@@ -137,7 +137,7 @@ export function TournamentCard({ tournament, onView, onEdit, onManage }: Tournam
             className="flex-1"
           >
             <Settings className="w-4 h-4 mr-1" />
-            Manage
+            Teams
           </Button>
         )}
       </div>

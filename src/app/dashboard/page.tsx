@@ -239,7 +239,7 @@ export default function DashboardPage() {
                 tournament={tournament}
                 onView={(id) => console.log('View tournament:', id)}
                 onEdit={(id) => console.log('Edit tournament:', id)}
-                onManage={(id) => console.log('Manage tournament:', id)}
+                onManage={(id) => router.push(`/dashboard/tournaments/${id}/teams`)}
               />
             ))}
           </div>
