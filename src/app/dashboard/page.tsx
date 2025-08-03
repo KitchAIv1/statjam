@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { StatCard } from '@/components/ui/StatCard';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
-import { redirect } from 'next/navigation';
+import { redirect, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { 
   Trophy, 
@@ -16,9 +16,11 @@ import {
   Settings,
   Eye
 } from 'lucide-react';
+import { TournamentCard } from '@/components/dashboard/TournamentCard';
 
 export default function DashboardPage() {
   const { user, userRole, loading } = useAuthStore();
+  const router = useRouter();
 
   useEffect(() => {
     if (!loading && (!user || userRole !== 'organizer')) {
@@ -75,7 +77,7 @@ export default function DashboardPage() {
       title: 'Create Tournament',
       description: 'Start a new tournament from scratch',
       icon: <Plus className="w-8 h-8" />,
-      action: () => console.log('Create tournament'),
+      action: () => router.push('/dashboard/create-tournament'),
       primary: true
     },
     {
@@ -103,25 +105,46 @@ export default function DashboardPage() {
 
   const recentTournaments = [
     {
+      id: '1',
       name: 'Summer League 2024',
-      status: 'Active',
-      teams: 8,
-      games: 14,
-      lastUpdate: '2 hours ago'
+      status: 'active' as const,
+      startDate: '2024-06-15',
+      endDate: '2024-07-15',
+      venue: 'Downtown Arena',
+      maxTeams: 8,
+      currentTeams: 8,
+      tournamentType: 'single_elimination',
+      isPublic: true,
+      entryFee: 50,
+      prizePool: 1000
     },
     {
+      id: '2',
       name: 'City Championship',
-      status: 'Active',
-      teams: 16,
-      games: 30,
-      lastUpdate: '5 hours ago'
+      status: 'active' as const,
+      startDate: '2024-07-01',
+      endDate: '2024-07-30',
+      venue: 'Sports Complex',
+      maxTeams: 16,
+      currentTeams: 12,
+      tournamentType: 'double_elimination',
+      isPublic: true,
+      entryFee: 100,
+      prizePool: 2500
     },
     {
+      id: '3',
       name: 'Youth Tournament',
-      status: 'Draft',
-      teams: 6,
-      games: 0,
-      lastUpdate: '1 day ago'
+      status: 'draft' as const,
+      startDate: '2024-08-01',
+      endDate: '2024-08-15',
+      venue: 'Community Center',
+      maxTeams: 6,
+      currentTeams: 0,
+      tournamentType: 'round_robin',
+      isPublic: false,
+      entryFee: 25,
+      prizePool: 500
     }
   ];
 
@@ -209,59 +232,16 @@ export default function DashboardPage() {
             </Button>
           </div>
           
-          <div className="rounded-lg overflow-hidden" style={{ backgroundColor: '#1a1a1a', border: '1px solid #1f2937' }}>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead style={{ backgroundColor: '#2a2a2a' }}>
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 uppercase tracking-wider">
-                      Tournament
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 uppercase tracking-wider">
-                      Teams
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 uppercase tracking-wider">
-                      Games
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 uppercase tracking-wider">
-                      Last Update
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentTournaments.map((tournament, index) => (
-                    <tr key={tournament.name} className="border-t border-gray-800 hover:bg-gray-800/50 transition-colors duration-200">
-                      <td className="px-6 py-4">
-                        <div className="text-white font-medium">{tournament.name}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          tournament.status === 'Active' 
-                            ? 'bg-green-500/20 text-green-400' 
-                            : 'bg-yellow-500/20 text-yellow-400'
-                        }`}>
-                          {tournament.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-300">{tournament.teams}</td>
-                      <td className="px-6 py-4 text-gray-300">{tournament.games}</td>
-                      <td className="px-6 py-4 text-gray-400 text-sm">{tournament.lastUpdate}</td>
-                      <td className="px-6 py-4">
-                        <button className="text-purple-400 hover:text-purple-300 transition-colors duration-200">
-                          <Eye className="w-5 h-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {recentTournaments.map((tournament) => (
+              <TournamentCard
+                key={tournament.id}
+                tournament={tournament}
+                onView={(id) => console.log('View tournament:', id)}
+                onEdit={(id) => console.log('Edit tournament:', id)}
+                onManage={(id) => console.log('Manage tournament:', id)}
+              />
+            ))}
           </div>
         </motion.div>
       </div>
