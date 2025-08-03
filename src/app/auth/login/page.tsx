@@ -33,13 +33,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#121212' }}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="w-full max-w-lg space-y-8"
-      >
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#121212' }}>
+      <div className="container-responsive">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-md mx-auto space-y-8"
+        >
         {/* Logo and Header */}
         <div className="text-center">
           <div className="flex justify-center items-center space-x-2 mb-4">
@@ -87,10 +88,11 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full max-w-full pl-10 pr-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                  className="w-full pl-10 pr-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                   style={{ 
                     backgroundColor: '#2a2a2a',
-                    borderColor: '#374151'
+                    borderColor: '#374151',
+                    maxWidth: '100%'
                   }}
                   placeholder="Enter your email"
                 />
@@ -110,10 +112,11 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full max-w-full pl-10 pr-12 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                  className="w-full pl-10 pr-12 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                   style={{ 
                     backgroundColor: '#2a2a2a',
-                    borderColor: '#374151'
+                    borderColor: '#374151',
+                    maxWidth: '100%'
                   }}
                   placeholder="Enter your password"
                 />
@@ -157,7 +160,8 @@ export default function LoginPage() {
             ← Back to Homepage
           </Link>
         </motion.div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

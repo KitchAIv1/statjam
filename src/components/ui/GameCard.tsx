@@ -49,13 +49,11 @@ export function GameCard({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={cn('rounded-lg p-6 border transition-all duration-200 cursor-pointer', className)}
+      className={cn('game-card-constrained rounded-lg p-6 border transition-all duration-200 cursor-pointer', className)}
       style={{
         backgroundColor: '#1a1a1a',
         borderColor: '#1f2937',
         borderWidth: '1px',
-        width: '350px',
-        minHeight: '220px',
       }}
     >
       {/* Status and Time */}

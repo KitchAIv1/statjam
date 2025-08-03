@@ -85,8 +85,9 @@ export default function CreateTournamentPage() {
   };
 
   return (
-    <div className="min-h-screen pt-16" style={{ backgroundColor: '#121212' }}>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="min-h-screen pt-16" style={{ backgroundColor: '#121212' }}>
+          <div className="container-responsive py-8">
+            <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -180,6 +181,7 @@ export default function CreateTournamentPage() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

@@ -60,13 +60,14 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ backgroundColor: '#121212' }}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="w-full max-w-lg space-y-8"
-      >
+    <div className="min-h-screen flex items-center justify-center py-12" style={{ backgroundColor: '#121212' }}>
+      <div className="container-responsive">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-md mx-auto space-y-8"
+        >
         {/* Logo and Header */}
         <div className="text-center">
           <div className="flex justify-center items-center space-x-2 mb-4">
@@ -290,7 +291,8 @@ export default function SignupPage() {
             ← Back to Homepage
           </Link>
         </motion.div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

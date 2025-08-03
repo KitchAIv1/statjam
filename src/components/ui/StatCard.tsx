@@ -30,13 +30,11 @@ export function StatCard({
     <motion.div
       whileHover={{ scale: 1.05, y: -5 }}
       whileTap={{ scale: 0.98 }}
-      className={cn('rounded-xl p-6 border transition-all duration-300 shadow-lg', className)}
+      className={cn('stat-card-constrained rounded-xl p-6 border transition-all duration-300 shadow-lg', className)}
       style={{
         backgroundColor: '#1a1a1a',
         borderColor: 'rgba(255, 255, 255, 0.1)',
         borderWidth: '1px',
-        width: '280px',
-        height: '200px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',

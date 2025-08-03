@@ -150,7 +150,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen pt-16" style={{ backgroundColor: '#121212' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="container-responsive py-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -171,7 +171,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
+          className="grid-stat-cards mb-12"
         >
           {stats.map((stat, index) => (
             <motion.div
@@ -193,7 +193,7 @@ export default function DashboardPage() {
           className="mb-12"
         >
           <h2 className="text-2xl font-bold text-white mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid-responsive-cards">
             {quickActions.map((action, index) => (
               <motion.button
                 key={action.title}
@@ -232,7 +232,7 @@ export default function DashboardPage() {
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid-responsive-cards">
             {recentTournaments.map((tournament) => (
               <TournamentCard
                 key={tournament.id}

@@ -58,8 +58,8 @@ export default function HomePage() {
       />
 
       {/* Live Stats Section */}
-      <section className="py-20 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-20">
+        <div className="container-responsive">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -67,15 +67,15 @@ export default function HomePage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="font-header text-5xl md:text-6xl font-bold text-white mb-4">
+            <h2 className="font-header text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
               LIVE TOURNAMENT DATA
             </h2>
-            <p className="text-xl max-w-3xl mx-auto" style={{ color: '#b3b3b3' }}>
+            <p className="text-lg md:text-xl max-w-3xl mx-auto" style={{ color: '#b3b3b3' }}>
               Real-time statistics and insights from tournaments happening right now
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 place-items-center">
+          <div className="grid-stat-cards">
             {featuredStats.map((stat, index) => (
               <motion.div
                 key={stat.title}
@@ -92,8 +92,8 @@ export default function HomePage() {
       </section>
 
       {/* Featured Games Section */}
-      <section className="py-20 px-4 md:px-8" style={{ backgroundColor: 'rgba(26, 26, 26, 0.3)' }}>
-        <div className="max-w-7xl mx-auto">
+      <section className="py-20" style={{ backgroundColor: 'rgba(26, 26, 26, 0.3)' }}>
+        <div className="container-responsive">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -101,15 +101,15 @@ export default function HomePage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="font-header text-5xl md:text-6xl font-bold text-white mb-4">
+            <h2 className="font-header text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
               FEATURED GAMES
             </h2>
-            <p className="text-xl max-w-3xl mx-auto" style={{ color: '#b3b3b3' }}>
+            <p className="text-lg md:text-xl max-w-3xl mx-auto" style={{ color: '#b3b3b3' }}>
               Don't miss the action from today's biggest matchups
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 place-items-center">
+          <div className="grid-game-cards">
             {featuredGames.map((game, index) => (
               <motion.div
                 key={index}
@@ -141,29 +141,31 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-4 md:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="font-header text-5xl md:text-6xl font-bold text-white mb-6">
-              READY TO ELEVATE YOUR GAME?
-            </h2>
-            <p className="text-xl mb-10 max-w-3xl mx-auto" style={{ color: '#b3b3b3' }}>
-              Join thousands of organizers and players who trust StatJam for their tournament management needs.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <Button variant="primary" size="xl">
-                Start Your Tournament
-              </Button>
-              <Button variant="secondary" size="xl">
-                Browse Public Games
-              </Button>
-            </div>
-          </motion.div>
+      <section className="py-24">
+        <div className="container-responsive">
+          <div className="max-w-4xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <h2 className="font-header text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
+                READY TO ELEVATE YOUR GAME?
+              </h2>
+              <p className="text-lg md:text-xl mb-10 max-w-3xl mx-auto" style={{ color: '#b3b3b3' }}>
+                Join thousands of organizers and players who trust StatJam for their tournament management needs.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+                <Button variant="primary" size="xl">
+                  Start Your Tournament
+                </Button>
+                <Button variant="secondary" size="xl">
+                  Browse Public Games
+                </Button>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
     </main>
