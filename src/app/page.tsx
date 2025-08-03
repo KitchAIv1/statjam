@@ -1,103 +1,171 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { HeroSection } from '@/components/ui/HeroSection';
+import { StatCard } from '@/components/ui/StatCard';
+import { GameCard } from '@/components/ui/GameCard';
+import { Button } from '@/components/ui/Button';
+import { Trophy, Users, Activity, TrendingUp } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+export default function HomePage() {
+  // Mock data for demo
+  const featuredStats = [
+    { title: 'Active Tournaments', value: '24', icon: <Trophy className="w-5 h-5" />, trend: 'up' as const },
+    { title: 'Registered Players', value: '1,247', icon: <Users className="w-5 h-5" />, trend: 'up' as const },
+    { title: 'Live Games', value: '8', icon: <Activity className="w-5 h-5" />, trend: 'neutral' as const },
+    { title: 'Stats Recorded', value: '45K+', icon: <TrendingUp className="w-5 h-5" />, trend: 'up' as const },
+  ];
+
+  const featuredGames = [
+    {
+      homeTeam: { name: 'Lakers Elite', score: 98 },
+      awayTeam: { name: 'Warriors Pro', score: 102 },
+      status: 'finished' as const,
+      time: '2h ago',
+      venue: 'Staples Center'
+    },
+    {
+      homeTeam: { name: 'Heat Squad', score: 76 },
+      awayTeam: { name: 'Bulls United', score: 84 },
+      status: 'live' as const,
+      time: 'Q4 2:45',
+      venue: 'Miami Arena'
+    },
+    {
+      homeTeam: { name: 'Nets Force' },
+      awayTeam: { name: 'Celtics Prime' },
+      status: 'upcoming' as const,
+      time: '8:00 PM',
+      venue: 'Brooklyn Center'
+    },
+  ];
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="min-h-screen">
+      {/* Hero Section */}
+      <HeroSection
+        subtitle="Welcome to StatJam"
+        title="YOUR COURTSIDE COMMAND CENTER"
+        description="Professional-grade tournament management with real-time stat tracking. Built for organizers, players, and fans who demand the best."
+        primaryAction={{
+          label: 'Create Tournament',
+          onClick: () => console.log('Create Tournament')
+        }}
+        secondaryAction={{
+          label: 'Join as Player',
+          onClick: () => console.log('Join as Player')
+        }}
+      />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      {/* Live Stats Section */}
+      <section className="py-20 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <h2 className="font-header text-5xl md:text-6xl font-bold text-white mb-4">
+              LIVE TOURNAMENT DATA
+            </h2>
+            <p className="text-xl max-w-3xl mx-auto" style={{ color: '#b3b3b3' }}>
+              Real-time statistics and insights from tournaments happening right now
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 place-items-center">
+            {featuredStats.map((stat, index) => (
+              <motion.div
+                key={stat.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+              >
+                <StatCard {...stat} />
+              </motion.div>
+            ))}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </section>
+
+      {/* Featured Games Section */}
+      <section className="py-20 px-4 md:px-8" style={{ backgroundColor: 'rgba(26, 26, 26, 0.3)' }}>
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="font-header text-5xl md:text-6xl font-bold text-white mb-4">
+              FEATURED GAMES
+            </h2>
+            <p className="text-xl max-w-3xl mx-auto" style={{ color: '#b3b3b3' }}>
+              Don't miss the action from today's biggest matchups
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 place-items-center">
+            {featuredGames.map((game, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+              >
+                <GameCard
+                  {...game}
+                  onClick={() => console.log('View game details')}
+                />
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="text-center mt-16"
+          >
+            <Button variant="outline" size="lg">
+              View All Games
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 px-4 md:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="font-header text-5xl md:text-6xl font-bold text-white mb-6">
+              READY TO ELEVATE YOUR GAME?
+            </h2>
+            <p className="text-xl mb-10 max-w-3xl mx-auto" style={{ color: '#b3b3b3' }}>
+              Join thousands of organizers and players who trust StatJam for their tournament management needs.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <Button variant="primary" size="xl">
+                Start Your Tournament
+              </Button>
+              <Button variant="secondary" size="xl">
+                Browse Public Games
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+    </main>
   );
 }
