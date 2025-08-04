@@ -29,21 +29,21 @@ const DashboardV2 = () => {
     }
   }, []);
 
-  // Immediate redirect for non-authenticated users
-  if (!loading && !user) {
-    router.push('/auth');
-    return null;
-  }
-
-  // Immediate redirect for non-organizer users  
-  if (!loading && user && userRole && userRole !== 'organizer') {
-    if (userRole === 'player') {
-      router.push('/dashboard/player');
-    } else if (userRole === 'stat_admin') {
-      router.push('/dashboard/stat-admin');
+  // Handle redirects in useEffect to avoid render-time navigation
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth');
+      return;
     }
-    return null;
-  }
+    
+    if (!loading && user && userRole && userRole !== 'organizer') {
+      if (userRole === 'player') {
+        router.push('/dashboard/player');
+      } else if (userRole === 'stat_admin') {
+        router.push('/dashboard/stat-admin');
+      }
+    }
+  }, [loading, user, userRole, router]);
 
   // Show loading screen only while auth is still loading
   if (loading || !user || !userRole) {
