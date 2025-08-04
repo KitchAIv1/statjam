@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 const DashboardV2 = () => {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, userRole, loading, initialized } = useAuthStore();
   const { tournaments, loading: tournamentsLoading } = useTournaments();
   const { stats, loading: statsLoading } = useTournamentStats();
   const router = useRouter();
@@ -29,24 +29,25 @@ const DashboardV2 = () => {
     }
   }, []);
 
-  // Handle redirects in useEffect to avoid render-time navigation
+  // Handle redirects in useEffect - wait for auth to fully initialize
   useEffect(() => {
-    if (!loading && !user) {
+    // Only redirect after auth is fully initialized
+    if (initialized && !loading && !user) {
       router.push('/auth');
       return;
     }
     
-    if (!loading && user && userRole && userRole !== 'organizer') {
+    if (initialized && !loading && user && userRole && userRole !== 'organizer') {
       if (userRole === 'player') {
         router.push('/dashboard/player');
       } else if (userRole === 'stat_admin') {
         router.push('/dashboard/stat-admin');
       }
     }
-  }, [loading, user, userRole, router]);
+  }, [initialized, loading, user, userRole, router]);
 
-  // Show loading screen only while auth is still loading
-  if (loading || !user || !userRole) {
+  // Show loading screen only while auth is initializing
+  if (!initialized || loading || !user || !userRole) {
     return (
       <div style={{
         minHeight: '100vh',

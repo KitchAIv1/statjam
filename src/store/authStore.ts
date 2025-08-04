@@ -72,10 +72,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return false;
       };
 
-      // Try session check with 1 second timeout
+      // Try session check with longer timeout for page refresh
       const sessionFound = await Promise.race([
         sessionCheck(),
-        new Promise(resolve => setTimeout(() => resolve(false), 1000))
+        new Promise(resolve => setTimeout(() => resolve(false), 3000))
       ]);
 
       if (!sessionFound) {
