@@ -24,7 +24,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   userProfile: null,
-  loading: true,
+  loading: false,
   initialized: false,
   userRole: null,
   subscription: null,
@@ -50,36 +50,52 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialize: async () => {
     try {
       console.log('🔧 Auth Store: Starting initialization...');
-      set({ loading: true, initialized: false });
       
-      // Simple approach - just set up the auth listener and let it handle everything
+      // Quick session check with timeout - don't block UI
+      const sessionCheck = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            console.log('🔧 Auth Store: Initial session found');
+            const role = session.user.user_metadata?.role || 'player';
+            set({ 
+              user: session.user, 
+              userRole: role, 
+              loading: false, 
+              initialized: true 
+            });
+            return true;
+          }
+        } catch (error) {
+          console.log('🔧 Auth Store: Session check failed');
+        }
+        return false;
+      };
+
+      // Try session check with 1 second timeout
+      const sessionFound = await Promise.race([
+        sessionCheck(),
+        new Promise(resolve => setTimeout(() => resolve(false), 1000))
+      ]);
+
+      if (!sessionFound) {
+        console.log('🔧 Auth Store: No session or timeout, setting up listener');
+        set({ loading: false, initialized: true });
+      }
+      
+      // Set up auth listener for future changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('🔧 Auth Store: Auth state changed:', { event, hasSession: !!session });
         
         if (session?.user) {
           console.log('🔧 Auth Store: User found:', session.user.email);
-          
-          // Get role from metadata immediately for fast loading
           const role = session.user.user_metadata?.role || 'player';
-          console.log('🔧 Auth Store: Using role from metadata:', role);
-          
           set({ 
             user: session.user, 
             userRole: role, 
             loading: false, 
             initialized: true 
           });
-          
-          // Try to get profile in background (don't block UI)
-          try {
-            const profile = await UserService.getUserProfile(true);
-            if (profile) {
-              console.log('🔧 Auth Store: Profile loaded:', profile.role);
-              set({ userProfile: profile, userRole: profile.role });
-            }
-          } catch (error) {
-            console.log('🔧 Auth Store: Profile fetch failed, keeping metadata role');
-          }
         } else {
           console.log('🔧 Auth Store: No user session');
           set({ 
@@ -93,27 +109,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       
       set({ subscription });
-      
-      // Get initial session state
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          console.log('🔧 Auth Store: Initial session found');
-          const role = session.user.user_metadata?.role || 'player';
-          set({ 
-            user: session.user, 
-            userRole: role, 
-            loading: false, 
-            initialized: true 
-          });
-        } else {
-          console.log('🔧 Auth Store: No initial session');
-          set({ loading: false, initialized: true });
-        }
-      } catch (sessionError) {
-        console.log('🔧 Auth Store: Session check failed, relying on listener');
-        set({ loading: false, initialized: true });
-      }
       
     } catch (error) {
       console.error('Auth initialization error:', error);
