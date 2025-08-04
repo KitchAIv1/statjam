@@ -29,27 +29,24 @@ const DashboardV2 = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth');
-      return;
-    }
-    
-    // Redirect to role-specific dashboards
-    if (!loading && user && userRole) {
-      if (userRole === 'player') {
-        router.push('/dashboard/player');
-        return;
-      } else if (userRole === 'stat_admin') {
-        router.push('/dashboard/stat-admin');
-        return;
-      }
-      // organizer stays on this page
-    }
-  }, [user, userRole, loading, router]);
+  // Immediate redirect for non-authenticated users
+  if (!loading && !user) {
+    router.push('/auth');
+    return null;
+  }
 
-  // Only show loading if auth is still loading AND not initialized
-  if (loading || !user || userRole !== 'organizer') {
+  // Immediate redirect for non-organizer users  
+  if (!loading && user && userRole && userRole !== 'organizer') {
+    if (userRole === 'player') {
+      router.push('/dashboard/player');
+    } else if (userRole === 'stat_admin') {
+      router.push('/dashboard/stat-admin');
+    }
+    return null;
+  }
+
+  // Show loading screen only while auth is still loading
+  if (loading || !user || !userRole) {
     return (
       <div style={{
         minHeight: '100vh',
@@ -95,38 +92,7 @@ const DashboardV2 = () => {
           </div>
         </div>
         
-        {/* Sign Out Button */}
-        <button
-          onClick={async () => {
-            try {
-              await supabase.auth.signOut();
-              router.push('/auth');
-            } catch (error) {
-              console.error('Sign out error:', error);
-            }
-          }}
-          style={{
-            background: 'rgba(255, 0, 0, 0.1)',
-            border: '1px solid rgba(255, 0, 0, 0.3)',
-            borderRadius: '8px',
-            padding: '12px 24px',
-            color: '#ff6b6b',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 0, 0, 0.2)';
-            e.currentTarget.style.borderColor = 'rgba(255, 0, 0, 0.5)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 0, 0, 0.1)';
-            e.currentTarget.style.borderColor = 'rgba(255, 0, 0, 0.3)';
-          }}
-        >
-          Sign Out & Restart
-        </button>
+
         
         <style jsx>{`
           @keyframes spin {

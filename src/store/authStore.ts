@@ -148,8 +148,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   
   logout: async () => {
-    set({ loading: true });
-    
     // Clean up subscription
     const { subscription } = get();
     if (subscription) {
@@ -160,6 +158,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (error) {
       console.error('Logout error:', error);
     }
+    
+    // Clear user state immediately without setting loading: true
     set({ user: null, userProfile: null, userRole: null, loading: false, subscription: null });
   }
 }));
