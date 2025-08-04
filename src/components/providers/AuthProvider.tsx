@@ -12,6 +12,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     if (!initialized) {
+      console.log('🔧 AuthProvider: Initializing auth store...');
       initialize();
     }
   }, [initialize, initialized]);

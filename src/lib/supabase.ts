@@ -17,14 +17,39 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Auth helper functions
 export const signUp = async (email: string, password: string, userData?: any) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: userData
+  try {
+    console.log('🔍 DEBUG - Signup userData:', userData);
+    console.log('🔍 DEBUG - userType being set:', userData?.userType);
+    
+    // Direct Supabase Auth signup with user metadata
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          role: userData?.userType || 'player',
+          country: userData?.country || 'US',
+          firstName: userData?.firstName || '',
+          lastName: userData?.lastName || '',
+        }
+      }
+    });
+
+    if (error) {
+      console.error('Supabase signup error:', error);
+      throw error;
     }
-  });
-  return { data, error };
+
+    console.log('Supabase signup successful:', { 
+      user: data.user?.id, 
+      role: data.user?.user_metadata?.role 
+    });
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Signup error:', error);
+    return { data: null, error };
+  }
 };
 
 export const signIn = async (email: string, password: string) => {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/Button';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/authStore';
+import { TournamentService, TeamService } from '@/lib/services/tournamentService';
+import { Tournament, Team, Player } from '@/lib/types/tournament';
 import { 
   Users, 
   Plus, 
@@ -14,485 +15,1217 @@ import {
   Edit,
   Trash2,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  Trophy,
+  Crown,
+  Shield,
+  Star
 } from 'lucide-react';
 
-interface Player {
-  id: string;
-  name: string;
-  email: string;
-  position: string;
-  jerseyNumber: number;
-  isPremium: boolean;
+interface TeamManagementPageProps {
+  params: { id: string };
 }
 
-interface Team {
-  id: string;
-  name: string;
-  logo?: string;
-  players: Player[];
-  captain: Player;
-  coach?: string;
-  wins: number;
-  losses: number;
-}
-
-export default function TeamManagementPage({ params }: { params: { id: string } }) {
-  const [teams, setTeams] = useState<Team[]>([
-    {
-      id: '1',
-      name: 'Lakers Elite',
-      players: [
-        { id: '1', name: 'John Smith', email: 'john@example.com', position: 'PG', jerseyNumber: 1, isPremium: true },
-        { id: '2', name: 'Mike Johnson', email: 'mike@example.com', position: 'SG', jerseyNumber: 2, isPremium: false },
-        { id: '3', name: 'David Wilson', email: 'david@example.com', position: 'SF', jerseyNumber: 3, isPremium: true },
-      ],
-      captain: { id: '1', name: 'John Smith', email: 'john@example.com', position: 'PG', jerseyNumber: 1, isPremium: true },
-      wins: 5,
-      losses: 2
-    },
-    {
-      id: '2',
-      name: 'Warriors Pro',
-      players: [
-        { id: '4', name: 'Chris Davis', email: 'chris@example.com', position: 'PG', jerseyNumber: 4, isPremium: true },
-        { id: '5', name: 'Alex Brown', email: 'alex@example.com', position: 'C', jerseyNumber: 5, isPremium: false },
-      ],
-      captain: { id: '4', name: 'Chris Davis', email: 'chris@example.com', position: 'PG', jerseyNumber: 4, isPremium: true },
-      wins: 4,
-      losses: 3
-    }
-  ]);
-
+const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
+  const { user, userRole, loading } = useAuthStore();
+  const router = useRouter();
+  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const router = useRouter();
+  const [filterStatus, setFilterStatus] = useState<'all' | 'full' | 'open'>('all');
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showFullRoster, setShowFullRoster] = useState(false);
+  const [selectedTeamForRoster, setSelectedTeamForRoster] = useState<Team | null>(null);
+  
+  // Get tournament ID from params
+  const tournamentId = params.id;
 
-  const filteredTeams = teams.filter(team =>
-    team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    team.players.some(player => player.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  useEffect(() => {
+    if (!loading && (!user || userRole !== 'organizer')) {
+      router.push('/auth');
+      return;
+    }
+
+    const loadData = async () => {
+      try {
+        console.log('🔍 Loading tournament data for ID:', tournamentId);
+        
+        // Load tournament details
+        const tournamentData = await TournamentService.getTournament(tournamentId);
+        console.log('🔍 Tournament data loaded:', tournamentData);
+        setTournament(tournamentData);
+        
+        // Load teams for this tournament
+        const teamsData = await TeamService.getTeamsByTournament(tournamentId);
+        console.log('🔍 Teams data loaded:', teamsData);
+        setTeams(teamsData);
+      } catch (error) {
+        console.error('❌ Failed to load tournament data:', error);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    if (user) {
+      loadData();
+    }
+  }, [user, userRole, loading, tournamentId, router]);
+
+  const filteredTeams = teams.filter(team => {
+    const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         team.players.some(player => player.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    let matchesFilter = true;
+    if (filterStatus === 'full') {
+      matchesFilter = team.players.length >= 12; // Assuming max 12 players per team
+    } else if (filterStatus === 'open') {
+      matchesFilter = team.players.length < 12;
+    }
+    
+    return matchesSearch && matchesFilter;
+  });
+
+  const handleCreateTeam = async (teamData: any) => {
+    setCreatingTeam(true);
+    setError(null);
+    
+    try {
+      const newTeam = await TeamService.createTeam({
+        name: teamData.name,
+        coach: teamData.coach,
+        tournamentId: tournamentId,
+      });
+      setTeams(prev => [...prev, newTeam]);
+      setShowCreateTeam(false);
+    } catch (error) {
+      console.error('Failed to create team:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create team');
+    } finally {
+      setCreatingTeam(false);
+    }
+  };
+
+  const handleAddPlayer = async (playerData: any) => {
+    try {
+      console.log('Adding player to team:', playerData);
+      
+      // Find the team and add the player
+      const updatedTeams = teams.map(team => {
+        if (team.id === playerData.teamId) {
+          // Find the player from search results
+          const playerToAdd = playerData.player;
+          
+          // Check if player is already in the team
+          const isPlayerAlreadyInTeam = team.players.some(p => p.id === playerToAdd.id);
+          if (isPlayerAlreadyInTeam) {
+            throw new Error('Player is already in this team');
+          }
+          
+          // Add player to team
+          return {
+            ...team,
+            players: [...team.players, playerToAdd]
+          };
+        }
+        return team;
+      });
+      
+      setTeams(updatedTeams);
+      setShowAddPlayer(false);
+      
+      // Show success message (you can add a toast notification here)
+      console.log('Player added successfully to team');
+    } catch (error) {
+      console.error('Failed to add player:', error);
+      // You can add error handling UI here
+    }
+  };
+
+  if (loading || loadingData) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#1a1a1a',
+        color: '#ffffff'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          fontSize: '18px',
+          fontWeight: '500'
+        }}>
+          <div style={{
+            width: '24px',
+            height: '24px',
+            borderWidth: '2px',
+            borderStyle: 'solid',
+            borderColor: '#FFD700',
+            borderTopColor: 'transparent',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }} />
+          Loading Team Management...
+        </div>
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (!tournament) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#1a1a1a',
+        color: '#ffffff'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>Tournament Not Found</h2>
+          <p style={{ color: '#888' }}>The tournament you're looking for doesn't exist.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // CLEAN SLATE STYLING - AUTH V2 BRANDING CONSISTENCY
+  const styles: any = {
+    container: {
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+      paddingTop: '100px',
+      paddingBottom: '60px',
+    },
+    content: {
+      maxWidth: '1400px',
+      margin: '0 auto',
+      padding: '0 24px',
+    },
+    header: {
+      marginBottom: '48px',
+    },
+    backButton: {
+      background: 'transparent',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.3)',
+      borderRadius: '10px',
+      padding: '12px 16px',
+      color: '#FFD700',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '500',
+      transition: 'all 0.2s ease',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px',
+      marginBottom: '24px',
+    },
+    backButtonHover: {
+      background: 'rgba(255, 215, 0, 0.1)',
+      borderColor: '#FFD700',
+    },
+    title: {
+      fontSize: '42px',
+      fontWeight: '700',
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+      fontFamily: "'Anton', system-ui, sans-serif",
+      marginBottom: '16px',
+      letterSpacing: '1px',
+    },
+    subtitle: {
+      fontSize: '18px',
+      color: '#b3b3b3',
+      fontWeight: '400',
+      marginBottom: '32px',
+    },
+    controls: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: '32px',
+      gap: '16px',
+      flexWrap: 'wrap' as const,
+    },
+    searchContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      flex: 1,
+      maxWidth: '400px',
+    },
+    searchInput: {
+      flex: 1,
+      background: 'rgba(30, 30, 30, 0.8)',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+      borderRadius: '12px',
+      padding: '12px 16px',
+      color: '#ffffff',
+      fontSize: '14px',
+      outline: 'none',
+    },
+    filterSelect: {
+      background: 'rgba(30, 30, 30, 0.8)',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+      borderRadius: '12px',
+      padding: '12px 16px',
+      color: '#ffffff',
+      fontSize: '14px',
+      outline: 'none',
+      cursor: 'pointer',
+    },
+    createButton: {
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      border: 'none',
+      borderRadius: '12px',
+      padding: '12px 24px',
+      color: '#1a1a1a',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '600',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      transition: 'all 0.2s ease',
+    },
+    createButtonHover: {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 8px 20px rgba(255, 215, 0, 0.3)',
+    },
+    teamsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
+      gap: '24px',
+    },
+    teamCard: {
+      background: 'rgba(30, 30, 30, 0.8)',
+      borderRadius: '20px',
+      padding: '24px',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.1)',
+      transition: 'all 0.3s ease',
+    },
+    teamCardHover: {
+      borderColor: 'rgba(255, 215, 0, 0.3)',
+      transform: 'translateY(-4px)',
+      boxShadow: '0 12px 32px rgba(0, 0, 0, 0.3)',
+    },
+    teamHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: '20px',
+    },
+    teamInfo: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+    },
+    teamIcon: {
+      width: '48px',
+      height: '48px',
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      borderRadius: '12px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    teamName: {
+      fontSize: '20px',
+      fontWeight: '700',
+      color: '#ffffff',
+      marginBottom: '4px',
+    },
+    teamMeta: {
+      fontSize: '14px',
+      color: '#888888',
+    },
+    teamStats: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      marginBottom: '20px',
+    },
+    stat: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      fontSize: '14px',
+      color: '#b3b3b3',
+    },
+    playersList: {
+      marginBottom: '20px',
+    },
+    playersTitle: {
+      fontSize: '16px',
+      fontWeight: '600',
+      color: '#ffffff',
+      marginBottom: '12px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+    },
+    playerItem: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '8px 12px',
+      background: 'rgba(255, 255, 255, 0.05)',
+      borderRadius: '8px',
+      marginBottom: '8px',
+    },
+    playerInfo: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+    },
+    playerName: {
+      fontSize: '14px',
+      fontWeight: '500',
+      color: '#ffffff',
+    },
+    playerPosition: {
+      fontSize: '12px',
+      color: '#888888',
+      background: 'rgba(255, 215, 0, 0.1)',
+      padding: '2px 6px',
+      borderRadius: '4px',
+    },
+    captainBadge: {
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      color: '#1a1a1a',
+      fontSize: '10px',
+      fontWeight: '700',
+      padding: '2px 6px',
+      borderRadius: '4px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+    },
+    premiumBadge: {
+      fontSize: '10px',
+      fontWeight: '600',
+      color: '#FFD700',
+      marginLeft: '8px',
+    },
+    teamActions: {
+      display: 'flex',
+      gap: '8px',
+    },
+    actionButton: {
+      background: 'transparent',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.3)',
+      borderRadius: '8px',
+      padding: '8px 12px',
+      color: '#FFD700',
+      cursor: 'pointer',
+      fontSize: '12px',
+      fontWeight: '500',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+    },
+    actionButtonHover: {
+      background: 'rgba(255, 215, 0, 0.1)',
+      borderColor: '#FFD700',
+    },
+    emptyState: {
+      textAlign: 'center',
+      padding: '60px 20px',
+      color: '#888888',
+    },
+    emptyStateIcon: {
+      marginBottom: '24px',
+      opacity: 0.5,
+    },
+    emptyStateTitle: {
+      fontSize: '24px',
+      fontWeight: '600',
+      color: '#ffffff',
+      marginBottom: '12px',
+    },
+    emptyStateDesc: {
+      fontSize: '16px',
+      marginBottom: '32px',
+      lineHeight: '1.6',
+    },
+  };
 
   return (
-    <div className="min-h-screen pt-16" style={{ backgroundColor: '#121212' }}>
-      <div className="container-responsive py-8">
+    <div style={styles.container}>
+      <div style={styles.content}>
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <button
-                onClick={() => router.back()}
-                className="flex items-center text-gray-400 hover:text-white transition-colors duration-200 mb-4"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Tournament
-              </button>
-              <h1 className="text-4xl font-bold text-white mb-2" style={{ fontFamily: 'Anton, system-ui, sans-serif' }}>
-                TEAM MANAGEMENT
-              </h1>
-              <p className="text-gray-400 text-lg">
-                Manage teams and players for Tournament #{params.id}
-              </p>
-            </div>
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => setShowAddPlayer(true)}
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add Player
-              </Button>
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => setShowCreateTeam(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Team
-              </Button>
-            </div>
-          </div>
-        </motion.div>
+        <div style={styles.header}>
+          <button
+            style={styles.backButton}
+            onClick={() => router.push(`/dashboard/tournaments/${params.id}`)}
+            onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.backButtonHover)}
+            onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.backButton)}
+          >
+            <ArrowLeft style={{ width: '16px', height: '16px' }} />
+            Back to Tournament
+          </button>
 
-        {/* Search and Filters */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8"
-        >
-          <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search teams or players..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                    style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-                  />
-                </div>
-              </div>
-              <div className="flex space-x-3">
-                <Button variant="ghost" size="lg">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filter
-                </Button>
-                <Button variant="ghost" size="lg">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import CSV
-                </Button>
-              </div>
-            </div>
+          <h1 style={styles.title}>TEAM MANAGEMENT</h1>
+          <p style={styles.subtitle}>
+            Manage teams and players for {tournament.name}
+          </p>
+        </div>
+
+        {/* Controls */}
+        <div style={styles.controls}>
+          <div style={styles.searchContainer}>
+            <Search style={{ width: '20px', height: '20px', color: '#888' }} />
+            <input
+              type="text"
+              placeholder="Search teams or players..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={styles.searchInput}
+            />
           </div>
-        </motion.div>
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as any)}
+            style={styles.filterSelect}
+          >
+            <option value="all">All Teams</option>
+            <option value="open">Open for Players</option>
+            <option value="full">Full Teams</option>
+          </select>
+
+          <button
+            style={styles.createButton}
+            onClick={() => setShowCreateTeam(true)}
+            onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.createButtonHover)}
+            onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.createButton)}
+          >
+            <Plus style={{ width: '16px', height: '16px' }} />
+            Create Team
+          </button>
+        </div>
 
         {/* Teams Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid-responsive-cards"
-        >
-          {filteredTeams.map((team, index) => (
-            <motion.div
-              key={team.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + index * 0.1 }}
-              className="bg-gray-900 rounded-lg p-6 border border-gray-800 hover:border-purple-500/50 transition-all duration-200"
-            >
-              {/* Team Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#4B0082' }}>
-                    <Users className="w-6 h-6 text-yellow-400" />
+        <div style={styles.teamsGrid}>
+          {filteredTeams.length > 0 ? (
+            filteredTeams.map((team) => (
+              <div
+                key={team.id}
+                style={styles.teamCard}
+                onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.teamCardHover)}
+                onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.teamCard)}
+              >
+                <div style={styles.teamHeader}>
+                  <div style={styles.teamInfo}>
+                    <div style={styles.teamIcon}>
+                      <Shield style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
+                    </div>
+                    <div>
+                      <div style={styles.teamName}>{team.name}</div>
+                      <div style={styles.teamMeta}>
+                        {team.players.length} players • {team.wins}W - {team.losses}L
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">{team.name}</h3>
-                    <p className="text-sm text-gray-400">{team.players.length} players</p>
+                  <div style={styles.teamActions}>
+                    <button
+                      style={styles.actionButton}
+                      onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.actionButtonHover)}
+                      onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.actionButton)}
+                      onClick={() => {
+                        setSelectedTeam(team);
+                        setShowAddPlayer(true);
+                      }}
+                    >
+                      <UserPlus style={{ width: '14px', height: '14px' }} />
+                      Add Player
+                    </button>
+                    <button
+                      style={styles.actionButton}
+                      onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.actionButtonHover)}
+                      onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.actionButton)}
+                    >
+                      <Edit style={{ width: '14px', height: '14px' }} />
+                      Edit
+                    </button>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-400">Record</div>
-                  <div className="text-white font-semibold">{team.wins}W - {team.losses}L</div>
-                </div>
-              </div>
 
-              {/* Captain */}
-              <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: '#2a2a2a' }}>
-                <div className="text-xs text-gray-400 mb-1">Captain</div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
-                    <span className="text-xs text-white font-bold">{team.captain.jerseyNumber}</span>
+                <div style={styles.teamStats}>
+                  <div style={styles.stat}>
+                    <Users style={{ width: '16px', height: '16px' }} />
+                    {team.players.length}/12 players
                   </div>
-                  <span className="text-white font-medium">{team.captain.name}</span>
-                  {team.captain.isPremium && (
-                    <span className="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400">
-                      Premium
-                    </span>
+                  <div style={styles.stat}>
+                    <Trophy style={{ width: '16px', height: '16px' }} />
+                    {team.wins} wins
+                  </div>
+                </div>
+
+                <div style={styles.playersList}>
+                  <div style={styles.playersTitle}>
+                    <Users style={{ width: '16px', height: '16px' }} />
+                    Roster ({team.players.length})
+                  </div>
+                  {team.players
+                    .sort((a, b) => {
+                      // Sort by premium status first (premium players first)
+                      if (a.isPremium && !b.isPremium) return -1;
+                      if (!a.isPremium && b.isPremium) return 1;
+                      // Then by name
+                      return a.name.localeCompare(b.name);
+                    })
+                    .slice(0, 5)
+                    .map((player) => (
+                    <div key={player.id} style={styles.playerItem}>
+                      <div style={styles.playerInfo}>
+                        <div style={styles.playerName}>
+                          {player.name}
+                          {player.isPremium && (
+                            <span style={styles.premiumBadge}>⭐ PREMIUM</span>
+                          )}
+                        </div>
+                        <div style={styles.playerPosition}>{player.position} • #{player.jerseyNumber}</div>
+                        {team.captain.id && player.id === team.captain.id && (
+                          <div style={styles.captainBadge}>
+                            <Crown style={{ width: '10px', height: '10px' }} />
+                            CAPTAIN
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {team.players.length > 5 && (
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#888', 
+                      textAlign: 'center' as const, 
+                      padding: '8px',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}>
+                      <span>+{team.players.length - 5} more players</span>
+                      <button
+                        onClick={() => {
+                          setSelectedTeamForRoster(team);
+                          setShowFullRoster(true);
+                        }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#FFD700',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        View Full Roster
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
-
-              {/* Players List */}
-              <div className="space-y-2 mb-4">
-                <div className="text-sm text-gray-400">Players</div>
-                {team.players.slice(0, 3).map((player) => (
-                  <div key={player.id} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-gray-300">#{player.jerseyNumber}</span>
-                      <span className="text-white">{player.name}</span>
-                      <span className="text-gray-400">({player.position})</span>
-                    </div>
-                    {player.isPremium && (
-                      <span className="text-xs text-yellow-400">★</span>
-                    )}
-                  </div>
-                ))}
-                {team.players.length > 3 && (
-                  <div className="text-sm text-gray-400">
-                    +{team.players.length - 3} more players
-                  </div>
-                )}
+            ))
+          ) : (
+            <div style={styles.emptyState}>
+              <div style={styles.emptyStateIcon}>
+                <Users style={{ width: '64px', height: '64px' }} />
               </div>
-
-              {/* Actions */}
-              <div className="flex space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedTeam(team)}
-                  className="flex-1"
-                >
-                  <Eye className="w-4 h-4 mr-1" />
-                  View
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => console.log('Edit team:', team.id)}
-                  className="flex-1"
-                >
-                  <Edit className="w-4 h-4 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => console.log('Delete team:', team.id)}
-                  className="text-red-400 hover:text-red-300"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+              <div style={styles.emptyStateTitle}>No teams yet</div>
+              <div style={styles.emptyStateDesc}>
+                Create your first team to start building your tournament roster
               </div>
-            </motion.div>
-          ))}
-        </motion.div>
+              <button
+                style={styles.createButton}
+                onClick={() => setShowCreateTeam(true)}
+                onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.createButtonHover)}
+                onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.createButton)}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Create First Team
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
-        {/* Empty State */}
-        {filteredTeams.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
-          >
-            <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No teams found</h3>
-            <p className="text-gray-400 mb-6">
-              {searchTerm ? 'Try adjusting your search terms' : 'Get started by creating your first team'}
-            </p>
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => setShowCreateTeam(true)}
+      {/* Create Team Modal */}
+      {showCreateTeam && (
+        <CreateTeamModal
+          onClose={() => setShowCreateTeam(false)}
+          onSave={handleCreateTeam}
+          creatingTeam={creatingTeam}
+          error={error}
+        />
+      )}
+
+      {/* Add Player Modal */}
+      {showAddPlayer && selectedTeam && (
+        <AddPlayerModal
+          team={selectedTeam}
+          onClose={() => {
+            setShowAddPlayer(false);
+            setSelectedTeam(null);
+          }}
+          onSave={handleAddPlayer}
+        />
+      )}
+
+      {/* Full Roster Modal */}
+      {showFullRoster && selectedTeamForRoster && (
+        <FullRosterModal
+          team={selectedTeamForRoster}
+          onClose={() => setShowFullRoster(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+// Create Team Modal Component
+function CreateTeamModal({ onClose, onSave, creatingTeam, error }: { 
+  onClose: () => void; 
+  onSave: (data: any) => void;
+  creatingTeam: boolean;
+  error: string | null;
+}) {
+  const [formData, setFormData] = useState({
+    name: '',
+    coach: '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  const styles = {
+    overlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.8)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+    },
+    modal: {
+      background: 'rgba(30, 30, 30, 0.95)',
+      backdropFilter: 'blur(20px)',
+      borderRadius: '20px',
+      padding: '32px',
+      maxWidth: '500px',
+      width: '90%',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+    },
+    title: {
+      fontSize: '24px',
+      fontWeight: '700',
+      color: '#FFD700',
+      marginBottom: '24px',
+      textAlign: 'center' as const,
+    },
+    form: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '20px',
+    },
+    input: {
+      background: 'rgba(255, 255, 255, 0.05)',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+      borderRadius: '12px',
+      padding: '16px',
+      color: '#ffffff',
+      fontSize: '16px',
+      outline: 'none',
+    },
+    buttons: {
+      display: 'flex',
+      gap: '12px',
+      marginTop: '24px',
+    },
+    button: {
+      flex: 1,
+      padding: '12px 24px',
+      borderRadius: '12px',
+      fontSize: '14px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      border: 'none',
+      transition: 'all 0.2s ease',
+    },
+    cancelButton: {
+      background: 'transparent',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+      color: '#ffffff',
+    },
+    saveButton: {
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      color: '#1a1a1a',
+    },
+  };
+
+  return (
+    <div style={styles.overlay} onClick={onClose}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <h2 style={styles.title}>Create New Team</h2>
+        <form style={styles.form} onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Team Name"
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            style={styles.input}
+            required
+          />
+          <input
+            type="text"
+            placeholder="Coach Name (Optional)"
+            value={formData.coach}
+            onChange={(e) => setFormData(prev => ({ ...prev, coach: e.target.value }))}
+            style={styles.input}
+          />
+          
+          {error && (
+            <div style={{
+              background: 'rgba(255, 0, 0, 0.1)',
+              border: '1px solid rgba(255, 0, 0, 0.3)',
+              borderRadius: '8px',
+              padding: '12px',
+              color: '#ff6b6b',
+              fontSize: '14px',
+            }}>
+              {error}
+            </div>
+          )}
+          
+          <div style={styles.buttons}>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={creatingTeam}
+              style={{ ...styles.button, ...styles.cancelButton }}
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Create First Team
-            </Button>
-          </motion.div>
-        )}
-
-        {/* Create Team Modal */}
-        {showCreateTeam && (
-          <CreateTeamModal
-            onClose={() => setShowCreateTeam(false)}
-            onSave={(teamData) => {
-              console.log('Creating team:', teamData);
-              setShowCreateTeam(false);
-            }}
-          />
-        )}
-
-        {/* Add Player Modal */}
-        {showAddPlayer && (
-          <AddPlayerModal
-            teams={teams}
-            onClose={() => setShowAddPlayer(false)}
-            onSave={(playerData) => {
-              console.log('Adding player:', playerData);
-              setShowAddPlayer(false);
-            }}
-          />
-        )}
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={creatingTeam}
+              style={{ 
+                ...styles.button, 
+                ...styles.saveButton,
+                opacity: creatingTeam ? 0.6 : 1,
+                cursor: creatingTeam ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {creatingTeam ? 'Creating...' : 'Create Team'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
 }
 
-// Modal Components
-function CreateTeamModal({ onClose, onSave }: { onClose: () => void; onSave: (data: any) => void }) {
-  const [teamData, setTeamData] = useState({
-    name: '',
-    coach: '',
-    logo: ''
-  });
+// Add Player Modal Component
+function AddPlayerModal({ team, onClose, onSave }: { team: Team; onClose: () => void; onSave: (data: any) => void }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<Player[]>([]);
+
+  const handleSearch = async () => {
+    if (searchTerm.trim()) {
+      try {
+        const results = await TeamService.searchPlayers(searchTerm);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Failed to search players:', error);
+      }
+    }
+  };
+
+  const styles = {
+    overlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.8)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+    },
+    modal: {
+      background: 'rgba(30, 30, 30, 0.95)',
+      backdropFilter: 'blur(20px)',
+      borderRadius: '20px',
+      padding: '32px',
+      maxWidth: '600px',
+      width: '90%',
+      maxHeight: '80vh',
+      overflow: 'auto',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+    },
+    title: {
+      fontSize: '24px',
+      fontWeight: '700',
+      color: '#FFD700',
+      marginBottom: '16px',
+    },
+    subtitle: {
+      fontSize: '16px',
+      color: '#b3b3b3',
+      marginBottom: '24px',
+    },
+    searchContainer: {
+      display: 'flex',
+      gap: '12px',
+      marginBottom: '24px',
+    },
+    searchInput: {
+      flex: 1,
+      background: 'rgba(255, 255, 255, 0.05)',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+      borderRadius: '12px',
+      padding: '12px 16px',
+      color: '#ffffff',
+      fontSize: '14px',
+      outline: 'none',
+    },
+    searchButton: {
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      border: 'none',
+      borderRadius: '12px',
+      padding: '12px 20px',
+      color: '#1a1a1a',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '600',
+    },
+    resultsList: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '12px',
+    },
+    playerItem: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '16px',
+      background: 'rgba(255, 255, 255, 0.05)',
+      borderRadius: '12px',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.1)',
+    },
+    playerInfo: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+    },
+    playerName: {
+      fontSize: '16px',
+      fontWeight: '600',
+      color: '#ffffff',
+    },
+    playerEmail: {
+      fontSize: '14px',
+      color: '#888888',
+    },
+    inviteButton: {
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      border: 'none',
+      borderRadius: '8px',
+      padding: '8px 16px',
+      color: '#1a1a1a',
+      cursor: 'pointer',
+      fontSize: '12px',
+      fontWeight: '600',
+    },
+    closeButton: {
+      background: 'transparent',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+      borderRadius: '12px',
+      padding: '12px 24px',
+      color: '#ffffff',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '600',
+      marginTop: '24px',
+      width: '100%',
+    },
+    premiumBadge: {
+      fontSize: '10px',
+      fontWeight: '600',
+      color: '#FFD700',
+      marginLeft: '8px',
+    },
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-gray-900 rounded-lg p-8 max-w-md w-full mx-4 border border-gray-800"
-      >
-        <h2 className="text-2xl font-bold text-white mb-6">Create New Team</h2>
+    <div style={styles.overlay} onClick={onClose}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <h2 style={styles.title}>Add Player to {team.name}</h2>
+        <p style={styles.subtitle}>Search for players to invite to your team</p>
         
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Team Name *
-            </label>
-            <input
-              type="text"
-              value={teamData.name}
-              onChange={(e) => setTeamData({ ...teamData, name: e.target.value })}
-              className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-              style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-              placeholder="Enter team name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Coach (Optional)
-            </label>
-            <input
-              type="text"
-              value={teamData.coach}
-              onChange={(e) => setTeamData({ ...teamData, coach: e.target.value })}
-              className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-              style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-              placeholder="Enter coach name"
-            />
-          </div>
+        <div style={styles.searchContainer}>
+          <input
+            type="text"
+            placeholder="Search players by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.searchInput}
+          />
+          <button
+            onClick={handleSearch}
+            style={styles.searchButton}
+          >
+            Search
+          </button>
         </div>
 
-        <div className="flex space-x-3 mt-8">
-          <Button variant="outline" size="lg" onClick={onClose} className="flex-1">
-            Cancel
-          </Button>
-          <Button variant="primary" size="lg" onClick={() => onSave(teamData)} className="flex-1">
-            Create Team
-          </Button>
+        <div style={styles.resultsList}>
+          {searchResults
+            .sort((a, b) => {
+              // Sort by premium status first (premium players first)
+              if (a.isPremium && !b.isPremium) return -1;
+              if (!a.isPremium && b.isPremium) return 1;
+              // Then by name
+              return a.name.localeCompare(b.name);
+            })
+            .map((player) => (
+            <div key={player.id} style={styles.playerItem}>
+              <div style={styles.playerInfo}>
+                <div>
+                  <div style={styles.playerName}>
+                    {player.name}
+                    {player.isPremium && (
+                      <span style={styles.premiumBadge}>⭐ PREMIUM</span>
+                    )}
+                  </div>
+                  <div style={styles.playerEmail}>
+                    {player.email} • {player.position} • #{player.jerseyNumber} • {player.country}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => onSave({ player: player, teamId: team.id })}
+                style={styles.inviteButton}
+              >
+                Add to Team
+              </button>
+            </div>
+          ))}
         </div>
-      </motion.div>
+
+        <button
+          onClick={onClose}
+          style={styles.closeButton}
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 }
 
-function AddPlayerModal({ teams, onClose, onSave }: { teams: Team[]; onClose: () => void; onSave: (data: any) => void }) {
-  const [playerData, setPlayerData] = useState({
-    name: '',
-    email: '',
-    position: 'PG',
-    jerseyNumber: 1,
-    teamId: '',
-    isPremium: false
-  });
+// Full Roster Modal Component
+function FullRosterModal({ team, onClose }: { team: Team; onClose: () => void }) {
+  const styles = {
+    overlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.8)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+    },
+    modal: {
+      background: 'rgba(30, 30, 30, 0.95)',
+      backdropFilter: 'blur(20px)',
+      borderRadius: '20px',
+      padding: '32px',
+      maxWidth: '700px',
+      width: '90%',
+      maxHeight: '80vh',
+      overflow: 'auto',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+    },
+    title: {
+      fontSize: '24px',
+      fontWeight: '700',
+      color: '#FFD700',
+      marginBottom: '8px',
+    },
+    subtitle: {
+      fontSize: '16px',
+      color: '#b3b3b3',
+      marginBottom: '24px',
+    },
+    rosterList: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '12px',
+    },
+    playerItem: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '16px',
+      background: 'rgba(255, 255, 255, 0.05)',
+      borderRadius: '12px',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.1)',
+    },
+    playerInfo: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+    },
+    playerName: {
+      fontSize: '16px',
+      fontWeight: '600',
+      color: '#ffffff',
+    },
+    playerDetails: {
+      fontSize: '14px',
+      color: '#888888',
+    },
+    premiumBadge: {
+      fontSize: '10px',
+      fontWeight: '600',
+      color: '#FFD700',
+      marginLeft: '8px',
+    },
+    captainBadge: {
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      color: '#1a1a1a',
+      fontSize: '10px',
+      fontWeight: '700',
+      padding: '2px 6px',
+      borderRadius: '4px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+    },
+    closeButton: {
+      background: 'transparent',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+      borderRadius: '12px',
+      padding: '12px 24px',
+      color: '#ffffff',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '600',
+      marginTop: '24px',
+      width: '100%',
+    },
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-gray-900 rounded-lg p-8 max-w-md w-full mx-4 border border-gray-800"
-      >
-        <h2 className="text-2xl font-bold text-white mb-6">Add Player</h2>
+    <div style={styles.overlay} onClick={onClose}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <h2 style={styles.title}>Full Roster - {team.name}</h2>
+        <p style={styles.subtitle}>
+          {team.players.length} players • {team.wins}W - {team.losses}L
+        </p>
         
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                First Name *
-              </label>
-              <input
-                type="text"
-                value={playerData.name}
-                onChange={(e) => setPlayerData({ ...playerData, name: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-                placeholder="Player name"
-              />
+        <div style={styles.rosterList}>
+          {team.players
+            .sort((a, b) => {
+              // Sort by premium status first (premium players first)
+              if (a.isPremium && !b.isPremium) return -1;
+              if (!a.isPremium && b.isPremium) return 1;
+              // Then by name
+              return a.name.localeCompare(b.name);
+            })
+            .map((player) => (
+            <div key={player.id} style={styles.playerItem}>
+              <div style={styles.playerInfo}>
+                <div>
+                  <div style={styles.playerName}>
+                    {player.name}
+                    {player.isPremium && (
+                      <span style={styles.premiumBadge}>⭐ PREMIUM</span>
+                    )}
+                  </div>
+                  <div style={styles.playerDetails}>
+                    {player.position} • #{player.jerseyNumber} • {player.email} • {player.country}
+                  </div>
+                </div>
+              </div>
+              {team.captain.id && player.id === team.captain.id && (
+                <div style={styles.captainBadge}>
+                  <Crown style={{ width: '10px', height: '10px' }} />
+                  CAPTAIN
+                </div>
+              )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Jersey Number *
-              </label>
-              <input
-                type="number"
-                value={playerData.jerseyNumber}
-                onChange={(e) => setPlayerData({ ...playerData, jerseyNumber: parseInt(e.target.value) })}
-                className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-                min="0"
-                max="99"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Email *
-            </label>
-            <input
-              type="email"
-              value={playerData.email}
-              onChange={(e) => setPlayerData({ ...playerData, email: e.target.value })}
-              className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-              style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-              placeholder="player@example.com"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Position *
-              </label>
-              <select
-                value={playerData.position}
-                onChange={(e) => setPlayerData({ ...playerData, position: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-              >
-                <option value="PG">Point Guard</option>
-                <option value="SG">Shooting Guard</option>
-                <option value="SF">Small Forward</option>
-                <option value="PF">Power Forward</option>
-                <option value="C">Center</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Team *
-              </label>
-              <select
-                value={playerData.teamId}
-                onChange={(e) => setPlayerData({ ...playerData, teamId: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-              >
-                <option value="">Select team</option>
-                {teams.map(team => (
-                  <option key={team.id} value={team.id}>{team.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="isPremium"
-              checked={playerData.isPremium}
-              onChange={(e) => setPlayerData({ ...playerData, isPremium: e.target.checked })}
-              className="mr-2"
-            />
-            <label htmlFor="isPremium" className="text-sm text-gray-300">
-              Premium player (higher visibility in search)
-            </label>
-          </div>
+          ))}
         </div>
 
-        <div className="flex space-x-3 mt-8">
-          <Button variant="outline" size="lg" onClick={onClose} className="flex-1">
-            Cancel
-          </Button>
-          <Button variant="primary" size="lg" onClick={() => onSave(playerData)} className="flex-1">
-            Add Player
-          </Button>
-        </div>
-      </motion.div>
+        <button
+          onClick={onClose}
+          style={styles.closeButton}
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
-} 
+}
+
+export default TeamManagementPage; 

@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Trophy, Users, Calendar, Eye, Edit, Settings } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { CardButton } from '@/components/ui/Button';
 
 interface Tournament {
   id: string;
@@ -108,7 +108,7 @@ export function TournamentCard({ tournament, onView, onEdit, onManage }: Tournam
       {/* Actions */}
       <div className="flex space-x-2">
         {onView && (
-          <Button
+          <CardButton
             variant="ghost"
             size="sm"
             onClick={() => onView(tournament.id)}
@@ -116,29 +116,29 @@ export function TournamentCard({ tournament, onView, onEdit, onManage }: Tournam
           >
             <Eye className="w-4 h-4 mr-1" />
             View
-          </Button>
+          </CardButton>
         )}
         {onEdit && (
-          <Button
-            variant="outline"
+          <CardButton
+            variant="ghost"
             size="sm"
             onClick={() => onEdit(tournament.id)}
             className="flex-1"
           >
             <Edit className="w-4 h-4 mr-1" />
             Edit
-          </Button>
+          </CardButton>
         )}
         {onManage && (
-          <Button
+          <CardButton
             variant="primary"
             size="sm"
             onClick={() => onManage(tournament.id)}
             className="flex-1"
           >
             <Settings className="w-4 h-4 mr-1" />
-            Teams
-          </Button>
+            Manage
+          </CardButton>
         )}
       </div>
     </motion.div>

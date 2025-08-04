@@ -1,495 +1,917 @@
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/Button';
+import React from 'react';
+import { Trophy, Settings, Users, Check, ArrowLeft, ArrowRight, Calendar, MapPin, DollarSign } from 'lucide-react';
+import { useTournamentForm } from '@/lib/hooks/useTournamentForm';
+import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Trophy, Users, Calendar, Settings, Check } from 'lucide-react';
+import { useEffect } from 'react';
 
-interface TournamentData {
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  venue: string;
-  maxTeams: number;
-  tournamentType: 'single_elimination' | 'double_elimination' | 'round_robin' | 'swiss';
-  isPublic: boolean;
-  entryFee: number;
-  prizePool: number;
-}
-
-const steps = [
-  { id: 1, title: 'Basic Info', icon: <Trophy className="w-5 h-5" /> },
-  { id: 2, title: 'Tournament Type', icon: <Settings className="w-5 h-5" /> },
-  { id: 3, title: 'Teams & Schedule', icon: <Users className="w-5 h-5" /> },
-  { id: 4, title: 'Review & Create', icon: <Check className="w-5 h-5" /> },
-];
-
-export default function CreateTournamentPage() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [tournamentData, setTournamentData] = useState<TournamentData>({
-    name: '',
-    description: '',
-    startDate: '',
-    endDate: '',
-    venue: '',
-    maxTeams: 8,
-    tournamentType: 'single_elimination',
-    isPublic: true,
-    entryFee: 0,
-    prizePool: 0,
-  });
-  const [loading, setLoading] = useState(false);
+const CreateTournamentV2 = () => {
+  const { user, userRole, loading } = useAuthStore();
   const router = useRouter();
+  const {
+    data,
+    errors,
+    loading: formLoading,
+    currentStep,
+    updateData,
+    nextStep,
+    prevStep,
+    submitTournament,
+    resetForm,
+  } = useTournamentForm();
 
-  const updateTournamentData = (field: keyof TournamentData, value: any) => {
-    setTournamentData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const nextStep = () => {
-    if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
+  useEffect(() => {
+    if (!loading && (!user || userRole !== 'organizer')) {
+      router.push('/auth');
     }
-  };
+  }, [user, userRole, loading, router]);
 
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
+  if (loading || !user || userRole !== 'organizer') {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#1a1a1a',
+        color: '#ffffff'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          fontSize: '18px',
+          fontWeight: '500'
+        }}>
+          <div style={{
+            width: '24px',
+            height: '24px',
+            border: '2px solid #FFD700',
+            borderTopColor: 'transparent',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }} />
+          Loading...
+        </div>
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  const steps = [
+    { id: 1, title: 'Basic Info', icon: <Trophy style={{ width: '20px', height: '20px' }} /> },
+    { id: 2, title: 'Tournament Setup', icon: <Settings style={{ width: '20px', height: '20px' }} /> },
+    { id: 3, title: 'Schedule & Budget', icon: <Calendar style={{ width: '20px', height: '20px' }} /> },
+    { id: 4, title: 'Review & Create', icon: <Check style={{ width: '20px', height: '20px' }} /> },
+  ];
 
   const handleSubmit = async () => {
-    setLoading(true);
-    // TODO: Submit to Supabase
-    console.log('Creating tournament:', tournamentData);
-    setTimeout(() => {
-      setLoading(false);
-      router.push('/dashboard');
-    }, 2000);
+    console.log('🚀 Tournament submission initiated...');
+    const success = await submitTournament(user.id);
+    if (success) {
+      console.log('✅ Tournament created successfully, redirecting to dashboard...');
+      // Add a small delay to show success state
+      setTimeout(() => {
+        router.push('/dashboard?created=true');
+      }, 1000);
+    } else {
+      console.log('❌ Tournament creation failed');
+    }
+  };
+
+  // CLEAN SLATE STYLING - AUTH V2 BRANDING CONSISTENCY
+  const styles = {
+    container: {
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+      paddingTop: '100px',
+      paddingBottom: '60px',
+    },
+    content: {
+      maxWidth: '900px',
+      margin: '0 auto',
+      padding: '0 24px',
+    },
+    header: {
+      marginBottom: '48px',
+      textAlign: 'center',
+    },
+    backButton: {
+      background: 'transparent',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.3)',
+      borderRadius: '10px',
+      padding: '12px 16px',
+      color: '#FFD700',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '500',
+      transition: 'all 0.2s ease',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px',
+      marginBottom: '24px',
+    },
+    backButtonHover: {
+      background: 'rgba(255, 215, 0, 0.1)',
+      borderColor: '#FFD700',
+    },
+    title: {
+      fontSize: '42px',
+      fontWeight: '700',
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+      fontFamily: "'Anton', system-ui, sans-serif",
+      marginBottom: '16px',
+      letterSpacing: '1px',
+    },
+    subtitle: {
+      fontSize: '16px',
+      color: '#b3b3b3',
+      fontWeight: '400',
+      lineHeight: '1.6',
+    },
+    progressContainer: {
+      marginBottom: '48px',
+    },
+    progressBar: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '24px',
+      marginBottom: '32px',
+    },
+    step: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '12px',
+      position: 'relative',
+    },
+    stepIcon: {
+      width: '56px',
+      height: '56px',
+      borderRadius: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: 'all 0.3s ease',
+      borderWidth: '2px',
+      borderStyle: 'solid',
+    },
+    stepIconActive: {
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      borderColor: '#FFD700',
+      color: '#1a1a1a',
+      boxShadow: '0 8px 24px rgba(255, 215, 0, 0.3)',
+    },
+    stepIconCompleted: {
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      borderColor: '#FFD700',
+      color: '#1a1a1a',
+    },
+    stepIconInactive: {
+      background: 'rgba(30, 30, 30, 0.8)',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+      color: '#888888',
+    },
+    stepTitle: {
+      fontSize: '14px',
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    stepTitleActive: {
+      color: '#FFD700',
+    },
+    stepTitleInactive: {
+      color: '#888888',
+    },
+    formCard: {
+      background: 'rgba(30, 30, 30, 0.8)',
+      borderRadius: '20px',
+      padding: '40px',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+      backdropFilter: 'blur(20px)',
+      marginBottom: '32px',
+    },
+    formGrid: {
+      display: 'grid',
+      gap: '24px',
+    },
+    formRow: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+      gap: '24px',
+    },
+    fieldGroup: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+    },
+    label: {
+      fontSize: '14px',
+      fontWeight: '600',
+      color: '#ffffff',
+    },
+    input: {
+      padding: '16px',
+      borderRadius: '12px',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+      background: 'rgba(255, 255, 255, 0.05)',
+      color: '#ffffff',
+      fontSize: '16px',
+      transition: 'all 0.2s ease',
+      outline: 'none',
+    },
+    inputFocus: {
+      borderColor: '#FFD700',
+      boxShadow: '0 0 0 3px rgba(255, 215, 0, 0.1)',
+    },
+    inputError: {
+      borderColor: '#ff4444',
+    },
+    textarea: {
+      padding: '16px',
+      borderRadius: '12px',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+      background: 'rgba(255, 255, 255, 0.05)',
+      color: '#ffffff',
+      fontSize: '16px',
+      transition: 'all 0.2s ease',
+      outline: 'none',
+      resize: 'vertical',
+      minHeight: '120px',
+    },
+    select: {
+      padding: '16px',
+      borderRadius: '12px',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+      background: 'rgba(255, 255, 255, 0.05)',
+      color: '#ffffff',
+      fontSize: '16px',
+      transition: 'all 0.2s ease',
+      outline: 'none',
+    },
+    errorText: {
+      fontSize: '12px',
+      color: '#ff4444',
+      marginTop: '4px',
+    },
+    typeGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: '16px',
+    },
+    typeOption: {
+      padding: '20px',
+      borderRadius: '12px',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.2)',
+      background: 'rgba(255, 255, 255, 0.05)',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      textAlign: 'center',
+    },
+    typeOptionSelected: {
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      borderColor: '#FFD700',
+      color: '#1a1a1a',
+    },
+    typeOptionTitle: {
+      fontSize: '16px',
+      fontWeight: '600',
+      marginBottom: '8px',
+    },
+    typeOptionDesc: {
+      fontSize: '14px',
+      opacity: 0.8,
+    },
+    reviewSection: {
+      marginBottom: '24px',
+    },
+    reviewTitle: {
+      fontSize: '18px',
+      fontWeight: '600',
+      color: '#ffffff',
+      marginBottom: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+    },
+    reviewGrid: {
+      display: 'grid',
+      gap: '12px',
+    },
+    reviewItem: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '12px 0',
+      borderBottom: '1px solid rgba(255, 215, 0, 0.1)',
+    },
+    reviewLabel: {
+      fontSize: '14px',
+      color: '#888888',
+    },
+    reviewValue: {
+      fontSize: '14px',
+      color: '#ffffff',
+      fontWeight: '500',
+    },
+    actions: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: '16px',
+    },
+    button: {
+      padding: '16px 32px',
+      borderRadius: '12px',
+      fontSize: '16px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      border: 'none',
+    },
+    buttonSecondary: {
+      background: 'transparent',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'rgba(255, 215, 0, 0.3)',
+      color: '#FFD700',
+    },
+    buttonSecondaryHover: {
+      background: 'rgba(255, 215, 0, 0.1)',
+      borderColor: '#FFD700',
+    },
+    buttonPrimary: {
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      color: '#1a1a1a',
+    },
+    buttonPrimaryHover: {
+      transform: 'translateY(-1px)',
+      boxShadow: '0 8px 20px rgba(255, 215, 0, 0.4)',
+    },
+    buttonDisabled: {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+    },
   };
 
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        return <BasicInfoStep data={tournamentData} updateData={updateTournamentData} />;
+        return (
+          <div style={styles.formGrid}>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Tournament Name *</label>
+              <input
+                type="text"
+                value={data.name || ''}
+                onChange={(e) => updateData('name', e.target.value)}
+                placeholder="Enter tournament name"
+                style={{
+                  ...styles.input,
+                  ...(errors.name ? styles.inputError : {})
+                }}
+                onFocus={(e) => Object.assign(e.currentTarget.style, styles.inputFocus)}
+                onBlur={(e) => Object.assign(e.currentTarget.style, styles.input)}
+              />
+              {errors.name && <span style={styles.errorText}>{errors.name}</span>}
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Description *</label>
+              <textarea
+                value={data.description || ''}
+                onChange={(e) => updateData('description', e.target.value)}
+                placeholder="Describe your tournament"
+                style={{
+                  ...styles.textarea,
+                  ...(errors.description ? styles.inputError : {})
+                }}
+                onFocus={(e) => Object.assign(e.currentTarget.style, styles.inputFocus)}
+                onBlur={(e) => Object.assign(e.currentTarget.style, styles.textarea)}
+              />
+              {errors.description && <span style={styles.errorText}>{errors.description}</span>}
+            </div>
+
+            <div style={styles.formRow}>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Venue *</label>
+                <input
+                  type="text"
+                  value={data.venue || ''}
+                  onChange={(e) => updateData('venue', e.target.value)}
+                  placeholder="Tournament venue"
+                  style={{
+                    ...styles.input,
+                    ...(errors.venue ? styles.inputError : {})
+                  }}
+                  onFocus={(e) => Object.assign(e.currentTarget.style, styles.inputFocus)}
+                  onBlur={(e) => Object.assign(e.currentTarget.style, styles.input)}
+                />
+                {errors.venue && <span style={styles.errorText}>{errors.venue}</span>}
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Country *</label>
+                <select
+                  value={data.country || 'US'}
+                  onChange={(e) => updateData('country', e.target.value)}
+                  style={{
+                    ...styles.select,
+                    ...(errors.country ? styles.inputError : {})
+                  }}
+                >
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="UK">United Kingdom</option>
+                  <option value="AU">Australia</option>
+                  <option value="DE">Germany</option>
+                  <option value="FR">France</option>
+                  <option value="ES">Spain</option>
+                  <option value="IT">Italy</option>
+                  <option value="JP">Japan</option>
+                  <option value="BR">Brazil</option>
+                </select>
+                {errors.country && <span style={styles.errorText}>{errors.country}</span>}
+              </div>
+            </div>
+          </div>
+        );
+
       case 2:
-        return <TournamentTypeStep data={tournamentData} updateData={updateTournamentData} />;
+        return (
+          <div style={styles.formGrid}>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Tournament Format *</label>
+              <div style={styles.typeGrid}>
+                {[
+                  { value: 'single_elimination', title: 'Single Elimination', desc: 'One loss and you\'re out' },
+                  { value: 'double_elimination', title: 'Double Elimination', desc: 'Two chances to compete' },
+                  { value: 'round_robin', title: 'Round Robin', desc: 'Everyone plays everyone' },
+                  { value: 'swiss', title: 'Swiss System', desc: 'Multiple rounds, best records advance' },
+                ].map((type) => (
+                  <div
+                    key={type.value}
+                    style={{
+                      ...styles.typeOption,
+                      ...(data.tournamentType === type.value ? styles.typeOptionSelected : {})
+                    }}
+                    onClick={() => updateData('tournamentType', type.value)}
+                  >
+                    <div style={styles.typeOptionTitle}>{type.title}</div>
+                    <div style={styles.typeOptionDesc}>{type.desc}</div>
+                  </div>
+                ))}
+              </div>
+              {errors.tournamentType && <span style={styles.errorText}>{errors.tournamentType}</span>}
+            </div>
+
+            <div style={styles.formRow}>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Maximum Teams *</label>
+                <select
+                  value={data.maxTeams || 8}
+                  onChange={(e) => updateData('maxTeams', parseInt(e.target.value))}
+                  style={{
+                    ...styles.select,
+                    ...(errors.maxTeams ? styles.inputError : {})
+                  }}
+                >
+                  {[4, 8, 16, 24, 32, 64].map(num => (
+                    <option key={num} value={num}>{num} Teams</option>
+                  ))}
+                </select>
+                {errors.maxTeams && <span style={styles.errorText}>{errors.maxTeams}</span>}
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Visibility</label>
+                <select
+                  value={data.isPublic ? 'true' : 'false'}
+                  onChange={(e) => updateData('isPublic', e.target.value === 'true')}
+                  style={styles.select}
+                >
+                  <option value="true">Public (discoverable)</option>
+                  <option value="false">Private (invite only)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        );
+
       case 3:
-        return <TeamsScheduleStep data={tournamentData} updateData={updateTournamentData} />;
+        return (
+          <div style={styles.formGrid}>
+            <div style={styles.formRow}>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Start Date *</label>
+                <input
+                  type="date"
+                  value={data.startDate || ''}
+                  onChange={(e) => updateData('startDate', e.target.value)}
+                  style={{
+                    ...styles.input,
+                    ...(errors.startDate ? styles.inputError : {})
+                  }}
+                  onFocus={(e) => Object.assign(e.currentTarget.style, styles.inputFocus)}
+                  onBlur={(e) => Object.assign(e.currentTarget.style, styles.input)}
+                />
+                {errors.startDate && <span style={styles.errorText}>{errors.startDate}</span>}
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>End Date *</label>
+                <input
+                  type="date"
+                  value={data.endDate || ''}
+                  onChange={(e) => updateData('endDate', e.target.value)}
+                  style={{
+                    ...styles.input,
+                    ...(errors.endDate ? styles.inputError : {})
+                  }}
+                  onFocus={(e) => Object.assign(e.currentTarget.style, styles.inputFocus)}
+                  onBlur={(e) => Object.assign(e.currentTarget.style, styles.input)}
+                />
+                {errors.endDate && <span style={styles.errorText}>{errors.endDate}</span>}
+              </div>
+            </div>
+
+            <div style={styles.formRow}>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Entry Fee ($)</label>
+                <input
+                  type="number"
+                  value={data.entryFee || 0}
+                  onChange={(e) => updateData('entryFee', parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                  min="0"
+                  step="1"
+                  style={{
+                    ...styles.input,
+                    ...(errors.entryFee ? styles.inputError : {})
+                  }}
+                  onFocus={(e) => Object.assign(e.currentTarget.style, styles.inputFocus)}
+                  onBlur={(e) => Object.assign(e.currentTarget.style, styles.input)}
+                />
+                {errors.entryFee && <span style={styles.errorText}>{errors.entryFee}</span>}
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Prize Pool ($)</label>
+                <input
+                  type="number"
+                  value={data.prizePool || 0}
+                  onChange={(e) => updateData('prizePool', parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                  min="0"
+                  step="1"
+                  style={{
+                    ...styles.input,
+                    ...(errors.prizePool ? styles.inputError : {})
+                  }}
+                  onFocus={(e) => Object.assign(e.currentTarget.style, styles.inputFocus)}
+                  onBlur={(e) => Object.assign(e.currentTarget.style, styles.input)}
+                />
+                {errors.prizePool && <span style={styles.errorText}>{errors.prizePool}</span>}
+              </div>
+            </div>
+          </div>
+        );
+
       case 4:
-        return <ReviewStep data={tournamentData} />;
+        return (
+          <div style={styles.formGrid}>
+            <div style={styles.reviewSection}>
+              <div style={styles.reviewTitle}>
+                <Trophy style={{ width: '20px', height: '20px' }} />
+                Tournament Information
+              </div>
+              <div style={styles.reviewGrid}>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Name</span>
+                  <span style={styles.reviewValue}>{data.name}</span>
+                </div>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Description</span>
+                  <span style={styles.reviewValue}>{data.description}</span>
+                </div>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Venue</span>
+                  <span style={styles.reviewValue}>{data.venue}</span>
+                </div>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Country</span>
+                  <span style={styles.reviewValue}>{data.country}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.reviewSection}>
+              <div style={styles.reviewTitle}>
+                <Settings style={{ width: '20px', height: '20px' }} />
+                Tournament Setup
+              </div>
+              <div style={styles.reviewGrid}>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Format</span>
+                  <span style={styles.reviewValue}>
+                    {data.tournamentType?.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Maximum Teams</span>
+                  <span style={styles.reviewValue}>{data.maxTeams}</span>
+                </div>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Visibility</span>
+                  <span style={styles.reviewValue}>{data.isPublic ? 'Public' : 'Private'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.reviewSection}>
+              <div style={styles.reviewTitle}>
+                <Calendar style={{ width: '20px', height: '20px' }} />
+                Schedule & Budget
+              </div>
+              <div style={styles.reviewGrid}>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Start Date</span>
+                  <span style={styles.reviewValue}>
+                    {data.startDate ? new Date(data.startDate).toLocaleDateString() : 'Not set'}
+                  </span>
+                </div>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>End Date</span>
+                  <span style={styles.reviewValue}>
+                    {data.endDate ? new Date(data.endDate).toLocaleDateString() : 'Not set'}
+                  </span>
+                </div>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Entry Fee</span>
+                  <span style={styles.reviewValue}>${data.entryFee || 0}</span>
+                </div>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Prize Pool</span>
+                  <span style={styles.reviewValue}>${data.prizePool || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            {errors.submit && (
+              <div style={{
+                padding: '16px',
+                borderRadius: '12px',
+                background: 'rgba(255, 68, 68, 0.1)',
+                border: '1px solid rgba(255, 68, 68, 0.3)',
+                color: '#ff4444',
+                fontSize: '14px',
+              }}>
+                {errors.submit}
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }
   };
 
   return (
-            <div className="min-h-screen pt-16" style={{ backgroundColor: '#121212' }}>
-          <div className="container-responsive py-8">
-            <div className="max-w-4xl mx-auto">
+    <div style={styles.container}>
+      <div style={styles.content}>
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-4xl font-bold text-white mb-2" style={{ fontFamily: 'Anton, system-ui, sans-serif' }}>
-            CREATE TOURNAMENT
-          </h1>
-          <p className="text-gray-400 text-lg">
-            Set up your tournament in just a few steps
+        <div style={styles.header}>
+          <button
+            style={styles.backButton}
+            onClick={() => router.push('/dashboard')}
+            onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.backButtonHover)}
+            onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.backButton)}
+          >
+            <ArrowLeft style={{ width: '16px', height: '16px' }} />
+            Back to Dashboard
+          </button>
+          <h1 style={styles.title}>CREATE TOURNAMENT</h1>
+          <p style={styles.subtitle}>
+            Set up your professional tournament in just a few steps
           </p>
-        </motion.div>
+        </div>
 
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+        {/* Progress Bar */}
+        <div style={styles.progressContainer}>
+          <div style={styles.progressBar}>
             {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-200 ${
-                  currentStep >= step.id
-                    ? 'border-purple-500 bg-purple-500 text-white'
-                    : 'border-gray-600 text-gray-400'
-                }`}>
-                  {currentStep > step.id ? (
-                    <Check className="w-6 h-6" />
+              <div key={step.id} style={styles.step}>
+                <div
+                  style={{
+                    ...styles.stepIcon,
+                    ...(step.id === currentStep ? styles.stepIconActive :
+                        step.id < currentStep ? styles.stepIconCompleted :
+                        styles.stepIconInactive)
+                  }}
+                >
+                  {step.id < currentStep ? (
+                    <Check style={{ width: '20px', height: '20px' }} />
                   ) : (
                     step.icon
                   )}
                 </div>
-                <span className={`ml-3 font-medium ${
-                  currentStep >= step.id ? 'text-white' : 'text-gray-400'
-                }`}>
+                <div
+                  style={{
+                    ...styles.stepTitle,
+                    ...(step.id <= currentStep ? styles.stepTitleActive : styles.stepTitleInactive)
+                  }}
+                >
                   {step.title}
-                </span>
-                {index < steps.length - 1 && (
-                  <div className={`w-16 h-0.5 mx-4 ${
-                    currentStep > step.id ? 'bg-purple-500' : 'bg-gray-600'
-                  }`} />
-                )}
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Step Content */}
-        <div className="bg-gray-900 rounded-lg p-8 border border-gray-800">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {renderStepContent()}
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Navigation */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-gray-800">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={prevStep}
-              disabled={currentStep === 1}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-
-            {currentStep < steps.length ? (
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={nextStep}
-              >
-                Next
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? 'Creating Tournament...' : 'Create Tournament'}
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-    </div>
-  );
-}
-
-// Step Components
-function BasicInfoStep({ data, updateData }: { data: TournamentData; updateData: (field: keyof TournamentData, value: any) => void }) {
-  return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-white mb-6">Tournament Information</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Tournament Name *
-          </label>
-          <input
-            type="text"
-            value={data.name}
-            onChange={(e) => updateData('name', e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-            style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-            placeholder="Enter tournament name"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Venue *
-          </label>
-          <input
-            type="text"
-            value={data.venue}
-            onChange={(e) => updateData('venue', e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-            style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-            placeholder="Enter venue name"
-            required
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Description
-        </label>
-        <textarea
-          value={data.description}
-          onChange={(e) => updateData('description', e.target.value)}
-          rows={4}
-          className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-          style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-          placeholder="Describe your tournament..."
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Start Date *
-          </label>
-          <input
-            type="date"
-            value={data.startDate}
-            onChange={(e) => updateData('startDate', e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-            style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            End Date *
-          </label>
-          <input
-            type="date"
-            value={data.endDate}
-            onChange={(e) => updateData('endDate', e.target.value)}
-            className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-            style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-            required
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TournamentTypeStep({ data, updateData }: { data: TournamentData; updateData: (field: keyof TournamentData, value: any) => void }) {
-  const tournamentTypes = [
-    { id: 'single_elimination', name: 'Single Elimination', description: 'Teams are eliminated after one loss' },
-    { id: 'double_elimination', name: 'Double Elimination', description: 'Teams must lose twice to be eliminated' },
-    { id: 'round_robin', name: 'Round Robin', description: 'All teams play against each other' },
-    { id: 'swiss', name: 'Swiss System', description: 'Teams play against others with similar records' },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-white mb-6">Tournament Format</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {tournamentTypes.map((type) => (
-          <div
-            key={type.id}
-            onClick={() => updateData('tournamentType', type.id)}
-            className={`p-6 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-              data.tournamentType === type.id
-                ? 'border-purple-500 bg-purple-500/10'
-                : 'border-gray-600 hover:border-gray-500'
-            }`}
-          >
-            <h3 className="text-lg font-semibold text-white mb-2">{type.name}</h3>
-            <p className="text-gray-400 text-sm">{type.description}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Maximum Teams
-          </label>
-          <select
-            value={data.maxTeams}
-            onChange={(e) => updateData('maxTeams', parseInt(e.target.value))}
-            className="w-full px-4 py-3 rounded-lg border text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-            style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-          >
-            {[4, 8, 16, 32, 64].map(num => (
-              <option key={num} value={num}>{num} Teams</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Tournament Visibility
-          </label>
-          <div className="flex items-center space-x-4">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                checked={data.isPublic}
-                onChange={() => updateData('isPublic', true)}
-                className="mr-2"
-              />
-              <span className="text-white">Public</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                checked={!data.isPublic}
-                onChange={() => updateData('isPublic', false)}
-                className="mr-2"
-              />
-              <span className="text-white">Private</span>
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TeamsScheduleStep({ data, updateData }: { data: TournamentData; updateData: (field: keyof TournamentData, value: any) => void }) {
-  return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-white mb-6">Teams & Scheduling</h2>
-      
-      <div className="bg-gray-800 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Tournament Summary</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <span className="text-gray-400">Format:</span>
-            <p className="text-white font-medium">{data.tournamentType.replace('_', ' ').toUpperCase()}</p>
-          </div>
-          <div>
-            <span className="text-gray-400">Teams:</span>
-            <p className="text-white font-medium">{data.maxTeams}</p>
-          </div>
-          <div>
-            <span className="text-gray-400">Duration:</span>
-            <p className="text-white font-medium">
-              {data.startDate && data.endDate 
-                ? `${new Date(data.startDate).toLocaleDateString()} - ${new Date(data.endDate).toLocaleDateString()}`
-                : 'Not set'
-              }
-            </p>
-          </div>
-          <div>
-            <span className="text-gray-400">Visibility:</span>
-            <p className="text-white font-medium">{data.isPublic ? 'Public' : 'Private'}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Entry Fee ($)
-          </label>
-          <input
-            type="number"
-            value={data.entryFee}
-            onChange={(e) => updateData('entryFee', parseFloat(e.target.value) || 0)}
-            className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-            style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-            placeholder="0"
-            min="0"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Prize Pool ($)
-          </label>
-          <input
-            type="number"
-            value={data.prizePool}
-            onChange={(e) => updateData('prizePool', parseFloat(e.target.value) || 0)}
-            className="w-full px-4 py-3 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-            style={{ backgroundColor: '#2a2a2a', borderColor: '#374151' }}
-            placeholder="0"
-            min="0"
-          />
-        </div>
-      </div>
-
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-        <p className="text-blue-400 text-sm">
-          💡 <strong>Tip:</strong> Teams can be added after tournament creation. You can also import teams from CSV or invite players directly.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ReviewStep({ data }: { data: TournamentData }) {
-  return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-white mb-6">Review & Create</h2>
-      
-      <div className="bg-gray-800 rounded-lg p-6 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Tournament Details</h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-gray-400">Name:</span>
-                <p className="text-white font-medium">{data.name}</p>
-              </div>
-              <div>
-                <span className="text-gray-400">Venue:</span>
-                <p className="text-white font-medium">{data.venue}</p>
-              </div>
-              <div>
-                <span className="text-gray-400">Description:</span>
-                <p className="text-white">{data.description || 'No description provided'}</p>
-              </div>
+        {/* Form Card */}
+        <div style={styles.formCard}>
+          {/* Error Display */}
+          {errors.submit && (
+            <div style={{
+              background: 'rgba(255, 68, 68, 0.1)',
+              border: '1px solid rgba(255, 68, 68, 0.3)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '24px',
+              color: '#ff4444'
+            }}>
+              <div style={{ fontWeight: '600', marginBottom: '8px' }}>Error Creating Tournament</div>
+              <div style={{ fontSize: '14px' }}>{errors.submit}</div>
             </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Tournament Settings</h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-gray-400">Format:</span>
-                <p className="text-white font-medium">{data.tournamentType.replace('_', ' ').toUpperCase()}</p>
+          )}
+          
+          {renderStepContent()}
+          
+          {/* Success Message */}
+          {formLoading && (
+            <div style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: 'rgba(26, 26, 26, 0.95)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 215, 0, 0.3)',
+              borderRadius: '20px',
+              padding: '32px',
+              textAlign: 'center',
+              zIndex: 1000,
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 24px'
+              }}>
+                <Trophy style={{ width: '32px', height: '32px', color: '#1a1a1a' }} />
               </div>
-              <div>
-                <span className="text-gray-400">Max Teams:</span>
-                <p className="text-white font-medium">{data.maxTeams}</p>
-              </div>
-              <div>
-                <span className="text-gray-400">Visibility:</span>
-                <p className="text-white font-medium">{data.isPublic ? 'Public' : 'Private'}</p>
-              </div>
-              <div>
-                <span className="text-gray-400">Entry Fee:</span>
-                <p className="text-white font-medium">${data.entryFee}</p>
-              </div>
-              <div>
-                <span className="text-gray-400">Prize Pool:</span>
-                <p className="text-white font-medium">${data.prizePool}</p>
-              </div>
+              <h3 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#FFD700',
+                marginBottom: '12px'
+              }}>
+                Creating Tournament...
+              </h3>
+              <p style={{
+                fontSize: '16px',
+                color: '#b3b3b3',
+                marginBottom: '24px'
+              }}>
+                Please wait while we save your tournament to the database.
+              </p>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                border: '3px solid rgba(255, 215, 0, 0.3)',
+                borderTopColor: '#FFD700',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto'
+              }} />
             </div>
-          </div>
+          )}
         </div>
 
-        <div className="border-t border-gray-700 pt-4">
-          <div>
-            <span className="text-gray-400">Date Range:</span>
-            <p className="text-white font-medium">
-              {data.startDate && data.endDate 
-                ? `${new Date(data.startDate).toLocaleDateString()} - ${new Date(data.endDate).toLocaleDateString()}`
-                : 'Not set'
+        {/* Actions */}
+        <div style={styles.actions}>
+          <button
+            style={{
+              ...styles.button,
+              ...styles.buttonSecondary,
+              ...(currentStep === 1 ? styles.buttonDisabled : {})
+            }}
+            onClick={prevStep}
+            disabled={currentStep === 1}
+            onMouseEnter={(e) => {
+              if (currentStep > 1) {
+                Object.assign(e.currentTarget.style, styles.buttonSecondaryHover);
               }
-            </p>
-          </div>
-        </div>
-      </div>
+            }}
+            onMouseLeave={(e) => {
+              if (currentStep > 1) {
+                Object.assign(e.currentTarget.style, { ...styles.button, ...styles.buttonSecondary });
+              }
+            }}
+          >
+            <ArrowLeft style={{ width: '16px', height: '16px' }} />
+            Previous
+          </button>
 
-      <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-        <p className="text-green-400 text-sm">
-          ✅ <strong>Ready to create!</strong> Your tournament will be set up and ready for team registration.
-        </p>
+          {currentStep < 4 ? (
+            <button
+              style={{
+                ...styles.button,
+                ...styles.buttonPrimary
+              }}
+              onClick={nextStep}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.buttonPrimaryHover)}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, { ...styles.button, ...styles.buttonPrimary })}
+            >
+              Next Step
+              <ArrowRight style={{ width: '16px', height: '16px' }} />
+            </button>
+          ) : (
+            <button
+              style={{
+                ...styles.button,
+                ...styles.buttonPrimary,
+                ...(formLoading ? styles.buttonDisabled : {})
+              }}
+              onClick={handleSubmit}
+              disabled={formLoading}
+              onMouseEnter={(e) => {
+                if (!formLoading) {
+                  Object.assign(e.currentTarget.style, styles.buttonPrimaryHover);
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!formLoading) {
+                  Object.assign(e.currentTarget.style, { ...styles.button, ...styles.buttonPrimary });
+                }
+              }}
+            >
+              {formLoading ? (
+                <>
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #1a1a1a',
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Trophy style={{ width: '16px', height: '16px' }} />
+                  Create Tournament
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
-} 
+};
+
+export default CreateTournamentV2;

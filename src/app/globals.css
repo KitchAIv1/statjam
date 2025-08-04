@@ -4,7 +4,42 @@
 
 @layer base {
   /* CSS Custom Properties for consistent spacing and sizing */
-  :root {
+:root {
+    /* === COLOR SYSTEM === */
+    /* Primary Brand Colors */
+    --color-primary: #FCD34D;        /* Yellow-400 */
+    --color-primary-hover: #F59E0B;  /* Yellow-500 */
+    --color-secondary: #4B0082;      /* Purple */
+    --color-accent: #FFD700;         /* Gold */
+    
+    /* Background Colors */
+    --color-bg-primary: #121212;     /* Main dark */
+    --color-bg-secondary: #1a1a1a;   /* Card backgrounds */
+    --color-bg-tertiary: #2a2a2a;    /* Hover states */
+    --color-bg-input: #2a2a2a;       /* Form inputs */
+    
+    /* Text Colors */
+    --color-text-primary: #ffffff;   /* Main text */
+    --color-text-secondary: #b3b3b3; /* Secondary text */
+    --color-text-muted: #666666;     /* Muted text */
+    --color-text-inverse: #111827;   /* Dark text on light */
+    
+    /* Border Colors */
+    --color-border: #374151;         /* Default borders */
+    --color-border-hover: #4B5563;   /* Hover borders */
+    --color-border-focus: #FCD34D;   /* Focus borders */
+    
+    /* Status Colors */
+    --color-success: #10B981;        /* Green */
+    --color-warning: #F59E0B;        /* Amber */
+    --color-error: #EF4444;          /* Red */
+    --color-info: #3B82F6;           /* Blue */
+    
+    /* Game Status Colors */
+    --color-status-live: #EF4444;    /* Red for live */
+    --color-status-upcoming: #b3b3b3; /* Gray for upcoming */
+    --color-status-finished: #ffffff; /* White for finished */
+    
     /* Spacing Scale */
     --space-xs: 0.25rem;
     --space-sm: 0.5rem;
@@ -64,8 +99,10 @@
 }
 
 @layer components {
-  /* Responsive Container Pattern */
-  .container-responsive {
+  /* === CONTAINER SYSTEM === */
+  
+  /* Base container - replaces all max-w-7xl mx-auto px-4 patterns */
+  .container-base {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
@@ -73,67 +110,190 @@
     padding-right: var(--space-md);
   }
 
-  /* Mobile First Breakpoints */
+  /* Standard page container */
+  .container-page {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+    max-width: var(--container-2xl); /* 1400px */
+  }
+
+  /* Narrow container for content */
+  .container-content {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+    max-width: var(--container-lg); /* 1024px */
+  }
+
+  /* Hero/full-width container */
+  .container-hero {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+    max-width: var(--container-max); /* 1600px */
+  }
+
+  /* Section containers with responsive padding */
+  .container-section {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+    max-width: var(--container-2xl);
+    padding-top: var(--space-2xl);
+    padding-bottom: var(--space-2xl);
+  }
+
+  /* Mobile First Responsive Adjustments */
   @media (min-width: 640px) {
-    .container-responsive {
-      max-width: var(--container-sm);
+    .container-base, .container-page, .container-content, .container-hero {
       padding-left: var(--space-lg);
       padding-right: var(--space-lg);
     }
-  }
-
-  @media (min-width: 768px) {
-    .container-responsive {
-      max-width: var(--container-md);
+    .container-section {
+      padding-left: var(--space-lg);
+      padding-right: var(--space-lg);
+      padding-top: var(--space-3xl);
+      padding-bottom: var(--space-3xl);
     }
   }
 
   @media (min-width: 1024px) {
-    .container-responsive {
-      max-width: var(--container-lg);
+    .container-base, .container-page, .container-content, .container-hero {
+      padding-left: var(--space-xl);
+      padding-right: var(--space-xl);
+    }
+    .container-section {
       padding-left: var(--space-xl);
       padding-right: var(--space-xl);
     }
   }
 
-  @media (min-width: 1280px) {
-    .container-responsive {
-      max-width: var(--container-xl);
-    }
-  }
-
-  @media (min-width: 1536px) {
-    .container-responsive {
-      max-width: var(--container-2xl);
-    }
-  }
-
-  /* Grid Layouts with Proper Constraints */
-  .grid-responsive-cards {
+  /* === GRID SYSTEM === */
+  
+  /* Base grid - replaces all manual grid implementations */
+  .grid-base {
     display: grid;
+    gap: var(--grid-gap);
+  }
+
+  /* Auto-responsive grids */
+  .grid-auto-fit {
+    display: grid;
+    gap: var(--grid-gap);
     grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
-    gap: var(--grid-gap);
     justify-items: center;
-    max-width: var(--container-2xl);
+  }
+
+  .grid-auto-fill {
+    display: grid;
+    gap: var(--grid-gap);
+    grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width), 1fr));
+    justify-items: center;
+  }
+
+  /* === SECTION-SPECIFIC GRIDS === */
+  
+  /* Landing Page Hero Stats - Large & Prominent */
+  .landing-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 320px));
+    gap: 2rem;
+    justify-content: center;
+    max-width: 1400px;
     margin: 0 auto;
   }
 
-  .grid-stat-cards {
+  /* Landing Page Featured Games - Visual Focus */
+  .landing-games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(var(--stat-card-size), var(--stat-card-size)));
-    gap: var(--grid-gap);
+    grid-template-columns: repeat(auto-fit, minmax(380px, 420px));
+    gap: 2rem;
     justify-content: center;
-    max-width: var(--container-2xl);
+    max-width: 1400px;
     margin: 0 auto;
   }
 
-  .grid-game-cards {
+  /* Dashboard Stats - Compact Overview */
+  .dashboard-stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(var(--game-card-width), var(--game-card-width)));
-    gap: var(--grid-gap);
+    grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
+    gap: 1.5rem;
     justify-content: center;
-    max-width: var(--container-2xl);
+    max-width: 1200px;
     margin: 0 auto;
+  }
+
+  /* Dashboard Quick Actions - Button-like */
+  .dashboard-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
+    gap: 1.5rem;
+    justify-content: center;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Responsive column grids - replaces manual breakpoint classes */
+  .grid-cols-responsive {
+    display: grid;
+    gap: var(--grid-gap);
+    grid-template-columns: 1fr;
+  }
+
+  /* RESPONSIVE GRID BREAKPOINTS */
+  @media (min-width: 640px) {
+    .grid-cols-responsive {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .grid-stats {
+      grid-template-columns: repeat(auto-fit, minmax(280px, 320px));
+    }
+    .grid-games {
+      grid-template-columns: repeat(auto-fit, minmax(350px, 380px));
+    }
+  }
+
+  @media (min-width: 768px) {
+    .grid-cols-responsive {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .grid-stats {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 340px));
+    }
+    .grid-games {
+      grid-template-columns: repeat(auto-fit, minmax(360px, 390px));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .grid-cols-responsive {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .grid-stats {
+      grid-template-columns: repeat(auto-fit, minmax(320px, 350px));
+    }
+    .grid-games {
+      grid-template-columns: repeat(auto-fit, minmax(370px, 400px));
+    }
+  }
+
+  /* PREVENT OVERLAP ON ULTRA-WIDE SCREENS */
+  @media (min-width: 1400px) {
+    .grid-stats {
+      grid-template-columns: repeat(5, 350px);
+    }
+    .grid-games {
+      grid-template-columns: repeat(4, 400px);
+    }
   }
 
   /* Component Size Constraints */
@@ -144,18 +304,95 @@
     aspect-ratio: var(--card-aspect-ratio);
   }
 
-  .stat-card-constrained {
-    width: var(--stat-card-size);
-    height: var(--stat-card-size);
-    min-width: var(--stat-card-size);
-    max-width: var(--stat-card-size);
+  /* === SECTION-SPECIFIC CARD STYLES === */
+  
+  /* Landing Page Hero Stat Cards */
+  .landing-stat-card {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border: 1px solid rgba(252, 211, 77, 0.2);
+    border-radius: 16px;
+    padding: 2rem;
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
   }
 
-  .game-card-constrained {
-    width: var(--game-card-width);
-    min-height: var(--game-card-min-height);
-    min-width: var(--game-card-width);
-    max-width: var(--game-card-width);
+  .landing-stat-card:hover {
+    border-color: rgba(252, 211, 77, 0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .landing-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #FCD34D, #F59E0B);
+  }
+
+  /* Landing Page Game Cards */
+  .landing-game-card {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .landing-game-card:hover {
+    border-color: rgba(252, 211, 77, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Dashboard Stat Cards - Compact */
+  .dashboard-stat-card {
+    background: #1a1a1a;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 1.5rem;
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+  }
+
+  .dashboard-stat-card:hover {
+    border-color: #FCD34D;
+    background: #1f1f1f;
+  }
+
+  /* Dashboard Action Cards - Button-like */
+  .dashboard-action-card {
+    background: linear-gradient(135deg, #4B0082 0%, #6B21A8 100%);
+    border: 1px solid rgba(252, 211, 77, 0.3);
+    border-radius: 12px;
+    padding: 2rem;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .dashboard-action-card:hover {
+    background: linear-gradient(135deg, #5B10A2 0%, #7C2D9B 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(75, 0, 130, 0.3);
   }
 }
 
@@ -164,6 +401,49 @@
     text-wrap: balance;
   }
 
+  /* === COLOR UTILITIES === */
+  /* Background utilities */
+  .bg-primary { background-color: var(--color-bg-primary) !important; }
+  .bg-secondary { background-color: var(--color-bg-secondary) !important; }
+  .bg-tertiary { background-color: var(--color-bg-tertiary) !important; }
+  .bg-input { background-color: var(--color-bg-input) !important; }
+
+  /* Text color utilities */
+  .text-primary { color: var(--color-text-primary) !important; }
+  .text-secondary { color: var(--color-text-secondary) !important; }
+  .text-muted { color: var(--color-text-muted) !important; }
+  .text-inverse { color: var(--color-text-inverse) !important; }
+  .text-brand { color: var(--color-primary) !important; }
+  .text-accent { color: var(--color-accent) !important; }
+
+  /* Border utilities */
+  .border-default { border-color: var(--color-border) !important; border-width: 1px !important; }
+  .border-hover { border-color: var(--color-border-hover) !important; }
+  .border-focus { border-color: var(--color-border-focus) !important; }
+
+  /* Status colors */
+  .text-status-live { color: var(--color-status-live) !important; }
+  .text-status-upcoming { color: var(--color-status-upcoming) !important; }
+  .text-status-finished { color: var(--color-status-finished) !important; }
+
+  /* === LEGACY CLEANUP - TO BE REMOVED === */
+
+  /* Container max-width emergency fix */
+  .max-width-container {
+    max-width: 1400px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  /* Section spacing emergency fix */
+  .section-spacing {
+    padding-top: 5rem !important;
+    padding-bottom: 5rem !important;
+  }
+
+  /* === LAYOUT UTILITIES === */
   /* Remove problematic flex utilities */
   .flex-safe {
     display: flex;
@@ -175,5 +455,35 @@
     flex: 0 1 var(--card-min-width);
     min-width: var(--card-min-width);
     max-width: var(--card-max-width);
+  }
+
+  /* Typography utilities */
+  .font-header { font-family: 'Anton', system-ui, sans-serif; }
+  .font-body { font-family: 'Poppins', system-ui, sans-serif; }
+
+  /* === SPACING UTILITIES === */
+  .spacing-card-header {
+    margin-bottom: 1rem;
+  }
+
+  .spacing-card-content {
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+  }
+
+  .spacing-game-teams {
+    margin-bottom: 0.75rem;
+  }
+
+  .spacing-team-row {
+    margin-bottom: 0.5rem;
+  }
+
+  .spacing-game-status {
+    margin-bottom: 1rem;
+  }
+
+  .spacing-score-text {
+    line-height: 1.2;
   }
 }
