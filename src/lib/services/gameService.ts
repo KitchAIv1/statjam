@@ -155,32 +155,6 @@ export class GameService {
     }
   }
 
-  // ===== LIVE GAME MANAGEMENT METHODS =====
-  
-  // Get current game for stat admin
-  static async getCurrentGame(statAdminId: string): Promise<Game | null> {
-    try {
-      const { data, error } = await supabase
-        .from('games')
-        .select('*')
-        .eq('stat_admin_id', statAdminId)
-        .in('status', ['scheduled', 'in_progress'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error) {
-        console.error('Error getting current game:', error);
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Error in getCurrentGame:', error);
-      return null;
-    }
-  }
-
   // Get all games assigned to a stat admin
   static async getAssignedGames(statAdminId: string): Promise<any[]> {
     try {
@@ -221,6 +195,32 @@ export class GameService {
     } catch (error) {
       console.error('Error getting assigned games:', error);
       return [];
+    }
+  }
+
+  // ===== LIVE GAME MANAGEMENT METHODS =====
+
+  // Get current game for stat admin
+  static async getCurrentGame(statAdminId: string): Promise<Game | null> {
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('stat_admin_id', statAdminId)
+        .in('status', ['scheduled', 'in_progress'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error('Error getting current game:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getCurrentGame:', error);
+      return null;
     }
   }
 

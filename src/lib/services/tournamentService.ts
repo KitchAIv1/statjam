@@ -601,9 +601,12 @@ export class TeamService {
     try {
       console.log('🔍 TeamService: Fetching players for team:', teamId);
       
+
+      
       const { data: teamPlayers, error } = await supabase
         .from('team_players')
         .select(`
+          player_id,
           users!player_id (
             id,
             email,
@@ -621,8 +624,12 @@ export class TeamService {
 
       console.log('🔍 TeamService: Found team players:', teamPlayers?.length || 0);
 
+      // Filter out any team_players records where users is null (orphaned records)
+      const validTeamPlayers = (teamPlayers || []).filter((tp): tp is { users: NonNullable<typeof tp.users> } => tp.users !== null);
+      console.log('🔍 TeamService: Valid team players (non-null users):', validTeamPlayers.length);
+
       // Map team_players data to Player interface
-      const players = (teamPlayers || []).map(tp => ({
+      const players = validTeamPlayers.map(tp => ({
         id: tp.users.id,
         name: tp.users.email.split('@')[0], // Use email prefix as name for now
         email: tp.users.email,

@@ -233,9 +233,10 @@ const StatTracker = () => {
     }
   };
 
-  const recordStat = (stat: any, modifier: string = '') => {
+  const recordStat = async (stat: any, modifier: string = '') => {
     let actionText = '';
     
+    // Build action text for UI
     if (stat.hasMadeMissed) {
       actionText = `${stat.label} ${modifier === 'made' ? 'Made' : 'Missed'} ${stat.type === 'points' ? 'Points' : stat.type === 'freethrow' ? 'Free Throw' : stat.type.toUpperCase()}`;
     } else if (stat.hasOffensiveDefensive) {
@@ -246,11 +247,83 @@ const StatTracker = () => {
       actionText = `${stat.label} ${stat.type === 'points' ? 'Points' : stat.type === 'freethrow' ? 'Free Throw' : stat.type.toUpperCase()}`;
     }
     
+    // Update UI immediately for responsiveness
     setLastAction(actionText);
     setShowMadeMissed(false);
     setShowOffensiveDefensive(false);
     setShowPersonalTechnical(false);
     setSelectedStat(null);
+    
+    // ===== DATABASE PERSISTENCE =====
+    try {
+      console.log('🏀 Recording stat to database:', { stat, modifier, selectedPlayer, selectedTeam });
+      
+      // Find the selected player's data
+      const currentPlayers = teamPlayers[selectedTeam as keyof typeof teamPlayers];
+      const selectedPlayerData = currentPlayers.find(p => p.name === selectedPlayer);
+      
+      if (!selectedPlayerData) {
+        console.error('❌ Selected player not found:', selectedPlayer);
+        return;
+      }
+      
+      // Get team ID based on selected team
+      const teamId = selectedTeam === 'Team A' ? teamAInfo?.id : teamBInfo?.id;
+      if (!teamId) {
+        console.error('❌ Team ID not found for:', selectedTeam);
+        return;
+      }
+      
+      // Map stat type and calculate value
+      let statType = stat.type || 'misc';
+      let statValue = 1; // Default value
+      
+      // Handle different stat types
+      if (stat.type === 'points') {
+        if (stat.label.includes('3')) statValue = 3;
+        else if (stat.label.includes('2')) statValue = 2;
+        else if (stat.label.includes('Free')) statValue = 1;
+      } else if (stat.type === 'freethrow') {
+        statValue = 1;
+      }
+      
+      // Adjust for missed shots (negative value for tracking)
+      if (modifier === 'missed') {
+        statValue = 0; // Track attempts but no points scored
+        statType = statType + '_attempt';
+      } else if (modifier === 'made') {
+        statType = statType + '_made';
+      }
+      
+      // Prepare stat data for database
+      const statData = {
+        gameId: gameId!,
+        playerId: selectedPlayerData.id,
+        teamId: teamId,
+        statType: statType,
+        statValue: statValue,
+        modifier: modifier || undefined,
+        quarter: quarter,
+        gameTimeMinutes: gameClock.minutes,
+        gameTimeSeconds: gameClock.seconds
+      };
+      
+      console.log('📊 Sending stat data to database:', statData);
+      
+      // Record stat in database
+      const success = await GameService.recordStat(statData);
+      
+      if (success) {
+        console.log('✅ Stat recorded successfully in database');
+      } else {
+        console.error('❌ Failed to record stat in database');
+        // Could show user feedback here
+      }
+      
+    } catch (error) {
+      console.error('❌ Error recording stat:', error);
+      // Could show user feedback here
+    }
   };
 
   const handleUndo = () => {
