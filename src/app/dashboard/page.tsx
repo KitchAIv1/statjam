@@ -14,6 +14,11 @@ const DashboardV2 = () => {
   const { stats, loading: statsLoading } = useTournamentStats();
   const router = useRouter();
   
+  // Debug tournament loading (reduced logging)
+  if (tournaments.length > 0) {
+    console.log('✅ Tournaments loaded:', tournaments.length);
+  }
+  
   // Check for success message from tournament creation
   const [showSuccess, setShowSuccess] = useState(false);
   

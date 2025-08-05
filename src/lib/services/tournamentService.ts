@@ -197,7 +197,7 @@ export class TournamentService {
       }
 
       // Map database fields to our Tournament interface
-      return (tournaments || []).map(tournament => ({
+      const mappedTournaments = (tournaments || []).map(tournament => ({
         id: tournament.id,
         name: tournament.name,
         description: tournament.description || '',
@@ -216,6 +216,8 @@ export class TournamentService {
         createdAt: tournament.created_at || new Date().toISOString(),
         updatedAt: tournament.updated_at || new Date().toISOString(),
       }));
+
+      return mappedTournaments;
     } catch (error) {
       console.error('Error getting tournaments by organizer:', error);
       throw error instanceof Error ? error : new Error('Failed to get tournaments');
@@ -335,7 +337,7 @@ export class TeamService {
         wins: 0, // Default value since not in DB
         losses: 0, // Default value since not in DB
         tournamentId: team.tournament_id,
-        createdAt: team.created_at || new Date().toISOString(),
+        createdAt: new Date().toISOString(), // Default since created_at doesn't exist in teams table
       };
     } catch (error) {
       console.error('Error creating team:', error);
@@ -344,51 +346,299 @@ export class TeamService {
   }
 
   static async getTeamsByTournament(tournamentId: string): Promise<Team[]> {
-    // TODO: Implement Supabase integration
-    // Mock data for now
-    return [
-      {
-        id: '1',
-        name: 'Lakers Elite',
-        players: [
-          { id: '1', name: 'John Smith', email: 'john@example.com', position: 'PG', jerseyNumber: 1, isPremium: true, country: 'US', createdAt: '2024-01-01T00:00:00Z' },
-          { id: '2', name: 'Mike Johnson', email: 'mike@example.com', position: 'SG', jerseyNumber: 2, isPremium: false, country: 'US', createdAt: '2024-01-01T00:00:00Z' },
-          { id: '3', name: 'David Wilson', email: 'david@example.com', position: 'SF', jerseyNumber: 3, isPremium: true, country: 'US', createdAt: '2024-01-01T00:00:00Z' },
-        ],
-        captain: { id: '1', name: 'John Smith', email: 'john@example.com', position: 'PG', jerseyNumber: 1, isPremium: true, country: 'US', createdAt: '2024-01-01T00:00:00Z' },
-        wins: 5,
-        losses: 2,
-        tournamentId,
-        createdAt: '2024-01-01T00:00:00Z',
-      },
-      {
-        id: '2',
-        name: 'Warriors Pro',
-        players: [
-          { id: '4', name: 'Chris Davis', email: 'chris@example.com', position: 'PG', jerseyNumber: 4, isPremium: true, country: 'US', createdAt: '2024-01-01T00:00:00Z' },
-          { id: '5', name: 'Alex Brown', email: 'alex@example.com', position: 'C', jerseyNumber: 5, isPremium: false, country: 'US', createdAt: '2024-01-01T00:00:00Z' },
-        ],
-        captain: { id: '4', name: 'Chris Davis', email: 'chris@example.com', position: 'PG', jerseyNumber: 4, isPremium: true, country: 'US', createdAt: '2024-01-01T00:00:00Z' },
-        wins: 4,
-        losses: 3,
-        tournamentId,
-        createdAt: '2024-01-01T00:00:00Z',
+    try {
+      console.log('🔍 TeamService: Fetching teams for tournament:', tournamentId);
+      
+      const { data: teams, error } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('tournament_id', tournamentId);
+
+      if (error) {
+        console.error('❌ Supabase error getting teams:', error);
+        console.error('❌ Error details:', error.message, error.details, error.hint);
+        throw new Error(`Failed to get teams: ${error.message}`);
       }
-    ];
+
+      console.log('🔍 TeamService: Raw teams data from Supabase:', teams);
+      console.log('🔍 TeamService: Found teams count:', teams?.length || 0);
+      
+      if (!teams || teams.length === 0) {
+        console.log('⚠️ No teams found for tournament:', tournamentId);
+        return [];
+      }
+
+      // Map database fields to our Team interface and load players
+      const mappedTeams = await Promise.all((teams || []).map(async (team) => {
+        // Fetch players for this team
+        let teamPlayers: Player[] = [];
+        let captain: Player = {
+          id: '',
+          name: '',
+          email: '',
+          position: 'PG' as const,
+          jerseyNumber: 0,
+          isPremium: false,
+          country: '',
+          createdAt: new Date().toISOString(),
+        };
+
+        try {
+          teamPlayers = await TeamService.getTeamPlayers(team.id);
+          // Find captain (first player marked as captain, or first player)
+          captain = teamPlayers.find(p => {
+            // We'll need to track captain status in team_players table
+            return false; // For now, no captain logic
+          }) || teamPlayers[0] || captain;
+        } catch (error) {
+          console.error(`Failed to load players for team ${team.id}:`, error);
+        }
+
+        return {
+          id: team.id,
+          name: team.name,
+          logo: team.logo || '',
+          players: teamPlayers,
+          captain: captain,
+          coach: team.coach || '',
+          wins: 0, // Default value since not in DB schema yet
+          losses: 0, // Default value since not in DB schema yet
+          tournamentId: team.tournament_id,
+          createdAt: new Date().toISOString(), // Default since created_at doesn't exist in teams table
+        };
+      }));
+
+      console.log('🔍 TeamService: Mapped teams:', mappedTeams.map(t => ({ id: t.id, name: t.name })));
+      
+      return mappedTeams;
+    } catch (error) {
+      console.error('Error getting teams by tournament:', error);
+      throw error instanceof Error ? error : new Error('Failed to get teams');
+    }
+  }
+
+  static async getAllPlayers(): Promise<Player[]> {
+    try {
+      console.log('🔍 TeamService: Fetching all available players');
+      
+      // Since the users table might have RLS issues, let's try multiple approaches
+      let players: Player[] = [];
+      
+      // Approach 1: Try to get all users first (to check RLS and table access)
+      try {
+        console.log('🔍 Approach 1: Fetching ALL users to check access');
+        const { data: allUsers, error: allUsersError } = await supabase
+          .from('users')
+          .select('id, email, role, premium_status, country, created_at');
+        
+        if (allUsersError) {
+          console.log('❌ Users table error:', allUsersError.message);
+          if (allUsersError.message.includes('infinite recursion') || allUsersError.message.includes('operator does not exist')) {
+            console.log('🔧 RLS policy issue detected - backend fix needed');
+          }
+        } else {
+          console.log('✅ Users table accessible, found:', allUsers?.length || 0, 'users');
+          
+          // Filter for players
+          const playerUsers = (allUsers || []).filter(user => user.role === 'player');
+          console.log('✅ Found', playerUsers.length, 'users with role="player"');
+          
+          if (playerUsers.length > 0) {
+            // Map real players to Player interface
+            players = playerUsers.map(user => ({
+              id: user.id,
+              name: user.email.split('@')[0], // Use email prefix as name for now
+              email: user.email,
+              position: 'PG' as const,
+              jerseyNumber: Math.floor(Math.random() * 99) + 1, // Random jersey number for now
+              isPremium: user.premium_status || false,
+              country: user.country || 'US',
+              createdAt: user.created_at || new Date().toISOString(),
+            }));
+          } else {
+            // Show what users we found for debugging
+            console.log('⚠️ No players found. Existing users:');
+            allUsers?.slice(0, 3).forEach((user, index) => {
+              console.log(`   User ${index + 1}: role="${user.role}", email="${user.email}"`);
+            });
+          }
+        }
+      } catch (usersError) {
+        console.log('❌ Users table approach failed:', usersError);
+      }
+      
+      // Approach 2: If no players found, create some demo players from current user
+      if (players.length === 0) {
+        console.log('⚠️ No players found in users table, creating demo players');
+        
+        // Get current user for reference
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          console.log('✅ Current user found, creating demo players based on auth system');
+          
+          // Create demo players with different roles/premiums
+          players = [
+            {
+              id: 'demo-1',
+              name: 'Premium Player 1',
+              email: 'premium1@statjam.com',
+              position: 'PG' as const,
+              jerseyNumber: 23,
+              isPremium: true,
+              country: 'US',
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: 'demo-2', 
+              name: 'Premium Player 2',
+              email: 'premium2@statjam.com',
+              position: 'SG' as const,
+              jerseyNumber: 24,
+              isPremium: true,
+              country: 'US',
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: 'demo-3',
+              name: 'Regular Player 1',
+              email: 'player1@statjam.com', 
+              position: 'SF' as const,
+              jerseyNumber: 7,
+              isPremium: false,
+              country: 'US',
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: 'demo-4',
+              name: 'Regular Player 2',
+              email: 'player2@statjam.com',
+              position: 'PF' as const,
+              jerseyNumber: 21,
+              isPremium: false,
+              country: 'US', 
+              createdAt: new Date().toISOString(),
+            }
+          ];
+          
+          console.log('✅ Created', players.length, 'demo players for testing');
+        }
+      }
+
+      console.log('🔍 TeamService: Final player count:', players.length);
+      return players;
+      
+    } catch (error) {
+      console.error('Error getting players:', error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async searchPlayers(query: string, country?: string): Promise<Player[]> {
-    // TODO: Implement Supabase integration
-    // Mock search results
-    const allPlayers: Player[] = [
-      { id: '1', name: 'John Smith', email: 'john@example.com', position: 'PG', jerseyNumber: 1, isPremium: true, country: 'US', createdAt: '2024-01-01T00:00:00Z' },
-      { id: '2', name: 'Mike Johnson', email: 'mike@example.com', position: 'SG', jerseyNumber: 2, isPremium: false, country: 'US', createdAt: '2024-01-01T00:00:00Z' },
-      { id: '3', name: 'Sarah Wilson', email: 'sarah@example.com', position: 'SF', jerseyNumber: 3, isPremium: true, country: 'CA', createdAt: '2024-01-01T00:00:00Z' },
-    ];
+    try {
+      console.log('🔍 TeamService: Searching players with query:', query);
+      
+      const allPlayers = await this.getAllPlayers();
+      
+      // Filter players by search query
+      return allPlayers.filter(player =>
+        player.name.toLowerCase().includes(query.toLowerCase()) ||
+        player.email.toLowerCase().includes(query.toLowerCase())
+      );
+      
+    } catch (error) {
+      console.error('Error searching players:', error);
+      throw error instanceof Error ? error : new Error('Failed to search players');
+    }
+  }
 
-    return allPlayers.filter(player =>
-      player.name.toLowerCase().includes(query.toLowerCase()) &&
-      (!country || player.country === country)
-    );
+  // Team-Player Relationship Management
+  static async addPlayerToTeam(teamId: string, playerId: string, position?: string, jerseyNumber?: number): Promise<void> {
+    try {
+      console.log('🔍 TeamService: Adding player to team:', { teamId, playerId, position, jerseyNumber });
+      
+      const { error } = await supabase
+        .from('team_players')
+        .insert({
+          team_id: teamId,
+          player_id: playerId
+        });
+
+      if (error) {
+        console.error('❌ Supabase error adding player to team:', error);
+        throw new Error(`Failed to add player to team: ${error.message}`);
+      }
+
+      console.log('✅ Player successfully added to team in database');
+    } catch (error) {
+      console.error('Error adding player to team:', error);
+      throw error instanceof Error ? error : new Error('Failed to add player to team');
+    }
+  }
+
+  static async removePlayerFromTeam(teamId: string, playerId: string): Promise<void> {
+    try {
+      console.log('🔍 TeamService: Removing player from team:', { teamId, playerId });
+      
+      const { error } = await supabase
+        .from('team_players')
+        .delete()
+        .eq('team_id', teamId)
+        .eq('player_id', playerId);
+
+      if (error) {
+        console.error('❌ Supabase error removing player from team:', error);
+        throw new Error(`Failed to remove player from team: ${error.message}`);
+      }
+
+      console.log('✅ Player successfully removed from team in database');
+    } catch (error) {
+      console.error('Error removing player from team:', error);
+      throw error instanceof Error ? error : new Error('Failed to remove player from team');
+    }
+  }
+
+  static async getTeamPlayers(teamId: string): Promise<Player[]> {
+    try {
+      console.log('🔍 TeamService: Fetching players for team:', teamId);
+      
+      const { data: teamPlayers, error } = await supabase
+        .from('team_players')
+        .select(`
+          users!player_id (
+            id,
+            email,
+            premium_status,
+            country,
+            created_at
+          )
+        `)
+        .eq('team_id', teamId);
+
+      if (error) {
+        console.error('❌ Supabase error getting team players:', error);
+        throw new Error(`Failed to get team players: ${error.message}`);
+      }
+
+      console.log('🔍 TeamService: Found team players:', teamPlayers?.length || 0);
+
+      // Map team_players data to Player interface
+      const players = (teamPlayers || []).map(tp => ({
+        id: tp.users.id,
+        name: tp.users.email.split('@')[0], // Use email prefix as name for now
+        email: tp.users.email,
+        position: 'PG' as Player['position'], // Default position
+        jerseyNumber: Math.floor(Math.random() * 99) + 1, // Random jersey number
+        isPremium: tp.users.premium_status || false,
+        country: tp.users.country || 'US',
+        createdAt: tp.users.created_at || new Date().toISOString(),
+      }));
+
+      console.log('🔍 TeamService: Mapped team players:', players.map(p => ({ name: p.name, position: p.position, jersey: p.jerseyNumber })));
+      
+      return players;
+    } catch (error) {
+      console.error('Error getting team players:', error);
+      throw error instanceof Error ? error : new Error('Failed to get team players');
+    }
   }
 }

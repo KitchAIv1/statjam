@@ -18,20 +18,21 @@ export function useTournaments() {
 
   // Load tournaments
   const loadTournaments = async () => {
-    if (!user) return;
+    if (!user || state.loading) {
+      console.log('🔍 Skipping tournament load - no user or already loading');
+      return;
+    }
 
     console.log('🔍 Loading tournaments for user:', user.id);
-    console.log('🔍 User profile:', userProfile);
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      // Use user.id directly instead of userProfile.id
-      const organizerId = userProfile?.id || user.id;
+      // Always use user.id as organizer_id since that's what we store in database
+      const organizerId = user.id;
       console.log('🔍 Using organizer ID:', organizerId);
       
       const tournaments = await TournamentService.getTournamentsByOrganizer(organizerId);
-      console.log('🔍 Loaded tournaments:', tournaments);
       
       setState(prev => ({ ...prev, tournaments, loading: false }));
     } catch (error) {
@@ -52,7 +53,7 @@ export function useTournaments() {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const organizerId = userProfile?.id || user.id;
+      const organizerId = user.id;
       const tournament = await TournamentService.createTournament(data, organizerId);
       setState(prev => ({
         ...prev,
@@ -109,10 +110,12 @@ export function useTournaments() {
     }));
   };
 
-  // Load tournaments on mount
+  // Load tournaments on mount - with dependency optimization
   useEffect(() => {
-    loadTournaments();
-  }, [user?.id, userProfile?.id]);
+    if (user?.id && !state.loading) {
+      loadTournaments();
+    }
+  }, [user?.id]);
 
   return {
     tournaments: filteredTournaments,
@@ -129,7 +132,7 @@ export function useTournaments() {
 
 // Hook for tournament statistics
 export function useTournamentStats() {
-  const { user, userProfile } = useAuthStore();
+  const { user } = useAuthStore();
   const [stats, setStats] = useState({
     totalTournaments: 0,
     activeTournaments: 0,
@@ -141,11 +144,11 @@ export function useTournamentStats() {
   const [loading, setLoading] = useState(false);
 
   const loadStats = async () => {
-    if (!user || !userProfile) return;
+    if (!user) return;
 
     setLoading(true);
     try {
-      const tournamentStats = await TournamentService.getTournamentStats(userProfile.id);
+      const tournamentStats = await TournamentService.getTournamentStats(user.id);
       setStats(tournamentStats);
     } catch (error) {
       console.error('Failed to load tournament stats:', error);
@@ -165,7 +168,7 @@ export function useTournamentStats() {
 
   useEffect(() => {
     loadStats();
-  }, [user?.id, userProfile?.id]);
+  }, [user?.id]);
 
   return { stats, loading, refreshStats: loadStats };
 }

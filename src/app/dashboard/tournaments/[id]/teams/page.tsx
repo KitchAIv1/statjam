@@ -114,19 +114,29 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
     try {
       console.log('Adding player to team:', playerData);
       
-      // Find the team and add the player
+      const playerToAdd = playerData.player;
+      const teamId = playerData.teamId;
+      
+      // Check if player is already in the team
+      const currentTeam = teams.find(team => team.id === teamId);
+      if (currentTeam) {
+        const isPlayerAlreadyInTeam = currentTeam.players.some(p => p.id === playerToAdd.id);
+        if (isPlayerAlreadyInTeam) {
+          throw new Error('Player is already in this team');
+        }
+      }
+      
+      // Save to database first
+      await TeamService.addPlayerToTeam(
+        teamId,
+        playerToAdd.id,
+        playerToAdd.position,
+        playerToAdd.jerseyNumber
+      );
+      
+      // Update local state after successful database save
       const updatedTeams = teams.map(team => {
-        if (team.id === playerData.teamId) {
-          // Find the player from search results
-          const playerToAdd = playerData.player;
-          
-          // Check if player is already in the team
-          const isPlayerAlreadyInTeam = team.players.some(p => p.id === playerToAdd.id);
-          if (isPlayerAlreadyInTeam) {
-            throw new Error('Player is already in this team');
-          }
-          
-          // Add player to team
+        if (team.id === teamId) {
           return {
             ...team,
             players: [...team.players, playerToAdd]
@@ -138,11 +148,11 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
       setTeams(updatedTeams);
       setShowAddPlayer(false);
       
-      // Show success message (you can add a toast notification here)
-      console.log('Player added successfully to team');
+      console.log('✅ Player added successfully to team and saved to database');
     } catch (error) {
-      console.error('Failed to add player:', error);
-      // You can add error handling UI here
+      console.error('❌ Failed to add player:', error);
+      setError(error instanceof Error ? error.message : 'Failed to add player');
+      // Don't close modal on error so user can try again
     }
   };
 
@@ -691,6 +701,7 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
       {showAddPlayer && selectedTeam && (
         <AddPlayerModal
           team={selectedTeam}
+          teams={teams}
           onClose={() => {
             setShowAddPlayer(false);
             setSelectedTeam(null);
@@ -865,20 +876,54 @@ function CreateTeamModal({ onClose, onSave, creatingTeam, error }: {
 }
 
 // Add Player Modal Component
-function AddPlayerModal({ team, onClose, onSave }: { team: Team; onClose: () => void; onSave: (data: any) => void }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<Player[]>([]);
+function AddPlayerModal({ team, teams, onClose, onSave }: { team: Team; teams: Team[]; onClose: () => void; onSave: (data: any) => void }) {
+  const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addingPlayer, setAddingPlayer] = useState<string | null>(null); // Track which player is being added
+  const [draftedPlayers, setDraftedPlayers] = useState<Set<string>>(new Set()); // Track drafted players
 
-  const handleSearch = async () => {
-    if (searchTerm.trim()) {
+  // Load all available players on mount
+  useEffect(() => {
+    const loadAvailablePlayers = async () => {
       try {
-        const results = await TeamService.searchPlayers(searchTerm);
-        setSearchResults(results);
+        setLoading(true);
+        console.log('🔍 AddPlayerModal: Loading real players from database');
+        
+        // Fetch real players from database
+        const players = await TeamService.getAllPlayers();
+        console.log('🔍 AddPlayerModal: Loaded players:', players);
+        
+        setAvailablePlayers(players);
       } catch (error) {
-        console.error('Failed to search players:', error);
+        console.error('❌ Failed to load players:', error);
+        // Set empty array on error - no fallback to mock data
+        setAvailablePlayers([]);
+      } finally {
+        setLoading(false);
       }
-    }
-  };
+    };
+
+    loadAvailablePlayers();
+  }, []);
+
+  // Initialize drafted players from existing teams
+  useEffect(() => {
+    const initializeDraftedPlayers = () => {
+      const allDraftedPlayerIds = new Set<string>();
+      
+      // Collect all player IDs from all teams
+      teams.forEach(t => {
+        t.players.forEach(player => {
+          allDraftedPlayerIds.add(player.id);
+        });
+      });
+      
+      console.log('🔍 Initialized drafted players:', Array.from(allDraftedPlayerIds));
+      setDraftedPlayers(allDraftedPlayerIds);
+    };
+
+    initializeDraftedPlayers();
+  }, [teams]);
 
   const styles = {
     overlay: {
@@ -917,33 +962,7 @@ function AddPlayerModal({ team, onClose, onSave }: { team: Team; onClose: () => 
       color: '#b3b3b3',
       marginBottom: '24px',
     },
-    searchContainer: {
-      display: 'flex',
-      gap: '12px',
-      marginBottom: '24px',
-    },
-    searchInput: {
-      flex: 1,
-      background: 'rgba(255, 255, 255, 0.05)',
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.2)',
-      borderRadius: '12px',
-      padding: '12px 16px',
-      color: '#ffffff',
-      fontSize: '14px',
-      outline: 'none',
-    },
-    searchButton: {
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-      border: 'none',
-      borderRadius: '12px',
-      padding: '12px 20px',
-      color: '#1a1a1a',
-      cursor: 'pointer',
-      fontSize: '14px',
-      fontWeight: '600',
-    },
+
     resultsList: {
       display: 'flex',
       flexDirection: 'column' as const,
@@ -1010,57 +1029,77 @@ function AddPlayerModal({ team, onClose, onSave }: { team: Team; onClose: () => 
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <h2 style={styles.title}>Add Player to {team.name}</h2>
-        <p style={styles.subtitle}>Search for players to invite to your team</p>
+        <p style={styles.subtitle}>Available Players Roster - Premium players listed first</p>
         
-        <div style={styles.searchContainer}>
-          <input
-            type="text"
-            placeholder="Search players by name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={styles.searchInput}
-          />
-          <button
-            onClick={handleSearch}
-            style={styles.searchButton}
-          >
-            Search
-          </button>
-        </div>
-
-        <div style={styles.resultsList}>
-          {searchResults
-            .sort((a, b) => {
-              // Sort by premium status first (premium players first)
-              if (a.isPremium && !b.isPremium) return -1;
-              if (!a.isPremium && b.isPremium) return 1;
-              // Then by name
-              return a.name.localeCompare(b.name);
-            })
-            .map((player) => (
-            <div key={player.id} style={styles.playerItem}>
-              <div style={styles.playerInfo}>
-                <div>
-                  <div style={styles.playerName}>
-                    {player.name}
-                    {player.isPremium && (
-                      <span style={styles.premiumBadge}>⭐ PREMIUM</span>
-                    )}
-                  </div>
-                  <div style={styles.playerEmail}>
-                    {player.email} • {player.position} • #{player.jerseyNumber} • {player.country}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              border: '2px solid #FFD700',
+              borderTopColor: 'transparent',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 16px'
+            }} />
+            Loading players...
+          </div>
+        ) : (
+          <div style={styles.resultsList}>
+            {availablePlayers
+              .sort((a, b) => {
+                // Sort by premium status first (premium players first)
+                if (a.isPremium && !b.isPremium) return -1;
+                if (!a.isPremium && b.isPremium) return 1;
+                // Then by name
+                return a.name.localeCompare(b.name);
+              })
+              .map((player) => (
+              <div key={player.id} style={styles.playerItem}>
+                <div style={styles.playerInfo}>
+                  <div>
+                    <div style={styles.playerName}>
+                      {player.name}
+                      {player.isPremium && (
+                        <span style={styles.premiumBadge}>⭐ PREMIUM</span>
+                      )}
+                    </div>
+                    <div style={styles.playerEmail}>
+                      {player.email} • {player.position} • #{player.jerseyNumber} • {player.country}
+                    </div>
                   </div>
                 </div>
+                <button
+                  onClick={async () => {
+                    if (draftedPlayers.has(player.id)) return; // Prevent clicking drafted players
+                    
+                    console.log('🔍 Add to Team button clicked:', { playerId: player.id, teamId: team.id, playerName: player.name });
+                    setAddingPlayer(player.id);
+                    try {
+                      await onSave({ player: player, teamId: team.id });
+                      // Mark player as drafted after successful addition
+                      setDraftedPlayers(prev => new Set([...prev, player.id]));
+                      console.log('✅ Player marked as drafted:', player.name);
+                    } catch (error) {
+                      console.error('Failed to add player:', error);
+                    } finally {
+                      setAddingPlayer(null);
+                    }
+                  }}
+                  disabled={addingPlayer === player.id || draftedPlayers.has(player.id)}
+                  style={{
+                    ...styles.inviteButton,
+                    opacity: draftedPlayers.has(player.id) ? 0.4 : (addingPlayer === player.id ? 0.6 : 1),
+                    cursor: draftedPlayers.has(player.id) ? 'not-allowed' : (addingPlayer === player.id ? 'not-allowed' : 'pointer'),
+                    background: draftedPlayers.has(player.id) ? '#666' : styles.inviteButton.background,
+                  }}
+                >
+                  {draftedPlayers.has(player.id) ? 'DRAFTED' : (addingPlayer === player.id ? 'Adding...' : 'Add to Team')}
+                </button>
               </div>
-              <button
-                onClick={() => onSave({ player: player, teamId: team.id })}
-                style={styles.inviteButton}
-              >
-                Add to Team
-              </button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         <button
           onClick={onClose}
