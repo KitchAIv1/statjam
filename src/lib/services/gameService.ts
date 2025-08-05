@@ -2,6 +2,161 @@ import { supabase } from '@/lib/supabase';
 import { Game, GameStat, PlayerGameStats, GameSubstitution, AuditLog } from '@/lib/types/game';
 
 export class GameService {
+  // ===== GAME SCHEDULING METHODS =====
+  
+  // Create a new game
+  static async createGame(gameData: {
+    tournamentId: string;
+    teamAId: string;
+    teamBId: string;
+    startTime: string;
+    venue?: string;
+    statAdminId?: string;
+  }): Promise<Game | null> {
+    try {
+      console.log('🔍 GameService: Creating game:', gameData);
+      
+      const { data: game, error } = await supabase
+        .from('games')
+        .insert({
+          tournament_id: gameData.tournamentId,
+          team_a_id: gameData.teamAId,
+          team_b_id: gameData.teamBId,
+          stat_admin_id: gameData.statAdminId || null,
+          status: 'scheduled',
+          start_time: gameData.startTime,
+          quarter: 1,
+          game_clock_minutes: 12,
+          game_clock_seconds: 0,
+          is_clock_running: false,
+          home_score: 0,
+          away_score: 0
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Supabase error creating game:', error);
+        throw new Error(`Failed to create game: ${error.message}`);
+      }
+
+      console.log('✅ Game created successfully:', game.id);
+      return game;
+    } catch (error) {
+      console.error('Error creating game:', error);
+      throw error;
+    }
+  }
+
+  // Get games by tournament
+  static async getGamesByTournament(tournamentId: string): Promise<Game[]> {
+    try {
+      console.log('🔍 GameService: Fetching games for tournament:', tournamentId);
+      
+      const { data: games, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('tournament_id', tournamentId)
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error('❌ Supabase error getting games:', error);
+        throw new Error(`Failed to get games: ${error.message}`);
+      }
+
+      console.log('🔍 GameService: Found games:', games?.length || 0);
+      return games || [];
+    } catch (error) {
+      console.error('Error getting games by tournament:', error);
+      throw error;
+    }
+  }
+
+  // Update a game
+  static async updateGame(gameId: string, updateData: {
+    teamAId?: string;
+    teamBId?: string;
+    startTime?: string;
+    venue?: string;
+    statAdminId?: string;
+    status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  }): Promise<Game | null> {
+    try {
+      console.log('🔍 GameService: Updating game:', gameId, updateData);
+      
+      const dbUpdateData: any = {};
+      if (updateData.teamAId !== undefined) dbUpdateData.team_a_id = updateData.teamAId;
+      if (updateData.teamBId !== undefined) dbUpdateData.team_b_id = updateData.teamBId;
+      if (updateData.startTime !== undefined) dbUpdateData.start_time = updateData.startTime;
+      if (updateData.statAdminId !== undefined) dbUpdateData.stat_admin_id = updateData.statAdminId;
+      if (updateData.status !== undefined) dbUpdateData.status = updateData.status;
+
+      const { data: game, error } = await supabase
+        .from('games')
+        .update(dbUpdateData)
+        .eq('id', gameId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Supabase error updating game:', error);
+        throw new Error(`Failed to update game: ${error.message}`);
+      }
+
+      console.log('✅ Game updated successfully:', gameId);
+      return game;
+    } catch (error) {
+      console.error('Error updating game:', error);
+      throw error;
+    }
+  }
+
+  // Delete a game
+  static async deleteGame(gameId: string): Promise<boolean> {
+    try {
+      console.log('🔍 GameService: Deleting game:', gameId);
+      
+      const { error } = await supabase
+        .from('games')
+        .delete()
+        .eq('id', gameId);
+
+      if (error) {
+        console.error('❌ Supabase error deleting game:', error);
+        throw new Error(`Failed to delete game: ${error.message}`);
+      }
+
+      console.log('✅ Game deleted successfully:', gameId);
+      return true;
+    } catch (error) {
+      console.error('Error deleting game:', error);
+      throw error;
+    }
+  }
+
+  // Get game by ID
+  static async getGame(gameId: string): Promise<Game | null> {
+    try {
+      const { data: game, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single();
+
+      if (error) {
+        console.error('Error getting game:', error);
+        return null;
+      }
+
+      return game;
+    } catch (error) {
+      console.error('Error in getGame:', error);
+      return null;
+    }
+  }
+
+  // ===== LIVE GAME MANAGEMENT METHODS =====
+  
   // Get current game for stat admin
   static async getCurrentGame(statAdminId: string): Promise<Game | null> {
     try {
@@ -23,6 +178,49 @@ export class GameService {
     } catch (error) {
       console.error('Error in getCurrentGame:', error);
       return null;
+    }
+  }
+
+  // Get all games assigned to a stat admin
+  static async getAssignedGames(statAdminId: string): Promise<any[]> {
+    try {
+      console.log('🔍 GameService: Fetching assigned games for stat admin:', statAdminId);
+      
+      const { data: games, error } = await supabase
+        .from('games')
+        .select(`
+          *,
+          tournaments!inner(name, venue),
+          teams!team_a_id(name),
+          teamB:teams!team_b_id(name)
+        `)
+        .eq('stat_admin_id', statAdminId)
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error('❌ Supabase error getting assigned games:', error);
+        return [];
+      }
+
+      console.log('🔍 GameService: Found assigned games:', games?.length || 0);
+
+      // Transform data to match expected format
+      const transformedGames = (games || []).map(game => ({
+        id: game.id,
+        tournamentName: game.tournaments?.name || 'Unknown Tournament',
+        teamA: game.teams?.name || 'Team A',
+        teamB: game.teamB?.name || 'Team B',
+        scheduledDate: game.start_time,
+        venue: game.tournaments?.venue || 'TBD',
+        status: game.status,
+        tournamentId: game.tournament_id
+      }));
+
+      console.log('🔍 GameService: Transformed assigned games:', transformedGames);
+      return transformedGames;
+    } catch (error) {
+      console.error('Error getting assigned games:', error);
+      return [];
     }
   }
 

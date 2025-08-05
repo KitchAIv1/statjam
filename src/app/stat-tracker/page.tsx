@@ -4,6 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Undo2 } from 'lucide-react';
+import { GameService } from '@/lib/services/gameService';
+import { TeamService } from '@/lib/services/tournamentService';
+import { Game } from '@/lib/types/game';
+import { Player, Team } from '@/lib/types/tournament';
 
 const StatTracker = () => {
   const { user, userRole, loading } = useAuthStore();
@@ -12,6 +16,15 @@ const StatTracker = () => {
   // Get game and tournament IDs from URL parameters
   const [gameId, setGameId] = useState<string | null>(null);
   const [tournamentId, setTournamentId] = useState<string | null>(null);
+  
+  // Real game and team data
+  const [gameData, setGameData] = useState<Game | null>(null);
+  const [teamAData, setTeamAData] = useState<Player[]>([]);
+  const [teamBData, setTeamBData] = useState<Player[]>([]);
+  const [teamAInfo, setTeamAInfo] = useState<{ id: string; name: string } | null>(null);
+  const [teamBInfo, setTeamBInfo] = useState<{ id: string; name: string } | null>(null);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
   
   useEffect(() => {
     // Parse URL parameters
@@ -23,7 +36,55 @@ const StatTracker = () => {
     setTournamentId(tournamentIdParam);
     
     console.log('Stat Tracker loaded for:', { gameId: gameIdParam, tournamentId: tournamentIdParam });
+    
+    // Load real game data when gameId is available
+    if (gameIdParam) {
+      loadGameData(gameIdParam);
+    }
   }, []);
+
+  // Function to load real game and team data
+  const loadGameData = async (gameId: string) => {
+    try {
+      setDataLoading(true);
+      setDataError(null);
+      
+      console.log('🔍 Loading game data for gameId:', gameId);
+      
+      // Load game data
+      const game = await GameService.getGame(gameId);
+      if (!game) {
+        setDataError('Game not found');
+        return;
+      }
+      
+      console.log('🔍 Loaded game data:', game);
+      setGameData(game);
+      
+      // Load team A data and info
+      const teamAPlayers = await TeamService.getTeamPlayers(game.team_a_id);
+      setTeamAData(teamAPlayers);
+      console.log('🔍 Loaded Team A players:', teamAPlayers.length);
+      
+      // Load team B data and info
+      const teamBPlayers = await TeamService.getTeamPlayers(game.team_b_id);
+      setTeamBData(teamBPlayers);
+      console.log('🔍 Loaded Team B players:', teamBPlayers.length);
+      
+      // Load actual team names
+      const teamAInfo = await TeamService.getTeamInfo(game.team_a_id);
+      const teamBInfo = await TeamService.getTeamInfo(game.team_b_id);
+      
+      setTeamAInfo(teamAInfo || { id: game.team_a_id, name: 'Team A' });
+      setTeamBInfo(teamBInfo || { id: game.team_b_id, name: 'Team B' });
+      
+    } catch (error) {
+      console.error('❌ Error loading game data:', error);
+      setDataError(error instanceof Error ? error.message : 'Failed to load game data');
+    } finally {
+      setDataLoading(false);
+    }
+  };
   
   const [selectedPlayer, setSelectedPlayer] = useState('11 Ross');
   const [lastAction, setLastAction] = useState('+3 Points');
@@ -44,7 +105,7 @@ const StatTracker = () => {
   const [currentRoster, setCurrentRoster] = useState<any[]>([]);
   const [currentBench, setCurrentBench] = useState<any[]>([]);
   
-  // Update selected player when team changes
+  // Update selected player when team changes or data is loaded
   React.useEffect(() => {
     const currentPlayers = teamPlayers[selectedTeam as keyof typeof teamPlayers];
     const currentBenchPlayers = teamBenchPlayers[selectedTeam as keyof typeof teamBenchPlayers];
@@ -54,7 +115,7 @@ const StatTracker = () => {
       setCurrentRoster([...currentPlayers]);
       setCurrentBench([...currentBenchPlayers]);
     }
-  }, [selectedTeam]);
+  }, [selectedTeam, teamAData, teamBData]);
 
   // Game clock timer
   React.useEffect(() => {
@@ -97,43 +158,44 @@ const StatTracker = () => {
     }
   }, [isClockRunning, activePlayers]);
   
+  // Dynamic team names from loaded data
   const teamNames = {
-    'Team A': 'Lakers',
-    'Team B': 'Warriors'
+    'Team A': teamAInfo?.name || 'Team A',
+    'Team B': teamBInfo?.name || 'Team B'
   };
 
+  // Transform real player data to match stat tracker format
   const teamPlayers = {
-    'Team A': [
-      { id: 'james', name: 'James', number: '', image: '/api/placeholder/40/40' },
-      { id: 'ross', name: '11 Ross', number: '11', image: '/api/placeholder/40/40' },
-      { id: 'clark', name: 'Clark', number: '', image: '/api/placeholder/40/40' },
-      { id: 'triges', name: '30 Triges', number: '30', image: '/api/placeholder/40/40' },
-      { id: 'hayes', name: 'Hayes', number: '', image: '/api/placeholder/40/40' },
-    ],
-    'Team B': [
-      { id: 'curry', name: 'Curry', number: '30', image: '/api/placeholder/40/40' },
-      { id: 'thompson', name: 'Thompson', number: '11', image: '/api/placeholder/40/40' },
-      { id: 'green', name: 'Green', number: '23', image: '/api/placeholder/40/40' },
-      { id: 'wiggins', name: 'Wiggins', number: '22', image: '/api/placeholder/40/40' },
-      { id: 'looney', name: 'Looney', number: '5', image: '/api/placeholder/40/40' },
-    ]
+    'Team A': teamAData.slice(0, 5).map(player => ({
+      id: player.id,
+      name: player.name,
+      number: player.jerseyNumber.toString(),
+      image: '/api/placeholder/40/40'
+    })),
+    'Team B': teamBData.slice(0, 5).map(player => ({
+      id: player.id,
+      name: player.name,
+      number: player.jerseyNumber.toString(),
+      image: '/api/placeholder/40/40'
+    }))
   };
 
+  // Transform remaining players as bench players
   const teamBenchPlayers = {
-    'Team A': [
-      { id: 'bench1', name: 'Taurean Prince', number: '8', image: '/api/placeholder/40/40', position: 'SF' },
-      { id: 'bench2', name: 'Jaxson Hayes', number: '12', image: '/api/placeholder/40/40', position: 'C' },
-      { id: 'bench3', name: 'Max Christie', number: '15', image: '/api/placeholder/40/40', position: 'SG' },
-      { id: 'bench4', name: 'Cam Reddish', number: '22', image: '/api/placeholder/40/40', position: 'SF' },
-      { id: 'bench5', name: 'Christian Wood', number: '33', image: '/api/placeholder/40/40', position: 'PF' },
-    ],
-    'Team B': [
-      { id: 'bench6', name: 'Gary Payton II', number: '9', image: '/api/placeholder/40/40', position: 'SG' },
-      { id: 'bench7', name: 'Jonathan Kuminga', number: '16', image: '/api/placeholder/40/40', position: 'SF' },
-      { id: 'bench8', name: 'Moses Moody', number: '18', image: '/api/placeholder/40/40', position: 'SG' },
-      { id: 'bench9', name: 'Trayce Jackson-Davis', number: '25', image: '/api/placeholder/40/40', position: 'PF' },
-      { id: 'bench10', name: 'Brandin Podziemski', number: '31', image: '/api/placeholder/40/40', position: 'SG' },
-    ]
+    'Team A': teamAData.slice(5).map(player => ({
+      id: player.id,
+      name: player.name,
+      number: player.jerseyNumber.toString(),
+      image: '/api/placeholder/40/40',
+      position: player.position
+    })),
+    'Team B': teamBData.slice(5).map(player => ({
+      id: player.id,
+      name: player.name,
+      number: player.jerseyNumber.toString(),
+      image: '/api/placeholder/40/40',
+      position: player.position
+    }))
   };
 
   const players = teamPlayers[selectedTeam as keyof typeof teamPlayers];
@@ -644,6 +706,66 @@ const StatTracker = () => {
       <div style={styles.container}>
         <div style={{ textAlign: 'center', paddingTop: '100px' }}>
           Loading Stat Tracker...
+        </div>
+      </div>
+    );
+  }
+
+  // Show data loading state
+  if (dataLoading) {
+    return (
+      <div style={styles.container}>
+        <div style={{ textAlign: 'center', paddingTop: '100px' }}>
+          <div style={{ color: '#FFD700', fontSize: '18px', marginBottom: '16px' }}>
+            Loading Game Data...
+          </div>
+          <div style={{ color: '#888', fontSize: '14px' }}>
+            {gameId ? `Game ID: ${gameId}` : 'Initializing...'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show data error state
+  if (dataError) {
+    return (
+      <div style={styles.container}>
+        <div style={{ textAlign: 'center', paddingTop: '100px' }}>
+          <div style={{ color: '#ff4444', fontSize: '18px', marginBottom: '16px' }}>
+            Error Loading Game Data
+          </div>
+          <div style={{ color: '#888', fontSize: '14px', marginBottom: '24px' }}>
+            {dataError}
+          </div>
+          <button 
+            onClick={() => gameId && loadGameData(gameId)}
+            style={{
+              background: '#FFD700',
+              color: '#000',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if no data loaded yet
+  if (!gameData || !teamAInfo || !teamBInfo) {
+    return (
+      <div style={styles.container}>
+        <div style={{ textAlign: 'center', paddingTop: '100px' }}>
+          <div style={{ color: '#888', fontSize: '16px' }}>
+            No game data available. Please check the game ID.
+          </div>
         </div>
       </div>
     );

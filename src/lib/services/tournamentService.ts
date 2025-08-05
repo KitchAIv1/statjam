@@ -641,4 +641,101 @@ export class TeamService {
       throw error instanceof Error ? error : new Error('Failed to get team players');
     }
   }
+
+  // Get basic team info by ID
+  static async getTeamInfo(teamId: string): Promise<{ id: string; name: string } | null> {
+    try {
+      console.log('🔍 TeamService: Fetching team info for:', teamId);
+      
+      const { data: team, error } = await supabase
+        .from('teams')
+        .select('id, name')
+        .eq('id', teamId)
+        .single();
+
+      if (error) {
+        console.error('❌ Supabase error getting team info:', error);
+        return null;
+      }
+
+      console.log('🔍 TeamService: Found team info:', team);
+      return team;
+    } catch (error) {
+      console.error('Error getting team info:', error);
+      return null;
+    }
+  }
+
+  // Get all stat admins for assignment
+  static async getStatAdmins(): Promise<{ id: string; name: string; email: string }[]> {
+    try {
+      console.log('🔍 TeamService: Fetching stat admins');
+      
+      // First, let's try to get the current user to check permissions
+      const { data: currentUser } = await supabase.auth.getUser();
+      console.log('🔍 TeamService: Current user:', currentUser?.user?.id, currentUser?.user?.email);
+      
+      // Try the query with detailed error logging
+      const { data: statAdmins, error } = await supabase
+        .from('users')
+        .select('id, email, role')
+        .eq('role', 'stat_admin');
+
+      if (error) {
+        console.error('❌ Supabase error getting stat admins:', error);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error details:', error.details);
+        console.error('❌ Error hint:', error.hint);
+        console.error('❌ Error code:', error.code);
+        
+        // Try alternative approach - get all users and filter (might work if RLS allows broader access)
+        console.log('🔄 Trying alternative approach...');
+        const { data: allUsers, error: allUsersError } = await supabase
+          .from('users')
+          .select('id, email, role');
+          
+        if (allUsersError) {
+          console.error('❌ Alternative approach also failed:', allUsersError);
+          return [];
+        }
+        
+        console.log('🔍 All users found:', allUsers?.length || 0);
+        const filteredAdmins = (allUsers || []).filter(user => user.role === 'stat_admin');
+        console.log('🔍 Filtered stat admins:', filteredAdmins.length);
+        
+        if (filteredAdmins.length > 0) {
+          const admins = filteredAdmins.map(admin => ({
+            id: admin.id,
+            name: admin.email.split('@')[0],
+            email: admin.email
+          }));
+          console.log('🔍 TeamService: Using filtered admins:', admins);
+          return admins;
+        }
+        
+        return [];
+      }
+
+      console.log('🔍 TeamService: Raw stat admins data:', statAdmins);
+      console.log('🔍 TeamService: Found stat admins count:', statAdmins?.length || 0);
+      
+      if (!statAdmins || statAdmins.length === 0) {
+        console.log('⚠️ No stat admins found in database with role filter');
+        return [];
+      }
+      
+      // Map to expected format
+      const admins = statAdmins.map(admin => ({
+        id: admin.id,
+        name: admin.email.split('@')[0], // Use email prefix as name
+        email: admin.email
+      }));
+
+      console.log('🔍 TeamService: Mapped stat admins:', admins);
+      return admins;
+    } catch (error) {
+      console.error('Error getting stat admins:', error);
+      return [];
+    }
+  }
 }

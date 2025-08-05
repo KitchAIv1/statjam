@@ -3,41 +3,51 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import { GameService } from '@/lib/services/gameService';
+import { TeamService } from '@/lib/services/tournamentService';
 import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy } from 'lucide-react';
 
 const StatAdminDashboard = () => {
   const { user, userRole, loading } = useAuthStore();
   const router = useRouter();
   
-  // Mock assigned games data - this will come from Supabase
-  const [assignedGames] = useState([
-    {
-      id: 'game-1',
-      tournamentName: 'Spring Championship 2024',
-      teamA: 'Lakers Elite',
-      teamB: 'Warriors Pro',
-      scheduledDate: '2024-03-15T20:00:00Z',
-      venue: 'Staples Center',
-      status: 'scheduled',
-      tournamentId: 'tournament-1'
-    },
-    {
-      id: 'game-2', 
-      tournamentName: 'City League Finals',
-      teamA: 'Heat Squad',
-      teamB: 'Bulls United',
-      scheduledDate: '2024-03-18T19:30:00Z',
-      venue: 'Miami Arena',
-      status: 'scheduled',
-      tournamentId: 'tournament-2'
-    }
-  ]);
+  // Real assigned games data
+  const [assignedGames, setAssignedGames] = useState<any[]>([]);
+  const [gamesLoading, setGamesLoading] = useState(false);
+  const [gamesError, setGamesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || userRole !== 'stat_admin')) {
       router.push('/auth');
     }
   }, [user, userRole, loading, router]);
+
+  // Load assigned games when user is available
+  useEffect(() => {
+    const loadAssignedGames = async () => {
+      if (!user || userRole !== 'stat_admin') return;
+      
+      try {
+        setGamesLoading(true);
+        setGamesError(null);
+        
+        console.log('🔍 Loading assigned games for stat admin:', user.id);
+        const games = await GameService.getAssignedGames(user.id);
+        setAssignedGames(games);
+        
+        console.log('✅ Loaded assigned games:', games.length);
+      } catch (error) {
+        console.error('❌ Error loading assigned games:', error);
+        setGamesError(error instanceof Error ? error.message : 'Failed to load assigned games');
+      } finally {
+        setGamesLoading(false);
+      }
+    };
+
+    if (user && userRole === 'stat_admin') {
+      loadAssignedGames();
+    }
+  }, [user, userRole]);
 
   if (loading || !user || userRole !== 'stat_admin') {
     return (
@@ -382,8 +392,70 @@ const StatAdminDashboard = () => {
         {/* Assigned Games */}
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}>My Assigned Games</h2>
-          <div style={styles.adminTools}>
-            {assignedGames.map((game) => (
+          
+          {gamesLoading ? (
+            <div style={styles.toolCard}>
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <div style={{ color: '#FFD700', fontSize: '16px', marginBottom: '8px' }}>
+                  Loading assigned games...
+                </div>
+                <div style={{ color: '#888', fontSize: '14px' }}>
+                  Fetching your game assignments
+                </div>
+              </div>
+            </div>
+          ) : gamesError ? (
+            <div style={styles.toolCard}>
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <div style={{ color: '#ff4444', fontSize: '16px', marginBottom: '8px' }}>
+                  Error loading games
+                </div>
+                <div style={{ color: '#888', fontSize: '14px', marginBottom: '16px' }}>
+                  {gamesError}
+                </div>
+                <button
+                  onClick={() => {
+                    if (user) {
+                      setGamesLoading(true);
+                      setGamesError(null);
+                      GameService.getAssignedGames(user.id)
+                        .then(setAssignedGames)
+                        .catch((error) => setGamesError(error.message))
+                        .finally(() => setGamesLoading(false));
+                    }
+                  }}
+                  style={{
+                    background: '#FFD700',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          ) : assignedGames.length === 0 ? (
+            <div style={styles.toolCard}>
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <div style={styles.toolIcon}>
+                  <Trophy style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
+                </div>
+                <div style={{ color: '#888', fontSize: '16px', marginBottom: '8px' }}>
+                  No games assigned yet
+                </div>
+                <div style={{ color: '#666', fontSize: '14px' }}>
+                  Tournament organizers will assign games to you. Check back later or contact your organizer.
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={styles.adminTools}>
+              {assignedGames.map((game) => (
               <div key={game.id} style={styles.toolCard}>
                 <div style={styles.toolIcon}>
                   <Trophy style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
@@ -416,7 +488,8 @@ const StatAdminDashboard = () => {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Coming Soon */}

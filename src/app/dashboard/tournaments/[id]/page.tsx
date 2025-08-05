@@ -409,7 +409,7 @@ const TournamentDetailPage = ({ params }: TournamentDetailPageProps) => {
       title: 'Schedule Games',
       description: 'Set up matches and tournament brackets',
       icon: <Calendar style={{ width: '20px', height: '20px', color: '#1a1a1a' }} />,
-      action: () => console.log('Schedule games'),
+      action: () => router.push(`/dashboard/tournaments/${tournamentId}/schedule`),
     },
     {
       title: 'Tournament Settings',
