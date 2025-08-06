@@ -4,6 +4,45 @@ import { Game, GameStat, PlayerGameStats, GameSubstitution, AuditLog } from '@/l
 export class GameService {
   // ===== GAME SCHEDULING METHODS =====
   
+  // Update game state (clock, scores, quarter)
+  static async updateGameState(gameId: string, gameStateData: {
+    quarter: number;
+    game_clock_minutes: number;
+    game_clock_seconds: number;
+    is_clock_running: boolean;
+    home_score: number;
+    away_score: number;
+  }): Promise<boolean> {
+    try {
+      console.log('🔄 GameService: Updating game state for:', gameId);
+      console.log('🔄 GameService: State data:', gameStateData);
+
+      const { error } = await supabase
+        .from('games')
+        .update({
+          quarter: gameStateData.quarter,
+          game_clock_minutes: gameStateData.game_clock_minutes,
+          game_clock_seconds: gameStateData.game_clock_seconds,
+          is_clock_running: gameStateData.is_clock_running,
+          home_score: gameStateData.home_score,
+          away_score: gameStateData.away_score,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', gameId);
+
+      if (error) {
+        console.error('❌ Supabase error updating game state:', error);
+        return false;
+      }
+
+      console.log('✅ Game state updated successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error updating game state:', error);
+      return false;
+    }
+  }
+  
   // Create a new game
   static async createGame(gameData: {
     tournamentId: string;
