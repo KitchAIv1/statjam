@@ -295,31 +295,101 @@ export class GameService {
     gameTimeSeconds: number;
   }): Promise<boolean> {
     try {
-      const { error } = await supabase
+      console.log('🔍 GameService: Recording stat with data:', JSON.stringify(statData, null, 2));
+      
+      // DEBUG: Check authentication before making the request
+      console.log('🔍 DEBUG: Checking authentication before INSERT...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('❌ Session error:', sessionError);
+        return false;
+      }
+      
+      if (!session) {
+        console.error('❌ No active session found');
+        return false;
+      }
+      
+      if (!session.user) {
+        console.error('❌ No user in session');
+        return false;
+      }
+      
+      console.log('✅ Session validation passed:');
+      console.log('  - User ID:', session.user.id);
+      console.log('  - User email:', session.user.email);
+      console.log('  - Session expires at:', session.expires_at);
+      console.log('  - Access token length:', session.access_token.length);
+      console.log('  - Access token (first 50 chars):', session.access_token.substring(0, 50) + '...');
+      
+      // Prepare insert data
+      const insertData = {
+        game_id: statData.gameId,
+        player_id: statData.playerId,
+        team_id: statData.teamId,
+        stat_type: statData.statType,
+        stat_value: statData.statValue,
+        modifier: statData.modifier,
+        quarter: statData.quarter,
+        game_time_minutes: statData.gameTimeMinutes,
+        game_time_seconds: statData.gameTimeSeconds
+      };
+      
+      console.log('📊 GameService: Insert data:', JSON.stringify(insertData, null, 2));
+      
+      // Validate data before insert
+      if (!insertData.game_id || !insertData.player_id || !insertData.team_id) {
+        console.error('❌ Missing required IDs:', insertData);
+        return false;
+      }
+      
+      console.log('🔍 DEBUG: About to make Supabase INSERT request...');
+      console.log('🔍 DEBUG: Request will go to: /rest/v1/game_stats');
+      
+      // Try a test query first to see if authentication context works
+      console.log('🔍 DEBUG: Testing authentication with simple SELECT...');
+      try {
+        const { data: testData, error: testError } = await supabase
+          .from('users')
+          .select('id, email')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (testError) {
+          console.error('❌ Test SELECT failed:', testError);
+        } else {
+          console.log('✅ Test SELECT succeeded:', testData);
+        }
+      } catch (testErr) {
+        console.error('❌ Test SELECT exception:', testErr);
+      }
+      
+      const { data, error } = await supabase
         .from('game_stats')
-        .insert({
-          game_id: statData.gameId,
-          player_id: statData.playerId,
-          team_id: statData.teamId,
-          stat_type: statData.statType,
-          stat_value: statData.statValue,
-          modifier: statData.modifier,
-          quarter: statData.quarter,
-          game_time_minutes: statData.gameTimeMinutes,
-          game_time_seconds: statData.gameTimeSeconds
-        });
+        .insert(insertData);
 
       if (error) {
-        console.error('Error recording stat:', error);
+        console.error('❌ Supabase error recording stat:');
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        console.error('Error code:', error.code);
+        console.error('Full error object:', JSON.stringify(error, null, 2));
         return false;
       }
 
-      // Log the action
-      await this.createAuditLog(statData.gameId, 'stat_recorded', statData);
+      console.log('✅ Stat recorded successfully:', data);
 
+      // Note: Audit logging temporarily disabled due to 404 endpoint issue
+      // TODO: Re-enable once backend provides audit_logs API endpoint
+      
       return true;
     } catch (error) {
-      console.error('Error in recordStat:', error);
+      console.error('❌ Unexpected error in recordStat:');
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('Full error:', error);
       return false;
     }
   }

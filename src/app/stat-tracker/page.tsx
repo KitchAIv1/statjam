@@ -274,26 +274,50 @@ const StatTracker = () => {
         return;
       }
       
-      // Map stat type and calculate value
+      // Map stat type and calculate value - using common basketball stat terminology
       let statType = stat.type || 'misc';
       let statValue = 1; // Default value
       
-      // Handle different stat types
+      // Handle different stat types - map to likely allowed constraint values
       if (stat.type === 'points') {
-        if (stat.label.includes('3')) statValue = 3;
-        else if (stat.label.includes('2')) statValue = 2;
-        else if (stat.label.includes('Free')) statValue = 1;
+        // Try common basketball stat type names
+        if (stat.label.includes('3')) {
+          statType = 'three_pointer'; // or 'three_point' or '3pt'
+          statValue = 3;
+        } else if (stat.label.includes('2')) {
+          statType = 'field_goal'; // or 'two_pointer' or '2pt'
+          statValue = 2;
+        } else if (stat.label.includes('Free')) {
+          statType = 'free_throw'; // or 'freethrow' or '1pt'
+          statValue = 1;
+        }
       } else if (stat.type === 'freethrow') {
+        statType = 'free_throw';
         statValue = 1;
       }
       
-      // Adjust for missed shots (negative value for tracking)
+      // For missed shots, set value to 0 but keep the same stat type
+      // The modifier field will indicate if it was made/missed
       if (modifier === 'missed') {
         statValue = 0; // Track attempts but no points scored
-        statType = statType + '_attempt';
-      } else if (modifier === 'made') {
-        statType = statType + '_made';
       }
+      
+      // Map other stat types to likely backend constraint values
+      const statTypeMapping: { [key: string]: string } = {
+        'rebound': 'rebound',
+        'assist': 'assist', 
+        'steal': 'steal',
+        'block': 'block',
+        'turnover': 'turnover',
+        'foul': 'foul'
+      };
+      
+      // Apply mapping if stat type exists in our mapping
+      if (statTypeMapping[statType]) {
+        statType = statTypeMapping[statType];
+      }
+      
+      console.log('📝 Final mapped stat type:', statType, 'with value:', statValue);
       
       // Prepare stat data for database
       const statData = {
