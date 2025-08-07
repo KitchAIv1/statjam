@@ -9,6 +9,7 @@ import { TeamService } from '@/lib/services/tournamentService';
 import { Game } from '@/lib/types/game';
 import { Player, Team } from '@/lib/types/tournament';
 import GameStateSync from '@/components/game/GameStateSync';
+import GameCompletionManager from '@/components/game/GameCompletionManager';
 
 const StatTracker = () => {
   const { user, userRole, loading } = useAuthStore();
@@ -426,27 +427,69 @@ const StatTracker = () => {
   };
 
   /**
-   * Quarter Management Functions
+   * Quarter Management Functions with Overtime Support
    */
   const nextQuarter = () => {
     if (quarter < 4) {
+      // Regular quarters Q1-Q3
       setQuarter(prev => prev + 1);
       setGameClock({ minutes: 12, seconds: 0 });
       setIsClockRunning(false);
       console.log(`🏀 Advanced to Quarter ${quarter + 1}`);
     } else if (quarter === 4) {
-      // Could add overtime logic here
-      console.log('🏀 Game Complete - 4 quarters finished');
+      // Q4 → Check for overtime (handled by GameCompletionManager)
+      console.log('🏀 Q4 Complete - Game completion logic will handle next steps');
+    } else {
+      // Already in overtime, advance to next OT period
+      setQuarter(prev => prev + 1);
+      setGameClock({ minutes: 5, seconds: 0 }); // 5-minute overtime periods
+      setIsClockRunning(false);
+      const otPeriod = quarter - 3; // Q5=OT1, Q6=OT2, etc.
+      console.log(`🏀 Advanced to Overtime OT${otPeriod}`);
     }
   };
 
   const previousQuarter = () => {
     if (quarter > 1) {
-      setQuarter(prev => prev - 1);
-      setGameClock({ minutes: 12, seconds: 0 });
+      const newQuarter = quarter - 1;
+      setQuarter(newQuarter);
+      
+      // Set appropriate clock time
+      if (newQuarter <= 4) {
+        setGameClock({ minutes: 12, seconds: 0 }); // Regular quarter
+      } else {
+        setGameClock({ minutes: 5, seconds: 0 }); // Overtime period
+      }
+      
       setIsClockRunning(false);
-      console.log(`🏀 Moved back to Quarter ${quarter - 1}`);
+      
+      if (newQuarter <= 4) {
+        console.log(`🏀 Moved back to Quarter ${newQuarter}`);
+      } else {
+        const otPeriod = newQuarter - 4;
+        console.log(`🏀 Moved back to Overtime OT${otPeriod}`);
+      }
     }
+  };
+
+  /**
+   * Start overtime period (called by GameCompletionManager)
+   */
+  const startOvertimePeriod = (overtimePeriod: number) => {
+    const overtimeQuarter = 4 + overtimePeriod; // OT1=Q5, OT2=Q6, etc.
+    setQuarter(overtimeQuarter);
+    setGameClock({ minutes: 5, seconds: 0 }); // 5-minute overtime
+    setIsClockRunning(false);
+    console.log(`🏀 Starting Overtime OT${overtimePeriod} (Q${overtimeQuarter})`);
+  };
+
+  /**
+   * Handle game completion (called by GameCompletionManager)
+   */
+  const handleGameComplete = (finalScores: { home: number; away: number }) => {
+    setIsClockRunning(false); // Ensure clock is stopped
+    console.log('🏆 Game Complete!', finalScores);
+    // Could show game complete modal or redirect here
   };
 
   const initiateSubstitution = (playerId: string) => {
@@ -995,6 +1038,24 @@ const StatTracker = () => {
           }}
         />
       )}
+
+      {/* Game Completion Manager Component */}
+      {gameId && (
+        <GameCompletionManager
+          gameId={gameId}
+          currentQuarter={quarter}
+          gameClockMinutes={gameClock.minutes}
+          gameClockSeconds={gameClock.seconds}
+          isClockRunning={isClockRunning}
+          homeScore={homeScore}
+          awayScore={awayScore}
+          onGameComplete={handleGameComplete}
+          onOvertimeStart={startOvertimePeriod}
+          onQuarterEnd={(q, scores) => {
+            console.log(`🏀 Quarter ${q} ended with scores:`, scores);
+          }}
+        />
+      )}
       
       {/* Header */}
       <div style={styles.header}>
@@ -1046,11 +1107,12 @@ const StatTracker = () => {
             >
               ←
             </button>
-            <div style={styles.quarterText}>Q{quarter}</div>
+            <div style={styles.quarterText}>
+              {quarter <= 4 ? `Q${quarter}` : `OT${quarter - 4}`}
+            </div>
             <button 
-              style={{...styles.quarterButton, opacity: quarter >= 4 ? 0.5 : 1}}
+              style={{...styles.quarterButton}}
               onClick={nextQuarter}
-              disabled={quarter >= 4}
             >
               →
             </button>

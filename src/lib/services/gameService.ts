@@ -42,6 +42,33 @@ export class GameService {
       return false;
     }
   }
+
+  // Update game status (for completion, overtime, etc.)
+  static async updateGameStatus(gameId: string, status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'): Promise<boolean> {
+    try {
+      console.log('🎯 GameService: Updating game status:', { gameId, status });
+
+      const { error } = await supabase
+        .from('games')
+        .update({
+          status: status,
+          ...(status === 'completed' ? { end_time: new Date().toISOString() } : {}),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', gameId);
+
+      if (error) {
+        console.error('❌ Supabase error updating game status:', error);
+        return false;
+      }
+
+      console.log('✅ Game status updated successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error updating game status:', error);
+      return false;
+    }
+  }
   
   // Create a new game
   static async createGame(gameData: {

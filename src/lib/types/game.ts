@@ -4,7 +4,7 @@ export interface Game {
   team_a_id: string;
   team_b_id: string;
   stat_admin_id: string;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime';
   start_time: string;
   end_time?: string;
   quarter: number;
