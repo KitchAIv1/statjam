@@ -13,6 +13,7 @@ interface PlayByPlayFeedProps {
     awayScore: number;
   };
   isLive: boolean;
+  isMobile?: boolean;
 }
 
 /**
@@ -24,7 +25,8 @@ interface PlayByPlayFeedProps {
 const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({ 
   playByPlay, 
   game, 
-  isLive 
+  isLive,
+  isMobile = false 
 }) => {
 
   console.log('🎮 PlayByPlayFeed: Received data:', {

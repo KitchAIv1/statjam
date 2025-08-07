@@ -3,13 +3,17 @@
 import React, { use, useEffect } from 'react';
 import { useGameStream } from '@/hooks/useGameStream';
 import { useAuthStore } from '@/store/authStore';
+import { useResponsive } from '@/hooks/useResponsive';
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
 import PlayByPlayFeed from './components/PlayByPlayFeed';
-import TabNavigation from './components/TabNavigation';
+
 
 interface GameViewerPageProps {
   params: Promise<{ gameId: string }>;
 }
+
+
 
 /**
  * NBA-Style Game Viewer
@@ -22,12 +26,14 @@ interface GameViewerPageProps {
  * - Real-time play-by-play feed  
  * - NBA-style premium UI
  * - Team branding integration
+ * - Mobile-responsive design
  * - Social engagement ready
  */
 const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   const { gameId } = use(params);
   const { user, initialized, loading: authLoading } = useAuthStore();
   const { gameData, loading, error, isLive } = useGameStream(gameId);
+  const { isMobile, isTablet, isDesktop } = useResponsive();
 
   // Initialize auth store
   useEffect(() => {
@@ -40,59 +46,60 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
 
   if (loading) {
     return (
-      <div style={styles.container}>
+      <ResponsiveContainer>
         <div style={styles.loadingContainer}>
           <div style={styles.loadingSpinner} />
           <div style={styles.loadingText}>Loading Game...</div>
         </div>
-      </div>
+      </ResponsiveContainer>
     );
   }
 
   if (error) {
     return (
-      <div style={styles.container}>
+      <ResponsiveContainer>
         <div style={styles.errorContainer}>
           <div style={styles.errorText}>⚠️ {error}</div>
           <div style={styles.errorSubtext}>
             Please check the game ID and try again
           </div>
         </div>
-      </div>
+      </ResponsiveContainer>
     );
   }
 
   if (!gameData) {
     return (
-      <div style={styles.container}>
+      <ResponsiveContainer>
         <div style={styles.errorContainer}>
           <div style={styles.errorText}>Game Not Found</div>
           <div style={styles.errorSubtext}>
             The requested game could not be loaded
           </div>
         </div>
-      </div>
+      </ResponsiveContainer>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <ResponsiveContainer>
       {/* Game Header - Score, Teams, Status */}
       <GameHeader 
         game={gameData.game}
         isLive={isLive}
         lastUpdated={gameData.lastUpdated}
+        isMobile={isMobile}
       />
 
-      {/* Tab Navigation - Feed, Game, Stats */}
-      <TabNavigation activeTab="Feed" />
 
-      {/* Main Content - Play by Play Feed */}
-      <div style={styles.content}>
+
+      {/* Play by Play Feed */}
+      <div style={styles.playByPlayContainer}>
         <PlayByPlayFeed 
           playByPlay={gameData.playByPlay}
           game={gameData.game}
           isLive={isLive}
+          isMobile={isMobile}
         />
       </div>
 
@@ -103,7 +110,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
           <span style={styles.liveText}>LIVE</span>
         </div>
       )}
-    </div>
+    </ResponsiveContainer>
   );
 };
 
@@ -116,6 +123,10 @@ const styles = {
   },
   content: {
     paddingBottom: '60px' // Space for live indicator
+  },
+  playByPlayContainer: {
+    padding: '0',
+    paddingBottom: '80px' // Space for live indicator
   },
   loadingContainer: {
     display: 'flex',
