@@ -70,12 +70,11 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   };
 
   /**
-   * Get team name from team ID
+   * Get team name from play data
    */
-  const getTeamName = (teamId: string): string => {
-    // This would need actual team mapping logic
-    // For now, use simple logic
-    return teamId.includes('a') ? teamAName : teamBName;
+  const getTeamName = (): string => {
+    // Use the teamName from the play data (already resolved)
+    return play.teamName || 'Unknown Team';
   };
 
   /**
@@ -115,7 +114,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   };
 
   const scoringInfo = getScoringInfo();
-  const teamName = getTeamName(play.teamId);
+      const teamName = getTeamName();
 
   return (
     <div style={{

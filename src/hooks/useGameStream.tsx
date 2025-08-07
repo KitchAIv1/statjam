@@ -15,9 +15,10 @@ export const useGameStream = (gameId: string) => {
   /**
    * Transform game stats into play-by-play entries
    */
-  const transformStatsToPlayByPlay = (stats: any[]): PlayByPlayEntry[] => {
+  const transformStatsToPlayByPlay = (stats: any[], teamMapping?: { teamAId: string; teamBId: string; teamAName: string; teamBName: string }): PlayByPlayEntry[] => {
     console.log('🔄 Transform function called with stats:', stats);
     console.log('🔄 Stats count:', stats.length);
+    console.log('🔄 Team mapping:', teamMapping);
     if (stats.length > 0) {
       console.log('🔄 First stat sample:', stats[0]);
     }
@@ -31,10 +32,25 @@ export const useGameStream = (gameId: string) => {
                         `Player ${stat.player_id?.substring(0, 8)}` || 
                         'Unknown Player';
       
-      console.log('🔍 Player name extraction:', {
+      // Resolve team name from team_id
+      let teamName = 'Unknown Team';
+      if (teamMapping && stat.team_id) {
+        if (stat.team_id === teamMapping.teamAId) {
+          teamName = teamMapping.teamAName;
+        } else if (stat.team_id === teamMapping.teamBId) {
+          teamName = teamMapping.teamBName;
+        } else {
+          teamName = `Team ${stat.team_id.substring(0, 8)}`;
+        }
+      }
+      
+      console.log('🔍 Player and team extraction:', {
         original: stat.users,
         extracted: playerName,
-        playerId: stat.player_id
+        playerId: stat.player_id,
+        teamId: stat.team_id,
+        teamName: teamName,
+        teamMapping: teamMapping
       });
       
       switch (stat.stat_type) {
@@ -78,6 +94,7 @@ export const useGameStream = (gameId: string) => {
         gameTimeSeconds: stat.game_time_seconds,
         playType: 'stat_recorded' as const,
         teamId: stat.team_id,
+        teamName: teamName,
         playerId: stat.player_id,
         playerName,
         statType: stat.stat_type,
@@ -205,7 +222,45 @@ export const useGameStream = (gameId: string) => {
         console.warn('⚠️ Failed to fetch stats:', statsError);
       }
 
-      const playByPlay = transformStatsToPlayByPlay(stats || []);
+      // Calculate scores from game_stats (same as play-by-play)
+      const calculateScoresFromStats = (stats: any[], teamAId: string, teamBId: string) => {
+        let homeScore = 0;
+        let awayScore = 0;
+        
+        stats.forEach(stat => {
+          if (stat.modifier === 'made') {
+            let points = 0;
+            if (stat.stat_type === 'three_pointer') points = 3;
+            else if (stat.stat_type === 'field_goal') points = 2;
+            else if (stat.stat_type === 'free_throw') points = 1;
+            
+            if (stat.team_id === teamAId) {
+              homeScore += points;
+            } else if (stat.team_id === teamBId) {
+              awayScore += points;
+            }
+          }
+        });
+        
+        return { homeScore, awayScore };
+      };
+      
+      const calculatedScores = calculateScoresFromStats(stats || [], game.team_a_id, game.team_b_id);
+      
+      console.log('🏀 Score calculation from game_stats:', {
+        statsCount: stats?.length || 0,
+        teamAId: game.team_a_id,
+        teamBId: game.team_b_id,
+        calculatedScores,
+        databaseScores: { home: game.home_score, away: game.away_score }
+      });
+      
+      const playByPlay = transformStatsToPlayByPlay(stats || [], {
+        teamAId: game.team_a_id,
+        teamBId: game.team_b_id,
+        teamAName: game.team_a?.name || 'Team A',
+        teamBName: game.team_b?.name || 'Team B'
+      });
       
       console.log('🎯 PlayByPlay transformation:', {
         inputStatsCount: stats?.length || 0,
@@ -228,8 +283,8 @@ export const useGameStream = (gameId: string) => {
           gameClockMinutes: game.game_clock_minutes,
           gameClockSeconds: game.game_clock_seconds,
           isClockRunning: game.is_clock_running,
-          homeScore: game.home_score,
-          awayScore: game.away_score
+          homeScore: calculatedScores.homeScore, // Use calculated scores from game_stats
+          awayScore: calculatedScores.awayScore  // Use calculated scores from game_stats
         },
         playByPlay,
         lastUpdated: new Date().toISOString()

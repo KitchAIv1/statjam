@@ -7,6 +7,7 @@ export interface PlayByPlayEntry {
   gameTimeSeconds: number;
   playType: 'stat_recorded' | 'substitution' | 'quarter_change' | 'game_event';
   teamId: string;
+  teamName: string;
   playerId?: string;
   playerName?: string;
   statType?: string;

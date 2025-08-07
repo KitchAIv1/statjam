@@ -8,7 +8,7 @@ import { GameService } from '@/lib/services/gameService';
 import { TeamService } from '@/lib/services/tournamentService';
 import { Game } from '@/lib/types/game';
 import { Player, Team } from '@/lib/types/tournament';
-import GameStateSync from '@/components/game/GameStateSync';
+
 import GameCompletionManager from '@/components/game/GameCompletionManager';
 
 const StatTracker = () => {
@@ -93,7 +93,7 @@ const StatTracker = () => {
   const [quarter, setQuarter] = useState(1);
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
-  const [scoreHighlight, setScoreHighlight] = useState<'home' | 'away' | null>(null);
+
   const [showMadeMissed, setShowMadeMissed] = useState(false);
   const [showOffensiveDefensive, setShowOffensiveDefensive] = useState(false);
   const [showPersonalTechnical, setShowPersonalTechnical] = useState(false);
@@ -256,37 +256,7 @@ const StatTracker = () => {
     return 0;
   };
 
-  /**
-   * Update scores based on recorded stat
-   */
-  const updateScoresFromStat = (stat: any, modifier: string, team: string) => {
-    const points = calculateStatPoints(stat, modifier);
-    console.log(`🏀 Score Update: ${stat.label} ${modifier} for ${team} = ${points} points`);
-    
-    if (points > 0) {
-      if (team === 'Team A') {
-        setHomeScore(prev => {
-          const newScore = prev + points;
-          console.log(`🏀 ✅ Team A scored ${points} points (${stat.label}) - Score: ${prev} → ${newScore}`);
-          return newScore;
-        });
-        // Highlight score change
-        setScoreHighlight('home');
-        setTimeout(() => setScoreHighlight(null), 1000);
-      } else {
-        setAwayScore(prev => {
-          const newScore = prev + points;
-          console.log(`🏀 ✅ Team B scored ${points} points (${stat.label}) - Score: ${prev} → ${newScore}`);
-          return newScore;
-        });
-        // Highlight score change
-        setScoreHighlight('away');
-        setTimeout(() => setScoreHighlight(null), 1000);
-      }
-    } else {
-      console.log(`🏀 ❌ No points awarded for ${stat.label} ${modifier}`);
-    }
-  };
+
 
   const recordStat = async (stat: any, modifier: string = '') => {
     let actionText = '';
@@ -302,9 +272,8 @@ const StatTracker = () => {
       actionText = `${stat.label} ${stat.type === 'points' ? 'Points' : stat.type === 'freethrow' ? 'Free Throw' : stat.type.toUpperCase()}`;
     }
     
-    // Update scores IMMEDIATELY for real-time feedback
-    console.log(`🎯 About to update score: ${stat.type} ${modifier} for ${selectedTeam}`);
-    updateScoresFromStat(stat, modifier, selectedTeam);
+      // Note: Scores will be calculated from game_stats table in real-time
+  console.log(`🎯 Recording stat: ${stat.type} ${modifier} for ${selectedTeam}`);
     
     // Update UI immediately for responsiveness
     setLastAction(actionText);
@@ -1016,28 +985,7 @@ const StatTracker = () => {
 
   return (
     <div style={styles.container}>
-      {/* Game State Sync Component */}
-      {gameId && (
-        <GameStateSync
-          gameId={gameId}
-          currentQuarter={quarter}
-          gameClockMinutes={gameClock.minutes}
-          gameClockSeconds={gameClock.seconds}
-          isClockRunning={isClockRunning}
-          homeScore={homeScore}
-          awayScore={awayScore}
-          onSyncComplete={(success) => {
-            if (success) {
-              console.log('✅ Game state sync successful');
-            } else {
-              console.log('❌ Game state sync failed');
-            }
-          }}
-          onSyncError={(error) => {
-            console.error('❌ Game state sync error:', error);
-          }}
-        />
-      )}
+      {/* Note: Scores are now calculated from game_stats table in real-time */}
 
       {/* Game Completion Manager Component */}
       {gameId && (
@@ -1087,12 +1035,7 @@ const StatTracker = () => {
           onClick={() => setSelectedTeam('Team A')}
         >
           <div style={styles.teamLabel}>HOME</div>
-          <div style={{
-            ...styles.teamScore,
-            background: scoreHighlight === 'home' ? '#FFD700' : 'transparent',
-            color: scoreHighlight === 'home' ? '#000' : '#ffffff',
-            transition: 'all 0.3s ease'
-          }}>{homeScore}</div>
+          <div style={styles.teamScore}>{homeScore}</div>
           <div style={styles.teamName}>{teamNames['Team A']}</div>
         </div>
 
@@ -1149,12 +1092,7 @@ const StatTracker = () => {
           onClick={() => setSelectedTeam('Team B')}
         >
           <div style={styles.teamLabel}>AWAY</div>
-          <div style={{
-            ...styles.teamScore,
-            background: scoreHighlight === 'away' ? '#FFD700' : 'transparent',
-            color: scoreHighlight === 'away' ? '#000' : '#ffffff',
-            transition: 'all 0.3s ease'
-          }}>{awayScore}</div>
+          <div style={styles.teamScore}>{awayScore}</div>
           <div style={styles.teamName}>{teamNames['Team B']}</div>
         </div>
       </div>
