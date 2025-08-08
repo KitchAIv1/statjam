@@ -11,6 +11,7 @@ import { GameStatusBar } from '@/components/tracker/GameStatusBar';
 import { TeamRoster } from '@/components/tracker/TeamRoster';
 import { StatRecorder } from '@/components/tracker/StatRecorder';
 import { SubstitutionControls } from '@/components/tracker/SubstitutionControls';
+import { ActionBar } from '@/components/tracker/ActionBar';
 
 type GameRow = {
   id: string;
@@ -128,6 +129,8 @@ export default function TrackerV2Page() {
           onStart={tracker.startClock}
           onStop={tracker.stopClock}
           onReset={tracker.resetClock}
+          onPrevQuarter={() => tracker.setQuarter(Math.max(1, tracker.quarter - 1) as any)}
+          onNextQuarter={() => tracker.setQuarter((tracker.quarter + 1) as any)}
         />
 
         {/* Rosters (read-only for now) */}
@@ -160,6 +163,17 @@ export default function TrackerV2Page() {
 
         {/* Quick Stat Recorder (demo) */}
         <StatRecorder onRecord={async (s) => { await tracker.recordStat(s); }} teamAId={teamAId} teamBId={teamBId} rosterA={tracker.rosterA} rosterB={tracker.rosterB} />
+
+        <div className="h-24" />
+        <ActionBar
+          lastAction={null}
+          onCloseGame={async () => {
+            if (!gameId) return;
+            const confirmEnd = confirm('End the game now? This will set status to completed.');
+            if (!confirmEnd) return;
+            await supabase.from('games').update({ status: 'completed' }).eq('id', gameId);
+          }}
+        />
       </div>
     </main>
   );
