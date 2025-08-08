@@ -14,6 +14,7 @@ import { SubstitutionControls } from '@/components/tracker/SubstitutionControls'
 import { ActionBar } from '@/components/tracker/ActionBar';
 import { PlayerGrid } from '@/components/tracker/PlayerGrid';
 import { SubstitutionModal } from '@/components/tracker/SubstitutionModal';
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 
 type GameRow = {
   id: string;
@@ -114,8 +115,9 @@ export default function TrackerV2Page() {
   const teamBScore = tracker.scores[teamBId] || 0;
 
   return (
-    <main className="min-h-screen px-4 py-8">
-      <div className="max-w-5xl mx-auto flex flex-col gap-10">
+    <main className="min-h-screen">
+      <ResponsiveContainer>
+      <div className="flex flex-col gap-10 py-8">
         <GameStatusBar status={game?.status || (tracker.clock.isRunning ? 'in_progress' : 'scheduled')} />
 
         <ScoreBoard
@@ -202,6 +204,7 @@ export default function TrackerV2Page() {
           }}
         />
       </div>
+      </ResponsiveContainer>
     </main>
   );
 }
