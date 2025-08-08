@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/supabase';
 import { Game, GameStat, PlayerGameStats, GameSubstitution, AuditLog } from '@/lib/types/game';
 
+// Temporary feature flag to silence audit log writes until backend endpoint is ready
+const ENABLE_AUDIT_LOGS = false;
+
 export class GameService {
   // ===== GAME SCHEDULING METHODS =====
   
@@ -488,8 +491,22 @@ export class GameService {
         return false;
       }
 
-      // Log the action
-      await this.createAuditLog(subData.gameId, 'substitution', subData);
+      console.log('✅ Substitution inserted:', {
+        game_id: subData.gameId,
+        player_in_id: subData.playerInId,
+        player_out_id: subData.playerOutId,
+        team_id: subData.teamId,
+        quarter: subData.quarter,
+        game_time_minutes: subData.gameTimeMinutes,
+        game_time_seconds: subData.gameTimeSeconds
+      });
+
+      // Log the action (non-blocking; ignore failures to avoid UI stalls)
+      try {
+        void this.createAuditLog(subData.gameId, 'substitution', subData);
+      } catch (_e) {
+        // no-op
+      }
 
       return true;
     } catch (error) {
@@ -564,10 +581,14 @@ export class GameService {
   // Create audit log entry
   static async createAuditLog(gameId: string, action: string, details: any): Promise<boolean> {
     try {
+      if (!ENABLE_AUDIT_LOGS) {
+        // Silently skip until audit_logs endpoint/policies are ready
+        return false;
+      }
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        console.error('No user found for audit log');
+        // Skip without noisy logging
         return false;
       }
 
@@ -581,13 +602,13 @@ export class GameService {
         });
 
       if (error) {
-        console.error('Error creating audit log:', error);
+        // Avoid noisy errors in console; return false quietly
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error in createAuditLog:', error);
+      // Avoid noisy errors in console; return false quietly
       return false;
     }
   }

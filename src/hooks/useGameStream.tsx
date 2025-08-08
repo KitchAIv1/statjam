@@ -6,6 +6,7 @@ import { GameViewerData, PlayByPlayEntry } from '@/lib/types/playByPlay';
 import { Game } from '@/lib/types/game';
 
 export const useGameStream = (gameId: string) => {
+  const DEBUG_VIEWER = false;
   const [gameData, setGameData] = useState<GameViewerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -16,11 +17,13 @@ export const useGameStream = (gameId: string) => {
    * Transform game stats into play-by-play entries
    */
   const transformStatsToPlayByPlay = (stats: any[], teamMapping?: { teamAId: string; teamBId: string; teamAName: string; teamBName: string }): PlayByPlayEntry[] => {
-    console.log('🔄 Transform function called with stats:', stats);
-    console.log('🔄 Stats count:', stats.length);
-    console.log('🔄 Team mapping:', teamMapping);
-    if (stats.length > 0) {
-      console.log('🔄 First stat sample:', stats[0]);
+    if (DEBUG_VIEWER) {
+      console.log('🔄 Transform function called with stats:', stats);
+      console.log('🔄 Stats count:', stats.length);
+      console.log('🔄 Team mapping:', teamMapping);
+      if (stats.length > 0) {
+        console.log('🔄 First stat sample:', stats[0]);
+      }
     }
     
     return stats.map(stat => {
@@ -111,6 +114,45 @@ export const useGameStream = (gameId: string) => {
   };
 
   /**
+   * Transform substitutions into play-by-play entries
+   */
+  const transformSubsToPlayByPlay = (subs: any[], teamMapping?: { teamAId: string; teamBId: string; teamAName: string; teamBName: string }): PlayByPlayEntry[] => {
+    return subs.map(sub => {
+      // Resolve team name from team_id
+      let teamName = 'Unknown Team';
+      if (teamMapping && sub.team_id) {
+        if (sub.team_id === teamMapping.teamAId) {
+          teamName = teamMapping.teamAName;
+        } else if (sub.team_id === teamMapping.teamBId) {
+          teamName = teamMapping.teamBName;
+        } else {
+          teamName = `Team ${sub.team_id.substring(0, 8)}`;
+        }
+      }
+
+      const playerOutName = sub.player_out?.email?.split('@')[0] || `Player ${sub.player_out_id?.substring(0, 8)}` || 'Unknown';
+      const playerInName = sub.player_in?.email?.split('@')[0] || `Player ${sub.player_in_id?.substring(0, 8)}` || 'Unknown';
+
+      const description = `Substitution: ${playerOutName} → ${playerInName}`;
+
+      return {
+        id: sub.id,
+        gameId: sub.game_id,
+        timestamp: sub.created_at,
+        quarter: sub.quarter,
+        gameTimeMinutes: sub.game_time_minutes,
+        gameTimeSeconds: sub.game_time_seconds,
+        playType: 'substitution' as const,
+        teamId: sub.team_id,
+        teamName,
+        description,
+        scoreAfter: { home: 0, away: 0 },
+        createdAt: sub.created_at
+      } as PlayByPlayEntry;
+    });
+  };
+
+  /**
    * Fetch initial game data
    */
   const fetchGameData = useCallback(async (isPollingUpdate = false) => {
@@ -121,7 +163,7 @@ export const useGameStream = (gameId: string) => {
       }
       setError(null);
 
-      console.log('🔍 GameViewer: Fetching game data for:', gameId);
+      if (DEBUG_VIEWER) console.log('🔍 GameViewer: Fetching game data for:', gameId);
 
       // Fetch game details
       const { data: game, error: gameError } = await supabase
@@ -143,16 +185,20 @@ export const useGameStream = (gameId: string) => {
       }
 
       // Fetch game stats for play-by-play
-      console.log('📊 Fetching stats for game:', gameId);
-      console.log('🔄 CACHE BUST: Current timestamp:', Date.now());
+      if (DEBUG_VIEWER) {
+        console.log('📊 Fetching stats for game:', gameId);
+        console.log('🔄 CACHE BUST: Current timestamp:', Date.now());
+      }
       
       // First, let's check authentication status
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('🔍 GameViewer: Auth status:', {
-        hasSession: !!session,
-        userId: session?.user?.id,
-        sessionError: sessionError?.message
-      });
+      if (DEBUG_VIEWER) {
+        console.log('🔍 GameViewer: Auth status:', {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          sessionError: sessionError?.message
+        });
+      }
       
       // First, let's check if there are ANY stats in the game_stats table
       const { data: allStats, error: allStatsError } = await supabase
@@ -160,14 +206,16 @@ export const useGameStream = (gameId: string) => {
         .select('game_id, stat_type, created_at')
         .limit(10);
         
-      console.log('🔍 ALL game_stats in DB (sample):', { 
-        count: allStats?.length || 0, 
-        error: allStatsError,
-        data: allStats 
-      });
+      if (DEBUG_VIEWER) {
+        console.log('🔍 ALL game_stats in DB (sample):', { 
+          count: allStats?.length || 0, 
+          error: allStatsError,
+          data: allStats 
+        });
+      }
       
       // Log each stat individually to see structure
-      if (allStats && allStats.length > 0) {
+      if (DEBUG_VIEWER && allStats && allStats.length > 0) {
         console.log('🔍 DETAILED: First stat in DB:', JSON.stringify(allStats[0], null, 2));
       }
       
@@ -181,27 +229,31 @@ export const useGameStream = (gameId: string) => {
         .eq('game_id', gameId)
         .order('created_at', { ascending: false });
 
-      console.log('📊 Stats query result for gameId:', gameId, { 
-        count: stats?.length || 0, 
-        error: statsError,
-        statsData: stats
-      });
+      if (DEBUG_VIEWER) {
+        console.log('📊 Stats query result for gameId:', gameId, { 
+          count: stats?.length || 0, 
+          error: statsError,
+          statsData: stats
+        });
+      }
       
       // Log each stat individually for this game
       if (stats && stats.length > 0) {
-        console.log('🔍 DETAILED: First stat for this game:', JSON.stringify(stats[0], null, 2));
-        stats.forEach((stat, index) => {
-          console.log(`🔍 Stat ${index + 1}:`, {
-            id: stat.id,
-            stat_type: stat.stat_type,
-            modifier: stat.modifier,
-            userRelation: stat.users,
-            playerEmail: stat.users?.email,
-            playerId: stat.player_id,
-            game_id: stat.game_id
+        if (DEBUG_VIEWER) {
+          console.log('🔍 DETAILED: First stat for this game:', JSON.stringify(stats[0], null, 2));
+          stats.forEach((stat, index) => {
+            console.log(`🔍 Stat ${index + 1}:`, {
+              id: stat.id,
+              stat_type: stat.stat_type,
+              modifier: stat.modifier,
+              userRelation: stat.users,
+              playerEmail: stat.users?.email,
+              playerId: stat.player_id,
+              game_id: stat.game_id
+            });
           });
-        });
-      } else {
+        }
+      } else if (DEBUG_VIEWER) {
         console.log('❌ NO STATS FOUND for game:', gameId);
       }
       
@@ -220,6 +272,26 @@ export const useGameStream = (gameId: string) => {
 
       if (statsError) {
         console.warn('⚠️ Failed to fetch stats:', statsError);
+      }
+
+      // Fetch substitutions for play-by-play
+      const { data: subs, error: subsError } = await supabase
+        .from('game_substitutions')
+        .select('id, game_id, match_id, team_id, player_in_id, player_out_id, quarter, game_time_minutes, game_time_seconds, created_at')
+        .or(`game_id.eq.${gameId},match_id.eq.${gameId}`)
+        .order('created_at', { ascending: false });
+
+      if (subsError) {
+        console.warn('⚠️ Failed to fetch substitutions:', subsError);
+      }
+      const subsCount = subs?.length || 0;
+      if (DEBUG_VIEWER) {
+        console.log('📊 Substitutions query result for gameId:', gameId, 'count=', subsCount, 'error=', subsError?.message);
+        if (subs && subs.length > 0) {
+          console.log('🔍 First substitution for this game:', JSON.stringify(subs[0], null, 2));
+        } else {
+          console.log('❌ NO SUBSTITUTIONS FOUND for game:', gameId);
+        }
       }
 
       // Calculate scores from game_stats (same as play-by-play)
@@ -247,26 +319,55 @@ export const useGameStream = (gameId: string) => {
       
       const calculatedScores = calculateScoresFromStats(stats || [], game.team_a_id, game.team_b_id);
       
-      console.log('🏀 Score calculation from game_stats:', {
-        statsCount: stats?.length || 0,
-        teamAId: game.team_a_id,
-        teamBId: game.team_b_id,
-        calculatedScores,
-        databaseScores: { home: game.home_score, away: game.away_score }
-      });
+      if (DEBUG_VIEWER) {
+        console.log('🏀 Score calculation from game_stats:', {
+          statsCount: stats?.length || 0,
+          teamAId: game.team_a_id,
+          teamBId: game.team_b_id,
+          calculatedScores,
+          databaseScores: { home: game.home_score, away: game.away_score }
+        });
+      }
       
-      const playByPlay = transformStatsToPlayByPlay(stats || [], {
+      const statEntries = transformStatsToPlayByPlay(stats || [], {
         teamAId: game.team_a_id,
         teamBId: game.team_b_id,
         teamAName: game.team_a?.name || 'Team A',
         teamBName: game.team_b?.name || 'Team B'
       });
-      
-      console.log('🎯 PlayByPlay transformation:', {
-        inputStatsCount: stats?.length || 0,
-        outputPlayByPlayCount: playByPlay.length,
-        samplePlayByPlay: playByPlay.slice(0, 2)
+
+      const subEntries = transformSubsToPlayByPlay(subs || [], {
+        teamAId: game.team_a_id,
+        teamBId: game.team_b_id,
+        teamAName: game.team_a?.name || 'Team A',
+        teamBName: game.team_b?.name || 'Team B'
       });
+
+      // Merge and sort: quarter desc, game time desc, createdAt desc
+      const sortPlays = (a: PlayByPlayEntry, b: PlayByPlayEntry) => {
+        if (a.quarter !== b.quarter) return b.quarter - a.quarter;
+        const ta = (a.gameTimeMinutes || 0) * 60 + (a.gameTimeSeconds || 0);
+        const tb = (b.gameTimeMinutes || 0) * 60 + (b.gameTimeSeconds || 0);
+        if (ta !== tb) return tb - ta;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      };
+
+      const playByPlay = [...statEntries, ...subEntries].sort(sortPlays);
+      if (DEBUG_VIEWER) {
+        console.log('🔁 Combined play list:', {
+          statEntries: statEntries.length,
+          subEntries: subEntries.length,
+          total: playByPlay.length
+        });
+      }
+      
+      if (DEBUG_VIEWER) {
+        console.log('🎯 PlayByPlay transformation:', {
+          inputStatsCount: stats?.length || 0,
+          outputPlayByPlayCount: playByPlay.length,
+          samplePlayByPlay: playByPlay.slice(0, 2)
+        });
+      }
 
       const gameViewerData: GameViewerData = {
         game: {
@@ -296,19 +397,23 @@ export const useGameStream = (gameId: string) => {
                         (game.status === 'scheduled' && (game.home_score > 0 || game.away_score > 0));
       setIsLive(gameIsLive);
       
-      console.log('🎯 Live status determination:', {
-        status: game.status,
-        hasScores: game.home_score > 0 || game.away_score > 0,
-        isLive: gameIsLive
-      });
+      if (DEBUG_VIEWER) {
+        console.log('🎯 Live status determination:', {
+          status: game.status,
+          hasScores: game.home_score > 0 || game.away_score > 0,
+          isLive: gameIsLive
+        });
+      }
 
-      console.log('✅ GameViewer: Game data loaded successfully');
-      console.log('📊 Game info:', {
-        scores: `${game.home_score}-${game.away_score}`,
-        status: game.status,
-        quarter: game.quarter,
-        playByPlayCount: playByPlay.length
-      });
+      if (DEBUG_VIEWER) {
+        console.log('✅ GameViewer: Game data loaded successfully');
+        console.log('📊 Game info:', {
+          scores: `${game.home_score}-${game.away_score}`,
+          status: game.status,
+          quarter: game.quarter,
+          playByPlayCount: playByPlay.length
+        });
+      }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load game data';
@@ -332,15 +437,17 @@ export const useGameStream = (gameId: string) => {
     fetchGameData();
 
     // Set up real-time subscriptions
-    console.log('🔗 GameViewer: Setting up subscriptions for game:', gameId);
-          console.log('🔗 Subscription filters:', {
+    if (DEBUG_VIEWER) {
+      console.log('🔗 GameViewer: Setting up subscriptions for game:', gameId);
+      console.log('🔗 Subscription filters:', {
         gameFilter: `id=eq.${gameId}`,
         statsFilter: `game_id=eq.${gameId}`
       });
+    }
     
     // Also set up polling as backup for real-time updates
     const pollInterval = setInterval(() => {
-      console.log('🔄 GameViewer: Polling for updates...');
+      if (DEBUG_VIEWER) console.log('🔄 GameViewer: Polling for updates...');
       fetchGameData(true); // Pass true to indicate this is a polling update
     }, 5000); // Poll every 5 seconds
     
@@ -355,19 +462,23 @@ export const useGameStream = (gameId: string) => {
           filter: `id=eq.${gameId}`
         },
         (payload) => {
-          console.log('🔄 GameViewer: Game state updated:', payload);
-          console.log('🎯 Game update details:', payload.new);
+          if (DEBUG_VIEWER) {
+            console.log('🔄 GameViewer: Game state updated:', payload);
+            console.log('🎯 Game update details:', payload.new);
+          }
           
           if (payload.new) {
             const updatedGame = payload.new as Game;
             
             // Debug score updates specifically
-            console.log('🏀 Score sync from games table:', {
-              homeScore: updatedGame.home_score,
-              awayScore: updatedGame.away_score,
-              quarter: updatedGame.quarter,
-              timestamp: new Date().toISOString()
-            });
+            if (DEBUG_VIEWER) {
+              console.log('🏀 Score sync from games table:', {
+                homeScore: updatedGame.home_score,
+                awayScore: updatedGame.away_score,
+                quarter: updatedGame.quarter,
+                timestamp: new Date().toISOString()
+              });
+            }
             
             setGameData(prev => prev ? {
               ...prev,
@@ -397,25 +508,70 @@ export const useGameStream = (gameId: string) => {
           filter: `game_id=eq.${gameId}`
         },
         (payload) => {
-          console.log('🔄 GameViewer: New stat recorded:', payload);
-          console.log('📈 Stat details:', payload.new);
+          if (DEBUG_VIEWER) {
+            console.log('🔄 GameViewer: New stat recorded:', payload);
+            console.log('📈 Stat details:', payload.new);
+          }
           
           if (payload.new) {
-            console.log('🔄 Triggering data refetch due to new stat...');
+            if (DEBUG_VIEWER) console.log('🔄 Triggering data refetch due to new stat...');
             // Small delay to ensure database is fully updated before refetch
             setTimeout(() => {
-              console.log('🔄 GameViewer: Executing delayed refetch...');
+              if (DEBUG_VIEWER) console.log('🔄 GameViewer: Executing delayed refetch...');
               fetchGameData(true); // Pass true to avoid loading screen
             }, 200);
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'game_substitutions',
+          // no filter to support both game_id and match_id; we'll check in handler
+        },
+        (payload) => {
+          if (DEBUG_VIEWER) console.log('🔄 GameViewer: New substitution recorded:', payload);
+          if (payload.new && (payload.new.game_id === gameId || payload.new.match_id === gameId)) {
+            // Optimistically add the new substitution to play-by-play without waiting for refetch
+            setGameData(prev => {
+              if (!prev) return prev;
+              const teamMapping = {
+                teamAId: prev.game.teamAId,
+                teamBId: prev.game.teamBId,
+                teamAName: prev.game.teamAName,
+                teamBName: prev.game.teamBName
+              };
+              const newEntry = transformSubsToPlayByPlay([payload.new], teamMapping)[0];
+              const merged = [newEntry, ...prev.playByPlay];
+              const sortPlays = (a: PlayByPlayEntry, b: PlayByPlayEntry) => {
+                if (a.quarter !== b.quarter) return b.quarter - a.quarter;
+                const ta = (a.gameTimeMinutes || 0) * 60 + (a.gameTimeSeconds || 0);
+                const tb = (b.gameTimeMinutes || 0) * 60 + (b.gameTimeSeconds || 0);
+                if (ta !== tb) return tb - ta;
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              };
+              return {
+                ...prev,
+                playByPlay: merged.sort(sortPlays),
+                lastUpdated: new Date().toISOString()
+              };
+            });
+
+            // Also refetch shortly after to ensure full consistency with DB
+            setTimeout(() => {
+              fetchGameData(true);
+            }, 300);
+          }
+        }
+      )
       .subscribe((status) => {
-        console.log('🔗 GameViewer: Subscription status:', status);
+        if (DEBUG_VIEWER) console.log('🔗 GameViewer: Subscription status:', status);
       });
 
     return () => {
-      console.log('🔗 GameViewer: Cleaning up subscriptions and polling...');
+      if (DEBUG_VIEWER) console.log('🔗 GameViewer: Cleaning up subscriptions and polling...');
       clearInterval(pollInterval);
       supabase.removeChannel(gameSubscription);
     };
