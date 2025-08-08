@@ -12,6 +12,8 @@ import { TeamRoster } from '@/components/tracker/TeamRoster';
 import { StatRecorder } from '@/components/tracker/StatRecorder';
 import { SubstitutionControls } from '@/components/tracker/SubstitutionControls';
 import { ActionBar } from '@/components/tracker/ActionBar';
+import { PlayerGrid } from '@/components/tracker/PlayerGrid';
+import { SubstitutionModal } from '@/components/tracker/SubstitutionModal';
 
 type GameRow = {
   id: string;
@@ -82,6 +84,7 @@ export default function TrackerV2Page() {
   const teamBId = game?.team_b_id || teamBParam;
   const teamAName = game?.team_a?.name || 'Team A';
   const teamBName = game?.team_b?.name || 'Team B';
+  const [subOutId, setSubOutId] = useState<string | null>(null);
 
   const tracker = useTracker({
     initialGameId: gameId || 'unknown',
@@ -135,8 +138,14 @@ export default function TrackerV2Page() {
 
         {/* Rosters (read-only for now) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <TeamRoster teamId={teamAId} teamName={teamAName} roster={tracker.rosterA} setRoster={(u) => tracker.setRosterA(u)} />
-          <TeamRoster teamId={teamBId} teamName={teamBName} roster={tracker.rosterB} setRoster={(u) => tracker.setRosterB(u)} />
+          <div>
+            <div className="mb-2 text-gray-300 text-sm">{teamAName} On Court</div>
+            <PlayerGrid roster={tracker.rosterA} playerSeconds={tracker.playerSeconds} onSubClick={(pid)=>setSubOutId(pid)} />
+          </div>
+          <div>
+            <div className="mb-2 text-gray-300 text-sm">{teamBName} On Court</div>
+            <PlayerGrid roster={tracker.rosterB} playerSeconds={tracker.playerSeconds} onSubClick={(pid)=>setSubOutId(pid)} />
+          </div>
         </div>
 
         {/* Substitutions */}
@@ -161,17 +170,35 @@ export default function TrackerV2Page() {
           />
         </div>
 
-        {/* Quick Stat Recorder (demo) */}
+        {/* Quick Stat Recorder */}
         <StatRecorder onRecord={async (s) => { await tracker.recordStat(s); }} teamAId={teamAId} teamBId={teamBId} rosterA={tracker.rosterA} rosterB={tracker.rosterB} />
+
+        <SubstitutionModal
+          open={!!subOutId}
+          onClose={() => setSubOutId(null)}
+          bench={subOutId && tracker.rosterA.onCourt.includes(subOutId) ? tracker.rosterA.bench : tracker.rosterB.bench}
+          onSelect={async (playerInId) => {
+            const teamId = subOutId && tracker.rosterA.onCourt.includes(subOutId) ? tracker.rosterA.teamId : tracker.rosterB.teamId;
+            const ok = await tracker.substitute({
+              gameId: tracker.gameId,
+              teamId,
+              playerOutId: subOutId!,
+              playerInId,
+              quarter: tracker.quarter as any,
+              gameTimeSeconds: tracker.clock.secondsRemaining
+            });
+            if (ok) setSubOutId(null);
+          }}
+        />
 
         <div className="h-24" />
         <ActionBar
-          lastAction={null}
+          lastAction={tracker.lastAction}
           onCloseGame={async () => {
             if (!gameId) return;
             const confirmEnd = confirm('End the game now? This will set status to completed.');
             if (!confirmEnd) return;
-            await supabase.from('games').update({ status: 'completed' }).eq('id', gameId);
+            await tracker.closeGame();
           }}
         />
       </div>

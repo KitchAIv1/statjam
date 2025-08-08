@@ -44,6 +44,8 @@ export function useTracker({ initialGameId, teamAId, teamBId, rules: rulesOverri
   const [rosterA, setRosterA] = useState<RosterState>({ teamId: teamAId, onCourt: [], bench: [] });
   const [rosterB, setRosterB] = useState<RosterState>({ teamId: teamBId, onCourt: [], bench: [] });
   const [error, setError] = useState<string | null>(null);
+  const [playerSeconds, setPlayerSeconds] = useState<Record<string, number>>({});
+  const [lastAction, setLastAction] = useState<string | null>(null);
 
   const gameIdRef = useRef(initialGameId);
 
@@ -59,7 +61,19 @@ export function useTracker({ initialGameId, teamAId, teamBId, rules: rulesOverri
   const startClock = useCallback(() => setClock(c => ({ ...c, isRunning: true })), []);
   const stopClock = useCallback(() => setClock(c => ({ ...c, isRunning: false })), []);
   const resetClock = useCallback(() => setClock({ isRunning: false, secondsRemaining: rules.quarterLengthSeconds }), [rules.quarterLengthSeconds]);
-  const tick = useCallback((delta: number) => setClock(c => tickClock(c, delta)), []);
+  const tick = useCallback((delta: number) => {
+    setClock(c => tickClock(c, delta));
+    // accumulate seconds for on-court players when running
+    setPlayerSeconds(prev => {
+      const next = { ...prev };
+      if (clock.isRunning && delta > 0) {
+        [...rosterA.onCourt, ...rosterB.onCourt].forEach(pid => {
+          next[pid] = (next[pid] || 0) + delta;
+        });
+      }
+      return next;
+    });
+  }, [clock.isRunning, rosterA.onCourt, rosterB.onCourt]);
 
   // Record stat
   const recordStat = useCallback(async (input: Omit<StatRecord, 'createdAt' | 'quarter' | 'gameTimeSeconds'> & { modifier?: string }) => {
@@ -90,6 +104,7 @@ export function useTracker({ initialGameId, teamAId, teamBId, rules: rulesOverri
         gameTimeSeconds: (enriched.gameTimeSeconds || 0) % 60
       } as any);
       if (!success) throw new Error('recordStat failed');
+      setLastAction('Stat recorded');
       return true;
     } catch (e) {
       // rollback if failed
@@ -121,6 +136,7 @@ export function useTracker({ initialGameId, teamAId, teamBId, rules: rulesOverri
         gameTimeSeconds: sub.gameTimeSeconds % 60
       });
       if (!success) throw new Error('recordSubstitution failed');
+      setLastAction('Substitution applied');
       return true;
     } catch (e) {
       // rollback by flipping back (simple approach: reload roster from previous state could be kept in ref if needed)
@@ -140,6 +156,13 @@ export function useTracker({ initialGameId, teamAId, teamBId, rules: rulesOverri
     return false;
   }, [snapshot, rules]);
 
+  const closeGame = useCallback(async () => {
+    try {
+      await GameService.updateGameStatus(gameIdRef.current, 'completed');
+      setLastAction('Game closed');
+    } catch {}
+  }, []);
+
   return {
     // state
     gameId: snapshot.gameId,
@@ -150,6 +173,8 @@ export function useTracker({ initialGameId, teamAId, teamBId, rules: rulesOverri
     rosterB,
     stats,
     error,
+    playerSeconds,
+    lastAction,
 
     // actions
     startClock,
@@ -161,7 +186,8 @@ export function useTracker({ initialGameId, teamAId, teamBId, rules: rulesOverri
     advanceIfNeeded,
     setRosterA,
     setRosterB,
-    setQuarter
+    setQuarter,
+    closeGame
   } as const;
 }
 
