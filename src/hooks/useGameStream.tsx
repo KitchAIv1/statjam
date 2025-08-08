@@ -280,37 +280,18 @@ export const useGameStream = (gameId: string) => {
         console.warn('⚠️ Failed to fetch stats:', statsError);
       }
 
-<<<<<<< HEAD
-      // Fetch substitutions for play-by-play
-      const { data: subs, error: subsError } = await supabase
-        .from('game_substitutions')
-        .select('id, game_id, match_id, team_id, player_in_id, player_out_id, quarter, game_time_minutes, game_time_seconds, created_at')
-        .or(`game_id.eq.${gameId},match_id.eq.${gameId}`)
-=======
+      
       // Fetch substitutions for this game by game_id only (backend confirmed)
       const { data: subs, error: subsError } = await supabase
         .from('game_substitutions')
         .select('id, game_id, team_id, player_in_id, player_out_id, quarter, game_time_minutes, game_time_seconds, created_at')
         .eq('game_id', gameId)
->>>>>>> feature/substitution-v2
         .order('created_at', { ascending: false });
 
       if (subsError) {
         console.warn('⚠️ Failed to fetch substitutions:', subsError);
       }
-<<<<<<< HEAD
-      const subsCount = subs?.length || 0;
-      if (DEBUG_VIEWER) {
-        console.log('📊 Substitutions query result for gameId:', gameId, 'count=', subsCount, 'error=', subsError?.message);
-        if (subs && subs.length > 0) {
-          console.log('🔍 First substitution for this game:', JSON.stringify(subs[0], null, 2));
-        } else {
-          console.log('❌ NO SUBSTITUTIONS FOUND for game:', gameId);
-        }
-      }
-=======
-      console.log('📊 Substitutions fetched:', { count: subs?.length || 0, sample: subs && subs[0] });
->>>>>>> feature/substitution-v2
+      if (DEBUG_VIEWER) console.log('📊 Substitutions fetched:', { count: subs?.length || 0, sample: subs && subs[0] });
 
       // Calculate scores from game_stats (same as play-by-play)
       const calculateScoresFromStats = (stats: any[], teamAId: string, teamBId: string) => {
@@ -347,11 +328,7 @@ export const useGameStream = (gameId: string) => {
         });
       }
       
-<<<<<<< HEAD
-      const statEntries = transformStatsToPlayByPlay(stats || [], {
-=======
       const teamMapping = {
->>>>>>> feature/substitution-v2
         teamAId: game.team_a_id,
         teamBId: game.team_b_id,
         teamAName: game.team_a?.name || 'Team A',
@@ -361,7 +338,6 @@ export const useGameStream = (gameId: string) => {
       const statEntries = transformStatsToPlayByPlay(stats || [], teamMapping);
       // Use V2 substitutions if available; fall back to direct fetch
       const subEntries = transformSubsToPlay((v2Subs && v2Subs.length ? v2Subs : (subs || [])), teamMapping);
-
       const playByPlay = [...statEntries, ...subEntries].sort((a, b) => {
         if (a.quarter !== b.quarter) return b.quarter - a.quarter;
         const ta = (a.gameTimeMinutes || 0) * 60 + (a.gameTimeSeconds || 0);
@@ -369,24 +345,6 @@ export const useGameStream = (gameId: string) => {
         if (ta !== tb) return tb - ta;
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-
-      const subEntries = transformSubsToPlayByPlay(subs || [], {
-        teamAId: game.team_a_id,
-        teamBId: game.team_b_id,
-        teamAName: game.team_a?.name || 'Team A',
-        teamBName: game.team_b?.name || 'Team B'
-      });
-
-      // Merge and sort: quarter desc, game time desc, createdAt desc
-      const sortPlays = (a: PlayByPlayEntry, b: PlayByPlayEntry) => {
-        if (a.quarter !== b.quarter) return b.quarter - a.quarter;
-        const ta = (a.gameTimeMinutes || 0) * 60 + (a.gameTimeSeconds || 0);
-        const tb = (b.gameTimeMinutes || 0) * 60 + (b.gameTimeSeconds || 0);
-        if (ta !== tb) return tb - ta;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      };
-
-      const playByPlay = [...statEntries, ...subEntries].sort(sortPlays);
       if (DEBUG_VIEWER) {
         console.log('🔁 Combined play list:', {
           statEntries: statEntries.length,
