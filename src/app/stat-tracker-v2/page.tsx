@@ -8,6 +8,7 @@ import { formatClock } from '@/lib/domain/tracker';
 import { ClockControls } from '@/components/tracker/ClockControls';
 import { ScoreBoard } from '@/components/tracker/ScoreBoard';
 import { GameStatusBar } from '@/components/tracker/GameStatusBar';
+import { CombinedScoreboard } from '@/components/tracker/CombinedScoreboard';
 import { TeamRoster } from '@/components/tracker/TeamRoster';
 import { StatRecorder } from '@/components/tracker/StatRecorder';
 import { SubstitutionControls } from '@/components/tracker/SubstitutionControls';
@@ -120,23 +121,22 @@ export default function TrackerV2Page() {
       <div className="flex flex-col gap-10 py-8">
         <GameStatusBar status={game?.status || (tracker.clock.isRunning ? 'in_progress' : 'scheduled')} />
 
-        <ScoreBoard
+        <CombinedScoreboard
           teamAName={teamAName}
           teamBName={teamBName}
           teamAScore={teamAScore}
           teamBScore={teamBScore}
-        />
-
-        <ClockControls
-          isRunning={tracker.clock.isRunning}
-          clockLabel={clockLabel}
           quarter={tracker.quarter}
+          clockLabel={clockLabel}
+          isRunning={tracker.clock.isRunning}
+          onPrevQuarter={() => tracker.setQuarter(Math.max(1, tracker.quarter - 1) as any)}
+          onNextQuarter={() => tracker.setQuarter((tracker.quarter + 1) as any)}
           onStart={tracker.startClock}
           onStop={tracker.stopClock}
           onReset={tracker.resetClock}
-          onPrevQuarter={() => tracker.setQuarter(Math.max(1, tracker.quarter - 1) as any)}
-          onNextQuarter={() => tracker.setQuarter((tracker.quarter + 1) as any)}
         />
+
+        {/* ClockControls replaced by CombinedScoreboard to match V1 visual */}
 
         {/* Rosters (read-only for now) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
