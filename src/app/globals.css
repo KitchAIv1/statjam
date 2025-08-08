@@ -215,8 +215,8 @@
   /* Landing Page Featured Games - Visual Focus */
   .landing-games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(380px, 420px));
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 360px));
+    gap: 1.25rem;
     justify-content: center;
     max-width: 1400px;
     margin: 0 auto;
@@ -342,8 +342,8 @@
     background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
-    padding: 1.5rem;
-    min-height: 280px;
+    padding: 1rem;
+    min-height: 170px;
     display: flex;
     flex-direction: column;
     transition: all 0.3s ease;
