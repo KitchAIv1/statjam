@@ -28,7 +28,7 @@ export const StatRecorder: React.FC<{
     = ({ label, onClick, tone = 'default' }) => (
     <button
       onClick={onClick}
-      className={`px-3 py-2 rounded-md text-sm font-semibold border ${tone==='primary' ? 'bg-yellow-400 text-gray-900 border-yellow-300' : 'bg-gray-800 text-gray-100 border-gray-700'} hover:opacity-90`}
+      className={`px-3 py-2 rounded-md text-sm font-semibold border ${tone==='primary' ? 'bg-yellow-400 text-black border-yellow-300' : 'bg-[#0f2347] text-white border-[#1f3b7a]'} hover:opacity-90`}
     >
       {label}
     </button>

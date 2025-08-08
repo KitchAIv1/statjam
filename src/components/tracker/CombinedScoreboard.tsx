@@ -39,9 +39,10 @@ export const CombinedScoreboard: React.FC<{
       onClick={() => onSelectTeam && onSelectTeam(side)}
       className={`flex-1 rounded-xl p-4 text-center border transition-colors ${
         selectedTeam === side
-          ? 'bg-orange-900/20 border-orange-500'
+          ? 'border-2 border-orange-500 bg-[rgba(234,88,12,0.08)] shadow-[0_0_0_2px_rgba(234,88,12,0.25)]'
           : 'bg-white/5 border-white/10 hover:border-white/20'
       }`}
+      style={{ WebkitTextFillColor: 'unset' }}
     >
       <div className="text-xs uppercase tracking-widest text-gray-300 mb-1">{label}</div>
       <div className="text-5xl font-extrabold text-white tabular-nums mb-1">{score}</div>

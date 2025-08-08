@@ -143,11 +143,11 @@ export default function TrackerV2Page() {
 
         {/* Rosters (read-only for now) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className={`${selectedTeam === 'A' ? 'ring-2 ring-orange-500 rounded-xl p-2' : ''}`}>
+          <div className={`${selectedTeam === 'A' ? 'rounded-xl p-2 border-2 border-orange-500 bg-orange-500/5 outline outline-2 outline-orange-500/30' : ''}`}>
             <div className="mb-2 text-gray-300 text-sm">{teamAName} On Court</div>
             <PlayerGrid roster={tracker.rosterA} playerSeconds={tracker.playerSeconds} onSubClick={(pid)=>setSubOutId(pid)} />
           </div>
-          <div className={`${selectedTeam === 'B' ? 'ring-2 ring-orange-500 rounded-xl p-2' : ''}`}>
+          <div className={`${selectedTeam === 'B' ? 'rounded-xl p-2 border-2 border-orange-500 bg-orange-500/5 outline outline-2 outline-orange-500/30' : ''}`}>
             <div className="mb-2 text-gray-300 text-sm">{teamBName} On Court</div>
             <PlayerGrid roster={tracker.rosterB} playerSeconds={tracker.playerSeconds} onSubClick={(pid)=>setSubOutId(pid)} />
           </div>
