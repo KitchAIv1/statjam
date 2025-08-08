@@ -8,6 +8,7 @@ import { GameService } from '@/lib/services/gameService';
 import { TeamService } from '@/lib/services/tournamentService';
 import { Game } from '@/lib/types/game';
 import { Player, Team } from '@/lib/types/tournament';
+import { supabase } from '@/lib/supabase';
 
 import GameCompletionManager from '@/components/game/GameCompletionManager';
 
@@ -62,6 +63,17 @@ const StatTracker = () => {
       
       console.log('🔍 Loaded game data:', game);
       setGameData(game);
+
+      // Initialize quarter/clock/run state from DB so refresh retains state
+      if (typeof game.quarter === 'number' && game.quarter > 0) {
+        setQuarter(game.quarter);
+      }
+      if (typeof game.game_clock_minutes === 'number' && typeof game.game_clock_seconds === 'number') {
+        setGameClock({ minutes: game.game_clock_minutes || 12, seconds: game.game_clock_seconds || 0 });
+      }
+      if (typeof game.is_clock_running === 'boolean') {
+        setIsClockRunning(game.is_clock_running);
+      }
       
       // Load team A data and info
       const teamAPlayers = await TeamService.getTeamPlayers(game.team_a_id);
@@ -79,6 +91,35 @@ const StatTracker = () => {
       
       setTeamAInfo(teamAInfo || { id: game.team_a_id, name: 'Team A' });
       setTeamBInfo(teamBInfo || { id: game.team_b_id, name: 'Team B' });
+
+      // Compute current scores from game_stats so refresh restores scoreboard
+      try {
+        const { data: stats, error: statsError } = await supabase
+          .from('game_stats')
+          .select('team_id, stat_type, modifier')
+          .eq('game_id', gameId);
+
+        if (!statsError && stats) {
+          let home = 0;
+          let away = 0;
+          for (const s of stats) {
+            if (s.modifier !== 'made') continue;
+            let pts = 0;
+            if (s.stat_type === 'three_pointer') pts = 3;
+            else if (s.stat_type === 'field_goal') pts = 2;
+            else if (s.stat_type === 'free_throw') pts = 1;
+            if (s.team_id === game.team_a_id) home += pts;
+            else if (s.team_id === game.team_b_id) away += pts;
+          }
+          setHomeScore(home);
+          setAwayScore(away);
+          console.log('🔁 Initialized scores from DB:', { home, away });
+        } else {
+          console.warn('⚠️ Could not load stats for score init:', statsError?.message);
+        }
+      } catch (e) {
+        console.warn('⚠️ Score init from stats failed:', e);
+      }
       
     } catch (error) {
       console.error('❌ Error loading game data:', error);
@@ -346,6 +387,13 @@ const StatTracker = () => {
       
       console.log('📝 Final mapped stat type:', statType, 'with value:', statValue);
       
+      // Guard: block stats when clock is not running
+      if (!isClockRunning) {
+        console.warn('⛔ Stat blocked: clock is not running');
+        alert('Start the game clock to record stats.');
+        return;
+      }
+
       // Prepare stat data for database
       const statData = {
         gameId: gameId!,
@@ -366,12 +414,34 @@ const StatTracker = () => {
       
       if (success) {
         console.log('✅ Stat recorded successfully in database');
+<<<<<<< HEAD
         // Update local scoreboard immediately for responsive UX
         const points = calculateStatPoints(stat, modifier);
         if (points > 0) {
           if (selectedTeam === 'Team A') {
             setHomeScore(prev => prev + points);
           } else {
+=======
+        // Quarter boundary: if clock hit 0:00, prepare next quarter
+        if (gameClock.minutes === 0 && gameClock.seconds === 0) {
+          if (quarter < 4) {
+            const proceed = confirm('Quarter ended. Move to next quarter?');
+            if (proceed) {
+              setQuarter(quarter + 1);
+              setIsClockRunning(false);
+              setGameClock({ minutes: 12, seconds: 0 });
+            }
+          } else {
+            console.log('🏁 Regulation ended. Consider overtime or completion.');
+          }
+        }
+        // Immediate local scoreboard update for real-time UX
+        const points = calculateStatPoints(stat, modifier);
+        if (points > 0) {
+          if (teamId === teamAInfo?.id) {
+            setHomeScore(prev => prev + points);
+          } else if (teamId === teamBInfo?.id) {
+>>>>>>> feature/substitution-v2
             setAwayScore(prev => prev + points);
           }
         }
@@ -1336,6 +1406,27 @@ const StatTracker = () => {
         <div style={styles.actionText}>
           {selectedTeam} - #{selectedPlayer.includes('11') ? '11' : ''} {selectedPlayer.replace('11 ', '')} {lastAction}
         </div>
+        <button
+          onClick={async () => {
+            if (!gameId) return;
+            const confirmEnd = confirm('End the game now? This will set status to completed.');
+            if (!confirmEnd) return;
+            await GameService.updateGameStatus(gameId, 'completed');
+            setIsClockRunning(false);
+          }}
+          style={{
+            marginLeft: 'auto',
+            background: '#991b1b',
+            color: '#fff',
+            border: 'none',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            fontWeight: 700,
+            cursor: 'pointer'
+          }}
+        >
+          Close Game
+        </button>
       </div>
     </div>
   );

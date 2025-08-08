@@ -163,27 +163,18 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
             </span>
           </div>
 
-          {/* Scoring Impact */}
-          {scoringInfo && (
-            <div style={styles.scoringImpact}>
-              <span style={styles.scoringText}>
-                {scoringInfo.description}
-              </span>
-            </div>
-          )}
+          {/* Scoring or Non-scoring Badge */}
+          <div style={styles.badgeRow}>
+            {scoringInfo ? (
+              <span style={styles.scoringText}>{scoringInfo.description}</span>
+            ) : (
+              <span style={styles.nonScoringText}>{play.statType?.toUpperCase()}</span>
+            )}
+            <span style={styles.scoreAtPlay}>Score: {play.scoreAfter.home}-{play.scoreAfter.away}</span>
+          </div>
         </div>
 
-        {/* Score and Stats */}
-        <div style={styles.statsSection}>
-          <div style={styles.currentScore}>
-            {play.scoreAfter.home}-{play.scoreAfter.away}
-          </div>
-          {scoringInfo && (
-            <div style={styles.pointsAdded}>
-              +{scoringInfo.points}
-            </div>
-          )}
-        </div>
+        {/* Score and Stats (removed bottom score display to avoid duplication) */}
       </div>
 
       {/* Latest Play Indicator */}
@@ -297,6 +288,11 @@ const styles = {
     display: 'flex',
     alignItems: 'center'
   },
+  badgeRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
   scoringText: {
     fontSize: '12px',
     fontWeight: '600',
@@ -304,6 +300,19 @@ const styles = {
     background: 'rgba(0, 255, 136, 0.1)',
     padding: '2px 8px',
     borderRadius: '4px'
+  },
+  nonScoringText: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#89b4ff',
+    background: 'rgba(137, 180, 255, 0.12)',
+    padding: '2px 6px',
+    borderRadius: '4px'
+  },
+  scoreAtPlay: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#b3b3b3'
   },
   statsSection: {
     display: 'flex',

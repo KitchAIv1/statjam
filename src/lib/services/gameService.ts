@@ -477,6 +477,7 @@ export class GameService {
       const { error } = await supabase
         .from('game_substitutions')
         .insert({
+          // V2: standardize on game_id only
           game_id: subData.gameId,
           player_in_id: subData.playerInId,
           player_out_id: subData.playerOutId,
@@ -491,6 +492,7 @@ export class GameService {
         return false;
       }
 
+<<<<<<< HEAD
       console.log('✅ Substitution inserted:', {
         game_id: subData.gameId,
         player_in_id: subData.playerInId,
@@ -507,6 +509,12 @@ export class GameService {
       } catch (_e) {
         // no-op
       }
+=======
+      // Log the action (non-blocking, avoid noisy errors)
+      try {
+        void this.createAuditLog(subData.gameId, 'substitution', subData);
+      } catch (_e) {}
+>>>>>>> feature/substitution-v2
 
       return true;
     } catch (error) {

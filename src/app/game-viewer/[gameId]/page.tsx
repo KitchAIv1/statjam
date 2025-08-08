@@ -2,6 +2,7 @@
 
 import React, { use, useEffect } from 'react';
 import { useGameStream } from '@/hooks/useGameStream';
+import { usePlayFeed } from '@/hooks/usePlayFeed';
 import { useAuthStore } from '@/store/authStore';
 import { useResponsive } from '@/hooks/useResponsive';
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
@@ -33,6 +34,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   const { gameId } = use(params);
   const { user, initialized, loading: authLoading } = useAuthStore();
   const { gameData, loading, error, isLive } = useGameStream(gameId);
+  const enableViewerV2 = process.env.NEXT_PUBLIC_VIEWER_V2 === '1';
   const { isMobile, isTablet, isDesktop } = useResponsive();
 
   // Initialize auth store
@@ -95,12 +97,21 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
 
       {/* Play by Play Feed */}
       <div style={styles.playByPlayContainer}>
-        <PlayByPlayFeed 
-          playByPlay={gameData.playByPlay}
-          game={gameData.game}
-          isLive={isLive}
-          isMobile={isMobile}
-        />
+        {enableViewerV2 ? (
+          <ViewerV2FeedWrapper gameId={gameData.game.id} teamMap={{
+            teamAId: gameData.game.teamAId,
+            teamBId: gameData.game.teamBId,
+            teamAName: gameData.game.teamAName,
+            teamBName: gameData.game.teamBName,
+          }} baseGame={gameData.game} isLive={isLive} isMobile={isMobile} />
+        ) : (
+          <PlayByPlayFeed 
+            playByPlay={gameData.playByPlay}
+            game={gameData.game}
+            isLive={isLive}
+            isMobile={isMobile}
+          />
+        )}
       </div>
 
       {/* Live Indicator */}
@@ -111,6 +122,30 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
         </div>
       )}
     </ResponsiveContainer>
+  );
+};
+
+// Lightweight wrapper to use the new feed without changing UI components
+const ViewerV2FeedWrapper: React.FC<{
+  gameId: string;
+  teamMap: { teamAId: string; teamBId: string; teamAName: string; teamBName: string };
+  baseGame: any;
+  isLive: boolean;
+  isMobile: boolean;
+}> = ({ gameId, teamMap, baseGame, isLive, isMobile }) => {
+  const { plays, homeScore, awayScore } = usePlayFeed(gameId, teamMap);
+  return (
+    <PlayByPlayFeed
+      playByPlay={plays}
+      game={{
+        teamAName: baseGame.teamAName,
+        teamBName: baseGame.teamBName,
+        homeScore,
+        awayScore,
+      }}
+      isLive={isLive}
+      isMobile={isMobile}
+    />
   );
 };
 
