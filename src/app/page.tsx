@@ -7,8 +7,28 @@ import { GameCard } from '@/components/ui/GameCard';
 import { HeroButton } from '@/components/ui/Button';
 import { Trophy, Users, Activity, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+
+type LiveGameRow = {
+  id: string;
+  status: string;
+  start_time: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  quarter: number | null;
+  game_clock_minutes: number | null;
+  game_clock_seconds: number | null;
+  team_a_id: string;
+  team_b_id: string;
+  is_clock_running: boolean | null;
+};
 
 export default function HomePage() {
+  const router = useRouter();
+  const [liveGames, setLiveGames] = useState<LiveGameRow[]>([]);
+  const [loadingLive, setLoadingLive] = useState<boolean>(true);
   // Mock data for demo
   const featuredStats = [
     { title: 'Active Tournaments', value: '24', icon: <Trophy className="w-5 h-5" />, trend: 'up' as const },
@@ -17,29 +37,89 @@ export default function HomePage() {
     { title: 'Stats Recorded', value: '45K+', icon: <TrendingUp className="w-5 h-5" />, trend: 'up' as const },
   ];
 
-  const featuredGames = [
-    {
-      homeTeam: { name: 'Lakers Elite', score: 98 },
-      awayTeam: { name: 'Warriors Pro', score: 102 },
-      status: 'finished' as const,
-      time: '2h ago',
-      venue: 'Staples Center'
-    },
-    {
-      homeTeam: { name: 'Heat Squad', score: 76 },
-      awayTeam: { name: 'Bulls United', score: 84 },
-      status: 'live' as const,
-      time: 'Q4 2:45',
-      venue: 'Miami Arena'
-    },
-    {
-      homeTeam: { name: 'Nets Force' },
-      awayTeam: { name: 'Celtics Prime' },
-      status: 'upcoming' as const,
-      time: '8:00 PM',
-      venue: 'Brooklyn Center'
-    },
-  ];
+  // Shared fetcher for live games
+  const fetchLiveGames = useCallback(async () => {
+    try {
+      setLoadingLive(true);
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .in('status', ['in_progress', 'overtime', 'live', 'scheduled'])
+        .order('start_time', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.warn('Landing: failed to load live games', error);
+        setLiveGames([]);
+        return;
+      }
+      setLiveGames((data as unknown as LiveGameRow[]) || []);
+    } catch (e) {
+      console.warn('Landing: unexpected error loading live games', e);
+      setLiveGames([]);
+    } finally {
+      setLoadingLive(false);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchLiveGames();
+  }, [fetchLiveGames]);
+
+  // Realtime + polling updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('landing-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'games' },
+        () => {
+          // debounce small to allow DB to settle
+          setTimeout(() => fetchLiveGames(), 300);
+        }
+      )
+      .subscribe();
+
+    const poll = setInterval(() => {
+      fetchLiveGames();
+    }, 10000);
+
+    return () => {
+      clearInterval(poll);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchLiveGames]);
+
+  const liveCards = useMemo(() => {
+    const toLabelStatus = (s: string) => (s === 'in_progress' || s === 'overtime' || s === 'live') ? 'live' as const
+      : s === 'completed' ? 'finished' as const
+      : 'upcoming' as const;
+    const isLiveComputed = (g: LiveGameRow) => (
+      g.status === 'in_progress' ||
+      g.status === 'overtime' ||
+      g.status === 'live' ||
+      Boolean(g.is_clock_running) ||
+      (g.status === 'scheduled' && ((g.home_score ?? 0) > 0 || (g.away_score ?? 0) > 0))
+    );
+
+    return (liveGames || []).filter(isLiveComputed).map(g => {
+      const mm = Math.max(0, Number(g.game_clock_minutes ?? 0));
+      const ss = Math.max(0, Number(g.game_clock_seconds ?? 0));
+      const timeLabel = g.quarter ? `Q${g.quarter} ${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}` : 'LIVE';
+      return {
+        key: g.id,
+        onClick: () => router.push(`/game-viewer/${g.id}`),
+        props: {
+          homeTeam: { name: 'Home', score: g.home_score ?? undefined },
+          awayTeam: { name: 'Away', score: g.away_score ?? undefined },
+          status: toLabelStatus(g.status),
+          time: timeLabel,
+          venue: undefined as string | undefined,
+        }
+      };
+    });
+  }, [liveGames, router]);
 
   return (
     <main className="min-h-screen">
@@ -93,7 +173,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Games Section */}
+      {/* Live Games Section */}
       <section className="section-spacing" style={{ backgroundColor: 'rgba(26, 26, 26, 0.3)' }}>
         <div className="max-width-container">
           <motion.div
@@ -104,26 +184,26 @@ export default function HomePage() {
             className="text-center mb-16"
           >
             <h2 className="font-header text-4xl md:text-5xl lg:text-6xl font-bold text-visible-yellow mb-4">
-              FEATURED GAMES
+              LIVE GAMES
             </h2>
             <p className="text-lg md:text-xl max-w-3xl mx-auto text-visible-gray">
-              Don't miss the action from today's biggest matchups
+              Watch games in progress right now
             </p>
           </motion.div>
 
           <div className="landing-games-grid">
-            {featuredGames.map((game, index) => (
+            {(!loadingLive && liveCards.length === 0) && (
+              <div className="text-center text-gray-400 py-8">No live games right now.</div>
+            )}
+            {liveCards.map((cg, index) => (
               <motion.div
-                key={index}
+                key={cg.key}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
+                transition={{ duration: 0.6, delay: index * 0.05 }}
               >
-                <GameCard
-                  {...game}
-                  onClick={() => console.log('View game details')}
-                />
+                <GameCard {...cg.props} onClick={cg.onClick} />
               </motion.div>
             ))}
           </div>
