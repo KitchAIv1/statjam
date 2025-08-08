@@ -30,11 +30,15 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       const subsTx = transformSubsToPlay(subs, teamMap);
 
       const merged = [...statsTx.plays, ...subsTx].sort((a, b) => {
+        // Prioritize newest events first by createdAt to ensure visibility of latest non-scoring entries
+        const ca = new Date(a.createdAt).getTime();
+        const cb = new Date(b.createdAt).getTime();
+        if (cb !== ca) return cb - ca;
+        // Fallbacks for stable ordering
         if (a.quarter !== b.quarter) return b.quarter - a.quarter;
         const ta = (a.gameTimeMinutes || 0) * 60 + (a.gameTimeSeconds || 0);
         const tb = (b.gameTimeMinutes || 0) * 60 + (b.gameTimeSeconds || 0);
-        if (ta !== tb) return tb - ta;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return tb - ta;
       });
 
       setPlays(merged);

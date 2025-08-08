@@ -1367,6 +1367,27 @@ const StatTracker = () => {
         <div style={styles.actionText}>
           {selectedTeam} - #{selectedPlayer.includes('11') ? '11' : ''} {selectedPlayer.replace('11 ', '')} {lastAction}
         </div>
+        <button
+          onClick={async () => {
+            if (!gameId) return;
+            const confirmEnd = confirm('End the game now? This will set status to completed.');
+            if (!confirmEnd) return;
+            await GameService.updateGameStatus(gameId, 'completed');
+            setIsClockRunning(false);
+          }}
+          style={{
+            marginLeft: 'auto',
+            background: '#991b1b',
+            color: '#fff',
+            border: 'none',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            fontWeight: 700,
+            cursor: 'pointer'
+          }}
+        >
+          Close Game
+        </button>
       </div>
     </div>
   );
