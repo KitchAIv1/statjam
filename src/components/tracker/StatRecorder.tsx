@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { RosterState, StatRecord } from '@/lib/types/tracker';
 
 export const StatRecorder: React.FC<{
@@ -12,6 +12,11 @@ export const StatRecorder: React.FC<{
 }> = ({ onRecord, teamAId, teamBId, rosterA, rosterB }) => {
   const [selectedA, setSelectedA] = useState<string | null>(null);
   const [selectedB, setSelectedB] = useState<string | null>(null);
+  const [pendingTeam, setPendingTeam] = useState<'A'|'B'|null>(null);
+  const [pendingType, setPendingType] = useState<'points2'|'points3'|'ft'|'rebound'|'foul'|null>(null);
+  const [showMadeMissed, setShowMadeMissed] = useState(false);
+  const [showRebType, setShowRebType] = useState(false);
+  const [showFoulType, setShowFoulType] = useState(false);
 
   useEffect(() => {
     if (!selectedA && rosterA.onCourt.length > 0) setSelectedA(rosterA.onCourt[0]);
@@ -28,6 +33,16 @@ export const StatRecorder: React.FC<{
       {label}
     </button>
   );
+
+  const fire = async (team: 'A'|'B', playerId: string, statType: 'field_goal'|'three_pointer'|'free_throw'|'assist'|'rebound'|'steal'|'block'|'turnover'|'foul', modifier?: string) => {
+    const teamId = team === 'A' ? teamAId : teamBId;
+    await onRecord({ teamId, playerId, statType, modifier, gameId: '' } as any);
+  };
+
+  const selectedFor = useMemo(() => ({
+    A: selectedA,
+    B: selectedB
+  }), [selectedA, selectedB]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -67,6 +82,58 @@ export const StatRecorder: React.FC<{
           </div>
         </div>
       </div>
+
+      {/* Full stat grid */}
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+        {/* Team A actions */}
+        <Btn label="A +2" tone="primary" onClick={() => selectedA && fire('A', selectedA, 'field_goal', 'made')} />
+        <Btn label="A +3" onClick={() => selectedA && fire('A', selectedA, 'three_pointer', 'made')} />
+        <Btn label="A FT" onClick={() => selectedA && fire('A', selectedA, 'free_throw', 'made')} />
+        <Btn label="A AST" onClick={() => selectedA && fire('A', selectedA, 'assist')} />
+        <Btn label="A REB" onClick={() => { setPendingTeam('A'); setPendingType('rebound'); setShowRebType(true); }} />
+        <Btn label="A STL" onClick={() => selectedA && fire('A', selectedA, 'steal')} />
+        <Btn label="A BLK" onClick={() => selectedA && fire('A', selectedA, 'block')} />
+        <Btn label="A FOUL" onClick={() => { setPendingTeam('A'); setPendingType('foul'); setShowFoulType(true); }} />
+        <Btn label="A TO" onClick={() => selectedA && fire('A', selectedA, 'turnover')} />
+
+        {/* Team B actions */}
+        <Btn label="B +2" tone="primary" onClick={() => selectedB && fire('B', selectedB, 'field_goal', 'made')} />
+        <Btn label="B +3" onClick={() => selectedB && fire('B', selectedB, 'three_pointer', 'made')} />
+        <Btn label="B FT" onClick={() => selectedB && fire('B', selectedB, 'free_throw', 'made')} />
+        <Btn label="B AST" onClick={() => selectedB && fire('B', selectedB, 'assist')} />
+        <Btn label="B REB" onClick={() => { setPendingTeam('B'); setPendingType('rebound'); setShowRebType(true); }} />
+        <Btn label="B STL" onClick={() => selectedB && fire('B', selectedB, 'steal')} />
+        <Btn label="B BLK" onClick={() => selectedB && fire('B', selectedB, 'block')} />
+        <Btn label="B FOUL" onClick={() => { setPendingTeam('B'); setPendingType('foul'); setShowFoulType(true); }} />
+        <Btn label="B TO" onClick={() => selectedB && fire('B', selectedB, 'turnover')} />
+      </div>
+
+      {/* Modals */}
+      {showRebType && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 w-[320px] max-w-[90%]">
+            <div className="text-white font-semibold text-center mb-3">Rebound Type?</div>
+            <div className="grid grid-cols-2 gap-2">
+              <Btn label="Offensive" onClick={async () => { const pid = selectedFor[pendingTeam!]!; await fire(pendingTeam!,'', 'rebound'); if (pid) await fire(pendingTeam!, pid, 'rebound', 'offensive'); setShowRebType(false); }} />
+              <Btn label="Defensive" onClick={async () => { const pid = selectedFor[pendingTeam!]!; await fire(pendingTeam!,'', 'rebound'); if (pid) await fire(pendingTeam!, pid, 'rebound', 'defensive'); setShowRebType(false); }} />
+            </div>
+            <button onClick={() => setShowRebType(false)} className="mt-3 w-full px-3 py-2 rounded-md bg-gray-700 text-white">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {showFoulType && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 w-[320px] max-w-[90%]">
+            <div className="text-white font-semibold text-center mb-3">Foul Type?</div>
+            <div className="grid grid-cols-2 gap-2">
+              <Btn label="Personal" onClick={async () => { const pid = selectedFor[pendingTeam!]!; if (pid) await fire(pendingTeam!, pid, 'foul', 'personal'); setShowFoulType(false); }} />
+              <Btn label="Technical" onClick={async () => { const pid = selectedFor[pendingTeam!]!; if (pid) await fire(pendingTeam!, pid, 'foul', 'technical'); setShowFoulType(false); }} />
+            </div>
+            <button onClick={() => setShowFoulType(false)} className="mt-3 w-full px-3 py-2 rounded-md bg-gray-700 text-white">Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
