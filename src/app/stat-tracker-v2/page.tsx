@@ -10,6 +10,7 @@ import { ScoreBoard } from '@/components/tracker/ScoreBoard';
 import { GameStatusBar } from '@/components/tracker/GameStatusBar';
 import { TeamRoster } from '@/components/tracker/TeamRoster';
 import { StatRecorder } from '@/components/tracker/StatRecorder';
+import { SubstitutionControls } from '@/components/tracker/SubstitutionControls';
 
 type GameRow = {
   id: string;
@@ -135,8 +136,30 @@ export default function TrackerV2Page() {
           <TeamRoster teamId={teamBId} teamName={teamBName} roster={tracker.rosterB} setRoster={(u) => tracker.setRosterB(u)} />
         </div>
 
+        {/* Substitutions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <SubstitutionControls
+            teamId={teamAId}
+            teamName={teamAName}
+            roster={tracker.rosterA}
+            onSubmit={tracker.substitute}
+            gameId={tracker.gameId}
+            quarter={tracker.quarter}
+            gameTimeSeconds={tracker.clock.secondsRemaining}
+          />
+          <SubstitutionControls
+            teamId={teamBId}
+            teamName={teamBName}
+            roster={tracker.rosterB}
+            onSubmit={tracker.substitute}
+            gameId={tracker.gameId}
+            quarter={tracker.quarter}
+            gameTimeSeconds={tracker.clock.secondsRemaining}
+          />
+        </div>
+
         {/* Quick Stat Recorder (demo) */}
-        <StatRecorder onRecord={async (s) => { await tracker.recordStat(s); }} teamAId={teamAId} teamBId={teamBId} />
+        <StatRecorder onRecord={async (s) => { await tracker.recordStat(s); }} teamAId={teamAId} teamBId={teamBId} rosterA={tracker.rosterA} rosterB={tracker.rosterB} />
       </div>
     </main>
   );
