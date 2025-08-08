@@ -12,7 +12,6 @@ import { GameStatusBar } from '@/components/tracker/GameStatusBar';
 import { CombinedScoreboard } from '@/components/tracker/CombinedScoreboard';
 import { TeamRoster } from '@/components/tracker/TeamRoster';
 import { StatRecorder } from '@/components/tracker/StatRecorder';
-import { SubstitutionControls } from '@/components/tracker/SubstitutionControls';
 import { ActionBar } from '@/components/tracker/ActionBar';
 import { PlayerGrid } from '@/components/tracker/PlayerGrid';
 import { SubstitutionModal } from '@/components/tracker/SubstitutionModal';
@@ -141,7 +140,7 @@ export default function TrackerV2Page() {
   return (
     <main className="min-h-screen">
       <ResponsiveContainer>
-      <div className="flex flex-col gap-8 py-8">
+      <div className="flex flex-col gap-8 py-8 pb-24">
         <TrackerHeader gameId={gameId} />
         <GameStatusBar status={game?.status || (tracker.clock.isRunning ? 'in_progress' : 'scheduled')} />
 
@@ -176,27 +175,7 @@ export default function TrackerV2Page() {
           />
         </div>
 
-        {/* Substitutions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <SubstitutionControls
-            teamId={teamAId}
-            teamName={teamAName}
-            roster={tracker.rosterA}
-            onSubmit={tracker.substitute}
-            gameId={tracker.gameId}
-            quarter={tracker.quarter}
-            gameTimeSeconds={tracker.clock.secondsRemaining}
-          />
-          <SubstitutionControls
-            teamId={teamBId}
-            teamName={teamBName}
-            roster={tracker.rosterB}
-            onSubmit={tracker.substitute}
-            gameId={tracker.gameId}
-            quarter={tracker.quarter}
-            gameTimeSeconds={tracker.clock.secondsRemaining}
-          />
-        </div>
+        {/* Substitutions handled by per-player SUB + bench modal; no dropdowns */}
 
         {/* Quick Stat Recorder */}
         <StatRecorder onRecord={async (s) => { await tracker.recordStat(s); }} teamAId={teamAId} teamBId={teamBId} rosterA={tracker.rosterA} rosterB={tracker.rosterB} activeTeam={selectedTeam} selectedPlayerId={selectedPlayerId} />
