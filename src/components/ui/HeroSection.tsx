@@ -76,7 +76,10 @@ export function HeroSection({
 
       {/* Content */}
       <div className="relative z-20 w-full px-4 md:px-8 lg:px-16 xl:px-20">
-        <div className="w-full max-w-4xl mx-auto text-center lg:text-left lg:max-w-2xl lg:ml-auto lg:mr-0">
+        {/* Two-column layout on large screens to anchor text on the right side */}
+        <div className="w-full max-w-[1600px] mx-auto grid lg:grid-cols-2 lg:gap-8 items-center text-center lg:text-left">
+          <div className="hidden lg:block" aria-hidden />
+          <div className="lg:col-start-2">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -157,6 +160,7 @@ export function HeroSection({
               </motion.div>
             )}
           </motion.div>
+          </div>
         </div>
       </div>
 

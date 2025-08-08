@@ -198,39 +198,7 @@ export default function HomePage() {
         }}
       />
 
-      {/* Live Stats Section */}
-      <section className="section-spacing">
-        <div className="max-width-container">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="font-header text-4xl md:text-5xl lg:text-6xl font-bold text-visible-yellow mb-4">
-              LIVE TOURNAMENT DATA
-            </h2>
-            <p className="text-lg md:text-xl max-w-3xl mx-auto text-visible-gray">
-              Real-time statistics and insights from tournaments happening right now
-            </p>
-          </motion.div>
-
-          <div className="landing-stats-grid">
-            {featuredStats.map((stat, index) => (
-              <motion.div
-                key={stat.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-              >
-                <StatCard {...stat} />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Live Tournament Data section removed per request */}
 
       {/* Live Games Section */}
       <section className="section-spacing relative">
