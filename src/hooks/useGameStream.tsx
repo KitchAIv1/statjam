@@ -111,6 +111,45 @@ export const useGameStream = (gameId: string) => {
   };
 
   /**
+   * Transform substitutions into play-by-play entries
+   */
+  const transformSubsToPlayByPlay = (subs: any[], teamMapping?: { teamAId: string; teamBId: string; teamAName: string; teamBName: string }): PlayByPlayEntry[] => {
+    return subs.map(sub => {
+      // Resolve team name from team_id
+      let teamName = 'Unknown Team';
+      if (teamMapping && sub.team_id) {
+        if (sub.team_id === teamMapping.teamAId) {
+          teamName = teamMapping.teamAName;
+        } else if (sub.team_id === teamMapping.teamBId) {
+          teamName = teamMapping.teamBName;
+        } else {
+          teamName = `Team ${sub.team_id.substring(0, 8)}`;
+        }
+      }
+
+      const playerOutName = sub.player_out?.email?.split('@')[0] || `Player ${sub.player_out_id?.substring(0, 8)}` || 'Unknown';
+      const playerInName = sub.player_in?.email?.split('@')[0] || `Player ${sub.player_in_id?.substring(0, 8)}` || 'Unknown';
+
+      const description = `Substitution: ${playerOutName} → ${playerInName}`;
+
+      return {
+        id: sub.id,
+        gameId: sub.game_id,
+        timestamp: sub.created_at,
+        quarter: sub.quarter,
+        gameTimeMinutes: sub.game_time_minutes,
+        gameTimeSeconds: sub.game_time_seconds,
+        playType: 'substitution' as const,
+        teamId: sub.team_id,
+        teamName,
+        description,
+        scoreAfter: { home: 0, away: 0 },
+        createdAt: sub.created_at
+      } as PlayByPlayEntry;
+    });
+  };
+
+  /**
    * Fetch initial game data
    */
   const fetchGameData = useCallback(async (isPollingUpdate = false) => {
@@ -222,6 +261,24 @@ export const useGameStream = (gameId: string) => {
         console.warn('⚠️ Failed to fetch stats:', statsError);
       }
 
+      // Fetch substitutions for play-by-play
+      const { data: subs, error: subsError } = await supabase
+        .from('game_substitutions')
+        .select('id, game_id, match_id, team_id, player_in_id, player_out_id, quarter, game_time_minutes, game_time_seconds, created_at')
+        .or(`game_id.eq.${gameId},match_id.eq.${gameId}`)
+        .order('created_at', { ascending: false });
+
+      if (subsError) {
+        console.warn('⚠️ Failed to fetch substitutions:', subsError);
+      }
+      const subsCount = subs?.length || 0;
+      console.log('📊 Substitutions query result for gameId:', gameId, 'count=', subsCount, 'error=', subsError?.message);
+      if (subs && subs.length > 0) {
+        console.log('🔍 First substitution for this game:', JSON.stringify(subs[0], null, 2));
+      } else {
+        console.log('❌ NO SUBSTITUTIONS FOUND for game:', gameId);
+      }
+
       // Calculate scores from game_stats (same as play-by-play)
       const calculateScoresFromStats = (stats: any[], teamAId: string, teamBId: string) => {
         let homeScore = 0;
@@ -255,11 +312,34 @@ export const useGameStream = (gameId: string) => {
         databaseScores: { home: game.home_score, away: game.away_score }
       });
       
-      const playByPlay = transformStatsToPlayByPlay(stats || [], {
+      const statEntries = transformStatsToPlayByPlay(stats || [], {
         teamAId: game.team_a_id,
         teamBId: game.team_b_id,
         teamAName: game.team_a?.name || 'Team A',
         teamBName: game.team_b?.name || 'Team B'
+      });
+
+      const subEntries = transformSubsToPlayByPlay(subs || [], {
+        teamAId: game.team_a_id,
+        teamBId: game.team_b_id,
+        teamAName: game.team_a?.name || 'Team A',
+        teamBName: game.team_b?.name || 'Team B'
+      });
+
+      // Merge and sort: quarter desc, game time desc, createdAt desc
+      const sortPlays = (a: PlayByPlayEntry, b: PlayByPlayEntry) => {
+        if (a.quarter !== b.quarter) return b.quarter - a.quarter;
+        const ta = (a.gameTimeMinutes || 0) * 60 + (a.gameTimeSeconds || 0);
+        const tb = (b.gameTimeMinutes || 0) * 60 + (b.gameTimeSeconds || 0);
+        if (ta !== tb) return tb - ta;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      };
+
+      const playByPlay = [...statEntries, ...subEntries].sort(sortPlays);
+      console.log('🔁 Combined play list:', {
+        statEntries: statEntries.length,
+        subEntries: subEntries.length,
+        total: playByPlay.length
       });
       
       console.log('🎯 PlayByPlay transformation:', {
@@ -407,6 +487,49 @@ export const useGameStream = (gameId: string) => {
               console.log('🔄 GameViewer: Executing delayed refetch...');
               fetchGameData(true); // Pass true to avoid loading screen
             }, 200);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'game_substitutions',
+          // no filter to support both game_id and match_id; we'll check in handler
+        },
+        (payload) => {
+          console.log('🔄 GameViewer: New substitution recorded:', payload);
+          if (payload.new && (payload.new.game_id === gameId || payload.new.match_id === gameId)) {
+            // Optimistically add the new substitution to play-by-play without waiting for refetch
+            setGameData(prev => {
+              if (!prev) return prev;
+              const teamMapping = {
+                teamAId: prev.game.teamAId,
+                teamBId: prev.game.teamBId,
+                teamAName: prev.game.teamAName,
+                teamBName: prev.game.teamBName
+              };
+              const newEntry = transformSubsToPlayByPlay([payload.new], teamMapping)[0];
+              const merged = [newEntry, ...prev.playByPlay];
+              const sortPlays = (a: PlayByPlayEntry, b: PlayByPlayEntry) => {
+                if (a.quarter !== b.quarter) return b.quarter - a.quarter;
+                const ta = (a.gameTimeMinutes || 0) * 60 + (a.gameTimeSeconds || 0);
+                const tb = (b.gameTimeMinutes || 0) * 60 + (b.gameTimeSeconds || 0);
+                if (ta !== tb) return tb - ta;
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              };
+              return {
+                ...prev,
+                playByPlay: merged.sort(sortPlays),
+                lastUpdated: new Date().toISOString()
+              };
+            });
+
+            // Also refetch shortly after to ensure full consistency with DB
+            setTimeout(() => {
+              fetchGameData(true);
+            }, 300);
           }
         }
       )

@@ -286,9 +286,8 @@ const StatTracker = () => {
     try {
       console.log('🏀 Recording stat to database:', { stat, modifier, selectedPlayer, selectedTeam });
       
-      // Find the selected player's data
-      const currentPlayers = teamPlayers[selectedTeam as keyof typeof teamPlayers];
-      const selectedPlayerData = currentPlayers.find(p => p.name === selectedPlayer);
+      // Find the selected player's data from the current on-court roster
+      const selectedPlayerData = currentRoster.find(p => p.name === selectedPlayer);
       
       if (!selectedPlayerData) {
         console.error('❌ Selected player not found:', selectedPlayer);
@@ -367,6 +366,15 @@ const StatTracker = () => {
       
       if (success) {
         console.log('✅ Stat recorded successfully in database');
+        // Update local scoreboard immediately for responsive UX
+        const points = calculateStatPoints(stat, modifier);
+        if (points > 0) {
+          if (selectedTeam === 'Team A') {
+            setHomeScore(prev => prev + points);
+          } else {
+            setAwayScore(prev => prev + points);
+          }
+        }
       } else {
         console.error('❌ Failed to record stat in database');
         // Could show user feedback here
@@ -466,13 +474,44 @@ const StatTracker = () => {
     setShowSubstitutionRoster(true);
   };
 
-  const completeSubstitution = (subbingInPlayerId: string) => {
+  const completeSubstitution = async (subbingInPlayerId: string) => {
     if (subbingOutPlayer) {
       // Find the players
       const subbingOutPlayerData = currentRoster.find(p => p.id === subbingOutPlayer);
       const subbingInPlayerData = currentBench.find(p => p.id === subbingInPlayerId);
       
       if (subbingOutPlayerData && subbingInPlayerData) {
+        // Persist substitution to database (non-blocking for UI responsiveness)
+        if (gameId) {
+          const teamId = selectedTeam === 'Team A' ? teamAInfo?.id : teamBInfo?.id;
+          if (teamId) {
+            try {
+              console.log('🔄 Recording substitution to database:', {
+                gameId,
+                playerOutId: subbingOutPlayerData.id,
+                playerInId: subbingInPlayerId,
+                teamId,
+                quarter,
+                gameTimeMinutes: gameClock.minutes,
+                gameTimeSeconds: gameClock.seconds
+              });
+              const ok = await GameService.recordSubstitution({
+                gameId,
+                playerOutId: subbingOutPlayerData.id,
+                playerInId: subbingInPlayerId,
+                teamId,
+                quarter,
+                gameTimeMinutes: gameClock.minutes,
+                gameTimeSeconds: gameClock.seconds
+              });
+              console.log('✅ Substitution DB result:', ok);
+            } catch (err) {
+              console.error('❌ Error recording substitution:', err);
+            }
+          } else {
+            console.error('❌ Team ID not found for substitution');
+          }
+        }
         // Log the substitution
         setLastAction(`SUB: ${subbingOutPlayerData.name} OUT, ${subbingInPlayerData.name} IN`);
         
