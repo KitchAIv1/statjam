@@ -474,6 +474,7 @@ export class GameService {
       const { error } = await supabase
         .from('game_substitutions')
         .insert({
+          // V2: standardize on game_id only
           game_id: subData.gameId,
           player_in_id: subData.playerInId,
           player_out_id: subData.playerOutId,
@@ -488,8 +489,10 @@ export class GameService {
         return false;
       }
 
-      // Log the action
-      await this.createAuditLog(subData.gameId, 'substitution', subData);
+      // Log the action (non-blocking, avoid noisy errors)
+      try {
+        void this.createAuditLog(subData.gameId, 'substitution', subData);
+      } catch (_e) {}
 
       return true;
     } catch (error) {
