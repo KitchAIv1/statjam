@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { TeamService } from '@/lib/services/tournamentService';
 import { useTracker } from '@/hooks/useTracker';
 import { formatClock } from '@/lib/domain/tracker';
 import { ClockControls } from '@/components/tracker/ClockControls';
@@ -89,6 +90,7 @@ export default function TrackerV2Page() {
   const teamBName = game?.team_b?.name || 'Team B';
   const [subOutId, setSubOutId] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<'A'|'B'>('A');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
 
   const tracker = useTracker({
     initialGameId: gameId || 'unknown',
@@ -109,6 +111,25 @@ export default function TrackerV2Page() {
   }, [tracker.clock.isRunning, tracker.clock.secondsRemaining, tracker]);
 
   const clockLabel = useMemo(() => formatClock(tracker.clock.secondsRemaining).label, [tracker.clock.secondsRemaining]);
+
+  // Initialize rosters (first 5 on-court), then default select first player
+  useEffect(() => {
+    const init = async () => {
+      if (!teamAId || !teamBId) return;
+      // Only if empty
+      if (tracker.rosterA.onCourt.length === 0) {
+        const a = await TeamService.getTeamPlayers(teamAId);
+        tracker.setRosterA(r => ({ ...r, onCourt: a.slice(0,5).map(p=>p.id), bench: a.slice(5).map(p=>p.id) }));
+        if (!selectedPlayerId && a.length > 0 && selectedTeam === 'A') setSelectedPlayerId(a[0].id);
+      }
+      if (tracker.rosterB.onCourt.length === 0) {
+        const b = await TeamService.getTeamPlayers(teamBId);
+        tracker.setRosterB(r => ({ ...r, onCourt: b.slice(0,5).map(p=>p.id), bench: b.slice(5).map(p=>p.id) }));
+        if (!selectedPlayerId && b.length > 0 && selectedTeam === 'B') setSelectedPlayerId(b[0].id);
+      }
+    };
+    init();
+  }, [teamAId, teamBId, tracker.rosterA.onCourt.length, tracker.rosterB.onCourt.length, selectedPlayerId, selectedTeam]);
 
   if (loading) return <div className="p-8 text-center text-gray-400">Loading tracker…</div>;
   if (error) return <div className="p-8 text-center text-red-400">{error}</div>;
@@ -144,15 +165,15 @@ export default function TrackerV2Page() {
         {/* ClockControls replaced by CombinedScoreboard to match V1 visual */}
 
         {/* Rosters (read-only for now) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className={`${selectedTeam === 'A' ? 'rounded-xl p-2 border-2 border-orange-500 bg-orange-500/5 outline outline-2 outline-orange-500/30' : ''}`}>
-            <div className="mb-2 text-gray-300 text-sm">{teamAName} On Court</div>
-            <PlayerGrid roster={tracker.rosterA} playerSeconds={tracker.playerSeconds} onSubClick={(pid)=>setSubOutId(pid)} />
-          </div>
-          <div className={`${selectedTeam === 'B' ? 'rounded-xl p-2 border-2 border-orange-500 bg-orange-500/5 outline outline-2 outline-orange-500/30' : ''}`}>
-            <div className="mb-2 text-gray-300 text-sm">{teamBName} On Court</div>
-            <PlayerGrid roster={tracker.rosterB} playerSeconds={tracker.playerSeconds} onSubClick={(pid)=>setSubOutId(pid)} />
-          </div>
+        <div className={`rounded-xl p-2 ${selectedTeam === 'A' ? 'border-2 border-orange-500 bg-orange-500/5 outline outline-2 outline-orange-500/30' : 'border-2 border-blue-500/0'}`}>
+          <div className="mb-2 text-gray-300 text-sm">{selectedTeam==='A' ? teamAName : teamBName} On Court</div>
+          <PlayerGrid
+            roster={selectedTeam==='A' ? tracker.rosterA : tracker.rosterB}
+            playerSeconds={tracker.playerSeconds}
+            onSubClick={(pid)=>setSubOutId(pid)}
+            selectedPlayerId={selectedPlayerId}
+            onSelectPlayer={(pid)=> setSelectedPlayerId(pid)}
+          />
         </div>
 
         {/* Substitutions */}
@@ -178,7 +199,7 @@ export default function TrackerV2Page() {
         </div>
 
         {/* Quick Stat Recorder */}
-        <StatRecorder onRecord={async (s) => { await tracker.recordStat(s); }} teamAId={teamAId} teamBId={teamBId} rosterA={tracker.rosterA} rosterB={tracker.rosterB} />
+        <StatRecorder onRecord={async (s) => { await tracker.recordStat(s); }} teamAId={teamAId} teamBId={teamBId} rosterA={tracker.rosterA} rosterB={tracker.rosterB} activeTeam={selectedTeam} selectedPlayerId={selectedPlayerId} />
 
         <SubstitutionModal
           open={!!subOutId}
