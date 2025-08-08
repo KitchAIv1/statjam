@@ -14,8 +14,11 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
   const [awayScore, setAwayScore] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
 
   const fetchAll = useCallback(async () => {
+    if (isFetching) return; // simple throttle
+    setIsFetching(true);
     try {
       setError(null);
       const [stats, subs] = await Promise.all([
@@ -37,10 +40,18 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       setPlays(merged);
       setHomeScore(statsTx.finalHome);
       setAwayScore(statsTx.finalAway);
+
+      // Debug: verify counts by type pre/post transform
+      if (process.env.NODE_ENV !== 'production') {
+        const pre = stats.reduce<Record<string, number>>((acc, s) => { acc[s.stat_type] = (acc[s.stat_type] || 0) + 1; return acc; }, {} as any);
+        const post = merged.reduce<Record<string, number>>((acc, p) => { acc[p.statType || p.playType] = (acc[p.statType || p.playType] || 0) + 1; return acc; }, {} as any);
+        console.log('🔍 V2 Feed counts:', { preStats: pre, postPlays: post });
+      }
     } catch (e) {
       setError('Failed to load play feed');
     } finally {
       setLoading(false);
+      setIsFetching(false);
     }
   }, [gameId, teamMap]);
 
@@ -62,8 +73,12 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       )
       .subscribe();
 
+    // Fallback polling every 5s as backup
+    const poll = setInterval(() => fetchAll(), 5000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(poll);
     };
   }, [gameId, fetchAll]);
 

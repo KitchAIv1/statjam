@@ -18,12 +18,25 @@ function pointsFor(stat: StatRow): number {
   return 0;
 }
 
+function normalizeStatType(type: string | null | undefined): string {
+  const t = (type || '').toLowerCase();
+  if (t === 'three_point' || t === '3pt' || t === 'threepointer') return 'three_pointer';
+  if (t === 'fg' || t === 'fieldgoal') return 'field_goal';
+  if (t === 'ft' || t === 'freethrow') return 'free_throw';
+  if (t === 'personal_foul' || t === 'pf') return 'foul';
+  if (t === 'tech_foul' || t === 'technical_foul' || t === 'tf') return 'foul';
+  if (t === 'off_rebound' || t === 'offensive_rebound') return 'rebound';
+  if (t === 'def_rebound' || t === 'defensive_rebound') return 'rebound';
+  return t;
+}
+
 export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { plays: PlayByPlayEntry[]; finalHome: number; finalAway: number; playerTallies: Record<string, { points: number; fgm: number; fga: number }>; } {
   let home = 0;
   let away = 0;
   const tallies: Record<string, { points: number; fgm: number; fga: number }> = {};
 
-  const plays: PlayByPlayEntry[] = stats.map((s) => {
+  const plays: PlayByPlayEntry[] = stats.map((raw) => {
+    const s: StatRow = { ...raw, stat_type: normalizeStatType(raw.stat_type) as any };
     const pts = pointsFor(s);
     const isHome = s.team_id === team.teamAId;
     const isAway = s.team_id === team.teamBId;
