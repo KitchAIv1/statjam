@@ -8,6 +8,8 @@ import { formatClock } from '@/lib/domain/tracker';
 import { ClockControls } from '@/components/tracker/ClockControls';
 import { ScoreBoard } from '@/components/tracker/ScoreBoard';
 import { GameStatusBar } from '@/components/tracker/GameStatusBar';
+import { TeamRoster } from '@/components/tracker/TeamRoster';
+import { StatRecorder } from '@/components/tracker/StatRecorder';
 
 type GameRow = {
   id: string;
@@ -127,8 +129,14 @@ export default function TrackerV2Page() {
           onReset={tracker.resetClock}
         />
 
-        {/* Placeholder for upcoming components: roster, stat recorder, etc. */}
-        <div className="text-center text-gray-500">Tracker V2 scaffolding. Recording UI coming next.</div>
+        {/* Rosters (read-only for now) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <TeamRoster teamId={teamAId} teamName={teamAName} roster={tracker.rosterA} setRoster={(u) => tracker.setRosterA(u)} />
+          <TeamRoster teamId={teamBId} teamName={teamBName} roster={tracker.rosterB} setRoster={(u) => tracker.setRosterB(u)} />
+        </div>
+
+        {/* Quick Stat Recorder (demo) */}
+        <StatRecorder onRecord={async (s) => { await tracker.recordStat(s); }} teamAId={teamAId} teamBId={teamBId} />
       </div>
     </main>
   );
