@@ -492,29 +492,11 @@ export class GameService {
         return false;
       }
 
-<<<<<<< HEAD
-      console.log('✅ Substitution inserted:', {
-        game_id: subData.gameId,
-        player_in_id: subData.playerInId,
-        player_out_id: subData.playerOutId,
-        team_id: subData.teamId,
-        quarter: subData.quarter,
-        game_time_minutes: subData.gameTimeMinutes,
-        game_time_seconds: subData.gameTimeSeconds
-      });
-
-      // Log the action (non-blocking; ignore failures to avoid UI stalls)
-      try {
-        void this.createAuditLog(subData.gameId, 'substitution', subData);
-      } catch (_e) {
-        // no-op
-      }
-=======
       // Log the action (non-blocking, avoid noisy errors)
       try {
         void this.createAuditLog(subData.gameId, 'substitution', subData);
       } catch (_e) {}
->>>>>>> feature/substitution-v2
+      
 
       return true;
     } catch (error) {

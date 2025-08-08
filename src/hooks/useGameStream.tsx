@@ -521,43 +521,6 @@ export const useGameStream = (gameId: string) => {
           event: 'INSERT',
           schema: 'public',
           table: 'game_substitutions',
-<<<<<<< HEAD
-          // no filter to support both game_id and match_id; we'll check in handler
-        },
-        (payload) => {
-          if (DEBUG_VIEWER) console.log('🔄 GameViewer: New substitution recorded:', payload);
-          if (payload.new && (payload.new.game_id === gameId || payload.new.match_id === gameId)) {
-            // Optimistically add the new substitution to play-by-play without waiting for refetch
-            setGameData(prev => {
-              if (!prev) return prev;
-              const teamMapping = {
-                teamAId: prev.game.teamAId,
-                teamBId: prev.game.teamBId,
-                teamAName: prev.game.teamAName,
-                teamBName: prev.game.teamBName
-              };
-              const newEntry = transformSubsToPlayByPlay([payload.new], teamMapping)[0];
-              const merged = [newEntry, ...prev.playByPlay];
-              const sortPlays = (a: PlayByPlayEntry, b: PlayByPlayEntry) => {
-                if (a.quarter !== b.quarter) return b.quarter - a.quarter;
-                const ta = (a.gameTimeMinutes || 0) * 60 + (a.gameTimeSeconds || 0);
-                const tb = (b.gameTimeMinutes || 0) * 60 + (b.gameTimeSeconds || 0);
-                if (ta !== tb) return tb - ta;
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-              };
-              return {
-                ...prev,
-                playByPlay: merged.sort(sortPlays),
-                lastUpdated: new Date().toISOString()
-              };
-            });
-
-            // Also refetch shortly after to ensure full consistency with DB
-            setTimeout(() => {
-              fetchGameData(true);
-            }, 300);
-          }
-=======
           filter: `game_id=eq.${gameId}`
         },
         (payload) => {
@@ -588,7 +551,6 @@ export const useGameStream = (gameId: string) => {
 
           // Ensure eventual consistency
           setTimeout(() => { refetchSubs(); fetchGameData(true); }, 300);
->>>>>>> feature/substitution-v2
         }
       )
       .subscribe((status) => {

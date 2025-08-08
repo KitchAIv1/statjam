@@ -414,14 +414,7 @@ const StatTracker = () => {
       
       if (success) {
         console.log('✅ Stat recorded successfully in database');
-<<<<<<< HEAD
-        // Update local scoreboard immediately for responsive UX
-        const points = calculateStatPoints(stat, modifier);
-        if (points > 0) {
-          if (selectedTeam === 'Team A') {
-            setHomeScore(prev => prev + points);
-          } else {
-=======
+        
         // Quarter boundary: if clock hit 0:00, prepare next quarter
         if (gameClock.minutes === 0 && gameClock.seconds === 0) {
           if (quarter < 4) {
@@ -441,7 +434,6 @@ const StatTracker = () => {
           if (teamId === teamAInfo?.id) {
             setHomeScore(prev => prev + points);
           } else if (teamId === teamBInfo?.id) {
->>>>>>> feature/substitution-v2
             setAwayScore(prev => prev + points);
           }
         }
