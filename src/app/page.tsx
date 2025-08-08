@@ -29,6 +29,8 @@ export default function HomePage() {
   const router = useRouter();
   const [liveGames, setLiveGames] = useState<LiveGameRow[]>([]);
   const [loadingLive, setLoadingLive] = useState<boolean>(true);
+  const [teamNameById, setTeamNameById] = useState<Record<string, string>>({});
+  const [scoreByGameId, setScoreByGameId] = useState<Record<string, { home: number; away: number }>>({});
   // Mock data for demo
   const featuredStats = [
     { title: 'Active Tournaments', value: '24', icon: <Trophy className="w-5 h-5" />, trend: 'up' as const },
@@ -44,7 +46,8 @@ export default function HomePage() {
       const { data, error } = await supabase
         .from('games')
         .select('*')
-        .in('status', ['in_progress', 'overtime', 'live', 'scheduled'])
+        // Show all unclosed games: either end_time is null OR status != 'completed'
+        .or('end_time.is.null,status.neq.completed')
         .order('start_time', { ascending: false })
         .limit(50);
 
@@ -53,10 +56,62 @@ export default function HomePage() {
         setLiveGames([]);
         return;
       }
-      setLiveGames((data as unknown as LiveGameRow[]) || []);
+      const gamesList = (data as unknown as LiveGameRow[]) || [];
+      setLiveGames(gamesList);
+
+      // 1) Fetch team names for displayed games
+      const teamIds = Array.from(new Set(gamesList.flatMap(g => [g.team_a_id, g.team_b_id])));
+      if (teamIds.length > 0) {
+        const { data: teamsData } = await supabase
+          .from('teams')
+          .select('id, name')
+          .in('id', teamIds);
+        const map: Record<string, string> = {};
+        (teamsData || []).forEach((t: any) => {
+          if (t?.id) map[t.id] = t.name || `Team ${String(t.id).slice(0, 6)}`;
+        });
+        setTeamNameById(map);
+      } else {
+        setTeamNameById({});
+      }
+
+      // 2) Compute scores from game_stats for these games
+      const gameIds = gamesList.map(g => g.id);
+      if (gameIds.length > 0) {
+        const { data: statsData, error: statsErr } = await supabase
+          .from('game_stats')
+          .select('game_id, team_id, stat_type, modifier')
+          .in('game_id', gameIds);
+        if (!statsErr) {
+          const scores: Record<string, { home: number; away: number }> = {};
+          for (const g of gamesList) {
+            scores[g.id] = { home: 0, away: 0 };
+          }
+          (statsData || []).forEach((s: any) => {
+            if (s?.modifier !== 'made') return;
+            let points = 0;
+            if (s.stat_type === 'three_pointer') points = 3;
+            else if (s.stat_type === 'field_goal') points = 2;
+            else if (s.stat_type === 'free_throw') points = 1;
+            const g = gamesList.find(x => x.id === s.game_id);
+            if (!g) return;
+            const bucket = scores[s.game_id];
+            if (!bucket) return;
+            if (s.team_id === g.team_a_id) bucket.home += points;
+            else if (s.team_id === g.team_b_id) bucket.away += points;
+          });
+          setScoreByGameId(scores);
+        } else {
+          setScoreByGameId({});
+        }
+      } else {
+        setScoreByGameId({});
+      }
     } catch (e) {
       console.warn('Landing: unexpected error loading live games', e);
       setLiveGames([]);
+      setTeamNameById({});
+      setScoreByGameId({});
     } finally {
       setLoadingLive(false);
     }
@@ -79,6 +134,13 @@ export default function HomePage() {
           setTimeout(() => fetchLiveGames(), 300);
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'game_stats' },
+        () => {
+          setTimeout(() => fetchLiveGames(), 300);
+        }
+      )
       .subscribe();
 
     const poll = setInterval(() => {
@@ -95,31 +157,28 @@ export default function HomePage() {
     const toLabelStatus = (s: string) => (s === 'in_progress' || s === 'overtime' || s === 'live') ? 'live' as const
       : s === 'completed' ? 'finished' as const
       : 'upcoming' as const;
-    const isLiveComputed = (g: LiveGameRow) => (
-      g.status === 'in_progress' ||
-      g.status === 'overtime' ||
-      g.status === 'live' ||
-      Boolean(g.is_clock_running) ||
-      (g.status === 'scheduled' && ((g.home_score ?? 0) > 0 || (g.away_score ?? 0) > 0))
-    );
 
-    return (liveGames || []).filter(isLiveComputed).map(g => {
+    return (liveGames || []).map(g => {
       const mm = Math.max(0, Number(g.game_clock_minutes ?? 0));
       const ss = Math.max(0, Number(g.game_clock_seconds ?? 0));
       const timeLabel = g.quarter ? `Q${g.quarter} ${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}` : 'LIVE';
+      const homeName = teamNameById[g.team_a_id] || 'Home';
+      const awayName = teamNameById[g.team_b_id] || 'Away';
+      const score = scoreByGameId[g.id] || { home: g.home_score ?? 0, away: g.away_score ?? 0 };
       return {
         key: g.id,
         onClick: () => router.push(`/game-viewer/${g.id}`),
         props: {
-          homeTeam: { name: 'Home', score: g.home_score ?? undefined },
-          awayTeam: { name: 'Away', score: g.away_score ?? undefined },
+          homeTeam: { name: homeName, score: score.home },
+          awayTeam: { name: awayName, score: score.away },
           status: toLabelStatus(g.status),
           time: timeLabel,
           venue: undefined as string | undefined,
+          showTeamLabels: false
         }
       };
     });
-  }, [liveGames, router]);
+  }, [liveGames, router, teamNameById, scoreByGameId]);
 
   return (
     <main className="min-h-screen">

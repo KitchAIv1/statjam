@@ -18,6 +18,7 @@ interface GameCardProps {
   venue?: string;
   className?: string;
   onClick?: () => void;
+  showTeamLabels?: boolean;
 }
 
 export function GameCard({
@@ -27,7 +28,8 @@ export function GameCard({
   time,
   venue,
   className,
-  onClick
+  onClick,
+  showTeamLabels = true
 }: GameCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -90,7 +92,9 @@ export function GameCard({
               <div className="font-semibold text-white truncate text-base">
                 {awayTeam.name}
               </div>
-              <div className="text-xs text-gray-400">Away</div>
+              {showTeamLabels && (
+                <div className="text-xs text-gray-400">Away</div>
+              )}
             </div>
           </div>
           {awayTeam.score !== undefined && (
@@ -119,7 +123,9 @@ export function GameCard({
               <div className="font-semibold text-white truncate text-base">
                 {homeTeam.name}
               </div>
-              <div className="text-xs text-gray-400">Home</div>
+              {showTeamLabels && (
+                <div className="text-xs text-gray-400">Home</div>
+              )}
             </div>
           </div>
           {homeTeam.score !== undefined && (
