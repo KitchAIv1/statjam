@@ -31,15 +31,6 @@ export function GameCard({
   onClick,
   showTeamLabels = true
 }: GameCardProps) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'upcoming': return '#b3b3b3';
-      case 'live': return '#ef4444';
-      case 'finished': return '#ffffff';
-      default: return '#b3b3b3';
-    }
-  };
-
   const statusLabels = {
     upcoming: 'UPCOMING',
     live: 'LIVE',
@@ -48,97 +39,112 @@ export function GameCard({
 
   // Determine context (landing vs dashboard)
   const isLandingPage = className?.includes('landing') || !className?.includes('dashboard');
+  const homeScore = homeTeam.score ?? undefined;
+  const awayScore = awayTeam.score ?? undefined;
   
   return (
     <motion.div
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ y: -2, boxShadow: '0 10px 30px rgba(255, 255, 0, 0.08)' }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={cn(
         isLandingPage ? 'landing-game-card' : 'dashboard-game-card',
-        'cursor-pointer',
+        // Glass card surface + subtle glow
+        'cursor-pointer rounded-xl p-4 md:p-5 backdrop-blur-md bg-white/5 border border-white/10 transition-all',
         className
       )}
+      style={{
+        backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00))'
+      }}
     >
       {/* Status and Time Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className={cn(
-          'px-3 py-1 rounded-full text-xs font-bold tracking-wide',
-          status === 'live' ? 'bg-red-500 text-white animate-pulse' :
-          status === 'upcoming' ? 'bg-blue-500 bg-opacity-20 text-blue-400' :
-          'bg-gray-500 bg-opacity-20 text-gray-400'
-        )}>
+        {/* LIVE pill with pulsing dot */}
+        <div
+          className={cn(
+            'flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider',
+            status === 'live' ? 'bg-visible-yellow text-black' :
+            status === 'upcoming' ? 'bg-white/10 text-gray-300' : 'bg-white/10 text-gray-200'
+          )}
+          aria-label={statusLabels[status]}
+        >
+          <span className="relative inline-flex">
+            <span className={cn(
+              'inline-block w-1.5 h-1.5 rounded-full',
+              status === 'live' ? 'bg-black' : 'bg-gray-400'
+            )} />
+            {status === 'live' && (
+              <span className="absolute inline-flex h-3 w-3 rounded-full bg-black/40 opacity-75 animate-ping -left-1 -top-1" />
+            )}
+          </span>
           {statusLabels[status]}
         </div>
+
+        {/* Quarter / Time pill */}
         {time && (
-          <div className="flex items-center gap-1 text-xs text-gray-400">
-            <Clock className="w-3 h-3" />
+          <div className="flex items-center gap-1 text-[11px] text-gray-300 bg-white/5 border border-white/10 px-2 py-1 rounded-full font-mono tabular-nums">
+            <Clock className="w-3 h-3 opacity-70" />
             {time}
           </div>
         )}
       </div>
 
-      {/* Teams Matchup */}
-      <div className="flex-1 space-y-4">
-        {/* Away Team */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {awayTeam.logo && (
-              <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0 border border-gray-600">
-                <img src={awayTeam.logo} alt={awayTeam.name} className="w-6 h-6" />
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold text-white truncate text-base">
-                {awayTeam.name}
-              </div>
-              {showTeamLabels && (
-                <div className="text-xs text-gray-400">Away</div>
-              )}
-            </div>
-          </div>
-          {awayTeam.score !== undefined && (
-            <div className="text-3xl font-bold text-white ml-4">
-              {awayTeam.score}
-            </div>
-          )}
-        </div>
+      {/* Primary Score */}
+      <div className="flex items-baseline justify-center gap-4 md:gap-6 mb-3 select-none">
+        <motion.span
+          key={`away-${awayScore}`}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="text-4xl md:text-5xl font-extrabold text-white tracking-tight"
+        >
+          {awayScore ?? '—'}
+        </motion.span>
+        <span className="text-gray-500">—</span>
+        <motion.span
+          key={`home-${homeScore}`}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="text-4xl md:text-5xl font-extrabold text-white tracking-tight"
+        >
+          {homeScore ?? '—'}
+        </motion.span>
+      </div>
 
-        {/* VS Separator */}
-        <div className="flex items-center justify-center py-2">
-          <div className="h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent flex-1"></div>
-          <div className="px-4 text-xs font-medium text-gray-500 bg-gray-800 rounded-full">VS</div>
-          <div className="h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent flex-1"></div>
-        </div>
-
-        {/* Home Team */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {homeTeam.logo && (
-              <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0 border border-gray-600">
-                <img src={homeTeam.logo} alt={homeTeam.name} className="w-6 h-6" />
-              </div>
+      {/* Teams Row */}
+      <div className="grid grid-cols-2 gap-4 md:gap-6">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[11px] font-bold text-gray-200">
+            {awayTeam.logo ? (
+              <img src={awayTeam.logo} alt={awayTeam.name} className="w-5 h-5" />
+            ) : (
+              <span>{awayTeam.name?.slice(0, 2).toUpperCase()}</span>
             )}
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold text-white truncate text-base">
-                {homeTeam.name}
-              </div>
-              {showTeamLabels && (
-                <div className="text-xs text-gray-400">Home</div>
-              )}
-            </div>
           </div>
-          {homeTeam.score !== undefined && (
-            <div className="text-3xl font-bold text-white ml-4">
-              {homeTeam.score}
-            </div>
-          )}
+          <div className="truncate">
+            <div className="text-sm font-medium text-white truncate">{awayTeam.name}</div>
+            {showTeamLabels && <div className="text-[10px] text-gray-400">Away</div>}
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 min-w-0">
+          <div className="truncate text-right">
+            <div className="text-sm font-medium text-white truncate">{homeTeam.name}</div>
+            {showTeamLabels && <div className="text-[10px] text-gray-400">Home</div>}
+          </div>
+          <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[11px] font-bold text-gray-200">
+            {homeTeam.logo ? (
+              <img src={homeTeam.logo} alt={homeTeam.name} className="w-5 h-5" />
+            ) : (
+              <span>{homeTeam.name?.slice(0, 2).toUpperCase()}</span>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Venue Footer */}
       {venue && (
-        <div className="flex items-center gap-2 text-xs text-gray-400 mt-4 pt-4 border-t border-gray-700 border-opacity-50">
+        <div className="flex items-center gap-2 text-xs text-gray-400 mt-4 pt-4 border-t border-white/10">
           <MapPin className="w-3 h-3" />
           <span>{venue}</span>
         </div>

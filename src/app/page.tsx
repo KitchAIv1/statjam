@@ -233,26 +233,43 @@ export default function HomePage() {
       </section>
 
       {/* Live Games Section */}
-      <section className="section-spacing" style={{ backgroundColor: 'rgba(26, 26, 26, 0.3)' }}>
+      <section className="section-spacing relative">
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(1200px 400px at 50% -10%, rgba(255,255,0,0.08), rgba(0,0,0,0))'
+        }} />
         <div className="max-width-container">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-16"
+            className="text-center mb-10 md:mb-12"
           >
-            <h2 className="font-header text-4xl md:text-5xl lg:text-6xl font-bold text-visible-yellow mb-4">
-              LIVE GAMES
-            </h2>
-            <p className="text-lg md:text-xl max-w-3xl mx-auto text-visible-gray">
-              Watch games in progress right now
+            <div className="inline-flex items-center gap-3">
+              <h2 className="font-header text-4xl md:text-5xl lg:text-6xl font-bold text-visible-yellow">
+                LIVE GAMES
+              </h2>
+              <span className="hidden md:inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider bg-visible-yellow text-black">
+                <span className="relative inline-flex">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-black" />
+                  <span className="absolute inline-flex h-3 w-3 rounded-full bg-black/40 opacity-75 animate-ping -left-1 -top-1" />
+                </span>
+                LIVE NOW
+              </span>
+            </div>
+            <p className="text-base md:text-lg max-w-3xl mx-auto text-visible-gray mt-3">
+              Unclosed games updating in real-time
             </p>
           </motion.div>
 
           <div className="landing-games-grid">
             {(!loadingLive && liveCards.length === 0) && (
               <div className="text-center text-gray-400 py-8">No live games right now.</div>
+            )}
+            {loadingLive && liveCards.length === 0 && (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={`skeleton-${i}`} className="rounded-xl p-5 bg-white/5 border border-white/10 animate-pulse h-44" />
+              ))
             )}
             {liveCards.map((cg, index) => (
               <motion.div
@@ -262,7 +279,7 @@ export default function HomePage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.05 }}
               >
-                <GameCard {...cg.props} onClick={cg.onClick} />
+                <GameCard {...cg.props} onClick={cg.onClick} className="landing" />
               </motion.div>
             ))}
           </div>
