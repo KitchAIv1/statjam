@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { StatButtonsGrid } from './StatButtonsGrid';
 import { RosterState, StatRecord } from '@/lib/types/tracker';
 
 export const StatRecorder: React.FC<{
@@ -83,30 +84,30 @@ export const StatRecorder: React.FC<{
         </div>
       </div>
 
-      {/* Full stat grid */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+      {/* Full stat grid (V1 layout: 3 columns per row) */}
+      <StatButtonsGrid>
         {/* Team A actions */}
-        <Btn label="A +2" tone="primary" onClick={() => selectedA && fire('A', selectedA, 'field_goal', 'made')} />
-        <Btn label="A +3" onClick={() => selectedA && fire('A', selectedA, 'three_pointer', 'made')} />
-        <Btn label="A FT" onClick={() => selectedA && fire('A', selectedA, 'free_throw', 'made')} />
-        <Btn label="A AST" onClick={() => selectedA && fire('A', selectedA, 'assist')} />
-        <Btn label="A REB" onClick={() => { setPendingTeam('A'); setPendingType('rebound'); setShowRebType(true); }} />
-        <Btn label="A STL" onClick={() => selectedA && fire('A', selectedA, 'steal')} />
-        <Btn label="A BLK" onClick={() => selectedA && fire('A', selectedA, 'block')} />
-        <Btn label="A FOUL" onClick={() => { setPendingTeam('A'); setPendingType('foul'); setShowFoulType(true); }} />
-        <Btn label="A TO" onClick={() => selectedA && fire('A', selectedA, 'turnover')} />
+        <Btn label="+2" tone="primary" onClick={() => selectedA && fire('A', selectedA, 'field_goal', 'made')} />
+        <Btn label="+3" onClick={() => selectedA && fire('A', selectedA, 'three_pointer', 'made')} />
+        <Btn label="FT" onClick={() => selectedA && fire('A', selectedA, 'free_throw', 'made')} />
+        <Btn label="AST" onClick={() => selectedA && fire('A', selectedA, 'assist')} />
+        <Btn label="REB" onClick={() => { setPendingTeam('A'); setPendingType('rebound'); setShowRebType(true); }} />
+        <Btn label="STL" onClick={() => selectedA && fire('A', selectedA, 'steal')} />
+        <Btn label="BLK" onClick={() => selectedA && fire('A', selectedA, 'block')} />
+        <Btn label="FOUL" onClick={() => { setPendingTeam('A'); setPendingType('foul'); setShowFoulType(true); }} />
+        <Btn label="TO" onClick={() => selectedA && fire('A', selectedA, 'turnover')} />
 
         {/* Team B actions */}
-        <Btn label="B +2" tone="primary" onClick={() => selectedB && fire('B', selectedB, 'field_goal', 'made')} />
-        <Btn label="B +3" onClick={() => selectedB && fire('B', selectedB, 'three_pointer', 'made')} />
-        <Btn label="B FT" onClick={() => selectedB && fire('B', selectedB, 'free_throw', 'made')} />
-        <Btn label="B AST" onClick={() => selectedB && fire('B', selectedB, 'assist')} />
-        <Btn label="B REB" onClick={() => { setPendingTeam('B'); setPendingType('rebound'); setShowRebType(true); }} />
-        <Btn label="B STL" onClick={() => selectedB && fire('B', selectedB, 'steal')} />
-        <Btn label="B BLK" onClick={() => selectedB && fire('B', selectedB, 'block')} />
-        <Btn label="B FOUL" onClick={() => { setPendingTeam('B'); setPendingType('foul'); setShowFoulType(true); }} />
-        <Btn label="B TO" onClick={() => selectedB && fire('B', selectedB, 'turnover')} />
-      </div>
+        <Btn label="+2" tone="primary" onClick={() => selectedB && fire('B', selectedB, 'field_goal', 'made')} />
+        <Btn label="+3" onClick={() => selectedB && fire('B', selectedB, 'three_pointer', 'made')} />
+        <Btn label="FT" onClick={() => selectedB && fire('B', selectedB, 'free_throw', 'made')} />
+        <Btn label="AST" onClick={() => selectedB && fire('B', selectedB, 'assist')} />
+        <Btn label="REB" onClick={() => { setPendingTeam('B'); setPendingType('rebound'); setShowRebType(true); }} />
+        <Btn label="STL" onClick={() => selectedB && fire('B', selectedB, 'steal')} />
+        <Btn label="BLK" onClick={() => selectedB && fire('B', selectedB, 'block')} />
+        <Btn label="FOUL" onClick={() => { setPendingTeam('B'); setPendingType('foul'); setShowFoulType(true); }} />
+        <Btn label="TO" onClick={() => selectedB && fire('B', selectedB, 'turnover')} />
+      </StatButtonsGrid>
 
       {/* Modals */}
       {showRebType && (

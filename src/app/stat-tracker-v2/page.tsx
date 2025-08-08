@@ -16,6 +16,7 @@ import { ActionBar } from '@/components/tracker/ActionBar';
 import { PlayerGrid } from '@/components/tracker/PlayerGrid';
 import { SubstitutionModal } from '@/components/tracker/SubstitutionModal';
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
+import { TrackerHeader } from '@/components/tracker/TrackerHeader';
 
 type GameRow = {
   id: string;
@@ -119,7 +120,8 @@ export default function TrackerV2Page() {
   return (
     <main className="min-h-screen">
       <ResponsiveContainer>
-      <div className="flex flex-col gap-10 py-8">
+      <div className="flex flex-col gap-8 py-8">
+        <TrackerHeader gameId={gameId} />
         <GameStatusBar status={game?.status || (tracker.clock.isRunning ? 'in_progress' : 'scheduled')} />
 
         <CombinedScoreboard
