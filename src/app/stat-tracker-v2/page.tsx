@@ -87,6 +87,7 @@ export default function TrackerV2Page() {
   const teamAName = game?.team_a?.name || 'Team A';
   const teamBName = game?.team_b?.name || 'Team B';
   const [subOutId, setSubOutId] = useState<string | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<'A'|'B'>('A');
 
   const tracker = useTracker({
     initialGameId: gameId || 'unknown',
@@ -134,17 +135,19 @@ export default function TrackerV2Page() {
           onStart={tracker.startClock}
           onStop={tracker.stopClock}
           onReset={tracker.resetClock}
+          selectedTeam={selectedTeam}
+          onSelectTeam={setSelectedTeam}
         />
 
         {/* ClockControls replaced by CombinedScoreboard to match V1 visual */}
 
         {/* Rosters (read-only for now) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
+          <div className={`${selectedTeam === 'A' ? 'ring-2 ring-orange-500 rounded-xl p-2' : ''}`}>
             <div className="mb-2 text-gray-300 text-sm">{teamAName} On Court</div>
             <PlayerGrid roster={tracker.rosterA} playerSeconds={tracker.playerSeconds} onSubClick={(pid)=>setSubOutId(pid)} />
           </div>
-          <div>
+          <div className={`${selectedTeam === 'B' ? 'ring-2 ring-orange-500 rounded-xl p-2' : ''}`}>
             <div className="mb-2 text-gray-300 text-sm">{teamBName} On Court</div>
             <PlayerGrid roster={tracker.rosterB} playerSeconds={tracker.playerSeconds} onSubClick={(pid)=>setSubOutId(pid)} />
           </div>

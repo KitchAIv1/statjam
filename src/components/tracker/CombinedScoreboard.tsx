@@ -15,6 +15,8 @@ export const CombinedScoreboard: React.FC<{
   onStart: () => void;
   onStop: () => void;
   onReset: () => void;
+  selectedTeam?: 'A' | 'B';
+  onSelectTeam?: (t: 'A' | 'B') => void;
 }> = ({
   teamAName,
   teamBName,
@@ -27,20 +29,29 @@ export const CombinedScoreboard: React.FC<{
   onNextQuarter,
   onStart,
   onStop,
-  onReset
+  onReset,
+  selectedTeam,
+  onSelectTeam
 }) => {
-  const TeamCard: React.FC<{ label: string; score: number; name: string; align?: 'left' | 'right' }>
-    = ({ label, score, name }) => (
-    <div className="flex-1 rounded-xl bg-white/5 border border-white/10 p-4 text-center">
+  const TeamCard: React.FC<{ label: string; score: number; name: string; side: 'A'|'B' }>
+    = ({ label, score, name, side }) => (
+    <button
+      onClick={() => onSelectTeam && onSelectTeam(side)}
+      className={`flex-1 rounded-xl p-4 text-center border transition-colors ${
+        selectedTeam === side
+          ? 'bg-orange-900/20 border-orange-500'
+          : 'bg-white/5 border-white/10 hover:border-white/20'
+      }`}
+    >
       <div className="text-xs uppercase tracking-widest text-gray-300 mb-1">{label}</div>
       <div className="text-5xl font-extrabold text-white tabular-nums mb-1">{score}</div>
       <div className="text-sm text-gray-400">{name}</div>
-    </div>
+    </button>
   );
 
   return (
     <div className="flex items-stretch gap-4">
-      <TeamCard label="HOME" score={teamAScore} name={teamAName} />
+      <TeamCard label="HOME" score={teamAScore} name={teamAName} side="A" />
 
       <div className="min-w-[220px] rounded-xl bg-white/5 border border-white/10 p-3 flex flex-col items-center justify-center gap-2">
         <div className="flex items-center gap-2">
@@ -60,7 +71,7 @@ export const CombinedScoreboard: React.FC<{
         </div>
       </div>
 
-      <TeamCard label="AWAY" score={teamBScore} name={teamBName} />
+      <TeamCard label="AWAY" score={teamBScore} name={teamBName} side="B" />
     </div>
   );
 };
