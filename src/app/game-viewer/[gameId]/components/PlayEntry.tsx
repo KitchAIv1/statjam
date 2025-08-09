@@ -3,11 +3,21 @@
 import React from 'react';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
 
+interface PlayerStats {
+  fieldGoalMade: number;
+  fieldGoalAttempts: number;
+  threePointerMade: number;
+  threePointerAttempts: number;
+  freeThrowMade: number;
+  freeThrowAttempts: number;
+}
+
 interface PlayEntryProps {
   play: PlayByPlayEntry;
   isLatest: boolean;
   teamAName: string;
   teamBName: string;
+  playerStats?: PlayerStats; // Optional player stats for the current play
 }
 
 /**
@@ -20,7 +30,8 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   play, 
   isLatest, 
   teamAName, 
-  teamBName 
+  teamBName,
+  playerStats
 }) => {
 
   /**
@@ -92,6 +103,49 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   };
 
   /**
+   * Get field goal statistics for the player (made/attempts)
+   */
+  const getFieldGoalStats = (): string | null => {
+    if (!playerStats) return null;
+    
+    switch (play.statType) {
+      case 'field_goal':
+        return `${playerStats.fieldGoalMade}/${playerStats.fieldGoalAttempts}`;
+      case 'three_pointer':
+        return `${playerStats.threePointerMade}/${playerStats.threePointerAttempts}`;
+      case 'free_throw':
+        return `${playerStats.freeThrowMade}/${playerStats.freeThrowAttempts}`;
+      default:
+        return null;
+    }
+  };
+
+  /**
+   * Get enhanced play description with stats
+   */
+  const getEnhancedDescription = (): string => {
+    const stats = getFieldGoalStats();
+    
+    if (stats && playerStats) {
+      const action = play.modifier === 'made' ? 'made' : 'missed';
+      
+      switch (play.statType) {
+        case 'field_goal':
+          return `${action} field goal (${stats} FG)`;
+        case 'three_pointer':
+          return `${action} 3-pointer (${stats} 3PT)`;
+        case 'free_throw':
+          return `${action} free throw (${stats} FT)`;
+        default:
+          return play.description;
+      }
+    }
+    
+    // For other stat types or when no stats available, use the original description
+    return play.description;
+  };
+
+  /**
    * Get relative time
    */
   const getRelativeTime = (timestamp: string): string => {
@@ -150,7 +204,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
         <div style={styles.playDetails}>
           <div style={styles.playDescription}>
             <span style={styles.playIcon}>{getPlayIcon(play.statType)}</span>
-            {play.description}
+            {getEnhancedDescription()}
           </div>
           
           {/* Player and Team Info */}

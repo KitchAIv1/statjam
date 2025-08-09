@@ -4,6 +4,15 @@ import React from 'react';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
 import PlayEntry from './PlayEntry';
 
+interface PlayerStats {
+  fieldGoalMade: number;
+  fieldGoalAttempts: number;
+  threePointerMade: number;
+  threePointerAttempts: number;
+  freeThrowMade: number;
+  freeThrowAttempts: number;
+}
+
 interface PlayByPlayFeedProps {
   playByPlay: PlayByPlayEntry[];
   game: {
@@ -34,6 +43,54 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
     isLive,
     gameScores: `${game.homeScore}-${game.awayScore}`
   });
+
+  /**
+   * Calculate player stats up to a specific play (chronologically)
+   */
+  const calculatePlayerStats = (currentPlayIndex: number, playerId?: string): PlayerStats | undefined => {
+    if (!playerId) return undefined;
+
+    const stats: PlayerStats = {
+      fieldGoalMade: 0,
+      fieldGoalAttempts: 0,
+      threePointerMade: 0,
+      threePointerAttempts: 0,
+      freeThrowMade: 0,
+      freeThrowAttempts: 0,
+    };
+
+    // playByPlay is in reverse chronological order (newest first)
+    // So we need to process from the end to the current play
+    for (let i = playByPlay.length - 1; i >= currentPlayIndex; i--) {
+      const play = playByPlay[i];
+      
+      // Only count stats for this specific player
+      if (play.playerId !== playerId) continue;
+
+      switch (play.statType) {
+        case 'field_goal':
+          stats.fieldGoalAttempts++;
+          if (play.modifier === 'made') {
+            stats.fieldGoalMade++;
+          }
+          break;
+        case 'three_pointer':
+          stats.threePointerAttempts++;
+          if (play.modifier === 'made') {
+            stats.threePointerMade++;
+          }
+          break;
+        case 'free_throw':
+          stats.freeThrowAttempts++;
+          if (play.modifier === 'made') {
+            stats.freeThrowMade++;
+          }
+          break;
+      }
+    }
+
+    return stats;
+  };
 
   if (playByPlay.length === 0) {
     return (
@@ -81,15 +138,21 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
 
       {/* Play Entries */}
       <div style={styles.feedContainer}>
-        {playByPlay.map((play, index) => (
-          <PlayEntry
-            key={play.id}
-            play={play}
-            isLatest={index === 0}
-            teamAName={game.teamAName}
-            teamBName={game.teamBName}
-          />
-        ))}
+        {playByPlay.map((play, index) => {
+          // Calculate player stats up to this point in the game
+          const playerStats = calculatePlayerStats(index, play.playerId);
+          
+          return (
+            <PlayEntry
+              key={play.id}
+              play={play}
+              isLatest={index === 0}
+              teamAName={game.teamAName}
+              teamBName={game.teamBName}
+              playerStats={playerStats}
+            />
+          );
+        })}
       </div>
 
       {/* Load More Placeholder */}
