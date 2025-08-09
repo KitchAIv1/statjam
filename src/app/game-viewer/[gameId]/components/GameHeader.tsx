@@ -7,6 +7,7 @@ import {
   getGameStatusText, 
   getStatusColor 
 } from '@/lib/utils/gameViewerUtils';
+import { figmaColors, figmaTypography, figmaSpacing, figmaRadius } from '@/lib/design/figmaTokens';
 
 interface GameHeaderProps {
   game?: {
@@ -111,85 +112,90 @@ const GameHeader: React.FC<GameHeaderProps> = ({ game, isLive, lastUpdated, isMo
 
 const styles = {
   container: {
-    background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-    borderBottom: '1px solid #333',
+    backgroundColor: figmaColors.secondary,
+    borderBottom: `1px solid ${figmaColors.border.primary}`,
     position: 'sticky' as const,
     top: 0,
-    zIndex: 100
+    zIndex: 100,
+    fontFamily: figmaTypography.fontFamily.primary
   },
   statusBar: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    padding: '12px 20px',
-    borderBottom: '1px solid #333'
+    gap: figmaSpacing[3],
+    padding: `${figmaSpacing[3]} ${figmaSpacing[5]}`,
+    borderBottom: `1px solid ${figmaColors.border.primary}`,
+    backgroundColor: figmaColors.primary
   },
   statusIndicator: {
     width: '8px',
     height: '8px',
-    borderRadius: '50%',
+    borderRadius: figmaRadius.full,
     animation: 'pulse 2s infinite'
   },
   statusText: {
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#ffffff'
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.text.primary,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em'
   },
   gameDate: {
-    fontSize: '12px',
-    color: '#b3b3b3',
+    fontSize: figmaTypography.fontSize.xs,
+    color: figmaColors.text.muted,
     marginLeft: 'auto'
   },
   header: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: '16px 12px',
-    gap: '32px',
-    maxWidth: '600px',
-    margin: '0 auto'
+    justifyContent: 'space-between',
+    padding: `${figmaSpacing[6]} ${figmaSpacing[4]}`,
+    maxWidth: '64rem',
+    margin: '0 auto',
+    backgroundColor: figmaColors.secondary
   },
   teamContainer: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    minWidth: '140px'
+    gap: figmaSpacing[4],
+    minWidth: '160px'
   },
   teamInfo: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px'
+    gap: figmaSpacing[4]
   },
   teamLogo: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '8px',
-    background: '#4B0082',
-    color: '#ffffff',
+    width: '48px',
+    height: '48px',
+    borderRadius: figmaRadius.lg,
+    background: figmaColors.accent.purple,
+    color: figmaColors.text.primary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '16px',
-    fontWeight: '700'
+    fontSize: figmaTypography.fontSize.xl,
+    fontWeight: figmaTypography.fontWeight.bold,
+    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
   },
   teamDetails: {
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '2px'
+    gap: figmaSpacing[1]
   },
   teamName: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#ffffff'
+    fontSize: figmaTypography.fontSize.lg,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.text.primary
   },
   teamRecord: {
-    fontSize: '12px',
-    color: '#b3b3b3'
+    fontSize: figmaTypography.fontSize.xs,
+    color: figmaColors.text.muted
   },
   teamScore: {
-    fontSize: '28px',
-    fontWeight: '900',
-    color: '#ffffff',
+    fontSize: figmaTypography.fontSize['2xl'],
+    fontWeight: figmaTypography.fontWeight.extrabold,
+    color: figmaColors.text.primary,
     minWidth: '60px',
     textAlign: 'center' as const
   },
@@ -197,45 +203,48 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    gap: '4px',
-    minWidth: '100px',
+    gap: figmaSpacing[2],
+    minWidth: '120px',
     textAlign: 'center' as const
   },
   gameStatus: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#FFD700'
+    fontSize: figmaTypography.fontSize.xl,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.accent.blueLight
   },
   gameTime: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#ffffff'
+    fontSize: figmaTypography.fontSize.sm,
+    fontWeight: figmaTypography.fontWeight.semibold,
+    color: figmaColors.text.secondary
   },
   finalStatus: {
-    fontSize: '20px',
-    fontWeight: '900',
-    color: '#00ff88'
+    fontSize: figmaTypography.fontSize['2xl'],
+    fontWeight: figmaTypography.fontWeight.extrabold,
+    color: figmaColors.status.success
   },
   statsBar: {
     display: 'flex',
     justifyContent: 'center',
-    gap: '32px',
-    padding: '16px 20px',
-    background: 'rgba(0, 0, 0, 0.3)'
+    gap: figmaSpacing[8],
+    padding: `${figmaSpacing[4]} ${figmaSpacing[5]}`,
+    backgroundColor: figmaColors.primary,
+    borderTop: `1px solid ${figmaColors.border.primary}`
   },
   statItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: figmaSpacing[2]
   },
   statLabel: {
-    fontSize: '12px',
-    color: '#b3b3b3'
+    fontSize: figmaTypography.fontSize.xs,
+    color: figmaColors.text.muted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em'
   },
   statValue: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#ffffff'
+    fontSize: figmaTypography.fontSize.sm,
+    fontWeight: figmaTypography.fontWeight.semibold,
+    color: figmaColors.text.primary
   }
 };
 

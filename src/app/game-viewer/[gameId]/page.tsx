@@ -5,6 +5,7 @@ import { useGameViewerData } from '@/hooks/useGameViewerData';
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
 import PlayByPlayFeed from './components/PlayByPlayFeed';
+import { figmaColors, figmaTypography } from '@/lib/design/figmaTokens';
 
 
 interface GameViewerPageProps {
@@ -150,9 +151,9 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
 const styles = {
   container: {
     minHeight: '100vh',
-    background: '#121212',
-    color: '#ffffff',
-    fontFamily: 'Poppins, system-ui, sans-serif'
+    backgroundColor: figmaColors.primary,
+    color: figmaColors.text.primary,
+    fontFamily: figmaTypography.fontFamily.primary
   },
   content: {
     paddingBottom: '60px' // Space for live indicator
