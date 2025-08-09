@@ -6,7 +6,7 @@ import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
 import PlayByPlayFeed from './components/PlayByPlayFeed';
 import { figmaColors, figmaTypography } from '@/lib/design/figmaTokens';
-// Tabs removed temporarily to fix crash; will reintroduce after stabilization
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 interface GameViewerPageProps {
@@ -107,34 +107,93 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
         isMobile={isMobile}
       />
 
-      {/* Play by Play Feed (stable) */}
-      <div style={styles.playByPlayContainer}>
-        {enableViewerV2 && v2Data ? (
-          <PlayByPlayFeed
-            playByPlay={v2Data.plays}
-            game={{
-              teamAName: v2Data.teamMap.teamAName,
-              teamBName: v2Data.teamMap.teamBName,
-              homeScore: v2Data.homeScore,
-              awayScore: v2Data.awayScore,
-            }}
-            isLive={isLive}
-            isMobile={isMobile}
-            calculatePlayerStats={calculatePlayerStats}
-            calculatePlayerPoints={calculatePlayerPoints}
-          />
-        ) : (
-          gameData && (
-            <PlayByPlayFeed 
-              playByPlay={gameData.playByPlay}
-              game={gameData.game}
-              isLive={isLive}
-              isMobile={isMobile}
-              calculatePlayerStats={calculatePlayerStats}
-              calculatePlayerPoints={calculatePlayerPoints}
-            />
-          )
-        )}
+      {/* Tabs: Feed / Game / Teams */}
+      <div style={styles.tabsContainer}>
+        <Tabs defaultValue="feed" className="w-full">
+          <TabsList className="w-full bg-gray-800 border-b border-gray-700 rounded-none h-auto p-0">
+            <TabsTrigger value="feed" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+              Feed
+            </TabsTrigger>
+            <TabsTrigger value="game" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+              Game
+            </TabsTrigger>
+            <TabsTrigger value="teamA" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+              {gameData.game.teamAName}
+            </TabsTrigger>
+            <TabsTrigger value="teamB" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+              {gameData.game.teamBName}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Feed Tab */}
+          <TabsContent value="feed" className="mt-0">
+            <div style={styles.playByPlayContainer}>
+              {enableViewerV2 && v2Data ? (
+                <PlayByPlayFeed
+                  playByPlay={v2Data.plays}
+                  game={{
+                    teamAName: v2Data.teamMap.teamAName,
+                    teamBName: v2Data.teamMap.teamBName,
+                    homeScore: v2Data.homeScore,
+                    awayScore: v2Data.awayScore,
+                  }}
+                  isLive={isLive}
+                  isMobile={isMobile}
+                  calculatePlayerStats={calculatePlayerStats}
+                  calculatePlayerPoints={calculatePlayerPoints}
+                />
+              ) : (
+                gameData && (
+                  <PlayByPlayFeed 
+                    playByPlay={gameData.playByPlay}
+                    game={gameData.game}
+                    isLive={isLive}
+                    isMobile={isMobile}
+                    calculatePlayerStats={calculatePlayerStats}
+                    calculatePlayerPoints={calculatePlayerPoints}
+                  />
+                )
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Game Tab (real data from hook) */}
+          <TabsContent value="game" className="mt-0">
+            <div style={styles.gameSummarySection}>
+              <div style={styles.gameSummaryCard}>
+                <div style={styles.gameSummaryHeader}>Game Summary</div>
+                <div style={styles.gameSummaryRow}>
+                  <div style={styles.gameSummaryTeam}>{gameData.game.teamAName}</div>
+                  <div style={styles.gameSummaryScore}>{gameData.game.homeScore}</div>
+                </div>
+                <div style={styles.gameSummaryRow}>
+                  <div style={styles.gameSummaryTeam}>{gameData.game.teamBName}</div>
+                  <div style={styles.gameSummaryScore}>{gameData.game.awayScore}</div>
+                </div>
+                <div style={styles.gameSummaryMeta}>
+                  <span>Status: {gameData.game.status}</span>
+                  <span>Quarter: {gameData.game.quarter}</span>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Team A Tab (placeholder for real roster; logic stays in hooks/services) */}
+          <TabsContent value="teamA" className="mt-0">
+            <div style={styles.teamSection}>
+              <div style={styles.teamHeader}>{gameData.game.teamAName}</div>
+              <div style={styles.teamPlaceholder}>Team roster and stats coming soon.</div>
+            </div>
+          </TabsContent>
+
+          {/* Team B Tab (placeholder for real roster; logic stays in hooks/services) */}
+          <TabsContent value="teamB" className="mt-0">
+            <div style={styles.teamSection}>
+              <div style={styles.teamHeader}>{gameData.game.teamBName}</div>
+              <div style={styles.teamPlaceholder}>Team roster and stats coming soon.</div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Live Indicator */}
