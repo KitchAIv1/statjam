@@ -196,6 +196,21 @@ export function MobileLayoutV3({
           benchPlayers={benchPlayers}
           onConfirm={handleSubConfirm}
         />
+
+        {/* Game ID Display for Testing - Mobile */}
+        <div className="fixed bottom-2 left-2 z-50">
+          <div 
+            className="px-2 py-1 rounded border text-xs font-mono"
+            style={{ 
+              background: 'var(--dashboard-card)', 
+              borderColor: 'var(--dashboard-border)',
+              color: 'var(--dashboard-text-secondary)'
+            }}
+          >
+            <div className="text-orange-500 font-semibold text-xs">Game ID:</div>
+            <div className="text-orange-400 text-xs">{gameData.id}</div>
+          </div>
+        </div>
       </div>
     </div>
   );

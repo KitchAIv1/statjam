@@ -69,11 +69,11 @@ export default function StatTrackerV3() {
   const [showSubModal, setShowSubModal] = useState(false);
   const [subOutPlayer, setSubOutPlayer] = useState<string | null>(null);
 
-  // Initialize tracker with game data
+  // Initialize tracker with game data  
   const tracker = useTracker({
     initialGameId: gameIdParam || 'unknown',
-    teamAId: teamAParam || 'teamA',
-    teamBId: teamBParam || 'teamB'
+    teamAId: gameData?.team_a_id || teamAParam || 'teamA',
+    teamBId: gameData?.team_b_id || teamBParam || 'teamB'
   });
 
   // Auth Check
@@ -154,6 +154,20 @@ export default function StatTrackerV3() {
       if (interval) clearInterval(interval);
     };
   }, [tracker.clock.isRunning, tracker]);
+
+  // Sync scores with actual team IDs when game data loads
+  useEffect(() => {
+    if (gameData && gameData.team_a_id && gameData.team_b_id) {
+      // Log the ID mismatch issue for debugging
+      console.log('🔄 Team ID mapping:', {
+        urlParamA: teamAParam,
+        urlParamB: teamBParam,
+        dbTeamA: gameData.team_a_id,
+        dbTeamB: gameData.team_b_id,
+        currentScores: tracker.scores
+      });
+    }
+  }, [gameData, teamAParam, teamBParam, tracker.scores]);
 
   // Stat Recording
   const handleStatRecord = async (statType: string, modifier?: string) => {
@@ -351,6 +365,26 @@ export default function StatTrackerV3() {
           benchPlayers={benchPlayers}
           onConfirm={handleSubConfirm}
         />
+
+        {/* Game ID Display for Testing */}
+        {gameData && (
+          <div className="fixed bottom-4 left-4 z-50">
+            <div 
+              className="px-3 py-2 rounded-lg border text-xs font-mono"
+              style={{ 
+                background: 'var(--dashboard-card)', 
+                borderColor: 'var(--dashboard-border)',
+                color: 'var(--dashboard-text-secondary)'
+              }}
+            >
+              <div className="text-orange-500 font-semibold mb-1">Testing Info:</div>
+              <div>Game ID: <span className="text-orange-400">{gameData.id}</span></div>
+              <div className="text-xs mt-1 opacity-75">
+                Live Viewer: /game-viewer/{gameData.id}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

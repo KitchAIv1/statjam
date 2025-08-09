@@ -68,10 +68,103 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [playerSeconds] = useState<Record<string, number>>({});
 
-  // Initialize
+  // Initialize and load existing game state from database
   useEffect(() => {
-    setIsLoading(false);
-  }, []);
+    const initializeGameState = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Import supabase dynamically
+        const { supabase } = await import('@/lib/supabase');
+        
+        // Load game data to initialize quarter, clock, and other state
+        const { data: game, error: gameError } = await supabase
+          .from('games')
+          .select('quarter, game_clock_minutes, game_clock_seconds, is_clock_running')
+          .eq('id', gameId)
+          .single();
+        
+        if (!gameError && game) {
+          // Initialize quarter from DB (like V1 pattern)
+          if (typeof game.quarter === 'number' && game.quarter > 0) {
+            setQuarterState(game.quarter);
+            console.log('🔁 Initialized quarter from database:', game.quarter);
+          }
+          
+          // Initialize clock from DB
+          if (typeof game.game_clock_minutes === 'number' && typeof game.game_clock_seconds === 'number') {
+            const totalSeconds = (game.game_clock_minutes * 60) + game.game_clock_seconds;
+            setClock(prev => ({
+              ...prev,
+              secondsRemaining: totalSeconds
+            }));
+            console.log('🔁 Initialized clock from database:', { 
+              minutes: game.game_clock_minutes, 
+              seconds: game.game_clock_seconds 
+            });
+          }
+          
+          // Initialize clock running state
+          if (typeof game.is_clock_running === 'boolean') {
+            setClock(prev => ({
+              ...prev,
+              isRunning: game.is_clock_running
+            }));
+            console.log('🔁 Initialized clock running state from database:', game.is_clock_running);
+          }
+        } else {
+          console.warn('⚠️ Could not load game state from database:', gameError?.message);
+        }
+        
+        // Load existing stats to calculate current scores (for refresh persistence)
+        const { data: stats, error: statsError } = await supabase
+          .from('game_stats')
+          .select('team_id, stat_type, modifier')
+          .eq('game_id', gameId);
+        
+        if (!statsError && stats) {
+          let teamAScore = 0;
+          let teamBScore = 0;
+          
+          for (const stat of stats) {
+            if (stat.modifier !== 'made') continue; // Only count made shots
+            
+            let points = 0;
+            if (stat.stat_type === 'three_pointer') points = 3;
+            else if (stat.stat_type === 'field_goal') points = 2;
+            else if (stat.stat_type === 'free_throw') points = 1;
+            
+            if (stat.team_id === teamAId) teamAScore += points;
+            else if (stat.team_id === teamBId) teamBScore += points;
+          }
+          
+          // Initialize scores with calculated totals
+          setScores({
+            [teamAId]: teamAScore,
+            [teamBId]: teamBScore
+          });
+          
+          console.log('🔁 Initialized scores from database:', { 
+            [teamAId]: teamAScore, 
+            [teamBId]: teamBScore 
+          });
+        } else {
+          console.warn('⚠️ Could not load stats for score initialization:', statsError?.message);
+        }
+        
+      } catch (error) {
+        console.error('❌ Error initializing game state:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    if (gameId && gameId !== 'unknown') {
+      initializeGameState();
+    } else {
+      setIsLoading(false);
+    }
+  }, [gameId, teamAId, teamBId]);
 
   // Clock Controls
   const startClock = useCallback(async () => {
@@ -133,10 +226,26 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     }));
   }, []);
 
-  const setQuarter = useCallback((newQuarter: number) => {
+  const setQuarter = useCallback(async (newQuarter: number) => {
     setQuarterState(newQuarter);
     setLastAction(`Advanced to Quarter ${newQuarter}`);
-  }, []);
+    
+    // Sync quarter change to database
+    try {
+      const { GameService } = await import('@/lib/services/gameService');
+      await GameService.updateGameState(gameId, {
+        quarter: newQuarter,
+        game_clock_minutes: Math.floor(clock.secondsRemaining / 60),
+        game_clock_seconds: clock.secondsRemaining % 60,
+        is_clock_running: clock.isRunning,
+        home_score: 0, // Scores are managed separately via stats
+        away_score: 0  // Scores are managed separately via stats
+      });
+      console.log('✅ Quarter synced to database:', newQuarter);
+    } catch (error) {
+      console.error('❌ Error syncing quarter to database:', error);
+    }
+  }, [gameId, clock]);
 
   const advanceIfNeeded = useCallback(() => {
     if (clock.secondsRemaining <= 0) {
