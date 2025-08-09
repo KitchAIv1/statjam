@@ -3,6 +3,7 @@
 import React from 'react';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
 import PlayEntry from './PlayEntry';
+import { figmaColors, figmaTypography, figmaSpacing, figmaRadius } from '@/lib/design/figmaTokens';
 
 interface PlayerStats {
   fieldGoalMade: number;
@@ -125,85 +126,88 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
 
 const styles = {
   container: {
-    background: '#121212',
-    minHeight: '60vh'
+    backgroundColor: figmaColors.primary,
+    minHeight: '60vh',
+    color: figmaColors.text.primary,
+    fontFamily: figmaTypography.fontFamily.primary,
   },
   emptyState: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '80px 20px',
+    padding: `${figmaSpacing[8]} ${figmaSpacing[4]}`,
     textAlign: 'center' as const
   },
   emptyIcon: {
     fontSize: '48px',
-    marginBottom: '16px',
+    marginBottom: figmaSpacing[3],
     opacity: 0.5
   },
   emptyTitle: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: '8px'
+    fontSize: figmaTypography.fontSize.xl,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.text.primary,
+    marginBottom: figmaSpacing[2]
   },
   emptySubtitle: {
-    fontSize: '14px',
-    color: '#b3b3b3',
-    lineHeight: '1.5',
-    maxWidth: '400px'
+    fontSize: figmaTypography.fontSize.sm,
+    color: figmaColors.text.muted,
+    lineHeight: figmaTypography.lineHeight.relaxed,
+    maxWidth: '420px'
   },
   feedHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '24px 20px 16px',
-    borderBottom: '1px solid #333'
+    padding: `${figmaSpacing[5]} ${figmaSpacing[4]} ${figmaSpacing[3]}`,
+    borderBottom: `1px solid ${figmaColors.border.primary}`,
+    backgroundColor: figmaColors.secondary
   },
   feedTitle: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#ffffff'
+    fontSize: figmaTypography.fontSize.lg,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.text.primary
   },
   feedSubtitle: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    fontSize: '14px',
-    color: '#b3b3b3'
+    gap: figmaSpacing[3],
+    fontSize: figmaTypography.fontSize.sm,
+    color: figmaColors.text.muted
   },
   liveIndicator: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#ff0000'
+    gap: figmaSpacing[1],
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.status.live
   },
   liveDot: {
     width: '6px',
     height: '6px',
-    background: '#ff0000',
-    borderRadius: '50%',
+    background: figmaColors.status.live,
+    borderRadius: figmaRadius.full,
     animation: 'pulse 2s infinite'
   },
   quarterSeparator: {
     display: 'flex',
     alignItems: 'center',
-    padding: '16px 20px',
-    gap: '16px',
-    background: 'rgba(255, 215, 0, 0.05)'
+    padding: `${figmaSpacing[4]} ${figmaSpacing[4]}`,
+    gap: figmaSpacing[4],
+    background: 'rgba(96, 165, 250, 0.08)'
   },
   quarterLine: {
     flex: 1,
     height: '1px',
-    background: '#FFD700',
+    background: figmaColors.accent.blue,
     opacity: 0.3
   },
   quarterLabel: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#FFD700',
+    fontSize: figmaTypography.fontSize.sm,
+    fontWeight: figmaTypography.fontWeight.semibold,
+    color: figmaColors.accent.blueLight,
     whiteSpace: 'nowrap' as const
   },
   feedContainer: {
@@ -211,17 +215,17 @@ const styles = {
     flexDirection: 'column' as const
   },
   loadMore: {
-    padding: '24px 20px',
+    padding: `${figmaSpacing[5]} ${figmaSpacing[4]}`,
     textAlign: 'center' as const
   },
   loadMoreButton: {
     background: 'transparent',
-    border: '1px solid #4B0082',
-    color: '#4B0082',
-    padding: '12px 24px',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: '600',
+    border: `1px solid ${figmaColors.accent.blue}`,
+    color: figmaColors.accent.blue,
+    padding: `${figmaSpacing[3]} ${figmaSpacing[4]}`,
+    borderRadius: figmaRadius.md,
+    fontSize: figmaTypography.fontSize.sm,
+    fontWeight: figmaTypography.fontWeight.semibold,
     cursor: 'pointer',
     transition: 'all 0.2s ease'
   }

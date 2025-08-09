@@ -10,6 +10,7 @@ import {
   getScoringInfo,
   getPlayIcon 
 } from '@/lib/utils/gameViewerUtils';
+import { figmaColors, figmaTypography, figmaSpacing, figmaRadius } from '@/lib/design/figmaTokens';
 
 interface PlayerStats {
   fieldGoalMade: number;
@@ -151,82 +152,83 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
 
 const styles = {
   container: {
-    background: '#1a1a1a',
-    borderBottom: '1px solid #333',
-    padding: '16px 20px',
+    backgroundColor: figmaColors.secondary,
+    borderBottom: `1px solid ${figmaColors.border.primary}`,
+    padding: `${figmaSpacing[4]} ${figmaSpacing[4]}`,
     transition: 'all 0.2s ease',
     position: 'relative' as const
   },
   latestPlay: {
-    background: 'rgba(255, 215, 0, 0.05)',
-    borderLeft: '4px solid #FFD700'
+    background: 'rgba(96, 165, 250, 0.08)',
+    borderLeft: `4px solid ${figmaColors.accent.blue}`
   },
   timeSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    marginBottom: '12px'
+    gap: figmaSpacing[3],
+    marginBottom: figmaSpacing[3]
   },
   quarter: {
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#FFD700',
-    background: 'rgba(255, 215, 0, 0.1)',
-    padding: '4px 8px',
-    borderRadius: '4px'
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.accent.blueLight,
+    background: 'rgba(96, 165, 250, 0.12)',
+    padding: `${figmaSpacing[1]} ${figmaSpacing[2]}`,
+    borderRadius: figmaRadius.base,
+    letterSpacing: '0.05em'
   },
   gameTime: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#ffffff'
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.semibold,
+    color: figmaColors.text.primary
   },
   relativeTime: {
-    fontSize: '12px',
-    color: '#b3b3b3',
+    fontSize: figmaTypography.fontSize.xs,
+    color: figmaColors.text.muted,
     marginLeft: 'auto'
   },
   playContent: {
     display: 'flex',
     alignItems: 'flex-start',
-    gap: '16px'
+    gap: figmaSpacing[4]
   },
   playerAvatar: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    gap: '4px'
+    gap: figmaSpacing[1]
   },
   avatarCircle: {
     width: '40px',
     height: '40px',
-    borderRadius: '50%',
-    background: '#4B0082',
-    color: '#ffffff',
+    borderRadius: figmaRadius.full,
+    background: figmaColors.accent.purple,
+    color: figmaColors.text.primary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '16px',
-    fontWeight: '700'
+    fontSize: figmaTypography.fontSize.base,
+    fontWeight: figmaTypography.fontWeight.bold
   },
   teamIndicator: {
-    fontSize: '10px',
-    fontWeight: '600',
-    color: '#b3b3b3'
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.semibold,
+    color: figmaColors.text.muted
   },
   playDetails: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '8px'
+    gap: figmaSpacing[2]
   },
   playDescription: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#ffffff',
+    fontSize: figmaTypography.fontSize.base,
+    fontWeight: figmaTypography.fontWeight.semibold,
+    color: figmaColors.text.primary,
     lineHeight: '1.4',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: figmaSpacing[2]
   },
   playIcon: {
     fontSize: '18px'
@@ -234,16 +236,16 @@ const styles = {
   playerInfo: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px'
+    gap: figmaSpacing[3]
   },
   playerName: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#FFD700'
+    fontSize: figmaTypography.fontSize.sm,
+    fontWeight: figmaTypography.fontWeight.semibold,
+    color: figmaColors.accent.blueLight
   },
   teamName: {
-    fontSize: '12px',
-    color: '#b3b3b3'
+    fontSize: figmaTypography.fontSize.xs,
+    color: figmaColors.text.muted
   },
   scoringImpact: {
     display: 'flex',
@@ -252,44 +254,44 @@ const styles = {
   badgeRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: figmaSpacing[2]
   },
   scoringText: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#00ff88',
-    background: 'rgba(0, 255, 136, 0.1)',
-    padding: '2px 8px',
-    borderRadius: '4px'
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.semibold,
+    color: figmaColors.status.success,
+    background: 'rgba(16, 185, 129, 0.12)',
+    padding: `${figmaSpacing[0.5]} ${figmaSpacing[2]}`,
+    borderRadius: figmaRadius.base
   },
   nonScoringText: {
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#89b4ff',
-    background: 'rgba(137, 180, 255, 0.12)',
-    padding: '2px 6px',
-    borderRadius: '4px'
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.semibold,
+    color: figmaColors.accent.blueLight,
+    background: 'rgba(96, 165, 250, 0.12)',
+    padding: `${figmaSpacing[0.5]} ${figmaSpacing[2]}`,
+    borderRadius: figmaRadius.base
   },
   scoreAtPlay: {
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#b3b3b3'
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.semibold,
+    color: figmaColors.text.muted
   },
   statsSection: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'flex-end',
-    gap: '4px'
+    gap: figmaSpacing[1]
   },
   currentScore: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#ffffff'
+    fontSize: figmaTypography.fontSize.base,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.text.primary
   },
   pointsAdded: {
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#00ff88'
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.status.success
   },
   latestIndicator: {
     position: 'absolute' as const,
@@ -297,19 +299,19 @@ const styles = {
     right: '20px',
     display: 'flex',
     alignItems: 'center',
-    gap: '6px'
+    gap: figmaSpacing[1]
   },
   latestDot: {
     width: '6px',
     height: '6px',
-    background: '#FFD700',
-    borderRadius: '50%',
+    background: figmaColors.accent.blue,
+    borderRadius: figmaRadius.full,
     animation: 'pulse 2s infinite'
   },
   latestText: {
-    fontSize: '10px',
-    fontWeight: '700',
-    color: '#FFD700'
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.accent.blue
   }
 };
 
