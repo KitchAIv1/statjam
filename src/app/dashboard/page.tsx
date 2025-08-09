@@ -5,7 +5,7 @@ import { Trophy, Users, Calendar, Activity, Plus, BarChart3, Eye, ArrowRight, Ch
 import { useTournaments, useTournamentStats } from '@/lib/hooks/useTournaments';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
-import { redirect } from 'next/navigation';
+import { NavigationHeader } from '@/components/NavigationHeader';
 import { supabase } from '@/lib/supabase';
 
 const DashboardV2 = () => {
@@ -409,7 +409,9 @@ const DashboardV2 = () => {
   ];
 
   return (
-    <div style={styles.container}>
+    <div className="min-h-screen" style={{ background: 'var(--dashboard-bg)' }}>
+      <NavigationHeader />
+      <div style={styles.container}>
       {/* Success Notification */}
       {showSuccess && (
         <div style={{
@@ -630,6 +632,7 @@ const DashboardV2 = () => {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };

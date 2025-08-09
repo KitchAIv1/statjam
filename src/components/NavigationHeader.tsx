@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Button } from "./ui/button";
-import { UserDropdownMenu } from "./ui/UserDropdownMenu";
+import { Button } from "@/components/ui/Button";
+import { UserDropdownMenu } from "@/components/ui/UserDropdownMenu";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { getNavigationForRole } from "@/lib/navigation-config";

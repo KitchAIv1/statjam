@@ -1,4 +1,4 @@
-import { Separator } from "./ui/separator";
+import { Separator } from "@/components/ui/separator";
 import { Facebook, Instagram, Twitter } from "lucide-react";
 
 // TikTok icon as a custom SVG since it's not in lucide-react

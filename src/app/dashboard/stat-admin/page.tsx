@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { GameService } from '@/lib/services/gameService';
 import { TeamService } from '@/lib/services/tournamentService';
-import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy } from 'lucide-react';
+import { NavigationHeader } from '@/components/NavigationHeader';
+import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap } from 'lucide-react';
 
 const StatAdminDashboard = () => {
   const { user, userRole, loading } = useAuthStore();
@@ -91,7 +92,7 @@ const StatAdminDashboard = () => {
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+      background: 'var(--dashboard-bg)',
       paddingTop: '100px',
       paddingBottom: '60px',
     },
@@ -107,7 +108,7 @@ const StatAdminDashboard = () => {
     title: {
       fontSize: '48px',
       fontWeight: '700',
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      background: 'var(--dashboard-gradient)',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
       backgroundClip: 'text',
@@ -117,7 +118,7 @@ const StatAdminDashboard = () => {
     },
     subtitle: {
       fontSize: '18px',
-      color: '#b3b3b3',
+      color: 'var(--dashboard-text-secondary)',
       fontWeight: '400',
       maxWidth: '600px',
       margin: '0 auto',
@@ -130,12 +131,12 @@ const StatAdminDashboard = () => {
       marginBottom: '48px',
     },
     statCard: {
-      background: 'rgba(30, 30, 30, 0.8)',
+      background: 'var(--dashboard-card)',
       borderRadius: '20px',
       padding: '32px',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.2)',
+      borderColor: 'var(--dashboard-border)',
       backdropFilter: 'blur(20px)',
       transition: 'all 0.3s ease',
       position: 'relative',
@@ -143,36 +144,38 @@ const StatAdminDashboard = () => {
     },
     statCardHover: {
       transform: 'translateY(-4px)',
-      borderColor: 'rgba(255, 215, 0, 0.4)',
-      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
+      borderColor: 'var(--dashboard-border-hover)',
+      boxShadow: '0 20px 40px rgba(249, 115, 22, 0.1)',
     },
     statIcon: {
-      width: '48px',
-      height: '48px',
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-      borderRadius: '12px',
+      width: '56px',
+      height: '56px',
+      background: 'var(--dashboard-gradient)',
+      borderRadius: '16px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: '16px',
+      marginBottom: '24px',
+      boxShadow: '0 8px 24px rgba(249, 115, 22, 0.3)',
     },
     statTitle: {
       fontSize: '14px',
       fontWeight: '600',
-      color: '#888888',
+      color: 'var(--dashboard-text-secondary)',
       textTransform: 'uppercase',
       letterSpacing: '0.5px',
       marginBottom: '8px',
     },
     statValue: {
-      fontSize: '32px',
+      fontSize: '36px',
       fontWeight: '700',
-      color: '#ffffff',
-      marginBottom: '4px',
+      color: 'var(--dashboard-text-primary)',
+      marginBottom: '8px',
+      fontFamily: "'Anton', system-ui, sans-serif",
     },
     statChange: {
       fontSize: '14px',
-      color: '#00ff88',
+      color: 'var(--dashboard-primary)',
       fontWeight: '500',
     },
     section: {
@@ -181,7 +184,7 @@ const StatAdminDashboard = () => {
     sectionTitle: {
       fontSize: '24px',
       fontWeight: '600',
-      color: '#ffffff',
+      color: 'var(--dashboard-text-primary)',
       marginBottom: '24px',
     },
     adminTools: {
@@ -191,39 +194,40 @@ const StatAdminDashboard = () => {
       marginBottom: '48px',
     },
     toolCard: {
-      background: 'rgba(30, 30, 30, 0.8)',
+      background: 'var(--dashboard-card)',
       borderRadius: '16px',
       padding: '32px',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.2)',
+      borderColor: 'var(--dashboard-border)',
       cursor: 'pointer',
       transition: 'all 0.3s ease',
     },
     toolCardHover: {
       transform: 'translateY(-2px)',
-      borderColor: 'rgba(255, 215, 0, 0.4)',
-      boxShadow: '0 12px 24px rgba(0, 0, 0, 0.2)',
+      borderColor: 'var(--dashboard-border-hover)',
+      boxShadow: '0 12px 24px rgba(249, 115, 22, 0.1)',
     },
     toolIcon: {
-      width: '48px',
-      height: '48px',
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-      borderRadius: '12px',
+      width: '56px',
+      height: '56px',
+      background: 'var(--dashboard-gradient)',
+      borderRadius: '16px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: '20px',
+      marginBottom: '24px',
+      boxShadow: '0 8px 24px rgba(249, 115, 22, 0.3)',
     },
     toolTitle: {
       fontSize: '20px',
       fontWeight: '600',
-      color: '#ffffff',
+      color: 'var(--dashboard-text-primary)',
       marginBottom: '12px',
     },
     toolDescription: {
       fontSize: '14px',
-      color: '#b3b3b3',
+      color: 'var(--dashboard-text-secondary)',
       lineHeight: '1.6',
       marginBottom: '16px',
     },
@@ -235,48 +239,51 @@ const StatAdminDashboard = () => {
       display: 'inline-block',
     },
     statusActive: {
-      background: 'rgba(0, 255, 136, 0.2)',
-      color: '#00ff88',
+      background: 'rgba(34, 197, 94, 0.2)',
+      color: '#22c55e',
     },
     statusPending: {
-      background: 'rgba(255, 215, 0, 0.2)',
-      color: '#FFD700',
+      background: 'rgba(249, 115, 22, 0.2)',
+      color: 'var(--dashboard-primary)',
     },
     comingSoon: {
-      background: 'rgba(30, 30, 30, 0.8)',
+      background: 'var(--dashboard-card)',
       borderRadius: '20px',
       padding: '48px',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.2)',
+      borderColor: 'var(--dashboard-border)',
       textAlign: 'center',
     },
     comingSoonIcon: {
       width: '64px',
       height: '64px',
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      background: 'var(--dashboard-gradient)',
       borderRadius: '16px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       margin: '0 auto 24px',
+      boxShadow: '0 8px 24px rgba(249, 115, 22, 0.3)',
     },
     comingSoonTitle: {
       fontSize: '24px',
       fontWeight: '600',
-      color: '#ffffff',
+      color: 'var(--dashboard-text-primary)',
       marginBottom: '12px',
     },
     comingSoonText: {
       fontSize: '16px',
-      color: '#b3b3b3',
+      color: 'var(--dashboard-text-secondary)',
       lineHeight: '1.6',
     },
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.content}>
+    <div className="min-h-screen" style={{ background: 'var(--dashboard-bg)' }}>
+      <NavigationHeader />
+      <div style={styles.container}>
+        <div style={styles.content}>
         {/* Header */}
         <div style={styles.header}>
           <h1 style={styles.title}>STAT ADMIN DASHBOARD</h1>
@@ -466,23 +473,69 @@ const StatAdminDashboard = () => {
                   {new Date(game.scheduledDate).toLocaleDateString()} at {new Date(game.scheduledDate).toLocaleTimeString()}<br />
                   Venue: {game.venue}
                 </div>
-                <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => router.push(`/stat-tracker-v3?gameId=${game.id}&teamAId=${game.teamAId}&teamBId=${game.teamBId}`)}
+                    style={{
+                      background: 'var(--dashboard-gradient)',
+                      color: '#1a1a1a',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '10px 16px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
+                    }}
+                  >
+                    <Zap size={16} />
+                    Launch V3 Tracker
+                  </button>
                   <button
                     onClick={() => router.push(`/stat-tracker?gameId=${game.id}&tournamentId=${game.tournamentId}`)}
                     style={{
-                      ...styles.toolStatus,
-                      ...styles.statusActive,
-                      cursor: 'pointer',
-                      border: 'none',
-                      padding: '8px 16px',
+                      background: 'var(--dashboard-card)',
+                      color: 'var(--dashboard-text-secondary)',
+                      border: `1px solid var(--dashboard-border)`,
+                      borderRadius: '8px',
+                      padding: '10px 16px',
                       fontSize: '14px',
-                      fontWeight: '600'
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--dashboard-border-hover)';
+                      e.currentTarget.style.color = 'var(--dashboard-text-primary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--dashboard-border)';
+                      e.currentTarget.style.color = 'var(--dashboard-text-secondary)';
                     }}
                   >
-                    <Play size={16} style={{ marginRight: '8px' }} />
-                    Start Tracking
+                    <Play size={16} />
+                    Legacy Tracker
                   </button>
-                  <div style={{ ...styles.toolStatus, ...styles.statusPending }}>
+                  <div style={{ 
+                    ...styles.toolStatus, 
+                    ...styles.statusPending,
+                    alignSelf: 'center'
+                  }}>
                     {game.status}
                   </div>
                 </div>
@@ -505,6 +558,7 @@ const StatAdminDashboard = () => {
           </p>
         </div>
       </div>
+    </div>
     </div>
   );
 };

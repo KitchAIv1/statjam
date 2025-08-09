@@ -1,6 +1,6 @@
-import { Button } from "./ui/button";
-import { Card } from "./ui/card";
-import { Badge } from "./ui/badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { TrendingUp, Video, User, Trophy } from "lucide-react";
 

@@ -107,10 +107,10 @@ export const navigationConfig: Record<string, NavigationConfig> = {
         description: 'Stat admin overview'
       },
       {
-        label: 'Live Games',
-        href: '/stat-tracker',
+        label: 'My Assigned Games',
+        href: '/dashboard/stat-admin',
         icon: PlayCircle,
-        description: 'Track live games'
+        description: 'View your assigned games and launch V3 tracker'
       },
       {
         label: 'Game History',
