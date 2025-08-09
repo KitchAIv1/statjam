@@ -5,7 +5,7 @@ import { useGameStream } from '@/hooks/useGameStream';
 import { usePlayFeed } from '@/hooks/usePlayFeed';
 import { useAuthStore } from '@/store/authStore';
 import { useResponsive } from '@/hooks/useResponsive';
-// import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
+import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
 import PlayByPlayFeed from './components/PlayByPlayFeed';
 
