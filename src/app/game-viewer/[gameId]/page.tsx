@@ -119,6 +119,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
             }}
             isLive={isLive}
             isMobile={isMobile}
+            calculatePlayerStats={calculatePlayerStats}
           />
         ) : (
           gameData && (
@@ -127,6 +128,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               game={gameData.game}
               isLive={isLive}
               isMobile={isMobile}
+              calculatePlayerStats={calculatePlayerStats}
             />
           )
         )}
