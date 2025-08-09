@@ -60,8 +60,8 @@ const DashboardV2 = () => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#1a1a1a',
-        color: '#ffffff',
+        background: 'var(--dashboard-bg)',
+        color: 'var(--dashboard-text-primary)',
         gap: '32px'
       }}>
         <div style={{
@@ -82,8 +82,8 @@ const DashboardV2 = () => {
               height: '24px',
               borderWidth: '2px',
               borderStyle: 'solid',
-              borderColor: '#FFD700',
-              borderTopColor: 'transparent',
+                          borderColor: 'var(--dashboard-primary)',
+            borderTopColor: 'transparent',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite'
             }} />
@@ -114,7 +114,7 @@ const DashboardV2 = () => {
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+      background: 'var(--dashboard-bg)',
       paddingTop: '100px',
       paddingBottom: '60px',
     },
@@ -130,7 +130,7 @@ const DashboardV2 = () => {
     title: {
       fontSize: '48px',
       fontWeight: '700',
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      background: 'var(--dashboard-gradient)',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
       backgroundClip: 'text',
@@ -140,7 +140,7 @@ const DashboardV2 = () => {
     },
     subtitle: {
       fontSize: '18px',
-      color: '#b3b3b3',
+      color: 'var(--dashboard-text-secondary)',
       fontWeight: '400',
       maxWidth: '600px',
       margin: '0 auto',
@@ -153,12 +153,12 @@ const DashboardV2 = () => {
       marginBottom: '48px',
     },
     statCard: {
-      background: 'rgba(30, 30, 30, 0.8)',
+      background: 'var(--dashboard-card)',
       borderRadius: '20px',
       padding: '32px',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.2)',
+      borderColor: 'var(--dashboard-border)',
       backdropFilter: 'blur(20px)',
       transition: 'all 0.3s ease',
       position: 'relative',
@@ -166,30 +166,30 @@ const DashboardV2 = () => {
     },
     statCardHover: {
       transform: 'translateY(-4px)',
-      borderColor: 'rgba(255, 215, 0, 0.4)',
-      boxShadow: '0 20px 40px rgba(255, 215, 0, 0.1)',
+      borderColor: 'var(--dashboard-border-hover)',
+      boxShadow: '0 20px 40px rgba(249, 115, 22, 0.1)',
     },
     statIcon: {
       width: '56px',
       height: '56px',
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      background: 'var(--dashboard-gradient)',
       borderRadius: '16px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: '24px',
-      boxShadow: '0 8px 24px rgba(255, 215, 0, 0.3)',
+      boxShadow: '0 8px 24px rgba(249, 115, 22, 0.3)',
     },
     statValue: {
       fontSize: '36px',
       fontWeight: '700',
-      color: '#ffffff',
+      color: 'var(--dashboard-text-primary)',
       marginBottom: '8px',
       fontFamily: "'Anton', system-ui, sans-serif",
     },
     statLabel: {
       fontSize: '16px',
-      color: '#888888',
+      color: 'var(--dashboard-text-secondary)',
       marginBottom: '12px',
       fontWeight: '500',
     },
@@ -204,12 +204,12 @@ const DashboardV2 = () => {
       gap: '32px',
     },
     section: {
-      background: 'rgba(30, 30, 30, 0.8)',
+      background: 'var(--dashboard-card)',
       borderRadius: '20px',
       padding: '32px',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.2)',
+      borderColor: 'var(--dashboard-border)',
       backdropFilter: 'blur(20px)',
     },
     sectionHeader: {
@@ -221,7 +221,7 @@ const DashboardV2 = () => {
     sectionTitle: {
       fontSize: '24px',
       fontWeight: '700',
-      color: '#ffffff',
+      color: 'var(--dashboard-text-primary)',
       fontFamily: "'Anton', system-ui, sans-serif",
     },
     quickActionGrid: {
@@ -230,23 +230,23 @@ const DashboardV2 = () => {
       gap: '16px',
     },
     quickAction: {
-      background: 'rgba(255, 215, 0, 0.1)',
+      background: 'rgba(249, 115, 22, 0.1)',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.2)',
+      borderColor: 'var(--dashboard-border)',
       borderRadius: '16px',
       padding: '24px',
       textAlign: 'center',
       cursor: 'pointer',
       transition: 'all 0.3s ease',
       textDecoration: 'none',
-      color: '#ffffff',
+      color: 'var(--dashboard-text-primary)',
     },
     quickActionHover: {
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-      color: '#1a1a1a',
+      background: 'var(--dashboard-gradient)',
+      color: 'white',
       transform: 'translateY(-2px)',
-      boxShadow: '0 12px 28px rgba(255, 215, 0, 0.3)',
+      boxShadow: '0 12px 28px rgba(249, 115, 22, 0.3)',
     },
     quickActionIcon: {
       marginBottom: '16px',
@@ -271,16 +271,16 @@ const DashboardV2 = () => {
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '20px',
-      background: 'rgba(255, 215, 0, 0.05)',
+      background: 'rgba(249, 115, 22, 0.05)',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.1)',
+      borderColor: 'rgba(249, 115, 22, 0.1)',
       borderRadius: '12px',
       transition: 'all 0.2s ease',
     },
     tournamentItemHover: {
-      background: 'rgba(255, 215, 0, 0.1)',
-      borderColor: 'rgba(255, 215, 0, 0.3)',
+      background: 'rgba(249, 115, 22, 0.1)',
+      borderColor: 'var(--dashboard-border-hover)',
     },
     tournamentInfo: {
       display: 'flex',
@@ -290,7 +290,7 @@ const DashboardV2 = () => {
     tournamentIcon: {
       width: '40px',
       height: '40px',
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      background: 'var(--dashboard-gradient)',
       borderRadius: '10px',
       display: 'flex',
       alignItems: 'center',
@@ -299,21 +299,21 @@ const DashboardV2 = () => {
     tournamentName: {
       fontSize: '16px',
       fontWeight: '600',
-      color: '#ffffff',
+      color: 'var(--dashboard-text-primary)',
       marginBottom: '4px',
     },
     tournamentMeta: {
       fontSize: '14px',
-      color: '#888888',
+      color: 'var(--dashboard-text-secondary)',
     },
     viewButton: {
       background: 'transparent',
       borderWidth: '1px',
       borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.3)',
+      borderColor: 'var(--dashboard-border)',
       borderRadius: '8px',
       padding: '8px 16px',
-      color: '#FFD700',
+      color: 'var(--dashboard-primary)',
       cursor: 'pointer',
       fontSize: '14px',
       fontWeight: '500',
@@ -323,13 +323,13 @@ const DashboardV2 = () => {
       gap: '6px',
     },
     viewButtonHover: {
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-      color: '#1a1a1a',
+      background: 'var(--dashboard-gradient)',
+      color: 'white',
     },
     emptyState: {
       textAlign: 'center',
       padding: '40px 20px',
-      color: '#888888',
+      color: 'var(--dashboard-text-secondary)',
     },
     emptyStateIcon: {
       marginBottom: '16px',
@@ -338,7 +338,7 @@ const DashboardV2 = () => {
     emptyStateTitle: {
       fontSize: '18px',
       fontWeight: '600',
-      color: '#ffffff',
+      color: 'var(--dashboard-text-primary)',
       marginBottom: '8px',
     },
     emptyStateDesc: {
@@ -347,8 +347,8 @@ const DashboardV2 = () => {
       marginBottom: '24px',
     },
     primaryButton: {
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-      color: '#1a1a1a',
+      background: 'var(--dashboard-gradient)',
+      color: 'white',
       border: 'none',
       borderRadius: '12px',
       padding: '12px 24px',
@@ -362,7 +362,7 @@ const DashboardV2 = () => {
     },
     primaryButtonHover: {
       transform: 'translateY(-1px)',
-      boxShadow: '0 8px 20px rgba(255, 215, 0, 0.4)',
+      boxShadow: '0 8px 20px rgba(249, 115, 22, 0.4)',
     },
   };
 

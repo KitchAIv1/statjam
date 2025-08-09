@@ -5,7 +5,7 @@ import { useGameStream } from '@/hooks/useGameStream';
 import { usePlayFeed } from '@/hooks/usePlayFeed';
 import { useAuthStore } from '@/store/authStore';
 import { useResponsive } from '@/hooks/useResponsive';
-import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
+// import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
 import PlayByPlayFeed from './components/PlayByPlayFeed';
 
@@ -48,38 +48,38 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
 
   if (loading) {
     return (
-      <ResponsiveContainer>
+      <div className="container mx-auto px-4">
         <div style={styles.loadingContainer}>
           <div style={styles.loadingSpinner} />
           <div style={styles.loadingText}>Loading Game...</div>
         </div>
-      </ResponsiveContainer>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <ResponsiveContainer>
+      <div className="container mx-auto px-4">
         <div style={styles.errorContainer}>
           <div style={styles.errorText}>⚠️ {error}</div>
           <div style={styles.errorSubtext}>
             Please check the game ID and try again
           </div>
         </div>
-      </ResponsiveContainer>
+      </div>
     );
   }
 
   if (!gameData) {
     return (
-      <ResponsiveContainer>
+      <div className="container mx-auto px-4">
         <div style={styles.errorContainer}>
           <div style={styles.errorText}>Game Not Found</div>
           <div style={styles.errorSubtext}>
             The requested game could not be loaded
           </div>
         </div>
-      </ResponsiveContainer>
+      </div>
     );
   }
 

@@ -3,11 +3,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 
-interface AuthProviderProps {
-  children: React.ReactNode;
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { initialize, initialized } = useAuthStore();
 
   useEffect(() => {
