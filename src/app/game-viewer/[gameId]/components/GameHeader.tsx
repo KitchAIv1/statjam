@@ -1,9 +1,15 @@
 'use client';
 
 import React from 'react';
+import { 
+  formatGameTime, 
+  formatGameDate, 
+  getGameStatusText, 
+  getStatusColor 
+} from '@/lib/utils/gameViewerUtils';
 
 interface GameHeaderProps {
-  game: {
+  game?: {
     id: string;
     teamAName: string;
     teamBName: string;
@@ -28,60 +34,18 @@ interface GameHeaderProps {
  * Inspired by NBA.com game headers with clean, professional design.
  */
 const GameHeader: React.FC<GameHeaderProps> = ({ game, isLive, lastUpdated, isMobile = false }) => {
-  
-  /**
-   * Format game time for display
-   */
-  const formatGameTime = (minutes: number, seconds: number): string => {
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  /**
-   * Format game status for display
-   */
-  const getGameStatus = (): string => {
-    if (game.status === 'completed') {
-      return 'Final';
-    } else if (game.status === 'in_progress' || game.status === 'overtime') {
-      if (game.quarter <= 4) {
-        return `Q${game.quarter}`;
-      } else {
-        return `OT${game.quarter - 4}`;
-      }
-    } else if (game.status === 'scheduled') {
-      return formatGameDate(game.startTime);
-    }
-    return game.status.toUpperCase();
-  };
-
-  /**
-   * Get status indicator color
-   */
-  const getStatusColor = (): string => {
-    if (isLive) return '#ff0000';
-    if (game.status === 'completed') return '#00ff88';
-    return '#b3b3b3';
-  };
-
-  /**
-   * Format date for display
-   */
-  const formatGameDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
+  // Safety check to prevent render errors
+  if (!game) {
+    return null;
+  }
 
   return (
     <div style={styles.container}>
       {/* Status Bar */}
       <div style={styles.statusBar}>
-        <div style={{...styles.statusIndicator, background: getStatusColor()}} />
+        <div style={{...styles.statusIndicator, background: getStatusColor(isLive, game.status)}} />
         <span style={styles.statusText}>
-          {isLive ? 'LIVE' : getGameStatus()}
+          {isLive ? 'LIVE' : getGameStatusText(game.status, game.quarter, game.startTime)}
         </span>
         <span style={styles.gameDate}>
           {formatGameDate(game.startTime)}
@@ -105,7 +69,7 @@ const GameHeader: React.FC<GameHeaderProps> = ({ game, isLive, lastUpdated, isMo
 
         {/* Center - Status Only (No Time Clock) */}
         <div style={styles.centerSection}>
-          <div style={styles.gameStatus}>{getGameStatus()}</div>
+          <div style={styles.gameStatus}>{getGameStatusText(game.status, game.quarter, game.startTime)}</div>
           {game.status === 'completed' && (
             <div style={styles.finalStatus}>FINAL</div>
           )}

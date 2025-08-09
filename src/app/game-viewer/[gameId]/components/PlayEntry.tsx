@@ -2,6 +2,14 @@
 
 import React from 'react';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
+import { 
+  formatGameTime, 
+  formatQuarter, 
+  getRelativeTime,
+  getEnhancedPlayDescription,
+  getScoringInfo,
+  getPlayIcon 
+} from '@/lib/utils/gameViewerUtils';
 
 interface PlayerStats {
   fieldGoalMade: number;
@@ -34,51 +42,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   playerStats
 }) => {
 
-  /**
-   * Format game time for display
-   */
-  const formatGameTime = (minutes: number, seconds: number): string => {
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
 
-  /**
-   * Format quarter display
-   */
-  const formatQuarter = (quarter: number): string => {
-    if (quarter <= 4) {
-      return `Q${quarter}`;
-    } else {
-      return `OT${quarter - 4}`;
-    }
-  };
-
-  /**
-   * Get play icon based on stat type
-   */
-  const getPlayIcon = (statType?: string): string => {
-    switch (statType) {
-      case 'three_pointer':
-        return '🎯';
-      case 'field_goal':
-        return '🏀';
-      case 'free_throw':
-        return '🎯';
-      case 'assist':
-        return '🤝';
-      case 'rebound':
-        return '📥';
-      case 'steal':
-        return '🔥';
-      case 'block':
-        return '🛡️';
-      case 'turnover':
-        return '😤';
-      case 'foul':
-        return '⚠️';
-      default:
-        return '🏀';
-    }
-  };
 
   /**
    * Get team name from play data
@@ -88,19 +52,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
     return play.teamName || 'Unknown Team';
   };
 
-  /**
-   * Get scoring information
-   */
-  const getScoringInfo = (): { points: number; description: string } | null => {
-    if (play.statType === 'three_pointer' && play.modifier === 'made') {
-      return { points: 3, description: '+3 points' };
-    } else if (play.statType === 'field_goal' && play.modifier === 'made') {
-      return { points: 2, description: '+2 points' };
-    } else if (play.statType === 'free_throw' && play.modifier === 'made') {
-      return { points: 1, description: '+1 point' };
-    }
-    return null;
-  };
+
 
   /**
    * Get field goal statistics for the player (made/attempts)
@@ -120,55 +72,10 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
     }
   };
 
-  /**
-   * Get enhanced play description with stats
-   */
-  const getEnhancedDescription = (): string => {
-    const stats = getFieldGoalStats();
-    
-    if (stats && playerStats) {
-      const action = play.modifier === 'made' ? 'made' : 'missed';
-      
-      switch (play.statType) {
-        case 'field_goal':
-          return `${action} field goal (${stats} FG)`;
-        case 'three_pointer':
-          return `${action} 3-pointer (${stats} 3PT)`;
-        case 'free_throw':
-          return `${action} free throw (${stats} FT)`;
-        default:
-          return play.description;
-      }
-    }
-    
-    // For other stat types or when no stats available, use the original description
-    return play.description;
-  };
 
-  /**
-   * Get relative time
-   */
-  const getRelativeTime = (timestamp: string): string => {
-    const now = new Date();
-    const playTime = new Date(timestamp);
-    const diffMs = now.getTime() - playTime.getTime();
-    const diffSeconds = Math.floor(diffMs / 1000);
-    const diffMinutes = Math.floor(diffSeconds / 60);
 
-    if (diffSeconds < 60) {
-      return `${diffSeconds}s ago`;
-    } else if (diffMinutes < 60) {
-      return `${diffMinutes}m ago`;
-    } else {
-      return playTime.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit' 
-      });
-    }
-  };
-
-  const scoringInfo = getScoringInfo();
-      const teamName = getTeamName();
+  const scoringInfo = getScoringInfo(play.statType, play.modifier);
+  const teamName = getTeamName();
 
   return (
     <div style={{
@@ -202,10 +109,10 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
 
         {/* Play Details */}
         <div style={styles.playDetails}>
-          <div style={styles.playDescription}>
-            <span style={styles.playIcon}>{getPlayIcon(play.statType)}</span>
-            {getEnhancedDescription()}
-          </div>
+                  <div style={styles.playDescription}>
+          <span style={styles.playIcon}>{getPlayIcon(play.statType)}</span>
+          {getEnhancedPlayDescription(play.description, play.statType, play.modifier, playerStats)}
+        </div>
           
           {/* Player and Team Info */}
           <div style={styles.playerInfo}>
