@@ -134,6 +134,13 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
             )}
             <span style={styles.scoreAtPlay}>Score: {play.scoreAfter.home}-{play.scoreAfter.away}</span>
           </div>
+
+          {/* Social Reactions Placeholder */}
+          <div style={styles.reactionsRow}>
+            <span style={styles.reactionItem}>❤️ 0</span>
+            <span style={styles.reactionItem}>💬 0</span>
+            <span style={styles.reactionItem}>↗️ Share</span>
+          </div>
         </div>
 
         {/* Score and Stats (removed bottom score display to avoid duplication) */}
@@ -312,6 +319,17 @@ const styles = {
     fontSize: figmaTypography.fontSize.xs,
     fontWeight: figmaTypography.fontWeight.bold,
     color: figmaColors.accent.blue
+  },
+  reactionsRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: figmaSpacing[4],
+    marginTop: figmaSpacing[2],
+    color: figmaColors.text.muted
+  },
+  reactionItem: {
+    fontSize: figmaTypography.fontSize.xs,
+    cursor: 'pointer'
   }
 };
 

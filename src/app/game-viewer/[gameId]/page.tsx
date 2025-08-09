@@ -1,11 +1,12 @@
 'use client';
 
-import React, { use, useEffect } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import { useGameViewerData } from '@/hooks/useGameViewerData';
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
 import PlayByPlayFeed from './components/PlayByPlayFeed';
 import { figmaColors, figmaTypography } from '@/lib/design/figmaTokens';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 interface GameViewerPageProps {
@@ -105,34 +106,91 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
         isMobile={isMobile}
       />
 
+      {/* Tabs: Feed / Game / Teams */}
+      <div style={styles.tabsContainer}>
+        <Tabs defaultValue="feed" className="w-full">
+          <TabsList className="w-full bg-gray-800 border-b border-gray-700 rounded-none h-auto p-0">
+            <TabsTrigger value="feed" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+              Feed
+            </TabsTrigger>
+            <TabsTrigger value="game" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+              Game
+            </TabsTrigger>
+            <TabsTrigger value="teamA" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+              {gameData.game.teamAName}
+            </TabsTrigger>
+            <TabsTrigger value="teamB" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+              {gameData.game.teamBName}
+            </TabsTrigger>
+          </TabsList>
 
+          {/* Feed Tab */}
+          <TabsContent value="feed" className="mt-0">
+            <div style={styles.playByPlayContainer}>
+              {enableViewerV2 && v2Data ? (
+                <PlayByPlayFeed
+                  playByPlay={v2Data.plays}
+                  game={{
+                    teamAName: v2Data.teamMap.teamAName,
+                    teamBName: v2Data.teamMap.teamBName,
+                    homeScore: v2Data.homeScore,
+                    awayScore: v2Data.awayScore,
+                  }}
+                  isLive={isLive}
+                  isMobile={isMobile}
+                  calculatePlayerStats={calculatePlayerStats}
+                />
+              ) : (
+                gameData && (
+                  <PlayByPlayFeed 
+                    playByPlay={gameData.playByPlay}
+                    game={gameData.game}
+                    isLive={isLive}
+                    isMobile={isMobile}
+                    calculatePlayerStats={calculatePlayerStats}
+                  />
+                )
+              )}
+            </div>
+          </TabsContent>
 
-      {/* Play by Play Feed */}
-      <div style={styles.playByPlayContainer}>
-        {enableViewerV2 && v2Data ? (
-          <PlayByPlayFeed
-            playByPlay={v2Data.plays}
-            game={{
-              teamAName: v2Data.teamMap.teamAName,
-              teamBName: v2Data.teamMap.teamBName,
-              homeScore: v2Data.homeScore,
-              awayScore: v2Data.awayScore,
-            }}
-            isLive={isLive}
-            isMobile={isMobile}
-            calculatePlayerStats={calculatePlayerStats}
-          />
-        ) : (
-          gameData && (
-            <PlayByPlayFeed 
-              playByPlay={gameData.playByPlay}
-              game={gameData.game}
-              isLive={isLive}
-              isMobile={isMobile}
-              calculatePlayerStats={calculatePlayerStats}
-            />
-          )
-        )}
+          {/* Game Tab */}
+          <TabsContent value="game" className="mt-0">
+            <div style={styles.gameSummarySection}>
+              <div style={styles.gameSummaryCard}>
+                <div style={styles.gameSummaryHeader}>Game Summary</div>
+                <div style={styles.gameSummaryRow}>
+                  <div style={styles.gameSummaryTeam}>{gameData.game.teamAName}</div>
+                  <div style={styles.gameSummaryScore}>{gameData.game.homeScore}</div>
+                </div>
+                <div style={styles.gameSummaryRow}>
+                  <div style={styles.gameSummaryTeam}>{gameData.game.teamBName}</div>
+                  <div style={styles.gameSummaryScore}>{gameData.game.awayScore}</div>
+                </div>
+                <div style={styles.gameSummaryMeta}>
+                  <span>Status: {gameData.game.status}</span>
+                  <span>Quarter: {gameData.game.quarter}</span>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Team A Tab */}
+          <TabsContent value="teamA" className="mt-0">
+            <div style={styles.teamSection}>
+              <div style={styles.teamHeader}>{gameData.game.teamAName}</div>
+              <div style={styles.teamPlaceholder}>Team roster and stats coming soon.</div>
+            </div>
+          </TabsContent>
+
+          {/* Team B Tab */}
+          <TabsContent value="teamB" className="mt-0">
+            <div style={styles.teamSection}>
+              <div style={styles.teamHeader}>{gameData.game.teamBName}</div>
+              <div style={styles.teamPlaceholder}>Team roster and stats coming soon.</div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Live Indicator */}
@@ -161,6 +219,60 @@ const styles = {
   playByPlayContainer: {
     padding: '0',
     paddingBottom: '80px' // Space for live indicator
+  },
+  tabsContainer: {
+    backgroundColor: figmaColors.secondary,
+    borderBottom: `1px solid ${figmaColors.border.primary}`,
+  },
+  gameSummarySection: {
+    padding: '16px',
+  },
+  gameSummaryCard: {
+    backgroundColor: figmaColors.secondary,
+    border: `1px solid ${figmaColors.border.primary}`,
+    borderRadius: '8px',
+    padding: '16px',
+    maxWidth: '640px',
+    margin: '0 auto',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '12px',
+  },
+  gameSummaryHeader: {
+    fontSize: '16px',
+    fontWeight: 700,
+  },
+  gameSummaryRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gameSummaryTeam: {
+    fontSize: '14px',
+    color: '#d1d5db',
+  },
+  gameSummaryScore: {
+    fontSize: '20px',
+    fontWeight: 800,
+  },
+  gameSummaryMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    fontSize: '12px',
+    color: '#9ca3af',
+  },
+  teamSection: {
+    padding: '16px',
+  },
+  teamHeader: {
+    fontSize: '16px',
+    fontWeight: 700,
+    marginBottom: '8px',
+  },
+  teamPlaceholder: {
+    fontSize: '14px',
+    color: '#9ca3af',
   },
   loadingContainer: {
     display: 'flex',
