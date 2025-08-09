@@ -45,6 +45,7 @@ export interface GameViewerState {
 export interface UseGameViewerDataReturn extends GameViewerState {
   // Helper functions
   calculatePlayerStats: (playIndex: number, playerId?: string) => PlayerStats | undefined;
+  calculatePlayerPoints: (playIndex: number, playerId?: string) => number | undefined;
   refetch: () => Promise<void>;
   
   // V2 data (if enabled)
@@ -146,6 +147,27 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
   }, [gameData?.playByPlay, v2Plays, enableViewerV2]);
 
   /**
+   * Calculate total points for a player up to a specific play index
+   */
+  const calculatePlayerPoints = useCallback((currentPlayIndex: number, playerId?: string): number | undefined => {
+    if (!playerId || !gameData?.playByPlay) return undefined;
+
+    const playByPlay = enableViewerV2 ? v2Plays : gameData.playByPlay;
+    let points = 0;
+
+    for (let i = playByPlay.length - 1; i >= currentPlayIndex; i--) {
+      const play = playByPlay[i];
+      if (play.playerId !== playerId) continue;
+      if (play.modifier !== 'made') continue;
+      if (play.statType === 'three_pointer') points += 3;
+      else if (play.statType === 'field_goal') points += 2;
+      else if (play.statType === 'free_throw') points += 1;
+    }
+
+    return points;
+  }, [gameData?.playByPlay, v2Plays, enableViewerV2]);
+
+  /**
    * Recalculate all player stats when data changes
    */
   useEffect(() => {
@@ -216,6 +238,7 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
     
     // Helper functions
     calculatePlayerStats,
+    calculatePlayerPoints,
     refetch,
     
     // V2 data

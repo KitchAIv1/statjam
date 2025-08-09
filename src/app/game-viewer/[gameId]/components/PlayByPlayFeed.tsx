@@ -25,6 +25,7 @@ interface PlayByPlayFeedProps {
   isLive: boolean;
   isMobile?: boolean;
   calculatePlayerStats?: (currentPlayIndex: number, playerId?: string) => PlayerStats | undefined;
+  calculatePlayerPoints?: (currentPlayIndex: number, playerId?: string) => number | undefined;
 }
 
 /**
@@ -38,7 +39,8 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
   game, 
   isLive,
   isMobile = false,
-  calculatePlayerStats
+  calculatePlayerStats,
+  calculatePlayerPoints
 }) => {
 
   console.log('🎮 PlayByPlayFeed: Received data:', {
@@ -98,6 +100,7 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
         {playByPlay.map((play, index) => {
           // Calculate player stats up to this point in the game (if function provided)
           const playerStats = calculatePlayerStats ? calculatePlayerStats(index, play.playerId) : undefined;
+          const playerPoints = calculatePlayerPoints ? calculatePlayerPoints(index, play.playerId) : undefined;
           
           return (
             <PlayEntry
@@ -107,6 +110,7 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
               teamAName={game.teamAName}
               teamBName={game.teamBName}
               playerStats={playerStats}
+              playerPoints={playerPoints}
             />
           );
         })}

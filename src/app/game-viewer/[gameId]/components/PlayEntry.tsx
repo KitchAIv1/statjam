@@ -27,6 +27,7 @@ interface PlayEntryProps {
   teamAName: string;
   teamBName: string;
   playerStats?: PlayerStats; // Optional player stats for the current play
+  playerPoints?: number; // Player points up to this play
 }
 
 /**
@@ -40,7 +41,8 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   isLatest, 
   teamAName, 
   teamBName,
-  playerStats
+  playerStats,
+  playerPoints
 }) => {
 
 
@@ -84,7 +86,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
       ...(isLatest ? styles.latestPlay : {})
     }}>
       {/* Time and Quarter Info */}
-      <div style={styles.timeSection}>
+        <div style={styles.timeSection}>
         <div style={styles.quarter}>
           {formatQuarter(play.quarter)}
         </div>
@@ -128,11 +130,17 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
           {/* Scoring or Non-scoring Badge */}
           <div style={styles.badgeRow}>
             {scoringInfo ? (
-              <span style={styles.scoringText}>{scoringInfo.description}</span>
+              <span style={styles.scoringTextLarge}>{scoringInfo.description}</span>
             ) : (
               <span style={styles.nonScoringText}>{play.statType?.toUpperCase()}</span>
             )}
             <span style={styles.scoreAtPlay}>Score: {play.scoreAfter.home}-{play.scoreAfter.away}</span>
+            {typeof playerPoints === 'number' && (
+              <div style={styles.playerPointsContainer}>
+                <div style={styles.playerPointsValue}>{playerPoints}</div>
+                <div style={styles.playerPointsLabel}>POINTS</div>
+              </div>
+            )}
           </div>
 
           {/* Social Reactions Placeholder */}
@@ -229,8 +237,8 @@ const styles = {
     gap: figmaSpacing[2]
   },
   playDescription: {
-    fontSize: figmaTypography.fontSize.base,
-    fontWeight: figmaTypography.fontWeight.semibold,
+    fontSize: figmaTypography.fontSize.lg,
+    fontWeight: figmaTypography.fontWeight.bold,
     color: figmaColors.text.primary,
     lineHeight: '1.4',
     display: 'flex',
@@ -271,6 +279,14 @@ const styles = {
     padding: `${figmaSpacing[0.5]} ${figmaSpacing[2]}`,
     borderRadius: figmaRadius.base
   },
+  scoringTextLarge: {
+    fontSize: figmaTypography.fontSize.lg,
+    fontWeight: figmaTypography.fontWeight.extrabold,
+    color: figmaColors.status.success,
+    background: 'rgba(16, 185, 129, 0.12)',
+    padding: `${figmaSpacing[1]} ${figmaSpacing[3]}`,
+    borderRadius: figmaRadius.base
+  },
   nonScoringText: {
     fontSize: figmaTypography.fontSize.xs,
     fontWeight: figmaTypography.fontWeight.semibold,
@@ -283,6 +299,24 @@ const styles = {
     fontSize: figmaTypography.fontSize.xs,
     fontWeight: figmaTypography.fontWeight.semibold,
     color: figmaColors.text.muted
+  },
+  playerPointsContainer: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'flex-end',
+    marginLeft: 'auto'
+  },
+  playerPointsValue: {
+    fontSize: '1.75rem', // ~x3 of base size visually
+    lineHeight: '1',
+    fontWeight: figmaTypography.fontWeight.extrabold,
+    color: figmaColors.text.primary,
+  },
+  playerPointsLabel: {
+    marginTop: '2px',
+    fontSize: figmaTypography.fontSize.xs,
+    letterSpacing: '0.06em',
+    color: figmaColors.text.muted,
   },
   statsSection: {
     display: 'flex',
