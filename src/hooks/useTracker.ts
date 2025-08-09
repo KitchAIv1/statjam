@@ -74,20 +74,57 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
   }, []);
 
   // Clock Controls
-  const startClock = useCallback(() => {
+  const startClock = useCallback(async () => {
     setClock(prev => ({ ...prev, isRunning: true }));
     setLastAction('Clock started');
-  }, []);
+    
+    // Sync clock state to database
+    try {
+      const { GameService } = await import('@/lib/services/gameService');
+      await GameService.updateGameClock(gameId, {
+        minutes: Math.floor(clock.secondsRemaining / 60),
+        seconds: clock.secondsRemaining % 60,
+        isRunning: true
+      });
+    } catch (error) {
+      console.error('Error syncing clock start to database:', error);
+    }
+  }, [gameId, clock.secondsRemaining]);
 
-  const stopClock = useCallback(() => {
+  const stopClock = useCallback(async () => {
     setClock(prev => ({ ...prev, isRunning: false }));
     setLastAction('Clock stopped');
-  }, []);
+    
+    // Sync clock state to database
+    try {
+      const { GameService } = await import('@/lib/services/gameService');
+      await GameService.updateGameClock(gameId, {
+        minutes: Math.floor(clock.secondsRemaining / 60),
+        seconds: clock.secondsRemaining % 60,
+        isRunning: false
+      });
+    } catch (error) {
+      console.error('Error syncing clock stop to database:', error);
+    }
+  }, [gameId, clock.secondsRemaining]);
 
-  const resetClock = useCallback(() => {
-    setClock({ isRunning: false, secondsRemaining: 12 * 60 });
+  const resetClock = useCallback(async () => {
+    const newSeconds = 12 * 60;
+    setClock({ isRunning: false, secondsRemaining: newSeconds });
     setLastAction('Clock reset');
-  }, []);
+    
+    // Sync clock state to database
+    try {
+      const { GameService } = await import('@/lib/services/gameService');
+      await GameService.updateGameClock(gameId, {
+        minutes: 12,
+        seconds: 0,
+        isRunning: false
+      });
+    } catch (error) {
+      console.error('Error syncing clock reset to database:', error);
+    }
+  }, [gameId]);
 
   const tick = useCallback((seconds: number) => {
     setClock(prev => ({
@@ -118,54 +155,145 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         createdAt: new Date().toISOString()
       };
 
-      // Update scores for scoring stats
+      console.log('🏀 Recording stat to database:', fullStat);
+
+      // Import GameService dynamically to avoid circular dependencies
+      const { GameService } = await import('@/lib/services/gameService');
+      
+      // Map stat value for database (points for scoring stats, 1 for others)
+      let statValue = 1;
       if (stat.statType === 'field_goal' && stat.modifier === 'made') {
-        setScores(prev => ({
-          ...prev,
-          [stat.teamId]: prev[stat.teamId] + 2
-        }));
+        statValue = 2;
       } else if (stat.statType === 'three_pointer' && stat.modifier === 'made') {
-        setScores(prev => ({
-          ...prev,
-          [stat.teamId]: prev[stat.teamId] + 3
-        }));
+        statValue = 3;
       } else if (stat.statType === 'free_throw' && stat.modifier === 'made') {
-        setScores(prev => ({
-          ...prev,
-          [stat.teamId]: prev[stat.teamId] + 1
-        }));
+        statValue = 1;
+      } else if (stat.modifier === 'missed') {
+        statValue = 0; // Track attempts but no points
       }
 
-      setLastAction(`${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`);
-      
-      // TODO: Send to backend via GameService
-      console.log('Recording stat:', fullStat);
+      // Record stat in database
+      const success = await GameService.recordStat({
+        gameId: stat.gameId,
+        playerId: stat.playerId,
+        teamId: stat.teamId,
+        statType: stat.statType,
+        statValue: statValue,
+        modifier: stat.modifier,
+        quarter: quarter,
+        gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
+        gameTimeSeconds: clock.secondsRemaining % 60
+      });
+
+      if (success) {
+        console.log('✅ Stat recorded successfully in database');
+        
+        // Update local scores for immediate UI feedback
+        if (stat.statType === 'field_goal' && stat.modifier === 'made') {
+          setScores(prev => ({
+            ...prev,
+            [stat.teamId]: prev[stat.teamId] + 2
+          }));
+        } else if (stat.statType === 'three_pointer' && stat.modifier === 'made') {
+          setScores(prev => ({
+            ...prev,
+            [stat.teamId]: prev[stat.teamId] + 3
+          }));
+        } else if (stat.statType === 'free_throw' && stat.modifier === 'made') {
+          setScores(prev => ({
+            ...prev,
+            [stat.teamId]: prev[stat.teamId] + 1
+          }));
+        }
+
+        setLastAction(`${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`);
+      } else {
+        console.error('❌ Failed to record stat in database');
+        setLastAction('Error recording stat');
+      }
       
     } catch (error) {
-      console.error('Error recording stat:', error);
+      console.error('❌ Error recording stat:', error);
+      setLastAction('Error recording stat');
     }
   }, [quarter, clock.secondsRemaining]);
 
   // Substitution
   const substitute = useCallback(async (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number }): Promise<boolean> => {
     try {
-      // TODO: Implement substitution logic
-      setLastAction(`Substitution: Player ${sub.playerOutId} → ${sub.playerInId}`);
-      return true;
+      console.log('🔄 Recording substitution to database:', sub);
+
+      // Import GameService dynamically to avoid circular dependencies
+      const { GameService } = await import('@/lib/services/gameService');
+      
+      // Record substitution in database
+      const success = await GameService.recordSubstitution({
+        gameId: sub.gameId,
+        playerInId: sub.playerInId,
+        playerOutId: sub.playerOutId,
+        teamId: sub.teamId,
+        quarter: sub.quarter,
+        gameTimeMinutes: Math.floor(sub.gameTimeSeconds / 60),
+        gameTimeSeconds: sub.gameTimeSeconds % 60
+      });
+
+      if (success) {
+        console.log('✅ Substitution recorded successfully in database');
+        setLastAction(`Substitution: Player ${sub.playerOutId} → ${sub.playerInId}`);
+        
+        // Update rosters locally for immediate UI feedback
+        const updateRoster = (roster: RosterState) => {
+          const newOnCourt = roster.onCourt.map(p => 
+            p.id === sub.playerOutId ? { ...p, id: sub.playerInId } : p
+          );
+          const newBench = roster.bench.map(p => 
+            p.id === sub.playerInId ? { ...p, id: sub.playerOutId } : p
+          );
+          return { ...roster, onCourt: newOnCourt, bench: newBench };
+        };
+
+        if (sub.teamId === teamAId) {
+          setRosterA(updateRoster);
+        } else if (sub.teamId === teamBId) {
+          setRosterB(updateRoster);
+        }
+
+        return true;
+      } else {
+        console.error('❌ Failed to record substitution in database');
+        setLastAction('Error recording substitution');
+        return false;
+      }
     } catch (error) {
-      console.error('Error with substitution:', error);
+      console.error('❌ Error with substitution:', error);
+      setLastAction('Error recording substitution');
       return false;
     }
-  }, []);
+  }, [teamAId, teamBId, setRosterA, setRosterB]);
 
   // Game Management
   const closeGame = useCallback(async () => {
     try {
-      // TODO: Implement game closing logic
-      setLastAction('Game ended');
-      console.log('Closing game:', gameId);
+      console.log('🏁 Closing game:', gameId);
+      
+      // Import GameService dynamically to avoid circular dependencies
+      const { GameService } = await import('@/lib/services/gameService');
+      
+      // Stop the clock and update game status to completed
+      setClock(prev => ({ ...prev, isRunning: false }));
+      
+      const success = await GameService.updateGameStatus(gameId, 'completed');
+      
+      if (success) {
+        console.log('✅ Game closed successfully');
+        setLastAction('Game ended');
+      } else {
+        console.error('❌ Failed to close game');
+        setLastAction('Error closing game');
+      }
     } catch (error) {
-      console.error('Error closing game:', error);
+      console.error('❌ Error closing game:', error);
+      setLastAction('Error closing game');
     }
   }, [gameId]);
 
