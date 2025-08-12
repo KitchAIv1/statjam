@@ -218,6 +218,25 @@ export function MobileLayoutV3({
           lastAction={tracker.lastAction}
         />
 
+        {/* End Game (Stat Admin Control) */}
+        <div className="px-2 pb-2">
+          <button
+            className="w-full text-sm font-semibold py-2 rounded-md border"
+            style={{
+              background: 'var(--dashboard-card)',
+              borderColor: 'var(--dashboard-border)',
+              color: 'var(--dashboard-text-primary)'
+            }}
+            onClick={() => {
+              if (confirm('End game? This will mark the game as completed.')) {
+                tracker.closeGame();
+              }
+            }}
+          >
+            End Game
+          </button>
+        </div>
+
         {/* Modals */}
         <FoulModalV3
           isOpen={showFoulModal}

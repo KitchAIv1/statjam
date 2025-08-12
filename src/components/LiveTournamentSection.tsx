@@ -1,7 +1,10 @@
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+"use client";
+
 import { Button } from "@/components/ui/Button";
-import { Clock, Eye, Play } from "lucide-react";
+import { Play } from "lucide-react";
+import LiveGameCard from "@/components/LiveGameCard";
+import { useLiveGames } from "@/hooks/useLiveGames";
+import { useRouter } from "next/navigation";
 
 interface LiveTournamentSectionProps {
   onWatchLive?: () => void;
@@ -9,7 +12,9 @@ interface LiveTournamentSectionProps {
 }
 
 export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTournamentSectionProps) {
-  // Mock data for different tournaments
+  const { games, loading } = useLiveGames();
+  const router = useRouter();
+  // Mock data retained below for reference
   const tournaments = [
     {
       name: "Summer League Championship",
@@ -71,83 +76,29 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
           </p>
         </div>
 
-        {/* Tournament Cards Grid */}
+        {/* Live Games Grid */}
         <div className="grid md:grid-cols-2 gap-6">
-          {tournaments.map((tournament, index) => (
-            <Card key={index} className="p-6 hover:shadow-lg transition-shadow border border-gray-200">
-              {/* Tournament Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex-1">
-                  {tournament.name}
-                </h3>
-                <Badge className={`${tournament.statusColor} text-white text-xs px-2 py-1`}>
-                  {tournament.status}
-                </Badge>
-              </div>
-
-              {/* Teams and Scores */}
-              <div className="space-y-4 mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-lg">
-                      {tournament.teams[0].logo}
-                    </div>
-                    <span className="text-lg font-semibold text-gray-900">
-                      {tournament.teams[0].name}
-                    </span>
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {tournament.teams[0].score}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-lg">
-                      {tournament.teams[1].logo}
-                    </div>
-                    <span className="text-lg font-semibold text-gray-900">
-                      {tournament.teams[1].name}
-                    </span>
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {tournament.teams[1].score}
-                  </div>
-                </div>
-              </div>
-
-              {/* Time and Viewers */}
-              <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  <span>{tournament.time}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Eye className="w-4 h-4" />
-                  <span>{tournament.viewers}</span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-2">
-                <Button 
-                  onClick={onWatchLive}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                  disabled={tournament.status === "FINAL"}
-                >
-                  <Play className="w-4 h-4 mr-2" />
-                  {tournament.status === "FINAL" ? "View Highlights" : "Watch Live"}
-                </Button>
-                <Button 
-                  onClick={onViewTournament}
-                  variant="outline"
-                  className="w-full"
-                >
-                  View Tournament
-                </Button>
-              </div>
-            </Card>
-          ))}
+          {loading && (
+            <div className="text-center text-gray-500 col-span-2">Loading live games…</div>
+          )}
+          {!loading && games.length === 0 && (
+            <div className="text-center text-gray-500 col-span-2">No live games right now.</div>
+          )}
+          {!loading && games.map((g) => {
+            const timeLabel = `${g.quarter <= 4 ? `Q${g.quarter}` : `OT${g.quarter - 4}`} ${g.minutes}:${String(g.seconds).padStart(2,'0')}`;
+            return (
+              <LiveGameCard
+                key={g.id}
+                gameId={g.id}
+                teamLeftName={g.teamAName}
+                teamRightName={g.teamBName}
+                leftScore={g.homeScore}
+                rightScore={g.awayScore}
+                timeLabel={timeLabel}
+                onClick={() => { router.push(`/game-viewer/${g.id}`); }}
+              />
+            );
+          })}
         </div>
 
         {/* Bottom CTA */}

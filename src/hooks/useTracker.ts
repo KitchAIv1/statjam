@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { StatRecord, RosterState, ScoreByTeam } from '@/lib/types/tracker';
 
 interface UseTrackerProps {
@@ -80,11 +80,24 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         // Load game data to initialize quarter, clock, and other state
         const { data: game, error: gameError } = await supabase
           .from('games')
-          .select('quarter, game_clock_minutes, game_clock_seconds, is_clock_running')
+          .select('status, quarter, game_clock_minutes, game_clock_seconds, is_clock_running')
           .eq('id', gameId)
           .single();
         
         if (!gameError && game) {
+          // If the stat admin has entered the tracker and the game is still scheduled,
+          // mark it as live to ensure live cards remain visible even when the clock is paused.
+          try {
+            const normalizedStatus = String(game.status || '').toLowerCase();
+            if (normalizedStatus === 'scheduled') {
+              const { GameService } = await import('@/lib/services/gameService');
+              // Use 'live' status to align with backend and landing filtering
+              await GameService.updateGameStatus(gameId, 'in_progress' as any);
+            }
+          } catch (_e) {
+            // Non-blocking if status update fails; viewer will still load
+          }
+          
           // Initialize quarter from DB (like V1 pattern)
           if (typeof game.quarter === 'number' && game.quarter > 0) {
             setQuarterState(game.quarter);

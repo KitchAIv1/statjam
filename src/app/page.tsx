@@ -6,15 +6,11 @@ import { HeroSection } from '@/components/HeroSection';
 import { PlayerPremiumSection } from '@/components/PlayerPremiumSection';
 import { LiveTournamentSection } from '@/components/LiveTournamentSection';
 import { Footer } from '@/components/Footer';
-import { TournamentViewer } from '@/components/TournamentViewer';
+// Retire mock TournamentViewer in favor of live viewer links
 import { TournamentPage } from '@/components/TournamentPage';
 
 export default function HomePage() {
-  const [currentView, setCurrentView] = useState<'landing' | 'tournament' | 'tournamentPage'>('landing');
-
-  const navigateToTournament = () => {
-    setCurrentView('tournament');
-  };
+  const [currentView, setCurrentView] = useState<'landing' | 'tournamentPage'>('landing');
 
   const navigateToTournamentPage = () => {
     setCurrentView('tournamentPage');
@@ -24,26 +20,19 @@ export default function HomePage() {
     setCurrentView('landing');
   };
 
-  if (currentView === 'tournament') {
-    return <TournamentViewer onBack={navigateToLanding} />;
-  }
-
   if (currentView === 'tournamentPage') {
-    return <TournamentPage onBack={navigateToLanding} onWatchLive={navigateToTournament} />;
+    return <TournamentPage onBack={navigateToLanding} onWatchLive={navigateToTournamentPage} />;
   }
 
   return (
     <div className="min-h-screen">
       <NavigationHeader />
       <HeroSection 
-        onWatchLive={navigateToTournament} 
+        onWatchLive={navigateToTournamentPage} 
         onViewTournament={navigateToTournamentPage}
       />
       <PlayerPremiumSection />
-      <LiveTournamentSection 
-        onWatchLive={navigateToTournament} 
-        onViewTournament={navigateToTournamentPage}
-      />
+      <LiveTournamentSection onViewTournament={navigateToTournamentPage} />
       <Footer />
     </div>
   );
