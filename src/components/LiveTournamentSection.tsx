@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useMemo } from 'react';
 import { Button } from "@/components/ui/Button";
 import { Play } from "lucide-react";
 import LiveGameCard from "@/components/LiveGameCard";
@@ -13,6 +14,20 @@ interface LiveTournamentSectionProps {
 
 export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTournamentSectionProps) {
   const { games, loading } = useLiveGames();
+  // Group by organizer
+  const grouped = useMemo(() => {
+    const map = new Map<string, { organizerName: string; live: typeof games; scheduled: typeof games }>();
+    for (const g of games) {
+      const orgId = g.organizerId || 'unknown';
+      const orgName = g.organizerName || 'Organizer';
+      if (!map.has(orgId)) map.set(orgId, { organizerName: orgName, live: [], scheduled: [] });
+      const bucket = map.get(orgId)!;
+      const status = String(g.status || '').toLowerCase();
+      if (['live','in_progress','overtime'].includes(status)) bucket.live.push(g);
+      if (status === 'scheduled') bucket.scheduled.push(g);
+    }
+    return Array.from(map.entries());
+  }, [games]);
   const router = useRouter();
   // Mock data retained below for reference
   const tournaments = [
@@ -76,30 +91,62 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
           </p>
         </div>
 
-        {/* Live Games Grid */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {loading && (
-            <div className="text-center text-gray-500 col-span-2">Loading live games…</div>
-          )}
-          {!loading && games.length === 0 && (
-            <div className="text-center text-gray-500 col-span-2">No live games right now.</div>
-          )}
-          {!loading && games.map((g) => {
-            const timeLabel = `${g.quarter <= 4 ? `Q${g.quarter}` : `OT${g.quarter - 4}`} ${g.minutes}:${String(g.seconds).padStart(2,'0')}`;
-            return (
-              <LiveGameCard
-                key={g.id}
-                gameId={g.id}
-                teamLeftName={g.teamAName}
-                teamRightName={g.teamBName}
-                leftScore={g.homeScore}
-                rightScore={g.awayScore}
-                timeLabel={timeLabel}
-                onClick={() => { router.push(`/game-viewer/${g.id}`); }}
-              />
-            );
-          })}
-        </div>
+        {/* Organizer Groups */}
+        {loading && (
+          <div className="text-center text-gray-500">Loading live games…</div>
+        )}
+        {!loading && grouped.length === 0 && (
+          <div className="text-center text-gray-500">No live games right now.</div>
+        )}
+        {!loading && grouped.map(([orgId, group]) => (
+          <div key={orgId} className="mb-10">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-gray-900">{group.organizerName}</h3>
+            </div>
+            {/* Live now */}
+            {group.live.length > 0 && (
+              <div className="grid md:grid-cols-2 gap-6 mb-4">
+                {group.live.map((g) => {
+                  const timeLabel = `${g.quarter <= 4 ? `Q${g.quarter}` : `OT${g.quarter - 4}`} ${g.minutes}:${String(g.seconds).padStart(2,'0')}`;
+                  return (
+                    <LiveGameCard
+                      key={g.id}
+                      gameId={g.id}
+                      teamLeftName={g.teamAName}
+                      teamRightName={g.teamBName}
+                      leftScore={g.homeScore}
+                      rightScore={g.awayScore}
+                      timeLabel={timeLabel}
+                      isLive
+                      onClick={() => { router.push(`/game-viewer/${g.id}`); }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+            {/* Scheduled */}
+            {group.scheduled.length > 0 && (
+              <div className="grid md:grid-cols-2 gap-6">
+                {group.scheduled.map((g) => {
+                  const timeLabel = `Q${g.quarter}  ${String(g.minutes).padStart(2,'0')}:${String(g.seconds).padStart(2,'0')}`;
+                  return (
+                    <LiveGameCard
+                      key={g.id}
+                      gameId={g.id}
+                      teamLeftName={g.teamAName}
+                      teamRightName={g.teamBName}
+                      leftScore={g.homeScore}
+                      rightScore={g.awayScore}
+                      timeLabel={timeLabel}
+                      isLive={false}
+                      onClick={() => { router.push(`/game-viewer/${g.id}`); }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
 
         {/* Bottom CTA */}
         <div className="text-center mt-12">

@@ -14,6 +14,8 @@ export interface LiveGameSummary {
   seconds: number;
   teamAId?: string;
   teamBId?: string;
+  organizerName?: string;
+  status?: string;
 }
 
 /**
@@ -45,6 +47,7 @@ export function useLiveGames() {
           away_score,
           team_a_id,
           team_b_id,
+          tournament:tournaments!tournament_id(name),
           team_a:teams!team_a_id(id, name),
           team_b:teams!team_b_id(id, name)
         `)
@@ -74,6 +77,8 @@ export function useLiveGames() {
         seconds: Number(g.game_clock_seconds ?? 0),
         teamAId: g.team_a_id,
         teamBId: g.team_b_id,
+        organizerName: g.tournament?.name || 'Tournament',
+        status: g.status,
       }));
 
       // Fallback compute scores from game_stats if DB scores are zero

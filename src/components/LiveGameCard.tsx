@@ -11,10 +11,11 @@ interface LiveGameCardProps {
   rightScore: number;
   timeLabel: string; // e.g., Q2 05:32 or OT1 02:11
   onClick: () => void;
+  isLive?: boolean;
 }
 
 // Lightweight, tokenized Figma-style live card
-export const LiveGameCard: React.FC<LiveGameCardProps> = React.memo(({ gameId, teamLeftName, teamRightName, leftScore, rightScore, timeLabel, onClick }) => {
+export const LiveGameCard: React.FC<LiveGameCardProps> = React.memo(({ gameId, teamLeftName, teamRightName, leftScore, rightScore, timeLabel, onClick, isLive = true }) => {
   return (
     <button
       aria-label={`Open live game ${teamLeftName} vs ${teamRightName}`}
@@ -23,10 +24,14 @@ export const LiveGameCard: React.FC<LiveGameCardProps> = React.memo(({ gameId, t
     >
       {/* Header: LIVE pill + time */}
       <div style={styles.headerRow}>
-        <div style={styles.livePill}>
-          <span style={styles.liveDot} />
-          LIVE
-        </div>
+        {isLive ? (
+          <div style={styles.livePill}>
+            <span style={styles.liveDot} />
+            LIVE
+          </div>
+        ) : (
+          <div style={styles.scheduledPill}>SCHEDULED</div>
+        )}
         <div style={styles.timePill}>{timeLabel}</div>
       </div>
 
@@ -90,6 +95,16 @@ const styles = {
     color: figmaColors.text.muted,
     fontSize: figmaTypography.fontSize.xs,
     fontFamily: figmaTypography.fontFamily.mono,
+  },
+  scheduledPill: {
+    padding: `${figmaSpacing[1]} ${figmaSpacing[2]}`,
+    borderRadius: figmaRadius.full,
+    backgroundColor: figmaColors.secondary,
+    border: `1px solid ${figmaColors.border.primary}`,
+    color: figmaColors.text.muted,
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.bold,
+    letterSpacing: '0.04em',
   },
   scoresRow: {
     display: 'flex',
