@@ -1,0 +1,577 @@
+"use client";
+
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { PerformanceChart } from "./PerformanceChart";
+import { TournamentCard } from "./TournamentCard";
+import { AchievementBadge } from "./AchievementBadge";
+import { PremiumCards } from "./PremiumCards";
+import { AICoaching } from "./AICoaching";
+import { SubscriptionModal } from "./SubscriptionModal";
+import { EditProfileModal } from "./EditProfileModal";
+import { NotificationBell } from "./NotificationBell";
+import { usePlayerDashboardData } from "@/hooks/usePlayerDashboardData";
+import { supabase } from "@/lib/supabase";
+import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3 } from "lucide-react";
+
+const defaultPlayerData = {
+  name: "",
+  jerseyNumber: "",
+  position: "",
+  height: "",
+  weight: "",
+  age: 0,
+  team: "",
+  profilePhoto: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop&crop=faces",
+  posePhoto: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=600&fit=crop&crop=faces",
+  seasonAverages: {
+    rebounds: 0,
+    assists: 0,
+    fieldGoalPercent: 0
+  },
+  careerHigh: {
+    points: 0,
+    rebounds: 0,
+    assists: 0
+  }
+};
+
+// Mock data removed - now using live data from usePlayerDashboardData hook
+
+export function PlayerDashboard() {
+  const { data, loading, refetch } = usePlayerDashboardData();
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [currentPlayerData, setCurrentPlayerData] = useState(defaultPlayerData);
+  const [currentTab, setCurrentTab] = useState("dashboard");
+
+  // Debug logging
+  console.log('🎯 PlayerDashboard: Current data state:', {
+    loading,
+    hasIdentity: !!data.identity,
+    hasSeason: !!data.season,
+    hasCareerHighs: !!data.careerHighs,
+    hasKpis: !!data.kpis,
+    identity: data.identity,
+    season: data.season,
+    careerHighs: data.careerHighs,
+    kpis: data.kpis
+  });
+
+  // Detailed identity logging
+  if (data.identity) {
+    console.log('🎯 PlayerDashboard: Identity details:', {
+      nameFromDB: data.identity.name,
+      nameType: typeof data.identity.name,
+      nameLength: data.identity.name?.length,
+      nameCondition: data.identity.name && data.identity.name !== 'Player Name',
+      willUseMock: !(data.identity.name && data.identity.name !== 'Player Name'),
+      mockName: currentPlayerData.name,
+      finalName: (data.identity?.name && data.identity.name !== 'Player Name') 
+        ? data.identity.name 
+        : currentPlayerData.name
+    });
+  } else {
+    console.log('🎯 PlayerDashboard: No identity data received');
+  }
+
+  const handlePremiumFeatureClick = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setIsSubscriptionModalOpen(true);
+  };
+
+  const handleEditProfile = () => {
+    setIsEditProfileModalOpen(true);
+  };
+
+  const handleSaveProfile = async (updatedData: typeof defaultPlayerData) => {
+    try {
+      console.log('💾 Saving profile data to database:', updatedData);
+      
+      // Update local state immediately for better UX
+      setCurrentPlayerData(updatedData);
+      
+      // Save to database via Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('💾 No authenticated user for profile save');
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          name: updatedData.name,
+          jersey_number: parseInt(updatedData.jerseyNumber as string) || null,
+          position: updatedData.position,
+          age: updatedData.age,
+          height: updatedData.height,
+          weight: updatedData.weight,
+          profile_photo_url: updatedData.profilePhoto || null,
+          pose_photo_url: updatedData.posePhoto || null,
+        })
+        .eq('id', user.id)
+        .select();
+      
+      if (error) {
+        console.error('💾 Error saving profile:', error);
+        alert('Failed to save profile. Please try again.');
+        return;
+      }
+      
+      console.log('💾 Profile saved successfully:', data);
+      
+      // Refresh the dashboard data to show the updated information
+      await refetch();
+      
+    } catch (error) {
+      console.error('💾 Unexpected error saving profile:', error);
+      alert('An unexpected error occurred. Please try again.');
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    if (value === "ai-coaching") {
+      handlePremiumFeatureClick();
+      return;
+    }
+    setCurrentTab(value);
+  };
+
+  // Helper function to check if data is meaningful (not null/empty/default)
+  const hasValidData = (value: any, defaultCheck?: any) => {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string' && (value === '' || value === 'N/A' || value === 'Player Name')) return false;
+    if (typeof value === 'number' && value === 0) return false;
+    if (defaultCheck !== undefined && value === defaultCheck) return false;
+    return true;
+  };
+
+  // Use real data when available and meaningful, otherwise show editable state
+  const identityName = hasValidData(data.identity?.name) 
+    ? data.identity!.name 
+    : (currentPlayerData.name || "Click Edit Profile to add your name");
+  const identityTeam = hasValidData(data.identity?.teamName) 
+    ? data.identity!.teamName 
+    : (currentPlayerData.team || "No Team");
+  const jerseyNumber = hasValidData(data.identity?.jerseyNumber) 
+    ? data.identity!.jerseyNumber 
+    : (currentPlayerData.jerseyNumber || "--");
+  const position = hasValidData(data.identity?.position) 
+    ? data.identity!.position 
+    : (currentPlayerData.position || "Position");
+  const profilePhoto = data.identity?.profilePhotoUrl ?? currentPlayerData.profilePhoto;
+  const posePhoto = data.identity?.posePhotoUrl ?? currentPlayerData.posePhoto;
+  const age = (data.identity?.age !== undefined && data.identity?.age !== null && data.identity?.age > 0) 
+    ? data.identity.age 
+    : (currentPlayerData.age > 0 ? currentPlayerData.age : "--");
+  const height = hasValidData(data.identity?.height) 
+    ? data.identity!.height 
+    : (currentPlayerData.height || "--");
+  const weight = hasValidData(data.identity?.weight) 
+    ? data.identity!.weight 
+    : (currentPlayerData.weight || "--");
+
+  // Season averages with better fallback logic - show live data even if 0
+  const seasonPts = (data.season?.pointsPerGame !== undefined && data.season?.pointsPerGame !== null) 
+    ? data.season.pointsPerGame 
+    : "--";
+  const seasonReb = (data.season?.reboundsPerGame !== undefined && data.season?.reboundsPerGame !== null) 
+    ? data.season.reboundsPerGame 
+    : "--";
+  const seasonAst = (data.season?.assistsPerGame !== undefined && data.season?.assistsPerGame !== null) 
+    ? data.season.assistsPerGame 
+    : "--";
+  const seasonFg = (data.season?.fieldGoalPct !== undefined && data.season?.fieldGoalPct !== null) 
+    ? `${data.season.fieldGoalPct}%`
+    : "--";
+  const season3Pt = (data.season?.threePointPct !== undefined && data.season?.threePointPct !== null) 
+    ? `${data.season.threePointPct}%`
+    : "--";
+  const seasonFt = (data.season?.freeThrowPct !== undefined && data.season?.freeThrowPct !== null) 
+    ? `${data.season.freeThrowPct}%`
+    : "--";
+  const seasonMin = (data.season?.minutesPerGame !== undefined && data.season?.minutesPerGame !== null) 
+    ? data.season.minutesPerGame 
+    : "--";
+
+  // Career highs with better fallback logic - show live data even if 0
+  const careerPts = (data.careerHighs?.points !== undefined && data.careerHighs?.points !== null) 
+    ? data.careerHighs.points 
+    : "--";
+  const careerReb = (data.careerHighs?.rebounds !== undefined && data.careerHighs?.rebounds !== null) 
+    ? data.careerHighs.rebounds 
+    : "--";
+  const careerAst = (data.careerHighs?.assists !== undefined && data.careerHighs?.assists !== null) 
+    ? data.careerHighs.assists 
+    : "--";
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 text-foreground p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
+              <Trophy className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="text-primary font-bold">STATJAM</span>
+          </div>
+          
+          {/* Notification Bell */}
+          <NotificationBell items={data.notifications?.map(n => ({
+            id: n.id,
+            type: (n.type as any) || 'tournament',
+            title: n.title,
+            message: n.message,
+            time: new Date(n.createdAt).toLocaleTimeString(),
+            isRead: n.isRead,
+            icon: undefined,
+            priority: 'low'
+          }))} />
+        </div>
+
+        {/* Navigation Tabs */}
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 glass-card mb-8">
+            <TabsTrigger value="dashboard" className="data-[state=active]:glass-card-accent data-[state=active]:text-primary">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ai-coaching" 
+              className="data-[state=active]:glass-card-accent data-[state=active]:text-primary"
+            >
+              <div className="flex items-center">
+                <Brain className="w-4 h-4 mr-2" />
+                AI Coaching
+                <Sparkles className="w-3 h-3 ml-1 text-primary" />
+              </div>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Dashboard Content */}
+          <TabsContent value="dashboard">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Hero Section - Left Column */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Player Profile */}
+                <Card className="bg-card border-border overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="relative min-h-[28rem] bg-gradient-to-br from-red-600 to-orange-600">
+                      <div className="absolute inset-0 flex">
+                        {/* Player Info */}
+                        <div className="flex-1 p-8">
+                          <div className="mb-4">
+                            <h1 className="text-4xl font-bold mb-2 text-white">{identityName}</h1>
+                            <div className="flex items-center gap-3 text-orange-200 mb-2">
+                              <span className="text-2xl">#{jerseyNumber}</span>
+                              <span className="text-lg">•</span>
+                              <span className="text-lg font-semibold">{position}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-orange-100">
+                              <span>{height}</span>
+                              <span>•</span>
+                              <span>{weight}</span>
+                              <span>•</span>
+                              <span>Age {age}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="mb-6">
+                            <p className="text-orange-100 mb-4">SEASON AVERAGES</p>
+                            {/* Primary Stats Row */}
+                            <div className="flex gap-8 mb-6">
+                              <div>
+                                <div className="text-3xl font-bold text-white">{seasonPts}</div>
+                                <div className="text-orange-200">Points</div>
+                              </div>
+                              <div>
+                                <div className="text-3xl font-bold text-white">{seasonReb}</div>
+                                <div className="text-orange-200">Rebounds</div>
+                              </div>
+                              <div>
+                                <div className="text-3xl font-bold text-white">{seasonAst}</div>
+                                <div className="text-orange-200">Assists</div>
+                              </div>
+                            </div>
+                            
+                            {/* Shooting Efficiency - Integrated Below */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-2 h-2 bg-orange-300 rounded-full"></div>
+                              <p className="text-orange-200 text-sm font-medium uppercase tracking-wider">Shooting Efficiency</p>
+                            </div>
+                            <div className="grid grid-cols-4 gap-4">
+                              <div className="text-center">
+                                <div className="text-xl font-bold text-white">{seasonFg}</div>
+                                <div className="text-orange-300 text-xs">FG%</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xl font-bold text-white">{season3Pt}</div>
+                                <div className="text-orange-300 text-xs">3PT%</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xl font-bold text-white">{seasonFt}</div>
+                                <div className="text-orange-300 text-xs">FT%</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xl font-bold text-white">{seasonMin}</div>
+                                <div className="text-orange-300 text-xs">MPG</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3">
+                            <Button 
+                              className="bg-white hover:bg-orange-50 text-red-600 px-6 py-3 border-0"
+                              onClick={handlePremiumFeatureClick}
+                            >
+                              GENERATE MY NBA CARD
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="border-white/20 bg-white/10 hover:bg-white/20 text-white hover:text-white px-4 py-3"
+                              onClick={handleEditProfile}
+                            >
+                              <Edit3 className="w-4 h-4 mr-2" />
+                              EDIT PROFILE
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Player Image */}
+                        <div className="flex-1 relative">
+                          <ImageWithFallback 
+                            src={posePhoto}
+                            alt={currentPlayerData.name}
+                            className="absolute right-0 top-0 h-full w-auto object-cover"
+                          />
+                          <div className="absolute top-4 right-4 bg-black/30 rounded px-3 py-1">
+                            <span className="text-orange-200 font-bold">{String(identityTeam).toUpperCase()}</span>
+                          </div>
+                          <div className="absolute bottom-4 right-4 text-6xl font-bold text-white opacity-50">
+                            {age}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Performance Chart - Glass Effect */}
+                <Card className="glass-card-light relative overflow-hidden">
+                  {/* Glass effect overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-red-500/5 pointer-events-none" />
+                  <div className="relative">
+                    <CardHeader>
+                      <CardTitle className="text-foreground flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-primary" />
+                        <span className="bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent font-bold">
+                          PERFORMANCE ANALYTICS
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Performance Stats Row */}
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="text-center p-4 relative overflow-hidden rounded-lg glass-card-accent border-2 border-primary/30 shadow-xl">
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/15 to-chart-2/10" />
+                          <div className="relative">
+                            <div className="text-2xl font-bold text-primary">
+                              {data.kpis?.trendVsLastMonthPercent !== undefined && data.kpis?.trendVsLastMonthPercent !== null
+                                ? `${data.kpis.trendVsLastMonthPercent > 0 ? '+' : ''}${data.kpis.trendVsLastMonthPercent}%`
+                                : '--'
+                              }
+                            </div>
+                            <div className="text-sm font-medium text-chart-1">vs Last Month</div>
+                          </div>
+                        </div>
+                        <div className="text-center p-4 relative overflow-hidden rounded-lg glass-card-light border-2 border-chart-2/40 shadow-xl">
+                          <div className="absolute inset-0 bg-gradient-to-br from-chart-2/20 to-chart-3/15" />
+                          <div className="relative">
+                            <div className="text-2xl font-bold text-chart-1">
+                              {data.kpis?.seasonHighPoints !== undefined && data.kpis?.seasonHighPoints !== null
+                                ? data.kpis.seasonHighPoints
+                                : '--'
+                              }
+                            </div>
+                            <div className="text-sm font-medium text-chart-2">Season High</div>
+                          </div>
+                        </div>
+                        <div className="text-center p-4 relative overflow-hidden rounded-lg glass-card border-2 border-foreground/20 shadow-xl">
+                          <div className="absolute inset-0 bg-gradient-to-br from-foreground/10 to-primary/5" />
+                          <div className="relative">
+                            <div className="text-2xl font-bold text-foreground">
+                              {data.kpis?.overallRating !== undefined && data.kpis?.overallRating !== null
+                                ? data.kpis.overallRating
+                                : '--'
+                              }
+                            </div>
+                            <div className="text-sm font-medium text-muted-foreground">Overall Rating</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Chart */}
+                      <PerformanceChart series={
+                        data.series && data.series.length > 0 
+                          ? data.series.map(s => ({
+                              date: s.date,
+                              points: s.points || 0,
+                              rebounds: s.rebounds || 0,
+                              assists: s.assists || 0,
+                              fieldGoal: s.fgm && s.fga ? (s.fga ? (s.fgm / s.fga) * 100 : 0) : 0,
+                              threePoint: s.threePm && s.threePa ? (s.threePa ? (s.threePm / s.threePa) * 100 : 0) : 0,
+                              freeThrow: s.ftm && s.fta ? (s.fta ? (s.ftm / s.fta) * 100 : 0) : 0,
+                              month: s.date
+                            }))
+                          : [] // Empty array for new users
+                      }
+                      />
+                    </CardContent>
+                  </div>
+                </Card>
+
+                {/* Premium Features (Phase 1: hidden) */}
+
+                {/* Social Highlights (Phase 1: hidden) */}
+                <Card className="hidden">
+                  <CardHeader>
+                    <CardTitle className="text-card-foreground flex items-center gap-2">
+                      <Play className="w-5 h-5 text-primary" />
+                      Social Highlights
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="relative h-48 bg-muted rounded-lg overflow-hidden">
+                      <ImageWithFallback 
+                        src="https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?w=600&h=300&fit=crop"
+                        alt="Game highlight"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/20" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Button className="glass-card rounded-full p-4">
+                          <Play className="w-8 h-8 text-white" />
+                        </Button>
+                      </div>
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <div className="glass-card rounded-lg p-3">
+                          <p className="text-white text-sm font-medium">Amazing dunk vs Eagles</p>
+                          <p className="text-white/70 text-xs">2.3K views • 2 days ago</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* My Tournaments */}
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="text-card-foreground flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      My Tournaments
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {data.upcomingGames && data.upcomingGames.length > 0 ? (
+                      data.upcomingGames.map((game, index) => (
+                        <TournamentCard key={index} game={game} />
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                        <p className="text-muted-foreground text-sm">No upcoming games scheduled</p>
+                        <p className="text-muted-foreground text-xs mt-1">Games will appear here when you join a team</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Achievements */}
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="text-card-foreground flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-primary" />
+                      Achievements
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {data.achievements && data.achievements.length > 0 ? (
+                      <div className="flex gap-4">
+                        {data.achievements.slice(0,3).map((achievement, index) => (
+                          <AchievementBadge key={achievement.id || index} achievement={{
+                            type: (achievement.type as any) ?? 'locked',
+                            value: (achievement.value as any) ?? '?',
+                            label: achievement.label ?? 'ACHIEVEMENT'
+                          }} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                        <p className="text-muted-foreground text-sm">No achievements unlocked yet</p>
+                        <p className="text-muted-foreground text-xs mt-1">Play games to earn achievements</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Career Stats */}
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="text-card-foreground flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-primary" />
+                      Career Highs
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                      <span className="text-muted-foreground">Points</span>
+                      <span className="text-card-foreground font-bold text-lg">{careerPts}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                      <span className="text-muted-foreground">Rebounds</span>
+                      <span className="text-card-foreground font-bold text-lg">{careerReb}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                      <span className="text-muted-foreground">Assists</span>
+                      <span className="text-card-foreground font-bold text-lg">{careerAst}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* AI Coaching Content */}
+          <TabsContent value="ai-coaching">
+            <AICoaching playerName={currentPlayerData.name} playerData={currentPlayerData} />
+          </TabsContent>
+        </Tabs>
+      </div>
+      
+      {/* Subscription Modal */}
+      <SubscriptionModal 
+        isOpen={isSubscriptionModalOpen} 
+        onClose={() => setIsSubscriptionModalOpen(false)} 
+      />
+      
+      {/* Edit Profile Modal */}
+      <EditProfileModal 
+        isOpen={isEditProfileModalOpen} 
+        onClose={() => setIsEditProfileModalOpen(false)} 
+        onSave={handleSaveProfile} 
+        playerData={currentPlayerData} 
+      />
+    </div>
+  );
+}

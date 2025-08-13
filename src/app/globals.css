@@ -1,106 +1,83 @@
-@custom-variant dark (&:is(.dark *));
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   --font-size: 14px;
-  --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
-  --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #030213;
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
-  --muted: #ececf0;
-  --muted-foreground: #717182;
-  --accent: #e9ebef;
-  --accent-foreground: #030213;
-  --destructive: #d4183d;
-  --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
+  --background: #fefaf7;
+  --foreground: #2d1b14;
+  --card: #fefcfa;
+  --card-foreground: #2d1b14;
+  --popover: #fefcfa;
+  --popover-foreground: #2d1b14;
+  --primary: #dc2626;
+  --primary-foreground: #fef2f2;
+  --secondary: #fed7aa;
+  --secondary-foreground: #9a3412;
+  --muted: #f9f5f3;
+  --muted-foreground: #78716c;
+  --accent: #ffedd5;
+  --accent-foreground: #c2410c;
+  --destructive: #dc2626;
+  --destructive-foreground: #fef2f2;
+  --border: rgba(251, 146, 60, 0.2);
   --input: transparent;
-  --input-background: #f3f3f5;
-  --switch-background: #cbced4;
+  --input-background: #fff7ed;
+  --switch-background: #fed7aa;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --ring: #fb923c;
+  --chart-1: #ea580c;
+  --chart-2: #f97316;
+  --chart-3: #fb923c;
+  --chart-4: #fdba74;
+  --chart-5: #fed7aa;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  
-  /* Dashboard specific variables - Orange/Red Figma theme */
-  --dashboard-bg: var(--background);
-  --dashboard-card: var(--card);
-  --dashboard-primary: #f97316;
-  --dashboard-primary-hover: #ea580c;
-  --dashboard-border: rgba(249, 115, 22, 0.2);
-  --dashboard-border-hover: rgba(249, 115, 22, 0.4);
-  --dashboard-text-primary: var(--foreground);
-  --dashboard-text-secondary: var(--muted-foreground);
-  --dashboard-gradient: linear-gradient(135deg, #f97316, #ea580c);
+  --sidebar: #fef7ff;
+  --sidebar-foreground: #2d1b14;
+  --sidebar-primary: #dc2626;
+  --sidebar-primary-foreground: #fef2f2;
+  --sidebar-accent: #ffedd5;
+  --sidebar-accent-foreground: #c2410c;
+  --sidebar-border: #fed7aa;
+  --sidebar-ring: #fb923c;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  --background: #1c1410;
+  --foreground: #fefaf7;
+  --card: #292017;
+  --card-foreground: #fefaf7;
+  --popover: #292017;
+  --popover-foreground: #fefaf7;
+  --primary: #f97316;
+  --primary-foreground: #1c1410;
+  --secondary: #451a03;
+  --secondary-foreground: #fed7aa;
+  --muted: #3c2f26;
+  --muted-foreground: #a8a29e;
+  --accent: #451a03;
+  --accent-foreground: #fed7aa;
+  --destructive: #dc2626;
+  --destructive-foreground: #fef2f2;
+  --border: #451a03;
+  --input: #3c2f26;
+  --ring: #fb923c;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
-  
-  /* Dashboard dark theme variables */
-  --dashboard-bg: var(--background);
-  --dashboard-card: var(--card);
-  --dashboard-primary: #f97316;
-  --dashboard-primary-hover: #ea580c;
-  --dashboard-border: rgba(249, 115, 22, 0.2);
-  --dashboard-border-hover: rgba(249, 115, 22, 0.4);
-  --dashboard-text-primary: var(--foreground);
-  --dashboard-text-secondary: var(--muted-foreground);
-  --dashboard-gradient: linear-gradient(135deg, #f97316, #ea580c);
+  --chart-1: #f97316;
+  --chart-2: #fb923c;
+  --chart-3: #fdba74;
+  --chart-4: #ea580c;
+  --chart-5: #dc2626;
+  --sidebar: #1c1410;
+  --sidebar-foreground: #fefaf7;
+  --sidebar-primary: #f97316;
+  --sidebar-primary-foreground: #1c1410;
+  --sidebar-accent: #451a03;
+  --sidebar-accent-foreground: #fed7aa;
+  --sidebar-border: #451a03;
+  --sidebar-ring: #fb923c;
 }
 
 @theme inline {
@@ -146,12 +123,11 @@
 
 @layer base {
   * {
-    border-color: var(--border);
+    @apply border-border;
   }
 
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    @apply bg-background text-foreground;
   }
 }
 
@@ -212,4 +188,17 @@
 
 html {
   font-size: var(--font-size);
+}
+
+/* Simple card styles for Figma components */
+.glass-card {
+  @apply bg-card border border-border;
+}
+
+.glass-card-light {
+  @apply bg-card border border-border;
+}
+
+.glass-card-accent {
+  @apply bg-accent border border-orange-300;
 }
