@@ -306,8 +306,26 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
     try {
       const selectedPlayerObjects = filteredRosterPlayers.filter(p => selectedPlayers.has(p.id));
       const results = { success: 0, failed: 0, errors: [] as string[] };
+      
+      // Pre-allocate jersey numbers for the entire batch to prevent conflicts
+      const currentUsedNumbers = teamPlayers.map(p => p.jerseyNumber);
+      const batchJerseyNumbers: { [playerId: string]: number } = {};
+      let nextJerseyNumber = 1;
+      
+      for (const player of selectedPlayerObjects) {
+        // Find next available jersey number across current team + batch
+        while (currentUsedNumbers.includes(nextJerseyNumber) || 
+               Object.values(batchJerseyNumbers).includes(nextJerseyNumber)) {
+          nextJerseyNumber++;
+          if (nextJerseyNumber > 99) {
+            nextJerseyNumber = 1; // Wrap around if needed
+          }
+        }
+        batchJerseyNumbers[player.id] = nextJerseyNumber;
+        nextJerseyNumber++;
+      }
 
-      // Process each selected player
+      // Process each selected player with pre-allocated jersey numbers
       for (const player of selectedPlayerObjects) {
         try {
           // Check if player is already in team
@@ -317,12 +335,8 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
             continue;
           }
 
-          // Generate jersey number
-          const usedNumbers = teamPlayers.map(p => p.jerseyNumber);
-          let jerseyNumber = 1;
-          while (usedNumbers.includes(jerseyNumber) && jerseyNumber <= 99) {
-            jerseyNumber++;
-          }
+          // Use pre-allocated jersey number
+          const jerseyNumber = batchJerseyNumbers[player.id];
 
           // Add player to database
           await TeamService.addPlayerToTeam(

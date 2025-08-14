@@ -667,11 +667,30 @@ export class TeamService {
     try {
       console.log('🔍 TeamService: Adding player to team:', { teamId, playerId, position, jerseyNumber });
       
+      // Check if player is already in team to prevent duplicate key violations
+      const { data: existingPlayer, error: checkError } = await supabase
+        .from('team_players')
+        .select('player_id')
+        .eq('team_id', teamId)
+        .eq('player_id', playerId)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('❌ Error checking existing player:', checkError);
+        throw new Error(`Failed to check existing player: ${checkError.message}`);
+      }
+
+      if (existingPlayer) {
+        throw new Error('Player is already in this team');
+      }
+      
       const { error } = await supabase
         .from('team_players')
         .insert({
           team_id: teamId,
-          player_id: playerId
+          player_id: playerId,
+          position: position || null,
+          jersey_number: jerseyNumber || null
         });
 
       if (error) {
