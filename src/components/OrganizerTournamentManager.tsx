@@ -7,13 +7,161 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock } from "lucide-react";
+import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useTournaments } from "@/lib/hooks/useTournaments";
+import { useTeamManagement } from "@/hooks/useTeamManagement";
+import { useTournamentTeamCount } from "@/hooks/useTournamentTeamCount";
+import { TournamentTableRow } from "@/components/TournamentTableRow";
 import { Tournament } from "@/lib/types/tournament";
+
+// Utility function for tournament status variants
+function getStatusVariant(status: Tournament['status']) {
+  switch (status) {
+    case 'active':
+      return 'default';
+    case 'draft':
+      return 'secondary';
+    case 'completed':
+      return 'outline';
+    case 'cancelled':
+      return 'destructive';
+    default:
+      return 'secondary';
+  }
+}
+
+// Tournament Card Component with Real-time Team Count
+interface TournamentCardProps {
+  tournament: Tournament;
+  onManageTeams: (tournament: Tournament) => void;
+  onOpenSettings: (tournament: Tournament) => void;
+}
+
+function TournamentCard({ tournament, onManageTeams, onOpenSettings }: TournamentCardProps) {
+  const { currentTeams, maxTeams, loading: teamCountLoading } = useTournamentTeamCount(tournament.id, {
+    maxTeams: tournament.maxTeams
+  });
+
+  return (
+    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-accent to-orange-500"></div>
+      <CardHeader className="relative bg-gradient-to-br from-muted/30 to-transparent">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <Trophy className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-base group-hover:text-primary transition-colors">{tournament.name}</CardTitle>
+              <div className="flex items-center gap-1 mt-1 text-muted-foreground">
+                <div className="w-2 h-2 bg-accent rounded-full"></div>
+                {tournament.tournamentType}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <Badge variant={getStatusVariant(tournament.status)} className={
+              tournament.status === 'active' 
+                ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-0' 
+                : tournament.status === 'completed'
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0'
+                : ''
+            }>
+              {tournament.status}
+            </Badge>
+            {tournament.status === 'active' && (
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            )}
+          </div>
+        </div>
+        <div className="mt-2">
+          <p className="text-sm text-muted-foreground line-clamp-2">{tournament.description}</p>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md flex items-center justify-center">
+                <Users className="w-3 h-3 text-white" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Teams</p>
+                <p className="text-sm font-semibold">
+                  {teamCountLoading ? (
+                    <span className="animate-pulse">...</span>
+                  ) : (
+                    `${currentTeams}/${maxTeams}`
+                  )}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-950/30">
+              <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-green-600 rounded-md flex items-center justify-center">
+                <Calendar className="w-3 h-3 text-white" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Start</p>
+                <p className="text-sm font-semibold">{new Date(tournament.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-50 dark:bg-purple-950/30">
+              <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-md flex items-center justify-center">
+                <Trophy className="w-3 h-3 text-white" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Format</p>
+                <p className="text-xs font-semibold">{tournament.tournamentType.split('_')[0]}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-50 dark:bg-orange-950/30">
+              <div className="w-6 h-6 bg-gradient-to-br from-orange-500 to-orange-600 rounded-md flex items-center justify-center">
+                <Calendar className="w-3 h-3 text-white" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">End</p>
+                <p className="text-sm font-semibold">{new Date(tournament.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex gap-2 pt-2 border-t border-border/50">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="flex-1 gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+            onClick={() => onManageTeams(tournament)}
+          >
+            <UserPlus className="w-3 h-3" />
+            Teams
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="flex-1 gap-1 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
+            onClick={() => onOpenSettings(tournament)}
+          >
+            <Settings className="w-3 h-3" />
+            Settings
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+
 
 export function OrganizerTournamentManager() {
   const { tournaments, loading, error, createTournament, deleteTournament } = useTournaments();
@@ -23,6 +171,9 @@ export function OrganizerTournamentManager() {
   const [isTeamManagerOpen, setIsTeamManagerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tournamentToEdit, setTournamentToEdit] = useState<Tournament | null>(null);
+  
+  // Team management hook - always call it, but pass empty string if no tournament selected
+  const teamManagement = useTeamManagement(selectedTournament?.id || '');
   const [newTournament, setNewTournament] = useState({
     name: "",
     format: "",
@@ -65,20 +216,7 @@ export function OrganizerTournamentManager() {
     }
   };
 
-  const getStatusVariant = (status: Tournament['status']) => {
-    switch (status) {
-      case 'active':
-        return 'default';
-      case 'draft':
-        return 'secondary';
-      case 'completed':
-        return 'outline';
-      case 'cancelled':
-        return 'destructive';
-      default:
-        return 'secondary';
-    }
-  };
+
 
   const handleManageTeams = (tournament: Tournament) => {
     setSelectedTournament(tournament);
@@ -251,110 +389,12 @@ export function OrganizerTournamentManager() {
       {/* Enhanced Tournament Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {tournaments.map((tournament) => (
-          <Card key={tournament.id} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-accent to-orange-500"></div>
-            <CardHeader className="relative bg-gradient-to-br from-muted/30 to-transparent">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Trophy className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base group-hover:text-primary transition-colors">{tournament.name}</CardTitle>
-                    <CardDescription className="flex items-center gap-1 mt-1">
-                      <div className="w-2 h-2 bg-accent rounded-full"></div>
-                      {tournament.tournamentType}
-                    </CardDescription>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Badge variant={getStatusVariant(tournament.status)} className={
-                    tournament.status === 'active' 
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-0' 
-                      : tournament.status === 'completed'
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0'
-                      : ''
-                  }>
-                    {tournament.status}
-                  </Badge>
-                  {tournament.status === 'active' && (
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  )}
-                </div>
-              </div>
-              <div className="mt-2">
-                <p className="text-sm text-muted-foreground line-clamp-2">{tournament.description}</p>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md flex items-center justify-center">
-                      <Users className="w-3 h-3 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Teams</p>
-                      <p className="text-sm font-semibold">{tournament.currentTeams}/{tournament.maxTeams}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-950/30">
-                    <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-green-600 rounded-md flex items-center justify-center">
-                      <Calendar className="w-3 h-3 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Start</p>
-                      <p className="text-sm font-semibold">{new Date(tournament.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-50 dark:bg-purple-950/30">
-                    <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-md flex items-center justify-center">
-                      <Trophy className="w-3 h-3 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Format</p>
-                      <p className="text-xs font-semibold">{tournament.tournamentType.split('_')[0]}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-50 dark:bg-orange-950/30">
-                    <div className="w-6 h-6 bg-gradient-to-br from-orange-500 to-orange-600 rounded-md flex items-center justify-center">
-                      <Calendar className="w-3 h-3 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">End</p>
-                      <p className="text-sm font-semibold">{new Date(tournament.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex gap-2 pt-2 border-t border-border/50">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="flex-1 gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                  onClick={() => handleManageTeams(tournament)}
-                >
-                  <UserPlus className="w-3 h-3" />
-                  Teams
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="flex-1 gap-1 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
-                  onClick={() => handleOpenSettings(tournament)}
-                >
-                  <Settings className="w-3 h-3" />
-                  Settings
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <TournamentCard 
+            key={tournament.id} 
+            tournament={tournament}
+            onManageTeams={handleManageTeams}
+            onOpenSettings={handleOpenSettings}
+          />
         ))}
       </div>
 
@@ -378,47 +418,12 @@ export function OrganizerTournamentManager() {
             </TableHeader>
             <TableBody>
               {tournaments.map((tournament) => (
-                <TableRow key={tournament.id}>
-                  <TableCell className="font-medium">{tournament.name}</TableCell>
-                  <TableCell>{tournament.tournamentType}</TableCell>
-                  <TableCell>{tournament.currentTeams}/{tournament.maxTeams}</TableCell>
-                  <TableCell>
-                    {new Date(tournament.startDate).toLocaleDateString()} - {new Date(tournament.endDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(tournament.status)}>
-                      {tournament.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => handleManageTeams(tournament)}
-                        title="Manage Teams"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => handleOpenSettings(tournament)}
-                        title="View Tournament"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => handleOpenSettings(tournament)}
-                        title="Tournament Settings"
-                      >
-                        <Settings className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <TournamentTableRow 
+                  key={tournament.id} 
+                  tournament={tournament}
+                  onManageTeams={handleManageTeams}
+                  onOpenSettings={handleOpenSettings}
+                />
               ))}
             </TableBody>
           </Table>
@@ -440,16 +445,166 @@ export function OrganizerTournamentManager() {
           <div className="overflow-y-auto flex-1 px-6 py-4">
             {selectedTournament && (
               <div className="space-y-6">
-                <div className="text-center py-8">
-                  <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <h3 className="font-semibold text-foreground mb-2">Team Management</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Team management for "{selectedTournament.name}" will be available here.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    This will integrate with the live team data from your tournament.
-                  </p>
-                </div>
+                {/* Loading State */}
+                {teamManagement?.loading && (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading teams...</p>
+                  </div>
+                )}
+
+                {/* Error State */}
+                {teamManagement?.error && (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-destructive/10 rounded-lg flex items-center justify-center">
+                      <Users className="w-8 h-8 text-destructive" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Error Loading Teams</h3>
+                    <p className="text-muted-foreground mb-4">{teamManagement.error}</p>
+                    <Button onClick={teamManagement.refetch} variant="outline">
+                      Try Again
+                    </Button>
+                  </div>
+                )}
+
+                {/* Success State */}
+                {!teamManagement?.loading && !teamManagement?.error && (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h2 className="text-2xl font-bold">Team Management</h2>
+                        <p className="text-muted-foreground">Manage teams for {selectedTournament.name}</p>
+                      </div>
+                      <Button className="gap-2">
+                        <Plus className="w-4 h-4" />
+                        Add Team
+                      </Button>
+                    </div>
+
+                    {/* Live Team Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card className="hover:shadow-lg transition-all duration-300 border-0 overflow-hidden">
+                        <div className="bg-gradient-to-br from-primary to-primary/80 text-white">
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-white/90">Total Teams</CardTitle>
+                            <Users className="h-5 w-5 text-white" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-3xl font-bold">{teamManagement?.stats.totalTeams || 0}</div>
+                            <p className="text-xs text-white/80">{teamManagement?.stats.totalTeams || 0} active teams</p>
+                          </CardContent>
+                        </div>
+                      </Card>
+                      
+                      <Card className="hover:shadow-lg transition-all duration-300 border-0 overflow-hidden">
+                        <div className="bg-gradient-to-br from-accent to-accent/80 text-white">
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-white/90">Total Players</CardTitle>
+                            <Users className="h-5 w-5 text-white" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-3xl font-bold">{teamManagement?.stats.totalPlayers || 0}</div>
+                            <p className="text-xs text-white/80">Across all teams</p>
+                          </CardContent>
+                        </div>
+                      </Card>
+                      
+                      <Card className="hover:shadow-lg transition-all duration-300 border-0 overflow-hidden">
+                        <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-white/90">Divisions</CardTitle>
+                            <Users className="h-5 w-5 text-white" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-3xl font-bold">{teamManagement?.stats.divisions || 0}</div>
+                            <p className="text-xs text-white/80">Active divisions</p>
+                          </CardContent>
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* Live Team Cards Grid */}
+                    {teamManagement?.teams && teamManagement.teams.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {teamManagement.teams.map((team) => (
+                          <Card key={team.id} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-orange-500"></div>
+                            <CardHeader className="relative">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="relative">
+                                    <Avatar className="border-2 border-primary/20 group-hover:border-primary/40 transition-colors">
+                                      <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground font-semibold">
+                                        {team.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-br from-green-400 to-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                                      <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <CardTitle className="text-base group-hover:text-primary transition-colors">{team.name}</CardTitle>
+                                    <div className="flex items-center gap-1 text-muted-foreground">
+                                      <div className="w-2 h-2 bg-primary/60 rounded-full"></div>
+                                      {team.division || 'Unknown'} Division
+                                    </div>
+                                  </div>
+                                </div>
+                                <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0">
+                                  Active
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <Users className="w-4 h-4 text-muted-foreground" />
+                                  <span>Coach: {team.coach || 'TBD'}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-between items-center pt-3 border-t border-border/50">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center">
+                                    <span className="text-xs font-bold text-white">{team.players.length}</span>
+                                  </div>
+                                  <span className="text-sm font-medium">players</span>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button size="sm" variant="ghost" className="hover:bg-primary/10 hover:text-primary">
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                                                     <Button 
+                                     size="sm" 
+                                     variant="ghost" 
+                                     className="hover:bg-destructive/10 hover:text-destructive"
+                                     onClick={() => teamManagement?.deleteTeam(team.id)}
+                                   >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-lg flex items-center justify-center">
+                          <Users className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-lg font-semibold mb-2">No Teams Yet</h3>
+                        <p className="text-muted-foreground mb-4">
+                          This tournament doesn't have any teams yet. Create your first team to get started.
+                        </p>
+                        <Button className="gap-2">
+                          <Plus className="w-4 h-4" />
+                          Create First Team
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>

@@ -318,6 +318,9 @@ export class TeamService {
         throw new Error(`Failed to create team: ${error.message}`);
       }
 
+      // Update the tournament's current_teams count
+      await this.updateTournamentTeamCount(data.tournamentId);
+
       return {
         id: team.id,
         name: team.name,
@@ -342,6 +345,80 @@ export class TeamService {
     } catch (error) {
       console.error('Error creating team:', error);
       throw error instanceof Error ? error : new Error('Failed to create team');
+    }
+  }
+
+  static async deleteTeam(teamId: string): Promise<void> {
+    try {
+      console.log('🔍 TeamService: Deleting team:', teamId);
+      
+      // First, get the team to know which tournament it belongs to for count update
+      const { data: teamData, error: teamFetchError } = await supabase
+        .from('teams')
+        .select('tournament_id')
+        .eq('id', teamId)
+        .single();
+
+      if (teamFetchError) {
+        console.error('❌ TeamService: Error fetching team for deletion:', teamFetchError);
+        throw new Error(`Failed to fetch team: ${teamFetchError.message}`);
+      }
+
+      // Delete the team
+      const { error: deleteError } = await supabase
+        .from('teams')
+        .delete()
+        .eq('id', teamId);
+
+      if (deleteError) {
+        console.error('❌ TeamService: Error deleting team:', deleteError);
+        throw new Error(`Failed to delete team: ${deleteError.message}`);
+      }
+
+      // Update the tournament's current_teams count
+      if (teamData?.tournament_id) {
+        await this.updateTournamentTeamCount(teamData.tournament_id);
+      }
+
+      console.log('✅ TeamService: Team deleted successfully:', teamId);
+    } catch (error) {
+      console.error('❌ TeamService: Error in deleteTeam:', error);
+      throw error instanceof Error ? error : new Error('Failed to delete team');
+    }
+  }
+
+  static async updateTournamentTeamCount(tournamentId: string): Promise<void> {
+    try {
+      console.log('🔍 TeamService: Updating team count for tournament:', tournamentId);
+      
+      // Get the current count of teams for this tournament
+      const { data: teams, error: countError } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('tournament_id', tournamentId);
+
+      if (countError) {
+        console.error('❌ TeamService: Error counting teams:', countError);
+        throw new Error(`Failed to count teams: ${countError.message}`);
+      }
+
+      const currentTeamsCount = teams?.length || 0;
+
+      // Update the tournament's current_teams field
+      const { error: updateError } = await supabase
+        .from('tournaments')
+        .update({ current_teams: currentTeamsCount })
+        .eq('id', tournamentId);
+
+      if (updateError) {
+        console.error('❌ TeamService: Error updating tournament team count:', updateError);
+        throw new Error(`Failed to update tournament team count: ${updateError.message}`);
+      }
+
+      console.log('✅ TeamService: Tournament team count updated:', { tournamentId, currentTeamsCount });
+    } catch (error) {
+      console.error('❌ TeamService: Error in updateTournamentTeamCount:', error);
+      throw error instanceof Error ? error : new Error('Failed to update tournament team count');
     }
   }
 
@@ -630,7 +707,20 @@ export class TeamService {
 
       // Map team_players data to Player interface
       const players = validTeamPlayers.map(tp => {
+        // Check if users array exists and has elements
+        if (!tp.users || !Array.isArray(tp.users) || tp.users.length === 0) {
+          console.warn('⚠️ TeamService: Users array is empty or invalid for team player:', tp);
+          return null;
+        }
+        
         const user = tp.users[0]; // Get the first user from the array
+        
+        // Add null check for user
+        if (!user) {
+          console.warn('⚠️ TeamService: User is null/undefined for team player:', tp);
+          return null;
+        }
+        
         return {
           id: user.id,
           name: user.email.split('@')[0], // Use email prefix as name for now
@@ -641,7 +731,7 @@ export class TeamService {
           country: user.country || 'US',
           createdAt: user.created_at || new Date().toISOString(),
         };
-      });
+      }).filter(Boolean); // Remove any null entries
 
       console.log('🔍 TeamService: Mapped team players:', players.map(p => ({ name: p.name, position: p.position, jersey: p.jerseyNumber })));
       
