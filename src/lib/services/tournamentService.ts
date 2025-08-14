@@ -324,7 +324,7 @@ export class TeamService {
       return {
         id: team.id,
         name: team.name,
-        logo: team.logo,
+        logo: '', // Default empty logo since column doesn't exist
         players: [], // TODO: Implement player fetching
         captain: {
           id: '',
@@ -336,7 +336,7 @@ export class TeamService {
           country: '',
           createdAt: new Date().toISOString(),
         }, // Default captain until players are added
-        coach: data.coach, // Use the coach from input data since it's not in DB
+        coach: '', // Default empty coach since column doesn't exist in DB
         wins: 0, // Default value since not in DB
         losses: 0, // Default value since not in DB
         tournamentId: team.tournament_id,
@@ -426,9 +426,24 @@ export class TeamService {
     try {
       console.log('🔍 TeamService: Fetching teams for tournament:', tournamentId);
       
+      // Simplified query with only existing columns
       const { data: teams, error } = await supabase
         .from('teams')
-        .select('*')
+        .select(`
+          id,
+          name,
+          tournament_id,
+          team_players (
+            player_id,
+            users!player_id (
+              id,
+              email,
+              premium_status,
+              country,
+              created_at
+            )
+          )
+        `)
         .eq('tournament_id', tournamentId);
 
       if (error) {
@@ -445,9 +460,8 @@ export class TeamService {
         return [];
       }
 
-      // Map database fields to our Team interface and load players
-      const mappedTeams = await Promise.all((teams || []).map(async (team) => {
-        // Fetch players for this team
+      // Map database fields to our Team interface (single pass, no N+1 queries)
+      const mappedTeams = teams.map((team) => {
         let teamPlayers: Player[] = [];
         let captain: Player = {
           id: '',
@@ -460,32 +474,52 @@ export class TeamService {
           createdAt: new Date().toISOString(),
         };
 
-        try {
-          teamPlayers = await TeamService.getTeamPlayers(team.id);
-          // Find captain (first player marked as captain, or first player)
-          captain = teamPlayers.find(p => {
-            // We'll need to track captain status in team_players table
-            return false; // For now, no captain logic
-          }) || teamPlayers[0] || captain;
-        } catch (error) {
-          console.error(`Failed to load players for team ${team.id}:`, error);
+        // Process players from the join data (handle null/empty team_players)
+        if (team.team_players && Array.isArray(team.team_players) && team.team_players.length > 0) {
+          const validTeamPlayers = team.team_players.filter(tp => 
+            tp && tp.users && 
+            Array.isArray(tp.users) && 
+            tp.users.length > 0 && 
+            tp.users[0]
+          );
+
+          teamPlayers = validTeamPlayers.map(tp => {
+            const user = tp.users[0];
+            return {
+              id: user.id,
+              name: user.email.split('@')[0],
+              email: user.email,
+              position: 'PG' as Player['position'],
+              jerseyNumber: Math.floor(Math.random() * 99) + 1,
+              isPremium: user.premium_status || false,
+              country: user.country || 'US',
+              createdAt: user.created_at || new Date().toISOString(),
+            };
+          });
+
+          // Set captain as first player
+          captain = teamPlayers[0] || captain;
         }
 
         return {
           id: team.id,
           name: team.name,
-          logo: team.logo || '',
+          logo: '', // Default empty logo since column doesn't exist
           players: teamPlayers,
           captain: captain,
-          coach: team.coach || '',
+          coach: '', // Default empty coach since column doesn't exist
           wins: 0, // Default value since not in DB schema yet
           losses: 0, // Default value since not in DB schema yet
           tournamentId: team.tournament_id,
           createdAt: new Date().toISOString(), // Default since created_at doesn't exist in teams table
         };
-      }));
+      });
 
-      console.log('🔍 TeamService: Mapped teams:', mappedTeams.map(t => ({ id: t.id, name: t.name })));
+      console.log('🔍 TeamService: Mapped teams:', mappedTeams.map(t => ({ 
+        id: t.id, 
+        name: t.name, 
+        playerCount: t.players.length 
+      })));
       
       return mappedTeams;
     } catch (error) {

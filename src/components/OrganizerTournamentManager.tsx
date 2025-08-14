@@ -18,6 +18,7 @@ import { useTeamManagement } from "@/hooks/useTeamManagement";
 import { useTournamentTeamCount } from "@/hooks/useTournamentTeamCount";
 import { TournamentTableRow } from "@/components/TournamentTableRow";
 import { Tournament } from "@/lib/types/tournament";
+import { PlayerManager } from "@/components/PlayerManager";
 
 // Utility function for tournament status variants
 function getStatusVariant(status: Tournament['status']) {
@@ -171,6 +172,9 @@ export function OrganizerTournamentManager() {
   const [isTeamManagerOpen, setIsTeamManagerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tournamentToEdit, setTournamentToEdit] = useState<Tournament | null>(null);
+  const [isPlayerManagerOpen, setIsPlayerManagerOpen] = useState(false);
+  const [selectedTeamForPlayers, setSelectedTeamForPlayers] = useState<any>(null);
+  const [isCreateTeamDialogOpen, setIsCreateTeamDialogOpen] = useState(false);
   
   // Team management hook - always call it, but pass empty string if no tournament selected
   const teamManagement = useTeamManagement(selectedTournament?.id || '');
@@ -227,6 +231,20 @@ export function OrganizerTournamentManager() {
     setTournamentToEdit(tournament);
     setIsSettingsOpen(true);
   };
+
+  const handleManagePlayers = (team: any) => {
+    setSelectedTeamForPlayers(team);
+    setIsPlayerManagerOpen(true);
+  };
+
+  const handlePlayerManagerClose = () => {
+    setIsPlayerManagerOpen(false);
+    setSelectedTeamForPlayers(null);
+    // Refresh team data
+    teamManagement?.refetch();
+  };
+
+
 
   const handleSaveSettings = () => {
     if (tournamentToEdit) {
@@ -475,7 +493,10 @@ export function OrganizerTournamentManager() {
                         <h2 className="text-2xl font-bold">Team Management</h2>
                         <p className="text-muted-foreground">Manage teams for {selectedTournament.name}</p>
                       </div>
-                      <Button className="gap-2">
+                      <Button 
+                        className="gap-2"
+                        onClick={() => setIsCreateTeamDialogOpen(true)}
+                      >
                         <Plus className="w-4 h-4" />
                         Add Team
                       </Button>
@@ -571,10 +592,24 @@ export function OrganizerTournamentManager() {
                                   <span className="text-sm font-medium">players</span>
                                 </div>
                                 <div className="flex gap-1">
-                                  <Button size="sm" variant="ghost" className="hover:bg-primary/10 hover:text-primary">
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="hover:bg-blue-500/10 hover:text-blue-600"
+                                    onClick={() => handleManagePlayers(team)}
+                                    title="Manage Players"
+                                  >
+                                    <Users className="w-4 h-4" />
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="hover:bg-primary/10 hover:text-primary"
+                                    title="Edit Team Info"
+                                  >
                                     <Edit className="w-4 h-4" />
                                   </Button>
-                                                                     <Button 
+                                  <Button 
                                      size="sm" 
                                      variant="ghost" 
                                      className="hover:bg-destructive/10 hover:text-destructive"
@@ -810,6 +845,70 @@ export function OrganizerTournamentManager() {
             </Button>
             <Button onClick={handleSaveSettings}>
               Save Settings
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Player Manager Modal */}
+      <PlayerManager
+        team={selectedTeamForPlayers}
+        isOpen={isPlayerManagerOpen}
+        onClose={handlePlayerManagerClose}
+        onUpdateTeam={handlePlayerManagerClose}
+      />
+
+
+
+      {/* Create Team Modal */}
+      <Dialog open={isCreateTeamDialogOpen} onOpenChange={setIsCreateTeamDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Team</DialogTitle>
+            <DialogDescription>
+              Create a new team for {selectedTournament?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="newTeamName">Team Name</Label>
+              <Input
+                id="newTeamName"
+                placeholder="Enter team name"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newCoachName">Coach Name</Label>
+              <Input
+                id="newCoachName"
+                placeholder="Enter coach name (optional)"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateTeamDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={async () => {
+              const teamNameInput = document.getElementById('newTeamName') as HTMLInputElement;
+              const coachNameInput = document.getElementById('newCoachName') as HTMLInputElement;
+              
+              if (teamNameInput.value.trim() && selectedTournament) {
+                try {
+                  await teamManagement?.createTeam({
+                    name: teamNameInput.value.trim(),
+                    coach: coachNameInput.value.trim() || undefined
+                  });
+                  setIsCreateTeamDialogOpen(false);
+                  // Clear inputs
+                  teamNameInput.value = '';
+                  coachNameInput.value = '';
+                } catch (error) {
+                  console.error('Error creating team:', error);
+                }
+              }
+            }}>
+              Create Team
             </Button>
           </DialogFooter>
         </DialogContent>
