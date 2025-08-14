@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { UserDropdownMenu } from "@/components/ui/UserDropdownMenu";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { getNavigationForRole } from "@/lib/navigation-config";
 import { Menu, X } from "lucide-react";
@@ -11,11 +11,15 @@ import { Menu, X } from "lucide-react";
 export function NavigationHeader() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, userRole, initialized } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const navigation = getNavigationForRole(userRole);
   const isAuthenticated = !!user;
+  
+  // Get current section for organizer dashboard
+  const currentSection = searchParams.get('section') || 'overview';
 
   const handleSignIn = () => {
     router.push('/auth');
@@ -45,6 +49,15 @@ export function NavigationHeader() {
 
   const isActiveLink = (href: string) => {
     if (href.startsWith('#')) return false;
+    
+    // Special handling for organizer dashboard sections
+    if (userRole === 'organizer' && pathname === '/dashboard' && href.includes('section=')) {
+      const sectionMatch = href.match(/section=([^&]+)/);
+      if (sectionMatch) {
+        return currentSection === sectionMatch[1];
+      }
+    }
+    
     return pathname === href || pathname.startsWith(href + '/');
   };
 

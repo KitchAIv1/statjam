@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 
 interface TournamentDetailPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 const TournamentDetailPage = ({ params }: TournamentDetailPageProps) => {

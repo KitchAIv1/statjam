@@ -1,4 +1,4 @@
-import { User, Trophy, BarChart3, Users, PlayCircle, Calendar, Settings, Home } from 'lucide-react';
+import { User, Trophy, BarChart3, Users, PlayCircle, Calendar, Settings, Home, Video } from 'lucide-react';
 
 export interface NavigationItem {
   label: string;
@@ -39,22 +39,34 @@ export const navigationConfig: Record<string, NavigationConfig> = {
   organizer: {
     primary: [
       {
-        label: 'Dashboard',
-        href: '/dashboard',
+        label: 'Overview',
+        href: '/dashboard?section=overview',
         icon: Home,
-        description: 'Tournament overview'
-      },
-      {
-        label: 'Create Tournament',
-        href: '/dashboard/create-tournament',
-        icon: Trophy,
-        description: 'Start new tournament'
+        description: 'Dashboard overview'
       },
       {
         label: 'Tournaments',
-        href: '/dashboard/tournaments',
-        icon: Calendar,
+        href: '/dashboard?section=tournaments',
+        icon: Trophy,
         description: 'Manage tournaments'
+      },
+      {
+        label: 'Teams',
+        href: '/dashboard?section=teams',
+        icon: Users,
+        description: 'Manage teams'
+      },
+      {
+        label: 'Games',
+        href: '/dashboard?section=games',
+        icon: Calendar,
+        description: 'Schedule games'
+      },
+      {
+        label: 'Live Stream',
+        href: '/dashboard?section=live-stream',
+        icon: Video,
+        description: 'Live streaming'
       }
     ],
     secondary: [
