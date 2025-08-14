@@ -7,8 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus } from "lucide-react";
+import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { useTournaments } from "@/lib/hooks/useTournaments";
 import { Tournament } from "@/lib/types/tournament";
 
@@ -16,6 +19,10 @@ export function OrganizerTournamentManager() {
   const { tournaments, loading, error, createTournament, deleteTournament } = useTournaments();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+  const [isTeamManagerOpen, setIsTeamManagerOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [tournamentToEdit, setTournamentToEdit] = useState<Tournament | null>(null);
   const [newTournament, setNewTournament] = useState({
     name: "",
     format: "",
@@ -70,6 +77,25 @@ export function OrganizerTournamentManager() {
         return 'destructive';
       default:
         return 'secondary';
+    }
+  };
+
+  const handleManageTeams = (tournament: Tournament) => {
+    setSelectedTournament(tournament);
+    setIsTeamManagerOpen(true);
+  };
+
+  const handleOpenSettings = (tournament: Tournament) => {
+    setTournamentToEdit(tournament);
+    setIsSettingsOpen(true);
+  };
+
+  const handleSaveSettings = () => {
+    if (tournamentToEdit) {
+      // This would update the tournament via the service
+      console.log('Saving settings for tournament:', tournamentToEdit.name);
+      setIsSettingsOpen(false);
+      setTournamentToEdit(null);
     }
   };
 
@@ -312,6 +338,7 @@ export function OrganizerTournamentManager() {
                   size="sm" 
                   variant="outline" 
                   className="flex-1 gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                  onClick={() => handleManageTeams(tournament)}
                 >
                   <UserPlus className="w-3 h-3" />
                   Teams
@@ -320,6 +347,7 @@ export function OrganizerTournamentManager() {
                   size="sm" 
                   variant="outline" 
                   className="flex-1 gap-1 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
+                  onClick={() => handleOpenSettings(tournament)}
                 >
                   <Settings className="w-3 h-3" />
                   Settings
@@ -352,8 +380,8 @@ export function OrganizerTournamentManager() {
               {tournaments.map((tournament) => (
                 <TableRow key={tournament.id}>
                   <TableCell className="font-medium">{tournament.name}</TableCell>
-                  <TableCell>{tournament.format}</TableCell>
-                  <TableCell>{tournament.teams}/{tournament.maxTeams}</TableCell>
+                  <TableCell>{tournament.tournamentType}</TableCell>
+                  <TableCell>{tournament.currentTeams}/{tournament.maxTeams}</TableCell>
                   <TableCell>
                     {new Date(tournament.startDate).toLocaleDateString()} - {new Date(tournament.endDate).toLocaleDateString()}
                   </TableCell>
@@ -364,13 +392,28 @@ export function OrganizerTournamentManager() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="ghost">
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleManageTeams(tournament)}
+                        title="Manage Teams"
+                      >
                         <UserPlus className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="ghost">
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleOpenSettings(tournament)}
+                        title="View Tournament"
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="ghost">
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleOpenSettings(tournament)}
+                        title="Tournament Settings"
+                      >
                         <Settings className="w-4 h-4" />
                       </Button>
                     </div>
@@ -381,6 +424,241 @@ export function OrganizerTournamentManager() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Team Manager Modal */}
+      <Dialog open={isTeamManagerOpen} onOpenChange={setIsTeamManagerOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-5xl max-h-[95vh] overflow-hidden p-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-primary" />
+              {selectedTournament?.name} - Team Management
+            </DialogTitle>
+            <DialogDescription>
+              Manage teams for {selectedTournament?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto flex-1 px-6 py-4">
+            {selectedTournament && (
+              <div className="space-y-6">
+                <div className="text-center py-8">
+                  <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                  <h3 className="font-semibold text-foreground mb-2">Team Management</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Team management for "{selectedTournament.name}" will be available here.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    This will integrate with the live team data from your tournament.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tournament Settings Modal */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[95vh] overflow-hidden p-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-primary" />
+              Tournament Settings - {tournamentToEdit?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Configure all aspects of your tournament
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="overflow-y-auto flex-1">
+            {tournamentToEdit && (
+              <Tabs defaultValue="general" className="w-full">
+                <div className="px-6 pt-4">
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="general" className="gap-2">
+                      <Trophy className="w-4 h-4" />
+                      General
+                    </TabsTrigger>
+                    <TabsTrigger value="venue" className="gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Venue
+                    </TabsTrigger>
+                    <TabsTrigger value="prizes" className="gap-2">
+                      <Award className="w-4 h-4" />
+                      Prizes
+                    </TabsTrigger>
+                    <TabsTrigger value="advanced" className="gap-2">
+                      <Shield className="w-4 h-4" />
+                      Advanced
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <div className="px-6 pb-4">
+                  {/* General Settings Tab */}
+                  <TabsContent value="general" className="space-y-6 mt-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Trophy className="w-5 h-5 text-primary" />
+                          Tournament Information
+                        </CardTitle>
+                        <CardDescription>Basic tournament details and configuration</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-name">Tournament Name</Label>
+                            <Input
+                              id="edit-name"
+                              value={tournamentToEdit.name}
+                              onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, name: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-status">Status</Label>
+                            <Select value={tournamentToEdit.status} onValueChange={(value: Tournament['status']) => setTournamentToEdit({ ...tournamentToEdit, status: value })}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="draft">Draft</SelectItem>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-description">Description</Label>
+                          <Textarea
+                            id="edit-description"
+                            value={tournamentToEdit.description || ''}
+                            onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, description: e.target.value })}
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-format">Format</Label>
+                            <Select value={tournamentToEdit.tournamentType} onValueChange={(value) => setTournamentToEdit({ ...tournamentToEdit, tournamentType: value as any })}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="single_elimination">Single Elimination</SelectItem>
+                                <SelectItem value="double_elimination">Double Elimination</SelectItem>
+                                <SelectItem value="round_robin">Round Robin</SelectItem>
+                                <SelectItem value="swiss_system">Swiss System</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-start-date">Start Date</Label>
+                            <Input
+                              id="edit-start-date"
+                              type="date"
+                              value={tournamentToEdit.startDate}
+                              onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, startDate: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-end-date">End Date</Label>
+                            <Input
+                              id="edit-end-date"
+                              type="date"
+                              value={tournamentToEdit.endDate}
+                              onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, endDate: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-max-teams">Maximum Teams</Label>
+                            <Select value={tournamentToEdit.maxTeams.toString()} onValueChange={(value) => setTournamentToEdit({ ...tournamentToEdit, maxTeams: parseInt(value) })}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="4">4 Teams</SelectItem>
+                                <SelectItem value="8">8 Teams</SelectItem>
+                                <SelectItem value="16">16 Teams</SelectItem>
+                                <SelectItem value="32">32 Teams</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-3">
+                            <Label>Registration Settings</Label>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="auto-register" className="text-sm">Allow Auto Registration</Label>
+                              <Switch id="auto-register" defaultChecked />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="public-registration" className="text-sm">Public Registration</Label>
+                              <Switch id="public-registration" />
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Other tabs would be implemented here */}
+                  <TabsContent value="venue" className="space-y-6 mt-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Venue Settings</CardTitle>
+                        <CardDescription>Configure tournament venue and location</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">Venue settings will be implemented here.</p>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="prizes" className="space-y-6 mt-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Prize Settings</CardTitle>
+                        <CardDescription>Configure tournament prizes and awards</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">Prize settings will be implemented here.</p>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="advanced" className="space-y-6 mt-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Advanced Settings</CardTitle>
+                        <CardDescription>Advanced tournament configuration</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">Advanced settings will be implemented here.</p>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </div>
+              </Tabs>
+            )}
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t">
+            <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveSettings}>
+              Save Settings
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
