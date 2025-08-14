@@ -2,104 +2,103 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Trophy, Users, Calendar, Target, TrendingUp, Award, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { useOrganizerDashboardData } from "@/hooks/useOrganizerDashboardData";
 
 export function OrganizerDashboardOverview() {
-  // Mock data for now - will be replaced with real data from hooks
+  const { data, loading, error } = useOrganizerDashboardData();
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-8 bg-muted rounded mb-2"></div>
+                <div className="h-12 bg-muted rounded mb-2"></div>
+                <div className="h-4 bg-muted rounded"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1, 2].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-6 bg-muted rounded mb-4"></div>
+                <div className="space-y-3">
+                  {[1, 2, 3].map((j) => (
+                    <div key={j} className="h-20 bg-muted rounded"></div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6 mt-6">
+        <Card className="border-destructive">
+          <CardContent className="p-6 text-center">
+            <div className="text-destructive mb-2">Error loading dashboard data</div>
+            <div className="text-sm text-muted-foreground">{error}</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Use live data from the hook
   const stats = [
     {
       title: "Active Tournaments",
-      value: "3",
-      description: "2 in progress",
+      value: data.stats.activeTournaments.toString(),
+      description: `${data.stats.totalTournaments} total tournaments`,
       icon: Trophy,
       color: "text-white",
       bgGradient: "bg-gradient-to-br from-primary to-primary/80",
-      trend: "+12%"
+      trend: data.stats.trends.tournaments
     },
     {
       title: "Total Teams",
-      value: "24",
-      description: "8 teams per tournament avg",
+      value: data.stats.totalTeams.toString(),
+      description: `${Math.round(data.stats.totalTeams / Math.max(data.stats.totalTournaments, 1))} teams per tournament avg`,
       icon: Users,
       color: "text-white", 
       bgGradient: "bg-gradient-to-br from-blue-500 to-blue-600",
-      trend: "+8%"
+      trend: data.stats.trends.teams
     },
     {
       title: "Games Scheduled",
-      value: "156",
+      value: data.stats.totalGames.toString(),
       description: "12 this week",
       icon: Calendar,
       color: "text-white",
       bgGradient: "bg-gradient-to-br from-orange-500 to-orange-600",
-      trend: "+24%"
+      trend: data.stats.trends.games
     },
     {
       title: "Completion Rate",
-      value: "87%",
+      value: `${data.stats.completionRate}%`,
       description: "Games completed on time",
       icon: Target,
       color: "text-white",
       bgGradient: "bg-gradient-to-br from-red-500 to-red-600",
-      trend: "+5%"
+      trend: data.stats.trends.completion
     }
   ];
 
-  const recentTournaments = [
-    { 
-      name: "Spring Championship", 
-      status: "Active", 
-      teams: 8, 
-      progress: 75,
-      venue: "Madison Square Arena",
-      prize: "$25,000",
-      nextGame: "Today 3:00 PM"
-    },
-    { 
-      name: "Youth League Finals", 
-      status: "Upcoming", 
-      teams: 6, 
-      progress: 0,
-      venue: "Community Sports Center",
-      prize: "$5,000",
-      nextGame: "Apr 1, 2:00 PM"
-    },
-    { 
-      name: "Summer Classic", 
-      status: "Active", 
-      teams: 12, 
-      progress: 45,
-      venue: "Downtown Basketball Complex",
-      prize: "$50,000",
-      nextGame: "Tomorrow 1:00 PM"
-    },
-  ];
+  // Use live recent tournaments data
+  const recentTournaments = data.recentTournaments;
 
-  const upcomingGames = [
-    { 
-      team1: "Lakers", 
-      team2: "Warriors", 
-      time: "Today 3:00 PM", 
-      court: "Court A",
-      tournament: "Spring Championship",
-      importance: "Semifinal"
-    },
-    { 
-      team1: "Bulls", 
-      team2: "Celtics", 
-      time: "Today 5:00 PM", 
-      court: "Court B",
-      tournament: "Summer Classic",
-      importance: "Quarterfinal"
-    },
-    { 
-      team1: "Heat", 
-      team2: "Spurs", 
-      time: "Tomorrow 2:00 PM", 
-      court: "Court A",
-      tournament: "Spring Championship",
-      importance: "Final"
-    },
-  ];
+  // Use live upcoming games data
+  const upcomingGames = data.upcomingGames;
 
   return (
     <div className="space-y-6 mt-6">

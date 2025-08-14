@@ -301,7 +301,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         teamId: stat.teamId,
         statType: stat.statType,
         statValue: statValue,
-        modifier: stat.modifier,
+        modifier: stat.modifier || undefined,
         quarter: quarter,
         gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
         gameTimeSeconds: clock.secondsRemaining % 60
@@ -365,11 +365,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         
         // Update rosters locally for immediate UI feedback
         const updateRoster = (roster: RosterState) => {
-          const newOnCourt = roster.onCourt.map(p => 
-            p.id === sub.playerOutId ? { ...p, id: sub.playerInId } : p
+          const newOnCourt = roster.onCourt.map(playerId => 
+            playerId === sub.playerOutId ? sub.playerInId : playerId
           );
-          const newBench = roster.bench.map(p => 
-            p.id === sub.playerInId ? { ...p, id: sub.playerOutId } : p
+          const newBench = roster.bench.map(playerId => 
+            playerId === sub.playerInId ? sub.playerOutId : playerId
           );
           return { ...roster, onCourt: newOnCourt, bench: newBench };
         };

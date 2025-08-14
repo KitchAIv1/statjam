@@ -9,55 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-interface Tournament {
-  id: string;
-  name: string;
-  format: string;
-  startDate: string;
-  endDate: string;
-  teams: number;
-  maxTeams: number;
-  status: 'Draft' | 'Active' | 'Completed';
-  description: string;
-}
+import { useTournaments } from "@/lib/hooks/useTournaments";
+import { Tournament } from "@/lib/types/tournament";
 
 export function OrganizerTournamentManager() {
-  const [tournaments, setTournaments] = useState<Tournament[]>([
-    {
-      id: "1",
-      name: "Spring Championship",
-      format: "Single Elimination",
-      startDate: "2025-03-15",
-      endDate: "2025-03-22",
-      teams: 8,
-      maxTeams: 8,
-      status: "Active",
-      description: "Annual spring basketball championship"
-    },
-    {
-      id: "2",
-      name: "Youth League Finals",
-      format: "Round Robin",
-      startDate: "2025-04-01",
-      endDate: "2025-04-08",
-      teams: 4,
-      maxTeams: 6,
-      status: "Draft",
-      description: "Youth division championship tournament"
-    },
-    {
-      id: "3",
-      name: "Summer Classic",
-      format: "Double Elimination",
-      startDate: "2025-06-10",
-      endDate: "2025-06-20",
-      teams: 12,
-      maxTeams: 16,
-      status: "Active",
-      description: "Premier summer basketball tournament"
-    }
-  ]);
+  const { tournaments, loading, error, createTournament, deleteTournament } = useTournaments();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newTournament, setNewTournament] = useState({
@@ -69,43 +25,101 @@ export function OrganizerTournamentManager() {
     description: ""
   });
 
-  const handleCreateTournament = () => {
-    const tournament: Tournament = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newTournament.name,
-      format: newTournament.format,
-      startDate: newTournament.startDate,
-      endDate: newTournament.endDate,
-      teams: 0,
-      maxTeams: parseInt(newTournament.maxTeams),
-      status: "Draft",
-      description: newTournament.description
-    };
+  const handleCreateTournament = async () => {
+    try {
+      const tournamentData = {
+        name: newTournament.name,
+        description: newTournament.description,
+        startDate: newTournament.startDate,
+        endDate: newTournament.endDate,
+        venue: "TBD", // Will be updated in the form
+        maxTeams: parseInt(newTournament.maxTeams),
+        tournamentType: newTournament.format.toLowerCase().replace(' ', '_') as any,
+        isPublic: true,
+        entryFee: 0,
+        prizePool: 0,
+        country: "US"
+      };
 
-    setTournaments([...tournaments, tournament]);
-    setNewTournament({
-      name: "",
-      format: "",
-      startDate: "",
-      endDate: "",
-      maxTeams: "",
-      description: ""
-    });
-    setIsCreateDialogOpen(false);
+      const result = await createTournament(tournamentData);
+      if (result) {
+        setNewTournament({
+          name: "",
+          format: "",
+          startDate: "",
+          endDate: "",
+          maxTeams: "",
+          description: ""
+        });
+        setIsCreateDialogOpen(false);
+      }
+    } catch (error) {
+      console.error('Error creating tournament:', error);
+    }
   };
 
   const getStatusVariant = (status: Tournament['status']) => {
     switch (status) {
-      case 'Active':
+      case 'active':
         return 'default';
-      case 'Draft':
+      case 'draft':
         return 'secondary';
-      case 'Completed':
+      case 'completed':
         return 'outline';
+      case 'cancelled':
+        return 'destructive';
       default:
         return 'secondary';
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Tournament Management</h2>
+            <p className="text-muted-foreground">Create and manage your basketball tournaments</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-6 bg-muted rounded mb-4"></div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-muted rounded"></div>
+                  <div className="h-4 bg-muted rounded"></div>
+                  <div className="h-4 bg-muted rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Tournament Management</h2>
+            <p className="text-muted-foreground">Create and manage your basketball tournaments</p>
+          </div>
+        </div>
+        <Card className="border-destructive">
+          <CardContent className="p-6 text-center">
+            <div className="text-destructive mb-2">Error loading tournaments</div>
+            <div className="text-sm text-muted-foreground">{error}</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -223,21 +237,21 @@ export function OrganizerTournamentManager() {
                     <CardTitle className="text-base group-hover:text-primary transition-colors">{tournament.name}</CardTitle>
                     <CardDescription className="flex items-center gap-1 mt-1">
                       <div className="w-2 h-2 bg-accent rounded-full"></div>
-                      {tournament.format}
+                      {tournament.tournamentType}
                     </CardDescription>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <Badge variant={getStatusVariant(tournament.status)} className={
-                    tournament.status === 'Active' 
+                    tournament.status === 'active' 
                       ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-0' 
-                      : tournament.status === 'Completed'
+                      : tournament.status === 'completed'
                       ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0'
                       : ''
                   }>
                     {tournament.status}
                   </Badge>
-                  {tournament.status === 'Active' && (
+                  {tournament.status === 'active' && (
                     <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                   )}
                 </div>
@@ -255,7 +269,7 @@ export function OrganizerTournamentManager() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Teams</p>
-                      <p className="text-sm font-semibold">{tournament.teams}/{tournament.maxTeams}</p>
+                      <p className="text-sm font-semibold">{tournament.currentTeams}/{tournament.maxTeams}</p>
                     </div>
                   </div>
                   
@@ -277,7 +291,7 @@ export function OrganizerTournamentManager() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Format</p>
-                      <p className="text-xs font-semibold">{tournament.format.split(' ')[0]}</p>
+                      <p className="text-xs font-semibold">{tournament.tournamentType.split('_')[0]}</p>
                     </div>
                   </div>
                   

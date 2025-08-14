@@ -67,6 +67,11 @@ export class UserService {
         }
       }
 
+      if (!profile) {
+        console.log('User profile not found - may still be syncing');
+        return null;
+      }
+
       return {
         id: profile.id,
         email: profile.email,

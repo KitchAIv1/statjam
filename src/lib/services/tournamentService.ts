@@ -625,20 +625,23 @@ export class TeamService {
       console.log('🔍 TeamService: Found team players:', teamPlayers?.length || 0);
 
       // Filter out any team_players records where users is null (orphaned records)
-      const validTeamPlayers = (teamPlayers || []).filter((tp): tp is { users: NonNullable<typeof tp.users> } => tp.users !== null);
+      const validTeamPlayers = (teamPlayers || []).filter(tp => tp.users !== null);
       console.log('🔍 TeamService: Valid team players (non-null users):', validTeamPlayers.length);
 
       // Map team_players data to Player interface
-      const players = validTeamPlayers.map(tp => ({
-        id: tp.users.id,
-        name: tp.users.email.split('@')[0], // Use email prefix as name for now
-        email: tp.users.email,
-        position: 'PG' as Player['position'], // Default position
-        jerseyNumber: Math.floor(Math.random() * 99) + 1, // Random jersey number
-        isPremium: tp.users.premium_status || false,
-        country: tp.users.country || 'US',
-        createdAt: tp.users.created_at || new Date().toISOString(),
-      }));
+      const players = validTeamPlayers.map(tp => {
+        const user = tp.users[0]; // Get the first user from the array
+        return {
+          id: user.id,
+          name: user.email.split('@')[0], // Use email prefix as name for now
+          email: user.email,
+          position: 'PG' as Player['position'], // Default position
+          jerseyNumber: Math.floor(Math.random() * 99) + 1, // Random jersey number
+          isPremium: user.premium_status || false,
+          country: user.country || 'US',
+          createdAt: user.created_at || new Date().toISOString(),
+        };
+      });
 
       console.log('🔍 TeamService: Mapped team players:', players.map(p => ({ name: p.name, position: p.position, jersey: p.jerseyNumber })));
       
