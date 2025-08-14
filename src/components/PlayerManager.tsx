@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Users, Plus, UserPlus, Trash2, Search, Filter, Calendar, Hash, Edit, CheckCircle, Loader2, AlertCircle } from "lucide-react";
+import { Users, Plus, UserPlus, Trash2, Search, Filter, Calendar, Hash, Edit, CheckCircle, Loader2, AlertCircle, Check } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Team as TeamType, Player } from "@/lib/types/tournament";
@@ -26,6 +26,11 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
   const [addingPlayerId, setAddingPlayerId] = useState<string | null>(null);
   const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // Multi-select state for batch player addition
+  const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
+  const [isAddingBatch, setIsAddingBatch] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   
   // Available roster players (not in team)
   const [rosterPlayers, setRosterPlayers] = useState<Player[]>([]);
@@ -77,6 +82,9 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
       setAddingPlayerId(null);
       setRecentlyAdded(new Set());
       setSuccessMessage(null);
+      setSelectedPlayers(new Set());
+      setIsAddingBatch(false);
+      setShowConfirmation(false);
     }
   }, [isOpen]);
 
@@ -274,6 +282,100 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
   const getInitials = (name: string) => {
     const safeName = name || 'Unknown Player';
     return safeName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  // Multi-select handlers
+  const handlePlayerSelection = (playerId: string, isSelected: boolean) => {
+    setSelectedPlayers(prev => {
+      const newSet = new Set(prev);
+      if (isSelected) {
+        newSet.add(playerId);
+      } else {
+        newSet.delete(playerId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleBatchAddPlayers = async () => {
+    if (!team || selectedPlayers.size === 0) return;
+
+    setIsAddingBatch(true);
+    setError(null);
+
+    try {
+      const selectedPlayerObjects = filteredRosterPlayers.filter(p => selectedPlayers.has(p.id));
+      const results = { success: 0, failed: 0, errors: [] as string[] };
+
+      // Process each selected player
+      for (const player of selectedPlayerObjects) {
+        try {
+          // Check if player is already in team
+          if (teamPlayers.some(p => p.id === player.id)) {
+            results.failed++;
+            results.errors.push(`${player.name || player.email?.split('@')[0] || 'Player'} is already in this team`);
+            continue;
+          }
+
+          // Generate jersey number
+          const usedNumbers = teamPlayers.map(p => p.jerseyNumber);
+          let jerseyNumber = 1;
+          while (usedNumbers.includes(jerseyNumber) && jerseyNumber <= 99) {
+            jerseyNumber++;
+          }
+
+          // Add player to database
+          await TeamService.addPlayerToTeam(
+            team.id,
+            player.id,
+            player.position,
+            jerseyNumber
+          );
+
+          // Update local state
+          const newPlayer: Player = {
+            ...player,
+            jerseyNumber,
+            inTeam: true
+          };
+
+          setTeamPlayers(prev => [...prev, newPlayer]);
+          setRosterPlayers(prev => prev.filter(p => p.id !== player.id));
+          setRecentlyAdded(prev => new Set([...prev, player.id]));
+
+          results.success++;
+        } catch (error) {
+          results.failed++;
+          const playerName = player.name || player.email?.split('@')[0] || 'Player';
+          results.errors.push(`Failed to add ${playerName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      // Show summary
+      if (results.success > 0) {
+        setSuccessMessage(`${results.success} player${results.success > 1 ? 's' : ''} added successfully${results.failed > 0 ? `, ${results.failed} failed` : ''}`);
+        onUpdateTeam?.();
+      }
+
+      if (results.failed > 0) {
+        setError(`Some players failed to add: ${results.errors.slice(0, 3).join(', ')}${results.errors.length > 3 ? '...' : ''}`);
+      }
+
+      // Clear selection and close confirmation
+      setSelectedPlayers(new Set());
+      setShowConfirmation(false);
+
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+
+    } catch (error) {
+      console.error('Error in batch add:', error);
+      setError('Failed to add selected players. Please try again.');
+    } finally {
+      setIsAddingBatch(false);
+    }
   };
 
   if (!team) return null;
@@ -551,6 +653,37 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
               </div>
             )}
 
+            {/* Selection Summary */}
+            {selectedPlayers.size > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-blue-800">
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {selectedPlayers.size} player{selectedPlayers.size > 1 ? 's' : ''} selected
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedPlayers(new Set())}
+                      className="text-xs h-8"
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowConfirmation(true)}
+                      className="text-xs h-8"
+                    >
+                      Add Selected
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
               <Input
                 placeholder="Search players..."
@@ -574,10 +707,27 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               {filteredRosterPlayers.map((player) => (
-                <Card key={player.id} className="border border-border/50 hover:border-primary/20">
+                <Card 
+                  key={player.id} 
+                  className={`border transition-all duration-200 ${
+                    selectedPlayers.has(player.id) 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border/50 hover:border-primary/20'
+                  }`}
+                >
                   <CardHeader className="pb-2 sm:pb-4 px-3 sm:px-6 pt-3 sm:pt-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                        {/* Checkbox */}
+                        <div className="flex-shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedPlayers.has(player.id)}
+                            onChange={(e) => handlePlayerSelection(player.id, e.target.checked)}
+                            className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-2"
+                            disabled={recentlyAdded.has(player.id)}
+                          />
+                        </div>
                         <Avatar className="w-8 h-8 flex-shrink-0">
                           <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                             {getInitials(player.name)}
@@ -636,6 +786,61 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
                 </p>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Player Addition</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to add {selectedPlayers.size} player{selectedPlayers.size > 1 ? 's' : ''} to {team?.name}?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="text-sm text-muted-foreground mb-4">
+              Selected players:
+            </div>
+            <div className="max-h-32 overflow-y-auto space-y-1">
+              {filteredRosterPlayers
+                .filter(p => selectedPlayers.has(p.id))
+                .map(player => (
+                  <div key={player.id} className="flex items-center gap-2 text-sm">
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    <span>{player.name || player.email?.split('@')[0] || 'Unknown Player'}</span>
+                    <span className="text-muted-foreground">({player.position})</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowConfirmation(false)}
+              className="flex-1"
+              disabled={isAddingBatch}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleBatchAddPlayers}
+              className="flex-1"
+              disabled={isAddingBatch}
+            >
+              {isAddingBatch ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  Add Players
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
