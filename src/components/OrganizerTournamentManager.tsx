@@ -450,8 +450,8 @@ export function OrganizerTournamentManager() {
 
       {/* Team Manager Modal */}
       <Dialog open={isTeamManagerOpen} onOpenChange={setIsTeamManagerOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-5xl max-h-[95vh] overflow-hidden p-0">
-          <DialogHeader className="px-6 py-4 border-b">
+        <DialogContent className="max-w-[95vw] sm:max-w-5xl max-h-[95vh] flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-primary" />
               {selectedTournament?.name} - Team Management
@@ -460,9 +460,9 @@ export function OrganizerTournamentManager() {
               Manage teams for {selectedTournament?.name}
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 px-6 py-4">
+          <div className="overflow-y-auto flex-1 px-6 py-4 min-h-0">
             {selectedTournament && (
-              <div className="space-y-6">
+              <div className="space-y-6 pb-6">
                 {/* Loading State */}
                 {teamManagement?.loading && (
                   <div className="text-center py-8">
