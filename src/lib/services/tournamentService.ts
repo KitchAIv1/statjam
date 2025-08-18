@@ -426,7 +426,7 @@ export class TeamService {
     try {
       console.log('🔍 TeamService: Fetching teams for tournament:', tournamentId);
       
-      // Simplified query with only existing columns
+      // Query with name column if it exists
       const { data: teams, error } = await supabase
         .from('teams')
         .select(`
@@ -440,7 +440,8 @@ export class TeamService {
               email,
               premium_status,
               country,
-              created_at
+              created_at,
+              name
             )
           )
         `)
@@ -476,21 +477,32 @@ export class TeamService {
 
         // Process players from the join data (handle null/empty team_players)
         if (team.team_players && Array.isArray(team.team_players) && team.team_players.length > 0) {
-          const validTeamPlayers = team.team_players.filter(tp => 
-            tp && tp.users && 
-            Array.isArray(tp.users) && 
-            tp.users.length > 0 && 
-            tp.users[0]
-          );
+          const validTeamPlayers = team.team_players.filter(tp => {
+            // Handle both array and object responses from Supabase
+            return tp && tp.users && (
+              (Array.isArray(tp.users) && tp.users.length > 0 && tp.users[0]) ||
+              (!Array.isArray(tp.users) && tp.users.id)
+            );
+          });
 
-          teamPlayers = validTeamPlayers.map(tp => {
-            const user = tp.users[0];
+          teamPlayers = validTeamPlayers.map((tp, index) => {
+            // Handle both array and object responses from Supabase
+            const user = Array.isArray(tp.users) ? tp.users[0] : tp.users;
+            
+            // Generate player name using actual name column if available, otherwise use email
+            const playerName = user.name || 
+              (user.email ? 
+                (user.email.includes('@') ? 
+                  user.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : 
+                  user.email) : 
+                `Player ${index + 1}`);
+            
             return {
               id: user.id,
-              name: user.email.split('@')[0],
+              name: playerName,
               email: user.email,
-              position: 'PG' as Player['position'],
-              jerseyNumber: Math.floor(Math.random() * 99) + 1,
+              position: 'PG' as Player['position'], // Default position (columns don't exist in DB yet)
+              jerseyNumber: index + 1, // Sequential jersey numbers (column doesn't exist in DB yet)
               isPremium: user.premium_status || false,
               country: user.country || 'US',
               createdAt: user.created_at || new Date().toISOString(),
@@ -515,10 +527,11 @@ export class TeamService {
         };
       });
 
-      console.log('🔍 TeamService: Mapped teams:', mappedTeams.map(t => ({ 
+      console.log('🔍 TeamService: Mapped teams with players:', mappedTeams.map(t => ({ 
         id: t.id, 
         name: t.name, 
-        playerCount: t.players.length 
+        playerCount: t.players.length,
+        players: t.players.map(p => ({ name: p.name, position: p.position, jersey: p.jerseyNumber }))
       })));
       
       return mappedTeams;
@@ -665,32 +678,17 @@ export class TeamService {
   // Team-Player Relationship Management
   static async addPlayerToTeam(teamId: string, playerId: string, position?: string, jerseyNumber?: number): Promise<void> {
     try {
-      console.log('🔍 TeamService: Adding player to team:', { teamId, playerId, position, jerseyNumber });
+      console.log('🔍 TeamService: Adding player to team:', { teamId, playerId });
+      console.log('⚠️ Note: position and jerseyNumber are ignored as team_players table only has (team_id, player_id)');
       
-      // Check if player is already in team to prevent duplicate key violations
-      const { data: existingPlayer, error: checkError } = await supabase
-        .from('team_players')
-        .select('player_id')
-        .eq('team_id', teamId)
-        .eq('player_id', playerId)
-        .single();
-
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('❌ Error checking existing player:', checkError);
-        throw new Error(`Failed to check existing player: ${checkError.message}`);
-      }
-
-      if (existingPlayer) {
-        throw new Error('Player is already in this team');
-      }
-      
+      // Use upsert to handle duplicates gracefully at database level
       const { error } = await supabase
         .from('team_players')
-        .insert({
+        .upsert({
           team_id: teamId,
-          player_id: playerId,
-          position: position || null,
-          jersey_number: jerseyNumber || null
+          player_id: playerId
+        }, {
+          onConflict: 'team_id,player_id'
         });
 
       if (error) {
@@ -731,8 +729,6 @@ export class TeamService {
     try {
       console.log('🔍 TeamService: Fetching players for team:', teamId);
       
-
-      
       const { data: teamPlayers, error } = await supabase
         .from('team_players')
         .select(`
@@ -742,7 +738,8 @@ export class TeamService {
             email,
             premium_status,
             country,
-            created_at
+            created_at,
+            name
           )
         `)
         .eq('team_id', teamId);
@@ -759,14 +756,9 @@ export class TeamService {
       console.log('🔍 TeamService: Valid team players (non-null users):', validTeamPlayers.length);
 
       // Map team_players data to Player interface
-      const players = validTeamPlayers.map(tp => {
-        // Check if users array exists and has elements
-        if (!tp.users || !Array.isArray(tp.users) || tp.users.length === 0) {
-          console.warn('⚠️ TeamService: Users array is empty or invalid for team player:', tp);
-          return null;
-        }
-        
-        const user = tp.users[0]; // Get the first user from the array
+      const players = validTeamPlayers.map((tp, index) => {
+        // Handle both array and object responses from Supabase
+        const user = Array.isArray(tp.users) ? tp.users[0] : tp.users;
         
         // Add null check for user
         if (!user) {
@@ -774,12 +766,20 @@ export class TeamService {
           return null;
         }
         
+        // Generate player name using actual name column if available, otherwise use email
+        const playerName = user.name || 
+          (user.email ? 
+            (user.email.includes('@') ? 
+              user.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : 
+              user.email) : 
+            `Player ${index + 1}`);
+        
         return {
           id: user.id,
-          name: user.email.split('@')[0], // Use email prefix as name for now
+          name: playerName,
           email: user.email,
-          position: 'PG' as Player['position'], // Default position
-          jerseyNumber: Math.floor(Math.random() * 99) + 1, // Random jersey number
+          position: 'PG' as Player['position'], // Default position (columns don't exist in DB yet)
+          jerseyNumber: index + 1, // Sequential jersey numbers (column doesn't exist in DB yet)
           isPremium: user.premium_status || false,
           country: user.country || 'US',
           createdAt: user.created_at || new Date().toISOString(),

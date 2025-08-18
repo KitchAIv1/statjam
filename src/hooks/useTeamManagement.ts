@@ -34,7 +34,14 @@ export function useTeamManagement(tournamentId: string) {
       return;
     }
 
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    // Prevent multiple simultaneous fetches
+    setState(prev => {
+      if (prev.loading) {
+        console.log('🔍 useTeamManagement: Already loading, skipping duplicate fetch');
+        return prev;
+      }
+      return { ...prev, loading: true, error: null };
+    });
     
     try {
       console.log('🔍 useTeamManagement: Fetching teams for tournament:', tournamentId);
