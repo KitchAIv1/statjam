@@ -891,4 +891,106 @@ export class TeamService {
       return [];
     }
   }
+
+  // Get stat admins assigned to games in a specific tournament
+  static async getTournamentStatAdmins(tournamentId: string): Promise<string[]> {
+    try {
+      console.log('🔍 TeamService: Fetching stat admins for tournament:', tournamentId);
+      
+      const { data: games, error } = await supabase
+        .from('games')
+        .select('stat_admin_id')
+        .eq('tournament_id', tournamentId)
+        .not('stat_admin_id', 'is', null);
+
+      if (error) {
+        console.error('❌ Supabase error getting tournament stat admins:', error);
+        return [];
+      }
+
+      // Extract unique stat admin IDs
+      const statAdminIds = [...new Set(
+        (games || [])
+          .map(game => game.stat_admin_id)
+          .filter(id => id !== null)
+      )];
+
+      console.log('🔍 TeamService: Found stat admins for tournament:', statAdminIds.length, 'unique admins');
+      return statAdminIds;
+    } catch (error) {
+      console.error('Error getting tournament stat admins:', error);
+      return [];
+    }
+  }
+
+  // Update stat admin assignments for all games in a tournament
+  static async updateTournamentStatAdmins(tournamentId: string, statAdminIds: string[]): Promise<boolean> {
+    try {
+      console.log('🔍 TeamService: Updating stat admin assignments for tournament:', tournamentId);
+      console.log('🔍 TeamService: New assignments:', statAdminIds);
+
+      // Get all games for this tournament
+      const { data: games, error: gamesError } = await supabase
+        .from('games')
+        .select('id')
+        .eq('tournament_id', tournamentId);
+
+      if (gamesError) {
+        console.error('❌ Error fetching tournament games:', gamesError);
+        return false;
+      }
+
+      if (!games || games.length === 0) {
+        console.log('ℹ️ No games found for tournament, assignments saved for when games are created');
+        return true;
+      }
+
+      // If no stat admins assigned, clear all assignments
+      if (statAdminIds.length === 0) {
+        const { error: clearError } = await supabase
+          .from('games')
+          .update({ stat_admin_id: null })
+          .eq('tournament_id', tournamentId);
+
+        if (clearError) {
+          console.error('❌ Error clearing stat admin assignments:', clearError);
+          return false;
+        }
+
+        console.log('✅ Cleared all stat admin assignments for tournament');
+        return true;
+      }
+
+      // Assign stat admins to games (round-robin distribution)
+      let updatePromises = [];
+      for (let i = 0; i < games.length; i++) {
+        const statAdminId = statAdminIds[i % statAdminIds.length]; // Round-robin assignment
+        updatePromises.push(
+          supabase
+            .from('games')
+            .update({ stat_admin_id: statAdminId })
+            .eq('id', games[i].id)
+        );
+      }
+
+      const results = await Promise.all(updatePromises);
+      const hasErrors = results.some(result => result.error);
+
+      if (hasErrors) {
+        console.error('❌ Some stat admin assignments failed');
+        results.forEach((result, index) => {
+          if (result.error) {
+            console.error(`❌ Game ${games[index].id}:`, result.error);
+          }
+        });
+        return false;
+      }
+
+      console.log('✅ Successfully updated stat admin assignments for tournament');
+      return true;
+    } catch (error) {
+      console.error('Error updating tournament stat admins:', error);
+      return false;
+    }
+  }
 }

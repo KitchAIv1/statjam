@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2, UserCheck, UserX, Target } from "lucide-react";
+import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2, UserCheck, UserX, Target, CalendarDays } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,10 +16,12 @@ import { Separator } from "@/components/ui/separator";
 import { useTournaments } from "@/lib/hooks/useTournaments";
 import { useTeamManagement } from "@/hooks/useTeamManagement";
 import { useTournamentTeamCount } from "@/hooks/useTournamentTeamCount";
+import { useTournamentGameStatus } from "@/hooks/useTournamentGameStatus";
 import { TournamentTableRow } from "@/components/TournamentTableRow";
 import { Tournament } from "@/lib/types/tournament";
 import { PlayerManager } from "@/components/PlayerManager";
 import { TeamService } from "@/lib/services/tournamentService";
+import { useRouter } from 'next/navigation';
 
 // Utility function for tournament status variants
 function getStatusVariant(status: Tournament['status']) {
@@ -41,13 +43,16 @@ function getStatusVariant(status: Tournament['status']) {
 interface TournamentCardProps {
   tournament: Tournament;
   onManageTeams: (tournament: Tournament) => void;
+  onManageSchedule: (tournament: Tournament) => void;
   onOpenSettings: (tournament: Tournament) => void;
 }
 
-function TournamentCard({ tournament, onManageTeams, onOpenSettings }: TournamentCardProps) {
+function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSettings }: TournamentCardProps) {
   const { currentTeams, maxTeams, loading: teamCountLoading } = useTournamentTeamCount(tournament.id, {
     maxTeams: tournament.maxTeams
   });
+  
+  const { hasGames, gameCount, loading: gameStatusLoading } = useTournamentGameStatus(tournament.id);
 
   return (
     <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden">
@@ -138,24 +143,47 @@ function TournamentCard({ tournament, onManageTeams, onOpenSettings }: Tournamen
           </div>
         </div>
         
-        <div className="flex gap-2 pt-2 border-t border-border/50">
+        <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-border/50">
           <Button 
             size="sm" 
             variant="outline" 
-            className="flex-1 gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+            className="gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
             onClick={() => onManageTeams(tournament)}
           >
             <UserPlus className="w-3 h-3" />
-            Teams
+            <span className="hidden sm:inline">Teams</span>
           </Button>
+          
+          <Button 
+            size="sm" 
+            variant={hasGames ? "default" : "outline"}
+            className={`gap-1 ${
+              hasGames 
+                ? "bg-green-600 hover:bg-green-700 text-white border-green-600"
+                : "hover:bg-orange/10 hover:text-orange-600 hover:border-orange/30"
+            }`}
+            onClick={() => onManageSchedule(tournament)}
+            disabled={gameStatusLoading}
+          >
+            <CalendarDays className="w-3 h-3" />
+            <span className="hidden sm:inline">
+              {gameStatusLoading ? "..." : hasGames ? "Schedule" : "Create"}
+            </span>
+            {hasGames && gameCount > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs px-1 py-0 h-4 min-w-4">
+                {gameCount}
+              </Badge>
+            )}
+          </Button>
+          
           <Button 
             size="sm" 
             variant="outline" 
-            className="flex-1 gap-1 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
+            className="gap-1 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
             onClick={() => onOpenSettings(tournament)}
           >
             <Settings className="w-3 h-3" />
-            Settings
+            <span className="hidden sm:inline">Settings</span>
           </Button>
         </div>
       </CardContent>
@@ -167,6 +195,7 @@ function TournamentCard({ tournament, onManageTeams, onOpenSettings }: Tournamen
 
 export function OrganizerTournamentManager() {
   const { tournaments, loading, error, createTournament, deleteTournament } = useTournaments();
+  const router = useRouter();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
@@ -195,12 +224,34 @@ export function OrganizerTournamentManager() {
 
   // Load stat admins when settings modal opens
   const loadStatAdmins = async () => {
+    if (!tournamentToEdit) return;
+    
     setLoadingStatAdmins(true);
     try {
       console.log('🔍 Loading stat admins for tournament settings...');
+      
+      // Load all available stat admins
       const admins = await TeamService.getStatAdmins();
       console.log('✅ Loaded stat admins:', admins.length, 'admins');
       setStatAdmins(admins);
+      
+      // Load existing assignments for this tournament
+      console.log('🔍 Loading existing stat admin assignments for tournament:', tournamentToEdit.id);
+      
+      // First check database (from games)
+      const dbAssignments = await TeamService.getTournamentStatAdmins(tournamentToEdit.id);
+      console.log('✅ Loaded DB assignments:', dbAssignments.length, 'assignments');
+      
+      // If no DB assignments, check localStorage for pending assignments
+      if (dbAssignments.length === 0) {
+        const localKey = `stat_admins_${tournamentToEdit.id}`;
+        const localAssignments = JSON.parse(localStorage.getItem(localKey) || '[]');
+        console.log('✅ Loaded local assignments:', localAssignments.length, 'assignments');
+        setAssignedStatAdmins(localAssignments);
+      } else {
+        setAssignedStatAdmins(dbAssignments);
+      }
+      
     } catch (error) {
       console.error('❌ Failed to load stat admins:', error);
     } finally {
@@ -221,8 +272,6 @@ export function OrganizerTournamentManager() {
   useEffect(() => {
     if (isSettingsOpen && tournamentToEdit) {
       loadStatAdmins();
-      // TODO: Load existing assigned stat admins for this tournament
-      setAssignedStatAdmins([]); // Reset for now
     }
   }, [isSettingsOpen, tournamentToEdit]);
 
@@ -276,6 +325,12 @@ export function OrganizerTournamentManager() {
     setIsPlayerManagerOpen(true);
   };
 
+  // Handle schedule management navigation
+  const handleManageSchedule = (tournament: Tournament) => {
+    console.log('🔍 Navigating to schedule for tournament:', tournament.name);
+    router.push(`/dashboard/tournaments/${tournament.id}/schedule`);
+  };
+
   const handlePlayerManagerClose = () => {
     setIsPlayerManagerOpen(false);
     setSelectedTeamForPlayers(null);
@@ -288,22 +343,24 @@ export function OrganizerTournamentManager() {
   const handleSaveSettings = async () => {
     if (tournamentToEdit) {
       try {
-        // This would update the tournament via the service
         console.log('Saving settings for tournament:', tournamentToEdit.name);
         console.log('Assigned stat admins:', assignedStatAdmins);
         
-        // TODO: Implement tournament update service call
-        // await TournamentService.updateTournament(tournamentToEdit.id, {
-        //   ...tournamentToEdit,
-        //   assignedStatAdmins
-        // });
+        // Save stat admin assignments to games
+        const success = await TeamService.updateTournamentStatAdmins(tournamentToEdit.id, assignedStatAdmins);
         
-        console.log('✅ Tournament settings saved successfully');
-        setIsSettingsOpen(false);
-        setTournamentToEdit(null);
-        setAssignedStatAdmins([]);
+        if (success) {
+          console.log('✅ Tournament settings saved successfully');
+          setIsSettingsOpen(false);
+          setTournamentToEdit(null);
+          setAssignedStatAdmins([]);
+        } else {
+          console.error('❌ Failed to save stat admin assignments');
+          // Keep modal open so user can retry
+        }
       } catch (error) {
         console.error('❌ Failed to save tournament settings:', error);
+        // Keep modal open so user can retry
       }
     }
   };
@@ -464,6 +521,7 @@ export function OrganizerTournamentManager() {
             key={tournament.id} 
             tournament={tournament}
             onManageTeams={handleManageTeams}
+            onManageSchedule={handleManageSchedule}
             onOpenSettings={handleOpenSettings}
           />
         ))}
@@ -493,6 +551,7 @@ export function OrganizerTournamentManager() {
                   key={tournament.id} 
                   tournament={tournament}
                   onManageTeams={handleManageTeams}
+                  onManageSchedule={handleManageSchedule}
                   onOpenSettings={handleOpenSettings}
                 />
               ))}
