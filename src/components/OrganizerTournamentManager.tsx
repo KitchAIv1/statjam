@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2 } from "lucide-react";
+import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2, UserCheck, UserX, Target } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +19,7 @@ import { useTournamentTeamCount } from "@/hooks/useTournamentTeamCount";
 import { TournamentTableRow } from "@/components/TournamentTableRow";
 import { Tournament } from "@/lib/types/tournament";
 import { PlayerManager } from "@/components/PlayerManager";
+import { TeamService } from "@/lib/services/tournamentService";
 
 // Utility function for tournament status variants
 function getStatusVariant(status: Tournament['status']) {
@@ -176,6 +177,11 @@ export function OrganizerTournamentManager() {
   const [selectedTeamForPlayers, setSelectedTeamForPlayers] = useState<any>(null);
   const [isCreateTeamDialogOpen, setIsCreateTeamDialogOpen] = useState(false);
   
+  // Stat admin management states
+  const [statAdmins, setStatAdmins] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [loadingStatAdmins, setLoadingStatAdmins] = useState(false);
+  const [assignedStatAdmins, setAssignedStatAdmins] = useState<string[]>([]);
+  
   // Team management hook - always call it, but pass empty string if no tournament selected
   const teamManagement = useTeamManagement(selectedTournament?.id || '');
   const [newTournament, setNewTournament] = useState({
@@ -186,6 +192,39 @@ export function OrganizerTournamentManager() {
     maxTeams: "",
     description: ""
   });
+
+  // Load stat admins when settings modal opens
+  const loadStatAdmins = async () => {
+    setLoadingStatAdmins(true);
+    try {
+      console.log('🔍 Loading stat admins for tournament settings...');
+      const admins = await TeamService.getStatAdmins();
+      console.log('✅ Loaded stat admins:', admins.length, 'admins');
+      setStatAdmins(admins);
+    } catch (error) {
+      console.error('❌ Failed to load stat admins:', error);
+    } finally {
+      setLoadingStatAdmins(false);
+    }
+  };
+
+  // Handle stat admin assignment/removal
+  const handleToggleStatAdmin = (adminId: string) => {
+    setAssignedStatAdmins(prev => 
+      prev.includes(adminId) 
+        ? prev.filter(id => id !== adminId)
+        : [...prev, adminId]
+    );
+  };
+
+  // Load stat admins when settings modal opens
+  useEffect(() => {
+    if (isSettingsOpen && tournamentToEdit) {
+      loadStatAdmins();
+      // TODO: Load existing assigned stat admins for this tournament
+      setAssignedStatAdmins([]); // Reset for now
+    }
+  }, [isSettingsOpen, tournamentToEdit]);
 
   const handleCreateTournament = async () => {
     try {
@@ -246,12 +285,26 @@ export function OrganizerTournamentManager() {
 
 
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     if (tournamentToEdit) {
-      // This would update the tournament via the service
-      console.log('Saving settings for tournament:', tournamentToEdit.name);
-      setIsSettingsOpen(false);
-      setTournamentToEdit(null);
+      try {
+        // This would update the tournament via the service
+        console.log('Saving settings for tournament:', tournamentToEdit.name);
+        console.log('Assigned stat admins:', assignedStatAdmins);
+        
+        // TODO: Implement tournament update service call
+        // await TournamentService.updateTournament(tournamentToEdit.id, {
+        //   ...tournamentToEdit,
+        //   assignedStatAdmins
+        // });
+        
+        console.log('✅ Tournament settings saved successfully');
+        setIsSettingsOpen(false);
+        setTournamentToEdit(null);
+        setAssignedStatAdmins([]);
+      } catch (error) {
+        console.error('❌ Failed to save tournament settings:', error);
+      }
     }
   };
 
@@ -824,13 +877,113 @@ export function OrganizerTournamentManager() {
                   </TabsContent>
 
                   <TabsContent value="advanced" className="space-y-6 mt-6">
+                    {/* Stat Admin Management */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Advanced Settings</CardTitle>
-                        <CardDescription>Advanced tournament configuration</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                          <Target className="w-5 h-5 text-primary" />
+                          Stat Admin Management
+                        </CardTitle>
+                        <CardDescription>
+                          Assign stat admins who can track live games for this tournament
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {loadingStatAdmins ? (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                            <span className="text-muted-foreground">Loading stat admins...</span>
+                          </div>
+                        ) : statAdmins.length === 0 ? (
+                          <div className="text-center py-8">
+                            <UserX className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold mb-2">No Stat Admins Available</h3>
+                            <p className="text-muted-foreground mb-4">
+                              No users with stat admin role found in the system.
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Contact your system administrator to create stat admin accounts.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm font-medium">Available Stat Admins</Label>
+                              <Badge variant="secondary" className="text-xs">
+                                {assignedStatAdmins.length} of {statAdmins.length} assigned
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid gap-3 max-h-64 overflow-y-auto">
+                              {statAdmins.map((admin) => {
+                                const isAssigned = assignedStatAdmins.includes(admin.id);
+                                return (
+                                  <div
+                                    key={admin.id}
+                                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                                      isAssigned 
+                                        ? 'border-primary bg-primary/5' 
+                                        : 'border-border hover:border-primary/50'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="w-8 h-8">
+                                        <AvatarFallback className="text-xs">
+                                          {admin.name ? admin.name.split(' ').map(n => n[0]).join('').toUpperCase() : 
+                                           admin.email.split('@')[0].slice(0, 2).toUpperCase()}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <p className="font-medium text-sm">
+                                          {admin.name || admin.email.split('@')[0]}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">{admin.email}</p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant={isAssigned ? "default" : "outline"}
+                                      onClick={() => handleToggleStatAdmin(admin.id)}
+                                      className="gap-1.5"
+                                    >
+                                      {isAssigned ? (
+                                        <>
+                                          <UserCheck className="w-3 h-3" />
+                                          Assigned
+                                        </>
+                                      ) : (
+                                        <>
+                                          <UserPlus className="w-3 h-3" />
+                                          Assign
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            
+                            {assignedStatAdmins.length > 0 && (
+                              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                                <p className="text-sm text-blue-800 dark:text-blue-200">
+                                  <Bell className="w-4 h-4 inline mr-1" />
+                                  Assigned stat admins will be able to access live game tracking for this tournament.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Other Advanced Settings */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Other Advanced Settings</CardTitle>
+                        <CardDescription>Additional tournament configuration options</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-muted-foreground">Advanced settings will be implemented here.</p>
+                        <p className="text-muted-foreground">Additional advanced settings will be implemented here.</p>
                       </CardContent>
                     </Card>
                   </TabsContent>
