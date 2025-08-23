@@ -129,26 +129,34 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
           console.warn('⚠️ Could not load game state from database:', gameError?.message);
         }
         
-        // Load existing stats to calculate current scores (for refresh persistence)
+        // FIXED: Load existing stats to calculate current scores (for refresh persistence)
+        console.log('🔍 Loading existing stats for score calculation...');
         const { data: stats, error: statsError } = await supabase
           .from('game_stats')
-          .select('team_id, stat_type, modifier')
-          .eq('game_id', gameId);
+          .select('team_id, stat_type, stat_value, modifier')
+          .eq('game_id', gameId)
+          .order('created_at', { ascending: true });
         
         if (!statsError && stats) {
           let teamAScore = 0;
           let teamBScore = 0;
           
+          console.log('🔍 Found', stats.length, 'existing stats for score calculation');
+          
           for (const stat of stats) {
-            if (stat.modifier !== 'made') continue; // Only count made shots
+            // FIXED: Use stat_value directly and only count made shots
+            if (stat.modifier !== 'made') continue;
             
-            let points = 0;
-            if (stat.stat_type === 'three_pointer') points = 3;
-            else if (stat.stat_type === 'field_goal') points = 2;
-            else if (stat.stat_type === 'free_throw') points = 1;
+            // Use stat_value from database (already contains correct points)
+            const points = stat.stat_value || 0;
             
-            if (stat.team_id === teamAId) teamAScore += points;
-            else if (stat.team_id === teamBId) teamBScore += points;
+            if (stat.team_id === teamAId) {
+              teamAScore += points;
+              console.log('🔍 Added', points, 'points to Team A:', stat.stat_type);
+            } else if (stat.team_id === teamBId) {
+              teamBScore += points;
+              console.log('🔍 Added', points, 'points to Team B:', stat.stat_type);
+            }
           }
           
           // Initialize scores with calculated totals
@@ -157,12 +165,18 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
             [teamBId]: teamBScore
           });
           
-          console.log('🔁 Initialized scores from database:', { 
-            [teamAId]: teamAScore, 
-            [teamBId]: teamBScore 
+          console.log('✅ STAT INTERFACE: Initialized scores from database:', { 
+            teamA: teamAScore, 
+            teamB: teamBScore,
+            totalStats: stats.length
           });
         } else {
           console.warn('⚠️ Could not load stats for score initialization:', statsError?.message);
+          // Ensure scores start at 0 if no stats found
+          setScores({
+            [teamAId]: 0,
+            [teamBId]: 0
+          });
         }
         
       } catch (error) {

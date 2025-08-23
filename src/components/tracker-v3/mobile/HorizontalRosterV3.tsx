@@ -29,13 +29,26 @@ export function HorizontalRosterV3({
   teamColor = '#f97316'
 }: HorizontalRosterV3Props) {
   
-  // Generate player initials
+  // FIXED: Generate player initials with proper fallback handling
   const getPlayerInitials = (name: string) => {
+    // Debug logging to see what names we're getting
+    console.log('🔍 getPlayerInitials called with name:', name);
+    
+    // Handle fallback names (like "Player 550e8400")
+    if (name.startsWith('Player ') || name.startsWith('player ')) {
+      console.log('⚠️ Detected fallback player name, using "PL" initials');
+      return 'PL'; // Better fallback than "P5" 
+    }
+    
     const words = name.trim().split(/\s+/);
     if (words.length === 1) {
-      return words[0].substring(0, 2).toUpperCase();
+      const initials = words[0].substring(0, 2).toUpperCase();
+      console.log('✅ Single word initials:', initials);
+      return initials;
     }
-    return words.map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    const initials = words.map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    console.log('✅ Multi-word initials:', initials);
+    return initials;
   };
 
   // Generate consistent colors based on player name
@@ -51,7 +64,9 @@ export function HorizontalRosterV3({
     return colors[Math.abs(hash) % colors.length];
   };
 
-  // On-court players (max 5)
+  // FIXED: Debug player data and handle on-court players (max 5)
+  console.log('🔍 HorizontalRosterV3 received players:', players.map(p => ({ id: p.id, name: p.name, jersey: p.jersey_number })));
+  
   const onCourtPlayers = players.slice(0, 5);
   
   // Fill empty spots with placeholders if less than 5 players
