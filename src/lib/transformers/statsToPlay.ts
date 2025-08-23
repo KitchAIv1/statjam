@@ -69,6 +69,18 @@ export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { pla
       }
     })();
 
+    // FIXED: Extract proper player name from users data
+    const playerName = s.users?.name || 
+                      (s.users?.email ? s.users.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : null) ||
+                      `Player ${String(s.player_id || '').substring(0, 8)}`;
+    
+    console.log('🔍 Player name extraction:', {
+      playerId: s.player_id,
+      userName: s.users?.name,
+      userEmail: s.users?.email,
+      finalName: playerName
+    });
+
     return {
       id: s.id,
       gameId: s.game_id,
@@ -80,7 +92,7 @@ export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { pla
       teamId: s.team_id,
       teamName,
       playerId: s.player_id,
-      playerName: `Player ${String(s.player_id || '').substring(0, 8)}`,
+      playerName: playerName,
       statType: s.stat_type,
       statValue: s.stat_value ?? 0,
       modifier: s.modifier ?? undefined,

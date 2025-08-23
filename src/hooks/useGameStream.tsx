@@ -33,8 +33,9 @@ export const useGameStream = (gameId: string) => {
     return stats.map(stat => {
       // Generate human-readable description
       let description = '';
-      // Extract player name with fallbacks
-      const playerName = stat.users?.email?.split('@')[0] || 
+      // FIXED: Extract player name with proper priority (name field first)
+      const playerName = stat.users?.name || 
+                        (stat.users?.email ? stat.users.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : null) ||
                         stat.users?.id?.substring(0, 8) || 
                         `Player ${stat.player_id?.substring(0, 8)}` || 
                         'Unknown Player';
@@ -230,7 +231,7 @@ export const useGameStream = (gameId: string) => {
         .from('game_stats')
         .select(`
           *,
-          users!player_id(id, email)
+          users!player_id(id, email, name)
         `)
         .eq('game_id', gameId)
         .order('created_at', { ascending: false });
