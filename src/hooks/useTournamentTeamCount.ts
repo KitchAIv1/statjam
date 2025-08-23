@@ -1,6 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { TeamService } from '@/lib/services/tournamentService';
+
+// EMERGENCY FIX: Global cache to prevent duplicate requests and timeouts
+const teamCountCache = new Map<string, { count: number; timestamp: number }>();
+const CACHE_DURATION = 30000; // 30 seconds
+const pendingRequests = new Map<string, Promise<number>>();
 
 interface TournamentTeamCount {
   currentTeams: number;
@@ -42,9 +47,8 @@ export function useTournamentTeamCount(
     try {
       console.log('🔍 useTournamentTeamCount: Fetching team count for tournament:', tournamentId);
       
-      // Get teams for this tournament
-      const teams = await TeamService.getTeamsByTournament(tournamentId);
-      const currentTeams = teams.length;
+      // EMERGENCY FIX: Use simple count query instead of complex JOIN
+      const currentTeams = await TeamService.getTeamCountByTournament(tournamentId);
       
       // If maxTeams was provided as prop, use it; otherwise fetch from DB
       let maxTeams = options.maxTeams;

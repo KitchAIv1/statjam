@@ -819,6 +819,30 @@ export class TeamService {
     }
   }
 
+  // EMERGENCY FIX: Simple team count query to avoid timeouts
+  static async getTeamCountByTournament(tournamentId: string): Promise<number> {
+    try {
+      console.log('🔍 TeamService: Getting team count for tournament:', tournamentId);
+      
+      const { count, error } = await supabase
+        .from('teams')
+        .select('*', { count: 'exact', head: true })
+        .eq('tournament_id', tournamentId);
+
+      if (error) {
+        console.error('❌ Error getting team count:', error);
+        return 0;
+      }
+
+      const teamCount = count || 0;
+      console.log('✅ TeamService: Team count:', teamCount);
+      return teamCount;
+    } catch (error) {
+      console.error('❌ Error in getTeamCountByTournament:', error);
+      return 0;
+    }
+  }
+
   // Get all stat admins for assignment
   static async getStatAdmins(): Promise<{ id: string; name: string; email: string }[]> {
     try {
