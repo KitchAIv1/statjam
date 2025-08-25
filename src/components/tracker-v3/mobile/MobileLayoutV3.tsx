@@ -172,8 +172,8 @@ export function MobileLayoutV3({
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--dashboard-bg)' }}>
-      <div className="flex-1 flex flex-col px-2 py-1 w-full space-y-1">
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--dashboard-bg)' }}>
+      <div className="flex-1 flex flex-col px-2 py-1 w-full space-y-1 overflow-y-auto">
         
         {/* Compact Scoreboard */}
         <CompactScoreboardV3
@@ -218,23 +218,38 @@ export function MobileLayoutV3({
           lastAction={tracker.lastAction}
         />
 
-        {/* End Game (Stat Admin Control) */}
-        <div className="px-2 pb-2">
-          <button
-            className="w-full text-sm font-semibold py-2 rounded-md border"
+        {/* 🏁 END GAME SECTION - Enhanced */}
+        <div className="px-4 pb-4">
+          <div 
+            className="w-full rounded-xl p-4 border-2 border-red-300 bg-gradient-to-br from-red-50 to-pink-50"
             style={{
-              background: 'var(--dashboard-card)',
-              borderColor: 'var(--dashboard-border)',
-              color: 'var(--dashboard-text-primary)'
-            }}
-            onClick={() => {
-              if (confirm('End game? This will mark the game as completed.')) {
-                tracker.closeGame();
-              }
+              boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.1)'
             }}
           >
-            End Game
-          </button>
+            <div className="text-center mb-3">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <span className="text-2xl">🏁</span>
+                <h4 className="text-lg font-bold text-red-700">Game Control</h4>
+              </div>
+              <p className="text-sm text-red-600 font-medium">
+                Finalize and complete this game session
+              </p>
+            </div>
+            
+            <button
+              className="w-full text-base font-black py-4 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
+              onClick={() => {
+                if (confirm('🏁 End Game?\n\nThis will mark the game as completed and save all statistics. This action cannot be undone.')) {
+                  tracker.closeGame();
+                }
+              }}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-xl">🏁</span>
+                <span>END GAME</span>
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* Modals */}
@@ -257,20 +272,7 @@ export function MobileLayoutV3({
           onConfirm={handleSubConfirm}
         />
 
-        {/* Game ID Display for Testing - Mobile */}
-        <div className="fixed bottom-2 left-2 z-50">
-          <div 
-            className="px-2 py-1 rounded border text-xs font-mono"
-            style={{ 
-              background: 'var(--dashboard-card)', 
-              borderColor: 'var(--dashboard-border)',
-              color: 'var(--dashboard-text-secondary)'
-            }}
-          >
-            <div className="text-orange-500 font-semibold text-xs">Game ID:</div>
-            <div className="text-orange-400 text-xs">{gameData.id}</div>
-          </div>
-        </div>
+
       </div>
     </div>
   );
