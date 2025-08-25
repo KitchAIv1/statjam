@@ -4,8 +4,16 @@ import React, { useState } from 'react';
 import { AlertTriangle, MoreHorizontal, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
+interface Player {
+  id: string;
+  name: string;
+  jersey_number?: number;
+  photo_url?: string;
+}
+
 interface MobileStatGridV3Props {
   selectedPlayer: string | null;
+  selectedPlayerData?: Player | null;
   isClockRunning: boolean;
   onStatRecord: (statType: string, modifier?: string) => Promise<void>;
   onFoulModal: () => void;
@@ -15,6 +23,7 @@ interface MobileStatGridV3Props {
 
 export function MobileStatGridV3({
   selectedPlayer,
+  selectedPlayerData,
   isClockRunning,
   onStatRecord,
   onFoulModal,
@@ -209,21 +218,56 @@ export function MobileStatGridV3({
         })}
       </div>
 
-      {/* Last Action Feedback - Clean Design */}
-      {lastAction && (
+      {/* Player Action Feedback with Controls */}
+      {lastAction && selectedPlayer && selectedPlayerData && (
         <div 
-          className="text-center p-4 rounded-xl border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-orange-50 mt-4"
+          className="p-4 rounded-xl border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 mt-4"
           style={{ 
-            boxShadow: '0 2px 4px rgba(251, 191, 36, 0.1)'
+            boxShadow: '0 2px 4px rgba(59, 130, 246, 0.1)'
           }}
         >
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <span className="text-lg">✨</span>
-            <p className="text-sm font-bold text-yellow-700">Last Recorded Action</p>
+          {/* Player Info */}
+          <div className="text-center mb-3">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                #{selectedPlayerData.jersey_number || '??'}
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-blue-700">{selectedPlayerData.name}</p>
+                <p className="text-xs text-blue-600">Just recorded</p>
+              </div>
+            </div>
+            <p className="text-base font-black text-blue-800 bg-blue-200 px-3 py-1 rounded-lg inline-block">
+              {lastAction}
+            </p>
           </div>
-          <p className="text-base font-black text-yellow-800 bg-yellow-200 px-3 py-1 rounded-lg inline-block">
-            {lastAction}
-          </p>
+          
+          {/* Action Controls */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => {
+                // TODO: Implement undo functionality
+                console.log('🔄 Undo last action:', lastAction);
+                alert('Undo functionality will be implemented');
+              }}
+              className="h-10 flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 rounded-xl border-2 bg-orange-500 border-orange-400 text-white hover:bg-orange-600 hover:border-orange-500 hover:shadow-md hover:scale-105 active:scale-95"
+            >
+              <span className="text-base">↶</span>
+              <span>UNDO</span>
+            </Button>
+            
+            <Button
+              onClick={() => {
+                // TODO: Implement edit functionality
+                console.log('✏️ Edit last action:', lastAction);
+                alert('Edit functionality will be implemented');
+              }}
+              className="h-10 flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 rounded-xl border-2 bg-purple-500 border-purple-400 text-white hover:bg-purple-600 hover:border-purple-500 hover:shadow-md hover:scale-105 active:scale-95"
+            >
+              <span className="text-base">✏️</span>
+              <span>EDIT</span>
+            </Button>
+          </div>
         </div>
       )}
     </div>

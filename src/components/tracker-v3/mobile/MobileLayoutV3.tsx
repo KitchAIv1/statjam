@@ -211,6 +211,7 @@ export function MobileLayoutV3({
         {/* Mobile Stat Grid */}
         <MobileStatGridV3
           selectedPlayer={selectedPlayer}
+          selectedPlayerData={selectedPlayerData}
           isClockRunning={tracker.clock.isRunning}
           onStatRecord={handleStatRecord}
           onFoulModal={() => setShowFoulModal(true)}
@@ -218,38 +219,21 @@ export function MobileLayoutV3({
           lastAction={tracker.lastAction}
         />
 
-        {/* 🏁 END GAME SECTION - Enhanced */}
+        {/* End Game Button - Clean Design */}
         <div className="px-4 pb-4">
-          <div 
-            className="w-full rounded-xl p-4 border-2 border-red-300 bg-gradient-to-br from-red-50 to-pink-50"
-            style={{
-              boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.1)'
+          <button
+            className="w-full text-base font-black py-4 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
+            onClick={() => {
+              if (confirm('End Game?\n\nThis will mark the game as completed and save all statistics. This action cannot be undone.')) {
+                tracker.closeGame();
+              }
             }}
           >
-            <div className="text-center mb-3">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <span className="text-2xl">🏁</span>
-                <h4 className="text-lg font-bold text-red-700">Game Control</h4>
-              </div>
-              <p className="text-sm text-red-600 font-medium">
-                Finalize and complete this game session
-              </p>
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-xl">🏁</span>
+              <span>END GAME</span>
             </div>
-            
-            <button
-              className="w-full text-base font-black py-4 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
-              onClick={() => {
-                if (confirm('🏁 End Game?\n\nThis will mark the game as completed and save all statistics. This action cannot be undone.')) {
-                  tracker.closeGame();
-                }
-              }}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-xl">🏁</span>
-                <span>END GAME</span>
-              </div>
-            </button>
-          </div>
+          </button>
         </div>
 
         {/* Modals */}
