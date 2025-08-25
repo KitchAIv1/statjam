@@ -88,7 +88,7 @@ export function MobileStatGridV3({
 
   return (
     <div 
-      className="w-full rounded-xl p-5 space-y-5"
+      className="w-full rounded-xl p-4"
       style={{ 
         background: 'var(--dashboard-card)', 
         borderColor: 'var(--dashboard-border)',
@@ -96,33 +96,7 @@ export function MobileStatGridV3({
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
       }}
     >
-      {/* Enhanced Header */}
-      <div className="text-center">
-        <h3 
-          className="text-base font-semibold mb-2"
-          style={{ color: 'var(--dashboard-text-primary)' }}
-        >
-          📊 Record Statistics
-        </h3>
-        {!selectedPlayer ? (
-          <div className="flex items-center justify-center gap-2">
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-            <p 
-              className="text-sm font-medium"
-              style={{ color: 'var(--dashboard-text-secondary)' }}
-            >
-              Select a player to begin tracking
-            </p>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <p className="text-sm text-green-600 font-semibold">
-              🎯 Ready to record stats
-            </p>
-          </div>
-        )}
-      </div>
+
 
       {/* Made Stats Row - Clean Design */}
       <div className="grid grid-cols-4 gap-3 mb-4">
@@ -219,9 +193,9 @@ export function MobileStatGridV3({
                 isDisabled || action.disabled
                   ? 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400'
                   : isFoul
-                    ? 'border-red-400 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-400 hover:shadow-md hover:scale-105 active:scale-95'
+                    ? 'bg-red-500 border-red-400 text-white hover:bg-red-600 hover:border-red-500 hover:shadow-md hover:scale-105 active:scale-95'
                     : isSub
-                      ? 'border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white hover:border-gray-700 hover:shadow-md hover:scale-105 active:scale-95'
+                      ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-900 hover:border-gray-800 hover:shadow-md hover:scale-105 active:scale-95'
                       : 'border-gray-300 text-gray-600 hover:bg-gray-500 hover:text-white hover:border-gray-400 hover:shadow-md hover:scale-105 active:scale-95'
               }`}
               style={{
