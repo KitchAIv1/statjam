@@ -19,6 +19,7 @@ interface MobileStatGridV3Props {
   onFoulModal: () => void;
   onSubstitution?: () => void;
   lastAction?: string | null;
+  lastActionPlayerId?: string | null;
 }
 
 export function MobileStatGridV3({
@@ -28,7 +29,8 @@ export function MobileStatGridV3({
   onStatRecord,
   onFoulModal,
   onSubstitution,
-  lastAction
+  lastAction,
+  lastActionPlayerId
 }: MobileStatGridV3Props) {
   const [isRecording, setIsRecording] = useState<string | null>(null);
 
@@ -218,8 +220,8 @@ export function MobileStatGridV3({
         })}
       </div>
 
-      {/* Last Action - Minimal Horizontal Layout */}
-      {lastAction && selectedPlayer && selectedPlayerData && (
+      {/* Last Action - Minimal Horizontal Layout (Only for player who performed action) */}
+      {lastAction && selectedPlayerData && lastActionPlayerId && selectedPlayer === lastActionPlayerId && (
         <div 
           className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 mt-4"
           style={{ 

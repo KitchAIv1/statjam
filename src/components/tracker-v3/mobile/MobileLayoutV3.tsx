@@ -217,10 +217,11 @@ export function MobileLayoutV3({
           onFoulModal={() => setShowFoulModal(true)}
           onSubstitution={() => selectedPlayer && handleSubstitution(selectedPlayer)}
           lastAction={tracker.lastAction}
+          lastActionPlayerId={tracker.lastActionPlayerId}
         />
 
         {/* End Game Button - Clean Design */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 mt-6">
           <button
             className="w-full text-base font-black py-4 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
             onClick={() => {

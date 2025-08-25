@@ -39,6 +39,7 @@ interface UseTrackerReturn {
   // Status
   isLoading: boolean;
   lastAction: string | null;
+  lastActionPlayerId: string | null;
   playerSeconds: Record<string, number>;
 }
 
@@ -66,6 +67,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
   });
   const [isLoading, setIsLoading] = useState(true);
   const [lastAction, setLastAction] = useState<string | null>(null);
+  const [lastActionPlayerId, setLastActionPlayerId] = useState<string | null>(null);
   const [playerSeconds] = useState<Record<string, number>>({});
 
   // Initialize and load existing game state from database
@@ -343,14 +345,17 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         }
 
         setLastAction(`${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`);
+        setLastActionPlayerId(stat.playerId);
       } else {
         console.error('❌ Failed to record stat in database');
         setLastAction('Error recording stat');
+        setLastActionPlayerId(stat.playerId);
       }
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);
       setLastAction('Error recording stat');
+      setLastActionPlayerId(stat.playerId);
     }
   }, [quarter, clock.secondsRemaining]);
 
@@ -453,6 +458,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     setRosterB,
     isLoading,
     lastAction,
+    lastActionPlayerId,
     playerSeconds
   };
 };
