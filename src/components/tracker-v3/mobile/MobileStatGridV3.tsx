@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertTriangle, MoreHorizontal, RotateCcw } from 'lucide-react';
+import { AlertTriangle, MoreHorizontal, RotateCcw, Undo, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface Player {
@@ -218,55 +218,52 @@ export function MobileStatGridV3({
         })}
       </div>
 
-      {/* Player Action Feedback with Controls */}
+      {/* Last Action - Minimal Horizontal Layout */}
       {lastAction && selectedPlayer && selectedPlayerData && (
         <div 
-          className="p-4 rounded-xl border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 mt-4"
+          className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 mt-4"
           style={{ 
-            boxShadow: '0 2px 4px rgba(59, 130, 246, 0.1)'
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
           }}
         >
-          {/* Player Info */}
-          <div className="text-center mb-3">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                #{selectedPlayerData.jersey_number || '??'}
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-bold text-blue-700">{selectedPlayerData.name}</p>
-                <p className="text-xs text-blue-600">Just recorded</p>
-              </div>
+          {/* Left: Player Details */}
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+              {selectedPlayerData.jersey_number || '?'}
             </div>
-            <p className="text-base font-black text-blue-800 bg-blue-200 px-3 py-1 rounded-lg inline-block">
-              {lastAction}
-            </p>
+            <span className="text-sm font-medium text-gray-700">
+              {selectedPlayerData.name}
+            </span>
           </div>
           
-          {/* Action Controls */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button
+          {/* Center: Action Text */}
+          <div className="text-sm font-semibold text-gray-800 bg-white px-2 py-1 rounded border">
+            {lastAction}
+          </div>
+          
+          {/* Right: Action Icons */}
+          <div className="flex items-center gap-3">
+            <button
               onClick={() => {
                 // TODO: Implement undo functionality
                 console.log('🔄 Undo last action:', lastAction);
                 alert('Undo functionality will be implemented');
               }}
-              className="h-10 flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 rounded-xl border-2 bg-orange-500 border-orange-400 text-white hover:bg-orange-600 hover:border-orange-500 hover:shadow-md hover:scale-105 active:scale-95"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-orange-100 text-orange-600 hover:bg-orange-200 hover:scale-110 active:scale-95 transition-all duration-200"
             >
-              <span className="text-base">↶</span>
-              <span>UNDO</span>
-            </Button>
+              <Undo className="w-4 h-4" />
+            </button>
             
-            <Button
+            <button
               onClick={() => {
                 // TODO: Implement edit functionality
                 console.log('✏️ Edit last action:', lastAction);
                 alert('Edit functionality will be implemented');
               }}
-              className="h-10 flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 rounded-xl border-2 bg-purple-500 border-purple-400 text-white hover:bg-purple-600 hover:border-purple-500 hover:shadow-md hover:scale-105 active:scale-95"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 hover:scale-110 active:scale-95 transition-all duration-200"
             >
-              <span className="text-base">✏️</span>
-              <span>EDIT</span>
-            </Button>
+              <Edit className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
