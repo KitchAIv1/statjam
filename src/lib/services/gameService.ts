@@ -208,7 +208,11 @@ export class GameService {
     try {
       const { data: game, error } = await supabase
         .from('games')
-        .select('*')
+        .select(`
+          *,
+          team_a:teams!team_a_id(name),
+          team_b:teams!team_b_id(name)
+        `)
         .eq('id', gameId)
         .single();
 
@@ -216,6 +220,12 @@ export class GameService {
         console.error('Error getting game:', error);
         return null;
       }
+
+      console.log('🏀 GameService: Fetched game with team names:', {
+        gameId,
+        teamA: game?.team_a?.name,
+        teamB: game?.team_b?.name
+      });
 
       return game;
     } catch (error) {
@@ -229,41 +239,113 @@ export class GameService {
     try {
       console.log('🔍 GameService: Fetching assigned games for stat admin:', statAdminId);
       
+      // First, try a simple query to see if there are any games at all
+      console.log('🔍 GameService: Step 1 - Checking for any games with stat_admin_id:', statAdminId);
+      console.log('🔍 GameService: statAdminId type:', typeof statAdminId, 'length:', statAdminId?.length);
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database query timeout')), 10000)
+      );
+      
+      const queryPromise = supabase
+        .from('games')
+        .select('*')
+        .eq('stat_admin_id', statAdminId);
+      
+      const { data: simpleGames, error: simpleError } = await Promise.race([
+        queryPromise,
+        timeoutPromise
+      ]) as any;
+      
+      console.log('🔍 GameService: Simple query result:', { count: simpleGames?.length || 0, error: simpleError });
+      
+      if (simpleError) {
+        console.error('❌ Simple query failed:', simpleError);
+        throw new Error(`Database error in simple query: ${simpleError.message}`);
+      }
+      
+      if (!simpleGames || simpleGames.length === 0) {
+        console.log('ℹ️ GameService: No games found for stat admin:', statAdminId);
+        
+        // Debug: Check if there are ANY games in the table
+        console.log('🔍 GameService: Debug - Checking all games in table...');
+        const { data: allGames, error: allGamesError } = await supabase
+          .from('games')
+          .select('id, stat_admin_id, status')
+          .limit(5);
+        
+        console.log('🔍 GameService: All games sample:', allGames);
+        console.log('🔍 GameService: Looking for stat_admin_id:', statAdminId);
+        
+        if (allGames && allGames.length > 0) {
+          console.log('🔍 GameService: Available stat_admin_ids:', 
+            [...new Set(allGames.map(g => g.stat_admin_id))]);
+        }
+        
+        return [];
+      }
+      
+      // Now try the complex query with JOINs
+      console.log('🔍 GameService: Step 2 - Fetching with JOINs for', simpleGames.length, 'games');
+      
       const { data: games, error } = await supabase
         .from('games')
         .select(`
           *,
-          tournaments!inner(name, venue),
-          teams!team_a_id(name),
-          teamB:teams!team_b_id(name)
+          tournaments(name, venue),
+          team_a:teams!team_a_id(name),
+          team_b:teams!team_b_id(name)
         `)
         .eq('stat_admin_id', statAdminId)
         .order('start_time', { ascending: true });
 
       if (error) {
-        console.error('❌ Supabase error getting assigned games:', error);
-        return [];
+        console.error('❌ Supabase error getting assigned games with JOINs:', error);
+        console.error('❌ Error details:', error.message, error.details, error.hint);
+        
+        // Fallback: Return simple games data if JOINs fail
+        console.log('🔄 GameService: JOINs failed, falling back to simple data');
+        const fallbackGames = simpleGames.map(game => ({
+          id: game.id,
+          tournamentName: 'Loading...',
+          teamA: 'Team A',
+          teamB: 'Team B',
+          scheduledDate: game.start_time,
+          venue: 'TBD',
+          status: game.status,
+          tournamentId: game.tournament_id
+        }));
+        
+        console.log('✅ GameService: Returning fallback games:', fallbackGames.length);
+        return fallbackGames;
       }
 
-      console.log('🔍 GameService: Found assigned games:', games?.length || 0);
+      console.log('✅ GameService: Found assigned games:', games?.length || 0);
+      console.log('🔍 GameService: Raw games data:', games);
 
       // Transform data to match expected format
-      const transformedGames = (games || []).map(game => ({
-        id: game.id,
-        tournamentName: game.tournaments?.name || 'Unknown Tournament',
-        teamA: game.teams?.name || 'Team A',
-        teamB: game.teamB?.name || 'Team B',
-        scheduledDate: game.start_time,
-        venue: game.tournaments?.venue || 'TBD',
-        status: game.status,
-        tournamentId: game.tournament_id
-      }));
+      const transformedGames = (games || []).map(game => {
+        console.log('🔄 Transforming game:', game.id, game);
+        return {
+          id: game.id,
+          tournamentName: game.tournaments?.name || 'Unknown Tournament',
+          teamA: game.team_a?.name || 'Team A',
+          teamB: game.team_b?.name || 'Team B',
+          scheduledDate: game.start_time,
+          venue: game.tournaments?.venue || 'TBD',
+          status: game.status,
+          tournamentId: game.tournament_id
+        };
+      });
 
-      console.log('🔍 GameService: Transformed assigned games:', transformedGames);
+      console.log('✅ GameService: Transformed assigned games:', transformedGames.length, 'games');
+      console.log('🔍 GameService: Final transformed data:', transformedGames);
       return transformedGames;
     } catch (error) {
-      console.error('Error getting assigned games:', error);
-      return [];
+      console.error('❌ Error getting assigned games:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      throw error; // Re-throw to let the component handle it
     }
   }
 

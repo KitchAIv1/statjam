@@ -16,6 +16,7 @@ interface SubstitutionModalV3Props {
   isOpen: boolean;
   onClose: () => void;
   playerOutId: string | null;
+  playerOutData?: Player | null;
   benchPlayers: Player[];
   onConfirm: (playerInId: string) => void;
 }
@@ -24,6 +25,7 @@ export function SubstitutionModalV3({
   isOpen,
   onClose,
   playerOutId,
+  playerOutData,
   benchPlayers,
   onConfirm
 }: SubstitutionModalV3Props) {
@@ -64,101 +66,116 @@ export function SubstitutionModalV3({
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-4 max-h-[60vh] overflow-y-auto">
-          {/* Substitution Info */}
+        <CardContent className="space-y-6 max-h-[70vh] overflow-y-auto">
+          {/* Substitution Info - Enhanced */}
           <div 
-            className="p-3 rounded-lg"
-            style={{ background: 'var(--dashboard-primary)' + '10', borderColor: 'var(--dashboard-primary)' }}
+            className="p-4 rounded-xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-red-50"
           >
-            <p className="text-sm font-medium text-orange-500 mb-1">
-              Player Coming Out:
-            </p>
-            <p 
-              className="text-sm"
-              style={{ color: 'var(--dashboard-text-primary)' }}
-            >
-              Player #{playerOutId?.slice(0, 8)}...
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center">
+                <RefreshCw className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-red-600 mb-1">
+                  Player Coming Out:
+                </p>
+                {playerOutData ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xs">
+                      #{playerOutData.jersey_number || '?'}
+                    </div>
+                    <span className="font-semibold text-gray-800">
+                      {playerOutData.name}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-600">
+                    Player #{playerOutId?.slice(0, 8)}...
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Instructions - Enhanced */}
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Select Substitute Player
+            </h3>
+            <p className="text-sm text-gray-600">
+              Choose a player from the bench to bring into the game
             </p>
           </div>
 
-          {/* Instructions */}
-          <div>
-            <p 
-              className="text-sm mb-3"
-              style={{ color: 'var(--dashboard-text-secondary)' }}
-            >
-              Select a player from the bench to substitute in:
-            </p>
-          </div>
-
-          {/* Bench Players List */}
-          <div className="space-y-2">
+          {/* Bench Players List - Enhanced */}
+          <div className="space-y-3">
             {benchPlayers.length > 0 ? (
-              benchPlayers.map((player) => (
+              benchPlayers.map((player, index) => (
                 <Button
                   key={player.id}
                   onClick={() => onConfirm(player.id)}
                   variant="outline"
-                  className="w-full h-auto p-3 justify-start gap-3 hover:bg-orange-500/10 hover:border-orange-500"
+                  className="w-full h-auto p-4 justify-start gap-4 hover:bg-green-500/10 hover:border-green-500 hover:scale-102 transition-all duration-200 border-2"
                 >
-                  {/* Jersey Number */}
-                  <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
-                  >
-                    {player.jersey_number || '?'}
+                  {/* Jersey Number - Enhanced */}
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-black text-sm shadow-md">
+                    #{player.jersey_number || '?'}
                   </div>
 
-                  {/* Player Info */}
+                  {/* Player Info - Enhanced */}
                   <div className="flex-1 text-left">
-                    <div 
-                      className="font-medium"
-                      style={{ color: 'var(--dashboard-text-primary)' }}
-                    >
+                    <div className="font-bold text-gray-800 text-base mb-1">
                       {player.name}
                     </div>
-                    <div className="text-xs text-gray-500">
-                      #{player.jersey_number || 'N/A'} • Bench
+                    <div className="text-sm text-gray-500 flex items-center gap-2">
+                      <span>Available to play</span>
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
                     </div>
                   </div>
 
-                  {/* Available Badge */}
-                  <Badge 
-                    variant="outline"
-                    className="text-green-500 border-green-500 bg-green-500/10"
-                  >
-                    Available
-                  </Badge>
+                  {/* Ready Badge */}
+                  <div className="flex flex-col items-center gap-1">
+                    <Badge 
+                      variant="outline"
+                      className="text-green-600 border-green-500 bg-green-500/10 font-semibold"
+                    >
+                      Ready
+                    </Badge>
+                    <span className="text-xs text-gray-400">#{index + 1}</span>
+                  </div>
                 </Button>
               ))
             ) : (
-              <div className="text-center py-8">
-                <User className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <p 
-                  className="text-sm"
-                  style={{ color: 'var(--dashboard-text-secondary)' }}
-                >
-                  No bench players available
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <User className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="font-semibold text-gray-700 mb-2">No Bench Players</h3>
+                <p className="text-sm text-gray-500">
+                  All available players are currently on the court
                 </p>
               </div>
             )}
           </div>
 
-          {/* Actions */}
-          <div className="border-t pt-4 space-y-2">
+          {/* Actions - Enhanced */}
+          <div className="border-t-2 border-gray-100 pt-4 space-y-3">
             <Button
               onClick={onClose}
               variant="outline"
-              className="w-full hover:bg-gray-500/10"
+              className="w-full py-3 text-base font-semibold hover:bg-red-500/10 hover:border-red-500 hover:text-red-600 transition-all duration-200"
             >
               Cancel Substitution
             </Button>
             
-            <p 
-              className="text-xs text-center"
-              style={{ color: 'var(--dashboard-text-secondary)' }}
-            >
-              Click on a bench player to complete the substitution
-            </p>
+            <div className="text-center">
+              <p className="text-xs text-gray-500 mb-1">
+                💡 Tip: Click any player above to complete the substitution
+              </p>
+              <p className="text-xs text-gray-400">
+                The selected player will immediately enter the game
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -25,7 +25,7 @@ interface UseTrackerReturn {
   recordStat: (stat: Omit<StatRecord, 'createdAt' | 'quarter' | 'gameTimeSeconds'>) => Promise<void>;
   startClock: () => void;
   stopClock: () => void;
-  resetClock: () => void;
+  resetClock: (forQuarter?: number) => void;
   tick: (seconds: number) => void;
   setQuarter: (quarter: number) => void;
   advanceIfNeeded: () => void;
@@ -49,7 +49,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
   const [quarter, setQuarterState] = useState(1);
   const [clock, setClock] = useState({
     isRunning: false,
-    secondsRemaining: 12 * 60 // 12 minutes
+    secondsRemaining: 12 * 60 // 12 minutes (will be adjusted based on quarter)
   });
   const [scores, setScores] = useState<ScoreByTeam>({
     [teamAId]: 0,
@@ -230,10 +230,27 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     }
   }, [gameId, clock.secondsRemaining]);
 
-  const resetClock = useCallback(async () => {
-    const newSeconds = 12 * 60;
+  const resetClock = useCallback(async (forQuarter?: number) => {
+    // Use provided quarter or current quarter
+    const targetQuarter = forQuarter || quarter;
+    
+    // Determine clock duration based on quarter
+    // Regular quarters (1-4): 12 minutes
+    // Overtime periods (5+): 5 minutes
+    const isOvertimePeriod = targetQuarter >= 5;
+    const clockMinutes = isOvertimePeriod ? 5 : 12;
+    const newSeconds = clockMinutes * 60;
+    
+    console.log(`🕐 Resetting clock for quarter ${targetQuarter}: ${clockMinutes} minutes (${newSeconds} seconds)`);
+    
     setClock({ isRunning: false, secondsRemaining: newSeconds });
-    setLastAction('Clock reset');
+    
+    if (isOvertimePeriod) {
+      const otPeriod = targetQuarter - 4;
+      setLastAction(`OT${otPeriod} clock reset (5 minutes)`);
+    } else {
+      setLastAction(`Q${targetQuarter} clock reset (12 minutes)`);
+    }
     
     // Sync clock state to database
     try {
@@ -278,10 +295,52 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
 
   const advanceIfNeeded = useCallback(() => {
     if (clock.secondsRemaining <= 0) {
-      setQuarter(quarter + 1);
-      resetClock();
+      if (quarter < 4) {
+        // Regular quarters 1-4
+        const nextQuarter = quarter + 1;
+        setQuarter(nextQuarter);
+        resetClock(nextQuarter); // Pass the new quarter explicitly
+      } else if (quarter === 4) {
+        // End of 4th quarter - check if game should go to overtime
+        const teamAScore = scores.teamA;
+        const teamBScore = scores.teamB;
+        
+        if (teamAScore === teamBScore) {
+          // Tied game - go to overtime
+          console.log(`🏀 End of regulation - TIED GAME (${teamAScore}-${teamBScore}) - advancing to overtime`);
+          setQuarter(5); // Overtime starts at quarter 5
+          resetClock(5); // Explicitly reset for OT1 (5 minutes)
+        } else {
+          // Game has a winner - end the game
+          const winner = teamAScore > teamBScore ? 'Team A' : 'Team B';
+          console.log(`🏀 End of regulation - GAME OVER! Winner: ${winner} (${teamAScore}-${teamBScore})`);
+          setLastAction(`Game Over! ${winner} wins ${teamAScore}-${teamBScore}`);
+          // Don't advance quarter - game is complete
+        }
+      } else {
+        // Already in overtime (quarter >= 5) - check for tie again
+        const teamAScore = scores.teamA;
+        const teamBScore = scores.teamB;
+        
+        if (teamAScore === teamBScore) {
+          // Still tied - continue to next OT period
+          const currentOT = quarter - 4;
+          const nextOT = currentOT + 1;
+          const nextQuarter = quarter + 1;
+          console.log(`🏀 End of OT${currentOT} - STILL TIED (${teamAScore}-${teamBScore}) - advancing to OT${nextOT}`);
+          setQuarter(nextQuarter);
+          resetClock(nextQuarter); // Pass the new OT quarter explicitly
+        } else {
+          // Overtime has a winner - end the game
+          const winner = teamAScore > teamBScore ? 'Team A' : 'Team B';
+          const currentOT = quarter - 4;
+          console.log(`🏀 End of OT${currentOT} - GAME OVER! Winner: ${winner} (${teamAScore}-${teamBScore})`);
+          setLastAction(`Game Over in OT${currentOT}! ${winner} wins ${teamAScore}-${teamBScore}`);
+          // Don't advance quarter - game is complete
+        }
+      }
     }
-  }, [clock.secondsRemaining, quarter, setQuarter, resetClock]);
+  }, [clock.secondsRemaining, quarter, setQuarter, resetClock, scores]);
 
   // Stat Recording
   const recordStat = useCallback(async (stat: Omit<StatRecord, 'createdAt' | 'quarter' | 'gameTimeSeconds'>) => {

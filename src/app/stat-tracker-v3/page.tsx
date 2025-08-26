@@ -16,12 +16,9 @@ import { MobileLayoutV3 } from '@/components/tracker-v3/mobile/MobileLayoutV3';
 
 // V3 Components
 import { GameHeaderV3 } from '@/components/tracker-v3/GameHeaderV3';
-import { ScoreboardV3 } from '@/components/tracker-v3/ScoreboardV3';
-import { ClockControlsV3 } from '@/components/tracker-v3/ClockControlsV3';
-
-import { DualTeamPlayerGridV3 } from '@/components/tracker-v3/DualTeamPlayerGridV3';
-import { StatButtonsV3 } from '@/components/tracker-v3/StatButtonsV3';
-import { ActionBarV3 } from '@/components/tracker-v3/ActionBarV3';
+import { TopScoreboardV3 } from '@/components/tracker-v3/TopScoreboardV3';
+import { TeamRosterV3 } from '@/components/tracker-v3/TeamRosterV3';
+import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
 
 interface GameData {
@@ -37,6 +34,8 @@ interface GameData {
   away_score: number;
   team_a?: { name?: string | null } | null;
   team_b?: { name?: string | null } | null;
+  team_a_name?: string | null;
+  team_b_name?: string | null;
 }
 
 interface Player {
@@ -200,12 +199,33 @@ export default function StatTrackerV3() {
   const handleStatRecord = async (statType: string, modifier?: string) => {
     if (!selectedPlayer || !gameData) return;
     
+    // Determine which team the selected player belongs to
+    const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+    
     await tracker.recordStat({
       gameId: gameData.id,
-      teamId: selectedTeam === 'A' ? gameData.team_a_id : gameData.team_b_id,
+      teamId,
       playerId: selectedPlayer,
       statType: statType as 'field_goal' | 'three_pointer' | 'free_throw' | 'assist' | 'rebound' | 'steal' | 'block' | 'turnover' | 'foul',
       modifier: modifier as 'made' | 'missed' | 'offensive' | 'defensive' | 'shooting' | 'personal' | 'technical' | 'flagrant' | undefined
+    });
+  };
+
+  // Handle foul recording
+  const handleFoulRecord = async (foulType: 'personal' | 'technical') => {
+    if (!selectedPlayer || !gameData) return;
+
+    // Determine which team the selected player belongs to
+    const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+
+    await tracker.recordStat({
+      gameId: gameData.id,
+      teamId,
+      playerId: selectedPlayer,
+      statType: 'foul',
+      modifier: foulType
     });
   };
 
@@ -321,65 +341,86 @@ export default function StatTrackerV3() {
     );
   }
 
-  // Desktop Layout
+  // Desktop Layout - iPad Optimized (No Scrolling)
   return (
-    <div className="min-h-screen" style={{ background: 'var(--dashboard-bg)' }}>
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
+    <div className="h-screen overflow-hidden" style={{ background: 'linear-gradient(135deg, #1f2937, #111827)' }}>
+      <div className="container mx-auto px-3 py-3 max-w-7xl h-full flex flex-col">
         {/* Header */}
         <GameHeaderV3 
           gameId={gameData.id}
           onBack={() => router.push('/dashboard')}
         />
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Scoreboard & Clock */}
-          <div className="lg:col-span-1 space-y-6">
-            <ScoreboardV3
-              teamAName={gameData.team_a?.name || 'Team A'}
-              teamBName={gameData.team_b?.name || 'Team B'}
-              teamAScore={tracker.scores[gameData.team_a_id] || 0}
-              teamBScore={tracker.scores[gameData.team_b_id] || 0}
-              quarter={tracker.quarter}
-              selectedTeam={null}
-              onTeamSelect={() => {}}
-            />
+        {/* Top Scoreboard & Clock */}
+        <TopScoreboardV3
+          teamAName={gameData.team_a?.name || 'Team A'}
+          teamBName={gameData.team_b?.name || 'Team B'}
+          teamAScore={tracker.scores[gameData.team_a_id] || 0}
+          teamBScore={tracker.scores[gameData.team_b_id] || 0}
+          quarter={tracker.quarter}
+          minutes={Math.floor(tracker.clock.secondsRemaining / 60)}
+          seconds={tracker.clock.secondsRemaining % 60}
+          isRunning={tracker.clock.isRunning}
+          onStart={tracker.startClock}
+          onStop={tracker.stopClock}
+          onReset={tracker.resetClock}
+          // NBA Standard: Team fouls and timeouts (placeholder values for now)
+          teamAFouls={3}
+          teamBFouls={6}
+          teamATimeouts={5}
+          teamBTimeouts={4}
+        />
 
-            <ClockControlsV3
-              minutes={Math.floor(tracker.clock.secondsRemaining / 60)}
-              seconds={tracker.clock.secondsRemaining % 60}
-              isRunning={tracker.clock.isRunning}
-              onStart={tracker.startClock}
-              onStop={tracker.stopClock}
-              onReset={tracker.resetClock}
-            />
+        {/* Main Content Grid - iPad Optimized Layout: No Scrolling */}
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-3 items-start flex-1 min-h-0">
+          {/* Left Column - Team A Roster (Wider for iPad) */}
+          <div className="lg:col-span-2">
+            <div className="h-full">
+              <TeamRosterV3
+                players={teamAPlayers}
+                teamName={gameData.team_a?.name || 'Team A'}
+                teamSide="left"
+                selectedPlayer={selectedPlayer}
+                onPlayerSelect={setSelectedPlayer}
+                onSubstitution={handleSubstitution}
+              />
+            </div>
           </div>
 
-          {/* Middle Column - Players */}
-          <div className="lg:col-span-1 space-y-6">
-            <DualTeamPlayerGridV3
-              teamAPlayers={teamAPlayers}
-              teamBPlayers={teamBPlayers}
-              teamAName={gameData.team_a?.name || 'Team A'}
-              teamBName={gameData.team_b?.name || 'Team B'}
-              selectedPlayer={selectedPlayer}
-              onPlayerSelect={setSelectedPlayer}
-              onSubstitution={handleSubstitution}
-            />
+          {/* Center Column - Stat Interface */}
+          <div className="lg:col-span-3">
+            <div className="h-full">
+              <DesktopStatGridV3
+                selectedPlayer={selectedPlayer}
+                selectedPlayerData={[...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer)}
+                isClockRunning={tracker.clock.isRunning}
+                onStatRecord={handleStatRecord}
+                onFoulRecord={handleFoulRecord}
+                onTimeOut={() => {
+                  // TODO: Implement timeout functionality
+                  console.log('⏰ Time out called');
+                  alert('Time out functionality will be implemented');
+                }}
+                onSubstitution={() => selectedPlayer && handleSubstitution(selectedPlayer)}
+                onGameEnd={tracker.closeGame}
+                lastAction={tracker.lastAction}
+                lastActionPlayerId={tracker.lastActionPlayerId}
+              />
+            </div>
           </div>
 
-          {/* Right Column - Stats */}
-          <div className="lg:col-span-1 space-y-6">
-            <StatButtonsV3
-              selectedPlayer={selectedPlayer}
-              onStatRecord={handleStatRecord}
-            />
-
-            <ActionBarV3
-              gameId={gameData.id}
-              lastAction={tracker.lastAction}
-              onGameEnd={tracker.closeGame}
-            />
+          {/* Right Column - Team B Roster (Wider for iPad) */}
+          <div className="lg:col-span-2">
+            <div className="h-full">
+              <TeamRosterV3
+                players={teamBPlayers}
+                teamName={gameData.team_b?.name || 'Team B'}
+                teamSide="right"
+                selectedPlayer={selectedPlayer}
+                onPlayerSelect={setSelectedPlayer}
+                onSubstitution={handleSubstitution}
+              />
+            </div>
           </div>
         </div>
 
@@ -388,29 +429,12 @@ export default function StatTrackerV3() {
           isOpen={showSubModal}
           onClose={() => setShowSubModal(false)}
           playerOutId={subOutPlayer}
+          playerOutData={[...teamAPlayers, ...teamBPlayers].find(p => p.id === subOutPlayer)}
           benchPlayers={benchPlayers}
           onConfirm={handleSubConfirm}
         />
 
-        {/* Game ID Display for Testing */}
-        {gameData && (
-          <div className="fixed bottom-4 left-4 z-50">
-            <div 
-              className="px-3 py-2 rounded-lg border text-xs font-mono"
-              style={{ 
-                background: 'var(--dashboard-card)', 
-                borderColor: 'var(--dashboard-border)',
-                color: 'var(--dashboard-text-secondary)'
-              }}
-            >
-              <div className="text-orange-500 font-semibold mb-1">Testing Info:</div>
-              <div>Game ID: <span className="text-orange-400">{gameData.id}</span></div>
-              <div className="text-xs mt-1 opacity-75">
-                Live Viewer: /game-viewer/{gameData.id}
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );

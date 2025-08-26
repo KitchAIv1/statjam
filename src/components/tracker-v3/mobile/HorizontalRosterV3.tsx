@@ -83,8 +83,8 @@ export function HorizontalRosterV3({
     <div 
       className="w-full rounded-lg p-2"
       style={{ 
-        background: 'var(--dashboard-card)', 
-        borderColor: 'var(--dashboard-border)',
+        background: '#ffffff', 
+        borderColor: '#e5e7eb',
         borderWidth: '1px'
       }}
     >

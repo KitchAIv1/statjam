@@ -120,9 +120,9 @@ export const navigationConfig: Record<string, NavigationConfig> = {
       },
       {
         label: 'My Assigned Games',
-        href: '/dashboard/stat-admin',
+        href: '/dashboard/stat-admin?section=games',
         icon: PlayCircle,
-        description: 'View your assigned games and launch V3 tracker'
+        description: 'View your assigned games and launch tracker'
       },
       {
         label: 'Game History',

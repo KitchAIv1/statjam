@@ -140,8 +140,8 @@ export function MobileStatGridV3({
     <div 
       className="w-full rounded-xl p-4"
       style={{ 
-        background: 'var(--dashboard-card)', 
-        borderColor: 'var(--dashboard-border)',
+        background: '#ffffff', 
+        borderColor: '#e5e7eb',
         borderWidth: '1px',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
       }}

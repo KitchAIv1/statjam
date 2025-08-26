@@ -51,8 +51,8 @@ export function FoulModalV3({
       <Card 
         className="relative w-full max-w-sm mx-4"
         style={{ 
-          background: 'var(--dashboard-card)', 
-          borderColor: 'var(--dashboard-border)',
+          background: '#ffffff', 
+          borderColor: '#e5e7eb',
           borderWidth: '1px'
         }}
       >

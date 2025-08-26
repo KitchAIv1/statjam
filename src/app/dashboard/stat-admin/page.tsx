@@ -6,7 +6,9 @@ import { useAuthStore } from '@/store/authStore';
 import { GameService } from '@/lib/services/gameService';
 import { TeamService } from '@/lib/services/tournamentService';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar } from 'lucide-react';
 
 const StatAdminDashboard = () => {
   const { user, userRole, loading } = useAuthStore();
@@ -26,27 +28,44 @@ const StatAdminDashboard = () => {
   // Load assigned games when user is available
   useEffect(() => {
     const loadAssignedGames = async () => {
-      if (!user || userRole !== 'stat_admin') return;
+      if (!user || userRole !== 'stat_admin') {
+        console.log('🚫 Skipping game load - no user or not stat_admin:', { user: !!user, userRole });
+        return;
+      }
       
       try {
         setGamesLoading(true);
         setGamesError(null);
         
         console.log('🔍 Loading assigned games for stat admin:', user.id);
+        console.log('🔍 User object:', user);
+        
         const games = await GameService.getAssignedGames(user.id);
-        setAssignedGames(games);
         
         console.log('✅ Loaded assigned games:', games.length);
+        console.log('✅ Games data:', games);
+        
+        setAssignedGames(games);
       } catch (error) {
         console.error('❌ Error loading assigned games:', error);
-        setGamesError(error instanceof Error ? error.message : 'Failed to load assigned games');
+        console.error('❌ Error type:', typeof error);
+        console.error('❌ Error instanceof Error:', error instanceof Error);
+        
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load assigned games';
+        console.error('❌ Setting error message:', errorMessage);
+        
+        setGamesError(errorMessage);
       } finally {
+        console.log('🏁 Finished loading games, setting loading to false');
         setGamesLoading(false);
       }
     };
 
     if (user && userRole === 'stat_admin') {
+      console.log('🚀 Starting to load assigned games...');
       loadAssignedGames();
+    } else {
+      console.log('⏸️ Not loading games - conditions not met:', { user: !!user, userRole });
     }
   }, [user, userRole]);
 
@@ -280,127 +299,128 @@ const StatAdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--dashboard-bg)' }}>
+    <div className="min-h-screen bg-background">
       <NavigationHeader />
-      <div style={styles.container}>
-        <div style={styles.content}>
-        {/* Header */}
-        <div style={styles.header}>
-          <h1 style={styles.title}>STAT ADMIN DASHBOARD</h1>
-          <p style={styles.subtitle}>
-            Manage statistics, analytics, and data integrity across all tournaments
-          </p>
-        </div>
-
-        {/* System Stats */}
-        <div style={styles.section}>
-          <h2 style={styles.sectionTitle}>System Overview</h2>
-          <div style={styles.statsGrid}>
-            <div style={styles.statCard}>
-              <div style={styles.statIcon}>
-                <Database style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-              </div>
-              <div style={styles.statTitle}>Data Records</div>
-              <div style={styles.statValue}>2.4M+</div>
-              <div style={styles.statChange}>+15% this week</div>
+      <main className="pt-16 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="space-y-6 mt-6">
+            {/* Modern Header */}
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                Stat Admin Dashboard
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Track your assigned games and manage statistical data with precision and efficiency.
+              </p>
             </div>
 
-            <div style={styles.statCard}>
-              <div style={styles.statIcon}>
-                <Activity style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-              </div>
-              <div style={styles.statTitle}>Active Sessions</div>
-              <div style={styles.statValue}>1,247</div>
-              <div style={styles.statChange}>+8% from yesterday</div>
+            {/* Modern Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
+                <div className="bg-gradient-to-br from-primary to-primary/80 relative">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
+                    <CardTitle className="text-sm font-medium text-white/90">Games Assigned</CardTitle>
+                    <div className="relative">
+                      <Trophy className="h-5 w-5 text-white" />
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse"></div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="text-white">
+                    <div className="flex items-end justify-between">
+                      <div className="text-3xl font-bold">{assignedGames.length}</div>
+                      <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
+                        <TrendingUp className="w-3 h-3" />
+                        Active
+                      </div>
+                    </div>
+                    <p className="text-xs text-white/80 mt-1">Total assigned games</p>
+                  </CardContent>
+                </div>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 relative">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
+                    <CardTitle className="text-sm font-medium text-white/90">Completed Games</CardTitle>
+                    <div className="relative">
+                      <Target className="h-5 w-5 text-white" />
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse"></div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="text-white">
+                    <div className="flex items-end justify-between">
+                      <div className="text-3xl font-bold">{assignedGames.filter(g => g.status === 'completed').length}</div>
+                      <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
+                        <TrendingUp className="w-3 h-3" />
+                        Done
+                      </div>
+                    </div>
+                    <p className="text-xs text-white/80 mt-1">Successfully tracked</p>
+                  </CardContent>
+                </div>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
+                <div className="bg-gradient-to-br from-orange-500 to-orange-600 relative">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
+                    <CardTitle className="text-sm font-medium text-white/90">Pending Games</CardTitle>
+                    <div className="relative">
+                      <Calendar className="h-5 w-5 text-white" />
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse"></div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="text-white">
+                    <div className="flex items-end justify-between">
+                      <div className="text-3xl font-bold">{assignedGames.filter(g => g.status !== 'completed').length}</div>
+                      <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
+                        <Clock className="w-3 h-3" />
+                        Waiting
+                      </div>
+                    </div>
+                    <p className="text-xs text-white/80 mt-1">Upcoming assignments</p>
+                  </CardContent>
+                </div>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
+                <div className="bg-gradient-to-br from-red-500 to-red-600 relative">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
+                    <CardTitle className="text-sm font-medium text-white/90">Completion Rate</CardTitle>
+                    <div className="relative">
+                      <TrendingUp className="h-5 w-5 text-white" />
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse"></div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="text-white">
+                    <div className="flex items-end justify-between">
+                      <div className="text-3xl font-bold">
+                        {assignedGames.length > 0 ? Math.round((assignedGames.filter(g => g.status === 'completed').length / assignedGames.length) * 100) : 0}%
+                      </div>
+                      <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
+                        <TrendingUp className="w-3 h-3" />
+                        Rate
+                      </div>
+                    </div>
+                    <p className="text-xs text-white/80 mt-1">Games completed</p>
+                  </CardContent>
+                </div>
+              </Card>
             </div>
 
-            <div style={styles.statCard}>
-              <div style={styles.statIcon}>
-                <TrendingUp style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-              </div>
-              <div style={styles.statTitle}>Data Accuracy</div>
-              <div style={styles.statValue}>99.8%</div>
-              <div style={styles.statChange}>+0.1% improvement</div>
-            </div>
 
-            <div style={styles.statCard}>
-              <div style={styles.statIcon}>
-                <Users style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-              </div>
-              <div style={styles.statTitle}>Users Tracked</div>
-              <div style={styles.statValue}>45K+</div>
-              <div style={styles.statChange}>+2.3K this month</div>
-            </div>
-          </div>
-        </div>
 
-        {/* Admin Tools */}
-        <div style={styles.section}>
-          <h2 style={styles.sectionTitle}>Administrative Tools</h2>
-          <div style={styles.adminTools}>
-            <div style={styles.toolCard}>
-              <div style={styles.toolIcon}>
-                <BarChart3 style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-              </div>
-              <div style={styles.toolTitle}>Analytics Dashboard</div>
-              <div style={styles.toolDescription}>
-                Comprehensive analytics and reporting tools for tournament performance,
-                player statistics, and system metrics.
-              </div>
-              <div style={{ ...styles.toolStatus, ...styles.statusActive }}>
-                Active
-              </div>
-            </div>
 
-            <div style={styles.toolCard}>
-              <div style={styles.toolIcon}>
-                <Database style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-              </div>
-              <div style={styles.toolTitle}>Data Management</div>
-              <div style={styles.toolDescription}>
-                Manage data integrity, backup systems, and ensure statistical accuracy
-                across all tournament data.
-              </div>
-              <div style={{ ...styles.toolStatus, ...styles.statusActive }}>
-                Active
-              </div>
-            </div>
-
-            <div style={styles.toolCard}>
-              <div style={styles.toolIcon}>
-                <Settings style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-              </div>
-              <div style={styles.toolTitle}>System Configuration</div>
-              <div style={styles.toolDescription}>
-                Configure statistical parameters, data collection rules, and
-                system-wide settings for optimal performance.
-              </div>
-              <div style={{ ...styles.toolStatus, ...styles.statusPending }}>
-                Pending
-              </div>
-            </div>
-
-            <div style={styles.toolCard}>
-              <div style={styles.toolIcon}>
-                <TrendingUp style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-              </div>
-              <div style={styles.toolTitle}>Performance Monitoring</div>
-              <div style={styles.toolDescription}>
-                Real-time monitoring of system performance, data processing speeds,
-                and statistical calculation accuracy.
-              </div>
-              <div style={{ ...styles.toolStatus, ...styles.statusActive }}>
-                Active
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Assigned Games */}
-        <div style={styles.section}>
-          <h2 style={styles.sectionTitle}>My Assigned Games</h2>
-          
-          {gamesLoading ? (
+            {/* Assigned Games Section */}
+            <Card className="hover:shadow-lg transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-primary" />
+                  <CardTitle>My Assigned Games</CardTitle>
+                </div>
+                <CardDescription>Track and manage your game assignments</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-6">
+                {gamesLoading ? (
             <div style={styles.toolCard}>
               <div style={{ textAlign: 'center', padding: '20px' }}>
                 <div style={{ color: '#FFD700', fontSize: '16px', marginBottom: '8px' }}>
@@ -501,35 +521,7 @@ const StatAdminDashboard = () => {
                     }}
                   >
                     <Zap size={16} />
-                    Launch V3 Tracker
-                  </button>
-                  <button
-                    onClick={() => router.push(`/stat-tracker?gameId=${game.id}&tournamentId=${game.tournamentId}`)}
-                    style={{
-                      background: 'var(--dashboard-card)',
-                      color: 'var(--dashboard-text-secondary)',
-                      border: `1px solid var(--dashboard-border)`,
-                      borderRadius: '8px',
-                      padding: '10px 16px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--dashboard-border-hover)';
-                      e.currentTarget.style.color = 'var(--dashboard-text-primary)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--dashboard-border)';
-                      e.currentTarget.style.color = 'var(--dashboard-text-secondary)';
-                    }}
-                  >
-                    <Play size={16} />
-                    Legacy Tracker
+                    Launch Tracker
                   </button>
                   <div style={{ 
                     ...styles.toolStatus, 
@@ -540,25 +532,14 @@ const StatAdminDashboard = () => {
                   </div>
                 </div>
               </div>
-            ))}
-            </div>
-          )}
-        </div>
-
-        {/* Coming Soon */}
-        <div style={styles.comingSoon}>
-          <div style={styles.comingSoonIcon}>
-            <TrendingUp style={{ width: '32px', height: '32px', color: '#1a1a1a' }} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
-          <h3 style={styles.comingSoonTitle}>Advanced Stat Admin Features</h3>
-          <p style={styles.comingSoonText}>
-            Advanced data analytics, machine learning insights, automated reporting,
-            and predictive analytics coming soon. Get deeper insights into player
-            performance patterns and tournament trends.
-          </p>
         </div>
-      </div>
-    </div>
+      </main>
     </div>
   );
 };

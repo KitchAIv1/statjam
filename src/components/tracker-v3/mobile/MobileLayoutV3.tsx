@@ -185,7 +185,7 @@ export function MobileLayoutV3({
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--dashboard-bg)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #1f2937, #111827)' }}>
       <div className="flex-1 flex flex-col px-2 py-1 w-full space-y-1 overflow-y-auto">
         
         {/* Compact Scoreboard */}
