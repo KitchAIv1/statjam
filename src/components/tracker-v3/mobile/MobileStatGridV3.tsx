@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertTriangle, MoreHorizontal, RotateCcw, Undo, Edit } from 'lucide-react';
+import { AlertTriangle, MoreHorizontal, RotateCcw, Clock, Undo, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface Player {
@@ -16,7 +16,8 @@ interface MobileStatGridV3Props {
   selectedPlayerData?: Player | null;
   isClockRunning: boolean;
   onStatRecord: (statType: string, modifier?: string) => Promise<void>;
-  onFoulModal: () => void;
+  onFoulRecord: (foulType: 'personal' | 'technical') => Promise<void>;
+  onTimeOut: () => void;
   onSubstitution?: () => void;
   lastAction?: string | null;
   lastActionPlayerId?: string | null;
@@ -27,7 +28,8 @@ export function MobileStatGridV3({
   selectedPlayerData,
   isClockRunning,
   onStatRecord,
-  onFoulModal,
+  onFoulRecord,
+  onTimeOut,
   onSubstitution,
   lastAction,
   lastActionPlayerId
@@ -48,6 +50,25 @@ export function MobileStatGridV3({
     setIsRecording(statType);
     try {
       await onStatRecord(statType, modifier);
+    } finally {
+      setIsRecording(null);
+    }
+  };
+
+  const handleFoulClick = async (foulType: 'personal' | 'technical') => {
+    if (!selectedPlayer) {
+      alert('Please select a player first');
+      return;
+    }
+    
+    if (!isClockRunning) {
+      alert('Clock must be running to record fouls');
+      return;
+    }
+
+    setIsRecording(`foul-${foulType}`);
+    try {
+      await onFoulRecord(foulType);
     } finally {
       setIsRecording(null);
     }
@@ -78,14 +99,31 @@ export function MobileStatGridV3({
     { id: 'tov', label: 'TOV', statType: 'turnover' }
   ];
 
-  // Secondary actions (modals/special)
+  // Secondary actions - FOUL, TF, TIME OUT, SUB
   const secondaryActions = [
     { 
       id: 'foul', 
       label: 'FOUL', 
       icon: AlertTriangle, 
-      onClick: onFoulModal,
-      variant: 'outline' as const
+      onClick: () => handleFoulClick('personal'),
+      variant: 'outline' as const,
+      color: 'red'
+    },
+    { 
+      id: 'technical', 
+      label: 'TF', 
+      icon: AlertTriangle, 
+      onClick: () => handleFoulClick('technical'),
+      variant: 'outline' as const,
+      color: 'orange'
+    },
+    { 
+      id: 'timeout', 
+      label: 'TIME OUT', 
+      icon: Clock, 
+      onClick: onTimeOut,
+      variant: 'outline' as const,
+      color: 'lightblack'
     },
     { 
       id: 'sub', 
@@ -93,7 +131,8 @@ export function MobileStatGridV3({
       icon: RotateCcw, 
       onClick: onSubstitution,
       variant: 'outline' as const,
-      disabled: !onSubstitution
+      disabled: !onSubstitution,
+      color: 'gray'
     }
   ];
 
@@ -187,12 +226,37 @@ export function MobileStatGridV3({
         ))}
       </div>
 
-      {/* Special Actions - Clean Design with Custom Colors */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      {/* Special Actions - FOUL, TF, TIME OUT, SUB */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
         {secondaryActions.map((action) => {
           const Icon = action.icon;
-          const isFoul = action.id === 'foul';
-          const isSub = action.id === 'sub';
+          const isRecordingThis = isRecording === `foul-${action.id === 'foul' ? 'personal' : 'technical'}`;
+          
+          // Color schemes for each button
+          const getColorClasses = () => {
+            if (isDisabled || action.disabled) {
+              return 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400';
+            }
+            
+            if (isRecordingThis) {
+              return 'animate-pulse shadow-lg scale-105';
+            }
+            
+            switch (action.color) {
+              case 'red':
+                return 'bg-red-500 border-red-400 text-white hover:bg-red-600 hover:border-red-500 hover:shadow-md hover:scale-105 active:scale-95';
+              case 'orange':
+                return 'bg-orange-500 border-orange-400 text-white hover:bg-orange-600 hover:border-orange-500 hover:shadow-md hover:scale-105 active:scale-95';
+              case 'blue':
+                return 'bg-blue-500 border-blue-400 text-white hover:bg-blue-600 hover:border-blue-500 hover:shadow-md hover:scale-105 active:scale-95';
+              case 'lightblack':
+                return 'bg-gray-600 border-gray-500 text-white hover:bg-gray-700 hover:border-gray-600 hover:shadow-md hover:scale-105 active:scale-95';
+              case 'gray':
+                return 'bg-gray-800 border-gray-700 text-white hover:bg-gray-900 hover:border-gray-800 hover:shadow-md hover:scale-105 active:scale-95';
+              default:
+                return 'border-gray-300 text-gray-600 hover:bg-gray-500 hover:text-white hover:border-gray-400 hover:shadow-md hover:scale-105 active:scale-95';
+            }
+          };
           
           return (
             <Button
@@ -200,21 +264,13 @@ export function MobileStatGridV3({
               onClick={action.onClick}
               disabled={isDisabled || action.disabled}
               variant={action.variant}
-              className={`h-14 flex items-center justify-center gap-3 text-sm font-semibold transition-all duration-200 rounded-xl border-2 shadow-sm ${
-                isDisabled || action.disabled
-                  ? 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400'
-                  : isFoul
-                    ? 'bg-red-500 border-red-400 text-white hover:bg-red-600 hover:border-red-500 hover:shadow-md hover:scale-105 active:scale-95'
-                    : isSub
-                      ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-900 hover:border-gray-800 hover:shadow-md hover:scale-105 active:scale-95'
-                      : 'border-gray-300 text-gray-600 hover:bg-gray-500 hover:text-white hover:border-gray-400 hover:shadow-md hover:scale-105 active:scale-95'
-              }`}
+              className={`h-14 flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 rounded-xl border-2 shadow-sm ${getColorClasses()}`}
               style={{
                 minHeight: '56px' // Touch target size
               }}
             >
-              <Icon className="w-5 h-5" />
-              <span className="font-bold">{action.label}</span>
+              <Icon className="w-4 h-4" />
+              <span className="font-bold text-xs">{action.label}</span>
             </Button>
           );
         })}
@@ -269,6 +325,7 @@ export function MobileStatGridV3({
           </div>
         </div>
       )}
+
     </div>
   );
 }

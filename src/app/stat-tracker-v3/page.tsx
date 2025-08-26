@@ -18,8 +18,8 @@ import { MobileLayoutV3 } from '@/components/tracker-v3/mobile/MobileLayoutV3';
 import { GameHeaderV3 } from '@/components/tracker-v3/GameHeaderV3';
 import { ScoreboardV3 } from '@/components/tracker-v3/ScoreboardV3';
 import { ClockControlsV3 } from '@/components/tracker-v3/ClockControlsV3';
-import { TeamSelectorV3 } from '@/components/tracker-v3/TeamSelectorV3';
-import { PlayerGridV3 } from '@/components/tracker-v3/PlayerGridV3';
+
+import { DualTeamPlayerGridV3 } from '@/components/tracker-v3/DualTeamPlayerGridV3';
 import { StatButtonsV3 } from '@/components/tracker-v3/StatButtonsV3';
 import { ActionBarV3 } from '@/components/tracker-v3/ActionBarV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
@@ -64,7 +64,7 @@ export default function StatTrackerV3() {
   const [error, setError] = useState<string | null>(null);
   
   // UI State
-  const [selectedTeam, setSelectedTeam] = useState<'A' | 'B'>('A');
+
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [subOutPlayer, setSubOutPlayer] = useState<string | null>(null);
@@ -78,12 +78,14 @@ export default function StatTrackerV3() {
 
   // Auth Check
   useEffect(() => {
+    console.log('🔐 Auth check:', { loading, user: !!user, userRole });
     if (!loading && (!user || userRole !== 'stat_admin')) {
+      console.log('🔄 Redirecting to auth...');
       router.push('/auth');
     }
   }, [user, userRole, loading, router]);
 
-  // Load Game Data
+  // Load Game Data Effect - RESTORED LIVE TOURNAMENT FUNCTIONALITY
   useEffect(() => {
     const loadGameData = async () => {
       if (!gameIdParam) {
@@ -93,56 +95,74 @@ export default function StatTrackerV3() {
       }
 
       try {
+        console.log('🔄 Loading LIVE game data for:', gameIdParam);
         setIsLoading(true);
-        
-        // Fetch game data
-        const { data: game, error: gameError } = await supabase
-          .from('games')
-          .select(`
-            id, team_a_id, team_b_id, status, quarter,
-            game_clock_minutes, game_clock_seconds, is_clock_running,
-            home_score, away_score,
-            team_a:teams!team_a_id(name),
-            team_b:teams!team_b_id(name)
-          `)
-          .eq('id', gameIdParam)
-          .single();
 
-        if (gameError) throw gameError;
-        
-        setGameData(game as GameData);
+        // Import services dynamically
+        const { GameService } = await import('@/lib/services/gameService');
+        const { TeamService } = await import('@/lib/services/tournamentService');
 
-        // Validate team IDs before fetching players
+        // Load game data
+        const game = await GameService.getGame(gameIdParam);
+        if (!game) {
+          setError('Game not found');
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('✅ Loaded game data:', game);
+        setGameData(game);
+
+        // Validate team IDs
         if (!game.team_a_id || !game.team_b_id) {
-          throw new Error('Game is missing team IDs');
+          setError('Game missing team information');
+          setIsLoading(false);
+          return;
         }
 
-        console.log('🔄 Fetching players for teams:', game.team_a_id, game.team_b_id);
-
-        // Fetch team players
-        const [teamAPlayersData, teamBPlayersData] = await Promise.all([
-          TeamService.getTeamPlayers(game.team_a_id),
-          TeamService.getTeamPlayers(game.team_b_id)
-        ]);
-
-        setTeamAPlayers(teamAPlayersData);
-        setTeamBPlayers(teamBPlayersData);
+        console.log('🔄 Loading team players...');
         
-        // Auto-select first player
-        if (teamAPlayersData.length > 0) {
-          setSelectedPlayer(teamAPlayersData[0].id);
+        // Load Team A players with individual error handling
+        let teamAPlayersData: Player[] = [];
+        try {
+          teamAPlayersData = await TeamService.getTeamPlayers(game.team_a_id);
+          console.log('✅ Team A players loaded:', teamAPlayersData.length);
+          setTeamAPlayers(teamAPlayersData);
+        } catch (teamAError) {
+          console.error('❌ Failed to load Team A players:', teamAError);
+          setTeamAPlayers([]);
         }
 
-      } catch (err) {
-        console.error('Error loading game data:', err);
+        // Load Team B players with individual error handling  
+        let teamBPlayersData: Player[] = [];
+        try {
+          teamBPlayersData = await TeamService.getTeamPlayers(game.team_b_id);
+          console.log('✅ Team B players loaded:', teamBPlayersData.length);
+          setTeamBPlayers(teamBPlayersData);
+        } catch (teamBError) {
+          console.error('❌ Failed to load Team B players:', teamBError);
+          setTeamBPlayers([]);
+        }
+
+        // Auto-select first available player from loaded data
+        const allPlayers = [...teamAPlayersData, ...teamBPlayersData];
+        if (allPlayers.length > 0) {
+          setSelectedPlayer(allPlayers[0].id);
+          console.log('✅ Auto-selected first player:', allPlayers[0].name);
+        }
+
+      } catch (error) {
+        console.error('❌ Error loading game data:', error);
         setError('Failed to load game data');
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadGameData();
-  }, [gameIdParam]);
+    if (gameIdParam && user) {
+      loadGameData();
+    }
+  }, [gameIdParam, user]);
 
   // Clock Tick Effect
   useEffect(() => {
@@ -189,15 +209,7 @@ export default function StatTrackerV3() {
     });
   };
 
-  // Team Switch
-  const handleTeamSwitch = (team: 'A' | 'B') => {
-    setSelectedTeam(team);
-    // Auto-select first player from new team
-    const players = team === 'A' ? teamAPlayers : teamBPlayers;
-    if (players.length > 0) {
-      setSelectedPlayer(players[0].id);
-    }
-  };
+
 
   // Substitution
   const handleSubstitution = (playerOutId: string) => {
@@ -208,9 +220,13 @@ export default function StatTrackerV3() {
   const handleSubConfirm = async (playerInId: string) => {
     if (!subOutPlayer || !gameData) return;
     
+    // Determine which team the player being substituted belongs to
+    const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
+    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+    
     const success = await tracker.substitute({
       gameId: gameData.id,
-      teamId: selectedTeam === 'A' ? gameData.team_a_id : gameData.team_b_id,
+      teamId,
       playerOutId: subOutPlayer,
       playerInId,
       quarter: tracker.quarter,
@@ -278,8 +294,15 @@ export default function StatTrackerV3() {
     );
   }
 
-  const currentPlayers = selectedTeam === 'A' ? teamAPlayers : teamBPlayers;
-  const benchPlayers = currentPlayers.slice(5); // Bench players for substitutions
+  // Get bench players based on which team the substituted player belongs to
+  const getBenchPlayers = () => {
+    if (!subOutPlayer) return [];
+    const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
+    const teamPlayers = isTeamAPlayer ? teamAPlayers : teamBPlayers;
+    return teamPlayers.slice(5); // Bench players for substitutions
+  };
+  
+  const benchPlayers = getBenchPlayers();
 
   // Mobile Layout
   if (isMobile) {
@@ -289,9 +312,9 @@ export default function StatTrackerV3() {
         tracker={tracker}
         teamAPlayers={teamAPlayers}
         teamBPlayers={teamBPlayers}
-        selectedTeam={selectedTeam}
+        selectedTeam={'A'} // Default for mobile compatibility
         selectedPlayer={selectedPlayer}
-        onTeamSelect={handleTeamSwitch}
+        onTeamSelect={() => {}} // No-op for mobile compatibility
         onPlayerSelect={setSelectedPlayer}
         onSubstitution={handleSubstitution}
       />
@@ -318,8 +341,8 @@ export default function StatTrackerV3() {
               teamAScore={tracker.scores[gameData.team_a_id] || 0}
               teamBScore={tracker.scores[gameData.team_b_id] || 0}
               quarter={tracker.quarter}
-              selectedTeam={selectedTeam}
-              onTeamSelect={handleTeamSwitch}
+              selectedTeam={null}
+              onTeamSelect={() => {}}
             />
 
             <ClockControlsV3
@@ -334,15 +357,11 @@ export default function StatTrackerV3() {
 
           {/* Middle Column - Players */}
           <div className="lg:col-span-1 space-y-6">
-            <TeamSelectorV3
-              selectedTeam={selectedTeam}
+            <DualTeamPlayerGridV3
+              teamAPlayers={teamAPlayers}
+              teamBPlayers={teamBPlayers}
               teamAName={gameData.team_a?.name || 'Team A'}
               teamBName={gameData.team_b?.name || 'Team B'}
-              onTeamSelect={handleTeamSwitch}
-            />
-
-            <PlayerGridV3
-              players={currentPlayers.slice(0, 5)} // On-court players
               selectedPlayer={selectedPlayer}
               onPlayerSelect={setSelectedPlayer}
               onSubstitution={handleSubstitution}
