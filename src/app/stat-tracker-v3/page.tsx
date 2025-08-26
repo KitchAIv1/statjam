@@ -69,11 +69,11 @@ export default function StatTrackerV3() {
   const [showSubModal, setShowSubModal] = useState(false);
   const [subOutPlayer, setSubOutPlayer] = useState<string | null>(null);
 
-  // Initialize tracker with game data  
+  // Initialize tracker with game data (only when we have valid team IDs)
   const tracker = useTracker({
     initialGameId: gameIdParam || 'unknown',
-    teamAId: gameData?.team_a_id || teamAParam || 'teamA',
-    teamBId: gameData?.team_b_id || teamBParam || 'teamB'
+    teamAId: gameData?.team_a_id || 'teamA',
+    teamBId: gameData?.team_b_id || 'teamB'
   });
 
   // Auth Check
@@ -111,6 +111,13 @@ export default function StatTrackerV3() {
         if (gameError) throw gameError;
         
         setGameData(game as GameData);
+
+        // Validate team IDs before fetching players
+        if (!game.team_a_id || !game.team_b_id) {
+          throw new Error('Game is missing team IDs');
+        }
+
+        console.log('🔄 Fetching players for teams:', game.team_a_id, game.team_b_id);
 
         // Fetch team players
         const [teamAPlayersData, teamBPlayersData] = await Promise.all([

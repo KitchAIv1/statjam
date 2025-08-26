@@ -74,23 +74,23 @@ const AuthPageV2 = () => {
     }
   };
 
-  // Updated styling with Figma theme
+  // Updated styling with StatJam orange/red branding
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'var(--dashboard-bg)',
+      background: 'linear-gradient(135deg, #fef7ed 0%, #fff7ed 50%, #fef2f2 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px',
     },
     formContainer: {
-      background: 'var(--dashboard-card)',
+      background: 'white',
       borderRadius: '20px',
       padding: '40px',
       width: '100%',
       maxWidth: '500px',
-      border: '1px solid var(--dashboard-border)',
+      border: '1px solid rgba(251, 146, 60, 0.2)',
       boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
     },
     header: {
@@ -100,46 +100,50 @@ const AuthPageV2 = () => {
     title: {
       fontSize: '32px',
       fontWeight: '700',
-      background: 'var(--dashboard-gradient)',
+      background: 'linear-gradient(to right, #fb923c, #ef4444)',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
       marginBottom: '8px',
     },
     subtitle: {
-      color: 'var(--dashboard-text-secondary)',
+      color: '#78716c',
       fontSize: '16px',
     },
     input: {
       width: '100%',
       padding: '16px',
       borderRadius: '12px',
-      border: '1px solid var(--dashboard-border)',
-      background: 'var(--input-background)',
-      color: 'var(--dashboard-text-primary)',
+      border: '1px solid rgba(251, 146, 60, 0.2)',
+      background: '#fff7ed',
+      color: '#2d1b14',
       fontSize: '16px',
       marginBottom: '16px',
+      transition: 'all 0.3s ease',
+      outline: 'none',
     },
     button: {
       width: '100%',
       padding: '16px',
       borderRadius: '12px',
-      background: 'var(--dashboard-gradient)',
+      background: 'linear-gradient(to right, #fb923c, #ef4444)',
       color: 'white',
       border: 'none',
       fontSize: '16px',
       fontWeight: '600',
       cursor: 'pointer',
       marginBottom: '16px',
+      transition: 'all 0.3s ease',
+      boxShadow: '0 4px 15px rgba(251, 146, 60, 0.3)',
     },
     switchButton: {
-      color: 'var(--dashboard-primary)',
+      color: '#f97316',
       background: 'none',
       border: 'none',
       cursor: 'pointer',
       textDecoration: 'underline',
     },
     error: {
-      color: '#ff4444',
+      color: '#dc2626',
       marginBottom: '16px',
       textAlign: 'center' as const,
     }
@@ -167,6 +171,16 @@ const AuthPageV2 = () => {
                 value={formData.firstName}
                 onChange={handleInputChange}
                 style={styles.input}
+                onFocus={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  target.style.borderColor = '#f97316';
+                  target.style.boxShadow = '0 0 0 3px rgba(251, 146, 60, 0.1)';
+                }}
+                onBlur={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  target.style.borderColor = 'rgba(251, 146, 60, 0.2)';
+                  target.style.boxShadow = 'none';
+                }}
                 required
               />
               <input
@@ -176,6 +190,16 @@ const AuthPageV2 = () => {
                 value={formData.lastName}
                 onChange={handleInputChange}
                 style={styles.input}
+                onFocus={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  target.style.borderColor = '#f97316';
+                  target.style.boxShadow = '0 0 0 3px rgba(251, 146, 60, 0.1)';
+                }}
+                onBlur={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  target.style.borderColor = 'rgba(251, 146, 60, 0.2)';
+                  target.style.boxShadow = 'none';
+                }}
                 required
               />
             </>
@@ -188,6 +212,14 @@ const AuthPageV2 = () => {
             value={formData.email}
             onChange={handleInputChange}
             style={styles.input}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#f97316';
+              e.target.style.boxShadow = '0 0 0 3px rgba(251, 146, 60, 0.1)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'rgba(251, 146, 60, 0.2)';
+              e.target.style.boxShadow = 'none';
+            }}
             required
           />
 
@@ -198,6 +230,14 @@ const AuthPageV2 = () => {
             value={formData.password}
             onChange={handleInputChange}
             style={styles.input}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#f97316';
+              e.target.style.boxShadow = '0 0 0 3px rgba(251, 146, 60, 0.1)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'rgba(251, 146, 60, 0.2)';
+              e.target.style.boxShadow = 'none';
+            }}
             required
           />
 
@@ -209,6 +249,14 @@ const AuthPageV2 = () => {
               value={formData.confirmPassword}
               onChange={handleInputChange}
               style={styles.input}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#f97316';
+                e.target.style.boxShadow = '0 0 0 3px rgba(251, 146, 60, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(251, 146, 60, 0.2)';
+                e.target.style.boxShadow = 'none';
+              }}
               required
             />
           )}
@@ -217,18 +265,36 @@ const AuthPageV2 = () => {
             type="submit"
             style={styles.button}
             disabled={loading}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                const target = e.target as HTMLButtonElement;
+                target.style.background = 'linear-gradient(to right, #ea580c, #dc2626)';
+                target.style.transform = 'translateY(-2px)';
+                target.style.boxShadow = '0 8px 25px rgba(251, 146, 60, 0.4)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                const target = e.target as HTMLButtonElement;
+                target.style.background = 'linear-gradient(to right, #fb923c, #ef4444)';
+                target.style.transform = 'translateY(0px)';
+                target.style.boxShadow = '0 4px 15px rgba(251, 146, 60, 0.3)';
+              }
+            }}
           >
             {loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Sign Up')}
           </button>
         </form>
 
         <div style={{ textAlign: 'center' }}>
-          <span style={{ color: 'var(--dashboard-text-secondary)' }}>
+          <span style={{ color: '#78716c' }}>
             {isLogin ? "Don't have an account? " : "Already have an account? "}
           </span>
           <button
             style={styles.switchButton}
             onClick={() => setIsLogin(!isLogin)}
+            onMouseEnter={(e) => (e.target as HTMLButtonElement).style.color = '#ea580c'}
+            onMouseLeave={(e) => (e.target as HTMLButtonElement).style.color = '#f97316'}
           >
             {isLogin ? 'Sign Up' : 'Sign In'}
           </button>

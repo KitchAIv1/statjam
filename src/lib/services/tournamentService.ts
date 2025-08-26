@@ -729,19 +729,16 @@ export class TeamService {
     try {
       console.log('🔍 TeamService: Fetching players for team:', teamId);
       
+      // Validate team ID to prevent database timeouts
+      if (!teamId || teamId === 'undefined' || teamId === 'null' || teamId.trim() === '') {
+        console.warn('⚠️ TeamService: Invalid team ID provided:', teamId);
+        return [];
+      }
+      
+      // Step 1: Get player IDs (simple query, no JOINs)
       const { data: teamPlayers, error } = await supabase
         .from('team_players')
-        .select(`
-          player_id,
-          users!player_id (
-            id,
-            email,
-            premium_status,
-            country,
-            created_at,
-            name
-          )
-        `)
+        .select('player_id')
         .eq('team_id', teamId);
 
       if (error) {
@@ -749,23 +746,30 @@ export class TeamService {
         throw new Error(`Failed to get team players: ${error.message}`);
       }
 
-      console.log('🔍 TeamService: Found team players:', teamPlayers?.length || 0);
+      if (!teamPlayers || teamPlayers.length === 0) {
+        console.log('ℹ️ TeamService: No players found for team:', teamId);
+        return [];
+      }
 
-      // Filter out any team_players records where users is null (orphaned records)
-      const validTeamPlayers = (teamPlayers || []).filter(tp => tp.users !== null);
-      console.log('🔍 TeamService: Valid team players (non-null users):', validTeamPlayers.length);
+      // Step 2: Get player IDs and fetch user data separately
+      const playerIds = teamPlayers.map(tp => tp.player_id);
+      console.log('🔍 TeamService: Found player IDs:', playerIds.length);
 
-      // Map team_players data to Player interface
-      const players = validTeamPlayers.map((tp, index) => {
-        // Handle both array and object responses from Supabase
-        const user = Array.isArray(tp.users) ? tp.users[0] : tp.users;
-        
-        // Add null check for user
-        if (!user) {
-          console.warn('⚠️ TeamService: User is null/undefined for team player:', tp);
-          return null;
-        }
-        
+      // Step 3: Fetch user data separately (avoids JOIN timeout)
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, email, premium_status, country, created_at, name')
+        .in('id', playerIds);
+
+      if (usersError) {
+        console.error('❌ Supabase error getting user data:', usersError);
+        throw new Error(`Failed to get user data: ${usersError.message}`);
+      }
+
+      console.log('🔍 TeamService: Found users:', users?.length || 0);
+
+      // Step 4: Map user data to Player interface
+      const players: Player[] = (users || []).map((user, index) => {
         // Generate player name using actual name column if available, otherwise use email
         const playerName = user.name || 
           (user.email ? 
@@ -778,13 +782,13 @@ export class TeamService {
           id: user.id,
           name: playerName,
           email: user.email,
-          position: 'PG' as Player['position'], // Default position (columns don't exist in DB yet)
-          jerseyNumber: index + 1, // Sequential jersey numbers (column doesn't exist in DB yet)
+          position: 'PG' as Player['position'], // Default position
+          jerseyNumber: index + 1, // Sequential jersey numbers
           isPremium: user.premium_status || false,
           country: user.country || 'US',
           createdAt: user.created_at || new Date().toISOString(),
         };
-      }).filter(Boolean); // Remove any null entries
+      });
 
       console.log('🔍 TeamService: Mapped team players:', players.map(p => ({ name: p.name, position: p.position, jersey: p.jerseyNumber })));
       
