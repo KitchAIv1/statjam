@@ -54,18 +54,14 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
-                  size="lg" 
-                  variant="outline" 
                   onClick={onWatchLive}
-                  className="border-2 border-white bg-transparent text-white hover:bg-white hover:text-gray-900 px-8 py-4 text-lg font-semibold transition-all duration-300 flex-1"
+                  className="border-2 border-white bg-transparent text-white hover:bg-white hover:text-gray-900 px-8 py-4 text-lg font-semibold transition-all duration-300 flex-1 h-auto rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
                 >
                   Watch Live
                 </Button>
                 <Button 
-                  size="lg" 
-                  variant="outline" 
                   onClick={onViewTournament}
-                  className="border-2 border-orange-400 bg-transparent text-orange-400 hover:bg-orange-400 hover:text-white px-8 py-4 text-lg font-semibold transition-all duration-300 flex-1"
+                  className="border-2 border-orange-400 bg-transparent text-orange-400 hover:bg-orange-400 hover:text-white px-8 py-4 text-lg font-semibold transition-all duration-300 flex-1 h-auto rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
                 >
                   Explore Tournaments
                 </Button>
