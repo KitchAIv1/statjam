@@ -482,58 +482,86 @@ const StatAdminDashboard = () => {
             </div>
           ) : (
             <div style={styles.adminTools}>
-              {assignedGames.map((game) => (
-              <div key={game.id} style={styles.toolCard}>
-                <div style={styles.toolIcon}>
-                  <Trophy style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-                </div>
-                <div style={styles.toolTitle}>{game.tournamentName}</div>
-                <div style={styles.toolDescription}>
-                  <strong>{game.teamA}</strong> vs <strong>{game.teamB}</strong><br />
-                  {new Date(game.scheduledDate).toLocaleDateString()} at {new Date(game.scheduledDate).toLocaleTimeString()}<br />
-                  Venue: {game.venue}
-                </div>
-                <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => router.push(`/stat-tracker-v3?gameId=${game.id}&teamAId=${game.teamAId}&teamBId=${game.teamBId}`)}
-                    style={{
-                      background: 'var(--dashboard-gradient)',
-                      color: '#1a1a1a',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '10px 16px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
-                    }}
-                  >
-                    <Zap size={16} />
-                    Launch Tracker
-                  </button>
-                  <div style={{ 
-                    ...styles.toolStatus, 
-                    ...styles.statusPending,
-                    alignSelf: 'center'
+              {(Array.isArray(assignedGames) ? assignedGames : []).map((organizerGroup: any) => (
+                <div key={organizerGroup.organizerId} style={{ marginBottom: '32px' }}>
+                  {/* Organizer Header */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                    borderRadius: '12px',
+                    padding: '16px 20px',
+                    marginBottom: '16px',
+                    color: '#ffffff'
                   }}>
-                    {game.status}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Users style={{ width: '20px', height: '20px' }} />
+                      <div>
+                        <div style={{ fontSize: '18px', fontWeight: '600' }}>
+                          {organizerGroup.organizerName}
+                        </div>
+                        <div style={{ fontSize: '14px', opacity: '0.9' }}>
+                          {organizerGroup.games?.length || 0} game{(organizerGroup.games?.length || 0) !== 1 ? 's' : ''} assigned
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                  
+                  {/* Games for this organizer */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '16px' }}>
+                    {(organizerGroup.games || []).map((game: any) => (
+                      <div key={game.id} style={styles.toolCard}>
+                        <div style={styles.toolIcon}>
+                          <Trophy style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
+                        </div>
+                        <div style={styles.toolTitle}>{game.tournamentName}</div>
+                        <div style={styles.toolDescription}>
+                          <strong>{game.teamA}</strong> vs <strong>{game.teamB}</strong><br />
+                          {new Date(game.scheduledDate).toLocaleDateString()} at {new Date(game.scheduledDate).toLocaleTimeString()}<br />
+                          Venue: {game.venue}
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => router.push(`/stat-tracker-v3?gameId=${game.id}&teamAId=${game.teamAId}&teamBId=${game.teamBId}`)}
+                            style={{
+                              background: 'var(--dashboard-gradient)',
+                              color: '#1a1a1a',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '10px 16px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                              transition: 'all 0.3s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'translateY(0px)';
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
+                            }}
+                          >
+                            <Zap size={16} />
+                            Launch Tracker
+                          </button>
+                          <div style={{ 
+                            ...styles.toolStatus, 
+                            ...styles.statusPending,
+                            alignSelf: 'center'
+                          }}>
+                            {game.status}
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
+                </div>
+              ))}
+            </div>
                 )}
               </CardContent>
             </Card>

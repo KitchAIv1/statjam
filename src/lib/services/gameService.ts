@@ -281,17 +281,17 @@ export class GameService {
       console.log('🔍 GameService: Step 2 - Fetching related data separately for performance');
       
       // Get unique tournament and team IDs
-      const tournamentIds = [...new Set(simpleGames.map(g => g.tournament_id).filter(Boolean))];
+      const tournamentIds = [...new Set(simpleGames.map((g: any) => g.tournament_id).filter(Boolean))];
       const teamIds = [...new Set([
-        ...simpleGames.map(g => g.team_a_id).filter(Boolean),
-        ...simpleGames.map(g => g.team_b_id).filter(Boolean)
+        ...simpleGames.map((g: any) => g.team_a_id).filter(Boolean),
+        ...simpleGames.map((g: any) => g.team_b_id).filter(Boolean)
       ])];
       
-      // Fetch tournaments and teams separately (much faster than JOINs)
+      // Fetch tournaments, teams, and organizers separately (much faster than JOINs)
       const [tournamentsResult, teamsResult] = await Promise.all([
         tournamentIds.length > 0 ? supabase
           .from('tournaments')
-          .select('id, name, venue')
+          .select('id, name, venue, organizer_id')
           .in('id', tournamentIds) : { data: [], error: null },
         teamIds.length > 0 ? supabase
           .from('teams')
@@ -299,33 +299,51 @@ export class GameService {
           .in('id', teamIds) : { data: [], error: null }
       ]);
       
+      // Get unique organizer IDs and fetch organizer info
+      const organizerIds = [...new Set(tournamentsResult.data?.map(t => t.organizer_id).filter(Boolean) || [])];
+      const organizersResult = organizerIds.length > 0 ? await supabase
+        .from('users')
+        .select('id, email')
+        .in('id', organizerIds) : { data: [], error: null };
+      
       // Create lookup maps for fast access
       const tournamentMap = new Map(tournamentsResult.data?.map(t => [t.id, t]) || []);
       const teamMap = new Map(teamsResult.data?.map(t => [t.id, t]) || []);
+      const organizerMap = new Map(organizersResult.data?.map(o => [o.id, o]) || []);
       
       // Combine data efficiently
-      const games = simpleGames.map(game => {
+      const games = simpleGames.map((game: any) => {
         const tournament = tournamentMap.get(game.tournament_id);
         const teamA = teamMap.get(game.team_a_id);
         const teamB = teamMap.get(game.team_b_id);
+        const organizer = tournament ? organizerMap.get(tournament.organizer_id) : null;
         
         return {
           ...game,
-          tournaments: tournament ? { name: tournament.name, venue: tournament.venue } : null,
+          tournaments: tournament ? { 
+            name: tournament.name, 
+            venue: tournament.venue,
+            organizer_id: tournament.organizer_id
+          } : null,
           team_a: teamA ? { name: teamA.name } : null,
-          team_b: teamB ? { name: teamB.name } : null
+          team_b: teamB ? { name: teamB.name } : null,
+          organizer: organizer ? {
+            id: organizer.id,
+            name: organizer.email,
+            email: organizer.email
+          } : null
         };
       });
       
-      const error = tournamentsResult.error || teamsResult.error;
+      const error = tournamentsResult.error || teamsResult.error || organizersResult.error;
 
       if (error) {
         console.error('❌ Supabase error getting assigned games with JOINs:', error);
         console.error('❌ Error details:', error.message, error.details, error.hint);
         
-        // Fallback: Return simple games data if JOINs fail
+        // Fallback: Return simple games data in expected grouped structure
         console.log('🔄 GameService: JOINs failed, falling back to simple data');
-        const fallbackGames = simpleGames.map(game => ({
+        const fallbackGames = simpleGames.map((game: any) => ({
           id: game.id,
           tournamentName: 'Loading...',
           teamA: 'Team A',
@@ -333,18 +351,28 @@ export class GameService {
           scheduledDate: game.start_time,
           venue: 'TBD',
           status: game.status,
-          tournamentId: game.tournament_id
+          tournamentId: game.tournament_id,
+          createdAt: game.created_at,
+          organizer: null
         }));
         
-        console.log('✅ GameService: Returning fallback games:', fallbackGames.length);
-        return fallbackGames;
+        // Return in grouped structure even for fallback
+        const fallbackGrouped = [{
+          organizerId: 'unknown',
+          organizerName: 'Loading Organizer Info...',
+          organizerEmail: '',
+          games: fallbackGames
+        }];
+        
+        console.log('✅ GameService: Returning fallback games in grouped structure:', fallbackGrouped.length);
+        return fallbackGrouped;
       }
 
       console.log('✅ GameService: Found assigned games:', games?.length || 0);
       console.log('🔍 GameService: Raw games data:', games);
 
-      // Transform data to match expected format
-      const transformedGames = (games || []).map(game => {
+      // Transform and organize data
+      const transformedGames = (games || []).map((game: any) => {
         console.log('🔄 Transforming game:', game.id, game);
         return {
           id: game.id,
@@ -354,13 +382,51 @@ export class GameService {
           scheduledDate: game.start_time,
           venue: game.tournaments?.venue || 'TBD',
           status: game.status,
-          tournamentId: game.tournament_id
+          tournamentId: game.tournament_id,
+          createdAt: game.created_at,
+          organizer: game.organizer ? {
+            id: game.organizer.id,
+            name: game.organizer.name,
+            email: game.organizer.email
+          } : null
         };
       });
 
-      console.log('✅ GameService: Transformed assigned games:', transformedGames.length, 'games');
-      console.log('🔍 GameService: Final transformed data:', transformedGames);
-      return transformedGames;
+      // Sort by creation date (newest first)
+      const sortedGames = transformedGames.sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || a.scheduledDate);
+        const dateB = new Date(b.createdAt || b.scheduledDate);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      // Group by organizer
+      const groupedByOrganizer = sortedGames.reduce((groups: any, game: any) => {
+        const organizerKey = game.organizer?.id || 'unknown';
+        const organizerName = game.organizer?.name || 'Unknown Organizer';
+        
+        if (!groups[organizerKey]) {
+          groups[organizerKey] = {
+            organizerId: organizerKey,
+            organizerName: organizerName,
+            organizerEmail: game.organizer?.email || '',
+            games: []
+          };
+        }
+        
+        groups[organizerKey].games.push(game);
+        return groups;
+      }, {} as Record<string, { organizerId: string; organizerName: string; organizerEmail: string; games: any[] }>);
+
+      // Convert to array and sort organizer groups by most recent game
+      const organizedGames = Object.values(groupedByOrganizer).sort((a: any, b: any) => {
+        const latestA = new Date(a.games[0]?.createdAt || a.games[0]?.scheduledDate || 0);
+        const latestB = new Date(b.games[0]?.createdAt || b.games[0]?.scheduledDate || 0);
+        return latestB.getTime() - latestA.getTime();
+      });
+
+      console.log('✅ GameService: Organized assigned games by organizer:', organizedGames.length, 'organizers');
+      console.log('🔍 GameService: Final organized data:', organizedGames);
+      return organizedGames;
     } catch (error) {
       console.error('❌ Error getting assigned games:', error);
       console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
