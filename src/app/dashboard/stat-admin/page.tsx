@@ -27,16 +27,13 @@ const StatAdminDashboard = () => {
   const pendingGames = gamesLoading ? null : flatGames.filter(game => game.status !== 'completed').length;
   const completionRate = gamesLoading ? null : (totalGames > 0 ? Math.round((completedGames / totalGames) * 100) : 0);
 
-  // Debug logging for stats calculation (only when not loading)
-  if (!gamesLoading && assignedGames.length > 0) {
+  // Debug logging for stats calculation (development only)
+  if (process.env.NODE_ENV !== 'production' && !gamesLoading && assignedGames.length > 0) {
     console.log('📊 StatAdmin Dashboard Stats:', {
-      assignedGamesLength: assignedGames.length,
-      flatGamesLength: flatGames.length,
       totalGames,
       completedGames,
       pendingGames,
-      completionRate,
-      gameStatuses: flatGames.map(g => ({ id: g.id, status: g.status }))
+      completionRate
     });
   }
 
@@ -50,7 +47,6 @@ const StatAdminDashboard = () => {
   useEffect(() => {
     const loadAssignedGames = async () => {
       if (!user || userRole !== 'stat_admin') {
-        console.log('🚫 Skipping game load - no user or not stat_admin:', { user: !!user, userRole });
         return;
       }
       
@@ -58,35 +54,20 @@ const StatAdminDashboard = () => {
         setGamesLoading(true);
         setGamesError(null);
         
-        console.log('🔍 Loading assigned games for stat admin:', user.id);
-        console.log('🔍 User object:', user);
-        
         const games = await GameService.getAssignedGames(user.id);
-        
-        console.log('✅ Loaded assigned games:', games.length);
-        console.log('✅ Games data:', games);
-        
         setAssignedGames(games);
       } catch (error) {
         console.error('❌ Error loading assigned games:', error);
-        console.error('❌ Error type:', typeof error);
-        console.error('❌ Error instanceof Error:', error instanceof Error);
-        
         const errorMessage = error instanceof Error ? error.message : 'Failed to load assigned games';
-        console.error('❌ Setting error message:', errorMessage);
-        
         setGamesError(errorMessage);
       } finally {
-        console.log('🏁 Finished loading games, setting loading to false');
         setGamesLoading(false);
       }
     };
 
     if (user && userRole === 'stat_admin') {
-      console.log('🚀 Starting to load assigned games...');
       loadAssignedGames();
     } else {
-      console.log('⏸️ Not loading games - conditions not met:', { user: !!user, userRole });
       // Set loading to false if conditions aren't met to prevent infinite loading
       setGamesLoading(false);
     }

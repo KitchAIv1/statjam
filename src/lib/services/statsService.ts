@@ -23,8 +23,6 @@ export interface StatRow {
 
 export const StatsService = {
   async getByGameId(gameId: string): Promise<StatRow[]> {
-    console.log('🔍 StatsService: Fetching stats for game:', gameId);
-    
     // Step 1: Get stats without JOINs for better performance
     const { data: stats, error: statsError } = await supabase
       .from('game_stats')
@@ -38,7 +36,6 @@ export const StatsService = {
     }
 
     if (!stats || stats.length === 0) {
-      console.log('✅ StatsService: No stats found for game:', gameId);
       return [];
     }
 
@@ -46,7 +43,6 @@ export const StatsService = {
     const playerIds = [...new Set(stats.map(s => s.player_id).filter(Boolean))];
     
     if (playerIds.length === 0) {
-      console.log('✅ StatsService: Loaded', stats.length, 'stats (no player data needed)');
       return stats.map(stat => ({ ...stat, users: null })) as StatRow[];
     }
 
@@ -68,8 +64,6 @@ export const StatsService = {
       ...stat,
       users: userMap.get(stat.player_id) || null
     })) as StatRow[];
-    
-    console.log('✅ StatsService: Loaded', result.length, 'stats with user data');
     
     return result;
   },

@@ -250,7 +250,6 @@ export class GameService {
   // Get all games assigned to a stat admin
   static async getAssignedGames(statAdminId: string): Promise<any[]> {
     try {
-      console.log('🔍 GameService: Fetching assigned games for stat admin:', statAdminId);
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
@@ -268,17 +267,12 @@ export class GameService {
       ]) as any;
       
       if (simpleError) {
-        console.error('❌ Simple query failed:', simpleError);
         throw new Error(`Database error in simple query: ${simpleError.message}`);
       }
       
       if (!simpleGames || simpleGames.length === 0) {
-        console.log('ℹ️ GameService: No games found for stat admin:', statAdminId);
         return [];
       }
-      
-      // Step 2: Fetch related data separately to avoid complex JOINs
-      console.log('🔍 GameService: Step 2 - Fetching related data separately for performance');
       
       // Get unique tournament and team IDs
       const tournamentIds = [...new Set(simpleGames.map((g: any) => g.tournament_id).filter(Boolean))];
@@ -338,11 +332,7 @@ export class GameService {
       const error = tournamentsResult.error || teamsResult.error || organizersResult.error;
 
       if (error) {
-        console.error('❌ Supabase error getting assigned games with JOINs:', error);
-        console.error('❌ Error details:', error.message, error.details, error.hint);
-        
         // Fallback: Return simple games data in expected grouped structure
-        console.log('🔄 GameService: JOINs failed, falling back to simple data');
         const fallbackGames = simpleGames.map((game: any) => ({
           id: game.id,
           tournamentName: 'Loading...',
@@ -364,16 +354,11 @@ export class GameService {
           games: fallbackGames
         }];
         
-        console.log('✅ GameService: Returning fallback games in grouped structure:', fallbackGrouped.length);
         return fallbackGrouped;
       }
 
-      console.log('✅ GameService: Found assigned games:', games?.length || 0);
-      console.log('🔍 GameService: Raw games data:', games);
-
       // Transform and organize data
       const transformedGames = (games || []).map((game: any) => {
-        console.log('🔄 Transforming game:', game.id, game);
         return {
           id: game.id,
           tournamentName: game.tournaments?.name || 'Unknown Tournament',
@@ -424,12 +409,9 @@ export class GameService {
         return latestB.getTime() - latestA.getTime();
       });
 
-      console.log('✅ GameService: Organized assigned games by organizer:', organizedGames.length, 'organizers');
-      console.log('🔍 GameService: Final organized data:', organizedGames);
       return organizedGames;
     } catch (error) {
       console.error('❌ Error getting assigned games:', error);
-      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       throw error; // Re-throw to let the component handle it
     }
   }
