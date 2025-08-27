@@ -51,10 +51,9 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       setHomeScore(statsTx.finalHome);
       setAwayScore(statsTx.finalAway);
 
-      // Reduced logging for performance
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('🔍 V2 Feed: Updated', merged.length, 'plays, scores:', `${statsTx.finalHome}-${statsTx.finalAway}`);
-      }
+      // Enhanced logging for score updates
+      console.log('🔍 V2 Feed: Score update - Setting homeScore:', statsTx.finalHome, 'awayScore:', statsTx.finalAway);
+      console.log('🔍 V2 Feed: Updated', merged.length, 'plays, final scores:', `${statsTx.finalHome}-${statsTx.finalAway}`);
     } catch (e) {
       setError('Failed to load play feed');
     } finally {
@@ -79,9 +78,9 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
     
     try {
       const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
-        console.log('🔔 V2 Feed: Subscription callback received for table:', table);
+        console.log('🔔 V2 Feed: Subscription callback received for table:', table, 'payload:', payload);
         if (table === 'game_stats' || table === 'game_substitutions') {
-          console.log('🔄 V2 Feed: Triggering fetchAll() for', table, 'update');
+          console.log('🔄 V2 Feed: Triggering fetchAll() for', table, 'update - this should update scores!');
           fetchAll();
         } else {
           console.log('🔕 V2 Feed: Ignoring update for table:', table);
@@ -96,18 +95,7 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
         console.log('🧪 V2 Feed: If you see this but no subscription logs when recording stats, RLS might be blocking real-time');
       }, 2000);
 
-      // TEMPORARY: Add polling fallback while RLS is fixed
-      const pollInterval = setInterval(() => {
-        if (document.visibilityState === 'visible') {
-          console.log('🔄 V2 Feed: Polling fallback - checking for new data');
-          fetchAll();
-        }
-      }, 3000); // Poll every 3 seconds
-
-      return () => {
-        clearInterval(pollInterval);
-        unsubscribe();
-      };
+      return unsubscribe;
     } catch (error) {
       console.error('❌ V2 Feed: Error setting up subscription:', error);
     }
