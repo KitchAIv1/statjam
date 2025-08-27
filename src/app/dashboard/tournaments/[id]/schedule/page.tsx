@@ -891,11 +891,11 @@ function GameCard({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'scheduled': return { bg: '#1a4b8c', text: '#87ceeb' };
-      case 'in_progress': return { bg: '#1a5f1a', text: '#90ee90' };
-      case 'completed': return { bg: '#4a4a4a', text: '#d3d3d3' };
-      case 'cancelled': return { bg: '#5c1a1a', text: '#ff6b6b' };
-      default: return { bg: '#333', text: '#ccc' };
+      case 'scheduled': return { bg: '#dbeafe', text: '#1e40af' };
+      case 'in_progress': return { bg: '#dcfce7', text: '#166534' };
+      case 'completed': return { bg: '#f3f4f6', text: '#374151' };
+      case 'cancelled': return { bg: '#fee2e2', text: '#dc2626' };
+      default: return { bg: '#f9fafb', text: '#6b7280' };
     }
   };
 
@@ -903,16 +903,18 @@ function GameCard({
 
   const styles = {
     card: {
-      background: 'rgba(255, 255, 255, 0.05)',
+      background: '#ffffff',
       borderRadius: '12px',
       padding: '20px',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      border: '1px solid #e5e7eb',
       transition: 'all 0.2s ease',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
     },
     cardHover: {
-      background: 'rgba(255, 255, 255, 0.08)',
-      borderColor: 'rgba(255, 215, 0, 0.3)',
+      background: '#ffffff',
+      borderColor: '#f97316',
       transform: 'translateY(-1px)',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
     },
     header: {
       display: 'flex',
@@ -932,10 +934,10 @@ function GameCard({
       gap: '8px',
       fontSize: '18px',
       fontWeight: '600',
-      color: '#ffffff',
+      color: '#1f2937',
     },
     vs: {
-      color: '#888',
+      color: '#6b7280',
       fontSize: '14px',
       fontWeight: '500',
     },
@@ -958,7 +960,7 @@ function GameCard({
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      color: '#b3b3b3',
+      color: '#6b7280',
       fontSize: '14px',
     },
     actions: {
@@ -967,11 +969,11 @@ function GameCard({
       justifyContent: 'flex-end',
     },
     actionButton: {
-      background: 'rgba(255, 255, 255, 0.1)',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
+      background: '#f9fafb',
+      border: '1px solid #d1d5db',
       borderRadius: '8px',
       padding: '8px 12px',
-      color: '#ffffff',
+      color: '#374151',
       cursor: 'pointer',
       fontSize: '12px',
       fontWeight: '500',
@@ -981,10 +983,14 @@ function GameCard({
       transition: 'all 0.2s ease',
     },
     editButton: {
-      borderColor: 'rgba(255, 215, 0, 0.3)',
+      background: '#fef3c7',
+      borderColor: '#f59e0b',
+      color: '#92400e',
     },
     deleteButton: {
-      borderColor: 'rgba(255, 107, 107, 0.3)',
+      background: '#fee2e2',
+      borderColor: '#ef4444',
+      color: '#dc2626',
     },
   };
 
