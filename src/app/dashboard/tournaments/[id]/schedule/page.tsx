@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { TournamentService, TeamService } from '@/lib/services/tournamentService';
@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 
 interface GameSchedulePageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
@@ -41,7 +41,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
   const [filterDate, setFilterDate] = useState<string>('');
   const [showBracketBuilder, setShowBracketBuilder] = useState(false);
   
-  const tournamentId = params.id;
+  const { id: tournamentId } = use(params);
 
   useEffect(() => {
     if (!loading && (!user || userRole !== 'organizer')) {
@@ -111,8 +111,8 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#1a1a1a',
-        color: '#ffffff'
+        background: '#ffffff',
+        color: '#1f2937'
       }}>
         <div style={{
           display: 'flex',
@@ -126,7 +126,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
             height: '24px',
             borderWidth: '2px',
             borderStyle: 'solid',
-            borderColor: '#FFD700',
+            borderColor: '#f97316',
             borderTopColor: 'transparent',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite'
@@ -145,8 +145,8 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
 
   if (!tournament) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a' }}>
-        <div style={{ color: '#ffffff', fontSize: '18px' }}>Tournament not found</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ffffff' }}>
+        <div style={{ color: '#1f2937', fontSize: '18px' }}>Tournament not found</div>
       </div>
     );
   }
@@ -154,7 +154,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+      background: '#ffffff',
       paddingTop: '100px',
       paddingBottom: '40px',
     },
@@ -167,7 +167,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
       marginBottom: '32px',
     },
     backButton: {
-      background: 'rgba(255, 255, 255, 0.1)',
+      background: '#f97316',
       border: 'none',
       borderRadius: '12px',
       padding: '12px 20px',
@@ -182,7 +182,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
       transition: 'all 0.2s ease',
     },
     backButtonHover: {
-      background: 'rgba(255, 255, 255, 0.2)',
+      background: '#ea580c',
       transform: 'translateY(-1px)',
     },
     titleSection: {
@@ -199,16 +199,13 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
     title: {
       fontSize: '36px',
       fontWeight: '700',
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      backgroundClip: 'text',
+      color: '#1f2937',
       marginBottom: '8px',
       fontFamily: "'Anton', system-ui, sans-serif",
     },
     subtitle: {
       fontSize: '16px',
-      color: '#b3b3b3',
+      color: '#6b7280',
       marginBottom: '16px',
     },
     actionButtons: {
@@ -217,11 +214,11 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
       alignItems: 'center',
     },
     primaryButton: {
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      background: '#dc2626',
       border: 'none',
       borderRadius: '12px',
       padding: '12px 24px',
-      color: '#1a1a1a',
+      color: '#ffffff',
       fontSize: '14px',
       fontWeight: '600',
       cursor: 'pointer',
@@ -231,16 +228,15 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
       transition: 'all 0.2s ease',
     },
     primaryButtonHover: {
-      background: 'linear-gradient(135deg, #FFA500, #FF8C00)',
+      background: '#b91c1c',
       transform: 'translateY(-1px)',
     },
     filtersContainer: {
-      background: 'rgba(255, 255, 255, 0.05)',
+      background: '#f9fafb',
       borderRadius: '16px',
       padding: '24px',
       marginBottom: '24px',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      border: '1px solid #e5e7eb',
     },
     filtersGrid: {
       display: 'grid',
@@ -256,32 +252,32 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
     filterLabel: {
       fontSize: '14px',
       fontWeight: '500',
-      color: '#ffffff',
+      color: '#374151',
     },
     filterSelect: {
-      background: 'rgba(255, 255, 255, 0.1)',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
+      background: '#ffffff',
+      border: '1px solid #d1d5db',
       borderRadius: '8px',
       padding: '10px 12px',
-      color: '#ffffff',
+      color: '#1f2937',
       fontSize: '14px',
       outline: 'none',
     },
     filterInput: {
-      background: 'rgba(255, 255, 255, 0.1)',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
+      background: '#ffffff',
+      border: '1px solid #d1d5db',
       borderRadius: '8px',
       padding: '10px 12px',
-      color: '#ffffff',
+      color: '#1f2937',
       fontSize: '14px',
       outline: 'none',
     },
     gamesContainer: {
-      background: 'rgba(255, 255, 255, 0.05)',
+      background: '#ffffff',
       borderRadius: '16px',
       padding: '24px',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
     },
     gamesHeader: {
       display: 'flex',
@@ -292,28 +288,28 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
     gamesTitle: {
       fontSize: '20px',
       fontWeight: '600',
-      color: '#ffffff',
+      color: '#1f2937',
     },
     emptyState: {
       textAlign: 'center' as const,
       padding: '60px 20px',
-      color: '#888',
+      color: '#6b7280',
     },
     emptyIcon: {
       width: '64px',
       height: '64px',
       margin: '0 auto 16px',
-      color: '#444',
+      color: '#9ca3af',
     },
     emptyTitle: {
       fontSize: '18px',
       fontWeight: '500',
       marginBottom: '8px',
-      color: '#ffffff',
+      color: '#1f2937',
     },
     emptyDescription: {
       fontSize: '14px',
-      color: '#888',
+      color: '#6b7280',
       marginBottom: '24px',
     },
   };
@@ -325,12 +321,12 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
         <div style={styles.header}>
           <button
             style={styles.backButton}
-            onClick={() => router.push(`/dashboard/tournaments/${tournamentId}`)}
+            onClick={() => router.push('/dashboard?section=overview')}
             onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.backButtonHover)}
             onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.backButton)}
           >
             <ArrowLeft style={{ width: '16px', height: '16px' }} />
-            Back to Tournament
+            Back to Dashboard
           </button>
 
           <div style={styles.titleSection}>

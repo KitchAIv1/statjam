@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { TournamentService } from '@/lib/services/tournamentService';
@@ -34,7 +34,7 @@ const TournamentDetailPage = ({ params }: TournamentDetailPageProps) => {
   const [loadingTournament, setLoadingTournament] = useState(true);
   
   // Get tournament ID from params
-  const tournamentId = params.id;
+  const { id: tournamentId } = use(params);
 
   useEffect(() => {
     if (!loading && (!user || (userRole !== 'organizer' && userRole !== 'stat_admin'))) {
