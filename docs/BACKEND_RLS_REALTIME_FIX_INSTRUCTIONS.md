@@ -1,13 +1,19 @@
 # Backend Instructions: Fix Supabase Real-Time Subscriptions
 
-## 🚨 CRITICAL ISSUE IDENTIFIED
+## 🚨 CRITICAL ISSUE IDENTIFIED - UPDATE NEEDED
 
-**Problem**: Live viewer scores are not updating in real-time because Supabase RLS policies are blocking real-time subscription events.
+**Problem**: Live viewer scores are not updating in real-time because Supabase RLS policies are still blocking real-time subscription events.
 
-**Status**: 
+**Status After Backend Changes**: 
 - ✅ Frontend subscriptions are working (setup confirmed)
 - ✅ Database queries work (manual refresh shows correct data)
-- ❌ Real-time INSERT events are NOT being broadcast to subscribers
+- ✅ Play-by-play data is showing in live viewer
+- ❌ **Real-time INSERT events are STILL NOT being broadcast to subscribers**
+- ❌ **Both V1 and V2 subscriptions not firing**
+
+**Evidence**: Frontend logs show NO subscription callbacks when stats are recorded:
+- Missing: `🔔 SubscriptionManager: New game_stats INSERT detected`
+- Missing: `🔔 V2 Feed: Subscription callback received`
 
 ## 🔍 TECHNICAL DIAGNOSIS
 
@@ -111,9 +117,14 @@ And the live viewer scores should update **instantly** without requiring a page 
 
 **HIGH PRIORITY** - This affects core user experience. Users expect real-time score updates during live games.
 
-## 💡 TEMPORARY WORKAROUND
+## 💡 TEMPORARY WORKAROUND - UPDATED
 
-A 3-second polling fallback has been implemented in the frontend as a temporary measure, but this should be removed once real-time subscriptions are working properly.
+A **smart 2-second polling system** has been implemented in the frontend as a temporary measure:
+- Only polls for live games when tab is visible
+- Provides real-time feel until backend subscriptions work
+- Should be removed once real-time subscriptions are working properly
+
+**Current Status**: Live viewer now updates automatically every 2 seconds, but we need true real-time subscriptions for optimal performance.
 
 ---
 
