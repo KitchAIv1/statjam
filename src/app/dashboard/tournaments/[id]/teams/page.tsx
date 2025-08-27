@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { TournamentService, TeamService } from '@/lib/services/tournamentService';
@@ -23,10 +23,11 @@ import {
 } from 'lucide-react';
 
 interface TeamManagementPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
+  const { id: tournamentId } = use(params);
   const { user, userRole, loading } = useAuthStore();
   const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -42,8 +43,7 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
   const [showFullRoster, setShowFullRoster] = useState(false);
   const [selectedTeamForRoster, setSelectedTeamForRoster] = useState<Team | null>(null);
   
-  // Get tournament ID from params
-  const tournamentId = params.id;
+  // Tournament ID extracted from params above
 
   useEffect(() => {
     if (!loading && (!user || userRole !== 'organizer')) {
@@ -494,7 +494,7 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
         <div style={styles.header}>
           <button
             style={styles.backButton}
-            onClick={() => router.push(`/dashboard/tournaments/${params.id}`)}
+            onClick={() => router.push(`/dashboard/tournaments/${tournamentId}`)}
             onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.backButtonHover)}
             onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.backButton)}
           >

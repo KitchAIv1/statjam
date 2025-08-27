@@ -16,27 +16,29 @@ const StatAdminDashboard = () => {
   
   // Real assigned games data
   const [assignedGames, setAssignedGames] = useState<any[]>([]);
-  const [gamesLoading, setGamesLoading] = useState(false);
+  const [gamesLoading, setGamesLoading] = useState(true); // Start as true to prevent flash
   const [gamesError, setGamesError] = useState<string | null>(null);
   const [launchingTracker, setLaunchingTracker] = useState<string | null>(null);
 
-  // Calculate flat games array and stats from grouped data
-  const flatGames = assignedGames.flatMap(organizerGroup => organizerGroup.games || []);
-  const totalGames = flatGames.length;
-  const completedGames = flatGames.filter(game => game.status === 'completed').length;
-  const pendingGames = flatGames.filter(game => game.status !== 'completed').length;
-  const completionRate = totalGames > 0 ? Math.round((completedGames / totalGames) * 100) : 0;
+  // Calculate flat games array and stats from grouped data (only when data is loaded)
+  const flatGames = gamesLoading ? [] : assignedGames.flatMap(organizerGroup => organizerGroup.games || []);
+  const totalGames = gamesLoading ? null : flatGames.length;
+  const completedGames = gamesLoading ? null : flatGames.filter(game => game.status === 'completed').length;
+  const pendingGames = gamesLoading ? null : flatGames.filter(game => game.status !== 'completed').length;
+  const completionRate = gamesLoading ? null : (totalGames > 0 ? Math.round((completedGames / totalGames) * 100) : 0);
 
-  // Debug logging for stats calculation
-  console.log('📊 StatAdmin Dashboard Stats:', {
-    assignedGamesLength: assignedGames.length,
-    flatGamesLength: flatGames.length,
-    totalGames,
-    completedGames,
-    pendingGames,
-    completionRate,
-    gameStatuses: flatGames.map(g => ({ id: g.id, status: g.status }))
-  });
+  // Debug logging for stats calculation (only when not loading)
+  if (!gamesLoading && assignedGames.length > 0) {
+    console.log('📊 StatAdmin Dashboard Stats:', {
+      assignedGamesLength: assignedGames.length,
+      flatGamesLength: flatGames.length,
+      totalGames,
+      completedGames,
+      pendingGames,
+      completionRate,
+      gameStatuses: flatGames.map(g => ({ id: g.id, status: g.status }))
+    });
+  }
 
   useEffect(() => {
     if (!loading && (!user || userRole !== 'stat_admin')) {
@@ -85,6 +87,8 @@ const StatAdminDashboard = () => {
       loadAssignedGames();
     } else {
       console.log('⏸️ Not loading games - conditions not met:', { user: !!user, userRole });
+      // Set loading to false if conditions aren't met to prevent infinite loading
+      setGamesLoading(false);
     }
   }, [user, userRole]);
 
@@ -346,7 +350,13 @@ const StatAdminDashboard = () => {
                   </CardHeader>
                   <CardContent className="text-white">
                     <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">{totalGames}</div>
+                      <div className="text-3xl font-bold">
+                        {gamesLoading ? (
+                          <div className="w-12 h-9 bg-white/20 rounded animate-pulse"></div>
+                        ) : (
+                          totalGames
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
                         <TrendingUp className="w-3 h-3" />
                         Active
@@ -368,7 +378,13 @@ const StatAdminDashboard = () => {
                   </CardHeader>
                   <CardContent className="text-white">
                     <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">{completedGames}</div>
+                      <div className="text-3xl font-bold">
+                        {gamesLoading ? (
+                          <div className="w-12 h-9 bg-white/20 rounded animate-pulse"></div>
+                        ) : (
+                          completedGames
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
                         <TrendingUp className="w-3 h-3" />
                         Done
@@ -390,7 +406,13 @@ const StatAdminDashboard = () => {
                   </CardHeader>
                   <CardContent className="text-white">
                     <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">{pendingGames}</div>
+                      <div className="text-3xl font-bold">
+                        {gamesLoading ? (
+                          <div className="w-12 h-9 bg-white/20 rounded animate-pulse"></div>
+                        ) : (
+                          pendingGames
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
                         <Clock className="w-3 h-3" />
                         Waiting
@@ -412,7 +434,13 @@ const StatAdminDashboard = () => {
                   </CardHeader>
                   <CardContent className="text-white">
                     <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">{completionRate}%</div>
+                      <div className="text-3xl font-bold">
+                        {gamesLoading ? (
+                          <div className="w-16 h-9 bg-white/20 rounded animate-pulse"></div>
+                        ) : (
+                          `${completionRate}%`
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
                         <TrendingUp className="w-3 h-3" />
                         Rate
