@@ -43,11 +43,10 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
   calculatePlayerPoints
 }) => {
 
-  console.log('🎮 PlayByPlayFeed: Received data:', {
-    playByPlayCount: playByPlay.length,
-    isLive,
-    gameScores: `${game.homeScore}-${game.awayScore}`
-  });
+  // Reduced logging for performance
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🎮 PlayByPlayFeed: Updated', playByPlay.length, 'plays, scores:', `${game.homeScore}-${game.awayScore}`);
+  }
 
 
 

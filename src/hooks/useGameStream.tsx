@@ -417,7 +417,9 @@ export const useGameStream = (gameId: string) => {
       
       if (table === 'game_stats') {
         if (DEBUG_VIEWER) console.log('🔄 GameViewer: New stat recorded');
-        fetchGameData(true);
+        // Only update scores in real-time, avoid full data refetch
+        // The V2 feed (usePlayFeed) handles the detailed play-by-play updates
+        // This prevents duplicate data fetching and excessive console logs
       }
       
       if (table === 'game_substitutions') {

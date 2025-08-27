@@ -5,11 +5,12 @@ import { StatsService } from '@/lib/services/statsService';
 import { SubstitutionsService } from '@/lib/services/substitutionsService';
 import { transformStatsToPlay } from '@/lib/transformers/statsToPlay';
 import { transformSubsToPlay } from '@/lib/transformers/subsToPlay';
+import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 import { supabase } from '@/lib/supabase';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
-import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 
 export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId: string; teamAName: string; teamBName: string }) {
+  const DEBUG_VIEWER = false; // Reduced logging for performance
   const [plays, setPlays] = useState<PlayByPlayEntry[]>([]);
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
@@ -46,11 +47,9 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       setHomeScore(statsTx.finalHome);
       setAwayScore(statsTx.finalAway);
 
-      // Debug: verify counts by type pre/post transform
-      if (process.env.NODE_ENV !== 'production') {
-        const pre = stats.reduce<Record<string, number>>((acc, s) => { acc[s.stat_type] = (acc[s.stat_type] || 0) + 1; return acc; }, {} as any);
-        const post = merged.reduce<Record<string, number>>((acc, p) => { acc[p.statType || p.playType] = (acc[p.statType || p.playType] || 0) + 1; return acc; }, {} as any);
-        console.log('🔍 V2 Feed counts:', { preStats: pre, postPlays: post });
+      // Reduced logging for performance
+      if (DEBUG_VIEWER && process.env.NODE_ENV !== 'production') {
+        console.log('🔍 V2 Feed: Updated', merged.length, 'plays, scores:', `${statsTx.finalHome}-${statsTx.finalAway}`);
       }
     } catch (e) {
       setError('Failed to load play feed');
