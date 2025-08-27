@@ -79,6 +79,7 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
   
   // Configuration
   const enableViewerV2 = process.env.NEXT_PUBLIC_VIEWER_V2 === '1';
+  console.log('🔧 GameViewerData: V2 enabled?', enableViewerV2, 'env var:', process.env.NEXT_PUBLIC_VIEWER_V2);
   
   // V2 data (conditional)
   const teamMap = gameData ? {
@@ -90,6 +91,7 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
   
   // Only call usePlayFeed if we have valid team data or V2 is enabled
   const shouldUseV2 = enableViewerV2 && gameData;
+  console.log('🔧 GameViewerData: shouldUseV2?', shouldUseV2, 'enableViewerV2:', enableViewerV2, 'gameData:', !!gameData);
   const { plays: v2Plays = [], homeScore = 0, awayScore = 0 } = usePlayFeed(
     gameId, 
     teamMap
@@ -210,6 +212,8 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
     awayScore,
     teamMap,
   } : undefined;
+  
+  console.log('🔧 GameViewerData: Final data source - V2 data exists?', !!v2Data, 'V2 scores:', homeScore, awayScore, 'V1 scores:', gameData?.game?.homeScore, gameData?.game?.awayScore);
 
   return {
     // Core game data

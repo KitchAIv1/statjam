@@ -38,7 +38,18 @@ class GameSubscriptionManager {
             this.callbacks.get(gameId)?.forEach(cb => cb('game_substitutions', payload));
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('🔌 SubscriptionManager: Channel status for game', gameId, ':', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ SubscriptionManager: Successfully subscribed to real-time updates for game', gameId);
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ SubscriptionManager: Channel error for game', gameId);
+          } else if (status === 'TIMED_OUT') {
+            console.error('⏰ SubscriptionManager: Subscription timed out for game', gameId);
+          } else if (status === 'CLOSED') {
+            console.log('🔒 SubscriptionManager: Channel closed for game', gameId);
+          }
+        });
 
       this.subscriptions.set(gameId, channel);
     }
