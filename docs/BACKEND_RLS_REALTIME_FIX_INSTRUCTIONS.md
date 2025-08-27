@@ -11,9 +11,14 @@
 - ❌ **Real-time INSERT events are STILL NOT being broadcast to subscribers**
 - ❌ **Both V1 and V2 subscriptions not firing**
 
-**Evidence**: Frontend logs show NO subscription callbacks when stats are recorded:
+**Evidence**: Frontend logs show subscription failures and no callbacks:
+- `🔌 SubscriptionManager: Channel status: SUBSCRIBED` ✅ (initial connection)
+- `🔌 SubscriptionManager: Channel status: CHANNEL_ERROR` ❌ (backend rejection)
 - Missing: `🔔 SubscriptionManager: New game_stats INSERT detected`
 - Missing: `🔔 V2 Feed: Subscription callback received`
+
+**NEW EVIDENCE - CHANNEL_ERROR:**
+The WebSocket connection is being **actively rejected** by Supabase, confirming RLS policies are blocking real-time events.
 
 ## 🔍 TECHNICAL DIAGNOSIS
 
