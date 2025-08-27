@@ -96,7 +96,18 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
         console.log('🧪 V2 Feed: If you see this but no subscription logs when recording stats, RLS might be blocking real-time');
       }, 2000);
 
-      return unsubscribe;
+      // TEMPORARY: Add polling fallback while RLS is fixed
+      const pollInterval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          console.log('🔄 V2 Feed: Polling fallback - checking for new data');
+          fetchAll();
+        }
+      }, 3000); // Poll every 3 seconds
+
+      return () => {
+        clearInterval(pollInterval);
+        unsubscribe();
+      };
     } catch (error) {
       console.error('❌ V2 Feed: Error setting up subscription:', error);
     }
