@@ -103,7 +103,12 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
     <ResponsiveContainer>
       {/* Game Header - Score, Teams, Status */}
       <GameHeader 
-        game={gameData?.game}
+        game={{
+          ...gameData?.game,
+          // Use V2 scores when available (real-time), fallback to V1 scores
+          homeScore: enableViewerV2 && v2Data ? v2Data.homeScore : gameData?.game?.homeScore,
+          awayScore: enableViewerV2 && v2Data ? v2Data.awayScore : gameData?.game?.awayScore,
+        }}
         isLive={isLive}
         lastUpdated={gameData?.lastUpdated || ''}
         isMobile={isMobile}
@@ -166,11 +171,15 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
                 <div style={styles.gameSummaryHeader}>Game Summary</div>
                 <div style={styles.gameSummaryRow}>
                   <div style={styles.gameSummaryTeam}>{gameData.game.teamAName}</div>
-                  <div style={styles.gameSummaryScore}>{gameData.game.homeScore}</div>
+                  <div style={styles.gameSummaryScore}>
+                    {enableViewerV2 && v2Data ? v2Data.homeScore : gameData.game.homeScore}
+                  </div>
                 </div>
                 <div style={styles.gameSummaryRow}>
                   <div style={styles.gameSummaryTeam}>{gameData.game.teamBName}</div>
-                  <div style={styles.gameSummaryScore}>{gameData.game.awayScore}</div>
+                  <div style={styles.gameSummaryScore}>
+                    {enableViewerV2 && v2Data ? v2Data.awayScore : gameData.game.awayScore}
+                  </div>
                 </div>
                 <div style={styles.gameSummaryMeta}>
                   <span>Status: {gameData.game.status}</span>
