@@ -9,7 +9,7 @@ import { transformSubsToPlay } from '@/lib/transformers/subsToPlay';
 import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 
 export const useGameStream = (gameId: string) => {
-  const DEBUG_VIEWER = false;
+  const DEBUG_VIEWER = true;
   const [gameData, setGameData] = useState<GameViewerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
