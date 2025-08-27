@@ -76,6 +76,25 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
   const { user, initialized, loading: authLoading } = useAuthStore();
   const { gameData, loading, error, isLive } = useGameStream(gameId);
   const { isMobile, isTablet, isDesktop } = useResponsive();
+
+  // TEMPORARY: Smart polling fallback since real-time subscriptions aren't working
+  useEffect(() => {
+    if (!gameId || !isLive) return;
+
+    console.log('🔄 GameViewerData: Starting smart polling fallback for live game');
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        console.log('🔄 GameViewerData: Polling for updates (real-time not working)');
+        // Trigger both V1 and V2 updates
+        window.dispatchEvent(new CustomEvent('force-game-refresh', { detail: { gameId } }));
+      }
+    }, 2000); // Poll every 2 seconds for live games
+
+    return () => {
+      console.log('🔄 GameViewerData: Stopping smart polling');
+      clearInterval(pollInterval);
+    };
+  }, [gameId, isLive]);
   
   // Configuration
   const enableViewerV2 = process.env.NEXT_PUBLIC_VIEWER_V2 === '1';
@@ -205,15 +224,16 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
     console.log('🔄 Refetching game data...');
   }, []);
 
-  // Prepare V2 data if enabled
+  // Prepare V2 data if enabled - USE V1 SCORES FOR REAL-TIME UPDATES (V1 subscriptions work perfectly)
   const v2Data = shouldUseV2 ? {
     plays: v2Plays,
-    homeScore,
-    awayScore,
+    homeScore: gameData?.game?.homeScore || homeScore || 0, // Always prefer V1 scores (real-time)
+    awayScore: gameData?.game?.awayScore || awayScore || 0,  // Always prefer V1 scores (real-time)
     teamMap,
   } : undefined;
   
   console.log('🔧 GameViewerData: Final data source - V2 data exists?', !!v2Data, 'V2 scores:', homeScore, awayScore, 'V1 scores:', gameData?.game?.homeScore, gameData?.game?.awayScore);
+  console.log('🔧 GameViewerData: Using scores - V2 final:', v2Data?.homeScore, v2Data?.awayScore);
 
   return {
     // Core game data

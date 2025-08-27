@@ -430,6 +430,19 @@ export const useGameStream = (gameId: string) => {
     return unsubscribe;
   }, [gameId, isTabVisible]);
 
+  // TEMPORARY: Listen for forced refresh events (polling fallback)
+  useEffect(() => {
+    const handleForceRefresh = (event: CustomEvent) => {
+      if (event.detail?.gameId === gameId) {
+        console.log('🔄 GameStream: Forced refresh triggered by polling');
+        fetchGameData(true);
+      }
+    };
+
+    window.addEventListener('force-game-refresh', handleForceRefresh as EventListener);
+    return () => window.removeEventListener('force-game-refresh', handleForceRefresh as EventListener);
+  }, [gameId, fetchGameData]);
+
   return {
     gameData,
     loading,

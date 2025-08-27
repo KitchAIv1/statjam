@@ -101,6 +101,19 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
     }
   }, [gameId, fetchAll]); // Include fetchAll dependency
 
+  // TEMPORARY: Listen for forced refresh events (polling fallback)
+  useEffect(() => {
+    const handleForceRefresh = (event: CustomEvent) => {
+      if (event.detail?.gameId === gameId) {
+        console.log('🔄 V2 Feed: Forced refresh triggered by polling');
+        fetchAll();
+      }
+    };
+
+    window.addEventListener('force-game-refresh', handleForceRefresh as EventListener);
+    return () => window.removeEventListener('force-game-refresh', handleForceRefresh as EventListener);
+  }, [gameId, fetchAll]);
+
   return { plays, homeScore, awayScore, loading, error, refetch: fetchAll };
 }
 
