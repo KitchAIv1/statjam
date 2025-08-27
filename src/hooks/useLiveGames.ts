@@ -26,6 +26,7 @@ export function useLiveGames() {
   const [games, setGames] = useState<LiveGameSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTabVisible, setIsTabVisible] = useState(true);
   // Track any game that has appeared as live in-session to prevent flicker on pauses
   const seenLiveIdsRef = useRef<Set<string>>(new Set());
 
@@ -145,6 +146,16 @@ export function useLiveGames() {
     }
   }, []);
 
+  // Tab visibility detection for smart polling
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabVisible(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   useEffect(() => {
     void fetchLive();
     // Realtime subscription to games updates
@@ -208,14 +219,18 @@ export function useLiveGames() {
       })
       .subscribe();
 
-    // Light polling as fallback
-    const t = setInterval(fetchLive, 10000);
+    // Smart polling - only poll when tab is visible (reduced from 10s to 60s for performance)
+    const t = setInterval(() => {
+      if (isTabVisible) {
+        fetchLive();
+      }
+    }, 60000);
 
     return () => {
       clearInterval(t);
       try { void supabase.removeChannel(channel); } catch { /* noop */ }
     };
-  }, [fetchLive]);
+  }, [fetchLive, isTabVisible]);
 
   return { games, loading, error, refetch: fetchLive };
 }

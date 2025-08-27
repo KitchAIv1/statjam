@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Game, GameStat, PlayerGameStats, GameSubstitution, AuditLog } from '@/lib/types/game';
+import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 
 // Temporary feature flag to silence audit log writes until backend endpoint is ready
 const ENABLE_AUDIT_LOGS = false;
@@ -206,6 +207,14 @@ export class GameService {
   // Get game by ID
   static async getGame(gameId: string): Promise<Game | null> {
     try {
+      // Check cache first for basic game data
+      const cacheKey = CacheKeys.gameBasic(gameId);
+      const cachedGame = cache.get<Game>(cacheKey);
+      if (cachedGame) {
+        console.log('✅ GameService: Returning cached game data for:', gameId);
+        return cachedGame;
+      }
+
       const { data: game, error } = await supabase
         .from('games')
         .select(`
@@ -226,6 +235,10 @@ export class GameService {
         teamA: game?.team_a?.name,
         teamB: game?.team_b?.name
       });
+
+      // Cache the game data for short-term reuse
+      cache.set(cacheKey, game, CacheTTL.GAME_BASIC);
+      console.log('💾 GameService: Cached game data for:', gameId);
 
       return game;
     } catch (error) {
@@ -286,19 +299,47 @@ export class GameService {
         return [];
       }
       
-      // Now try the complex query with JOINs
-      console.log('🔍 GameService: Step 2 - Fetching with JOINs for', simpleGames.length, 'games');
+      // Step 2: Fetch related data separately to avoid complex JOINs
+      console.log('🔍 GameService: Step 2 - Fetching related data separately for performance');
       
-      const { data: games, error } = await supabase
-        .from('games')
-        .select(`
-          *,
-          tournaments(name, venue),
-          team_a:teams!team_a_id(name),
-          team_b:teams!team_b_id(name)
-        `)
-        .eq('stat_admin_id', statAdminId)
-        .order('start_time', { ascending: true });
+      // Get unique tournament and team IDs
+      const tournamentIds = [...new Set(simpleGames.map(g => g.tournament_id).filter(Boolean))];
+      const teamIds = [...new Set([
+        ...simpleGames.map(g => g.team_a_id).filter(Boolean),
+        ...simpleGames.map(g => g.team_b_id).filter(Boolean)
+      ])];
+      
+      // Fetch tournaments and teams separately (much faster than JOINs)
+      const [tournamentsResult, teamsResult] = await Promise.all([
+        tournamentIds.length > 0 ? supabase
+          .from('tournaments')
+          .select('id, name, venue')
+          .in('id', tournamentIds) : { data: [], error: null },
+        teamIds.length > 0 ? supabase
+          .from('teams')
+          .select('id, name')
+          .in('id', teamIds) : { data: [], error: null }
+      ]);
+      
+      // Create lookup maps for fast access
+      const tournamentMap = new Map(tournamentsResult.data?.map(t => [t.id, t]) || []);
+      const teamMap = new Map(teamsResult.data?.map(t => [t.id, t]) || []);
+      
+      // Combine data efficiently
+      const games = simpleGames.map(game => {
+        const tournament = tournamentMap.get(game.tournament_id);
+        const teamA = teamMap.get(game.team_a_id);
+        const teamB = teamMap.get(game.team_b_id);
+        
+        return {
+          ...game,
+          tournaments: tournament ? { name: tournament.name, venue: tournament.venue } : null,
+          team_a: teamA ? { name: teamA.name } : null,
+          team_b: teamB ? { name: teamB.name } : null
+        };
+      });
+      
+      const error = tournamentsResult.error || teamsResult.error;
 
       if (error) {
         console.error('❌ Supabase error getting assigned games with JOINs:', error);

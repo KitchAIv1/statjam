@@ -23,35 +23,55 @@ export interface StatRow {
 
 export const StatsService = {
   async getByGameId(gameId: string): Promise<StatRow[]> {
-    console.log('🔍 StatsService: Fetching stats with user data for game:', gameId);
+    console.log('🔍 StatsService: Fetching stats for game:', gameId);
     
-    const { data, error } = await supabase
+    // Step 1: Get stats without JOINs for better performance
+    const { data: stats, error: statsError } = await supabase
       .from('game_stats')
-      .select(`
-        id, game_id, team_id, player_id, stat_type, stat_value, modifier, quarter, game_time_minutes, game_time_seconds, created_at,
-        users!player_id (
-          id, email, name
-        )
-      `)
+      .select('id, game_id, team_id, player_id, stat_type, stat_value, modifier, quarter, game_time_minutes, game_time_seconds, created_at')
       .eq('game_id', gameId)
-      .order('created_at', { ascending: true }); // ascending for cumulative processing
+      .order('created_at', { ascending: true });
 
-    if (error) {
-      console.warn('StatsService.getByGameId error:', error);
+    if (statsError) {
+      console.warn('StatsService.getByGameId error:', statsError);
       return [];
     }
-    
-    console.log('✅ StatsService: Loaded', data?.length || 0, 'stats with user data');
-    if (data && data.length > 0) {
-      console.log('🔍 Sample stat with user:', {
-        statType: data[0].stat_type,
-        playerId: data[0].player_id,
-        userName: data[0].users?.name,
-        userEmail: data[0].users?.email
-      });
+
+    if (!stats || stats.length === 0) {
+      console.log('✅ StatsService: No stats found for game:', gameId);
+      return [];
     }
+
+    // Step 2: Get unique player IDs and fetch user data separately
+    const playerIds = [...new Set(stats.map(s => s.player_id).filter(Boolean))];
     
-    return (data || []) as StatRow[];
+    if (playerIds.length === 0) {
+      console.log('✅ StatsService: Loaded', stats.length, 'stats (no player data needed)');
+      return stats.map(stat => ({ ...stat, users: null })) as StatRow[];
+    }
+
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, email, name')
+      .in('id', playerIds);
+
+    if (usersError) {
+      console.warn('StatsService: Error fetching user data:', usersError);
+      // Return stats without user data rather than failing completely
+      return stats.map(stat => ({ ...stat, users: null })) as StatRow[];
+    }
+
+    // Step 3: Create user lookup map and combine data
+    const userMap = new Map(users?.map(u => [u.id, u]) || []);
+    
+    const result = stats.map(stat => ({
+      ...stat,
+      users: userMap.get(stat.player_id) || null
+    })) as StatRow[];
+    
+    console.log('✅ StatsService: Loaded', result.length, 'stats with user data');
+    
+    return result;
   },
 };
 

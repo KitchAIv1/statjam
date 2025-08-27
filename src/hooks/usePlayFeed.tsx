@@ -77,8 +77,8 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       )
       .subscribe();
 
-    // Fallback polling every 5s as backup
-    const poll = setInterval(() => fetchAll(), 5000);
+    // Fallback polling every 15s as backup (reduced from 5s for performance)
+    const poll = setInterval(() => fetchAll(), 15000);
 
     return () => {
       supabase.removeChannel(channel);

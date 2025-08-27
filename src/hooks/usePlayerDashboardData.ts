@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState, useCallback } from 'react';
 import { PlayerDashboardService } from '@/lib/services/playerDashboardService';
+import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import type { PlayerDashboardData } from '@/lib/types/playerDashboard';
 
 export function usePlayerDashboardData() {
@@ -25,6 +26,21 @@ export function usePlayerDashboardData() {
       console.log('🔄 PlayerDashboard Hook: Starting data fetch...');
       setLoading(true);
       setError(null);
+      
+      // Check if we have cached dashboard data first
+      const userId = (await import('@/store/authStore')).useAuthStore.getState().user?.id;
+      if (userId) {
+        const dashboardCacheKey = CacheKeys.playerDashboard(userId);
+        const cachedDashboard = cache.get<PlayerDashboardData>(dashboardCacheKey);
+        if (cachedDashboard) {
+          console.log('✅ PlayerDashboard Hook: Returning cached dashboard data');
+          setData(cachedDashboard);
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Fetch all data in parallel (reduced from 8 to essential calls)
       const [identity, season, careerHighs, perf, achievements, notifications, upcomingGames, trial] = await Promise.all([
         PlayerDashboardService.getIdentity(),
         PlayerDashboardService.getSeasonAverages(),
@@ -47,7 +63,7 @@ export function usePlayerDashboardData() {
         upcomingGameCount: upcomingGames?.length || 0,
       });
 
-      setData({
+      const dashboardData = {
         identity,
         season,
         careerHighs,
@@ -57,7 +73,16 @@ export function usePlayerDashboardData() {
         notifications,
         upcomingGames,
         trial,
-      });
+      };
+
+      setData(dashboardData);
+
+      // Cache the complete dashboard data for future requests
+      if (userId) {
+        const dashboardCacheKey = CacheKeys.playerDashboard(userId);
+        cache.set(dashboardCacheKey, dashboardData, CacheTTL.DASHBOARD_DATA);
+        console.log('💾 PlayerDashboard Hook: Cached complete dashboard data');
+      }
     } catch (e: any) {
       console.error('🔄 PlayerDashboard Hook: Data fetch error:', e);
       setError(e?.message || 'Failed to load dashboard');

@@ -1,5 +1,6 @@
 import { Tournament, TournamentCreateRequest, TournamentUpdateRequest, Team, Player } from '@/lib/types/tournament';
 import { supabase } from '@/lib/supabase';
+import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 
 // Tournament Business Logic Layer
 export class TournamentService {
@@ -734,6 +735,14 @@ export class TeamService {
         console.warn('⚠️ TeamService: Invalid team ID provided:', teamId);
         return [];
       }
+
+      // Check cache first
+      const cacheKey = CacheKeys.teamPlayers(teamId);
+      const cachedPlayers = cache.get<Player[]>(cacheKey);
+      if (cachedPlayers) {
+        console.log('✅ TeamService: Returning cached players for team:', teamId, '(count:', cachedPlayers.length, ')');
+        return cachedPlayers;
+      }
       
       // Step 1: Get player IDs (simple query, no JOINs)
       const { data: teamPlayers, error } = await supabase
@@ -791,6 +800,10 @@ export class TeamService {
       });
 
       console.log('🔍 TeamService: Mapped team players:', players.map(p => ({ name: p.name, position: p.position, jersey: p.jerseyNumber })));
+      
+      // Cache the result for future requests
+      cache.set(cacheKey, players, CacheTTL.PLAYER_DATA);
+      console.log('💾 TeamService: Cached players for team:', teamId);
       
       return players;
     } catch (error) {

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase';
+import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import type {
   PlayerIdentity,
   SeasonAverages,
@@ -131,6 +132,15 @@ export class PlayerDashboardService {
       console.log('🔍 PlayerDashboard: No authenticated user');
       return null;
     }
+    
+    // Check cache first
+    const cacheKey = CacheKeys.user(user.id);
+    const cachedIdentity = cache.get<PlayerIdentity>(cacheKey);
+    if (cachedIdentity) {
+      console.log('✅ PlayerDashboard: Returning cached identity for user:', user.id);
+      return cachedIdentity;
+    }
+    
     console.log('🔍 PlayerDashboard: Fetching identity for user:', user.id);
     const { data, error } = await supabase
       .from('users')
@@ -160,7 +170,15 @@ export class PlayerDashboardService {
       return null;
     }
     console.log('🔍 PlayerDashboard: Identity data received:', data);
-    return toIdentity(data);
+    const identity = toIdentity(data);
+    
+    // Cache the identity data
+    if (identity) {
+      cache.set(cacheKey, identity, CacheTTL.USER_DATA);
+      console.log('💾 PlayerDashboard: Cached identity for user:', user.id);
+    }
+    
+    return identity;
   }
 
   static async getSeasonAverages(): Promise<SeasonAverages | null> {

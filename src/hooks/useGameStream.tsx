@@ -13,6 +13,7 @@ export const useGameStream = (gameId: string) => {
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTabVisible, setIsTabVisible] = useState(true);
   const [isLive, setIsLive] = useState(false);
   // V2 substitutions
   const { subs: v2Subs, refetch: refetchSubs } = useSubstitutions(gameId);
@@ -197,34 +198,7 @@ export const useGameStream = (gameId: string) => {
         console.log('🔄 CACHE BUST: Current timestamp:', Date.now());
       }
       
-      // First, let's check authentication status
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (DEBUG_VIEWER) {
-        console.log('🔍 GameViewer: Auth status:', {
-          hasSession: !!session,
-          userId: session?.user?.id,
-          sessionError: sessionError?.message
-        });
-      }
-      
-      // First, let's check if there are ANY stats in the game_stats table
-      const { data: allStats, error: allStatsError } = await supabase
-        .from('game_stats')
-        .select('game_id, stat_type, created_at')
-        .limit(10);
-        
-      if (DEBUG_VIEWER) {
-        console.log('🔍 ALL game_stats in DB (sample):', { 
-          count: allStats?.length || 0, 
-          error: allStatsError,
-          data: allStats 
-        });
-      }
-      
-      // Log each stat individually to see structure
-      if (DEBUG_VIEWER && allStats && allStats.length > 0) {
-        console.log('🔍 DETAILED: First stat in DB:', JSON.stringify(allStats[0], null, 2));
-      }
+      // Removed debug queries for production performance optimization
       
       // Now try our specific query
       const { data: stats, error: statsError } = await supabase
@@ -244,38 +218,12 @@ export const useGameStream = (gameId: string) => {
         });
       }
       
-      // Log each stat individually for this game
-      if (stats && stats.length > 0) {
-        if (DEBUG_VIEWER) {
-          console.log('🔍 DETAILED: First stat for this game:', JSON.stringify(stats[0], null, 2));
-          stats.forEach((stat, index) => {
-            console.log(`🔍 Stat ${index + 1}:`, {
-              id: stat.id,
-              stat_type: stat.stat_type,
-              modifier: stat.modifier,
-              userRelation: stat.users,
-              playerEmail: stat.users?.email,
-              playerId: stat.player_id,
-              game_id: stat.game_id
-            });
-          });
-        }
-      } else if (DEBUG_VIEWER) {
+      // Process stats data (debug logging removed for performance)
+      if (DEBUG_VIEWER && (!stats || stats.length === 0)) {
         console.log('❌ NO STATS FOUND for game:', gameId);
       }
       
-      // If no stats found, let's check if the game_id exists in different format
-      if (!stats || stats.length === 0) {
-        const { data: gameCheck } = await supabase
-          .from('games')
-          .select('id')
-          .eq('id', gameId);
-          
-        console.log('🔍 Game ID verification:', {
-          gameExists: !!gameCheck?.length,
-          gameId: gameId
-        });
-      }
+      // Removed game existence check for performance optimization
 
       if (statsError) {
         console.warn('⚠️ Failed to fetch stats:', statsError);
@@ -420,6 +368,16 @@ export const useGameStream = (gameId: string) => {
     }
   }, [gameId, isInitialLoad]);
 
+  // Tab visibility detection for smart polling
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabVisible(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   /**
    * Set up real-time subscriptions
    */
@@ -438,11 +396,15 @@ export const useGameStream = (gameId: string) => {
       });
     }
     
-    // Also set up polling as backup for real-time updates
+    // Smart polling - only poll when tab is visible
     const pollInterval = setInterval(() => {
-      if (DEBUG_VIEWER) console.log('🔄 GameViewer: Polling for updates...');
-      fetchGameData(true); // Pass true to indicate this is a polling update
-    }, 5000); // Poll every 5 seconds
+      if (isTabVisible) {
+        if (DEBUG_VIEWER) console.log('🔄 GameViewer: Polling for updates...');
+        fetchGameData(true); // Pass true to indicate this is a polling update
+      } else if (DEBUG_VIEWER) {
+        console.log('⏸️ GameViewer: Skipping poll - tab not visible');
+      }
+    }, 30000); // Poll every 30 seconds (reduced from 5s for performance)
     
     const gameSubscription = supabase
       .channel(`game-${gameId}`)
@@ -563,7 +525,7 @@ export const useGameStream = (gameId: string) => {
       clearInterval(pollInterval);
       supabase.removeChannel(gameSubscription);
     };
-  }, [gameId]); // REMOVED fetchGameData and gameData dependencies
+  }, [gameId, isTabVisible]); // Added isTabVisible for smart polling
 
   return {
     gameData,
