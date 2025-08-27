@@ -52,7 +52,7 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       setAwayScore(statsTx.finalAway);
 
       // Reduced logging for performance
-      if (DEBUG_VIEWER && process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== 'production') {
         console.log('🔍 V2 Feed: Updated', merged.length, 'plays, scores:', `${statsTx.finalHome}-${statsTx.finalAway}`);
       }
     } catch (e) {
@@ -61,7 +61,7 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       setLoading(false);
       setIsFetching(false);
     }
-  }, [gameId, teamMap]);
+  }, [gameId, teamMap.teamAId, teamMap.teamBId]); // More stable dependencies
 
   useEffect(() => {
     if (!gameId) return;
@@ -70,27 +70,37 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
 
   // Separate effect for subscriptions to avoid infinite loop
   useEffect(() => {
-    if (!gameId) return;
+    if (!gameId) {
+      console.log('🔌 V2 Feed: No gameId provided, skipping subscription setup');
+      return;
+    }
 
     console.log('🔌 V2 Feed: Setting up subscription for gameId:', gameId);
-    const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
-      console.log('🔔 V2 Feed: Subscription callback received for table:', table);
-      if (table === 'game_stats' || table === 'game_substitutions') {
-        console.log('🔄 V2 Feed: Triggering fetchAll() for', table, 'update');
-        fetchAll();
-      } else {
-        console.log('🔕 V2 Feed: Ignoring update for table:', table);
-      }
-    });
+    
+    try {
+      const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
+        console.log('🔔 V2 Feed: Subscription callback received for table:', table);
+        if (table === 'game_stats' || table === 'game_substitutions') {
+          console.log('🔄 V2 Feed: Triggering fetchAll() for', table, 'update');
+          fetchAll();
+        } else {
+          console.log('🔕 V2 Feed: Ignoring update for table:', table);
+        }
+      });
 
-    // Test subscription after 2 seconds
-    setTimeout(() => {
-      console.log('🧪 V2 Feed: Testing if subscription is active...');
-      console.log('🧪 V2 Feed: If you see this but no subscription logs when recording stats, RLS might be blocking real-time');
-    }, 2000);
+      console.log('🔌 V2 Feed: Subscription setup completed, unsubscribe function:', typeof unsubscribe);
 
-    return unsubscribe;
-  }, [gameId]); // Only gameId dependency to prevent infinite loop
+      // Test subscription after 2 seconds
+      setTimeout(() => {
+        console.log('🧪 V2 Feed: Testing if subscription is active...');
+        console.log('🧪 V2 Feed: If you see this but no subscription logs when recording stats, RLS might be blocking real-time');
+      }, 2000);
+
+      return unsubscribe;
+    } catch (error) {
+      console.error('❌ V2 Feed: Error setting up subscription:', error);
+    }
+  }, [gameId, fetchAll]); // Include fetchAll dependency
 
   return { plays, homeScore, awayScore, loading, error, refetch: fetchAll };
 }
