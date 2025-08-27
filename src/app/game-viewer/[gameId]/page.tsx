@@ -51,6 +51,8 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
     v2Data
   } = useGameViewerData(gameId);
 
+  // V1 always provides game data now, V2 just provides better stats/feed
+
   // Initialize auth store
   useEffect(() => {
     console.log('🔧 GameViewer: Auth state:', {

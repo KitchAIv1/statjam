@@ -8,7 +8,7 @@ import { useSubstitutions } from '@/hooks/useSubstitutions';
 import { transformSubsToPlay } from '@/lib/transformers/subsToPlay';
 import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 
-export const useGameStream = (gameId: string) => {
+export const useGameStream = (gameId: string, skipStatsQueries: boolean = false) => {
   const DEBUG_VIEWER = true;
   const [gameData, setGameData] = useState<GameViewerData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -16,6 +16,10 @@ export const useGameStream = (gameId: string) => {
   const [error, setError] = useState<string | null>(null);
   const [isTabVisible, setIsTabVisible] = useState(true);
   const [isLive, setIsLive] = useState(false);
+
+  if (DEBUG_VIEWER && skipStatsQueries) {
+    console.log('🔧 GameStream: V2 mode - will skip problematic stats queries');
+  }
   // V2 substitutions
   const { subs: v2Subs, refetch: refetchSubs } = useSubstitutions(gameId);
 
@@ -193,41 +197,52 @@ export const useGameStream = (gameId: string) => {
         throw new Error('Game not found');
       }
 
-      // Fetch game stats for play-by-play
-      if (DEBUG_VIEWER) {
-        console.log('📊 Fetching stats for game:', gameId);
-        console.log('🔄 CACHE BUST: Current timestamp:', Date.now());
-      }
+      // Fetch game stats for play-by-play (SKIP if V2 enabled - V2 handles stats)
+      let stats = null;
+      let statsError = null;
       
-      // Removed debug queries for production performance optimization
-      
-      // Now try our specific query
-      const { data: stats, error: statsError } = await supabase
-        .from('game_stats')
-        .select(`
-          *,
-          users!player_id(id, email, name)
-        `)
-        .eq('game_id', gameId)
-        .order('created_at', { ascending: false });
+      if (!skipStatsQueries) {
+        if (DEBUG_VIEWER) {
+          console.log('📊 Fetching stats for game:', gameId);
+          console.log('🔄 CACHE BUST: Current timestamp:', Date.now());
+        }
+        
+        // Removed debug queries for production performance optimization
+        
+        // Now try our specific query
+        const statsResult = await supabase
+          .from('game_stats')
+          .select(`
+            *,
+            users!player_id(id, email, name)
+          `)
+          .eq('game_id', gameId)
+          .order('created_at', { ascending: false });
 
-      if (DEBUG_VIEWER) {
-        console.log('📊 Stats query result for gameId:', gameId, { 
-          count: stats?.length || 0, 
-          error: statsError,
-          statsData: stats
-        });
-      }
-      
-      // Process stats data (debug logging removed for performance)
-      if (DEBUG_VIEWER && (!stats || stats.length === 0)) {
-        console.log('❌ NO STATS FOUND for game:', gameId);
-      }
-      
-      // Removed game existence check for performance optimization
+        stats = statsResult.data;
+        statsError = statsResult.error;
 
-      if (statsError) {
-        console.warn('⚠️ Failed to fetch stats:', statsError);
+        if (DEBUG_VIEWER) {
+          console.log('📊 Stats query result for gameId:', gameId, { 
+            count: stats?.length || 0, 
+            error: statsError,
+            statsData: stats
+          });
+        }
+        
+        // Process stats data (debug logging removed for performance)
+        if (DEBUG_VIEWER && (!stats || stats.length === 0)) {
+          console.log('❌ NO STATS FOUND for game:', gameId);
+        }
+        
+        if (statsError) {
+          console.warn('⚠️ Failed to fetch stats:', statsError);
+        }
+      } else {
+        if (DEBUG_VIEWER) {
+          console.log('⏭️ Skipping V1 stats query - V2 will handle stats');
+        }
+        stats = []; // Empty array for V2 mode
       }
 
       

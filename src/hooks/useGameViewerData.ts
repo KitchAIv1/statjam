@@ -6,6 +6,7 @@ import { usePlayFeed } from './usePlayFeed';
 import { useAuthStore } from '@/store/authStore';
 import { useResponsive } from './useResponsive';
 import { GameViewerData, PlayByPlayEntry } from '@/lib/types/playByPlay';
+import { supabase } from '@/lib/supabase';
 
 export interface PlayerStats {
   fieldGoalMade: number;
@@ -72,21 +73,36 @@ export interface UseGameViewerDataReturn extends GameViewerState {
 export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
   const [playerStatsMap, setPlayerStatsMap] = useState<Map<string, PlayerStats>>(new Map());
   
-  // Core hooks
+  // Configuration
+  const enableViewerV2 = process.env.NEXT_PUBLIC_VIEWER_V2 === '1';
+  console.log('🔧 GameViewerData: V2 enabled?', enableViewerV2, 'env var:', process.env.NEXT_PUBLIC_VIEWER_V2);
+  
+  // V1 provides all game data, V2 just provides better stats/feed
+  
+  // Core hooks - Always use V1 for game data, but V1 will skip stats queries when V2 enabled
   const { user, initialized, loading: authLoading } = useAuthStore();
-  const { gameData, loading, error, isLive } = useGameStream(gameId);
+  const { gameData, loading, error, isLive } = useGameStream(gameId, enableViewerV2); // Pass V2 flag to skip stats
   const { isMobile, isTablet, isDesktop } = useResponsive();
 
   // TEMPORARY: Smart polling fallback since real-time subscriptions aren't working
   useEffect(() => {
-    if (!gameId || !isLive) return;
+    if (!gameId) return;
+    
+    // V1 always provides isLive status now
+    const shouldPoll = gameData?.game && isLive;
+    if (!shouldPoll) return;
 
-    console.log('🔄 GameViewerData: Starting smart polling fallback for live game');
+    console.log('🔄 GameViewerData: Starting smart polling fallback for', enableViewerV2 ? 'V2' : 'V1');
     const pollInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        console.log('🔄 GameViewerData: Polling for updates (real-time not working)');
-        // Trigger both V1 and V2 updates
-        window.dispatchEvent(new CustomEvent('force-game-refresh', { detail: { gameId } }));
+        console.log('🔄 GameViewerData: Polling for updates -', enableViewerV2 ? 'V2 only' : 'V1 + V2');
+        if (enableViewerV2) {
+          // V2 only: Just trigger V2 refresh
+          window.dispatchEvent(new CustomEvent('force-v2-refresh', { detail: { gameId } }));
+        } else {
+          // V1 mode: Trigger both V1 and V2 updates
+          window.dispatchEvent(new CustomEvent('force-game-refresh', { detail: { gameId } }));
+        }
       }
     }, 2000); // Poll every 2 seconds for live games
 
@@ -94,13 +110,9 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
       console.log('🔄 GameViewerData: Stopping smart polling');
       clearInterval(pollInterval);
     };
-  }, [gameId, isLive]);
+  }, [gameId, isLive, enableViewerV2, gameData?.game]);
   
-  // Configuration
-  const enableViewerV2 = process.env.NEXT_PUBLIC_VIEWER_V2 === '1';
-  console.log('🔧 GameViewerData: V2 enabled?', enableViewerV2, 'env var:', process.env.NEXT_PUBLIC_VIEWER_V2);
-  
-  // V2 data (conditional)
+  // V1 always provides team mapping data
   const teamMap = gameData ? {
     teamAId: gameData.game.teamAId,
     teamBId: gameData.game.teamBId,
@@ -108,7 +120,7 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
     teamBName: gameData.game.teamBName,
   } : { teamAId: '', teamBId: '', teamAName: '', teamBName: '' };
   
-  // Only call usePlayFeed if we have valid team data or V2 is enabled
+  // Only call usePlayFeed if we have valid team data from V1
   const shouldUseV2 = enableViewerV2 && gameData;
   console.log('🔧 GameViewerData: shouldUseV2?', shouldUseV2, 'enableViewerV2:', enableViewerV2, 'gameData:', !!gameData);
   const { plays: v2Plays = [], homeScore = 0, awayScore = 0 } = usePlayFeed(

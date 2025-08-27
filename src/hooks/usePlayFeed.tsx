@@ -110,8 +110,19 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       }
     };
 
+    const handleV2Refresh = (event: CustomEvent) => {
+      if (event.detail?.gameId === gameId) {
+        console.log('🔄 V2 Feed: V2-only refresh triggered by polling');
+        fetchAll();
+      }
+    };
+
     window.addEventListener('force-game-refresh', handleForceRefresh as EventListener);
-    return () => window.removeEventListener('force-game-refresh', handleForceRefresh as EventListener);
+    window.addEventListener('force-v2-refresh', handleV2Refresh as EventListener);
+    return () => {
+      window.removeEventListener('force-game-refresh', handleForceRefresh as EventListener);
+      window.removeEventListener('force-v2-refresh', handleV2Refresh as EventListener);
+    };
   }, [gameId, fetchAll]);
 
   return { plays, homeScore, awayScore, loading, error, refetch: fetchAll };
