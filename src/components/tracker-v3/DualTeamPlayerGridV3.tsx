@@ -36,23 +36,24 @@ export function DualTeamPlayerGridV3({
   const teamAOnCourt = teamAPlayers.slice(0, 5);
   const teamBOnCourt = teamBPlayers.slice(0, 5);
   
-  // Check if selected player is from Team A or B
+  // Check if selected player is from Team A or B (check on-court players only)
   const selectedPlayerTeam = teamAOnCourt.find(p => p.id === selectedPlayer) ? 'A' : 
                             teamBOnCourt.find(p => p.id === selectedPlayer) ? 'B' : null;
 
   const renderPlayerCard = (player: Player, team: 'A' | 'B') => {
     const isSelected = selectedPlayer === player.id;
-    const isTeamSelected = selectedPlayerTeam === team;
     
     return (
       <div 
-        key={player.id}
+        key={`${team}-${player.id}`}
         className={`border rounded-lg p-2 transition-all cursor-pointer ${
           isSelected
             ? 'border-orange-500 bg-orange-500/20 shadow-md'
             : 'border-gray-200 dark:border-gray-700 hover:border-orange-500/50 hover:bg-orange-500/5'
         }`}
-        onClick={() => onPlayerSelect(player.id)}
+        onClick={() => {
+          onPlayerSelect(player.id);
+        }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

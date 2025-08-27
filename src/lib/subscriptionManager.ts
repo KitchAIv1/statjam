@@ -18,8 +18,9 @@ class GameSubscriptionManager {
       const channel = supabase
         .channel(`consolidated-game-${gameId}`)
         .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'games', filter: `id=eq.${gameId}` },
+          { event: 'UPDATE', schema: 'public', table: 'games', filter: `id=eq.${gameId}` },
           (payload) => {
+            console.log('🔄 SubscriptionManager: Game updated:', payload);
             this.callbacks.get(gameId)?.forEach(cb => cb('games', payload));
           }
         )

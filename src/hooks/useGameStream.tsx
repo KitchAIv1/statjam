@@ -417,7 +417,7 @@ export const useGameStream = (gameId: string) => {
       
       if (table === 'game_stats') {
         if (DEBUG_VIEWER) console.log('🔄 GameViewer: New stat recorded');
-        setTimeout(() => fetchGameData(true), 200);
+        fetchGameData(true);
       }
       
       if (table === 'game_substitutions') {

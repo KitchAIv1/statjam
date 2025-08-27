@@ -35,7 +35,7 @@ export function DualTeamHorizontalRosterV3({
   const teamAOnCourt = teamAPlayers.slice(0, 5);
   const teamBOnCourt = teamBPlayers.slice(0, 5);
   
-  // Check which team the selected player belongs to
+  // Check which team the selected player belongs to (check on-court players only)
   const selectedPlayerTeam = teamAOnCourt.find(p => p.id === selectedPlayer) ? 'A' : 
                             teamBOnCourt.find(p => p.id === selectedPlayer) ? 'B' : null;
 
@@ -140,10 +140,14 @@ export function DualTeamHorizontalRosterV3({
             const playerColor = getPlayerColor(team, player.name);
             
             return (
-              <div key={player.id} className="flex flex-col items-center gap-1">
+              <div key={`${team}-${player.id}-${index}`} className="flex flex-col items-center gap-1">
                 {/* Player Avatar */}
                 <Button
-                  onClick={() => !isEmpty && onPlayerSelect(player.id)}
+                  onClick={() => {
+                    if (!isEmpty) {
+                      onPlayerSelect(player.id);
+                    }
+                  }}
                   disabled={isEmpty}
                   className={`w-12 h-12 rounded-full p-0 flex items-center justify-center text-xs font-bold transition-all ${
                     isEmpty 

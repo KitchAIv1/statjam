@@ -145,9 +145,16 @@ export default function StatTrackerV3() {
 
         // Auto-select first available player from loaded data
         const allPlayers = [...teamAPlayersData, ...teamBPlayersData];
-        if (allPlayers.length > 0) {
+        if (allPlayers.length > 0 && (!selectedPlayer || !allPlayers.find(p => p.id === selectedPlayer))) {
+          console.log('🔍 DEBUG: All player IDs:', allPlayers.map(p => ({ id: p.id, name: p.name })));
+          console.log('🔍 DEBUG: Team A IDs:', teamAPlayersData.map(p => ({ id: p.id, name: p.name })));
+          console.log('🔍 DEBUG: Team B IDs:', teamBPlayersData.map(p => ({ id: p.id, name: p.name })));
           setSelectedPlayer(allPlayers[0].id);
-          console.log('✅ Auto-selected first player:', allPlayers[0].name);
+          console.log('✅ Auto-selected first player:', allPlayers[0].name, 'ID:', allPlayers[0].id);
+        } else if (allPlayers.length === 0) {
+          // Clear selected player if no team data loaded
+          setSelectedPlayer(null);
+          console.log('⚠️ No team players loaded, clearing selected player');
         }
 
       } catch (error) {

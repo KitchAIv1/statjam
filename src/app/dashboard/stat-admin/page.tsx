@@ -18,6 +18,7 @@ const StatAdminDashboard = () => {
   const [assignedGames, setAssignedGames] = useState<any[]>([]);
   const [gamesLoading, setGamesLoading] = useState(false);
   const [gamesError, setGamesError] = useState<string | null>(null);
+  const [launchingTracker, setLaunchingTracker] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || userRole !== 'stat_admin')) {
@@ -520,21 +521,29 @@ const StatAdminDashboard = () => {
                         </div>
                         <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
                           <button
-                            onClick={() => router.push(`/stat-tracker-v3?gameId=${game.id}&teamAId=${game.teamAId}&teamBId=${game.teamBId}`)}
+                            onClick={async () => {
+                              setLaunchingTracker(game.id);
+                              // Small delay for visual feedback, then navigate
+                              setTimeout(() => {
+                                router.push(`/stat-tracker-v3?gameId=${game.id}&teamAId=${game.teamAId}&teamBId=${game.teamBId}`);
+                              }, 100);
+                            }}
+                            disabled={launchingTracker === game.id}
                             style={{
-                              background: 'var(--dashboard-gradient)',
+                              background: launchingTracker === game.id ? 'rgba(249, 115, 22, 0.7)' : 'var(--dashboard-gradient)',
                               color: '#1a1a1a',
                               border: 'none',
                               borderRadius: '8px',
                               padding: '10px 16px',
                               fontSize: '14px',
                               fontWeight: '600',
-                              cursor: 'pointer',
+                              cursor: launchingTracker === game.id ? 'not-allowed' : 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '8px',
                               boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                              transition: 'all 0.3s ease'
+                              transition: 'all 0.3s ease',
+                              opacity: launchingTracker === game.id ? 0.7 : 1
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.transform = 'translateY(-2px)';
@@ -546,7 +555,7 @@ const StatAdminDashboard = () => {
                             }}
                           >
                             <Zap size={16} />
-                            Launch Tracker
+                            {launchingTracker === game.id ? 'Launching...' : 'Launch Tracker'}
                           </button>
                           <div style={{ 
                             ...styles.toolStatus, 

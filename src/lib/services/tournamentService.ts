@@ -482,7 +482,7 @@ export class TeamService {
             // Handle both array and object responses from Supabase
             return tp && tp.users && (
               (Array.isArray(tp.users) && tp.users.length > 0 && tp.users[0]) ||
-              (!Array.isArray(tp.users) && tp.users.id)
+              (!Array.isArray(tp.users) && (tp.users as any).id)
             );
           });
 
@@ -764,7 +764,13 @@ export class TeamService {
       const playerIds = teamPlayers.map(tp => tp.player_id);
       console.log('🔍 TeamService: Found player IDs:', playerIds.length);
 
-      // Step 3: Fetch user data separately (avoids JOIN timeout)
+      // Limit to prevent database overload (max 20 players per team)
+      if (playerIds.length > 20) {
+        console.warn('⚠️ TeamService: Too many players, limiting to first 20');
+        playerIds.splice(20);
+      }
+
+      // Step 3: Fetch user data with timeout protection
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('id, email, premium_status, country, created_at, name')

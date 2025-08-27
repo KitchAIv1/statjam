@@ -53,28 +53,25 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
       try {
         setLoadingData(true);
         
-        // Load tournament details
-        const tournamentData = await TournamentService.getTournament(tournamentId);
+        // Load all data in parallel for better performance
+        const [tournamentData, teamsData, gamesData, statAdminsData] = await Promise.all([
+          TournamentService.getTournament(tournamentId),
+          TeamService.getTeamsByTournament(tournamentId),
+          GameService.getGamesByTournament(tournamentId),
+          TeamService.getStatAdmins()
+        ]);
+        
+        // Set all data at once
         setTournament(tournamentData);
-        
-        // Load teams for this tournament
-        const teamsData = await TeamService.getTeamsByTournament(tournamentId);
-        console.log('🔍 Schedule Page: Loaded teams from database:', teamsData.length, 'teams');
-        teamsData.forEach((team, index) => {
-          console.log(`   Team ${index + 1}: ${team.name} (ID: ${team.id})`);
-        });
         setTeams(teamsData);
-        
-        // Load games for this tournament
-        const gamesData = await GameService.getGamesByTournament(tournamentId);
         setGames(gamesData);
-        
-        // Load stat admins for assignment
-        console.log('🔍 Schedule Page: Loading stat admins...');
-        const statAdminsData = await TeamService.getStatAdmins();
-        console.log('🔍 Schedule Page: Loaded stat admins:', statAdminsData.length, 'admins');
-        console.log('🔍 Schedule Page: Stat admins data:', statAdminsData);
         setStatAdmins(statAdminsData);
+        
+        console.log('🔍 Schedule Page: Loaded all data in parallel:', {
+          teams: teamsData.length,
+          games: gamesData.length,
+          statAdmins: statAdminsData.length
+        });
         
       } catch (error) {
         console.error('Failed to load tournament data:', error);
