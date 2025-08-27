@@ -252,10 +252,6 @@ export class GameService {
     try {
       console.log('🔍 GameService: Fetching assigned games for stat admin:', statAdminId);
       
-      // First, try a simple query to see if there are any games at all
-      console.log('🔍 GameService: Step 1 - Checking for any games with stat_admin_id:', statAdminId);
-      console.log('🔍 GameService: statAdminId type:', typeof statAdminId, 'length:', statAdminId?.length);
-      
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Database query timeout')), 10000)
@@ -271,8 +267,6 @@ export class GameService {
         timeoutPromise
       ]) as any;
       
-      console.log('🔍 GameService: Simple query result:', { count: simpleGames?.length || 0, error: simpleError });
-      
       if (simpleError) {
         console.error('❌ Simple query failed:', simpleError);
         throw new Error(`Database error in simple query: ${simpleError.message}`);
@@ -280,22 +274,6 @@ export class GameService {
       
       if (!simpleGames || simpleGames.length === 0) {
         console.log('ℹ️ GameService: No games found for stat admin:', statAdminId);
-        
-        // Debug: Check if there are ANY games in the table
-        console.log('🔍 GameService: Debug - Checking all games in table...');
-        const { data: allGames, error: allGamesError } = await supabase
-          .from('games')
-          .select('id, stat_admin_id, status')
-          .limit(5);
-        
-        console.log('🔍 GameService: All games sample:', allGames);
-        console.log('🔍 GameService: Looking for stat_admin_id:', statAdminId);
-        
-        if (allGames && allGames.length > 0) {
-          console.log('🔍 GameService: Available stat_admin_ids:', 
-            [...new Set(allGames.map(g => g.stat_admin_id))]);
-        }
-        
         return [];
       }
       

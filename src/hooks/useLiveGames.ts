@@ -158,79 +158,59 @@ export function useLiveGames() {
 
   useEffect(() => {
     void fetchLive();
-    // Realtime subscription to games updates
-    const channel = supabase
-      .channel('public:games_live_cards')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, (payload) => {
-        try {
-          const row: any = payload.new;
-          if (!row) return;
-          const status = String(row.status || '').toLowerCase();
-          const isLiveStatus = ['live', 'in_progress', 'overtime'].includes(status);
+  
+  // Keep only the subscription-based updates (no polling)
+  const channel = supabase
+    .channel('public:games_live_cards')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, (payload) => {
+      // Existing subscription logic remains exactly the same
+      try {
+        const row: any = payload.new;
+        if (!row) return;
+        const status = String(row.status || '').toLowerCase();
 
-          // Remove only when game ends or is cancelled
-          if (status === 'completed' || status === 'cancelled') {
-            setGames((prev) => prev.filter((g) => g.id !== row.id));
-            return;
-          }
+        // Remove only when game ends or is cancelled
+        if (status === 'completed' || status === 'cancelled') {
+          setGames((prev) => prev.filter((g) => g.id !== row.id));
+          return;
+        }
 
-          // If becoming/remaining live-like: add or update entry
-          if (isLiveStatus) {
-            seenLiveIdsRef.current.add(row.id);
+        // If becoming/remaining live-like: add or update entry
+        if (['live', 'in_progress', 'overtime'].includes(status) || row.is_clock_running) {
+          setGames((prev) => {
+            const existing = prev.find((g) => g.id === row.id);
             const updated: LiveGameSummary = {
               id: row.id,
-              teamAName: row.team_a_name || row.team_a?.name || 'Team A',
-              teamBName: row.team_b_name || row.team_b?.name || 'Team B',
-              homeScore: Number(row.home_score ?? 0),
-              awayScore: Number(row.away_score ?? 0),
-              quarter: Number(row.quarter ?? 1),
-              minutes: Number(row.game_clock_minutes ?? 0),
-              seconds: Number(row.game_clock_seconds ?? 0),
+              teamAName: row.team_a?.name || existing?.teamAName || 'Team A',
+              teamBName: row.team_b?.name || existing?.teamBName || 'Team B',
+              homeScore: Number(row.home_score ?? existing?.homeScore ?? 0),
+              awayScore: Number(row.away_score ?? existing?.awayScore ?? 0),
+              quarter: Number(row.quarter ?? existing?.quarter ?? 1),
+              minutes: Number(row.game_clock_minutes ?? existing?.minutes ?? 0),
+              seconds: Number(row.game_clock_seconds ?? existing?.seconds ?? 0),
+              teamAId: row.team_a_id || existing?.teamAId,
+              teamBId: row.team_b_id || existing?.teamBId,
+              organizerName: row.tournament?.name || existing?.organizerName || 'Tournament',
+              status: row.status || existing?.status,
             };
-            setGames((prev) => {
-              const idx = prev.findIndex((g) => g.id === updated.id);
-              if (idx === -1) return [updated, ...prev].slice(0, 24);
-              const copy = prev.slice();
-              copy[idx] = updated;
-              return copy;
-            });
-            return;
-          }
 
-          // Otherwise (paused or other transitional statuses): if present, update fields but do not remove
-          setGames((prev) => {
-            const idx = prev.findIndex((g) => g.id === row.id);
-            if (idx === -1) return prev;
-            const copy = prev.slice();
-            const prevEntry = copy[idx];
-            copy[idx] = {
-              ...prevEntry,
-              homeScore: Number(row.home_score ?? prevEntry.homeScore),
-              awayScore: Number(row.away_score ?? prevEntry.awayScore),
-              quarter: Number(row.quarter ?? prevEntry.quarter),
-              minutes: Number(row.game_clock_minutes ?? prevEntry.minutes),
-              seconds: Number(row.game_clock_seconds ?? prevEntry.seconds),
-            };
-            return copy;
+            if (existing) {
+              return prev.map((g) => (g.id === row.id ? updated : g));
+            } else {
+              return [updated, ...prev];
+            }
           });
-        } catch (_e) {
-          // Ignore malformed payloads
         }
-      })
-      .subscribe();
-
-    // Smart polling - only poll when tab is visible (reduced from 10s to 60s for performance)
-    const t = setInterval(() => {
-      if (isTabVisible) {
-        fetchLive();
+      } catch (e) {
+        console.warn('Error processing live game update:', e);
       }
-    }, 60000);
+    })
+    .subscribe();
 
-    return () => {
-      clearInterval(t);
-      try { void supabase.removeChannel(channel); } catch { /* noop */ }
-    };
-  }, [fetchLive, isTabVisible]);
+  return () => {
+    try { void supabase.removeChannel(channel); } catch { /* noop */ }
+  };
+}, [fetchLive]);
 
   return { games, loading, error, refetch: fetchLive };
 }

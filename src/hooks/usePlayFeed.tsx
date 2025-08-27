@@ -7,6 +7,7 @@ import { transformStatsToPlay } from '@/lib/transformers/statsToPlay';
 import { transformSubsToPlay } from '@/lib/transformers/subsToPlay';
 import { supabase } from '@/lib/supabase';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
+import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 
 export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId: string; teamAName: string; teamBName: string }) {
   const [plays, setPlays] = useState<PlayByPlayEntry[]>([]);
@@ -63,27 +64,14 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
     if (!gameId) return;
     fetchAll();
 
-    const channel = supabase
-      .channel(`play-${gameId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'game_stats', filter: `game_id=eq.${gameId}` },
-        () => fetchAll()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'game_substitutions', filter: `game_id=eq.${gameId}` },
-        () => fetchAll()
-      )
-      .subscribe();
+    // Use consolidated subscription instead of separate channel
+    const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
+      if (table === 'game_stats' || table === 'game_substitutions') {
+        fetchAll();
+      }
+    });
 
-    // Fallback polling every 15s as backup (reduced from 5s for performance)
-    const poll = setInterval(() => fetchAll(), 15000);
-
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(poll);
-    };
+    return unsubscribe;
   }, [gameId, fetchAll]);
 
   return { plays, homeScore, awayScore, loading, error, refetch: fetchAll };

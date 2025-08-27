@@ -6,6 +6,7 @@ import { GameViewerData, PlayByPlayEntry } from '@/lib/types/playByPlay';
 import { Game } from '@/lib/types/game';
 import { useSubstitutions } from '@/hooks/useSubstitutions';
 import { transformSubsToPlay } from '@/lib/transformers/subsToPlay';
+import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 
 export const useGameStream = (gameId: string) => {
   const DEBUG_VIEWER = false;
@@ -387,145 +388,46 @@ export const useGameStream = (gameId: string) => {
     // Initial fetch
     fetchGameData();
 
-    // Set up real-time subscriptions
-    if (DEBUG_VIEWER) {
-      console.log('🔗 GameViewer: Setting up subscriptions for game:', gameId);
-      console.log('🔗 Subscription filters:', {
-        gameFilter: `id=eq.${gameId}`,
-        statsFilter: `game_id=eq.${gameId}`
-      });
-    }
-    
-    // Smart polling - only poll when tab is visible
-    const pollInterval = setInterval(() => {
-      if (isTabVisible) {
-        if (DEBUG_VIEWER) console.log('🔄 GameViewer: Polling for updates...');
-        fetchGameData(true); // Pass true to indicate this is a polling update
-      } else if (DEBUG_VIEWER) {
-        console.log('⏸️ GameViewer: Skipping poll - tab not visible');
+    // Use consolidated subscription manager instead of individual subscriptions
+    const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
+      if (table === 'games' && payload.new) {
+        const updatedGame = payload.new as Game;
+        
+        if (DEBUG_VIEWER) {
+          console.log('🔄 GameViewer: Game state updated:', payload);
+        }
+        
+        setGameData(prev => prev ? {
+          ...prev,
+          game: {
+            ...prev.game,
+            quarter: updatedGame.quarter,
+            gameClockMinutes: updatedGame.game_clock_minutes,
+            gameClockSeconds: updatedGame.game_clock_seconds,
+            isClockRunning: updatedGame.is_clock_running,
+            homeScore: updatedGame.home_score,
+            awayScore: updatedGame.away_score,
+            status: updatedGame.status
+          },
+          lastUpdated: new Date().toISOString()
+        } : null);
+
+        setIsLive(updatedGame.status === 'in_progress' || updatedGame.status === 'overtime');
       }
-    }, 30000); // Poll every 30 seconds (reduced from 5s for performance)
-    
-    const gameSubscription = supabase
-      .channel(`game-${gameId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'games',
-          filter: `id=eq.${gameId}`
-        },
-        (payload) => {
-          if (DEBUG_VIEWER) {
-            console.log('🔄 GameViewer: Game state updated:', payload);
-            console.log('🎯 Game update details:', payload.new);
-          }
-          
-          if (payload.new) {
-            const updatedGame = payload.new as Game;
-            
-            // Debug score updates specifically
-            if (DEBUG_VIEWER) {
-              console.log('🏀 Score sync from games table:', {
-                homeScore: updatedGame.home_score,
-                awayScore: updatedGame.away_score,
-                quarter: updatedGame.quarter,
-                timestamp: new Date().toISOString()
-              });
-            }
-            
-            setGameData(prev => prev ? {
-              ...prev,
-              game: {
-                ...prev.game,
-                quarter: updatedGame.quarter,
-                gameClockMinutes: updatedGame.game_clock_minutes,
-                gameClockSeconds: updatedGame.game_clock_seconds,
-                isClockRunning: updatedGame.is_clock_running,
-                homeScore: updatedGame.home_score,
-                awayScore: updatedGame.away_score,
-                status: updatedGame.status
-              },
-              lastUpdated: new Date().toISOString()
-            } : null);
+      
+      if (table === 'game_stats') {
+        if (DEBUG_VIEWER) console.log('🔄 GameViewer: New stat recorded');
+        setTimeout(() => fetchGameData(true), 200);
+      }
+      
+      if (table === 'game_substitutions') {
+        if (DEBUG_VIEWER) console.log('🔄 GameViewer: New substitution recorded');
+        setTimeout(() => { refetchSubs(); fetchGameData(true); }, 300);
+      }
+    });
 
-            setIsLive(updatedGame.status === 'in_progress' || updatedGame.status === 'overtime');
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'game_stats',
-          filter: `game_id=eq.${gameId}`
-        },
-        (payload) => {
-          if (DEBUG_VIEWER) {
-            console.log('🔄 GameViewer: New stat recorded:', payload);
-            console.log('📈 Stat details:', payload.new);
-          }
-          
-          if (payload.new) {
-            if (DEBUG_VIEWER) console.log('🔄 Triggering data refetch due to new stat...');
-            // Small delay to ensure database is fully updated before refetch
-            setTimeout(() => {
-              if (DEBUG_VIEWER) console.log('🔄 GameViewer: Executing delayed refetch...');
-              fetchGameData(true); // Pass true to avoid loading screen
-            }, 200);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'game_substitutions',
-          filter: `game_id=eq.${gameId}`
-        },
-        (payload) => {
-          const sub = payload.new as any;
-          if (!sub) return;
-          console.log('🔄 GameViewer: New substitution recorded:', sub);
-
-          // Optimistically add
-          setGameData(prev => {
-            if (!prev) return prev;
-            const teamMappingLocal = {
-              teamAId: prev.game.teamAId,
-              teamBId: prev.game.teamBId,
-              teamAName: prev.game.teamAName,
-              teamBName: prev.game.teamBName
-            };
-            const newEntry = transformSubsToPlay([sub], teamMappingLocal)[0];
-            const merged = [newEntry, ...(prev.playByPlay || [])];
-            const sorted = merged.sort((a, b) => {
-              if (a.quarter !== b.quarter) return b.quarter - a.quarter;
-              const ta = (a.gameTimeMinutes || 0) * 60 + (a.gameTimeSeconds || 0);
-              const tb = (b.gameTimeMinutes || 0) * 60 + (b.gameTimeSeconds || 0);
-              if (ta !== tb) return tb - ta;
-              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            });
-            return { ...prev, playByPlay: sorted, lastUpdated: new Date().toISOString() };
-          });
-
-          // Ensure eventual consistency
-          setTimeout(() => { refetchSubs(); fetchGameData(true); }, 300);
-        }
-      )
-      .subscribe((status) => {
-        if (DEBUG_VIEWER) console.log('🔗 GameViewer: Subscription status:', status);
-      });
-
-    return () => {
-      if (DEBUG_VIEWER) console.log('🔗 GameViewer: Cleaning up subscriptions and polling...');
-      clearInterval(pollInterval);
-      supabase.removeChannel(gameSubscription);
-    };
-  }, [gameId, isTabVisible]); // Added isTabVisible for smart polling
+    return unsubscribe;
+  }, [gameId, isTabVisible]);
 
   return {
     gameData,
