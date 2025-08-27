@@ -7,14 +7,19 @@ class GameSubscriptionManager {
   private callbacks = new Map<string, Set<Function>>();
 
   subscribe(gameId: string, callback: Function) {
+    console.log('🔌 SubscriptionManager: Setting up subscription for game:', gameId);
+    
     // Add callback to the set
     if (!this.callbacks.has(gameId)) {
       this.callbacks.set(gameId, new Set());
     }
     this.callbacks.get(gameId)!.add(callback);
+    
+    console.log('🔌 SubscriptionManager: Total callbacks for game', gameId, ':', this.callbacks.get(gameId)?.size);
 
     // Create subscription only if it doesn't exist
     if (!this.subscriptions.has(gameId)) {
+      console.log('🔌 SubscriptionManager: Creating new subscription channel for game:', gameId);
       const channel = supabase
         .channel(`consolidated-game-${gameId}`)
         .on('postgres_changes', 
@@ -52,6 +57,13 @@ class GameSubscriptionManager {
         });
 
       this.subscriptions.set(gameId, channel);
+      
+      // Test if real-time is working at all
+      console.log('🔌 SubscriptionManager: Testing Supabase real-time connection...');
+      console.log('🔌 SubscriptionManager: Supabase URL:', supabase.supabaseUrl);
+      console.log('🔌 SubscriptionManager: Channel created:', channel);
+    } else {
+      console.log('🔌 SubscriptionManager: Reusing existing subscription for game:', gameId);
     }
 
     // Return unsubscribe function

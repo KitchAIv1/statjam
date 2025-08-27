@@ -72,6 +72,7 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
   useEffect(() => {
     if (!gameId) return;
 
+    console.log('🔌 V2 Feed: Setting up subscription for gameId:', gameId);
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
       console.log('🔔 V2 Feed: Subscription callback received for table:', table);
       if (table === 'game_stats' || table === 'game_substitutions') {
@@ -81,6 +82,12 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
         console.log('🔕 V2 Feed: Ignoring update for table:', table);
       }
     });
+
+    // Test subscription after 2 seconds
+    setTimeout(() => {
+      console.log('🧪 V2 Feed: Testing if subscription is active...');
+      console.log('🧪 V2 Feed: If you see this but no subscription logs when recording stats, RLS might be blocking real-time');
+    }, 2000);
 
     return unsubscribe;
   }, [gameId]); // Only gameId dependency to prevent infinite loop
