@@ -20,6 +20,24 @@ const StatAdminDashboard = () => {
   const [gamesError, setGamesError] = useState<string | null>(null);
   const [launchingTracker, setLaunchingTracker] = useState<string | null>(null);
 
+  // Calculate flat games array and stats from grouped data
+  const flatGames = assignedGames.flatMap(organizerGroup => organizerGroup.games || []);
+  const totalGames = flatGames.length;
+  const completedGames = flatGames.filter(game => game.status === 'completed').length;
+  const pendingGames = flatGames.filter(game => game.status !== 'completed').length;
+  const completionRate = totalGames > 0 ? Math.round((completedGames / totalGames) * 100) : 0;
+
+  // Debug logging for stats calculation
+  console.log('📊 StatAdmin Dashboard Stats:', {
+    assignedGamesLength: assignedGames.length,
+    flatGamesLength: flatGames.length,
+    totalGames,
+    completedGames,
+    pendingGames,
+    completionRate,
+    gameStatuses: flatGames.map(g => ({ id: g.id, status: g.status }))
+  });
+
   useEffect(() => {
     if (!loading && (!user || userRole !== 'stat_admin')) {
       router.push('/auth');
@@ -328,7 +346,7 @@ const StatAdminDashboard = () => {
                   </CardHeader>
                   <CardContent className="text-white">
                     <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">{assignedGames.length}</div>
+                      <div className="text-3xl font-bold">{totalGames}</div>
                       <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
                         <TrendingUp className="w-3 h-3" />
                         Active
@@ -350,7 +368,7 @@ const StatAdminDashboard = () => {
                   </CardHeader>
                   <CardContent className="text-white">
                     <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">{assignedGames.filter(g => g.status === 'completed').length}</div>
+                      <div className="text-3xl font-bold">{completedGames}</div>
                       <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
                         <TrendingUp className="w-3 h-3" />
                         Done
@@ -372,7 +390,7 @@ const StatAdminDashboard = () => {
                   </CardHeader>
                   <CardContent className="text-white">
                     <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">{assignedGames.filter(g => g.status !== 'completed').length}</div>
+                      <div className="text-3xl font-bold">{pendingGames}</div>
                       <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
                         <Clock className="w-3 h-3" />
                         Waiting
@@ -394,9 +412,7 @@ const StatAdminDashboard = () => {
                   </CardHeader>
                   <CardContent className="text-white">
                     <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">
-                        {assignedGames.length > 0 ? Math.round((assignedGames.filter(g => g.status === 'completed').length / assignedGames.length) * 100) : 0}%
-                      </div>
+                      <div className="text-3xl font-bold">{completionRate}%</div>
                       <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
                         <TrendingUp className="w-3 h-3" />
                         Rate
