@@ -74,12 +74,13 @@ export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { pla
                       (s.users?.email ? s.users.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : null) ||
                       `Player ${String(s.player_id || '').substring(0, 8)}`;
     
-    console.log('🔍 Player name extraction:', {
-      playerId: s.player_id,
-      userName: s.users?.name,
-      userEmail: s.users?.email,
-      finalName: playerName
-    });
+    // Reduced logging for performance
+    if (process.env.NODE_ENV !== 'production' && Math.random() < 0.1) {
+      console.log('🔍 Player name extraction sample:', {
+        playerId: s.player_id,
+        finalName: playerName
+      });
+    }
 
     return {
       id: s.id,

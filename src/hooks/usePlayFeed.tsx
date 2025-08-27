@@ -19,7 +19,11 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
   const [isFetching, setIsFetching] = useState(false);
 
   const fetchAll = useCallback(async () => {
-    if (isFetching) return; // simple throttle
+    if (isFetching) {
+      console.log('🔄 V2 Feed: fetchAll() called but already fetching, skipping');
+      return; // simple throttle
+    }
+    console.log('🔄 V2 Feed: fetchAll() starting for gameId:', gameId);
     setIsFetching(true);
     try {
       setError(null);
@@ -62,16 +66,24 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
   useEffect(() => {
     if (!gameId) return;
     fetchAll();
+  }, [gameId, teamMap.teamAId, teamMap.teamBId]);
 
-    // Use consolidated subscription instead of separate channel
+  // Separate effect for subscriptions to avoid infinite loop
+  useEffect(() => {
+    if (!gameId) return;
+
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
+      console.log('🔔 V2 Feed: Subscription callback received for table:', table);
       if (table === 'game_stats' || table === 'game_substitutions') {
+        console.log('🔄 V2 Feed: Triggering fetchAll() for', table, 'update');
         fetchAll();
+      } else {
+        console.log('🔕 V2 Feed: Ignoring update for table:', table);
       }
     });
 
     return unsubscribe;
-  }, [gameId, fetchAll]);
+  }, [gameId]); // Only gameId dependency to prevent infinite loop
 
   return { plays, homeScore, awayScore, loading, error, refetch: fetchAll };
 }

@@ -43,9 +43,10 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
   calculatePlayerPoints
 }) => {
 
-  // Reduced logging for performance
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('🎮 PlayByPlayFeed: Updated', playByPlay.length, 'plays, scores:', `${game.homeScore}-${game.awayScore}`);
+  // Minimal logging for performance (only on score changes)
+  const currentScore = `${game.homeScore}-${game.awayScore}`;
+  if (process.env.NODE_ENV !== 'production' && Math.random() < 0.2) {
+    console.log('🎮 PlayByPlayFeed: Scores updated to', currentScore);
   }
 
 

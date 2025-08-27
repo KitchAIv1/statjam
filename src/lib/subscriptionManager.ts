@@ -27,6 +27,8 @@ class GameSubscriptionManager {
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'game_stats', filter: `game_id=eq.${gameId}` },
           (payload) => {
+            console.log('🔔 SubscriptionManager: New game_stats INSERT detected:', payload);
+            console.log('🔔 SubscriptionManager: Notifying', this.callbacks.get(gameId)?.size, 'callbacks');
             this.callbacks.get(gameId)?.forEach(cb => cb('game_stats', payload));
           }
         )
