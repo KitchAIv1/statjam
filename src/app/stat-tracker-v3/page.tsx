@@ -20,6 +20,7 @@ import { TopScoreboardV3 } from '@/components/tracker-v3/TopScoreboardV3';
 import { TeamRosterV3 } from '@/components/tracker-v3/TeamRosterV3';
 import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
+import { ShotClockV3 } from '@/components/tracker-v3/ShotClockV3'; // NEW: Shot Clock Component
 
 interface GameData {
   id: string;
@@ -187,6 +188,40 @@ export default function StatTrackerV3() {
       if (interval) clearInterval(interval);
     };
   }, [tracker.clock.isRunning, tracker]);
+
+  // NEW: Shot Clock Tick Effect
+  useEffect(() => {
+    let shotClockInterval: NodeJS.Timeout;
+    
+    if (tracker.shotClock.isRunning && tracker.shotClock.isVisible) {
+      shotClockInterval = setInterval(() => {
+        tracker.shotClockTick(1);
+        
+        // Shot clock violation at 0 seconds
+        if (tracker.shotClock.secondsRemaining <= 1) {
+          console.log('🚨 Shot clock violation!');
+          tracker.stopShotClock();
+          // TODO: Add shot clock violation handling (buzzer, turnover, etc.)
+        }
+      }, 1000);
+    }
+
+    return () => {
+      if (shotClockInterval) clearInterval(shotClockInterval);
+    };
+  }, [tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker]);
+
+  // NEW: Sync shot clock with game clock
+  useEffect(() => {
+    // Stop shot clock when game clock stops
+    if (!tracker.clock.isRunning && tracker.shotClock.isRunning) {
+      tracker.stopShotClock();
+    }
+    // Auto-start shot clock when game clock starts (if shot clock is enabled)
+    else if (tracker.clock.isRunning && !tracker.shotClock.isRunning && tracker.shotClock.isVisible) {
+      tracker.startShotClock();
+    }
+  }, [tracker.clock.isRunning, tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker]);
 
   // Sync scores with actual team IDs when game data loads
   useEffect(() => {
@@ -395,25 +430,41 @@ export default function StatTrackerV3() {
             </div>
           </div>
 
-          {/* Center Column - Stat Interface */}
+          {/* Center Column - Stat Interface & Shot Clock */}
           <div className="lg:col-span-3">
-            <div className="h-full">
-              <DesktopStatGridV3
-                selectedPlayer={selectedPlayer}
-                selectedPlayerData={[...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer)}
-                isClockRunning={tracker.clock.isRunning}
-                onStatRecord={handleStatRecord}
-                onFoulRecord={handleFoulRecord}
-                onTimeOut={() => {
-                  // TODO: Implement timeout functionality
-                  console.log('⏰ Time out called');
-                  alert('Time out functionality will be implemented');
-                }}
-                onSubstitution={() => selectedPlayer && handleSubstitution(selectedPlayer)}
-                onGameEnd={tracker.closeGame}
-                lastAction={tracker.lastAction}
-                lastActionPlayerId={tracker.lastActionPlayerId}
-              />
+            <div className="h-full flex flex-col gap-3">
+              {/* Shot Clock - Top of center column */}
+              <div className="flex-shrink-0">
+                <ShotClockV3
+                  seconds={tracker.shotClock.secondsRemaining}
+                  isRunning={tracker.shotClock.isRunning}
+                  isVisible={tracker.shotClock.isVisible}
+                  onStart={tracker.startShotClock}
+                  onStop={tracker.stopShotClock}
+                  onReset={tracker.resetShotClock}
+                  onSetTime={tracker.setShotClockTime}
+                />
+              </div>
+
+              {/* Stat Interface - Main area */}
+              <div className="flex-1 min-h-0">
+                <DesktopStatGridV3
+                  selectedPlayer={selectedPlayer}
+                  selectedPlayerData={[...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer)}
+                  isClockRunning={tracker.clock.isRunning}
+                  onStatRecord={handleStatRecord}
+                  onFoulRecord={handleFoulRecord}
+                  onTimeOut={() => {
+                    // TODO: Implement timeout functionality
+                    console.log('⏰ Time out called');
+                    alert('Time out functionality will be implemented');
+                  }}
+                  onSubstitution={() => selectedPlayer && handleSubstitution(selectedPlayer)}
+                  onGameEnd={tracker.closeGame}
+                  lastAction={tracker.lastAction}
+                  lastActionPlayerId={tracker.lastActionPlayerId}
+                />
+              </div>
             </div>
           </div>
 

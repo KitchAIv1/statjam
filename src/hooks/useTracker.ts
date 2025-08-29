@@ -15,6 +15,12 @@ interface UseTrackerReturn {
     isRunning: boolean;
     secondsRemaining: number;
   };
+  // NEW: Shot Clock State
+  shotClock: {
+    isRunning: boolean;
+    secondsRemaining: number;
+    isVisible: boolean;
+  };
   scores: ScoreByTeam;
   
   // Rosters
@@ -28,6 +34,12 @@ interface UseTrackerReturn {
   resetClock: (forQuarter?: number) => void;
   setCustomTime: (minutes: number, seconds: number) => Promise<void>; // NEW: Manual clock editing
   tick: (seconds: number) => void;
+  // NEW: Shot Clock Actions
+  startShotClock: () => void;
+  stopShotClock: () => void;
+  resetShotClock: (seconds?: number) => void;
+  setShotClockTime: (seconds: number) => void;
+  shotClockTick: (seconds: number) => void;
   setQuarter: (quarter: number) => void;
   advanceIfNeeded: () => void;
   substitute: (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number }) => Promise<boolean>;
@@ -51,6 +63,12 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
   const [clock, setClock] = useState({
     isRunning: false,
     secondsRemaining: 12 * 60 // 12 minutes (will be adjusted based on quarter)
+  });
+  // NEW: Shot Clock State
+  const [shotClock, setShotClock] = useState({
+    isRunning: false,
+    secondsRemaining: 24, // Default NBA shot clock
+    isVisible: true // Can be disabled per tournament settings
   });
   const [scores, setScores] = useState<ScoreByTeam>({
     [teamAId]: 0,
@@ -294,8 +312,50 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     }
   }, [gameId]);
 
+  // NEW: Shot Clock Controls
+  const startShotClock = useCallback(() => {
+    setShotClock(prev => ({ ...prev, isRunning: true }));
+    setLastAction('Shot clock started');
+    console.log('🏀 Shot clock started');
+  }, []);
+
+  const stopShotClock = useCallback(() => {
+    setShotClock(prev => ({ ...prev, isRunning: false }));
+    setLastAction('Shot clock stopped');
+    console.log('🏀 Shot clock stopped');
+  }, []);
+
+  const resetShotClock = useCallback((seconds: number = 24) => {
+    setShotClock(prev => ({ 
+      ...prev, 
+      isRunning: false, 
+      secondsRemaining: seconds 
+    }));
+    setLastAction(`Shot clock reset to ${seconds}s`);
+    console.log(`🏀 Shot clock reset to ${seconds} seconds`);
+  }, []);
+
+  const setShotClockTime = useCallback((seconds: number) => {
+    const validSeconds = Math.max(0, Math.min(35, Math.floor(seconds))); // 0-35 seconds max
+    setShotClock(prev => ({ 
+      ...prev, 
+      isRunning: false, 
+      secondsRemaining: validSeconds 
+    }));
+    setLastAction(`Shot clock set to ${validSeconds}s`);
+    console.log(`🏀 Shot clock set to ${validSeconds} seconds`);
+  }, []);
+
   const tick = useCallback((seconds: number) => {
     setClock(prev => ({
+      ...prev,
+      secondsRemaining: Math.max(0, prev.secondsRemaining - seconds)
+    }));
+  }, []);
+
+  // NEW: Shot Clock Tick
+  const shotClockTick = useCallback((seconds: number) => {
+    setShotClock(prev => ({
       ...prev,
       secondsRemaining: Math.max(0, prev.secondsRemaining - seconds)
     }));
@@ -530,6 +590,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     gameId,
     quarter,
     clock,
+    shotClock, // NEW: Shot Clock State
     scores,
     rosterA,
     rosterB,
@@ -539,6 +600,12 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     resetClock,
     setCustomTime, // NEW: Manual clock editing
     tick,
+    // NEW: Shot Clock Actions
+    startShotClock,
+    stopShotClock,
+    resetShotClock,
+    setShotClockTime,
+    shotClockTick,
     setQuarter,
     advanceIfNeeded,
     substitute,

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { CompactScoreboardV3 } from './CompactScoreboardV3';
 import { DualTeamHorizontalRosterV3 } from './DualTeamHorizontalRosterV3';
 import { MobileStatGridV3 } from './MobileStatGridV3';
+import { MobileShotClockV3 } from './MobileShotClockV3'; // NEW: Mobile Shot Clock
 
 import { SubstitutionModalV3 } from '../SubstitutionModalV3';
 
@@ -222,6 +223,17 @@ export function MobileLayoutV3({
           selectedPlayer={selectedPlayer}
           onPlayerSelect={onPlayerSelect}
           onSubstitution={handleSubstitution}
+        />
+
+        {/* NEW: Mobile Shot Clock */}
+        <MobileShotClockV3
+          seconds={tracker.shotClock.secondsRemaining}
+          isRunning={tracker.shotClock.isRunning}
+          isVisible={tracker.shotClock.isVisible}
+          onStart={tracker.startShotClock}
+          onStop={tracker.stopShotClock}
+          onReset={tracker.resetShotClock}
+          onSetTime={tracker.setShotClockTime}
         />
 
         {/* Mobile Stat Grid */}
