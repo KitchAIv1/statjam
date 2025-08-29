@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { GameService } from '@/lib/services/gameService';
+import { GameServiceV2 } from '@/lib/services/gameServiceV2';
 import { TeamService } from '@/lib/services/tournamentService';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,9 @@ import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock
 const StatAdminDashboard = () => {
   const { user, userRole, loading } = useAuthStore();
   const router = useRouter();
+  
+  // Feature flag for V2 optimization (default: enabled)
+  const useV2Optimization = process.env.NEXT_PUBLIC_STAT_ADMIN_V2 !== '0';
   
   // Real assigned games data
   const [assignedGames, setAssignedGames] = useState<any[]>([]);
@@ -25,11 +29,12 @@ const StatAdminDashboard = () => {
   const totalGames = gamesLoading ? null : flatGames.length;
   const completedGames = gamesLoading ? null : flatGames.filter(game => game.status === 'completed').length;
   const pendingGames = gamesLoading ? null : flatGames.filter(game => game.status !== 'completed').length;
-  const completionRate = gamesLoading ? null : (totalGames > 0 ? Math.round((completedGames / totalGames) * 100) : 0);
+  const completionRate = gamesLoading ? null : (totalGames && totalGames > 0 ? Math.round(((completedGames || 0) / totalGames) * 100) : 0);
 
   // Debug logging for stats calculation (development only)
   if (process.env.NODE_ENV !== 'production' && !gamesLoading && assignedGames.length > 0) {
     console.log('📊 StatAdmin Dashboard Stats:', {
+      version: useV2Optimization ? 'V2 (Optimized)' : 'V1 (Legacy)',
       totalGames,
       completedGames,
       pendingGames,
@@ -54,7 +59,10 @@ const StatAdminDashboard = () => {
         setGamesLoading(true);
         setGamesError(null);
         
-        const games = await GameService.getAssignedGames(user.id);
+        // Use V2 optimization if enabled, fallback to V1
+        const games = useV2Optimization 
+          ? await GameServiceV2.getAssignedGames(user.id)
+          : await GameService.getAssignedGames(user.id);
         setAssignedGames(games);
       } catch (error) {
         console.error('❌ Error loading assigned games:', error);
@@ -471,7 +479,10 @@ const StatAdminDashboard = () => {
                     if (user) {
                       setGamesLoading(true);
                       setGamesError(null);
-                      GameService.getAssignedGames(user.id)
+                      // Use V2 optimization if enabled, fallback to V1
+                      (useV2Optimization 
+                        ? GameServiceV2.getAssignedGames(user.id)
+                        : GameService.getAssignedGames(user.id))
                         .then(setAssignedGames)
                         .catch((error) => setGamesError(error.message))
                         .finally(() => setGamesLoading(false));
