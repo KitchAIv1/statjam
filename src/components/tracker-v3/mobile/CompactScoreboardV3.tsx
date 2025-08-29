@@ -26,6 +26,7 @@ interface CompactScoreboardV3Props {
   onStartClock: () => void;
   onStopClock: () => void;
   onResetClock: () => void;
+  onSetCustomTime?: (minutes: number, seconds: number) => void; // NEW: Manual time setting
 }
 
 export function CompactScoreboardV3({
@@ -48,7 +49,8 @@ export function CompactScoreboardV3({
   onPossessionToggle,
   onStartClock,
   onStopClock,
-  onResetClock
+  onResetClock,
+  onSetCustomTime
 }: CompactScoreboardV3Props) {
   const formatTime = (min: number, sec: number) => {
     return `${min}:${sec.toString().padStart(2, '0')}`;

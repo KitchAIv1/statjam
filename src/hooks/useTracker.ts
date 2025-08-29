@@ -26,6 +26,7 @@ interface UseTrackerReturn {
   startClock: () => void;
   stopClock: () => void;
   resetClock: (forQuarter?: number) => void;
+  setCustomTime: (minutes: number, seconds: number) => Promise<void>; // NEW: Manual clock editing
   tick: (seconds: number) => void;
   setQuarter: (quarter: number) => void;
   advanceIfNeeded: () => void;
@@ -262,6 +263,34 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
       });
     } catch (error) {
       console.error('Error syncing clock reset to database:', error);
+    }
+  }, [gameId]);
+
+  // NEW: Set custom time (for manual editing)
+  const setCustomTime = useCallback(async (minutes: number, seconds: number) => {
+    // Validate input ranges
+    const validMinutes = Math.max(0, Math.min(15, Math.floor(minutes))); // 0-15 minutes max
+    const validSeconds = Math.max(0, Math.min(59, Math.floor(seconds))); // 0-59 seconds
+    
+    const totalSeconds = validMinutes * 60 + validSeconds;
+    
+    // Stop clock when setting custom time
+    setClock({ isRunning: false, secondsRemaining: totalSeconds });
+    setLastAction(`Clock set to ${validMinutes}:${validSeconds.toString().padStart(2, '0')}`);
+    
+    console.log(`🕐 Manual clock set: ${validMinutes}:${validSeconds.toString().padStart(2, '0')} (${totalSeconds} seconds)`);
+    
+    // Sync to database using existing updateGameClock method
+    try {
+      const { GameService } = await import('@/lib/services/gameService');
+      await GameService.updateGameClock(gameId, {
+        minutes: validMinutes,
+        seconds: validSeconds,
+        isRunning: false
+      });
+      console.log('✅ Custom clock time synced to database');
+    } catch (error) {
+      console.error('❌ Error syncing custom clock time to database:', error);
     }
   }, [gameId]);
 
@@ -508,6 +537,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     startClock,
     stopClock,
     resetClock,
+    setCustomTime, // NEW: Manual clock editing
     tick,
     setQuarter,
     advanceIfNeeded,

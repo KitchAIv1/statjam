@@ -371,6 +371,7 @@ export default function StatTrackerV3() {
           onStart={tracker.startClock}
           onStop={tracker.stopClock}
           onReset={tracker.resetClock}
+          onSetCustomTime={tracker.setCustomTime} // NEW: Manual clock editing
           // NBA Standard: Team fouls and timeouts (placeholder values for now)
           teamAFouls={3}
           teamBFouls={6}

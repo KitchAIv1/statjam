@@ -210,6 +210,7 @@ export function MobileLayoutV3({
           onStartClock={tracker.startClock}
           onStopClock={tracker.stopClock}
           onResetClock={tracker.resetClock}
+          onSetCustomTime={tracker.setCustomTime} // NEW: Manual clock editing
         />
 
         {/* Dual Team Horizontal Roster */}
