@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { safeSupabase } from '@/lib/supabaseClient';
 import { UserService, UserProfile } from '@/lib/services/userService';
 
 interface AuthState {
@@ -54,7 +54,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Quick session check with timeout - don't block UI
       const sessionCheck = async () => {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
+          const { data: { session } } = await safeSupabase().auth.getSession();
           if (session?.user) {
             console.log('🔧 Auth Store: Initial session found');
             const role = session.user.user_metadata?.role || 'player';
@@ -84,7 +84,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       
       // Set up auth listener for future changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const { data: { subscription } } = safeSupabase().auth.onAuthStateChange(async (event, session) => {
         console.log('🔧 Auth Store: Auth state changed:', { event, hasSession: !!session });
         
         if (session?.user) {
@@ -149,7 +149,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       subscription.unsubscribe();
     }
     
-    const { error } = await supabase.auth.signOut();
+    const { error } = await safeSupabase().auth.signOut();
     if (error) {
       console.error('Logout error:', error);
     }

@@ -42,8 +42,8 @@ const nextConfig: NextConfig = {
     formats: ['image/webp', 'image/avif'],
   },
   
-  // Temporarily disable strict checking for MVP deployment
-  // TODO: Fix TypeScript errors in Phase 2 hardening
+  // Temporarily disable strict checking for production stability
+  // TODO: Gradually re-enable and fix TypeScript/ESLint errors in Phase 2
   eslint: {
     ignoreDuringBuilds: true,
   },
