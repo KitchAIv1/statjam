@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xhunnsczqjwfrwgjetff.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhodW5uc2N6cWp3ZnJ3Z2pldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyNDk4MTQsImV4cCI6MjA2OTgyNTgxNH0.5-1h0PHnsw_CkBNMRrfjpgkisD30uz-XdnPZxJ3aRZQ';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
@@ -23,9 +23,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Auth helper functions
 export const signUp = async (email: string, password: string, userData?: any) => {
   try {
-    console.log('🔍 DEBUG - Signup userData:', userData);
-    console.log('🔍 DEBUG - userType being set:', userData?.userType);
-    
     // Direct Supabase Auth signup with user metadata
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -44,11 +41,6 @@ export const signUp = async (email: string, password: string, userData?: any) =>
       console.error('Supabase signup error:', error);
       throw error;
     }
-
-    console.log('Supabase signup successful:', { 
-      user: data.user?.id, 
-      role: data.user?.user_metadata?.role 
-    });
 
     return { data, error: null };
   } catch (error) {

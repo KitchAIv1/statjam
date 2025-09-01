@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -45,7 +45,7 @@ interface Player {
   jersey_number?: number;
 }
 
-export default function StatTrackerV3() {
+function StatTrackerV3Content() {
   const { user, userRole, loading } = useAuthStore();
   const router = useRouter();
   const params = useSearchParams();
@@ -496,5 +496,17 @@ export default function StatTrackerV3() {
 
       </div>
     </div>
+  );
+}
+
+export default function StatTrackerV3() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-white">Loading stat tracker...</div>
+      </div>
+    }>
+      <StatTrackerV3Content />
+    </Suspense>
   );
 }

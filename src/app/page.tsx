@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { HeroSection } from '@/components/HeroSection';
 import { PlayerPremiumSection } from '@/components/PlayerPremiumSection';
@@ -34,7 +34,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
-      <NavigationHeader />
+      <Suspense fallback={<div className="h-16 bg-gray-900" />}>
+        <NavigationHeader />
+      </Suspense>
       <HeroSection 
         onWatchLive={navigateToTournament} 
         onViewTournament={navigateToTournamentPage}
