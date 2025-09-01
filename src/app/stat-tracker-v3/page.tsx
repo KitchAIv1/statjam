@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/lib/supabase';
 import { TeamService } from '@/lib/services/tournamentService';
 import { useTracker } from '@/hooks/useTracker';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -385,8 +386,9 @@ function StatTrackerV3Content() {
 
   // Desktop Layout - iPad Optimized (No Scrolling)
   return (
-    <div className="h-screen overflow-hidden" style={{ background: 'linear-gradient(135deg, #1f2937, #111827)' }}>
-      <div className="container mx-auto px-3 py-3 max-w-7xl h-full flex flex-col">
+    <ErrorBoundary>
+      <div className="h-screen overflow-hidden" style={{ background: 'linear-gradient(135deg, #1f2937, #111827)' }}>
+        <div className="container mx-auto px-3 py-3 max-w-7xl h-full flex flex-col">
         {/* Header */}
         <GameHeaderV3 
           gameId={gameData.id}
@@ -495,7 +497,8 @@ function StatTrackerV3Content() {
 
 
       </div>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
 

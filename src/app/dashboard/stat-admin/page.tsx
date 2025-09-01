@@ -9,6 +9,7 @@ import { TeamService } from '@/lib/services/tournamentService';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar } from 'lucide-react';
 
 const StatAdminDashboard = () => {
@@ -313,7 +314,8 @@ const StatAdminDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <NavigationHeader />
-      <main className="pt-16 p-6">
+      <ErrorBoundary>
+        <main className="pt-16 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="space-y-6 mt-6">
             {/* Modern Header */}
@@ -612,7 +614,8 @@ const StatAdminDashboard = () => {
             </Card>
           </div>
         </div>
-      </main>
+        </main>
+      </ErrorBoundary>
     </div>
   );
 };
