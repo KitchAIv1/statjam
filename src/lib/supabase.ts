@@ -92,3 +92,16 @@ export const getCurrentUser = async () => {
   const { data: { user }, error } = await supabase.auth.getUser();
   return { user, error };
 };
+
+export const resendConfirmationEmail = async (email: string) => {
+  if (!supabase) {
+    return { error: new Error('Supabase client not initialized') };
+  }
+  
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email
+  });
+  
+  return { error };
+};

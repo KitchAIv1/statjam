@@ -57,6 +57,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const { data: { session } } = await safeSupabase().auth.getSession();
           if (session?.user) {
             console.log('🔧 Auth Store: Initial session found');
+            
+            // Check if email is confirmed
+            if (!session.user.email_confirmed_at) {
+              console.log('🔧 Auth Store: Email not confirmed in initial session');
+              return false;
+            }
+            
             const role = session.user.user_metadata?.role || 'player';
             set({ 
               user: session.user, 
@@ -89,6 +96,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         
         if (session?.user) {
           console.log('🔧 Auth Store: User found:', session.user.email);
+          
+          // Check if email is confirmed
+          if (!session.user.email_confirmed_at) {
+            console.log('🔧 Auth Store: Email not confirmed, keeping user logged out');
+            set({ 
+              user: null, 
+              userProfile: null, 
+              userRole: null, 
+              loading: false, 
+              initialized: true 
+            });
+            return;
+          }
+          
           const role = session.user.user_metadata?.role || 'player';
           set({ 
             user: session.user, 

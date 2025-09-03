@@ -5,6 +5,7 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Shield, Trophy } from 'lucid
 import { signIn, signUp } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import EmailConfirmationPending from './EmailConfirmationPending';
 
 const AuthPageV2 = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,6 +14,8 @@ const AuthPageV2 = () => {
   const [userType, setUserType] = useState('player');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
   const router = useRouter();
   const { user, userRole, loading: authLoading } = useAuthStore();
   
@@ -67,12 +70,35 @@ const AuthPageV2 = () => {
           }
         );
         if (error) throw error;
+        
+        // Show email confirmation screen
+        setSignupEmail(formData.email);
+        setShowEmailConfirmation(true);
+        setLoading(false);
+        return; // Don't continue to the catch block
       }
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
     }
   };
+
+  const handleBackToSignIn = () => {
+    setShowEmailConfirmation(false);
+    setIsLogin(true);
+    setSignupEmail('');
+    setError('');
+  };
+
+  // Show email confirmation screen if needed
+  if (showEmailConfirmation) {
+    return (
+      <EmailConfirmationPending 
+        email={signupEmail}
+        onBack={handleBackToSignIn}
+      />
+    );
+  }
 
   // Updated styling with StatJam orange/red branding
   const styles = {
@@ -202,6 +228,150 @@ const AuthPageV2 = () => {
                 }}
                 required
               />
+
+              {/* Role Selection */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#374151'
+                }}>
+                  I am signing up as a:
+                </label>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: '8px',
+                  marginBottom: '8px'
+                }}>
+                  {/* Player Role */}
+                  <button
+                    type="button"
+                    onClick={() => setUserType('player')}
+                    style={{
+                      padding: '12px 8px',
+                      borderRadius: '8px',
+                      border: userType === 'player' ? '2px solid #f97316' : '2px solid rgba(251, 146, 60, 0.2)',
+                      background: userType === 'player' ? 'rgba(251, 146, 60, 0.1)' : 'white',
+                      color: userType === 'player' ? '#ea580c' : '#6b7280',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      textAlign: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (userType !== 'player') {
+                        const target = e.target as HTMLButtonElement;
+                        target.style.borderColor = '#f97316';
+                        target.style.background = 'rgba(251, 146, 60, 0.05)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (userType !== 'player') {
+                        const target = e.target as HTMLButtonElement;
+                        target.style.borderColor = 'rgba(251, 146, 60, 0.2)';
+                        target.style.background = 'white';
+                      }
+                    }}
+                  >
+                    🏀 Player
+                  </button>
+
+                  {/* Organizer Role */}
+                  <button
+                    type="button"
+                    onClick={() => setUserType('organizer')}
+                    style={{
+                      padding: '12px 8px',
+                      borderRadius: '8px',
+                      border: userType === 'organizer' ? '2px solid #f97316' : '2px solid rgba(251, 146, 60, 0.2)',
+                      background: userType === 'organizer' ? 'rgba(251, 146, 60, 0.1)' : 'white',
+                      color: userType === 'organizer' ? '#ea580c' : '#6b7280',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      textAlign: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (userType !== 'organizer') {
+                        const target = e.target as HTMLButtonElement;
+                        target.style.borderColor = '#f97316';
+                        target.style.background = 'rgba(251, 146, 60, 0.05)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (userType !== 'organizer') {
+                        const target = e.target as HTMLButtonElement;
+                        target.style.borderColor = 'rgba(251, 146, 60, 0.2)';
+                        target.style.background = 'white';
+                      }
+                    }}
+                  >
+                    🏆 Organizer
+                  </button>
+
+                  {/* Stat Admin Role */}
+                  <button
+                    type="button"
+                    onClick={() => setUserType('stat_admin')}
+                    style={{
+                      padding: '12px 8px',
+                      borderRadius: '8px',
+                      border: userType === 'stat_admin' ? '2px solid #f97316' : '2px solid rgba(251, 146, 60, 0.2)',
+                      background: userType === 'stat_admin' ? 'rgba(251, 146, 60, 0.1)' : 'white',
+                      color: userType === 'stat_admin' ? '#ea580c' : '#6b7280',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      textAlign: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (userType !== 'stat_admin') {
+                        const target = e.target as HTMLButtonElement;
+                        target.style.borderColor = '#f97316';
+                        target.style.background = 'rgba(251, 146, 60, 0.05)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (userType !== 'stat_admin') {
+                        const target = e.target as HTMLButtonElement;
+                        target.style.borderColor = 'rgba(251, 146, 60, 0.2)';
+                        target.style.background = 'white';
+                      }
+                    }}
+                  >
+                    📊 Stat Admin
+                  </button>
+                </div>
+
+                {/* Role Descriptions */}
+                <div style={{
+                  fontSize: '12px',
+                  color: '#6b7280',
+                  lineHeight: '1.4'
+                }}>
+                  {userType === 'player' && (
+                    <p style={{ margin: '4px 0' }}>
+                      <strong>Player:</strong> Join tournaments, view your stats, and track your performance
+                    </p>
+                  )}
+                  {userType === 'organizer' && (
+                    <p style={{ margin: '4px 0' }}>
+                      <strong>Organizer:</strong> Create tournaments, manage teams, and schedule games
+                    </p>
+                  )}
+                  {userType === 'stat_admin' && (
+                    <p style={{ margin: '4px 0' }}>
+                      <strong>Stat Admin:</strong> Record live game statistics and manage game data
+                    </p>
+                  )}
+                </div>
+              </div>
             </>
           )}
 
