@@ -8,13 +8,13 @@ interface AuthState {
   userProfile: UserProfile | null;
   loading: boolean;
   initialized: boolean;
-  userRole: 'organizer' | 'stat_admin' | 'player' | 'fan' | null;
+  userRole: 'organizer' | 'stat_admin' | 'player' | 'fan' | 'admin' | null;
   subscription?: any;
   setUser: (user: User | null) => void;
   setUserProfile: (profile: UserProfile | null) => void;
   setLoading: (loading: boolean) => void;
   setInitialized: (initialized: boolean) => void;
-  setUserRole: (role: 'organizer' | 'stat_admin' | 'player' | 'fan' | null) => void;
+  setUserRole: (role: 'organizer' | 'stat_admin' | 'player' | 'fan' | 'admin' | null) => void;
   forceComplete: () => void;
   initialize: () => Promise<void>;
   logout: () => Promise<void>;
@@ -64,13 +64,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               return false;
             }
             
-            const role = session.user.user_metadata?.role || 'player';
-            set({ 
-              user: session.user, 
-              userRole: role, 
-              loading: false, 
-              initialized: true 
-            });
+            // Fetch role from database users table
+            try {
+              const userProfile = await UserService.getUserProfile(true);
+              const role = userProfile?.role || 'player';
+              console.log('🔧 Auth Store: Fetched role from database:', role);
+              
+              set({ 
+                user: session.user, 
+                userProfile,
+                userRole: role, 
+                loading: false, 
+                initialized: true 
+              });
+            } catch (error) {
+              console.error('🔧 Auth Store: Failed to fetch user profile, using fallback');
+              const role = session.user.user_metadata?.role || 'player';
+              set({ 
+                user: session.user, 
+                userRole: role, 
+                loading: false, 
+                initialized: true 
+              });
+            }
             return true;
           }
         } catch (error) {
@@ -110,13 +126,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             return;
           }
           
-          const role = session.user.user_metadata?.role || 'player';
-          set({ 
-            user: session.user, 
-            userRole: role, 
-            loading: false, 
-            initialized: true 
-          });
+          // Fetch role from database users table
+          try {
+            const userProfile = await UserService.getUserProfile(true);
+            const role = userProfile?.role || 'player';
+            console.log('🔧 Auth Store: Auth state change - fetched role from database:', role);
+            
+            set({ 
+              user: session.user, 
+              userProfile,
+              userRole: role, 
+              loading: false, 
+              initialized: true 
+            });
+          } catch (error) {
+            console.error('🔧 Auth Store: Failed to fetch user profile on auth change, using fallback');
+            const role = session.user.user_metadata?.role || 'player';
+            set({ 
+              user: session.user, 
+              userRole: role, 
+              loading: false, 
+              initialized: true 
+            });
+          }
         } else {
           console.log('🔧 Auth Store: No user session');
           set({ 

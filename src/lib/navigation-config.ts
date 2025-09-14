@@ -1,4 +1,4 @@
-import { User, Trophy, BarChart3, Users, PlayCircle, Calendar, Settings, Home, Video } from 'lucide-react';
+import { User, Trophy, BarChart3, Users, PlayCircle, Calendar, Settings, Home, Video, Palette } from 'lucide-react';
 
 export interface NavigationItem {
   label: string;
@@ -13,6 +13,31 @@ export interface NavigationConfig {
 }
 
 export const navigationConfig: Record<string, NavigationConfig> = {
+  admin: {
+    primary: [
+      {
+        label: 'Templates',
+        href: '/admin/templates',
+        icon: Palette,
+        description: 'Manage card templates'
+      },
+      {
+        label: 'Analytics',
+        href: '/admin/analytics',
+        icon: BarChart3,
+        description: 'View system analytics'
+      }
+    ],
+    secondary: [
+      {
+        label: 'Settings',
+        href: '/admin/settings',
+        icon: Settings,
+        description: 'System settings'
+      }
+    ]
+  },
+  
   guest: {
     primary: [
       {

@@ -32,9 +32,19 @@ const AuthPageV2 = () => {
   // Redirect if user is already logged in
   useEffect(() => {
     if (user && userRole && !authLoading) {
-      console.log('🔧 AuthPageV2: User is logged in, redirecting to dashboard');
+      console.log('🔧 AuthPageV2: User is logged in, redirecting based on role:', userRole);
       setLoading(false);
-      router.push('/dashboard');
+      
+      // Redirect based on role
+      if (userRole === 'admin') {
+        router.push('/admin/templates');
+      } else if (userRole === 'player') {
+        router.push('/dashboard/player');
+      } else if (userRole === 'stat_admin') {
+        router.push('/dashboard/stat-admin');
+      } else {
+        router.push('/dashboard');
+      }
     }
   }, [user, userRole, authLoading, router]);
 
