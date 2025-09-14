@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, User, Settings, LogOut, Shield } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { signOut } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
 interface UserDropdownMenuProps {
@@ -15,7 +14,7 @@ export function UserDropdownMenu({ user, userRole }: UserDropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { setUser, setUserProfile, setUserRole } = useAuthStore();
+  const { logout } = useAuthStore();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -31,11 +30,8 @@ export function UserDropdownMenu({ user, userRole }: UserDropdownMenuProps) {
 
   const handleLogout = async () => {
     try {
-      await signOut();
-      // Clear auth store
-      setUser(null);
-      setUserProfile(null);
-      setUserRole(null);
+      // Use the auth store's logout method which properly cleans up everything
+      await logout();
       // Redirect to home
       router.push('/');
       setIsOpen(false);
@@ -48,6 +44,7 @@ export function UserDropdownMenu({ user, userRole }: UserDropdownMenuProps) {
     const settingsPath = userRole === 'organizer' ? '/dashboard/settings' :
                         userRole === 'player' ? '/dashboard/player/settings' :
                         userRole === 'stat_admin' ? '/dashboard/stat-admin/settings' :
+                        userRole === 'admin' ? '/admin/settings' :
                         '/settings';
     router.push(settingsPath);
     setIsOpen(false);
@@ -65,18 +62,21 @@ export function UserDropdownMenu({ user, userRole }: UserDropdownMenuProps) {
       organizer: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
       player: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
       stat_admin: 'bg-green-500/20 text-green-300 border-green-500/30',
-      fan: 'bg-orange-500/20 text-orange-300 border-orange-500/30'
+      fan: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+      admin: 'bg-red-500/20 text-red-300 border-red-500/30'
     };
 
     const roleLabels = {
       organizer: 'Organizer',
       player: 'Player',
       stat_admin: 'Stat Admin',
-      fan: 'Fan'
+      fan: 'Fan',
+      admin: 'Admin'
     };
 
     return (
-      <span className={`px-2 py-1 text-xs rounded-full border ${roleColors[userRole as keyof typeof roleColors] || roleColors.fan}`}>
+      <span className={`px-2 py-1 text-xs rounded-full border flex items-center gap-1 ${roleColors[userRole as keyof typeof roleColors] || roleColors.fan}`}>
+        {userRole === 'admin' && <Shield className="w-3 h-3" />}
         {roleLabels[userRole as keyof typeof roleLabels] || 'User'}
       </span>
     );
