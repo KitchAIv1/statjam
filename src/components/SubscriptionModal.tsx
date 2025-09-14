@@ -32,9 +32,16 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
     }
   ];
 
+  const handleUpgrade = () => {
+    // TODO: Implement actual upgrade logic
+    console.log('🚀 Upgrading to Pro...');
+    // For now, close modal and proceed to card generation
+    onClose();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg p-0 border-0 bg-transparent shadow-none overflow-hidden backdrop-blur-sm">
+      <DialogContent className="max-w-lg p-0 border-0 bg-gray-900/95 backdrop-blur-md shadow-2xl overflow-hidden">
         <div className="glass-modal-accent rounded-xl overflow-hidden">
           {/* Header */}
           <div className="relative p-8 text-center glass-modal-header">
@@ -114,6 +121,7 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
               <Button 
                 className="w-full h-12 bg-gradient-to-r from-primary to-chart-1 hover:from-primary/90 hover:to-chart-1/90 text-white shadow-lg"
                 size="lg"
+                onClick={handleUpgrade}
               >
                 <Crown className="w-5 h-5 mr-2" />
                 Upgrade to Pro

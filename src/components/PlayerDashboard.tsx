@@ -48,6 +48,7 @@ export function PlayerDashboard() {
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [currentPlayerData, setCurrentPlayerData] = useState(defaultPlayerData);
   const [currentTab, setCurrentTab] = useState("dashboard");
+  const [showCardGeneration, setShowCardGeneration] = useState(false);
 
   // Debug logging
   console.log('🎯 PlayerDashboard: Current data state:', {
@@ -83,6 +84,20 @@ export function PlayerDashboard() {
     e?.preventDefault();
     e?.stopPropagation();
     setIsSubscriptionModalOpen(true);
+  };
+
+  const handleCardGenerationClick = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    // For now, show subscription modal
+    // Later this will check subscription status and proceed accordingly
+    setIsSubscriptionModalOpen(true);
+  };
+
+  const handleSubscriptionClose = () => {
+    setIsSubscriptionModalOpen(false);
+    // If user upgraded, we could redirect to card generation
+    // For now, just close the modal
   };
 
   const handleEditProfile = () => {
@@ -329,7 +344,7 @@ export function PlayerDashboard() {
                           <div className="flex gap-3">
                             <Button 
                               className="bg-white hover:bg-orange-50 text-red-600 px-6 py-3 border-0"
-                              onClick={handlePremiumFeatureClick}
+                              onClick={handleCardGenerationClick}
                             >
                               GENERATE MY NBA CARD
                             </Button>
@@ -562,7 +577,7 @@ export function PlayerDashboard() {
       {/* Subscription Modal */}
       <SubscriptionModal 
         isOpen={isSubscriptionModalOpen} 
-        onClose={() => setIsSubscriptionModalOpen(false)} 
+        onClose={handleSubscriptionClose} 
       />
       
       {/* Edit Profile Modal */}
