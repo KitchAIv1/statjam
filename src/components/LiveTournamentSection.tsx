@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { Button } from "@/components/ui/Button";
 import { Play } from "lucide-react";
 import LiveGameCard from "@/components/LiveGameCard";
-import { useLiveGames } from "@/hooks/useLiveGames";
+import { useLiveGamesHybrid } from "@/hooks/useLiveGamesHybrid";
 import { useRouter } from "next/navigation";
 
 interface LiveTournamentSectionProps {
@@ -13,13 +13,22 @@ interface LiveTournamentSectionProps {
 }
 
 export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTournamentSectionProps) {
-  const { games, loading } = useLiveGames();
-  // Group by organizer
+  // 🏀 NBA-LEVEL SOLUTION: Use hybrid approach (WebSocket + raw fetch fallback)
+  const { games: actualGames, loading: actualLoading, error, connectionStatus } = useLiveGamesHybrid();
+  
+  // Group by organizer - STABLE MEMOIZATION
   const grouped = useMemo(() => {
-    const map = new Map<string, { organizerName: string; live: typeof games; scheduled: typeof games }>();
-    for (const g of games) {
-      const orgId = g.organizerId || 'unknown';
-      const orgName = g.organizerName || 'Organizer';
+    console.log('🔄 LiveTournamentSection: Regrouping games (this should be rare)');
+    const map = new Map<string, { organizerName: string; live: typeof actualGames; scheduled: typeof actualGames }>();
+    
+    if (!actualGames || actualGames.length === 0) {
+      return Array.from(map.entries());
+    }
+    
+    for (const g of actualGames) {
+      // 🚨 V2 data uses tournament_name, not organizerId/organizerName
+      const orgId = g.tournament_id || 'unknown';
+      const orgName = g.tournament_name || 'Unknown Tournament';
       if (!map.has(orgId)) map.set(orgId, { organizerName: orgName, live: [], scheduled: [] });
       const bucket = map.get(orgId)!;
       const status = String(g.status || '').toLowerCase();
@@ -27,7 +36,7 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
       if (status === 'scheduled') bucket.scheduled.push(g);
     }
     return Array.from(map.entries());
-  }, [games]);
+  }, [actualGames]);
   const router = useRouter();
   // Mock data retained below for reference
   const tournaments = [
@@ -80,25 +89,38 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
   return (
     <section className="py-20 bg-white">
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            <span className="text-orange-500">Live</span> Tournament Action
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Follow real-time games from tournaments around the world. See how StatJam 
-            tracks every play, score, and statistic as it happens.
-          </p>
-        </div>
+      {/* Header */}
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                <span className="text-orange-500">Live</span> Tournament Action
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Follow real-time games from tournaments around the world. See how StatJam
+                tracks every play, score, and statistic as it happens.
+              </p>
+              {/* 🏀 NBA-Level Connection Status */}
+              {connectionStatus === 'connected' && (
+                <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  Real-time updates active
+                </div>
+              )}
+              {connectionStatus === 'polling' && (
+                <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  Backup mode (updates every 3 seconds)
+                </div>
+              )}
+            </div>
 
         {/* Organizer Groups */}
-        {loading && (
+        {actualLoading && (
           <div className="text-center text-gray-500">Loading live games…</div>
         )}
-        {!loading && grouped.length === 0 && (
+        {!actualLoading && grouped.length === 0 && (
           <div className="text-center text-gray-500">No live games right now.</div>
         )}
-        {!loading && grouped.map(([orgId, group]) => (
+        {!actualLoading && grouped.map(([orgId, group]) => (
           <div key={orgId} className="mb-10">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-gray-900">{group.organizerName}</h3>
@@ -107,15 +129,15 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
             {group.live.length > 0 && (
               <div className="grid md:grid-cols-2 gap-6 mb-4">
                 {group.live.map((g) => {
-                  const timeLabel = `${g.quarter <= 4 ? `Q${g.quarter}` : `OT${g.quarter - 4}`} ${g.minutes}:${String(g.seconds).padStart(2,'0')}`;
+                  const timeLabel = `${g.quarter <= 4 ? `Q${g.quarter}` : `OT${g.quarter - 4}`} ${String(g.game_clock_minutes || 0).padStart(2,'0')}:${String(g.game_clock_seconds || 0).padStart(2,'0')}`;
                   return (
-                    <LiveGameCard
+                    <MemoizedLiveGameCard
                       key={g.id}
                       gameId={g.id}
-                      teamLeftName={g.teamAName}
-                      teamRightName={g.teamBName}
-                      leftScore={g.homeScore}
-                      rightScore={g.awayScore}
+                      teamLeftName={g.team_a_name || 'Team A'}
+                      teamRightName={g.team_b_name || 'Team B'}
+                      leftScore={g.home_score || 0}
+                      rightScore={g.away_score || 0}
                       timeLabel={timeLabel}
                       isLive
                       onClick={() => { router.push(`/game-viewer/${g.id}`); }}
@@ -128,15 +150,15 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
             {group.scheduled.length > 0 && (
               <div className="grid md:grid-cols-2 gap-6">
                 {group.scheduled.map((g) => {
-                  const timeLabel = `Q${g.quarter}  ${String(g.minutes).padStart(2,'0')}:${String(g.seconds).padStart(2,'0')}`;
+                  const timeLabel = `Q${g.quarter} ${String(g.game_clock_minutes || 0).padStart(2,'0')}:${String(g.game_clock_seconds || 0).padStart(2,'0')}`;
                   return (
-                    <LiveGameCard
+                    <MemoizedLiveGameCard
                       key={g.id}
                       gameId={g.id}
-                      teamLeftName={g.teamAName}
-                      teamRightName={g.teamBName}
-                      leftScore={g.homeScore}
-                      rightScore={g.awayScore}
+                      teamLeftName={g.team_a_name || 'Team A'}
+                      teamRightName={g.team_b_name || 'Team B'}
+                      leftScore={g.home_score || 0}
+                      rightScore={g.away_score || 0}
                       timeLabel={timeLabel}
                       isLive={false}
                       onClick={() => { router.push(`/game-viewer/${g.id}`); }}
@@ -148,13 +170,24 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
           </div>
         ))}
 
-        {/* Bottom CTA */}
-        <div className="text-center mt-12">
-          <p className="text-lg text-gray-600 mb-6">
-            Experience every moment as it unfolds across multiple courts simultaneously.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
+            {/* Bottom CTA */}
+            <div className="text-center mt-12">
+              <p className="text-lg text-gray-600 mb-6">
+                Experience every moment as it unfolds across multiple courts simultaneously.
+              </p>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ✅ ANTI-FLICKER: Memoize LiveGameCard to prevent unnecessary re-renders
+    const MemoizedLiveGameCard = memo(LiveGameCard, (prev, next) => {
+      return (
+        prev.gameId === next.gameId &&
+        prev.leftScore === next.leftScore &&
+        prev.rightScore === next.rightScore &&
+        prev.timeLabel === next.timeLabel &&
+        prev.isLive === next.isLive
+      );
+    });

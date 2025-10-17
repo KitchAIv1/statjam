@@ -1,22 +1,93 @@
 'use client';
 
-import { supabase } from '@/lib/supabase';
+import { hybridSupabaseService } from '@/lib/services/hybridSupabaseService';
 
 class GameSubscriptionManager {
-  private subscriptions = new Map<string, any>();
+  private subscriptions = new Map<string, () => void>();
   private callbacks = new Map<string, Set<Function>>();
 
   subscribe(gameId: string, callback: Function) {
-    console.log('🔌 SubscriptionManager: Setting up subscription for game:', gameId);
+    console.log('🏀 SubscriptionManager: NBA-level subscription setup for game:', gameId);
     
     // Add callback to the set
     if (!this.callbacks.has(gameId)) {
       this.callbacks.set(gameId, new Set());
     }
     this.callbacks.get(gameId)!.add(callback);
-    
-    console.log('🔌 SubscriptionManager: Total callbacks for game', gameId, ':', this.callbacks.get(gameId)?.size);
 
+    // Create consolidated subscription if it doesn't exist
+    if (!this.subscriptions.has(gameId)) {
+      console.log('🔌 SubscriptionManager: Creating NBA-level hybrid subscription for game:', gameId);
+      
+      // Set up multiple subscriptions for different tables
+      const unsubscribeFunctions: (() => void)[] = [];
+
+      // 1. Game updates (score, clock, status)
+      const gameUnsub = hybridSupabaseService.subscribe(
+        'games',
+        `id=eq.${gameId}`, // ✅ Correct format: key=operator.value
+        (payload) => {
+          console.log('🔄 SubscriptionManager: Game updated:', payload);
+          this.callbacks.get(gameId)?.forEach(cb => cb('games', payload));
+        },
+        { fallbackToPolling: true, pollingInterval: 2000 }
+      );
+      unsubscribeFunctions.push(gameUnsub);
+
+      // 2. Game stats (points, fouls, etc.)
+      const statsUnsub = hybridSupabaseService.subscribe(
+        'game_stats',
+        `game_id=eq.${gameId}`, // ✅ Correct format: key=operator.value
+        (payload) => {
+          console.log('🔔 SubscriptionManager: New game_stats detected:', payload);
+          this.callbacks.get(gameId)?.forEach(cb => cb('game_stats', payload));
+        },
+        { fallbackToPolling: true, pollingInterval: 1000 } // Faster for stats
+      );
+      unsubscribeFunctions.push(statsUnsub);
+
+      // 3. Game substitutions
+      const subsUnsub = hybridSupabaseService.subscribe(
+        'game_substitutions',
+        `game_id=eq.${gameId}`, // ✅ Correct format: key=operator.value
+        (payload) => {
+          console.log('🔄 SubscriptionManager: Substitution detected:', payload);
+          this.callbacks.get(gameId)?.forEach(cb => cb('game_substitutions', payload));
+        },
+        { fallbackToPolling: true, pollingInterval: 3000 }
+      );
+      unsubscribeFunctions.push(subsUnsub);
+
+      // Store combined unsubscribe function
+      this.subscriptions.set(gameId, () => {
+        console.log('🔒 SubscriptionManager: Cleaning up all subscriptions for game:', gameId);
+        unsubscribeFunctions.forEach(unsub => unsub());
+      });
+
+      console.log('✅ SubscriptionManager: NBA-level subscription active for game:', gameId);
+    } else {
+      console.log('🔌 SubscriptionManager: Reusing existing subscription for game:', gameId);
+    }
+
+    // Return unsubscribe function
+    return () => {
+      console.log('🔌 SubscriptionManager: Unsubscribing callback for game:', gameId);
+      this.callbacks.get(gameId)?.delete(callback);
+      
+      // If no more callbacks, remove subscription
+      if (this.callbacks.get(gameId)?.size === 0) {
+        const unsubscribe = this.subscriptions.get(gameId);
+        if (unsubscribe) {
+          unsubscribe();
+          this.subscriptions.delete(gameId);
+          this.callbacks.delete(gameId);
+          console.log('🧹 SubscriptionManager: Cleaned up subscription for game:', gameId);
+        }
+      }
+    };
+
+    // ❌ DISABLED CODE BELOW - CAUSING WEBSOCKET SPAM
+    /*
     // Create subscription only if it doesn't exist
     if (!this.subscriptions.has(gameId)) {
       console.log('🔌 SubscriptionManager: Creating new subscription channel for game:', gameId);
@@ -80,6 +151,7 @@ class GameSubscriptionManager {
         }
       }
     };
+    */
   }
 }
 

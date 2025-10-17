@@ -1,0 +1,64 @@
+# ============================================================================
+# AI CONTEXT - CURRENT PROJECT STATE
+# ============================================================================
+# Purpose: Quick reference for AI to understand current state
+# Updated: Every major change
+# ============================================================================
+
+## 🎯 **CURRENT PHASE**
+**UPGRADING PHASE** - System Recovery & Source-of-Truth Audit
+
+## 📋 **MASTER PLAN STATUS**
+
+### ✅ **COMPLETED**
+- [x] Comprehensive system audit (SYSTEM_AUDIT_SOURCE_OF_TRUTH.md)
+- [x] Frontend fixes applied (player locking, error handling, score validation)
+- [x] Backend RLS policies applied (BACKEND_FIXES_APPLIED.sql)
+- [x] Authentication redirect fixed
+- [x] Real-time replication enabled
+
+### ⏳ **IN PROGRESS**
+- [ ] Live viewer display issue (RLS policy conflict)
+- [ ] Policy conflict resolution (POLICY_CONFLICT_FIX.sql ready)
+
+### 📋 **PENDING**
+- [ ] End-to-end testing
+- [ ] V1/V2 system consolidation
+- [ ] Real-time subscription verification
+
+## 🔍 **CURRENT ISSUE**
+**Live Viewer Not Displaying Games on Homepage**
+
+### **Root Cause** (from RLS_ISSUE_ANALYSIS.md):
+- Multiple conflicting RLS policies on games table
+- `games_public_read_policy` (too permissive) vs `public_view_games` (correct)
+- PostgreSQL requires ALL policies to pass
+
+### **Solution** (from documentation):
+- Execute POLICY_CONFLICT_FIX.sql
+- Remove conflicting policy
+- Keep correct restrictive policy
+
+## 📊 **KEY DOCUMENTATION FILES**
+
+### **Primary References:**
+1. `SYSTEM_AUDIT_SOURCE_OF_TRUTH.md` - Complete system analysis
+2. `RLS_ISSUE_ANALYSIS.md` - Current issue deep dive
+3. `POLICY_CONFLICT_FIX.sql` - Ready solution
+
+### **Implementation Guides:**
+1. `FRONTEND_ACTION_PLAN.md` - Frontend changes
+2. `BACKEND_COORDINATION_REQUIRED.md` - Backend changes
+3. `ISSUE_RESOLUTION_SUMMARY.md` - Step-by-step instructions
+
+## 🎯 **SUCCESS CRITERIA**
+- [ ] Authentication works (✅ DONE)
+- [ ] Live games show on homepage (⏳ IN PROGRESS)
+- [ ] Real-time updates work without refresh
+- [ ] All documentation accurately reflects system state
+
+## ⚠️ **CRITICAL REMINDERS**
+- Always reference documentation before making changes
+- Quote specific lines from source files
+- Explain alignment with master plan
+- Update this file when state changes

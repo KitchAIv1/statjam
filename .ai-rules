@@ -1,0 +1,94 @@
+# ============================================================================
+# AI ASSISTANT RULES - STATJAM PROJECT
+# ============================================================================
+# Purpose: Ensure AI always references SOURCE OF TRUTH documentation
+# Location: Root of project for easy access
+# ============================================================================
+
+## 📋 **MANDATORY REFERENCE HIERARCHY**
+
+### **1. PRIMARY SOURCE OF TRUTH (Always Check First)**
+- `SYSTEM_AUDIT_SOURCE_OF_TRUTH.md` - Complete system analysis
+- `AUDIT_INDEX.md` - Navigation guide to all documentation
+- `RECOVERY_SUMMARY.md` - Executive summary of fixes
+
+### **2. IMPLEMENTATION GUIDES (Check Before Making Changes)**
+- `FRONTEND_ACTION_PLAN.md` - Frontend implementation details
+- `BACKEND_COORDINATION_REQUIRED.md` - Backend team instructions
+- `SYSTEM_ARCHITECTURE_DIAGRAM.md` - Visual system overview
+
+### **3. ISSUE-SPECIFIC DOCUMENTATION (Check for Context)**
+- `RLS_ISSUE_ANALYSIS.md` - RLS policy problems and solutions
+- `ISSUE_RESOLUTION_SUMMARY.md` - Step-by-step fix instructions
+
+## 🎯 **MANDATORY WORKFLOW FOR AI**
+
+### **Before Making ANY Changes:**
+1. ✅ **READ** relevant SOURCE OF TRUTH documents
+2. ✅ **REFERENCE** specific sections in responses
+3. ✅ **QUOTE** exact lines from documentation
+4. ✅ **VERIFY** changes align with documented plan
+5. ✅ **UPDATE** documentation if changes deviate
+
+### **Response Format Requirements:**
+```
+## 📋 **REFERENCING SOURCE OF TRUTH**
+From [DOCUMENT_NAME.md] (lines X-Y):
+> "Exact quote from documentation"
+
+## 🎯 **ALIGNMENT CHECK**
+This change aligns with documented plan because:
+- Point 1 from documentation
+- Point 2 from documentation
+
+## 🛠️ **IMPLEMENTATION**
+[Actual implementation here]
+```
+
+## ⚠️ **FORBIDDEN ACTIONS**
+
+### **❌ NEVER DO:**
+- Make changes without referencing documentation
+- Deviate from documented plans without explicit approval
+- Create new approaches without checking existing solutions
+- Ignore documented root causes and solutions
+
+### **✅ ALWAYS DO:**
+- Quote specific documentation sections
+- Reference line numbers from source files
+- Explain how changes align with master plan
+- Update documentation when making approved deviations
+
+## 📊 **DOCUMENTATION PRIORITY ORDER**
+
+1. **SYSTEM_AUDIT_SOURCE_OF_TRUTH.md** - Ultimate authority
+2. **RECOVERY_SUMMARY.md** - Executive decisions
+3. **Issue-specific .md files** - Detailed solutions
+4. **SQL files** - Implementation scripts
+5. **Code comments** - Implementation details
+
+## 🔄 **UPDATE PROCESS**
+
+When documentation needs updates:
+1. Reference the change in existing docs
+2. Explain why deviation is necessary
+3. Update relevant documentation files
+4. Maintain consistency across all docs
+
+## 🎯 **SUCCESS CRITERIA**
+
+Every AI response must:
+- [ ] Reference specific documentation
+- [ ] Quote exact lines/sections
+- [ ] Explain alignment with master plan
+- [ ] Provide line numbers for verification
+
+## 📝 **EXAMPLE COMPLIANCE**
+
+❌ **BAD**: "Let me fix the RLS policy issue"
+
+✅ **GOOD**: 
+"From RLS_ISSUE_ANALYSIS.md (lines 46-53):
+> 'Live Viewer Flow: Query gets blocked by RLS policy'
+
+This aligns with our documented root cause. Implementing the solution from POLICY_CONFLICT_FIX.sql as specified in our master plan."

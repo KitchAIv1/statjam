@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
 import PlayEntry from './PlayEntry';
 import { figmaColors, figmaTypography, figmaSpacing, figmaRadius } from '@/lib/design/figmaTokens';
@@ -235,4 +235,15 @@ const styles = {
   }
 };
 
-export default PlayByPlayFeed;
+// 🏀 NBA-LEVEL: Memoize for zero unnecessary re-renders
+export default memo(PlayByPlayFeed, (prevProps, nextProps) => {
+  return (
+    prevProps.playByPlay.length === nextProps.playByPlay.length &&
+    prevProps.game.homeScore === nextProps.game.homeScore &&
+    prevProps.game.awayScore === nextProps.game.awayScore &&
+    prevProps.isLive === nextProps.isLive &&
+    prevProps.playByPlay.every((play, index) => 
+      play.id === nextProps.playByPlay[index]?.id
+    )
+  );
+});

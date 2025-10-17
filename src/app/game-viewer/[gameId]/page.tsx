@@ -1,7 +1,7 @@
 'use client';
 
-import React, { use, useEffect, useState } from 'react';
-import { useGameViewerData } from '@/hooks/useGameViewerData';
+import React, { use, useEffect } from 'react';
+import { useGameViewerV2 } from '@/hooks/useGameViewerV2';
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
 import PlayByPlayFeed from './components/PlayByPlayFeed';
@@ -33,37 +33,17 @@ interface GameViewerPageProps {
 const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   const { gameId } = use(params);
   
-  // Use unified game viewer data hook
-  const {
-    gameData,
-    loading,
-    error,
-    isLive,
-    user,
-    initialized,
-    authLoading,
-    isMobile,
-    isTablet,
-    isDesktop,
-    enableViewerV2,
-    playerStatsMap,
-    calculatePlayerStats,
-    calculatePlayerPoints,
-    v2Data
-  } = useGameViewerData(gameId);
+  // ✅ ENTERPRISE SOLUTION: Use V2 raw fetch (Supabase client is broken)
+  const { game: gameV2, stats: statsV2, plays: playsV2, loading: loadingV2, error: errorV2 } = useGameViewerV2(gameId);
 
-  // V1 always provides game data now, V2 just provides better stats/feed
+  // Use V2 data directly
+  const actualGame = gameV2;
+  const actualLoading = loadingV2;
+  const actualError = errorV2;
 
-  // Initialize auth store
-  useEffect(() => {
-    console.log('🔧 GameViewer: Auth state:', {
-      user: !!user,
-      initialized,
-      authLoading
-    });
-  }, [user, initialized, authLoading]);
+  // Clean V2-only implementation
 
-  if (loading) {
+  if (actualLoading) {
     return (
       <div className="container mx-auto px-4">
         <div style={styles.loadingContainer}>
@@ -74,11 +54,11 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
     );
   }
 
-  if (error) {
+  if (actualError) {
     return (
       <div className="container mx-auto px-4">
         <div style={styles.errorContainer}>
-          <div style={styles.errorText}>⚠️ {error}</div>
+          <div style={styles.errorText}>⚠️ {actualError}</div>
           <div style={styles.errorSubtext}>
             Please check the game ID and try again
           </div>
@@ -87,7 +67,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
     );
   }
 
-  if (!gameData) {
+  if (!actualGame) {
     return (
       <div className="container mx-auto px-4">
         <div style={styles.errorContainer}>
@@ -105,14 +85,18 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
       {/* Game Header - Score, Teams, Status */}
       <GameHeader 
         game={{
-          ...gameData?.game,
-          // Use V2 scores when available (real-time), fallback to V1 scores
-          homeScore: enableViewerV2 && v2Data ? v2Data.homeScore : gameData?.game?.homeScore,
-          awayScore: enableViewerV2 && v2Data ? v2Data.awayScore : gameData?.game?.awayScore,
+          ...actualGame,
+          // Map V2 field names to expected format
+          teamAName: actualGame.team_a_name || 'Team A',
+          teamBName: actualGame.team_b_name || 'Team B',
+          homeScore: actualGame.home_score || 0,
+          awayScore: actualGame.away_score || 0,
+          status: actualGame.status || 'Unknown',
+          quarter: actualGame.quarter || 1,
         }}
-        isLive={isLive}
-        lastUpdated={gameData?.lastUpdated || ''}
-        isMobile={isMobile}
+        isLive={actualGame.status?.toLowerCase().includes('live') || actualGame.status?.toLowerCase().includes('progress')}
+        lastUpdated={actualGame.updated_at || ''}
+        isMobile={false}
       />
 
       {/* Tabs: Feed / Game / Teams */}
@@ -126,44 +110,27 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               Game
             </TabsTrigger>
             <TabsTrigger value="teamA" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
-              {gameData.game.teamAName}
+              {actualGame.team_a_name || 'Team A'}
             </TabsTrigger>
             <TabsTrigger value="teamB" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
-              {gameData.game.teamBName}
+              {actualGame.team_b_name || 'Team B'}
             </TabsTrigger>
           </TabsList>
 
-          {/* Feed Tab */}
-          <TabsContent value="feed" className="mt-0">
-            <div style={styles.playByPlayContainer}>
-              {enableViewerV2 && v2Data ? (
+              {/* Feed Tab - NBA-Level Play-by-Play */}
+              <TabsContent value="feed" className="mt-0">
                 <PlayByPlayFeed
-                  playByPlay={v2Data.plays}
+                  playByPlay={playsV2 || []}
                   game={{
-                    teamAName: v2Data.teamMap.teamAName,
-                    teamBName: v2Data.teamMap.teamBName,
-                    homeScore: v2Data.homeScore,
-                    awayScore: v2Data.awayScore,
+                    teamAName: actualGame?.team_a_name || 'Team A',
+                    teamBName: actualGame?.team_b_name || 'Team B',
+                    homeScore: actualGame?.home_score || 0,
+                    awayScore: actualGame?.away_score || 0
                   }}
-                  isLive={isLive}
-                  isMobile={isMobile}
-                  calculatePlayerStats={calculatePlayerStats}
-                  calculatePlayerPoints={calculatePlayerPoints}
+                  isLive={actualGame?.status?.toLowerCase().includes('live') || actualGame?.status?.toLowerCase().includes('in_progress') || false}
+                  isMobile={false}
                 />
-              ) : (
-                gameData && (
-                  <PlayByPlayFeed 
-                    playByPlay={gameData.playByPlay}
-                    game={gameData.game}
-                    isLive={isLive}
-                    isMobile={isMobile}
-                    calculatePlayerStats={calculatePlayerStats}
-                    calculatePlayerPoints={calculatePlayerPoints}
-                  />
-                )
-              )}
-            </div>
-          </TabsContent>
+              </TabsContent>
 
           {/* Game Tab (real data from hook) */}
           <TabsContent value="game" className="mt-0">
@@ -171,20 +138,21 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               <div style={styles.gameSummaryCard}>
                 <div style={styles.gameSummaryHeader}>Game Summary</div>
                 <div style={styles.gameSummaryRow}>
-                  <div style={styles.gameSummaryTeam}>{gameData.game.teamAName}</div>
+                  <div style={styles.gameSummaryTeam}>{actualGame.team_a_name || 'Team A'}</div>
                   <div style={styles.gameSummaryScore}>
-                    {enableViewerV2 && v2Data ? v2Data.homeScore : gameData.game.homeScore}
+                    {actualGame.home_score || 0}
                   </div>
                 </div>
                 <div style={styles.gameSummaryRow}>
-                  <div style={styles.gameSummaryTeam}>{gameData.game.teamBName}</div>
+                  <div style={styles.gameSummaryTeam}>{actualGame.team_b_name || 'Team B'}</div>
                   <div style={styles.gameSummaryScore}>
-                    {enableViewerV2 && v2Data ? v2Data.awayScore : gameData.game.awayScore}
+                    {actualGame.away_score || 0}
                   </div>
                 </div>
                 <div style={styles.gameSummaryMeta}>
-                  <span>Status: {gameData.game.status}</span>
-                  <span>Quarter: {gameData.game.quarter}</span>
+                  <span>Status: {actualGame.status}</span>
+                  <span>Quarter: {actualGame.quarter}</span>
+                  <span>Time: {String(actualGame.game_clock_minutes || 0).padStart(2, '0')}:{String(actualGame.game_clock_seconds || 0).padStart(2, '0')}</span>
                 </div>
               </div>
             </div>
@@ -193,7 +161,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
           {/* Team A Tab (placeholder for real roster; logic stays in hooks/services) */}
           <TabsContent value="teamA" className="mt-0">
             <div style={styles.teamSection}>
-              <div style={styles.teamHeader}>{gameData.game.teamAName}</div>
+              <div style={styles.teamHeader}>{actualGame.team_a_name || 'Team A'}</div>
               <div style={styles.teamPlaceholder}>Team roster and stats coming soon.</div>
             </div>
           </TabsContent>
@@ -201,7 +169,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
           {/* Team B Tab (placeholder for real roster; logic stays in hooks/services) */}
           <TabsContent value="teamB" className="mt-0">
             <div style={styles.teamSection}>
-              <div style={styles.teamHeader}>{gameData.game.teamBName}</div>
+              <div style={styles.teamHeader}>{actualGame.team_b_name || 'Team B'}</div>
               <div style={styles.teamPlaceholder}>Team roster and stats coming soon.</div>
             </div>
           </TabsContent>
@@ -209,7 +177,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
       </div>
 
       {/* Live Indicator */}
-      {isLive && (
+      {(actualGame.status?.toLowerCase().includes('live') || actualGame.status?.toLowerCase().includes('progress')) && (
         <div style={styles.liveIndicator}>
           <div style={styles.liveDot} />
           <span style={styles.liveText}>LIVE</span>
