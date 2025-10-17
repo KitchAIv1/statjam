@@ -410,36 +410,37 @@ const StatTracker = () => {
       console.log('📊 Sending stat data to database:', statData);
       
       // Record stat in database
-      const success = await GameService.recordStat(statData);
+      const result = await GameService.recordStat(statData);
       
-      if (success) {
-        console.log('✅ Stat recorded successfully in database');
+      if (!result.success) {
+        console.error('❌ Failed to record stat:', result.error);
+        alert(`Error recording stat: ${result.error}`);
+        return;
+      }
+      
+      console.log('✅ Stat recorded successfully in database');
         
-        // Quarter boundary: if clock hit 0:00, prepare next quarter
-        if (gameClock.minutes === 0 && gameClock.seconds === 0) {
-          if (quarter < 4) {
-            const proceed = confirm('Quarter ended. Move to next quarter?');
-            if (proceed) {
-              setQuarter(quarter + 1);
-              setIsClockRunning(false);
-              setGameClock({ minutes: 12, seconds: 0 });
-            }
-          } else {
-            console.log('🏁 Regulation ended. Consider overtime or completion.');
+      // Quarter boundary: if clock hit 0:00, prepare next quarter
+      if (gameClock.minutes === 0 && gameClock.seconds === 0) {
+        if (quarter < 4) {
+          const proceed = confirm('Quarter ended. Move to next quarter?');
+          if (proceed) {
+            setQuarter(quarter + 1);
+            setIsClockRunning(false);
+            setGameClock({ minutes: 12, seconds: 0 });
           }
+        } else {
+          console.log('🏁 Regulation ended. Consider overtime or completion.');
         }
-        // Immediate local scoreboard update for real-time UX
-        const points = calculateStatPoints(stat, modifier);
-        if (points > 0) {
-          if (teamId === teamAInfo?.id) {
-            setHomeScore(prev => prev + points);
-          } else if (teamId === teamBInfo?.id) {
-            setAwayScore(prev => prev + points);
-          }
+      }
+      // Immediate local scoreboard update for real-time UX
+      const points = calculateStatPoints(stat, modifier);
+      if (points > 0) {
+        if (teamId === teamAInfo?.id) {
+          setHomeScore(prev => prev + points);
+        } else if (teamId === teamBInfo?.id) {
+          setAwayScore(prev => prev + points);
         }
-      } else {
-        console.error('❌ Failed to record stat in database');
-        // Could show user feedback here
       }
       
     } catch (error) {

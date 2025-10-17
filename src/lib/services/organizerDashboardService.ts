@@ -94,13 +94,17 @@ export class OrganizerDashboardService {
 
       const tournaments = await TournamentService.getTournamentsByOrganizer(organizerId);
       
-      // Sort by creation date and take the most recent 4
+      console.log('🔍 OrganizerDashboard: Total tournaments found:', tournaments.length);
+      console.log('🔍 OrganizerDashboard: Tournament IDs:', tournaments.map(t => ({ id: t.id, name: t.name, createdAt: t.createdAt })));
+      
+      // Sort by creation date and take the most recent 6
       const recentTournaments = tournaments
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 4)
+        .slice(0, 6)
         .map(tournament => this.mapTournamentToRecent(tournament));
 
-      console.log('🔍 OrganizerDashboard: Recent tournaments mapped:', recentTournaments.length);
+      console.log('🔍 OrganizerDashboard: Recent tournaments mapped (showing 6 of', tournaments.length, '):', recentTournaments.length);
+      console.log('🔍 OrganizerDashboard: Displayed tournaments:', recentTournaments.map(t => t.name));
       return recentTournaments;
     } catch (error) {
       console.error('❌ OrganizerDashboard: Error fetching recent tournaments:', error);

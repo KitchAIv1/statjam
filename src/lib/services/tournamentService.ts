@@ -682,7 +682,45 @@ export class TeamService {
       console.log('🔍 TeamService: Adding player to team:', { teamId, playerId });
       console.log('⚠️ Note: position and jerseyNumber are ignored as team_players table only has (team_id, player_id)');
       
-      // Use upsert to handle duplicates gracefully at database level
+      // STEP 1: Get tournament ID for this team
+      const { data: team, error: teamError } = await supabase
+        .from('teams')
+        .select('tournament_id')
+        .eq('id', teamId)
+        .single();
+      
+      if (teamError || !team) {
+        throw new Error(`Failed to get team information: ${teamError?.message}`);
+      }
+      
+      // STEP 2: Check if player is already assigned to another team in this tournament
+      const { data: existingAssignments, error: checkError } = await supabase
+        .from('team_players')
+        .select(`
+          team_id,
+          teams!inner(tournament_id, name)
+        `)
+        .eq('player_id', playerId);
+      
+      if (checkError) {
+        console.error('❌ Error checking existing player assignments:', checkError);
+        // Don't block the assignment if check fails (fail open)
+      } else if (existingAssignments && existingAssignments.length > 0) {
+        // Filter for assignments in the same tournament
+        const sameTournamentAssignments = existingAssignments.filter(
+          (assignment: any) => assignment.teams?.tournament_id === team.tournament_id
+        );
+        
+        if (sameTournamentAssignments.length > 0) {
+          const existingTeamName = sameTournamentAssignments[0].teams?.name || 'another team';
+          throw new Error(
+            `Player is already assigned to ${existingTeamName} in this tournament. ` +
+            `Please remove them from that team first.`
+          );
+        }
+      }
+      
+      // STEP 3: Proceed with assignment if validation passed
       const { error } = await supabase
         .from('team_players')
         .upsert({

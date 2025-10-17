@@ -36,6 +36,10 @@ export interface GameViewerState {
   isTablet: boolean;
   isDesktop: boolean;
   
+  // Real-time status
+  realtimeStatus: 'connected' | 'polling' | 'disconnected';
+  lastUpdate: Date | null;
+  
   // Enhanced data
   playerStatsMap: Map<string, PlayerStats>;
   
@@ -72,6 +76,8 @@ export interface UseGameViewerDataReturn extends GameViewerState {
  */
 export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
   const [playerStatsMap, setPlayerStatsMap] = useState<Map<string, PlayerStats>>(new Map());
+  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'polling' | 'disconnected'>('disconnected');
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   
   // Configuration
   const enableViewerV2 = process.env.NEXT_PUBLIC_VIEWER_V2 === '1';
@@ -90,12 +96,18 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
     
     // V1 always provides isLive status now
     const shouldPoll = gameData?.game && isLive;
-    if (!shouldPoll) return;
+    if (!shouldPoll) {
+      setRealtimeStatus('disconnected');
+      return;
+    }
 
     console.log('🔄 GameViewerData: Starting smart polling fallback for', enableViewerV2 ? 'V2' : 'V1');
+    setRealtimeStatus('polling'); // Indicate we're in fallback mode
+    
     const pollInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         console.log('🔄 GameViewerData: Polling for updates -', enableViewerV2 ? 'V2 only' : 'V1 + V2');
+        setLastUpdate(new Date());
         if (enableViewerV2) {
           // V2 only: Just trigger V2 refresh
           window.dispatchEvent(new CustomEvent('force-v2-refresh', { detail: { gameId } }));
@@ -265,6 +277,10 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
     isMobile,
     isTablet,
     isDesktop,
+    
+    // Real-time status
+    realtimeStatus,
+    lastUpdate,
     
     // Enhanced data
     playerStatsMap,

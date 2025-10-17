@@ -163,9 +163,9 @@ export const useGameState = (): UseGameStateReturn => {
       };
 
       if (isOnline) {
-        const success = await GameService.recordStat(fullStatData);
-        if (!success) {
-          throw new Error('Failed to record stat');
+        const result = await GameService.recordStat(fullStatData);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to record stat');
         }
       } else {
         // Queue for offline sync

@@ -459,7 +459,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
       }
 
       // Record stat in database
-      const success = await GameService.recordStat({
+      const result = await GameService.recordStat({
         gameId: stat.gameId,
         playerId: stat.playerId,
         teamId: stat.teamId,
@@ -471,34 +471,34 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         gameTimeSeconds: clock.secondsRemaining % 60
       });
 
-      if (success) {
-        console.log('✅ Stat recorded successfully in database');
-        
-        // Update local scores for immediate UI feedback
-        if (stat.statType === 'field_goal' && stat.modifier === 'made') {
-          setScores(prev => ({
-            ...prev,
-            [stat.teamId]: prev[stat.teamId] + 2
-          }));
-        } else if (stat.statType === 'three_pointer' && stat.modifier === 'made') {
-          setScores(prev => ({
-            ...prev,
-            [stat.teamId]: prev[stat.teamId] + 3
-          }));
-        } else if (stat.statType === 'free_throw' && stat.modifier === 'made') {
-          setScores(prev => ({
-            ...prev,
-            [stat.teamId]: prev[stat.teamId] + 1
-          }));
-        }
-
-        setLastAction(`${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`);
-        setLastActionPlayerId(stat.playerId);
-      } else {
-        console.error('❌ Failed to record stat in database');
-        setLastAction('Error recording stat');
-        setLastActionPlayerId(stat.playerId);
+      if (!result.success) {
+        console.error('❌ Failed to record stat:', result.error);
+        alert(`Error recording stat: ${result.error}`);
+        return;
       }
+      
+      console.log('✅ Stat recorded successfully in database');
+        
+      // Update local scores for immediate UI feedback
+      if (stat.statType === 'field_goal' && stat.modifier === 'made') {
+        setScores(prev => ({
+          ...prev,
+          [stat.teamId]: prev[stat.teamId] + 2
+        }));
+      } else if (stat.statType === 'three_pointer' && stat.modifier === 'made') {
+        setScores(prev => ({
+          ...prev,
+          [stat.teamId]: prev[stat.teamId] + 3
+        }));
+      } else if (stat.statType === 'free_throw' && stat.modifier === 'made') {
+        setScores(prev => ({
+          ...prev,
+          [stat.teamId]: prev[stat.teamId] + 1
+        }));
+      }
+
+      setLastAction(`${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`);
+      setLastActionPlayerId(stat.playerId);
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);

@@ -511,7 +511,7 @@ export class GameService {
     quarter: number;
     gameTimeMinutes: number;
     gameTimeSeconds: number;
-  }): Promise<boolean> {
+  }): Promise<{ success: boolean; error?: string }> {
     try {
       console.log('🔍 GameService: Recording stat for player:', statData.playerId);
       
@@ -519,7 +519,19 @@ export class GameService {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         console.error('❌ No active session');
-        return false;
+        return { 
+          success: false, 
+          error: 'You must be logged in to record stats'
+        };
+      }
+      
+      // Validate data before insert
+      if (!statData.gameId || !statData.playerId || !statData.teamId) {
+        console.error('❌ Missing required IDs:', statData);
+        return { 
+          success: false, 
+          error: 'Invalid stat data: missing required fields'
+        };
       }
       
       // Prepare insert data
@@ -537,40 +549,46 @@ export class GameService {
       
       console.log('📊 GameService: Inserting stat:', statData.statType);
       
-      // Validate data before insert
-      if (!insertData.game_id || !insertData.player_id || !insertData.team_id) {
-        console.error('❌ Missing required IDs:', insertData);
-        return false;
-      }
-      
       // Insert stat record
-      
       const { data, error } = await supabase
         .from('game_stats')
-        .insert(insertData);
+        .insert(insertData)
+        .select()
+        .single();
 
       if (error) {
-        console.error('❌ Supabase error recording stat:');
-        console.error('Error message:', error.message);
-        console.error('Error details:', error.details);
-        console.error('Error hint:', error.hint);
-        console.error('Error code:', error.code);
-        console.error('Full error object:', JSON.stringify(error, null, 2));
-        return false;
+        console.error('❌ Supabase error recording stat:', error);
+        
+        // Provide specific error messages based on error code
+        let userMessage = 'Failed to record stat';
+        
+        if (error.code === '23503') {
+          // Foreign key violation
+          userMessage = 'Invalid game, player, or team ID';
+        } else if (error.code === '42501') {
+          // Permission denied
+          userMessage = 'You do not have permission to record stats for this game';
+        } else if (error.message.includes('duplicate')) {
+          userMessage = 'This stat has already been recorded';
+        } else if (error.message.includes('timeout')) {
+          userMessage = 'Database timeout - please try again';
+        }
+        
+        return { 
+          success: false, 
+          error: `${userMessage}: ${error.message}`
+        };
       }
 
       console.log('✅ Stat recorded successfully:', data);
-
-      // Note: Audit logging temporarily disabled due to 404 endpoint issue
-      // TODO: Re-enable once backend provides audit_logs API endpoint
+      return { success: true };
       
-      return true;
     } catch (error) {
-      console.error('❌ Unexpected error in recordStat:');
-      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      console.error('Full error:', error);
-      return false;
+      console.error('❌ Unexpected error in recordStat:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 

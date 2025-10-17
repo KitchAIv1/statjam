@@ -1,11 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Users, Calendar, Target, TrendingUp, Award, Clock } from "lucide-react";
+import { Trophy, Users, Calendar, Target, TrendingUp, Award, Clock, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/Button";
 import { useOrganizerDashboardData } from "@/hooks/useOrganizerDashboardData";
+import { useRouter } from "next/navigation";
 
 export function OrganizerDashboardOverview() {
   const { data, loading, error } = useOrganizerDashboardData();
+  const router = useRouter();
 
   // Show loading state
   if (loading) {
@@ -133,14 +136,25 @@ export function OrganizerDashboardOverview() {
         {/* Enhanced Tournament Cards */}
         <Card className="hover:shadow-lg transition-all duration-300">
           <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent">
-            <div className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-primary" />
-              <CardTitle>Tournament Status</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-primary" />
+                <CardTitle>Tournament Status</CardTitle>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-1"
+                onClick={() => router.push('/dashboard/tournaments')}
+              >
+                View All
+                <ArrowRight className="w-4 h-4" />
+              </Button>
             </div>
-            <CardDescription>Track your active tournaments</CardDescription>
+            <CardDescription>Track your active tournaments (showing {recentTournaments.length} most recent)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-6">
-            {recentTournaments.map((tournament, index) => (
+            {recentTournaments.length > 0 ? recentTournaments.map((tournament, index) => (
               <div key={index} className="group p-4 border rounded-xl hover:border-primary/30 hover:bg-muted/30 transition-all duration-300">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -183,7 +197,19 @@ export function OrganizerDashboardOverview() {
                   </div>
                 )}
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-8">
+                <Trophy className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-muted-foreground mb-4">No tournaments yet</p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => router.push('/dashboard?section=tournaments')}
+                >
+                  Create Your First Tournament
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

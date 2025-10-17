@@ -35,6 +35,39 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       const statsTx = transformStatsToPlay(stats, teamMap);
       const subsTx = transformSubsToPlay(subs, teamMap);
 
+      // NEW: Fetch game scores for validation comparison
+      const { data: game, error: gameError } = await supabase
+        .from('games')
+        .select('home_score, away_score, team_a_id, team_b_id')
+        .eq('id', gameId)
+        .single();
+      
+      if (!gameError && game) {
+        // Validate scores match
+        const calculatedHome = statsTx.finalHome;
+        const calculatedAway = statsTx.finalAway;
+        const dbHome = game.home_score || 0;
+        const dbAway = game.away_score || 0;
+        
+        console.log('🔍 V2 Feed: Score Validation:', {
+          calculated: `${calculatedHome}-${calculatedAway}`,
+          database: `${dbHome}-${dbAway}`,
+          match: calculatedHome === dbHome && calculatedAway === dbAway
+        });
+        
+        if (calculatedHome !== dbHome || calculatedAway !== dbAway) {
+          console.warn('⚠️ SCORE DESYNC DETECTED:', {
+            gameId,
+            calculatedScores: { home: calculatedHome, away: calculatedAway },
+            databaseScores: { home: dbHome, away: dbAway },
+            difference: {
+              home: calculatedHome - dbHome,
+              away: calculatedAway - dbAway
+            }
+          });
+        }
+      }
+
       const merged = [...statsTx.plays, ...subsTx].sort((a, b) => {
         // Prioritize newest events first by createdAt to ensure visibility of latest non-scoring entries
         const ca = new Date(a.createdAt).getTime();
@@ -55,6 +88,7 @@ export function usePlayFeed(gameId: string, teamMap: { teamAId: string; teamBId:
       console.log('🔍 V2 Feed: Score update - Setting homeScore:', statsTx.finalHome, 'awayScore:', statsTx.finalAway);
       console.log('🔍 V2 Feed: Updated', merged.length, 'plays, final scores:', `${statsTx.finalHome}-${statsTx.finalAway}`);
     } catch (e) {
+      console.error('❌ V2 Feed: Error fetching data:', e);
       setError('Failed to load play feed');
     } finally {
       setLoading(false);
