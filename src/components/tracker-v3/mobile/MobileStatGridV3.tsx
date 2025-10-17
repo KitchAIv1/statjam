@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 interface Player {
   id: string;
   name: string;
-  jersey_number?: number;
+  jerseyNumber?: number;
   photo_url?: string;
 }
 
@@ -287,7 +287,7 @@ export function MobileStatGridV3({
           {/* Left: Player Details */}
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
-              {selectedPlayerData.jersey_number || '?'}
+              {selectedPlayerData.jerseyNumber || '?'}
             </div>
             <span className="text-sm font-medium text-gray-700">
               {selectedPlayerData.name}

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TemplateService, Template, TemplateVariant, GeminiGenerationRequest } from '@/lib/services/templateService';
 import { safeSupabase } from '@/lib/supabaseClient';
 import { NavigationHeader } from '@/components/NavigationHeader';
@@ -28,7 +28,8 @@ interface TemplateBuilderPageProps {
 }
 
 const TemplateBuilderPage = ({ params }: TemplateBuilderPageProps) => {
-  const { user, userRole } = useAuthStore();
+  const { user } = useAuthV2();
+  const userRole = user?.role;
   const router = useRouter();
   const { id: templateId } = use(params);
   

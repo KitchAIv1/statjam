@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TeamService } from '@/lib/services/tournamentService';
 
 // EMERGENCY FIX: Global cache to prevent duplicate requests and timeouts

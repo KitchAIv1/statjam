@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 interface Player {
   id: string;
   name: string;
-  jersey_number?: number;
+  jerseyNumber?: number;  // FIXED: Changed from jerseyNumber to match Player interface
   photo_url?: string;
 }
 
@@ -165,7 +165,7 @@ export function TeamRosterV3({
                   <div className={`px-1 py-0.5 rounded text-xs font-bold text-white ${
                     teamSide === 'left' ? 'bg-orange-500' : 'bg-blue-500'
                   }`}>
-                    #{player.jersey_number || 'none'}
+                    #{player.jerseyNumber || 'none'}
                   </div>
                 </div>
 

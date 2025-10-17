@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tournament, TournamentListState, TournamentCreateRequest } from '@/lib/types/tournament';
 import { TournamentService } from '@/lib/services/tournamentService';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 
 // Custom Hook for Tournament Data Management
 export function useTournaments() {
@@ -132,7 +132,7 @@ export function useTournaments() {
 
 // Hook for tournament statistics
 export function useTournamentStats() {
-  const { user } = useAuthStore();
+  const { user } = useAuthV2();
   const [stats, setStats] = useState({
     totalTournaments: 0,
     activeTournaments: 0,

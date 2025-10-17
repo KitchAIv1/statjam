@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 interface Player {
   id: string;
   name: string;
-  jersey_number?: number;
+  jerseyNumber?: number;
 }
 
 interface PlayerGridV3Props {
@@ -67,7 +67,7 @@ export function PlayerGridV3({
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
                     }`}
                   >
-                    {player.jersey_number || '?'}
+                    {player.jerseyNumber || '?'}
                   </div>
 
                   {/* Player Info */}
@@ -82,7 +82,7 @@ export function PlayerGridV3({
                       {player.name}
                     </div>
                     <div className="text-xs text-gray-500">
-                      #{player.jersey_number || 'N/A'}
+                      #{player.jerseyNumber || 'N/A'}
                     </div>
                   </div>
                 </div>

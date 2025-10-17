@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Undo2 } from 'lucide-react';
 import { GameService } from '@/lib/services/gameService';
@@ -13,8 +13,9 @@ import { supabase } from '@/lib/supabase';
 import GameCompletionManager from '@/components/game/GameCompletionManager';
 
 const StatTracker = () => {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, loading } = useAuthV2();
   const router = useRouter();
+  const userRole = user?.role;
   
   // Get game and tournament IDs from URL parameters
   const [gameId, setGameId] = useState<string | null>(null);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { TemplateBrowser } from '@/components/cards/TemplateBrowser';
 import { CardCustomizer } from '@/components/cards/CardCustomizer';
@@ -16,7 +16,8 @@ import { QuickCardResult } from '@/lib/services/playerCardService';
 type ViewState = 'home' | 'quick' | 'browse' | 'customize' | 'success';
 
 export default function PlayerCardsPage() {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, loading } = useAuthV2();
+  const userRole = user?.role;
   const router = useRouter();
   const { data: playerData } = usePlayerDashboardData();
   

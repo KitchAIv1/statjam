@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 interface Player {
   id: string;
   name: string;
-  jersey_number?: number;
+  jerseyNumber?: number;
   photo_url?: string;
 }
 
@@ -171,7 +171,7 @@ export function DesktopStatGridV3({
             {/* Left: Player Details */}
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                #{selectedPlayerData.jersey_number || '?'}
+                #{selectedPlayerData.jerseyNumber || '?'}
               </div>
               <span className="text-base font-medium text-gray-700">
                 {selectedPlayerData.name}

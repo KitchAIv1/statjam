@@ -11,7 +11,7 @@ import { SubstitutionModalV3 } from '../SubstitutionModalV3';
 interface Player {
   id: string;
   name: string;
-  jersey_number?: number;
+  jerseyNumber?: number;
   photo_url?: string;
 }
 

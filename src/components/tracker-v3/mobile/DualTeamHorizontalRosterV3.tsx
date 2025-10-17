@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 interface Player {
   id: string;
   name: string;
-  jersey_number?: number;
+  jerseyNumber?: number;
   photo_url?: string;
 }
 
@@ -80,7 +80,7 @@ export function DualTeamHorizontalRosterV3({
       displayPlayers.push({
         id: `empty-${teamLetter}-${displayPlayers.length}`,
         name: 'Empty',
-        jersey_number: undefined
+        jerseyNumber: undefined
       });
     }
     return displayPlayers;
@@ -185,7 +185,7 @@ export function DualTeamHorizontalRosterV3({
                           : 'bg-blue-100 text-blue-700'
                     }`}
                   >
-                    #{player.jersey_number || 'none'}
+                    #{player.jerseyNumber || 'none'}
                   </div>
                 )}
 

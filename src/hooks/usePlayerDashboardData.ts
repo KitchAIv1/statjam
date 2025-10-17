@@ -27,7 +27,9 @@ export function usePlayerDashboardData() {
       setError(null);
       
       // Check if we have cached dashboard data first
-      const userId = (await import('@/store/authStore')).useAuthStore.getState().user?.id;
+      const { authServiceV2 } = await import('@/lib/services/authServiceV2');
+      const session = authServiceV2.getSession();
+      const userId = session.user?.id;
       if (userId) {
         const dashboardCacheKey = CacheKeys.playerDashboard(userId);
         const cachedDashboard = cache.get<PlayerDashboardData>(dashboardCacheKey);

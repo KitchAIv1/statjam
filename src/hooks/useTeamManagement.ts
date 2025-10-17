@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TeamService } from '@/lib/services/tournamentService';
 import { Team, Player } from '@/lib/types/tournament';
 

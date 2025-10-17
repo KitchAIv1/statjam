@@ -2,7 +2,7 @@
 
 import React, { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { OrganizerDashboard } from '@/components/OrganizerDashboard';
 import { NavigationHeader } from '@/components/NavigationHeader';
 

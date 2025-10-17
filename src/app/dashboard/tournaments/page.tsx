@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useTournaments } from '@/lib/hooks/useTournaments';
 import { Tournament } from '@/lib/types/tournament';
 import { 
@@ -23,7 +23,8 @@ import {
 } from 'lucide-react';
 
 const TournamentsPage = () => {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, loading } = useAuthV2();
+  const userRole = user?.role;
   const router = useRouter();
   const { tournaments, loading: tournamentsLoading, error, filter, setFilter } = useTournaments();
   const [searchTerm, setSearchTerm] = useState('');

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 interface Player {
   id: string;
   name: string;
-  jersey_number?: number;
+  jerseyNumber?: number;
 }
 
 interface SubstitutionModalV3Props {
@@ -82,7 +82,7 @@ export function SubstitutionModalV3({
                 {playerOutData ? (
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xs">
-                      #{playerOutData.jersey_number || '?'}
+                      #{playerOutData.jerseyNumber || '?'}
                     </div>
                     <span className="font-semibold text-gray-800">
                       {playerOutData.name}
@@ -119,7 +119,7 @@ export function SubstitutionModalV3({
                 >
                   {/* Jersey Number - Enhanced */}
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-black text-sm shadow-md">
-                    #{player.jersey_number || '?'}
+                    #{player.jerseyNumber || '?'}
                   </div>
 
                   {/* Player Info - Enhanced */}

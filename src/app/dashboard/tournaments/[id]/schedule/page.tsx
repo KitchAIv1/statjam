@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TournamentService, TeamService } from '@/lib/services/tournamentService';
 import { GameService } from '@/lib/services/gameService';
 import { Tournament, Team } from '@/lib/types/tournament';
@@ -29,7 +29,8 @@ interface GameSchedulePageProps {
 }
 
 const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, loading } = useAuthV2();
+  const userRole = user?.role;
   const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);

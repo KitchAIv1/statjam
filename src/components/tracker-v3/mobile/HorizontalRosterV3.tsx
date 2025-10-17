@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 interface Player {
   id: string;
   name: string;
-  jersey_number?: number;
+  jerseyNumber?: number;
   photo_url?: string;
 }
 
@@ -65,7 +65,7 @@ export function HorizontalRosterV3({
   };
 
   // FIXED: Debug player data and handle on-court players (max 5)
-  console.log('🔍 HorizontalRosterV3 received players:', players.map(p => ({ id: p.id, name: p.name, jersey: p.jersey_number })));
+  console.log('🔍 HorizontalRosterV3 received players:', players.map(p => ({ id: p.id, name: p.name, jersey: p.jerseyNumber })));
   
   const onCourtPlayers = players.slice(0, 5);
   
@@ -75,7 +75,7 @@ export function HorizontalRosterV3({
     displayPlayers.push({
       id: `empty-${displayPlayers.length}`,
       name: 'Empty',
-      jersey_number: undefined
+      jerseyNumber: undefined
     });
   }
 
@@ -162,7 +162,7 @@ export function HorizontalRosterV3({
                       color: isSelected ? '#ffffff' : 'var(--dashboard-text-secondary)'
                     }}
                   >
-                    #{player.jersey_number || '?'}
+                    #{player.jerseyNumber || '?'}
                   </div>
                 )}
               </div>
@@ -195,7 +195,7 @@ export function HorizontalRosterV3({
             className="text-sm font-medium"
             style={{ color: 'var(--dashboard-text-primary)' }}
           >
-            Selected: #{players.find(p => p.id === selectedPlayer)?.jersey_number || '?'} {players.find(p => p.id === selectedPlayer)?.name}
+            Selected: #{players.find(p => p.id === selectedPlayer)?.jerseyNumber || '?'} {players.find(p => p.id === selectedPlayer)?.name}
           </div>
         </div>
       )}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TournamentService } from '@/lib/services/tournamentService';
 import { Tournament } from '@/lib/types/tournament';
 import { 
@@ -29,7 +29,8 @@ interface TournamentDetailPageProps {
 }
 
 const TournamentDetailPage = ({ params }: TournamentDetailPageProps) => {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, loading } = useAuthV2();
+  const userRole = user?.role;
   const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loadingTournament, setLoadingTournament] = useState(true);

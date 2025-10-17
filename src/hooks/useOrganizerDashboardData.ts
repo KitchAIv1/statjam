@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { OrganizerDashboardService } from '@/lib/services/organizerDashboardService';
 import { 
   OrganizerDashboardData, 

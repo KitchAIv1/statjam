@@ -2,11 +2,12 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { Trophy, Users, TrendingUp, Activity } from 'lucide-react';
 
 const StatsPage = () => {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, loading } = useAuthV2();
+  const userRole = user?.role;
   const router = useRouter();
 
   useEffect(() => {

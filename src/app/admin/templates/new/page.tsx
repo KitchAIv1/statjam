@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TemplateService } from '@/lib/services/templateService';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ArrowLeft, Palette, Sparkles } from 'lucide-react';
 
 const NewTemplatePage = () => {
-  const { user, userRole } = useAuthStore();
+  const { user } = useAuthV2();
+  const userRole = user?.role;
   const router = useRouter();
   
   // Form state

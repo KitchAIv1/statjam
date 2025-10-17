@@ -3,12 +3,13 @@
 import React from 'react';
 import { Trophy, Settings, Users, Check, ArrowLeft, ArrowRight, Calendar, MapPin, DollarSign } from 'lucide-react';
 import { useTournamentForm } from '@/lib/hooks/useTournamentForm';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 const CreateTournamentV2 = () => {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, loading } = useAuthV2();
+  const userRole = user?.role;
   const router = useRouter();
   const {
     data,

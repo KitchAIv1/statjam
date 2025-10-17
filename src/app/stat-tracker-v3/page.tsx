@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { supabase } from '@/lib/supabase';
 import { TeamService } from '@/lib/services/tournamentService';
 import { useTracker } from '@/hooks/useTracker';
@@ -43,12 +43,13 @@ interface GameData {
 interface Player {
   id: string;
   name: string;
-  jersey_number?: number;
+  jerseyNumber?: number;  // FIXED: Match official Player interface
 }
 
 function StatTrackerV3Content() {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, loading } = useAuthV2();
   const router = useRouter();
+  const userRole = user?.role;
   const params = useSearchParams();
   const { isMobile, isDesktop } = useResponsiveLayout();
   
@@ -167,10 +168,16 @@ function StatTrackerV3Content() {
       }
     };
 
-    if (gameIdParam && user) {
+    // Only load game data after auth is ready and user is available
+    if (gameIdParam && !loading && user) {
+      console.log('🔄 Triggering game data load - Auth ready, user available');
       loadGameData();
+    } else if (gameIdParam && loading) {
+      console.log('⏳ Waiting for auth to finish before loading game data...');
+    } else if (gameIdParam && !user) {
+      console.log('❌ Cannot load game data - user not authenticated');
     }
-  }, [gameIdParam, user]);
+  }, [gameIdParam, user, loading]);
 
   // Clock Tick Effect
   useEffect(() => {
