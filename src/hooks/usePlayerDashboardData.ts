@@ -23,7 +23,6 @@ export function usePlayerDashboardData() {
 
   const refetch = useCallback(async () => {
     try {
-      console.log('🔄 PlayerDashboard Hook: Starting data fetch...');
       setLoading(true);
       setError(null);
       
@@ -33,60 +32,64 @@ export function usePlayerDashboardData() {
         const dashboardCacheKey = CacheKeys.playerDashboard(userId);
         const cachedDashboard = cache.get<PlayerDashboardData>(dashboardCacheKey);
         if (cachedDashboard) {
-          console.log('✅ PlayerDashboard Hook: Returning cached dashboard data');
           setData(cachedDashboard);
           setLoading(false);
           return;
         }
       }
       
-      // Fetch all data in parallel (reduced from 8 to essential calls)
-      const [identity, season, careerHighs, perf, achievements, notifications, upcomingGames, trial] = await Promise.all([
+      // Fetch only essential data first (reduced from 8 to 4 critical calls)
+      const [identity, season, careerHighs, perf] = await Promise.all([
         PlayerDashboardService.getIdentity(),
         PlayerDashboardService.getSeasonAverages(),
         PlayerDashboardService.getCareerHighs(),
         PlayerDashboardService.getPerformance(),
-        PlayerDashboardService.getAchievements(),
-        PlayerDashboardService.getNotifications(),
-        PlayerDashboardService.getUpcomingGames(),
-        PlayerDashboardService.getTrialState(),
       ]);
 
-      console.log('🔄 PlayerDashboard Hook: Data fetch results:', {
-        hasIdentity: !!identity,
-        hasSeason: !!season,
-        hasCareerHighs: !!careerHighs,
-        hasKpis: !!perf.kpis,
-        seriesCount: perf.series?.length || 0,
-        achievementCount: achievements?.length || 0,
-        notificationCount: notifications?.length || 0,
-        upcomingGameCount: upcomingGames?.length || 0,
-      });
-
-      const dashboardData = {
+      // Set essential data immediately for faster UI
+      const essentialData = {
         identity,
         season,
         careerHighs,
         kpis: perf.kpis,
         series: perf.series,
-        achievements,
-        notifications,
-        upcomingGames,
-        trial,
+        achievements: [],
+        notifications: [],
+        upcomingGames: [],
+        trial: { isTrialActive: false },
       };
 
-      setData(dashboardData);
+      setData(essentialData);
+      setLoading(false);
 
-      // Cache the complete dashboard data for future requests
-      if (userId) {
-        const dashboardCacheKey = CacheKeys.playerDashboard(userId);
-        cache.set(dashboardCacheKey, dashboardData, CacheTTL.DASHBOARD_DATA);
-        console.log('💾 PlayerDashboard Hook: Cached complete dashboard data');
-      }
+      // Load non-critical data in background
+      Promise.all([
+        PlayerDashboardService.getAchievements(),
+        PlayerDashboardService.getNotifications(),
+        PlayerDashboardService.getUpcomingGames(),
+        PlayerDashboardService.getTrialState(),
+      ]).then(([achievements, notifications, upcomingGames, trial]) => {
+        const completeData = {
+          ...essentialData,
+          achievements,
+          notifications,
+          upcomingGames,
+          trial,
+        };
+        setData(completeData);
+        
+        // Cache complete data
+        if (userId) {
+          const dashboardCacheKey = CacheKeys.playerDashboard(userId);
+          cache.set(dashboardCacheKey, completeData, CacheTTL.playerDashboard);
+        }
+      }).catch(err => {
+        console.warn('Background data fetch failed:', err);
+      });
+
     } catch (e: any) {
-      console.error('🔄 PlayerDashboard Hook: Data fetch error:', e);
+      console.error('Dashboard data fetch error:', e);
       setError(e?.message || 'Failed to load dashboard');
-    } finally {
       setLoading(false);
     }
   }, []);

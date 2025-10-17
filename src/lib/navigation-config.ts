@@ -113,6 +113,12 @@ export const navigationConfig: Record<string, NavigationConfig> = {
         description: 'Player overview'
       },
       {
+        label: 'NBA Cards',
+        href: '/dashboard/player/cards',
+        icon: Palette,
+        description: 'Generate NBA trading cards'
+      },
+      {
         label: 'My Stats',
         href: '/dashboard/player/stats',
         icon: BarChart3,

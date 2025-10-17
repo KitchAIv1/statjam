@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,7 @@ const defaultPlayerData = {
 // Mock data removed - now using live data from usePlayerDashboardData hook
 
 export function PlayerDashboard() {
+  const router = useRouter();
   const { data, loading, refetch } = usePlayerDashboardData();
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
@@ -50,34 +52,9 @@ export function PlayerDashboard() {
   const [currentTab, setCurrentTab] = useState("dashboard");
   const [showCardGeneration, setShowCardGeneration] = useState(false);
 
-  // Debug logging
-  console.log('🎯 PlayerDashboard: Current data state:', {
-    loading,
-    hasIdentity: !!data.identity,
-    hasSeason: !!data.season,
-    hasCareerHighs: !!data.careerHighs,
-    hasKpis: !!data.kpis,
-    identity: data.identity,
-    season: data.season,
-    careerHighs: data.careerHighs,
-    kpis: data.kpis
-  });
-
-  // Detailed identity logging
-  if (data.identity) {
-    console.log('🎯 PlayerDashboard: Identity details:', {
-      nameFromDB: data.identity.name,
-      nameType: typeof data.identity.name,
-      nameLength: data.identity.name?.length,
-      nameCondition: data.identity.name && data.identity.name !== 'Player Name',
-      willUseMock: !(data.identity.name && data.identity.name !== 'Player Name'),
-      mockName: currentPlayerData.name,
-      finalName: (data.identity?.name && data.identity.name !== 'Player Name') 
-        ? data.identity.name 
-        : currentPlayerData.name
-    });
-  } else {
-    console.log('🎯 PlayerDashboard: No identity data received');
+  // Minimal logging for production
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🎯 PlayerDashboard: Loading state:', loading);
   }
 
   const handlePremiumFeatureClick = (e?: React.MouseEvent) => {
@@ -95,9 +72,12 @@ export function PlayerDashboard() {
   };
 
   const handleSubscriptionClose = () => {
+    console.log('🎯 PlayerDashboard: handleSubscriptionClose called');
     setIsSubscriptionModalOpen(false);
-    // If user upgraded, we could redirect to card generation
-    // For now, just close the modal
+    // If user upgraded, redirect to card generation
+    // For demo purposes, let's redirect to the card generation page
+    console.log('🚀 PlayerDashboard: Navigating to /dashboard/player/cards');
+    router.push('/dashboard/player/cards');
   };
 
   const handleEditProfile = () => {
@@ -577,7 +557,8 @@ export function PlayerDashboard() {
       {/* Subscription Modal */}
       <SubscriptionModal 
         isOpen={isSubscriptionModalOpen} 
-        onClose={handleSubscriptionClose} 
+        onClose={() => setIsSubscriptionModalOpen(false)}
+        onUpgrade={handleSubscriptionClose}
       />
       
       {/* Edit Profile Modal */}

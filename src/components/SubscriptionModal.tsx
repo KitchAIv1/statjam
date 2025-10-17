@@ -2,13 +2,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Zap, Target, Palette } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface SubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onUpgrade?: () => void;
 }
 
-export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
+export function SubscriptionModal({ isOpen, onClose, onUpgrade }: SubscriptionModalProps) {
+  const router = useRouter();
+  
   const features = [
     {
       icon: <Zap className="w-5 h-5" />,
@@ -35,8 +39,19 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
   const handleUpgrade = () => {
     // TODO: Implement actual upgrade logic
     console.log('🚀 Upgrading to Pro...');
-    // For now, close modal and proceed to card generation
+    console.log('🔍 onUpgrade callback exists:', !!onUpgrade);
+    
+    // Close the modal first
     onClose();
+    
+    // Navigate directly to the cards page
+    console.log('🚀 SubscriptionModal: Navigating to /dashboard/player/cards');
+    router.push('/dashboard/player/cards');
+    
+    // Also call the upgrade callback if provided
+    if (onUpgrade) {
+      onUpgrade();
+    }
   };
 
   return (
@@ -52,10 +67,10 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
             </div>
             
             <DialogHeader className="space-y-2">
-              <DialogTitle className="text-2xl text-center font-bold text-foreground">
+              <DialogTitle className="text-2xl text-center font-bold text-white">
                 Unlock StatJam Pro
               </DialogTitle>
-              <DialogDescription className="text-foreground/80 text-center">
+              <DialogDescription className="text-gray-200 text-center">
                 Take your basketball journey to the next level with premium features and AI-powered insights
               </DialogDescription>
             </DialogHeader>
@@ -64,7 +79,7 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
             <div className="mt-6">
               <div className="flex items-baseline justify-center gap-1">
                 <span className="text-4xl font-bold text-primary">$10</span>
-                <span className="text-foreground/80">/month</span>
+                <span className="text-gray-200">/month</span>
               </div>
               <Badge variant="secondary" className="mt-2 bg-primary/20 text-primary border-primary/30">
                 Most Popular
@@ -76,15 +91,15 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
           <div className="p-8 space-y-6 bg-card/50">
             <div className="space-y-4">
               {features.map((feature, index) => (
-                <div key={index} className="flex items-start gap-4 p-3 rounded-lg bg-card/80 border border-border/50">
+                <div key={index} className="flex items-start gap-4 p-3 rounded-lg bg-gray-800/80 border border-gray-700/50">
                   <div className="flex-shrink-0 p-2 rounded-lg bg-primary/20 text-primary">
                     {feature.icon}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-foreground">
+                    <h4 className="font-semibold text-white">
                       {feature.title}
                     </h4>
-                    <p className="text-sm text-foreground/80">
+                    <p className="text-sm text-gray-300">
                       {feature.description}
                     </p>
                   </div>
@@ -94,9 +109,9 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
             </div>
 
             {/* What's included */}
-            <div className="bg-card/90 border border-border/50 rounded-lg p-4">
-              <h5 className="font-semibold mb-3 text-center text-foreground">What's Included</h5>
-              <div className="grid grid-cols-2 gap-3 text-sm text-foreground/90">
+            <div className="bg-gray-800/90 border border-gray-700/50 rounded-lg p-4">
+              <h5 className="font-semibold mb-3 text-center text-white">What's Included</h5>
+              <div className="grid grid-cols-2 gap-3 text-sm text-gray-300">
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary" />
                   <span>Monthly cards</span>
@@ -129,7 +144,7 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
               
               <Button 
                 variant="ghost" 
-                className="w-full h-10 hover:bg-card/20 text-foreground/80"
+                className="w-full h-10 hover:bg-gray-800/20 text-gray-300 hover:text-white"
                 onClick={onClose}
               >
                 Maybe Later
@@ -137,8 +152,8 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
             </div>
 
             {/* Trust indicators */}
-            <div className="text-center pt-4 border-t border-border/50">
-              <p className="text-xs text-foreground/70">
+            <div className="text-center pt-4 border-t border-gray-700/50">
+              <p className="text-xs text-gray-400">
                 Cancel anytime • Secure payment • Used by 10k+ players
               </p>
             </div>
