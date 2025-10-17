@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Shield, Trophy } from 'lucide-react';
-import { signIn, signUp } from '@/lib/supabase';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
 import EmailConfirmationPending from './EmailConfirmationPending';
 
 const AuthPageV2 = () => {
@@ -12,12 +11,13 @@ const AuthPageV2 = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [userType, setUserType] = useState('player');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
   const [signupEmail, setSignupEmail] = useState('');
   const router = useRouter();
-  const { user, userRole, loading: authLoading } = useAuthStore();
+  
+  // 🏀 ENTERPRISE AUTH V2 - Raw HTTP (never hangs)
+  const { user, loading, error: authError, signIn: signInV2, signUp: signUpV2 } = useAuthV2();
+  const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
     email: '',
@@ -31,22 +31,38 @@ const AuthPageV2 = () => {
 
   // Redirect if user is already logged in
   useEffect(() => {
-    if (user && userRole && !authLoading) {
-      console.log('🔧 AuthPageV2: User is logged in, redirecting based on role:', userRole);
-      setLoading(false);
+    if (user && !loading) {
+      // ✅ FIX: Check if we're currently redirecting to prevent infinite loop
+      const isRedirecting = sessionStorage.getItem('auth-redirecting');
       
-      // Redirect based on role
-      if (userRole === 'admin') {
-        router.push('/admin/templates');
-      } else if (userRole === 'player') {
-        router.push('/dashboard/player');
-      } else if (userRole === 'stat_admin') {
-        router.push('/dashboard/stat-admin');
-      } else {
-        router.push('/dashboard');
+      if (isRedirecting === 'true') {
+        console.log('🔒 AuthPageV2 (V2): Already redirecting, skipping...');
+        return;
       }
+      
+      console.log('🔐 AuthPageV2 (V2): User is logged in, redirecting based on role:', user.role);
+      
+      // Mark that we're redirecting
+      sessionStorage.setItem('auth-redirecting', 'true');
+      
+      // ✅ Use window.location.href for hard redirect
+      let redirectUrl = '/dashboard';
+      if (user.role === 'admin') {
+        redirectUrl = '/admin/templates';
+      } else if (user.role === 'player') {
+        redirectUrl = '/dashboard/player';
+      } else if (user.role === 'stat_admin') {
+        redirectUrl = '/dashboard/stat-admin';
+      }
+      
+      console.log('🚀 AuthPageV2 (V2): Hard redirecting to:', redirectUrl);
+      
+      // Small delay to ensure sessionStorage is set
+      setTimeout(() => {
+        window.location.href = redirectUrl;
+      }, 100);
     }
-  }, [user, userRole, authLoading, router]);
+  }, [user, loading]);
 
   const handleInputChange = (e: any) => {
     const { name, value, type, checked } = e.target;
@@ -58,19 +74,24 @@ const AuthPageV2 = () => {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
     try {
       if (isLogin) {
-        const { data, error } = await signIn(formData.email, formData.password);
-        if (error) throw error;
+        console.log('🔐 AuthPageV2 (V2): Signing in with raw HTTP...');
+        const result = await signInV2(formData.email, formData.password);
+        if (!result.success) {
+          throw new Error(result.error || 'Sign in failed');
+        }
+        console.log('✅ AuthPageV2 (V2): Sign in successful!');
+        // useAuthV2 hook will handle redirect via useEffect
       } else {
         if (formData.password !== formData.confirmPassword) {
           throw new Error('Passwords do not match');
         }
         
-        const { data, error } = await signUp(
+        console.log('🔐 AuthPageV2 (V2): Signing up with raw HTTP...');
+        const result = await signUpV2(
           formData.email, 
           formData.password,
           {
@@ -79,17 +100,21 @@ const AuthPageV2 = () => {
             userType: userType
           }
         );
-        if (error) throw error;
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Sign up failed');
+        }
+        
+        console.log('✅ AuthPageV2 (V2): Sign up successful!');
         
         // Show email confirmation screen
         setSignupEmail(formData.email);
         setShowEmailConfirmation(true);
-        setLoading(false);
-        return; // Don't continue to the catch block
+        return;
       }
     } catch (err: any) {
+      console.error('❌ AuthPageV2 (V2): Error:', err.message);
       setError(err.message);
-      setLoading(false);
     }
   };
 
@@ -99,6 +124,42 @@ const AuthPageV2 = () => {
     setSignupEmail('');
     setError('');
   };
+
+  // ✅ FIX: Show loading while redirecting
+  if (user && !loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, rgba(251, 146, 60, 0.3) 0%, rgba(239, 68, 68, 0.3) 100%)',
+      }}>
+        <div style={{
+          background: 'white',
+          padding: '40px',
+          borderRadius: '16px',
+          textAlign: 'center',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+        }}>
+          <div style={{
+            fontSize: '20px',
+            fontWeight: '600',
+            color: '#111827',
+            marginBottom: '16px',
+          }}>
+            ✅ Signed In!
+          </div>
+          <div style={{
+            fontSize: '16px',
+            color: '#6b7280',
+          }}>
+            Redirecting to your dashboard...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show email confirmation screen if needed
   if (showEmailConfirmation) {

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Mail, RefreshCw, CheckCircle, ArrowLeft } from 'lucide-react';
-import { resendConfirmationEmail } from '@/lib/supabase';
+import { authServiceV2 } from '@/lib/services/authServiceV2';
 
 interface EmailConfirmationPendingProps {
   email: string;
@@ -19,7 +19,7 @@ const EmailConfirmationPending = ({ email, onBack }: EmailConfirmationPendingPro
     setError('');
     
     try {
-      const { error } = await resendConfirmationEmail(email);
+      const { error } = await authServiceV2.resendConfirmationEmail(email);
       if (error) {
         throw error;
       }

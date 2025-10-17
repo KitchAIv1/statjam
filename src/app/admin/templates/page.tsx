@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TemplateService, Template } from '@/lib/services/templateService';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +23,9 @@ import {
 } from 'lucide-react';
 
 const AdminTemplatesPage = () => {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, loading } = useAuthV2();
   const router = useRouter();
+  const userRole = user?.role;
   
   // State
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -33,6 +34,9 @@ const AdminTemplatesPage = () => {
 
   // Auth check
   useEffect(() => {
+    // ✅ Clear redirect flag when dashboard loads successfully
+    sessionStorage.removeItem('auth-redirecting');
+    
     if (!loading && (!user || userRole !== 'admin')) {
       router.push('/auth');
     }

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { GameService } from '@/lib/services/gameService';
 import { GameServiceV2 } from '@/lib/services/gameServiceV2';
 import { TeamService } from '@/lib/services/tournamentService';
@@ -13,8 +13,9 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar } from 'lucide-react';
 
 const StatAdminDashboard = () => {
-  const { user, userRole, loading } = useAuthStore();
+  const { user, loading } = useAuthV2();
   const router = useRouter();
+  const userRole = user?.role;
   
   // Feature flag for V2 optimization (default: enabled)
   const useV2Optimization = process.env.NEXT_PUBLIC_STAT_ADMIN_V2 !== '0';
@@ -44,6 +45,9 @@ const StatAdminDashboard = () => {
   }
 
   useEffect(() => {
+    // ✅ Clear redirect flag when dashboard loads successfully
+    sessionStorage.removeItem('auth-redirecting');
+    
     if (!loading && (!user || userRole !== 'stat_admin')) {
       router.push('/auth');
     }

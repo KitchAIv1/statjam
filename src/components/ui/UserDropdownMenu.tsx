@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, User, Settings, LogOut, Shield } from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useRouter } from 'next/navigation';
 
 interface UserDropdownMenuProps {
@@ -14,7 +14,7 @@ export function UserDropdownMenu({ user, userRole }: UserDropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { logout } = useAuthStore();
+  const { signOut } = useAuthV2();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -30,8 +30,8 @@ export function UserDropdownMenu({ user, userRole }: UserDropdownMenuProps) {
 
   const handleLogout = async () => {
     try {
-      // Use the auth store's logout method which properly cleans up everything
-      await logout();
+      // ✅ Use authServiceV2's signOut
+      await signOut();
       // Redirect to home
       router.push('/');
       setIsOpen(false);

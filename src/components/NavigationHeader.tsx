@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { UserDropdownMenu } from "@/components/ui/UserDropdownMenu";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthV2 } from "@/hooks/useAuthV2";
 import { getNavigationForRole } from "@/lib/navigation-config";
 import { Menu, X } from "lucide-react";
 
@@ -12,11 +12,12 @@ export function NavigationHeader() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user, userRole, initialized } = useAuthStore();
+  const { user, loading } = useAuthV2();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
+  const userRole = user?.role;
   const navigation = getNavigationForRole(userRole);
-  const isAuthenticated = !!user;
+  const isAuthenticated = !!user && !loading;
   
   // Get current section for organizer dashboard
   const currentSection = searchParams.get('section') || 'overview';
@@ -100,7 +101,7 @@ export function NavigationHeader() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-4">
-            {!initialized ? (
+            {loading ? (
               // Loading state
               <div className="w-8 h-8 animate-pulse bg-gray-700 rounded-full" />
             ) : isAuthenticated ? (
