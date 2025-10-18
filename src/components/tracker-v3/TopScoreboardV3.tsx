@@ -111,7 +111,7 @@ export function TopScoreboardV3({
       }}
     >
       {/* NBA Standard Layout: Team Names & Scores */}
-      <div className="grid grid-cols-3 gap-8 lg:gap-12 items-center mb-4">
+      <div className="grid grid-cols-3 gap-24 lg:gap-32 items-center mb-4">
         
         {/* Team A Section */}
         <div className="text-center">
@@ -158,9 +158,9 @@ export function TopScoreboardV3({
         {/* Center - Quarter and Shot Clock in Separate Containers */}
         <div className="flex flex-col items-center justify-center space-y-3">
           {/* Quarter and Shot Clock Row - Side by Side Containers */}
-          <div className="flex items-start gap-6">
+          <div className="flex items-stretch gap-6">
             {/* Left Container - Quarter + Game Clock + Start/Reset Buttons */}
-            <div className="flex flex-col items-center gap-3 p-4 rounded-xl border-2 bg-white shadow-lg min-w-[280px]" style={{ borderColor: '#e5e7eb' }}>
+            <div className="flex flex-col items-center justify-between gap-3 p-4 rounded-xl border-2 bg-white shadow-lg min-w-[280px]" style={{ borderColor: '#e5e7eb' }}>
               {/* Quarter Display */}
               <div 
                 className="px-5 py-2 rounded-xl text-lg font-black border-2 shadow-lg"
@@ -296,7 +296,7 @@ export function TopScoreboardV3({
 
             {/* Right Container - Shot Clock + 2x2 Button Grid */}
             {shotClockIsVisible && (
-              <div className="flex flex-col items-center gap-3 p-4 rounded-xl border-2 bg-white shadow-lg min-w-[280px]" style={{ borderColor: '#e5e7eb' }}>
+              <div className="flex flex-col items-center justify-between gap-3 p-4 rounded-xl border-2 bg-white shadow-lg min-w-[280px]" style={{ borderColor: '#e5e7eb' }}>
                 {/* Shot Clock Display */}
                 <div className="flex flex-col items-center w-full">
                   <div className="text-sm font-semibold text-gray-600 mb-2 tracking-wide">SHOT CLOCK</div>
