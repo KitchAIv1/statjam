@@ -294,10 +294,86 @@ export class PlayerDashboardService {
 
   static async getUpcomingGames(userId: string): Promise<UpcomingGame[]> {
     if (!userId) return [];
-    console.log('🔍 PlayerDashboard: Upcoming games - team_id column not available yet, returning empty array');
-    // TODO: Backend team needs to add team_id column to users table
-    // or provide alternative way to link users to teams
-    return [];
+    
+    try {
+      console.log('🔍 PlayerDashboard: Fetching upcoming games for player:', userId);
+
+      // Step 1: Get player's team assignments
+      const { data: teamPlayers, error: teamError } = await supabase
+        .from('team_players')
+        .select('team_id')
+        .eq('player_id', userId);
+
+      if (teamError) {
+        console.error('❌ PlayerDashboard: Error fetching player teams:', teamError);
+        return [];
+      }
+
+      if (!teamPlayers || teamPlayers.length === 0) {
+        console.log('📝 PlayerDashboard: Player not assigned to any teams');
+        return [];
+      }
+
+      const teamIds = teamPlayers.map(tp => tp.team_id);
+      console.log('🏀 PlayerDashboard: Player belongs to', teamIds.length, 'teams');
+
+      // Step 2: Get upcoming games for player's teams
+      const { data: games, error: gamesError } = await supabase
+        .from('games')
+        .select(`
+          id,
+          start_time,
+          status,
+          tournament_id,
+          team_a_id,
+          team_b_id,
+          team_a:teams!team_a_id (id, name),
+          team_b:teams!team_b_id (id, name),
+          tournaments:tournament_id (name, venue)
+        `)
+        .or(`team_a_id.in.(${teamIds.join(',')}),team_b_id.in.(${teamIds.join(',')})`)
+        .gte('start_time', new Date().toISOString())
+        .in('status', ['scheduled', 'in_progress'])
+        .order('start_time', { ascending: true })
+        .limit(10);
+
+      if (gamesError) {
+        console.error('❌ PlayerDashboard: Error fetching upcoming games:', gamesError);
+        return [];
+      }
+
+      if (!games || games.length === 0) {
+        console.log('📝 PlayerDashboard: No upcoming games found');
+        return [];
+      }
+
+      // Step 3: Transform to UpcomingGame format
+      const upcomingGames: UpcomingGame[] = games.map(game => {
+        // Determine opponent team
+        const playerTeamId = teamIds.find(id => id === game.team_a_id || id === game.team_b_id);
+        const isTeamA = playerTeamId === game.team_a_id;
+        const opponentTeamName = isTeamA ? game.team_b?.name : game.team_a?.name;
+        const opponentTeamId = isTeamA ? game.team_b_id : game.team_a_id;
+
+        return {
+          gameId: game.id,
+          tournamentId: game.tournament_id,
+          tournamentName: game.tournaments?.name || 'Tournament',
+          opponentTeamId: opponentTeamId,
+          opponentTeamName: opponentTeamName || 'Unknown Team',
+          scheduledAt: game.start_time,
+          status: game.status,
+          location: game.tournaments?.venue || 'TBD'
+        };
+      });
+
+      console.log('✅ PlayerDashboard: Found', upcomingGames.length, 'upcoming games');
+      return upcomingGames;
+
+    } catch (error) {
+      console.error('❌ PlayerDashboard: Error in getUpcomingGames:', error);
+      return [];
+    }
   }
 
   static async getTrialState(userId: string): Promise<TrialState> {

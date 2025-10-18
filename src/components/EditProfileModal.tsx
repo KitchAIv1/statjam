@@ -17,6 +17,16 @@ interface PlayerProfile {
   team: string;
   profilePhoto: string;
   posePhoto: string;
+  seasonAverages: {
+    rebounds: number;
+    assists: number;
+    fieldGoalPercent: number;
+  };
+  careerHigh: {
+    points: number;
+    rebounds: number;
+    assists: number;
+  };
 }
 
 interface EditProfileModalProps {

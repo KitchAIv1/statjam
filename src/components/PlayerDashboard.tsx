@@ -142,7 +142,7 @@ export function PlayerDashboard() {
       console.log('💾 Prepared update data:', updateData);
       console.log('💾 Updating user ID:', user.id);
       
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('users')
         .update(updateData)
         .eq('id', user.id)
@@ -187,6 +187,11 @@ export function PlayerDashboard() {
         team: data.identity.teamName || '',
         profilePhoto: data.identity.profilePhotoUrl || '',
         posePhoto: data.identity.posePhotoUrl || '',
+        seasonAverages: {
+          rebounds: data.seasonAverages?.rebounds || 0,
+          assists: data.seasonAverages?.assists || 0,
+          fieldGoalPercent: data.seasonAverages?.fieldGoalPercent || 0
+        },
         careerHigh: {
           points: data.careerHighs?.points || 0,
           rebounds: data.careerHighs?.rebounds || 0,
@@ -541,7 +546,17 @@ export function PlayerDashboard() {
                   <CardContent className="space-y-4">
                     {data.upcomingGames && data.upcomingGames.length > 0 ? (
                       data.upcomingGames.map((game, index) => (
-                        <TournamentCard key={index} game={game} />
+                        <TournamentCard key={index} game={{
+                          opponent: game.opponentTeamName || 'Unknown Team',
+                          time: new Date(game.scheduledAt || '').toLocaleString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                          }),
+                          isUpcoming: game.status === 'scheduled'
+                        }} />
                       ))
                     ) : (
                       <div className="text-center py-8">
