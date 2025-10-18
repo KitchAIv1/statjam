@@ -30,6 +30,7 @@ High-level project planning and overview
 - Product Requirements Document (PRD)
 - System Architecture
 - Project Status & Milestones
+- **Features Complete** - ✅ Comprehensive MVP feature list
 - Roadmap
 
 ### 🛠️ [02-Development](02-development/)
@@ -97,10 +98,13 @@ Historical and deprecated documentation
 
 | Topic | Location |
 |-------|----------|
+| **Features Complete** | [01-project/FEATURES_COMPLETE.md](01-project/FEATURES_COMPLETE.md) |
+| **Changelog** | [../CHANGELOG.md](../CHANGELOG.md) |
 | **Raw HTTP Pattern** | [03-architecture/RAW_HTTP_PATTERN.md](03-architecture/RAW_HTTP_PATTERN.md) |
 | Authentication V2 | [04-features/authentication/](04-features/authentication/) |
 | Stat Tracker V3 | [04-features/stat-tracker/](04-features/stat-tracker/) |
 | Live Viewer | [04-features/live-viewer/](04-features/live-viewer/) |
+| Substitution System | [01-project/FEATURES_COMPLETE.md#substitution-system](01-project/FEATURES_COMPLETE.md) |
 | Database Schema | [03-architecture/DATABASE_SCHEMA.md](03-architecture/DATABASE_SCHEMA.md) |
 | RLS Policies | [05-database/RLS_POLICIES.md](05-database/RLS_POLICIES.md) |
 | Setup Instructions | [02-development/SETUP_GUIDE.md](02-development/SETUP_GUIDE.md) |
@@ -130,4 +134,5 @@ When adding new documentation:
 
 **Last Updated**: October 18, 2025  
 **Maintained By**: Development Team  
-**Status**: ✅ Auth V2 Migration Complete - Documentation Reorganized
+**Status**: ✅ MVP Complete (v0.9.5) - All Core Features Functional  
+**Recent Updates**: Substitution system, Play-by-play integration, Performance optimization
