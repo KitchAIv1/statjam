@@ -112,7 +112,8 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   }
 
   return (
-    <ResponsiveContainer>
+    <div style={styles.container}>
+      <div style={styles.compactWrapper}>
       {/* Game Header - Score, Teams, Status */}
       <GameHeader 
         game={{
@@ -210,7 +211,8 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
           <span style={styles.liveText}>LIVE</span>
         </div>
       )}
-    </ResponsiveContainer>
+      </div>
+    </div>
   );
 };
 
@@ -221,7 +223,15 @@ const styles = {
     minHeight: '100vh',
     backgroundColor: figmaColors.primary,
     color: figmaColors.text.primary,
-    fontFamily: figmaTypography.fontFamily.primary
+    fontFamily: figmaTypography.fontFamily.primary,
+    display: 'flex',
+    justifyContent: 'center',
+    padding: '0 16px'
+  },
+  compactWrapper: {
+    width: '100%',
+    maxWidth: '800px', // Fixed compact width - similar to NBA.com/ESPN
+    margin: '0 auto'
   },
   content: {
     paddingBottom: '60px' // Space for live indicator
