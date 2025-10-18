@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { X, RefreshCw, User } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 
@@ -40,20 +39,21 @@ export function SubstitutionModalV3({
       />
       
       {/* Modal */}
-      <Card 
-        className="relative w-full max-w-md mx-4 max-h-[90vh] overflow-hidden"
+      <div 
+        className="relative w-full max-w-md mx-4 max-h-[90vh] overflow-hidden rounded-xl border shadow-2xl"
         style={{ 
-          background: 'var(--dashboard-card)', 
-          borderColor: 'var(--dashboard-border)',
-          borderWidth: '1px'
+          backgroundColor: '#1e293b',
+          borderColor: '#475569',
+          borderWidth: '2px'
         }}
       >
-        <CardHeader className="pb-4">
+        {/* Header */}
+        <div className="pb-4 px-6 pt-6">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2" style={{ color: 'var(--dashboard-text-primary)' }}>
+            <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
               <RefreshCw className="w-5 h-5 text-orange-500" />
               Player Substitution
-            </CardTitle>
+            </h3>
             
             <Button
               variant="outline"
@@ -64,19 +64,24 @@ export function SubstitutionModalV3({
               <X className="w-4 h-4" />
             </Button>
           </div>
-        </CardHeader>
+        </div>
         
-        <CardContent className="space-y-6 max-h-[70vh] overflow-y-auto">
+        {/* Content */}
+        <div className="space-y-6 max-h-[70vh] overflow-y-auto px-6 pb-6">
           {/* Substitution Info - Enhanced */}
           <div 
-            className="p-4 rounded-xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-red-50"
+            className="p-4 rounded-xl border-2"
+            style={{ 
+              borderColor: '#ef4444',
+              background: 'rgba(239, 68, 68, 0.15)'
+            }}
           >
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center">
                 <RefreshCw className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-bold text-red-600 mb-1">
+                <p className="text-sm font-bold text-red-400 mb-1">
                   Player Coming Out:
                 </p>
                 {playerOutData ? (
@@ -84,12 +89,12 @@ export function SubstitutionModalV3({
                     <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xs">
                       #{playerOutData.jerseyNumber || '?'}
                     </div>
-                    <span className="font-semibold text-gray-800">
+                    <span className="font-semibold text-white">
                       {playerOutData.name}
                     </span>
                   </div>
                 ) : (
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-300">
                     Player #{playerOutId?.slice(0, 8)}...
                   </span>
                 )}
@@ -99,10 +104,10 @@ export function SubstitutionModalV3({
 
           {/* Instructions - Enhanced */}
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            <h3 className="text-lg font-semibold mb-2 text-white">
               Select Substitute Player
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-300">
               Choose a player from the bench to bring into the game
             </p>
           </div>
@@ -115,7 +120,7 @@ export function SubstitutionModalV3({
                   key={player.id}
                   onClick={() => onConfirm(player.id)}
                   variant="outline"
-                  className="w-full h-auto p-4 justify-start gap-4 hover:bg-green-500/10 hover:border-green-500 hover:scale-102 transition-all duration-200 border-2"
+                  className="w-full h-auto p-4 justify-start gap-4 bg-slate-800 border-slate-600 hover:bg-green-500/20 hover:border-green-500 hover:scale-102 transition-all duration-200 border-2"
                 >
                   {/* Jersey Number - Enhanced */}
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-black text-sm shadow-md">
@@ -124,10 +129,10 @@ export function SubstitutionModalV3({
 
                   {/* Player Info - Enhanced */}
                   <div className="flex-1 text-left">
-                    <div className="font-bold text-gray-800 text-base mb-1">
+                    <div className="font-bold text-base mb-1 text-white">
                       {player.name}
                     </div>
-                    <div className="text-sm text-gray-500 flex items-center gap-2">
+                    <div className="text-sm flex items-center gap-2 text-gray-300">
                       <span>Available to play</span>
                       <div className="w-2 h-2 rounded-full bg-green-500"></div>
                     </div>
@@ -137,7 +142,7 @@ export function SubstitutionModalV3({
                   <div className="flex flex-col items-center gap-1">
                     <Badge 
                       variant="outline"
-                      className="text-green-600 border-green-500 bg-green-500/10 font-semibold"
+                      className="text-green-400 border-green-500 bg-green-500/20 font-semibold"
                     >
                       Ready
                     </Badge>
@@ -147,11 +152,11 @@ export function SubstitutionModalV3({
               ))
             ) : (
               <div className="text-center py-12">
-                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 rounded-full bg-slate-700 flex items-center justify-center mx-auto mb-4">
                   <User className="w-8 h-8 text-gray-400" />
                 </div>
-                <h3 className="font-semibold text-gray-700 mb-2">No Bench Players</h3>
-                <p className="text-sm text-gray-500">
+                <h3 className="font-semibold mb-2 text-white">No Bench Players</h3>
+                <p className="text-sm text-gray-300">
                   All available players are currently on the court
                 </p>
               </div>
@@ -159,17 +164,17 @@ export function SubstitutionModalV3({
           </div>
 
           {/* Actions - Enhanced */}
-          <div className="border-t-2 border-gray-100 pt-4 space-y-3">
+          <div className="border-t-2 border-slate-700 pt-4 space-y-3">
             <Button
               onClick={onClose}
               variant="outline"
-              className="w-full py-3 text-base font-semibold hover:bg-red-500/10 hover:border-red-500 hover:text-red-600 transition-all duration-200"
+              className="w-full py-3 text-base font-semibold bg-slate-800 text-gray-300 border-slate-600 hover:bg-red-500/10 hover:border-red-500 hover:text-red-400 transition-all duration-200"
             >
               Cancel Substitution
             </Button>
             
             <div className="text-center">
-              <p className="text-xs text-gray-500 mb-1">
+              <p className="text-xs mb-1 text-gray-300">
                 💡 Tip: Click any player above to complete the substitution
               </p>
               <p className="text-xs text-gray-400">
@@ -177,8 +182,8 @@ export function SubstitutionModalV3({
               </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
