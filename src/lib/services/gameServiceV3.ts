@@ -296,6 +296,50 @@ export class GameServiceV3 {
   }
 
   /**
+   * Update game status using raw HTTP requests
+   */
+  static async updateGameStatus(gameId: string, status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'): Promise<boolean> {
+    try {
+      console.log('🎯 GameServiceV3: Updating game status via raw HTTP:', { gameId, status });
+
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('No access token found - user not authenticated');
+      }
+
+      const url = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${gameId}`;
+      
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          status: status,
+          updated_at: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ GameServiceV3: Failed to update status - HTTP ${response.status}:`, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ GameServiceV3: Game status updated successfully to:', status);
+      return true;
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to update game status:', error);
+      return false;
+    }
+  }
+
+  /**
    * Record a stat using raw HTTP requests
    */
   static async recordStat(statData: {

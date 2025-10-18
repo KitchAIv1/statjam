@@ -109,9 +109,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
           try {
             const normalizedStatus = String(game.status || '').toLowerCase();
             if (normalizedStatus === 'scheduled') {
-              // TODO: Add updateGameStatus to GameServiceV3 if needed
-              console.log('🔄 useTracker: Game status is scheduled, should update to in_progress');
-              // For now, skip status update - the game will still work
+              console.log('🔄 useTracker: Game status is scheduled, updating to in_progress');
+              try {
+                await GameServiceV3.updateGameStatus(gameId, 'in_progress');
+                console.log('✅ useTracker: Game status updated to in_progress');
+              } catch (statusError) {
+                console.warn('⚠️ useTracker: Failed to update game status:', statusError);
+                // Non-blocking - game will still work with clock running
+              }
             }
           } catch (_e) {
             // Non-blocking if status update fails; viewer will still load
@@ -145,7 +150,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
             console.log('🔁 Initialized clock running state from database:', game.is_clock_running);
           }
         } else {
-          console.warn('⚠️ Could not load game state from database:', gameError?.message);
+          console.warn('⚠️ Could not load game state from database');
         }
         
         // FIXED: Load existing stats to calculate current scores (for refresh persistence)
