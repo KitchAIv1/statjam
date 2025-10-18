@@ -25,7 +25,7 @@ interface UseGameStateReturn {
 }
 
 export const useGameState = (): UseGameStateReturn => {
-  const { user, userProfile } = useAuthStore();
+  const { user } = useAuthV2();
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,13 +54,13 @@ export const useGameState = (): UseGameStateReturn => {
 
   // Load current game
   const loadCurrentGame = useCallback(async () => {
-    if (!userProfile?.id) return;
+    if (!user?.id) return;
 
     try {
       setIsLoading(true);
       setError(null);
       
-      const game = await GameService.getCurrentGame(userProfile.id);
+      const game = await GameService.getCurrentGame(user.id);
       setCurrentGame(game);
       
       if (game) {
@@ -73,7 +73,7 @@ export const useGameState = (): UseGameStateReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [userProfile?.id]);
+  }, [user?.id]);
 
   // Load game on mount and when user changes
   useEffect(() => {
