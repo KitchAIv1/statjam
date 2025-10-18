@@ -65,6 +65,10 @@ export function TopScoreboardV3({
   const [editMinutes, setEditMinutes] = useState(minutes);
   const [editSeconds, setEditSeconds] = useState(seconds);
   
+  // Shot Clock Edit mode state
+  const [isShotClockEditMode, setIsShotClockEditMode] = useState(false);
+  const [editShotClockSeconds, setEditShotClockSeconds] = useState(shotClockSeconds || 24);
+  
   const formatTime = (mins: number, secs: number) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
@@ -345,25 +349,13 @@ export function TopScoreboardV3({
                   </Button>
 
                   <Button
-                    onClick={shotClockIsRunning ? onShotClockStop : onShotClockStart}
-                    className={`h-10 px-4 text-sm font-bold transition-all duration-200 rounded-lg ${
-                      shotClockIsRunning
-                        ? 'bg-red-500 hover:bg-red-600 text-white border-red-400'
-                        : 'bg-green-500 hover:bg-green-600 text-white border-green-400'
-                    } border-2 hover:shadow-md hover:scale-105 active:scale-95`}
-                    disabled={!onShotClockStart || !onShotClockStop}
+                    onClick={() => setIsShotClockEditMode(!isShotClockEditMode)}
+                    variant="outline"
+                    className="h-10 px-4 text-sm font-bold border-2 border-blue-300 text-blue-600 hover:bg-blue-500 hover:text-white hover:border-blue-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                    disabled={!onShotClockSetTime}
                   >
-                    {shotClockIsRunning ? (
-                      <>
-                        <Pause className="w-4 h-4 mr-1" />
-                        STOP
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4 mr-1" />
-                        START
-                      </>
-                    )}
+                    <Edit3 className="w-4 h-4 mr-1" />
+                    EDIT
                   </Button>
                 </div>
               </div>
