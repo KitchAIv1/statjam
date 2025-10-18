@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
@@ -140,6 +140,28 @@ export function PlayerDashboard() {
     setCurrentTab(value);
   };
 
+  // Sync database data to currentPlayerData for edit form population
+  useEffect(() => {
+    if (data.identity) {
+      setCurrentPlayerData({
+        name: data.identity.name || '',
+        jerseyNumber: String(data.identity.jerseyNumber || ''),
+        position: data.identity.position || '',
+        height: String(data.identity.height || ''),
+        weight: String(data.identity.weight || ''),
+        age: data.identity.age || 0,
+        team: data.identity.teamName || '',
+        profilePhoto: data.identity.profilePhotoUrl || '',
+        posePhoto: data.identity.posePhotoUrl || '',
+        careerHigh: {
+          points: data.careerHighs?.points || 0,
+          rebounds: data.careerHighs?.rebounds || 0,
+          assists: data.careerHighs?.assists || 0
+        }
+      });
+    }
+  }, [data.identity, data.careerHighs]);
+
   // Helper function to check if data is meaningful (not null/empty/default)
   const hasValidData = (value: any, defaultCheck?: any) => {
     if (value === null || value === undefined) return false;
@@ -260,10 +282,10 @@ export function PlayerDashboard() {
                 {/* Player Profile */}
                 <Card className="bg-card border-border overflow-hidden">
                   <CardContent className="p-0">
-                    <div className="relative min-h-[28rem] bg-gradient-to-br from-red-600 to-orange-600">
+                    <div className="relative min-h-[32rem] bg-gradient-to-br from-red-600 to-orange-600">
                       <div className="absolute inset-0 flex">
                         {/* Player Info */}
-                        <div className="flex-1 p-8">
+                        <div className="flex-[1.5] p-8">
                           <div className="mb-4">
                             <h1 className="text-4xl font-bold mb-2 text-white">{identityName}</h1>
                             <div className="flex items-center gap-3 text-orange-200 mb-2">
@@ -323,16 +345,17 @@ export function PlayerDashboard() {
                             </div>
                           </div>
 
-                          <div className="flex gap-3">
+                          <div className="flex flex-wrap gap-3 mt-4">
                             <Button 
-                              className="bg-white hover:bg-orange-50 text-red-600 px-6 py-3 border-0"
-                              onClick={handleCardGenerationClick}
+                              className="bg-white/60 text-red-600/60 px-6 py-3 border-0 cursor-not-allowed hover:bg-white/60"
+                              disabled
+                              title="Feature coming soon"
                             >
                               GENERATE MY NBA CARD
                             </Button>
                             <Button 
                               variant="outline" 
-                              className="border-white/20 bg-white/10 hover:bg-white/20 text-white hover:text-white px-4 py-3"
+                              className="border-white/30 bg-white/10 hover:bg-white/20 text-white hover:text-white px-6 py-3"
                               onClick={handleEditProfile}
                             >
                               <Edit3 className="w-4 h-4 mr-2" />
@@ -342,11 +365,11 @@ export function PlayerDashboard() {
                         </div>
 
                         {/* Player Image */}
-                        <div className="flex-1 relative">
+                        <div className="flex-[0.7] relative">
                           <ImageWithFallback 
                             src={posePhoto}
                             alt={currentPlayerData.name}
-                            className="absolute right-0 top-0 h-full w-auto object-cover"
+                            className="absolute right-0 top-0 h-full w-auto object-cover object-top"
                           />
                           <div className="absolute top-4 right-4 bg-black/30 rounded px-3 py-1">
                             <span className="text-orange-200 font-bold">{String(identityTeam).toUpperCase()}</span>

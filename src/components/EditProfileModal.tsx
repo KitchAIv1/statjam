@@ -103,12 +103,12 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
         
         <div className="space-y-6 px-2">
           {/* Photo Upload Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Profile Photo */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Profile Photo</Label>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Profile Photo</Label>
               <div className="relative">
-                <div className="w-full aspect-square rounded-lg overflow-hidden bg-muted border-2 border-dashed border-border hover:border-primary/50 transition-colors">
+                <div className="w-full aspect-square max-w-[200px] mx-auto rounded-lg overflow-hidden bg-muted border-2 border-dashed border-border hover:border-primary/50 transition-colors">
                   {previewProfilePhoto || formData.profilePhoto ? (
                     <div className="relative w-full h-full">
                       <ImageWithFallback
@@ -147,10 +147,10 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
             </div>
 
             {/* Pose Photo */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Action/Pose Photo</Label>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Action/Pose Photo</Label>
               <div className="relative">
-                <div className="w-full aspect-square rounded-lg overflow-hidden bg-muted border-2 border-dashed border-border hover:border-primary/50 transition-colors">
+                <div className="w-full aspect-square max-w-[200px] mx-auto rounded-lg overflow-hidden bg-muted border-2 border-dashed border-border hover:border-primary/50 transition-colors">
                   {previewPosePhoto || formData.posePhoto ? (
                     <div className="relative w-full h-full">
                       <ImageWithFallback
