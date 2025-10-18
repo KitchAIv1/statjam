@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { GameService } from '@/lib/services/gameService';
-import { GameServiceV2 } from '@/lib/services/gameServiceV2';
+import { GameServiceV3 } from '@/lib/services/gameServiceV3';
 import { TeamService } from '@/lib/services/tournamentService';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,7 +66,7 @@ const StatAdminDashboard = () => {
         
         // Use V2 optimization if enabled, fallback to V1
         const games = useV2Optimization 
-          ? await GameServiceV2.getAssignedGames(user.id)
+          ? await GameServiceV3.getAssignedGames(user.id)
           : await GameService.getAssignedGames(user.id);
         setAssignedGames(games);
       } catch (error) {
@@ -487,7 +487,7 @@ const StatAdminDashboard = () => {
                       setGamesError(null);
                       // Use V2 optimization if enabled, fallback to V1
                       (useV2Optimization 
-                        ? GameServiceV2.getAssignedGames(user.id)
+                        ? GameServiceV3.getAssignedGames(user.id)
                         : GameService.getAssignedGames(user.id))
                         .then(setAssignedGames)
                         .catch((error) => setGamesError(error.message))

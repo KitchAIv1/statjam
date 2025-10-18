@@ -1,94 +1,136 @@
 import { supabase } from '@/lib/supabase';
 
 /**
- * GameServiceV2 - Optimized service for Stat Admin Dashboard
+ * GameServiceV2 - RLS-Optimized service for Stat Admin Dashboard
  * 
- * OPTIMIZATION: Single JOIN query instead of 3 separate queries
- * - Reduces database IO by 66% (3 queries → 1 query)
- * - Faster response times through server-side JOINs
- * - Better resource utilization
+ * OPTIMIZATION: Separate simple queries instead of complex JOINs
+ * - RLS-friendly: Each query checks only one table's policies
+ * - Fast: Simple queries with indexed columns (.eq, .in)
+ * - Reliable: No timeout issues from complex JOINs
+ * - Data combined client-side using Maps for O(1) lookups
+ * 
+ * WHY NOT JOINS: With RLS enabled, PostgreSQL checks policies on each
+ * joined table, making 4-table JOINs extremely expensive (10-15s timeout).
+ * Separate queries are faster and more reliable.
  * 
  * SCOPE: Only used by Stat Admin Dashboard (/dashboard/stat-admin)
  * All other components continue using GameService (V1)
  */
 export class GameServiceV2 {
   /**
-   * Get all games assigned to a stat admin with optimized single JOIN query
+   * Get all games assigned to a stat admin with RLS-optimized separate queries
    * 
    * @param statAdminId - The ID of the stat admin user
    * @returns Promise<any[]> - Organized games grouped by organizer
    */
   static async getAssignedGames(statAdminId: string): Promise<any[]> {
     try {
-      console.log('🚀 GameServiceV2: Fetching assigned games with single JOIN query for:', statAdminId);
+      console.log('🚀 GameServiceV2: Fetching assigned games with RLS-optimized queries for:', statAdminId);
       
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database query timeout')), 15000) // Slightly longer for JOIN
-      );
+      // ⚠️ NOTE: Session sync happens asynchronously at client creation time
+      // The custom storage adapter in supabase.ts handles this automatically
+      // We just need to wait a bit for it to complete
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for session sync
       
-      // OPTIMIZED: Single JOIN query to get all data at once
-      const joinQueryPromise = supabase
+      // ✅ STEP 1: Get games (simple, fast, RLS-friendly)
+      console.log('📊 Step 1: Fetching games...');
+      console.log('📊 Query: games WHERE stat_admin_id =', statAdminId);
+      
+      const gamesQueryPromise = supabase
         .from('games')
-        .select(`
-          id,
-          tournament_id,
-          team_a_id,
-          team_b_id,
-          start_time,
-          status,
-          created_at,
-          tournaments!inner (
-            id,
-            name,
-            venue,
-            organizer_id,
-            users!tournaments_organizer_id_fkey (
-              id,
-              email
-            )
-          ),
-          team_a:teams!games_team_a_id_fkey (
-            id,
-            name
-          ),
-          team_b:teams!games_team_b_id_fkey (
-            id,
-            name
-          )
-        `)
+        .select('id, tournament_id, team_a_id, team_b_id, start_time, status, created_at')
         .eq('stat_admin_id', statAdminId);
       
-      const { data: joinedGames, error: joinError } = await Promise.race([
-        joinQueryPromise,
+      // Add timeout to diagnose hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => {
+          console.error('⏰ GameServiceV2: Games query timed out after 10 seconds');
+          reject(new Error('Games query timeout - RLS policy may be blocking'));
+        }, 10000)
+      );
+      
+      const { data: games, error: gamesError } = await Promise.race([
+        gamesQueryPromise,
         timeoutPromise
       ]) as any;
       
-      if (joinError) {
-        console.warn('⚠️ GameServiceV2: JOIN query failed, falling back to V1:', joinError.message);
-        
-        // FALLBACK: Import and use V1 method if JOIN fails
-        const { GameService } = await import('./gameService');
-        return await GameService.getAssignedGames(statAdminId);
+      if (gamesError) {
+        console.error('❌ GameServiceV2: Error fetching games:', gamesError);
+        console.error('❌ Error details:', JSON.stringify(gamesError, null, 2));
+        throw gamesError;
       }
       
-      if (!joinedGames || joinedGames.length === 0) {
+      console.log('✅ Step 1 complete: Found', games?.length || 0, 'games');
+      
+      if (!games || games.length === 0) {
         console.log('📝 GameServiceV2: No games found for stat admin:', statAdminId);
         return [];
       }
       
-      console.log('✅ GameServiceV2: JOIN query successful, processing', joinedGames.length, 'games');
+      console.log('✅ GameServiceV2: Found', games.length, 'games');
       
-      // Transform the joined data to match expected format
-      const transformedGames = joinedGames.map((game: any) => {
-        const tournament = game.tournaments;
-        const organizer = tournament?.users;
+      // ✅ STEP 2: Get unique tournament IDs and fetch tournaments
+      const tournamentIds = [...new Set(games.map(g => g.tournament_id))];
+      console.log('📊 Step 2: Fetching', tournamentIds.length, 'tournaments...');
+      
+      const { data: tournaments, error: tournamentsError } = await supabase
+        .from('tournaments')
+        .select('id, name, venue, organizer_id')
+        .in('id', tournamentIds);
+      
+      if (tournamentsError) {
+        console.error('❌ GameServiceV2: Error fetching tournaments:', tournamentsError);
+        throw tournamentsError;
+      }
+      
+      // ✅ STEP 3: Get unique organizer IDs and fetch organizers
+      const organizerIds = [...new Set((tournaments || []).map(t => t.organizer_id))];
+      console.log('📊 Step 3: Fetching', organizerIds.length, 'organizers...');
+      
+      const { data: organizers, error: organizersError } = await supabase
+        .from('users')
+        .select('id, email')
+        .in('id', organizerIds);
+      
+      if (organizersError) {
+        console.error('❌ GameServiceV2: Error fetching organizers:', organizersError);
+        throw organizersError;
+      }
+      
+      // ✅ STEP 4: Get unique team IDs and fetch teams
+      const teamIds = [...new Set(games.flatMap(g => [g.team_a_id, g.team_b_id]).filter(Boolean))];
+      console.log('📊 Step 4: Fetching', teamIds.length, 'teams...');
+      
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name')
+        .in('id', teamIds);
+      
+      if (teamsError) {
+        console.error('❌ GameServiceV2: Error fetching teams:', teamsError);
+        throw teamsError;
+      }
+      
+      console.log('✅ GameServiceV2: All data fetched successfully');
+      
+      // ✅ STEP 5: Create lookup maps for fast access
+      const tournamentMap = new Map((tournaments || []).map(t => [t.id, t]));
+      const organizerMap = new Map((organizers || []).map(o => [o.id, o]));
+      const teamMap = new Map((teams || []).map(t => [t.id, t]));
+      
+      // ✅ STEP 6: Transform data to match expected format
+      const transformedGames = games.map((game: any) => {
+        const tournament = tournamentMap.get(game.tournament_id);
+        const organizer = tournament ? organizerMap.get(tournament.organizer_id) : null;
+        
+        const teamA = teamMap.get(game.team_a_id);
+        const teamB = teamMap.get(game.team_b_id);
         
         return {
           id: game.id,
           tournamentName: tournament?.name || 'Unknown Tournament',
-          teamA: game.team_a?.name || 'Team A',
-          teamB: game.team_b?.name || 'Team B',
+          teamA: teamA?.name || 'Team A',
+          teamB: teamB?.name || 'Team B',
           teamAId: game.team_a_id,
           teamBId: game.team_b_id,
           scheduledDate: game.start_time,

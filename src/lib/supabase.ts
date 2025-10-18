@@ -76,24 +76,27 @@ const createSupabaseClient = () => {
   });
   
   // 🔧 CRITICAL: Manually set session from authServiceV2 tokens on client creation
+  // This must happen SYNCHRONOUSLY before returning the client
   if (typeof window !== 'undefined') {
     const accessToken = localStorage.getItem('sb-access-token');
     const refreshToken = localStorage.getItem('sb-refresh-token');
     const userStr = localStorage.getItem('sb-user');
     
     if (accessToken && refreshToken && userStr) {
-      const user = JSON.parse(userStr);
       console.log('🔐 Syncing authServiceV2 session to Supabase client...');
       
-      // Set the session manually
+      // ⚠️ CRITICAL: This is async but we need it to complete before queries
+      // The Supabase client will queue queries until session is set
       client.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
       }).then(() => {
         console.log('✅ Supabase client session synced with authServiceV2');
       }).catch((err) => {
-        console.warn('⚠️ Failed to sync session:', err);
+        console.error('❌ Failed to sync session:', err);
       });
+    } else {
+      console.warn('⚠️ No authServiceV2 tokens found in localStorage');
     }
   }
   
@@ -103,6 +106,62 @@ const createSupabaseClient = () => {
 };
 
 export const supabase = createSupabaseClient();
+
+// 🔧 CRITICAL: Helper to ensure session is synced before queries
+let sessionSyncPromise: Promise<void> | null = null;
+
+export const ensureSupabaseSession = async (): Promise<void> => {
+  console.log('🔍 ensureSupabaseSession: Starting...');
+  
+  if (typeof window === 'undefined') {
+    console.log('🔍 ensureSupabaseSession: Server-side, skipping');
+    return;
+  }
+  
+  if (!supabase) {
+    console.warn('⚠️ ensureSupabaseSession: No supabase client');
+    return;
+  }
+  
+  // If already syncing, wait for it
+  if (sessionSyncPromise) {
+    console.log('🔍 ensureSupabaseSession: Already syncing, waiting...');
+    return sessionSyncPromise;
+  }
+  
+  // ⚠️ CRITICAL: Skip getSession() check - it hangs with custom storage
+  // Just force set the session from localStorage
+  console.log('🔍 ensureSupabaseSession: Forcing session sync from localStorage...');
+  const accessToken = localStorage.getItem('sb-access-token');
+  const refreshToken = localStorage.getItem('sb-refresh-token');
+  
+  if (!accessToken || !refreshToken) {
+    console.warn('⚠️ ensureSupabaseSession: No authServiceV2 tokens found in localStorage');
+    return;
+  }
+  
+  console.log('🔐 ensureSupabaseSession: Setting session...');
+  
+  // Set session with timeout to prevent hanging
+  sessionSyncPromise = Promise.race([
+    supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken
+    }),
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('setSession timeout')), 5000)
+    )
+  ]).then(() => {
+    console.log('✅ ensureSupabaseSession: Session synced successfully');
+    sessionSyncPromise = null;
+  }).catch((err) => {
+    console.error('❌ ensureSupabaseSession: Failed to sync session:', err);
+    sessionSyncPromise = null;
+    // Don't throw - let queries try anyway
+  });
+  
+  return sessionSyncPromise;
+};
 
 // ✅ OLD AUTH FUNCTIONS REMOVED
 // All authentication now handled by authServiceV2.ts and useAuthV2.ts
