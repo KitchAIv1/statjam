@@ -100,12 +100,12 @@ function StatTrackerV3Content() {
         console.log('🔄 Loading LIVE game data for:', gameIdParam);
         setIsLoading(true);
 
-        // Import services dynamically
-        const { GameService } = await import('@/lib/services/gameService');
-        const { TeamService } = await import('@/lib/services/tournamentService');
+        // Import V3 services (raw HTTP - reliable)
+        const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
+        const { TeamServiceV3 } = await import('@/lib/services/teamServiceV3');
 
         // Load game data
-        const game = await GameService.getGame(gameIdParam);
+        const game = await GameServiceV3.getGame(gameIdParam);
         if (!game) {
           setError('Game not found');
           setIsLoading(false);
@@ -127,7 +127,7 @@ function StatTrackerV3Content() {
         // Load Team A players with individual error handling
         let teamAPlayersData: Player[] = [];
         try {
-          teamAPlayersData = await TeamService.getTeamPlayers(game.team_a_id);
+          teamAPlayersData = await TeamServiceV3.getTeamPlayers(game.team_a_id);
           console.log('✅ Team A players loaded:', teamAPlayersData.length);
           setTeamAPlayers(teamAPlayersData);
         } catch (teamAError) {
@@ -138,7 +138,7 @@ function StatTrackerV3Content() {
         // Load Team B players with individual error handling  
         let teamBPlayersData: Player[] = [];
         try {
-          teamBPlayersData = await TeamService.getTeamPlayers(game.team_b_id);
+          teamBPlayersData = await TeamServiceV3.getTeamPlayers(game.team_b_id);
           console.log('✅ Team B players loaded:', teamBPlayersData.length);
           setTeamBPlayers(teamBPlayersData);
         } catch (teamBError) {
@@ -404,6 +404,7 @@ function StatTrackerV3Content() {
 
         {/* Top Scoreboard & Clock */}
         <TopScoreboardV3
+          key={`scoreboard-${JSON.stringify(tracker.scores)}`} // ✅ FORCE RE-RENDER
           teamAName={gameData.team_a?.name || 'Team A'}
           teamBName={gameData.team_b?.name || 'Team B'}
           teamAScore={tracker.scores[gameData.team_a_id] || 0}

@@ -258,17 +258,15 @@ export const useGameStream = (gameId: string, skipStatsQueries: boolean = false)
       }
       if (DEBUG_VIEWER) console.log('📊 Substitutions fetched:', { count: subs?.length || 0, sample: subs && subs[0] });
 
-      // Calculate scores from game_stats (same as play-by-play)
+      // Calculate scores from game_stats (FIXED: Use stat_value like tracker)
       const calculateScoresFromStats = (stats: any[], teamAId: string, teamBId: string) => {
         let homeScore = 0;
         let awayScore = 0;
         
         stats.forEach(stat => {
           if (stat.modifier === 'made') {
-            let points = 0;
-            if (stat.stat_type === 'three_pointer') points = 3;
-            else if (stat.stat_type === 'field_goal') points = 2;
-            else if (stat.stat_type === 'free_throw') points = 1;
+            // ✅ FIXED: Use stat_value from database (same as tracker logic)
+            const points = stat.stat_value || 0;
             
             if (stat.team_id === teamAId) {
               homeScore += points;

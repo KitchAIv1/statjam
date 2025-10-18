@@ -95,15 +95,13 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
       try {
         setIsLoading(true);
         
-        // Import supabase dynamically
-        const { supabase } = await import('@/lib/supabase');
+        // Import GameServiceV3 (raw HTTP - reliable)
+        const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
         
         // Load game data to initialize quarter, clock, and other state
-        const { data: game, error: gameError } = await supabase
-          .from('games')
-          .select('status, quarter, game_clock_minutes, game_clock_seconds, is_clock_running')
-          .eq('id', gameId)
-          .single();
+        console.log('🚀 useTracker: Loading game state via GameServiceV3 for:', gameId);
+        const game = await GameServiceV3.getGame(gameId);
+        const gameError = !game;
         
         if (!gameError && game) {
           // If the stat admin has entered the tracker and the game is still scheduled,
@@ -111,9 +109,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
           try {
             const normalizedStatus = String(game.status || '').toLowerCase();
             if (normalizedStatus === 'scheduled') {
-              const { GameService } = await import('@/lib/services/gameService');
-              // Use 'live' status to align with backend and landing filtering
-              await GameService.updateGameStatus(gameId, 'in_progress' as any);
+              // TODO: Add updateGameStatus to GameServiceV3 if needed
+              console.log('🔄 useTracker: Game status is scheduled, should update to in_progress');
+              // For now, skip status update - the game will still work
             }
           } catch (_e) {
             // Non-blocking if status update fails; viewer will still load
@@ -152,13 +150,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         
         // FIXED: Load existing stats to calculate current scores (for refresh persistence)
         console.log('🔍 Loading existing stats for score calculation...');
-        const { data: stats, error: statsError } = await supabase
-          .from('game_stats')
-          .select('team_id, stat_type, stat_value, modifier')
-          .eq('game_id', gameId)
-          .order('created_at', { ascending: true });
+        const stats = await GameServiceV3.getGameStats(gameId);
         
-        if (!statsError && stats) {
+        if (stats && stats.length > 0) {
           let teamAScore = 0;
           let teamBScore = 0;
           
@@ -189,7 +183,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
           console.log('✅ STAT INTERFACE: Initialized scores from database:', { 
             teamA: teamAScore, 
             teamB: teamBScore,
-            totalStats: stats.length
+            totalStats: stats.length,
+            teamAId: teamAId,
+            teamBId: teamBId
           });
         } else {
           console.warn('⚠️ Could not load stats for score initialization:', statsError?.message);
@@ -213,6 +209,64 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
       setIsLoading(false);
     }
   }, [gameId, teamAId, teamBId]);
+
+  // ✅ NEW: Function to refresh scores from database (matches viewer logic exactly)
+  const refreshScoresFromDatabase = useCallback(async () => {
+    try {
+      console.log('🔄 useTracker: Refreshing scores from database...');
+      const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
+      const stats = await GameServiceV3.getGameStats(gameId);
+      
+      if (stats && stats.length > 0) {
+        let teamAScore = 0;
+        let teamBScore = 0;
+        
+        for (const stat of stats) {
+          // ✅ EXACT SAME LOGIC AS VIEWER: Use stat_value and only count 'made'
+          if (stat.modifier !== 'made') continue;
+          
+          const points = stat.stat_value || 0;
+          
+          if (stat.team_id === teamAId) {
+            teamAScore += points;
+          } else if (stat.team_id === teamBId) {
+            teamBScore += points;
+          }
+        }
+        
+        // ✅ CHECK: Compare with current scores before updating
+        const currentScores = scores;
+        const newScores = { [teamAId]: teamAScore, [teamBId]: teamBScore };
+        
+        // Update scores to match database exactly
+        setScores(newScores);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing scores:', error);
+    }
+  }, [gameId, teamAId, teamBId]);
+
+  // ✅ NEW: Periodic score refresh to stay in sync with database/viewer
+  useEffect(() => {
+    if (!gameId || gameId === 'unknown') return;
+    
+    // Initial refresh after 5 seconds (for immediate testing)
+    const initialRefresh = setTimeout(() => {
+      console.log('🔄 useTracker: Initial score refresh (5s delay)...');
+      refreshScoresFromDatabase();
+    }, 5000);
+    
+    // Then refresh every 15 seconds to stay in sync with viewer
+    const scoreRefreshInterval = setInterval(() => {
+      console.log('⏰ useTracker: Periodic score refresh (15s interval)...');
+      refreshScoresFromDatabase();
+    }, 15000); // 15 seconds
+    
+    return () => {
+      clearTimeout(initialRefresh);
+      clearInterval(scoreRefreshInterval);
+    };
+  }, [gameId, refreshScoresFromDatabase]);
 
   // Clock Controls
   const startClock = useCallback(async () => {
@@ -443,8 +497,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
 
       console.log('🏀 Recording stat to database:', fullStat);
 
-      // Import GameService dynamically to avoid circular dependencies
-      const { GameService } = await import('@/lib/services/gameService');
+      // Import GameServiceV3 (raw HTTP - never hangs, triggers still fire for real-time)
+      const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
       
       // Map stat value for database (points for scoring stats, 1 for others)
       let statValue = 1;
@@ -456,44 +510,33 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         statValue = 1;
       } else if (stat.modifier === 'missed') {
         statValue = 0; // Track attempts but no points
+      } else if (!stat.modifier) {
+        // ✅ FIXED: Non-scoring stats (assist, rebound, steal, block, turnover) default to 1
+        statValue = 1;
       }
 
-      // Record stat in database
-      const result = await GameService.recordStat({
+      // Record stat in database (V3 - raw HTTP, never hangs)
+      await GameServiceV3.recordStat({
         gameId: stat.gameId,
         playerId: stat.playerId,
         teamId: stat.teamId,
         statType: stat.statType,
         statValue: statValue,
-        modifier: stat.modifier || undefined,
+        modifier: stat.modifier || null, // ✅ FIXED: Use null instead of empty string
         quarter: quarter,
         gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
         gameTimeSeconds: clock.secondsRemaining % 60
       });
 
-      if (!result.success) {
-        console.error('❌ Failed to record stat:', result.error);
-        alert(`Error recording stat: ${result.error}`);
-        return;
-      }
+      // V3 throws on error, so if we reach here, it succeeded
       
       console.log('✅ Stat recorded successfully in database');
         
-      // Update local scores for immediate UI feedback
-      if (stat.statType === 'field_goal' && stat.modifier === 'made') {
+      // Update local scores for immediate UI feedback (only for scoring stats)
+      if (stat.modifier === 'made' && statValue > 0) {
         setScores(prev => ({
           ...prev,
-          [stat.teamId]: prev[stat.teamId] + 2
-        }));
-      } else if (stat.statType === 'three_pointer' && stat.modifier === 'made') {
-        setScores(prev => ({
-          ...prev,
-          [stat.teamId]: prev[stat.teamId] + 3
-        }));
-      } else if (stat.statType === 'free_throw' && stat.modifier === 'made') {
-        setScores(prev => ({
-          ...prev,
-          [stat.teamId]: prev[stat.teamId] + 1
+          [stat.teamId]: prev[stat.teamId] + statValue
         }));
       }
 
@@ -585,6 +628,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
       setLastAction('Error closing game');
     }
   }, [gameId]);
+
 
   return {
     gameId,

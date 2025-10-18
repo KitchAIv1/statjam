@@ -43,6 +43,7 @@ export function TopScoreboardV3({
   teamATimeouts = 7,
   teamBTimeouts = 7
 }: TopScoreboardV3Props) {
+
   // NEW: Edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
   const [editMinutes, setEditMinutes] = useState(minutes);

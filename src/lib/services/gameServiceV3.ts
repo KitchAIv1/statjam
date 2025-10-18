@@ -188,4 +188,143 @@ export class GameServiceV3 {
       throw new Error(`Failed to load assigned games: ${error.message}`);
     }
   }
+
+  /**
+   * Get a single game by ID using raw HTTP requests
+   */
+  static async getGame(gameId: string): Promise<any> {
+    try {
+      console.log('🚀 GameServiceV3: Fetching single game via raw HTTP for:', gameId);
+
+      const games = await this.makeRequest<any>('games', {
+        'select': 'id,tournament_id,team_a_id,team_b_id,start_time,status,created_at,quarter,game_clock_minutes,game_clock_seconds,is_clock_running,home_score,away_score',
+        'id': `eq.${gameId}`
+      });
+
+      if (!games || games.length === 0) {
+        console.log('📝 GameServiceV3: No game found for ID:', gameId);
+        return null;
+      }
+
+      const game = games[0];
+      console.log('✅ GameServiceV3: Single game loaded successfully');
+
+      // Get team names if we have team IDs
+      if (game.team_a_id && game.team_b_id) {
+        try {
+          const teams = await this.makeRequest<any>('teams', {
+            'select': 'id,name',
+            'id': `in.(${game.team_a_id},${game.team_b_id})`
+          });
+
+          const teamMap = new Map(teams.map(t => [t.id, t]));
+          const teamA = teamMap.get(game.team_a_id);
+          const teamB = teamMap.get(game.team_b_id);
+
+          // Add team data to game
+          game.team_a = teamA ? { name: teamA.name } : null;
+          game.team_b = teamB ? { name: teamB.name } : null;
+          game.team_a_name = teamA?.name || null;
+          game.team_b_name = teamB?.name || null;
+
+          console.log('✅ GameServiceV3: Team names added to game');
+        } catch (teamError) {
+          console.warn('⚠️ GameServiceV3: Failed to load team names:', teamError);
+          // Continue without team names
+        }
+      }
+
+      return game;
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to get game:', error);
+      throw new Error(`Failed to load game: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get game stats for score calculation using raw HTTP requests
+   */
+  static async getGameStats(gameId: string): Promise<any[]> {
+    try {
+      console.log('🚀 GameServiceV3: Fetching game stats via raw HTTP for:', gameId);
+
+      const stats = await this.makeRequest<any>('game_stats', {
+        'select': 'team_id,stat_type,stat_value,modifier',
+        'game_id': `eq.${gameId}`,
+        'order': 'created_at.asc'
+      });
+
+      console.log('✅ GameServiceV3: Game stats loaded successfully:', stats.length, 'records');
+      return stats || [];
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to get game stats:', error);
+      // Don't throw - return empty array so tracker can still work
+      return [];
+    }
+  }
+
+  /**
+   * Record a stat using raw HTTP requests
+   */
+  static async recordStat(statData: {
+    gameId: string;
+    playerId: string;
+    teamId: string;
+    statType: string;
+    modifier: string | null; // ✅ FIXED: Allow null modifier
+    quarter: number;
+    gameTimeMinutes: number;
+    gameTimeSeconds: number;
+    statValue?: number;
+  }): Promise<any> {
+    try {
+      console.log('🚀 GameServiceV3: Recording stat via raw HTTP:', statData);
+
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('No access token found - user not authenticated');
+      }
+
+      console.log('🔐 GameServiceV3: Using access token for INSERT:', accessToken.substring(0, 20) + '...');
+
+      const url = `${this.SUPABASE_URL}/rest/v1/game_stats`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          game_id: statData.gameId,
+          player_id: statData.playerId,
+          team_id: statData.teamId,
+          stat_type: statData.statType,
+          modifier: statData.modifier,
+          quarter: statData.quarter,
+          game_time_minutes: statData.gameTimeMinutes,
+          game_time_seconds: statData.gameTimeSeconds,
+          stat_value: statData.statValue || 1
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ GameServiceV3: Failed to record stat - HTTP ${response.status}:`, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ GameServiceV3: Stat recorded successfully via raw HTTP');
+      return result;
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to record stat:', error);
+      throw new Error(`Failed to record stat: ${error.message}`);
+    }
+  }
 }

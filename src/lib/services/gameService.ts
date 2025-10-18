@@ -515,15 +515,9 @@ export class GameService {
     try {
       console.log('🔍 GameService: Recording stat for player:', statData.playerId);
       
-      // Quick session check (optimized for speed)
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        console.error('❌ No active session');
-        return { 
-          success: false, 
-          error: 'You must be logged in to record stats'
-        };
-      }
+      // ✅ SKIP SESSION CHECK: supabase.from().insert() will use auth token from custom storage
+      // The hanging getSession() call is bypassed - auth token is automatically attached
+      console.log('🔐 GameService: Using auth token from custom storage for stat recording');
       
       // Validate data before insert
       if (!statData.gameId || !statData.playerId || !statData.teamId) {
