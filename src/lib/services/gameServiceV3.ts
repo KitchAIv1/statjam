@@ -23,11 +23,12 @@ export class GameServiceV3 {
   }
 
   /**
-   * Make authenticated HTTP request to Supabase REST API
+   * Make authenticated HTTP request to Supabase REST API with automatic token refresh
    */
   private static async makeRequest<T>(
     table: string, 
-    params: Record<string, string> = {}
+    params: Record<string, string> = {},
+    retryCount: number = 0
   ): Promise<T[]> {
     const accessToken = this.getAccessToken();
     
@@ -55,9 +56,38 @@ export class GameServiceV3 {
       }
     });
 
+    // Handle authentication errors with automatic token refresh
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ GameServiceV3: HTTP ${response.status}:`, errorText);
+      
+      // Check if it's an authentication error and we haven't retried yet
+      if ((response.status === 401 || response.status === 403) && retryCount === 0) {
+        console.log('🔐 GameServiceV3: Authentication error detected, attempting token refresh...');
+        
+        try {
+          // Import authServiceV2 dynamically to avoid circular dependencies
+          const { authServiceV2 } = await import('@/lib/services/authServiceV2');
+          const session = authServiceV2.getSession();
+          
+          if (session.refreshToken) {
+            const { data, error } = await authServiceV2.refreshToken(session.refreshToken);
+            
+            if (data && !error) {
+              console.log('✅ GameServiceV3: Token refreshed, retrying request...');
+              // Retry the request with the new token
+              return this.makeRequest(table, params, retryCount + 1);
+            } else {
+              console.error('❌ GameServiceV3: Token refresh failed:', error);
+            }
+          } else {
+            console.error('❌ GameServiceV3: No refresh token available');
+          }
+        } catch (refreshError) {
+          console.error('❌ GameServiceV3: Error during token refresh:', refreshError);
+        }
+      }
+      
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
 

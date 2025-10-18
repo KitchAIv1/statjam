@@ -34,10 +34,11 @@ export function useAuthV2() {
   });
 
   /**
-   * Load user from localStorage on mount (ONCE ONLY)
+   * Load user from localStorage on mount (ONCE ONLY) + Setup automatic token refresh
    */
   useEffect(() => {
     let isMounted = true; // ✅ Prevent state updates after unmount
+    let refreshInterval: NodeJS.Timeout | null = null;
     
     const loadUser = async () => {
       try {
@@ -51,10 +52,45 @@ export function useAuthV2() {
 
         console.log('🔐 useAuthV2: Session found, loading profile...');
         
+        // Check if token is expired or about to expire
+        const tokenPayload = JSON.parse(atob(session.accessToken.split('.')[1]));
+        const expirationTime = tokenPayload.exp * 1000; // Convert to milliseconds
+        const currentTime = Date.now();
+        const timeUntilExpiry = expirationTime - currentTime;
+        
+        console.log('🔐 useAuthV2: Token expires in', Math.round(timeUntilExpiry / 1000 / 60), 'minutes');
+        
+        // If token expires in less than 5 minutes, refresh it immediately
+        if (timeUntilExpiry < 5 * 60 * 1000) {
+          console.log('🔐 useAuthV2: Token expires soon, refreshing immediately...');
+          const refreshResult = await refreshSession();
+          if (!refreshResult.success) {
+            if (isMounted) setState({ user: null, loading: false, error: null });
+            return;
+          }
+        }
+        
         // Fetch full profile from database
         const { data: profile, error } = await authServiceV2.getUserProfile(session.accessToken);
         
         if (error || !profile) {
+          // Check if error is due to expired token
+          if (error?.message?.includes('JWT expired') || error?.message?.includes('401') || error?.message?.includes('403')) {
+            console.log('🔐 useAuthV2: Token expired, attempting refresh...');
+            const refreshResult = await refreshSession();
+            if (refreshResult.success) {
+              // Retry getting profile with new token
+              const newSession = authServiceV2.getSession();
+              const { data: newProfile, error: newError } = await authServiceV2.getUserProfile(newSession.accessToken);
+              if (newProfile && !newError) {
+                console.log('✅ useAuthV2: User loaded after token refresh:', newProfile.email, 'role:', newProfile.role);
+                if (isMounted) setState({ user: newProfile, loading: false, error: null });
+                setupTokenRefreshTimer();
+                return;
+              }
+            }
+          }
+          
           console.warn('⚠️ useAuthV2: Could not load profile, clearing invalid session');
           // ✅ FIX: Clear invalid tokens from localStorage
           await authServiceV2.signOut();
@@ -66,6 +102,9 @@ export function useAuthV2() {
 
         console.log('✅ useAuthV2: User loaded:', profile.email, 'role:', profile.role);
         if (isMounted) setState({ user: profile, loading: false, error: null });
+        
+        // Setup automatic token refresh
+        setupTokenRefreshTimer();
 
       } catch (error: any) {
         console.error('❌ useAuthV2: Error loading user:', error);
@@ -75,11 +114,34 @@ export function useAuthV2() {
       }
     };
 
+    const setupTokenRefreshTimer = () => {
+      // Clear existing timer
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+      
+      // Set up automatic refresh every 45 minutes (tokens usually expire in 1 hour)
+      refreshInterval = setInterval(async () => {
+        if (!isMounted) return;
+        
+        console.log('🔐 useAuthV2: Automatic token refresh triggered');
+        const refreshResult = await refreshSession();
+        if (!refreshResult.success) {
+          console.warn('⚠️ useAuthV2: Automatic refresh failed, user will need to re-authenticate');
+        }
+      }, 45 * 60 * 1000); // 45 minutes
+      
+      console.log('✅ useAuthV2: Automatic token refresh timer set (45 minutes)');
+    };
+
     loadUser();
     
     // ✅ Cleanup to prevent memory leaks
     return () => {
       isMounted = false;
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
     };
   }, []); // ✅ Empty deps = run ONCE on mount
 
