@@ -133,7 +133,15 @@ const AuthPageV2 = () => {
         
         console.log('✅ AuthPageV2 (V2): Sign up successful!');
         
-        // Show email confirmation screen
+        // Check if user was auto-signed in (email confirmation disabled)
+        if (result.autoSignedIn) {
+          console.log('🚀 AuthPageV2 (V2): Auto sign-in enabled, user will be redirected by useEffect');
+          // Don't show email confirmation - user is already signed in
+          // The useEffect will handle the redirect to dashboard
+          return;
+        }
+        
+        // Show email confirmation screen only if email confirmation is required
         setSignupEmail(formData.email);
         setShowEmailConfirmation(true);
         return;

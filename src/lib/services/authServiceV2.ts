@@ -162,6 +162,15 @@ export class AuthServiceV2 {
 
       const data: SignUpResponse = await response.json();
       console.log('✅ AuthServiceV2: Sign up successful for:', email);
+      
+      // Store tokens in localStorage if provided (email confirmation disabled)
+      if (data.access_token && typeof window !== 'undefined') {
+        console.log('🔐 AuthServiceV2: Storing signup tokens in localStorage');
+        localStorage.setItem('sb-access-token', data.access_token);
+        localStorage.setItem('sb-refresh-token', data.refresh_token || '');
+        localStorage.setItem('sb-user', JSON.stringify(data.user));
+      }
+      
       return { data, error: null };
 
     } catch (error: any) {

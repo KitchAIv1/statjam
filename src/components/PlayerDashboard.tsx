@@ -15,6 +15,7 @@ import { AICoaching } from "./AICoaching";
 import { SubscriptionModal } from "./SubscriptionModal";
 import { EditProfileModal } from "./EditProfileModal";
 import { NotificationBell } from "./NotificationBell";
+import { GameStatsTable } from "./GameStatsTable";
 import { usePlayerDashboardData } from "@/hooks/usePlayerDashboardData";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -184,8 +185,8 @@ export function PlayerDashboard() {
   const position = hasValidData(data.identity?.position) 
     ? data.identity!.position 
     : (currentPlayerData.position || "Position");
-  const profilePhoto = data.identity?.profilePhotoUrl ?? currentPlayerData.profilePhoto;
-  const posePhoto = data.identity?.posePhotoUrl ?? currentPlayerData.posePhoto;
+  const profilePhoto = data.identity?.profilePhotoUrl || currentPlayerData.profilePhoto || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop&crop=faces";
+  const posePhoto = data.identity?.posePhotoUrl || currentPlayerData.posePhoto || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=600&fit=crop&crop=faces";
   const age = (data.identity?.age !== undefined && data.identity?.age !== null && data.identity?.age > 0) 
     ? data.identity.age 
     : (currentPlayerData.age > 0 ? currentPlayerData.age : "--");
@@ -456,6 +457,9 @@ export function PlayerDashboard() {
                     </CardContent>
                   </div>
                 </Card>
+
+                {/* Game Stats Table - NBA Box Score */}
+                {user?.id && <GameStatsTable userId={user.id} />}
 
                 {/* Premium Features (Phase 1: hidden) */}
 
