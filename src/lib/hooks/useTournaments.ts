@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Tournament, TournamentListState, TournamentCreateRequest } from '@/lib/types/tournament';
 import { TournamentService } from '@/lib/services/tournamentService';
-import { useAuthV2 } from '@/hooks/useAuthV2';
 
 // Custom Hook for Tournament Data Management
-export function useTournaments() {
-  const { user } = useAuthV2();
+export function useTournaments(user: { id: string } | null) {
   const [state, setState] = useState<TournamentListState>({
     tournaments: [],
     loading: false,
@@ -131,8 +129,7 @@ export function useTournaments() {
 }
 
 // Hook for tournament statistics
-export function useTournamentStats() {
-  const { user } = useAuthV2();
+export function useTournamentStats(user: { id: string } | null) {
   const [stats, setStats] = useState({
     totalTournaments: 0,
     activeTournaments: 0,

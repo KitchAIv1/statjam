@@ -119,18 +119,50 @@ export class OrganizerDashboardService {
     try {
       console.log('🔍 OrganizerDashboard: Fetching upcoming games for:', organizerId);
 
-      // This will be enhanced when the games table is fully implemented
-      // For now, return placeholder data
-      const upcomingGames: UpcomingGame[] = [];
+      // Get tournaments for this organizer first
+      const tournaments = await TournamentService.getTournamentsByOrganizer(organizerId);
+      const tournamentIds = tournaments.map(t => t.id);
 
-      // TODO: Implement when games table is available
-      // const { data: games, error } = await supabase
-      //   .from('games')
-      //   .select('*')
-      //   .eq('organizer_id', organizerId)
-      //   .gte('scheduled_date', new Date().toISOString())
-      //   .order('scheduled_date', { ascending: true })
-      //   .limit(3);
+      if (tournamentIds.length === 0) {
+        console.log('🔍 OrganizerDashboard: No tournaments found for organizer');
+        return [];
+      }
+
+      // Fetch upcoming games from tournaments owned by this organizer
+      const { data: games, error } = await supabase
+        .from('games')
+        .select(`
+          id, start_time, status, tournament_id,
+          team_a:team_a_id(id, name),
+          team_b:team_b_id(id, name),
+          tournaments:tournament_id(name, venue)
+        `)
+        .in('tournament_id', tournamentIds)
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
+        .limit(5);
+
+      if (error) {
+        console.error('❌ OrganizerDashboard: Error fetching games:', error);
+        return [];
+      }
+
+      // Transform to UpcomingGame format
+      const upcomingGames: UpcomingGame[] = (games || []).map(game => ({
+        id: game.id,
+        team1: game.team_a?.name || 'Team A',
+        team2: game.team_b?.name || 'Team B',
+        time: new Date(game.start_time).toLocaleString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit'
+        }),
+        court: 'Court 1', // Default court
+        tournament: game.tournaments?.name || 'Tournament',
+        importance: game.status === 'scheduled' ? 'Regular Season' : 'Important'
+      }));
 
       console.log('🔍 OrganizerDashboard: Upcoming games fetched:', upcomingGames.length);
       return upcomingGames;
@@ -145,15 +177,27 @@ export class OrganizerDashboardService {
    */
   private static async getTotalGamesCount(organizerId: string): Promise<number> {
     try {
-      // TODO: Implement when games table is available
-      // const { count, error } = await supabase
-      //   .from('games')
-      //   .select('*', { count: 'exact', head: true })
-      //   .eq('organizer_id', organizerId);
-
-      // For now, return a placeholder based on tournaments
+      // Get tournaments for this organizer first
       const tournaments = await TournamentService.getTournamentsByOrganizer(organizerId);
-      return tournaments.reduce((sum, t) => sum + (t.currentTeams * 2), 0); // Rough estimate
+      const tournamentIds = tournaments.map(t => t.id);
+
+      if (tournamentIds.length === 0) {
+        return 0;
+      }
+
+      // Count games from tournaments owned by this organizer
+      const { count, error } = await supabase
+        .from('games')
+        .select('*', { count: 'exact', head: true })
+        .in('tournament_id', tournamentIds);
+
+      if (error) {
+        console.error('❌ OrganizerDashboard: Error counting games:', error);
+        // Fallback: estimate based on tournaments
+        return tournaments.reduce((sum, t) => sum + Math.max(t.currentTeams - 1, 0), 0);
+      }
+
+      return count || 0;
     } catch (error) {
       console.error('❌ OrganizerDashboard: Error getting games count:', error);
       return 0;

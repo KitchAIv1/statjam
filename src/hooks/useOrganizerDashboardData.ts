@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuthV2 } from '@/hooks/useAuthV2';
 import { OrganizerDashboardService } from '@/lib/services/organizerDashboardService';
 import { 
   OrganizerDashboardData, 
@@ -7,8 +6,7 @@ import {
   defaultOrganizerDashboardData 
 } from '@/lib/types/organizerDashboard';
 
-export function useOrganizerDashboardData() {
-  const { user, loading: authLoading } = useAuthV2();
+export function useOrganizerDashboardData(user: { id: string } | null) {
   const [state, setState] = useState<OrganizerDashboardState>({
     data: defaultOrganizerDashboardData,
     loading: true,
@@ -49,12 +47,12 @@ export function useOrganizerDashboardData() {
     }
   }, [user?.id]);
 
-  // Load data when auth is ready and user is available
+  // Load data when user is available
   useEffect(() => {
-    if (!authLoading && user?.id) {
+    if (user?.id) {
       refetch();
     }
-  }, [authLoading, user?.id, refetch]);
+  }, [user?.id, refetch]);
 
   // Return the state and refetch function
   return {

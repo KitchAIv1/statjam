@@ -92,15 +92,32 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
     try {
       setLoading(true);
       const allPlayers = await TeamService.getAllPlayers();
-      const currentPlayerIds = [...teamPlayers.map(p => p.id), ...(team?.players?.map(p => p.id) || [])];
       
-      // Remove duplicates and filter out current team players
-      const uniquePlayers = allPlayers.filter((player, index, self) => 
+      // Get all players already assigned to ANY team in this tournament
+      let allAssignedPlayerIds: string[] = [];
+      if (team?.tournamentId) {
+        try {
+          const tournamentTeams = await TeamService.getTeamsByTournament(team.tournamentId);
+          allAssignedPlayerIds = tournamentTeams.flatMap(t => t.players?.map(p => p.id) || []);
+        } catch (error) {
+          console.warn('Could not fetch tournament teams, falling back to current team only:', error);
+          allAssignedPlayerIds = [...teamPlayers.map(p => p.id), ...(team?.players?.map(p => p.id) || [])];
+        }
+      } else {
+        // Fallback: only exclude current team players
+        allAssignedPlayerIds = [...teamPlayers.map(p => p.id), ...(team?.players?.map(p => p.id) || [])];
+      }
+      
+      // Remove duplicates and filter out ALL assigned players in the tournament
+      const availablePlayers = allPlayers.filter((player, index, self) => 
         index === self.findIndex(p => p.id === player.id) && 
-        !currentPlayerIds.includes(player.id)
+        !allAssignedPlayerIds.includes(player.id)
       );
       
-      setRosterPlayers(uniquePlayers);
+      console.log(`🔍 PlayerManager: Filtered ${allPlayers.length} total players to ${availablePlayers.length} available players`);
+      console.log(`🔍 PlayerManager: Excluded ${allAssignedPlayerIds.length} already assigned players from tournament`);
+      
+      setRosterPlayers(availablePlayers);
     } catch (error) {
       console.error('Error loading roster players:', error);
       setError('Failed to load roster players');
@@ -229,7 +246,7 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
   const handleEditPlayer = (player: Player) => {
     setEditingPlayer(player);
     setNewPlayer({
-      name: player.name,
+      name: player.name, // Read-only, cannot be edited
       position: player.position,
       jerseyNumber: player.jerseyNumber.toString(),
       age: "",
@@ -240,7 +257,7 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
   };
 
   const handleUpdatePlayer = async () => {
-    if (!editingPlayer || !newPlayer.name || !newPlayer.position || !newPlayer.jerseyNumber) return;
+    if (!editingPlayer || !newPlayer.position || !newPlayer.jerseyNumber) return;
 
     try {
       setLoading(true);
@@ -252,11 +269,18 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
         jerseyNumber: parseInt(newPlayer.jerseyNumber),
       };
 
-      // Update local state immediately for better UX
+      // Update the player in the database (name is not editable as it's an independent profile)
+      const success = await TeamService.updatePlayer(editingPlayer.id, {
+        position: updatedPlayer.position,
+        jerseyNumber: updatedPlayer.jerseyNumber
+      });
+
+      if (!success) {
+        throw new Error('Failed to update player in database');
+      }
+
+      // Update local state after successful database update
       setTeamPlayers(teamPlayers.map(p => p.id === editingPlayer.id ? updatedPlayer : p));
-      
-      // TODO: Add database update call here when backend supports player updates
-      // await TeamService.updatePlayer(editingPlayer.id, updatedPlayer);
       
       setNewPlayer({
         name: "",
@@ -270,10 +294,16 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
       setIsAddPlayerOpen(false);
       onUpdateTeam?.();
       
+      setSuccessMessage(`✅ ${updatedPlayer.name}'s position and jersey number updated successfully!`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
       console.log('✅ Player updated successfully:', updatedPlayer.name);
     } catch (error) {
       console.error('Error updating player:', error);
-      setError('Failed to update player');
+      setError(`Failed to update player: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Revert local state changes on error
+      setTeamPlayers(teamPlayers.map(p => p.id === editingPlayer.id ? editingPlayer : p));
     } finally {
       setLoading(false);
     }
@@ -446,16 +476,31 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
               <Card className="border-0 overflow-hidden">
                 <div className={`bg-gradient-to-br transition-all duration-300 ${
                   teamPlayers.length >= 5 ? 'from-green-500 to-green-600' : 'from-orange-500 to-orange-600'
-                } text-white`}>
+                } text-white relative`}>
+                  {teamPlayers.length < 5 && (
+                    <div className="absolute top-2 right-2">
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    </div>
+                  )}
                   <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                    <CardTitle className="text-xs sm:text-sm text-white/90">Status</CardTitle>
+                    <CardTitle className="text-xs sm:text-sm text-white/90">Roster Status</CardTitle>
                   </CardHeader>
                   <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                    <div className="text-sm font-bold">
-                      {teamPlayers.length >= 5 ? '✓ Complete' : '⚠ Building'}
+                    <div className="text-sm font-bold flex items-center gap-2">
+                      {teamPlayers.length >= 5 ? (
+                        <>
+                          <span className="text-lg">✓</span>
+                          Ready to Play
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-lg">⚠</span>
+                          Need {5 - teamPlayers.length} More
+                        </>
+                      )}
                     </div>
                     <p className="text-xs text-white/80">
-                      Min 5 players
+                      Min 5 players required
                     </p>
                   </CardContent>
                 </div>
@@ -591,12 +636,14 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="playerName">Player Name</Label>
+              <Label htmlFor="playerName">Player Name (Profile Name - Not Editable)</Label>
               <Input
                 id="playerName"
                 value={newPlayer.name}
-                onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
-                placeholder="Enter player name"
+                readOnly
+                disabled
+                className="bg-muted text-muted-foreground cursor-not-allowed"
+                placeholder="Player profile name"
               />
             </div>
             <div className="grid gap-2">
@@ -650,7 +697,10 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
             <DialogDescription className="text-sm">
               Current team size: <span className="font-medium text-primary">{teamPlayers.length} players</span>
               {teamPlayers.length < 5 && (
-                <span className="text-orange-600 ml-2">• Need {5 - teamPlayers.length} more for minimum roster</span>
+                <span className="text-orange-600 font-medium ml-2 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                  Need {5 - teamPlayers.length} more for minimum roster
+                </span>
               )}
             </DialogDescription>
           </DialogHeader>

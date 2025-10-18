@@ -6,8 +6,29 @@ import { Button } from "@/components/ui/Button";
 import { useOrganizerDashboardData } from "@/hooks/useOrganizerDashboardData";
 import { useRouter } from "next/navigation";
 
-export function OrganizerDashboardOverview() {
-  const { data, loading, error } = useOrganizerDashboardData();
+// Enhanced status styling function for overview cards
+function getOverviewStatusClasses(status: string) {
+  const normalizedStatus = status.toLowerCase();
+  switch (normalizedStatus) {
+    case 'active':
+      return 'bg-green-100 text-green-800 border-green-200 font-semibold shadow-sm';
+    case 'draft':
+      return 'bg-gray-100 text-gray-600 border-gray-200 font-medium';
+    case 'completed':
+      return 'bg-blue-100 text-blue-800 border-blue-200 font-medium';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800 border-red-200 font-medium';
+    default:
+      return 'bg-gray-100 text-gray-600 border-gray-200 font-medium';
+  }
+}
+
+interface OrganizerDashboardOverviewProps {
+  user: { id: string } | null;
+}
+
+export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewProps) {
+  const { data, loading, error } = useOrganizerDashboardData(user);
   const router = useRouter();
 
   // Show loading state
@@ -182,8 +203,9 @@ export function OrganizerDashboardOverview() {
                   </div>
                   <Badge 
                     variant={tournament.status === 'Active' ? 'default' : 'secondary'}
-                    className="shrink-0"
+                    className={`${getOverviewStatusClasses(tournament.status)} shrink-0 px-3 py-1 text-xs uppercase tracking-wide`}
                   >
+                    {tournament.status === 'Active' && <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>}
                     {tournament.status}
                   </Badge>
                 </div>

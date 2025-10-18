@@ -2,19 +2,18 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, User, Settings, LogOut, Shield } from 'lucide-react';
-import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useRouter } from 'next/navigation';
 
 interface UserDropdownMenuProps {
   user: any;
   userRole: string;
+  signOut: () => Promise<{ success: boolean; }>;
 }
 
-export function UserDropdownMenu({ user, userRole }: UserDropdownMenuProps) {
+export function UserDropdownMenu({ user, userRole, signOut }: UserDropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { signOut } = useAuthV2();
 
   // Close dropdown when clicking outside
   useEffect(() => {

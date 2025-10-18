@@ -12,11 +12,11 @@ export function NavigationHeader() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user, loading } = useAuthV2();
+  const { user, loading, signOut } = useAuthV2();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const userRole = user?.role;
-  const navigation = getNavigationForRole(userRole);
+  const navigation = getNavigationForRole(userRole || null);
   const isAuthenticated = !!user && !loading;
   
   // Get current section for organizer dashboard
@@ -106,7 +106,7 @@ export function NavigationHeader() {
               <div className="w-8 h-8 animate-pulse bg-gray-700 rounded-full" />
             ) : isAuthenticated ? (
               // Authenticated user menu
-              <UserDropdownMenu user={user} userRole={userRole || 'fan'} />
+              <UserDropdownMenu user={user} userRole={userRole || 'fan'} signOut={signOut} />
             ) : (
               // Guest auth buttons
               <div className="hidden md:flex items-center space-x-4">

@@ -20,10 +20,10 @@ import { useTournamentGameStatus } from "@/hooks/useTournamentGameStatus";
 import { TournamentTableRow } from "@/components/TournamentTableRow";
 import { Tournament } from "@/lib/types/tournament";
 import { PlayerManager } from "@/components/PlayerManager";
-import { TeamService } from "@/lib/services/tournamentService";
+import { TeamService, TournamentService } from "@/lib/services/tournamentService";
 import { useRouter } from 'next/navigation';
 
-// Utility function for tournament status variants
+// Utility function for tournament status variants with enhanced styling
 function getStatusVariant(status: Tournament['status']) {
   switch (status) {
     case 'active':
@@ -36,6 +36,22 @@ function getStatusVariant(status: Tournament['status']) {
       return 'destructive';
     default:
       return 'secondary';
+  }
+}
+
+// Enhanced status styling function
+function getStatusClasses(status: Tournament['status']) {
+  switch (status) {
+    case 'active':
+      return 'bg-green-100 text-green-800 border-green-200 font-semibold shadow-sm';
+    case 'draft':
+      return 'bg-gray-100 text-gray-600 border-gray-200 font-medium';
+    case 'completed':
+      return 'bg-blue-100 text-blue-800 border-blue-200 font-medium';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800 border-red-200 font-medium';
+    default:
+      return 'bg-gray-100 text-gray-600 border-gray-200 font-medium';
   }
 }
 
@@ -72,13 +88,8 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <Badge variant={getStatusVariant(tournament.status)} className={
-              tournament.status === 'active' 
-                ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-0' 
-                : tournament.status === 'completed'
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0'
-                : ''
-            }>
+            <Badge variant={getStatusVariant(tournament.status)} className={`${getStatusClasses(tournament.status)} px-3 py-1 text-xs uppercase tracking-wide`}>
+              {tournament.status === 'active' && <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>}
               {tournament.status}
             </Badge>
             {tournament.status === 'active' && (
@@ -193,8 +204,12 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
 
 
 
-export function OrganizerTournamentManager() {
-  const { tournaments, loading, error, createTournament, deleteTournament } = useTournaments();
+interface OrganizerTournamentManagerProps {
+  user: { id: string } | null;
+}
+
+export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerProps) {
+  const { tournaments, loading, error, createTournament, deleteTournament } = useTournaments(user);
   const router = useRouter();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -212,7 +227,7 @@ export function OrganizerTournamentManager() {
   const [assignedStatAdmins, setAssignedStatAdmins] = useState<string[]>([]);
   
   // Team management hook - always call it, but pass empty string if no tournament selected
-  const teamManagement = useTeamManagement(selectedTournament?.id || '');
+  const teamManagement = useTeamManagement(selectedTournament?.id || '', user);
   const [newTournament, setNewTournament] = useState({
     name: "",
     format: "",
@@ -344,18 +359,32 @@ export function OrganizerTournamentManager() {
     if (tournamentToEdit) {
       try {
         console.log('Saving settings for tournament:', tournamentToEdit.name);
+        console.log('Tournament data to save:', tournamentToEdit);
         console.log('Assigned stat admins:', assignedStatAdmins);
         
-        // Save stat admin assignments to games
-        const success = await TeamService.updateTournamentStatAdmins(tournamentToEdit.id, assignedStatAdmins);
+        // Save tournament settings (including status changes)
+        const updatedTournament = await TournamentService.updateTournament({
+          id: tournamentToEdit.id,
+          name: tournamentToEdit.name,
+          description: tournamentToEdit.description,
+          status: tournamentToEdit.status,
+          startDate: tournamentToEdit.startDate,
+          endDate: tournamentToEdit.endDate,
+          maxTeams: tournamentToEdit.maxTeams,
+          tournamentType: tournamentToEdit.tournamentType
+        });
         
-        if (success) {
-          console.log('✅ Tournament settings saved successfully');
+        // Save stat admin assignments to games
+        const statAdminSuccess = await TeamService.updateTournamentStatAdmins(tournamentToEdit.id, assignedStatAdmins);
+        
+        if (updatedTournament && statAdminSuccess) {
+          console.log('✅ Tournament settings and stat admin assignments saved successfully');
           setIsSettingsOpen(false);
           setTournamentToEdit(null);
           setAssignedStatAdmins([]);
+          // The tournaments list will automatically refresh due to React state updates
         } else {
-          console.error('❌ Failed to save stat admin assignments');
+          console.error('❌ Failed to save some tournament settings');
           // Keep modal open so user can retry
         }
       } catch (error) {
@@ -630,7 +659,7 @@ export function OrganizerTournamentManager() {
                       </Card>
                       
                       <Card className="hover:shadow-lg transition-all duration-300 border-0 overflow-hidden">
-                        <div className="bg-gradient-to-br from-accent to-accent/80 text-white">
+                        <div className="bg-gradient-to-br from-green-500 to-green-600 text-white">
                           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-white/90">Total Players</CardTitle>
                             <Users className="h-5 w-5 text-white" />
@@ -823,10 +852,30 @@ export function OrganizerTournamentManager() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="draft">Draft</SelectItem>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                                <SelectItem value="draft" className="text-gray-600 font-medium">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                                    Draft
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="active" className="text-green-700 font-semibold bg-green-50 hover:bg-green-100">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                    Active
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="completed" className="text-blue-700 font-medium bg-blue-50 hover:bg-blue-100">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                    Completed
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="cancelled" className="text-red-700 font-medium bg-red-50 hover:bg-red-100">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                    Cancelled
+                                  </div>
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </div>

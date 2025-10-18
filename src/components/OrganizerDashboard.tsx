@@ -1,5 +1,6 @@
 import { useSearchParams } from "next/navigation";
 import { Users } from "lucide-react";
+import { useAuthV2 } from "@/hooks/useAuthV2";
 import { OrganizerDashboardOverview } from "./OrganizerDashboardOverview";
 import { OrganizerTournamentManager } from "./OrganizerTournamentManager";
 import { OrganizerGameScheduler } from "./OrganizerGameScheduler";
@@ -9,6 +10,7 @@ type ActiveSection = 'overview' | 'tournaments' | 'teams' | 'games' | 'live-stre
 
 export function OrganizerDashboard() {
   const searchParams = useSearchParams();
+  const { user } = useAuthV2();
   
   // Get current section from URL params, default to overview
   const currentSection = (searchParams.get('section') || 'overview') as ActiveSection;
@@ -16,9 +18,9 @@ export function OrganizerDashboard() {
   const renderContent = () => {
     switch (currentSection) {
       case 'overview':
-        return <OrganizerDashboardOverview />;
+        return <OrganizerDashboardOverview user={user} />;
       case 'tournaments':
-        return <OrganizerTournamentManager />;
+        return <OrganizerTournamentManager user={user} />;
       case 'teams':
         return (
           <div className="space-y-6">

@@ -1,6 +1,5 @@
 import { Tournament, TournamentCreateRequest, TournamentUpdateRequest, Team, Player } from '@/lib/types/tournament';
 import { supabase } from '@/lib/supabase';
-import { authServiceV2 } from '@/lib/services/authServiceV2';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 
 // Tournament Business Logic Layer
@@ -69,6 +68,7 @@ export class TournamentService {
       // Map frontend fields to database fields
       if (data.name !== undefined) updateData.name = data.name;
       if (data.description !== undefined) updateData.description = data.description;
+      if (data.status !== undefined) updateData.status = data.status;
       if (data.startDate !== undefined) updateData.start_date = data.startDate;
       if (data.endDate !== undefined) updateData.end_date = data.endDate;
       if (data.venue !== undefined) updateData.venue = data.venue;
@@ -910,10 +910,6 @@ export class TeamService {
     try {
       console.log('🔍 TeamService: Fetching stat admins');
       
-      // First, let's try to get the current user to check permissions
-      const currentUser = await authServiceV2.getUserProfile();
-      console.log('🔍 TeamService: Current user:', currentUser?.id, currentUser?.email);
-      
       // Try the query with detailed error logging
       const { data: statAdmins, error } = await supabase
         .from('users')
@@ -1076,6 +1072,40 @@ export class TeamService {
       return true;
     } catch (error) {
       console.error('Error updating tournament stat admins:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update player information
+   * Note: Player data is stored in the 'users' table, not 'team_players'
+   */
+  static async updatePlayer(playerId: string, updates: {
+    name?: string;
+    position?: string;
+    jerseyNumber?: number;
+  }): Promise<boolean> {
+    try {
+      console.log('🔍 TeamService: Updating player in users table:', playerId, updates);
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          ...(updates.name && { name: updates.name }),
+          ...(updates.position && { position: updates.position }),
+          ...(updates.jerseyNumber && { jersey_number: updates.jerseyNumber })
+        })
+        .eq('id', playerId);
+
+      if (error) {
+        console.error('❌ TeamService: Error updating player:', error);
+        throw new Error(`Failed to update player: ${error.message}`);
+      }
+
+      console.log('✅ TeamService: Player updated successfully in users table');
+      return true;
+    } catch (error) {
+      console.error('❌ TeamService: Error in updatePlayer:', error);
       return false;
     }
   }

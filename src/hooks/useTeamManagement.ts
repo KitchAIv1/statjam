@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TeamService } from '@/lib/services/tournamentService';
 import { Team, Player } from '@/lib/types/tournament';
 
@@ -14,8 +13,7 @@ interface TeamManagementState {
   };
 }
 
-export function useTeamManagement(tournamentId: string) {
-  const { user, loading: authLoading } = useAuthV2();
+export function useTeamManagement(tournamentId: string, user: { id: string } | null) {
   const [state, setState] = useState<TeamManagementState>({
     teams: [],
     loading: true,
@@ -160,10 +158,10 @@ export function useTeamManagement(tournamentId: string) {
 
   // Initial data load
   useEffect(() => {
-    if (!authLoading && user?.id && tournamentId) {
+    if (user?.id && tournamentId) {
       fetchTeams();
     }
-  }, [authLoading, user?.id, tournamentId, fetchTeams]);
+  }, [user?.id, tournamentId, fetchTeams]);
 
   return {
     ...state,
