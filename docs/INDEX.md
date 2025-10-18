@@ -39,12 +39,12 @@ Developer guidelines and procedures
 - Testing Guide
 - Deployment Guide
 
-### 🏗️ [02-Architecture](02-architecture/)
+### 🏗️ [03-Architecture](03-architecture/)
 System design and architecture
 - Backend Architecture
 - Frontend Architecture
 - Database Schema
-- API Documentation
+- Real-time Architecture
 - **Raw HTTP Pattern** - Enterprise Supabase integration solution
 
 ### 🛠️ [04-Fixes](04-fixes/)
@@ -97,11 +97,11 @@ Historical and deprecated documentation
 
 | Topic | Location |
 |-------|----------|
-| **Raw HTTP Pattern** | [02-architecture/RAW_HTTP_PATTERN.md](02-architecture/RAW_HTTP_PATTERN.md) |
+| **Raw HTTP Pattern** | [03-architecture/RAW_HTTP_PATTERN.md](03-architecture/RAW_HTTP_PATTERN.md) |
 | Authentication V2 | [04-features/authentication/](04-features/authentication/) |
 | Stat Tracker V3 | [04-features/stat-tracker/](04-features/stat-tracker/) |
 | Live Viewer | [04-features/live-viewer/](04-features/live-viewer/) |
-| Database Schema | [02-architecture/DATABASE_SCHEMA.md](02-architecture/DATABASE_SCHEMA.md) |
+| Database Schema | [03-architecture/DATABASE_SCHEMA.md](03-architecture/DATABASE_SCHEMA.md) |
 | RLS Policies | [05-database/RLS_POLICIES.md](05-database/RLS_POLICIES.md) |
 | Setup Instructions | [02-development/SETUP_GUIDE.md](02-development/SETUP_GUIDE.md) |
 | Common Issues | [06-troubleshooting/COMMON_ISSUES.md](06-troubleshooting/COMMON_ISSUES.md) |
@@ -128,5 +128,6 @@ When adding new documentation:
 
 ---
 
-**Last Updated**: October 17, 2025  
-**Maintained By**: Development Team
+**Last Updated**: October 18, 2025  
+**Maintained By**: Development Team  
+**Status**: ✅ Auth V2 Migration Complete - Documentation Reorganized
