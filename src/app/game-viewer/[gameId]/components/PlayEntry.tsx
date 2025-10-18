@@ -115,6 +115,10 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
                   <div style={styles.playDescription}>
           <span style={styles.playIcon}>{getPlayIcon(play.statType)}</span>
           {getEnhancedPlayDescription(play.description, play.statType, play.modifier, playerStats)}
+          {/* NBA-Style Player Points Display */}
+          {typeof playerPoints === 'number' && scoringInfo && (
+            <span style={styles.playerPointsBadge}>({playerPoints} PTS)</span>
+          )}
         </div>
           
           {/* Player and Team Info */}
@@ -135,12 +139,6 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
               <span style={styles.nonScoringText}>{play.statType?.toUpperCase()}</span>
             )}
             <span style={styles.scoreAtPlay}>Score: {play.scoreAfter.home}-{play.scoreAfter.away}</span>
-            {typeof playerPoints === 'number' && (
-              <div style={styles.playerPointsContainer}>
-                <div style={styles.playerPointsValue}>{playerPoints}</div>
-                <div style={styles.playerPointsLabel}>POINTS</div>
-              </div>
-            )}
           </div>
 
           {/* Social Reactions Placeholder */}
@@ -299,6 +297,16 @@ const styles = {
     fontSize: figmaTypography.fontSize.xs,
     fontWeight: figmaTypography.fontWeight.semibold,
     color: figmaColors.text.muted
+  },
+  playerPointsBadge: {
+    fontSize: figmaTypography.fontSize.sm,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.accent.blueLight,
+    backgroundColor: 'rgba(96, 165, 250, 0.15)',
+    padding: `${figmaSpacing[0.5]} ${figmaSpacing[2]}`,
+    borderRadius: figmaRadius.base,
+    marginLeft: figmaSpacing[2],
+    letterSpacing: '0.05em'
   },
   playerPointsContainer: {
     display: 'flex',

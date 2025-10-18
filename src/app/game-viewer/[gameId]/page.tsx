@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useEffect, useMemo } from 'react';
+import React, { use, useEffect, useMemo, useCallback } from 'react';
 import { useGameViewerV2 } from '@/hooks/useGameViewerV2';
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
@@ -48,6 +48,29 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
     homeScore: actualGame?.home_score || 0,
     awayScore: actualGame?.away_score || 0
   }), [actualGame?.team_a_name, actualGame?.team_b_name, actualGame?.home_score, actualGame?.away_score]);
+
+  // Calculate cumulative player points up to a specific play (NBA-style)
+  const calculatePlayerPoints = useCallback((currentPlayIndex: number, playerId?: string): number | undefined => {
+    if (!playerId || !playsV2) return undefined;
+    
+    let totalPoints = 0;
+    
+    // playsV2 is ordered by created_at.desc (newest first)
+    // We need to count all scoring plays for this player from the beginning of the game
+    // up to and including the current play
+    const totalPlays = playsV2.length;
+    
+    // Iterate from the end of the array (oldest plays) to the current play
+    for (let i = totalPlays - 1; i >= currentPlayIndex; i--) {
+      const play = playsV2[i];
+      
+      if (play.playerId === playerId && play.points && play.points > 0) {
+        totalPoints += play.points;
+      }
+    }
+    
+    return totalPoints > 0 ? totalPoints : undefined;
+  }, [playsV2]);
 
   // Clean V2-only implementation
 
@@ -132,6 +155,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
                   game={memoizedGame}
                   isLive={actualGame?.status?.toLowerCase().includes('live') || actualGame?.status?.toLowerCase().includes('in_progress') || false}
                   isMobile={false}
+                  calculatePlayerPoints={calculatePlayerPoints}
                 />
               </TabsContent>
 
