@@ -135,16 +135,16 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
       <div style={styles.tabsContainer}>
         <Tabs defaultValue="feed" className="w-full">
           <TabsList className="w-full bg-gray-800 border-b border-gray-700 rounded-none h-auto p-0">
-            <TabsTrigger value="feed" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+            <TabsTrigger value="feed" className="flex-1 data-[state=active]:bg-gray-700/50 data-[state=active]:border-b-2 data-[state=active]:border-gray-500 data-[state=active]:text-gray-200 rounded-none py-3 text-gray-400 hover:text-gray-300 transition-colors">
               Feed
             </TabsTrigger>
-            <TabsTrigger value="game" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
-              Game
+            <TabsTrigger value="game" className="flex-1 data-[state=active]:bg-gray-700/50 data-[state=active]:border-b-2 data-[state=active]:border-gray-500 data-[state=active]:text-gray-200 rounded-none py-3 text-gray-400 hover:text-gray-300 transition-colors">
+              Box Score
             </TabsTrigger>
-            <TabsTrigger value="teamA" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+            <TabsTrigger value="teamA" className="flex-1 data-[state=active]:bg-gray-700/50 data-[state=active]:border-b-2 data-[state=active]:border-gray-500 data-[state=active]:text-gray-200 rounded-none py-3 text-gray-400 hover:text-gray-300 transition-colors">
               {actualGame.team_a_name || 'Team A'}
             </TabsTrigger>
-            <TabsTrigger value="teamB" className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-400 rounded-none py-3 text-white">
+            <TabsTrigger value="teamB" className="flex-1 data-[state=active]:bg-gray-700/50 data-[state=active]:border-b-2 data-[state=active]:border-gray-500 data-[state=active]:text-gray-200 rounded-none py-3 text-gray-400 hover:text-gray-300 transition-colors">
               {actualGame.team_b_name || 'Team B'}
             </TabsTrigger>
           </TabsList>

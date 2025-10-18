@@ -138,7 +138,18 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
             ) : (
               <span style={styles.nonScoringText}>{play.statType?.toUpperCase()}</span>
             )}
-            <span style={styles.scoreAtPlay}>Score: {play.scoreAfter.home}-{play.scoreAfter.away}</span>
+            <span style={styles.scoreAtPlay}>
+              {teamAName} {play.scoreAfter.home}, {teamBName} {play.scoreAfter.away}
+              {play.scoreAfter.home !== play.scoreAfter.away && (
+                <span style={styles.leadIndicator}>
+                  {' • '}
+                  {play.scoreAfter.home > play.scoreAfter.away 
+                    ? `+${play.scoreAfter.home - play.scoreAfter.away} ${teamAName.substring(0, 3).toUpperCase()}`
+                    : `+${play.scoreAfter.away - play.scoreAfter.home} ${teamBName.substring(0, 3).toUpperCase()}`
+                  }
+                </span>
+              )}
+            </span>
           </div>
 
           {/* Social Reactions Placeholder */}
@@ -297,6 +308,11 @@ const styles = {
     fontSize: figmaTypography.fontSize.xs,
     fontWeight: figmaTypography.fontWeight.semibold,
     color: figmaColors.text.muted
+  },
+  leadIndicator: {
+    fontSize: figmaTypography.fontSize.xs,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.accent.blueLight
   },
   playerPointsBadge: {
     fontSize: figmaTypography.fontSize.sm,
