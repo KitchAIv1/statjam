@@ -70,7 +70,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
 
 const styles = {
   container: {
-    background: '#1a1a1a',
+    backgroundColor: '#1a1a1a',
     borderBottom: '1px solid #333',
     position: 'sticky' as const,
     top: '140px', // Below header
@@ -83,7 +83,7 @@ const styles = {
   },
   tab: {
     position: 'relative' as const,
-    background: 'transparent',
+    backgroundColor: 'transparent',
     border: 'none',
     padding: '16px 24px',
     cursor: 'pointer',
@@ -91,7 +91,7 @@ const styles = {
     outline: 'none'
   },
   activeTab: {
-    background: 'rgba(255, 215, 0, 0.1)'
+    backgroundColor: 'rgba(255, 215, 0, 0.1)'
   },
   disabledTab: {
     cursor: 'not-allowed',
@@ -115,11 +115,11 @@ const styles = {
     left: 0,
     right: 0,
     height: '3px',
-    background: '#FFD700'
+    backgroundColor: '#FFD700'
   },
   comingSoon: {
     padding: '8px 20px',
-    background: 'rgba(75, 0, 130, 0.1)',
+    backgroundColor: 'rgba(75, 0, 130, 0.1)',
     borderTop: '1px solid #333'
   },
   comingSoonText: {

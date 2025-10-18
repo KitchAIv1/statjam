@@ -44,7 +44,7 @@ const GameHeader: React.FC<GameHeaderProps> = ({ game, isLive, lastUpdated, isMo
     <div style={styles.container}>
       {/* Status Bar */}
       <div style={styles.statusBar}>
-        <div style={{...styles.statusIndicator, background: getStatusColor(isLive, game.status)}} />
+        <div style={{...styles.statusIndicator, backgroundColor: getStatusColor(isLive, game.status)}} />
         <span style={styles.statusText}>
           {isLive ? 'LIVE' : getGameStatusText(game.status, game.quarter, game.startTime)}
         </span>
@@ -169,7 +169,7 @@ const styles = {
     width: '48px',
     height: '48px',
     borderRadius: figmaRadius.lg,
-    background: figmaColors.accent.purple,
+    backgroundColor: figmaColors.accent.purple,
     color: figmaColors.text.primary,
     display: 'flex',
     alignItems: 'center',

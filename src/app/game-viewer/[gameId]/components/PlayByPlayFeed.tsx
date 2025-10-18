@@ -193,7 +193,7 @@ const styles = {
   liveDot: {
     width: '6px',
     height: '6px',
-    background: figmaColors.status.live,
+    backgroundColor: figmaColors.status.live,
     borderRadius: figmaRadius.full,
     animation: 'pulse 2s infinite'
   },
@@ -202,12 +202,12 @@ const styles = {
     alignItems: 'center',
     padding: `${figmaSpacing[4]} ${figmaSpacing[4]}`,
     gap: figmaSpacing[4],
-    background: 'rgba(96, 165, 250, 0.08)'
+    backgroundColor: 'rgba(96, 165, 250, 0.08)'
   },
   quarterLine: {
     flex: 1,
     height: '1px',
-    background: figmaColors.accent.blue,
+    backgroundColor: figmaColors.accent.blue,
     opacity: 0.3
   },
   quarterLabel: {
@@ -225,7 +225,7 @@ const styles = {
     textAlign: 'center' as const
   },
   loadMoreButton: {
-    background: 'transparent',
+    backgroundColor: 'transparent',
     border: `1px solid ${figmaColors.accent.blue}`,
     color: figmaColors.accent.blue,
     padding: `${figmaSpacing[3]} ${figmaSpacing[4]}`,

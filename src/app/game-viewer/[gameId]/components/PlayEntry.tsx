@@ -174,7 +174,7 @@ const styles = {
     position: 'relative' as const
   },
   latestPlay: {
-    background: 'rgba(96, 165, 250, 0.08)',
+    backgroundColor: 'rgba(96, 165, 250, 0.08)',
     borderLeft: `4px solid ${figmaColors.accent.blue}`
   },
   timeSection: {
@@ -187,7 +187,7 @@ const styles = {
     fontSize: figmaTypography.fontSize.xs,
     fontWeight: figmaTypography.fontWeight.bold,
     color: figmaColors.accent.blueLight,
-    background: 'rgba(96, 165, 250, 0.12)',
+    backgroundColor: 'rgba(96, 165, 250, 0.12)',
     padding: `${figmaSpacing[1]} ${figmaSpacing[2]}`,
     borderRadius: figmaRadius.base,
     letterSpacing: '0.05em'
@@ -217,7 +217,7 @@ const styles = {
     width: '40px',
     height: '40px',
     borderRadius: figmaRadius.full,
-    background: figmaColors.accent.purple,
+    backgroundColor: figmaColors.accent.purple,
     color: figmaColors.text.primary,
     display: 'flex',
     alignItems: 'center',
@@ -275,7 +275,7 @@ const styles = {
     fontSize: figmaTypography.fontSize.xs,
     fontWeight: figmaTypography.fontWeight.semibold,
     color: figmaColors.status.success,
-    background: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
     padding: `${figmaSpacing[0.5]} ${figmaSpacing[2]}`,
     borderRadius: figmaRadius.base
   },
@@ -283,7 +283,7 @@ const styles = {
     fontSize: figmaTypography.fontSize.lg,
     fontWeight: figmaTypography.fontWeight.extrabold,
     color: figmaColors.status.success,
-    background: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
     padding: `${figmaSpacing[1]} ${figmaSpacing[3]}`,
     borderRadius: figmaRadius.base
   },
@@ -291,7 +291,7 @@ const styles = {
     fontSize: figmaTypography.fontSize.xs,
     fontWeight: figmaTypography.fontWeight.semibold,
     color: figmaColors.accent.blueLight,
-    background: 'rgba(96, 165, 250, 0.12)',
+    backgroundColor: 'rgba(96, 165, 250, 0.12)',
     padding: `${figmaSpacing[0.5]} ${figmaSpacing[2]}`,
     borderRadius: figmaRadius.base
   },
@@ -345,7 +345,7 @@ const styles = {
   latestDot: {
     width: '6px',
     height: '6px',
-    background: figmaColors.accent.blue,
+    backgroundColor: figmaColors.accent.blue,
     borderRadius: figmaRadius.full,
     animation: 'pulse 2s infinite'
   },

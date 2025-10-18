@@ -308,7 +308,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    background: '#ff0000',
+    backgroundColor: '#ff0000',
     padding: '8px 16px',
     borderRadius: '20px',
     boxShadow: '0 4px 12px rgba(255, 0, 0, 0.3)',
@@ -317,7 +317,7 @@ const styles = {
   liveDot: {
     width: '8px',
     height: '8px',
-    background: '#ffffff',
+    backgroundColor: '#ffffff',
     borderRadius: '50%',
     animation: 'pulse 2s infinite'
   },
