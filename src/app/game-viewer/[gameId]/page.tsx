@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useEffect } from 'react';
+import React, { use, useEffect, useMemo } from 'react';
 import { useGameViewerV2 } from '@/hooks/useGameViewerV2';
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
@@ -40,6 +40,14 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   const actualGame = gameV2;
   const actualLoading = loadingV2;
   const actualError = errorV2;
+
+  // Memoize game object to prevent unnecessary re-renders
+  const memoizedGame = useMemo(() => ({
+    teamAName: actualGame?.team_a_name || 'Team A',
+    teamBName: actualGame?.team_b_name || 'Team B',
+    homeScore: actualGame?.home_score || 0,
+    awayScore: actualGame?.away_score || 0
+  }), [actualGame?.team_a_name, actualGame?.team_b_name, actualGame?.home_score, actualGame?.away_score]);
 
   // Clean V2-only implementation
 
@@ -121,12 +129,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               <TabsContent value="feed" className="mt-0">
                 <PlayByPlayFeed
                   playByPlay={playsV2 || []}
-                  game={{
-                    teamAName: actualGame?.team_a_name || 'Team A',
-                    teamBName: actualGame?.team_b_name || 'Team B',
-                    homeScore: actualGame?.home_score || 0,
-                    awayScore: actualGame?.away_score || 0
-                  }}
+                  game={memoizedGame}
                   isLive={actualGame?.status?.toLowerCase().includes('live') || actualGame?.status?.toLowerCase().includes('in_progress') || false}
                   isMobile={false}
                 />

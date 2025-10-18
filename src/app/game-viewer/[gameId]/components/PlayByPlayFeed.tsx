@@ -33,6 +33,8 @@ interface PlayByPlayFeedProps {
  * 
  * Live feed showing real-time game actions.
  * Matches NBA.com play-by-play design with premium styling.
+ * 
+ * Optimized with React.memo to prevent unnecessary re-renders
  */
 const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({ 
   playByPlay, 

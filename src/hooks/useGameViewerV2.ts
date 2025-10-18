@@ -177,12 +177,16 @@ export function useGameViewerV2(gameId: string): GameViewerData {
   const [plays, setPlays] = useState<PlayByPlayEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const fetchGameData = useCallback(async () => {
+  const fetchGameData = useCallback(async (isUpdate: boolean = false) => {
     if (!gameId) return;
 
     try {
-      setLoading(true);
+      // Only show loading spinner on initial load, not on updates
+      if (!isUpdate) {
+        setLoading(true);
+      }
       setError(null);
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -372,12 +376,19 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       setStats([]);
       setPlays([]);
     } finally {
-      setLoading(false);
+      // Only set loading to false on initial load
+      if (!isUpdate) {
+        setLoading(false);
+      }
+      // Mark that initial load is complete
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
     }
-  }, [gameId]);
+  }, [gameId, isInitialLoad]);
 
   useEffect(() => {
-    void fetchGameData();
+    void fetchGameData(false); // Initial load
   }, [fetchGameData]);
 
   // 🏀 USE EXISTING HYBRID SYSTEM: WebSocket subscriptions via gameSubscriptionManager
@@ -389,8 +400,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
     // Use the existing hybrid subscription system
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
       console.log('🔔 useGameViewerV2: Real-time update received:', table, payload);
-      // Only refetch when we get real updates
-      void fetchGameData();
+      // Silent update - no loading spinner
+      void fetchGameData(true);
     });
 
     return unsubscribe;
