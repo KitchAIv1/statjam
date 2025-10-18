@@ -115,17 +115,17 @@ export function TopScoreboardV3({
       }}
     >
       {/* NBA Standard Layout: Team Names & Scores */}
-      <div className="grid grid-cols-3 gap-24 lg:gap-32 items-center mb-4">
+      <div className="grid grid-cols-3 gap-8 md:gap-16 lg:gap-24 xl:gap-32 items-center mb-4">
         
         {/* Team A Section */}
         <div className="text-center">
           <div 
-            className="text-xl lg:text-2xl font-bold mb-2"
+            className="text-lg md:text-xl lg:text-2xl font-bold mb-2"
             style={{ color: 'var(--dashboard-text-primary)' }}
           >
             {teamAName}
           </div>
-          <div className="text-4xl lg:text-5xl font-black text-orange-500 leading-none mb-3">
+          <div className="text-3xl md:text-4xl lg:text-5xl font-black text-orange-500 leading-none mb-3">
             {teamAScore}
           </div>
           
@@ -164,7 +164,7 @@ export function TopScoreboardV3({
           {/* Quarter and Shot Clock Row - Side by Side Containers */}
           <div className="flex items-stretch gap-6">
             {/* Left Container - Quarter + Game Clock + Start/Reset Buttons */}
-            <div className="flex flex-col items-center justify-between gap-3 p-4 rounded-xl border-2 bg-white shadow-lg min-w-[280px]" style={{ borderColor: '#e5e7eb' }}>
+            <div className="flex flex-col items-center justify-between gap-3 p-3 md:p-4 rounded-xl border-2 bg-white shadow-lg min-w-[240px] md:min-w-[280px]" style={{ borderColor: '#e5e7eb' }}>
               {/* Quarter Display */}
               <div 
                 className="px-5 py-2 rounded-xl text-lg font-black border-2 shadow-lg"
@@ -215,7 +215,7 @@ export function TopScoreboardV3({
                   // Normal Mode - Clock display
                   <>
                     <div 
-                      className={`text-4xl lg:text-5xl font-mono font-black leading-none mb-2 ${
+                      className={`text-3xl md:text-4xl lg:text-5xl font-mono font-black leading-none mb-2 ${
                         isRunning ? 'text-green-500' : 'text-red-500'
                       }`}
                     >
@@ -300,12 +300,12 @@ export function TopScoreboardV3({
 
             {/* Right Container - Shot Clock + 2x2 Button Grid */}
             {shotClockIsVisible && (
-              <div className="flex flex-col items-center justify-between gap-3 p-4 rounded-xl border-2 bg-white shadow-lg min-w-[280px]" style={{ borderColor: '#e5e7eb' }}>
+              <div className="flex flex-col items-center justify-between gap-3 p-3 md:p-4 rounded-xl border-2 bg-white shadow-lg min-w-[240px] md:min-w-[280px]" style={{ borderColor: '#e5e7eb' }}>
                 {/* Shot Clock Display */}
                 <div className="flex flex-col items-center w-full">
                   <div className="text-sm font-semibold text-gray-600 mb-2 tracking-wide">SHOT CLOCK</div>
                   <div 
-                    className={`text-4xl lg:text-5xl font-mono font-black leading-none px-4 py-2 rounded-lg ${
+                    className={`text-3xl md:text-4xl lg:text-5xl font-mono font-black leading-none px-4 py-2 rounded-lg ${
                       shotClockSeconds !== undefined && shotClockSeconds <= 5 ? 'text-red-500' : 
                       shotClockSeconds !== undefined && shotClockSeconds <= 10 ? 'text-orange-500' : 
                       shotClockIsRunning ? 'text-green-500' : 'text-gray-500'
@@ -366,12 +366,12 @@ export function TopScoreboardV3({
         {/* Team B Section */}
         <div className="text-center">
           <div 
-            className="text-xl lg:text-2xl font-bold mb-2"
+            className="text-lg md:text-xl lg:text-2xl font-bold mb-2"
             style={{ color: 'var(--dashboard-text-primary)' }}
           >
             {teamBName}
           </div>
-          <div className="text-4xl lg:text-5xl font-black text-blue-500 leading-none mb-3">
+          <div className="text-3xl md:text-4xl lg:text-5xl font-black text-blue-500 leading-none mb-3">
             {teamBScore}
           </div>
           

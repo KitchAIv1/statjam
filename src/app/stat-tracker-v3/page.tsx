@@ -50,6 +50,19 @@ function StatTrackerV3Content() {
   const params = useSearchParams();
   const { isMobile, isDesktop } = useResponsiveLayout();
   
+  // Enhanced device detection for better tablet support
+  const [screenWidth, setScreenWidth] = useState(0);
+  
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    handleResize(); // Initial check
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const isLargeDesktop = screenWidth >= 1280;
+  
   // URL Parameters
   const gameIdParam = params.get('gameId') || '';
   const teamAParam = params.get('teamAId') || '';
@@ -429,10 +442,14 @@ function StatTrackerV3Content() {
           onShotClockSetTime={tracker.setShotClockTime}
         />
 
-        {/* Main Content Grid - iPad Optimized Layout: No Scrolling */}
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-3 items-start flex-1 min-h-0">
-          {/* Left Column - Team A Roster (Wider for iPad) */}
-          <div className="lg:col-span-2">
+        {/* Main Content Grid - Responsive Layout: Mobile/Tablet/Desktop */}
+        <div className={`grid gap-3 items-start flex-1 min-h-0 ${
+          isTablet 
+            ? 'grid-cols-1 md:grid-cols-5' 
+            : 'grid-cols-1 lg:grid-cols-7'
+        }`}>
+          {/* Left Column - Team A Roster */}
+          <div className={isTablet ? "md:col-span-2" : "lg:col-span-2"}>
             <div className="h-full">
               <TeamRosterV3
                 players={teamAPlayers}
@@ -446,7 +463,7 @@ function StatTrackerV3Content() {
           </div>
 
           {/* Center Column - Stat Interface */}
-          <div className="lg:col-span-3">
+          <div className={isTablet ? "md:col-span-1" : "lg:col-span-3"}>
             <div className="h-full">
               <DesktopStatGridV3
                 selectedPlayer={selectedPlayer}
@@ -467,8 +484,8 @@ function StatTrackerV3Content() {
             </div>
           </div>
 
-          {/* Right Column - Team B Roster (Wider for iPad) */}
-          <div className="lg:col-span-2">
+          {/* Right Column - Team B Roster */}
+          <div className={isTablet ? "md:col-span-2" : "lg:col-span-2"}>
             <div className="h-full">
               <TeamRosterV3
                 players={teamBPlayers}
