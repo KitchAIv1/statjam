@@ -401,11 +401,11 @@ function StatTrackerV3Content() {
     );
   }
 
-  // Desktop Layout - iPad Optimized (No Scrolling)
+  // Desktop Layout - Responsive with Optional Scrolling
   return (
     <ErrorBoundary>
-      <div className="h-screen overflow-hidden" style={{ background: 'linear-gradient(135deg, #1f2937, #111827)' }}>
-        <div className="container mx-auto px-3 py-3 max-w-7xl h-full flex flex-col">
+      <div className="min-h-screen overflow-y-auto" style={{ background: 'linear-gradient(135deg, #1f2937, #111827)' }}>
+        <div className="container mx-auto px-3 py-3 max-w-7xl min-h-screen flex flex-col">
         {/* Header */}
         <GameHeaderV3 
           gameId={gameData.id}

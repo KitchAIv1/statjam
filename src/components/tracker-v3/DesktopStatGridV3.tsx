@@ -146,9 +146,7 @@ export function DesktopStatGridV3({
         borderColor: '#e5e7eb',
         borderWidth: '1px',
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        minHeight: '650px',
-        maxHeight: '650px',
-        height: '650px'
+        minHeight: '650px'
       }}
     >
 
