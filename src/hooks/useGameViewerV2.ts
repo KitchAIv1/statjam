@@ -77,19 +77,21 @@ interface GameViewerData {
 }
 
 /**
- * Transform raw stats into play-by-play entries with running score calculation
+ * Transform raw stats AND substitutions into play-by-play entries with running score calculation
  */
 function transformStatsToPlays(
   stats: GameStats[], 
   teamAId: string, 
   teamBId: string,
   teamAName: string,
-  teamBName: string
+  teamBName: string,
+  substitutions: any[] = []
 ): PlayByPlayEntry[] {
   let runningScoreHome = 0;
   let runningScoreAway = 0;
   
-  return stats.map(stat => {
+  // Convert stats to play entries
+  const statPlays = stats.map(stat => {
     const teamName = stat.team_id === teamAId ? teamAName : 
                      stat.team_id === teamBId ? teamBName : 
                      'Unknown Team';
@@ -169,6 +171,42 @@ function transformStatsToPlays(
       }
     };
   });
+
+  // Convert substitutions to play entries
+  const substitutionPlays = substitutions.map(sub => {
+    const teamName = sub.team_id === teamAId ? teamAName : 
+                     sub.team_id === teamBId ? teamBName : 
+                     'Unknown Team';
+    
+    const description = `SUB: ${sub.player_in_name} in for ${sub.player_out_name}`;
+    
+    return {
+      id: sub.id,
+      timestamp: sub.created_at,
+      quarter: sub.quarter || 1,
+      gameTimeMinutes: sub.game_time_minutes || 0,
+      gameTimeSeconds: sub.game_time_seconds || 0,
+      description,
+      statType: 'substitution',
+      playerId: sub.player_in_id,
+      playerName: sub.player_in_name,
+      teamId: sub.team_id || '',
+      teamName,
+      modifier: null,
+      points: 0,
+      scoreAfter: {
+        home: runningScoreHome,
+        away: runningScoreAway
+      }
+    };
+  });
+
+  // Merge stats and substitutions, sort by timestamp (newest first)
+  const allPlays = [...statPlays, ...substitutionPlays].sort((a, b) => {
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
+
+  return allPlays;
 }
 
 export function useGameViewerV2(gameId: string): GameViewerData {
@@ -257,14 +295,16 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         { headers }
       );
 
+      // Shared playersMap for both stats and substitutions
+      let playersMap = new Map<string, string>();
       let gameStats: GameStats[] = [];
+      
       if (statsResponse.ok) {
         gameStats = await statsResponse.json();
         console.log('🏀 useGameViewerV2: Fetched', gameStats.length, 'game_stats rows');
         
         // 4b. Fetch player names for the stats
         const playerIds = [...new Set(gameStats.map(s => s.player_id).filter(Boolean))];
-        let playersMap = new Map<string, string>();
         
         if (playerIds.length > 0) {
           const playersResponse = await fetch(
@@ -293,7 +333,54 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         console.error('❌ useGameViewerV2: Failed to fetch game_stats:', statsResponse.status, await statsResponse.text());
       }
 
-      // 5. Enrich game data
+      // 5. Fetch game substitutions
+      const subsResponse = await fetch(
+        `${supabaseUrl}/rest/v1/game_substitutions?select=*&game_id=eq.${gameId}&order=created_at.asc`,
+        { headers }
+      );
+
+      let gameSubstitutions: any[] = [];
+      if (subsResponse.ok) {
+        gameSubstitutions = await subsResponse.json();
+        console.log('🔄 useGameViewerV2: Fetched', gameSubstitutions.length, 'substitutions');
+        
+        // Enrich substitutions with player names
+        const subPlayerIds = [...new Set([
+          ...gameSubstitutions.map(s => s.player_in_id).filter(Boolean),
+          ...gameSubstitutions.map(s => s.player_out_id).filter(Boolean)
+        ])];
+        
+        // Fetch player names for substitutions (if not already in playersMap)
+        const newPlayerIds = subPlayerIds.filter(id => !playersMap.has(id));
+        if (newPlayerIds.length > 0) {
+          const subPlayersResponse = await fetch(
+            `${supabaseUrl}/rest/v1/users?select=id,name,email&id=in.(${newPlayerIds.join(',')})`,
+            { headers }
+          );
+          
+          if (subPlayersResponse.ok) {
+            const subPlayersData = await subPlayersResponse.json();
+            subPlayersData.forEach((p: any) => {
+              playersMap.set(
+                p.id,
+                p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`
+              );
+            });
+          }
+        }
+        
+        // Enrich substitutions with player names
+        gameSubstitutions = gameSubstitutions.map(sub => ({
+          ...sub,
+          player_in_name: playersMap.get(sub.player_in_id) || `Player ${sub.player_in_id?.substring(0, 8)}`,
+          player_out_name: playersMap.get(sub.player_out_id) || `Player ${sub.player_out_id?.substring(0, 8)}`
+        }));
+        
+      } else {
+        console.error('❌ useGameViewerV2: Failed to fetch substitutions:', subsResponse.status, await subsResponse.text());
+      }
+
+      // 6. Enrich game data
       const teamAName = teamsMap.get(gameInfo.team_a_id) || 'Team A';
       const teamBName = teamsMap.get(gameInfo.team_b_id) || 'Team B';
       
@@ -304,13 +391,14 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         tournament_name: tournamentName
       };
 
-      // 6. Transform stats into play-by-play entries
+      // 7. Transform stats AND substitutions into play-by-play entries
       const playByPlayEntries = transformStatsToPlays(
         gameStats,
         gameInfo.team_a_id,
         gameInfo.team_b_id,
         teamAName,
-        teamBName
+        teamBName,
+        gameSubstitutions
       );
 
       console.log('🏀 useGameViewerV2: Fetched', gameStats.length, 'stats, transformed into', playByPlayEntries.length, 'plays');

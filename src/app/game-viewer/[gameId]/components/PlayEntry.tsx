@@ -79,11 +79,13 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
 
   const scoringInfo = getScoringInfo(play.statType, play.modifier);
   const teamName = getTeamName();
+  const isSubstitution = play.statType === 'substitution';
 
   return (
     <div style={{
       ...styles.container,
-      ...(isLatest ? styles.latestPlay : {})
+      ...(isLatest ? styles.latestPlay : {}),
+      ...(isSubstitution ? styles.substitutionPlay : {})
     }}>
       {/* Time and Quarter Info */}
         <div style={styles.timeSection}>
@@ -135,6 +137,8 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
           <div style={styles.badgeRow}>
             {scoringInfo ? (
               <span style={styles.scoringTextLarge}>{scoringInfo.description}</span>
+            ) : isSubstitution ? (
+              <span style={styles.substitutionText}>SUBSTITUTION</span>
             ) : (
               <span style={styles.nonScoringText}>{play.statType?.toUpperCase()}</span>
             )}
@@ -388,6 +392,19 @@ const styles = {
   reactionItem: {
     fontSize: figmaTypography.fontSize.xs,
     cursor: 'pointer'
+  },
+  substitutionPlay: {
+    backgroundColor: 'rgba(99, 102, 241, 0.08)', // Indigo tint for substitutions
+    borderLeft: `3px solid ${figmaColors.accent.blue}`
+  },
+  substitutionText: {
+    fontSize: figmaTypography.fontSize.sm,
+    fontWeight: figmaTypography.fontWeight.bold,
+    color: figmaColors.accent.blue,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    padding: `${figmaSpacing[1]} ${figmaSpacing[2]}`,
+    borderRadius: figmaRadius.base,
+    letterSpacing: '0.05em'
   }
 };
 

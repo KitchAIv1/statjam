@@ -51,7 +51,9 @@ export class TeamServiceV3 {
         'apikey': this.SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
+        'Prefer': 'return=representation',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
       }
     });
 
@@ -113,6 +115,104 @@ export class TeamServiceV3 {
     } catch (error: any) {
       console.error('❌ TeamServiceV3: Failed to get team players:', error);
       throw new Error(`Failed to load team players: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get team players with current substitution state for a specific game
+   * This method applies substitutions to show who's actually on court vs bench
+   */
+  static async getTeamPlayersWithSubstitutions(teamId: string, gameId?: string): Promise<any[]> {
+    try {
+      console.log('🚀 TeamServiceV3: Fetching team players with substitutions for team:', teamId, 'game:', gameId);
+
+      // Get base roster from team_players
+      const basePlayers = await this.getTeamPlayers(teamId);
+      
+      if (!gameId) {
+        console.log('📝 TeamServiceV3: No gameId provided, returning base roster');
+        return basePlayers;
+      }
+
+      // Get substitutions for this game and team
+      const substitutions = await this.makeRequest<any>('game_substitutions', {
+        'select': 'player_in_id,player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
+        'game_id': `eq.${gameId}`,
+        'team_id': `eq.${teamId}`,
+        'order': 'created_at.asc' // Apply substitutions in chronological order
+      });
+
+      console.log('✅ TeamServiceV3: Found', substitutions.length, 'substitutions for this game/team');
+
+      if (substitutions.length === 0) {
+        console.log('📝 TeamServiceV3: No substitutions found, returning base roster');
+        return basePlayers;
+      }
+
+      // NEW APPROACH: Track current on-court status based on substitutions
+      // Instead of swapping positions, determine who should be on court vs bench
+      
+      console.log('🔍 SUBSTITUTION LOGIC DEBUG:', {
+        baseRosterCount: basePlayers.length,
+        substitutionsToApply: substitutions.length,
+        baseRosterFirstFive: basePlayers.slice(0, 5).map(p => ({ id: p.id, name: p.name }))
+      });
+
+      // Start with first 5 players as on-court, rest as bench
+      const onCourtPlayerIds = new Set(basePlayers.slice(0, 5).map(p => p.id));
+      const benchPlayerIds = new Set(basePlayers.slice(5).map(p => p.id));
+
+      console.log('🏀 Initial state:', {
+        onCourt: Array.from(onCourtPlayerIds),
+        bench: Array.from(benchPlayerIds)
+      });
+
+      // Apply each substitution to update on-court status
+      let substitutionCount = 0;
+      for (const sub of substitutions) {
+        const playerOutId = sub.player_out_id;
+        const playerInId = sub.player_in_id;
+
+        console.log(`🔄 Processing substitution ${substitutionCount + 1}: ${playerOutId} → ${playerInId}`);
+
+        // Move player out from on-court to bench
+        if (onCourtPlayerIds.has(playerOutId)) {
+          onCourtPlayerIds.delete(playerOutId);
+          benchPlayerIds.add(playerOutId);
+        }
+
+        // Move player in from bench to on-court
+        if (benchPlayerIds.has(playerInId)) {
+          benchPlayerIds.delete(playerInId);
+          onCourtPlayerIds.add(playerInId);
+        }
+
+        substitutionCount++;
+        console.log(`✅ Applied substitution ${substitutionCount}:`, {
+          onCourt: Array.from(onCourtPlayerIds),
+          bench: Array.from(benchPlayerIds)
+        });
+      }
+
+      // Rebuild roster with on-court players first, then bench players
+      const onCourtPlayers = basePlayers.filter(p => onCourtPlayerIds.has(p.id));
+      const benchPlayers = basePlayers.filter(p => benchPlayerIds.has(p.id));
+      const currentRoster = [...onCourtPlayers, ...benchPlayers];
+
+      console.log('🎯 FINAL ROSTER STATE:', {
+        totalSubstitutions: substitutionCount,
+        finalOnCourtCount: onCourtPlayers.length,
+        finalBenchCount: benchPlayers.length,
+        finalFirstFive: currentRoster.slice(0, 5).map(p => ({ id: p.id, name: p.name })),
+        finalRosterOrder: currentRoster.map(p => ({ id: p.id, name: p.name }))
+      });
+
+      return currentRoster;
+
+    } catch (error: any) {
+      console.error('❌ TeamServiceV3: Failed to get team players with substitutions:', error);
+      // Fallback to base roster if substitution logic fails
+      return this.getTeamPlayers(teamId);
     }
   }
 

@@ -18,6 +18,7 @@ interface TeamRosterV3Props {
   selectedPlayer: string | null;
   onPlayerSelect: (playerId: string) => void;
   onSubstitution?: (playerId: string) => void;
+  refreshKey?: string | number; // Add refresh key to force re-render
 }
 
 export function TeamRosterV3({
@@ -26,7 +27,8 @@ export function TeamRosterV3({
   teamSide,
   selectedPlayer,
   onPlayerSelect,
-  onSubstitution
+  onSubstitution,
+  refreshKey = 0
 }: TeamRosterV3Props) {
   
   // Generate player initials with proper fallback handling
@@ -127,13 +129,13 @@ export function TeamRosterV3({
         </div>
 
         <div className="grid grid-cols-1 gap-2 flex-1 overflow-y-auto">
-          {onCourtPlayers.map((player) => {
+          {onCourtPlayers.map((player, index) => {
             const isSelected = selectedPlayer === player.id;
             const playerColor = getPlayerColor(player.name);
             
             return (
               <div
-                key={player.id}
+                key={`${player.id}-${index}-${refreshKey}`}
                 className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
                   isSelected
                     ? teamSide === 'left'

@@ -80,7 +80,9 @@ function StatTrackerV3Content() {
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [subOutPlayer, setSubOutPlayer] = useState<string | null>(null);
+  const [isSubstituting, setIsSubstituting] = useState(false);
   const [shotClockViolation, setShotClockViolation] = useState(false);
+  const [rosterRefreshKey, setRosterRefreshKey] = useState<string | number>(0);
 
   // Initialize tracker with game data (only when we have valid team IDs)
   const tracker = useTracker({
@@ -135,22 +137,22 @@ function StatTrackerV3Content() {
 
         console.log('🔄 Loading team players...');
         
-        // Load Team A players with individual error handling
+        // Load Team A players with individual error handling (including substitutions)
         let teamAPlayersData: Player[] = [];
         try {
-          teamAPlayersData = await TeamServiceV3.getTeamPlayers(game.team_a_id);
-          console.log('✅ Team A players loaded:', teamAPlayersData.length);
+          teamAPlayersData = await TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_a_id, game.id);
+          console.log('✅ Team A players loaded (with substitutions):', teamAPlayersData.length);
           setTeamAPlayers(teamAPlayersData);
         } catch (teamAError) {
           console.error('❌ Failed to load Team A players:', teamAError);
           setTeamAPlayers([]);
         }
 
-        // Load Team B players with individual error handling  
+        // Load Team B players with individual error handling (including substitutions)
         let teamBPlayersData: Player[] = [];
         try {
-          teamBPlayersData = await TeamServiceV3.getTeamPlayers(game.team_b_id);
-          console.log('✅ Team B players loaded:', teamBPlayersData.length);
+          teamBPlayersData = await TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_b_id, game.id);
+          console.log('✅ Team B players loaded (with substitutions):', teamBPlayersData.length);
           setTeamBPlayers(teamBPlayersData);
         } catch (teamBError) {
           console.error('❌ Failed to load Team B players:', teamBError);
@@ -306,29 +308,13 @@ function StatTrackerV3Content() {
     setShowSubModal(true);
   };
 
+  // DISABLED: Buggy main page substitution handler - using MobileLayoutV3 handler instead
+  /*
   const handleSubConfirm = async (playerInId: string) => {
-    if (!subOutPlayer || !gameData) return;
-    
-    // Determine which team the player being substituted belongs to
-    const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
-    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-    
-    const success = await tracker.substitute({
-      gameId: gameData.id,
-      teamId,
-      playerOutId: subOutPlayer,
-      playerInId,
-      quarter: tracker.quarter,
-      gameTimeSeconds: tracker.clock.secondsRemaining
-    });
-    
-    if (success) {
-      setShowSubModal(false);
-      setSubOutPlayer(null);
-      // Refresh team rosters to reflect the substitution
-      await loadTeamPlayers();
-    }
+    // This handler had bugs and was never properly tested
+    // Using the working MobileLayoutV3 handler instead
   };
+  */
 
   // Loading States
   if (loading) {
@@ -408,6 +394,13 @@ function StatTrackerV3Content() {
         onTeamSelect={() => {}} // No-op for mobile compatibility
         onPlayerSelect={setSelectedPlayer}
         onSubstitution={handleSubstitution}
+        onTeamPlayersUpdate={(updatedTeamA, updatedTeamB) => {
+          console.log('🔄 Updating main team players state after substitution');
+          setTeamAPlayers(updatedTeamA);
+          setTeamBPlayers(updatedTeamB);
+          // Force re-render with new key
+          setRosterRefreshKey(Date.now());
+        }}
       />
     );
   }
@@ -463,12 +456,14 @@ function StatTrackerV3Content() {
           <div className={isTablet ? "md:col-span-2" : "lg:col-span-2"}>
             <div className="h-full">
               <TeamRosterV3
+                key={`teamA-${rosterRefreshKey}`}
                 players={teamAPlayers}
                 teamName={gameData.team_a?.name || 'Team A'}
                 teamSide="left"
                 selectedPlayer={selectedPlayer}
                 onPlayerSelect={setSelectedPlayer}
                 onSubstitution={handleSubstitution}
+                refreshKey={rosterRefreshKey}
               />
             </div>
           </div>
@@ -499,26 +494,32 @@ function StatTrackerV3Content() {
           <div className={isTablet ? "md:col-span-2" : "lg:col-span-2"}>
             <div className="h-full">
               <TeamRosterV3
+                key={`teamB-${rosterRefreshKey}`}
                 players={teamBPlayers}
                 teamName={gameData.team_b?.name || 'Team B'}
                 teamSide="right"
                 selectedPlayer={selectedPlayer}
                 onPlayerSelect={setSelectedPlayer}
                 onSubstitution={handleSubstitution}
+                refreshKey={rosterRefreshKey}
               />
             </div>
           </div>
         </div>
 
-        {/* Substitution Modal */}
-        <SubstitutionModalV3
-          isOpen={showSubModal}
-          onClose={() => setShowSubModal(false)}
-          playerOutId={subOutPlayer}
-          playerOutData={[...teamAPlayers, ...teamBPlayers].find(p => p.id === subOutPlayer)}
-          benchPlayers={benchPlayers}
-          onConfirm={handleSubConfirm}
-        />
+        {/* Substitution Modal - Handled by MobileLayoutV3 */}
+
+        {/* Substitution Loading Overlay */}
+        {isSubstituting && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg p-6 border border-slate-600 shadow-xl">
+              <div className="flex items-center space-x-3">
+                <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="text-white font-medium">Processing substitution...</div>
+              </div>
+            </div>
+          </div>
+        )}
 
 
       </div>

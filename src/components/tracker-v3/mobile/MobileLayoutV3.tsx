@@ -44,6 +44,7 @@ interface MobileLayoutV3Props {
   onTeamSelect: (team: 'A' | 'B') => void;
   onPlayerSelect: (playerId: string) => void;
   onSubstitution: (playerId: string) => void;
+  onTeamPlayersUpdate?: (teamAPlayers: Player[], teamBPlayers: Player[]) => void; // Add callback to update main state
 }
 
 export function MobileLayoutV3({
@@ -55,7 +56,8 @@ export function MobileLayoutV3({
   selectedPlayer,
   onTeamSelect,
   onPlayerSelect,
-  onSubstitution
+  onSubstitution,
+  onTeamPlayersUpdate
 }: MobileLayoutV3Props) {
   const [possessionTeam, setPossessionTeam] = useState<'A' | 'B'>('A');
   const [showSubModal, setShowSubModal] = useState(false);
@@ -168,9 +170,21 @@ export function MobileLayoutV3({
         if (isTeamAPlayer) {
           setCurrentRosterA(newRoster);
           setCurrentBenchA(newBench);
+          
+          // Update main state - rebuild teamAPlayers with new order
+          const updatedTeamAPlayers = [...newRoster, ...newBench];
+          if (onTeamPlayersUpdate) {
+            onTeamPlayersUpdate(updatedTeamAPlayers, teamBPlayers);
+          }
         } else {
           setCurrentRosterB(newRoster);
           setCurrentBenchB(newBench);
+          
+          // Update main state - rebuild teamBPlayers with new order
+          const updatedTeamBPlayers = [...newRoster, ...newBench];
+          if (onTeamPlayersUpdate) {
+            onTeamPlayersUpdate(teamAPlayers, updatedTeamBPlayers);
+          }
         }
 
         // Update selected player if it was the subbed out player
