@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase';
-import { authServiceV2 } from '@/lib/services/authServiceV2';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import type {
   PlayerIdentity,
@@ -127,33 +126,32 @@ function toNotification(row: Record<string, unknown>): NotificationItem {
 }
 
 export class PlayerDashboardService {
-  static async getIdentity(): Promise<PlayerIdentity | null> {
-    const user = await authServiceV2.getUserProfile();
-    if (!user) {
-      console.log('🔍 PlayerDashboard: No authenticated user');
+  static async getIdentity(userId: string): Promise<PlayerIdentity | null> {
+    if (!userId) {
+      console.log('🔍 PlayerDashboard: No user ID provided');
       return null;
     }
     
     // Check cache first
-    const cacheKey = CacheKeys.user(user.id);
+    const cacheKey = CacheKeys.user(userId);
     const cachedIdentity = cache.get<PlayerIdentity>(cacheKey);
     if (cachedIdentity) {
-      console.log('✅ PlayerDashboard: Returning cached identity for user:', user.id);
+      console.log('✅ PlayerDashboard: Returning cached identity for user:', userId);
       return cachedIdentity;
     }
     
-    console.log('🔍 PlayerDashboard: Fetching identity for user:', user.id);
+    console.log('🔍 PlayerDashboard: Fetching identity for user:', userId);
     const { data, error } = await supabase
       .from('users')
       .select('id, name, jersey_number, position, age, height, weight, country, profile_photo_url, pose_photo_url')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
     if (error) {
       if (error.code === 'PGRST116') {
         console.log('🔍 PlayerDashboard: New user - no profile data yet');
         // Return a basic identity object for new users
         return {
-          playerId: user.id,
+          playerId: userId,
           name: '',
           jerseyNumber: undefined,
           position: '',
@@ -176,23 +174,22 @@ export class PlayerDashboardService {
     // Cache the identity data
     if (identity) {
       cache.set(cacheKey, identity, CacheTTL.USER_DATA);
-      console.log('💾 PlayerDashboard: Cached identity for user:', user.id);
+      console.log('💾 PlayerDashboard: Cached identity for user:', userId);
     }
     
     return identity;
   }
 
-  static async getSeasonAverages(): Promise<SeasonAverages | null> {
-    const user = await authServiceV2.getUserProfile();
-    if (!user) {
-      console.log('🔍 PlayerDashboard: No authenticated user for season averages');
+  static async getSeasonAverages(userId: string): Promise<SeasonAverages | null> {
+    if (!userId) {
+      console.log('🔍 PlayerDashboard: No user ID provided for season averages');
       return null;
     }
-    console.log('🔍 PlayerDashboard: Fetching season averages for user:', user.id);
+    console.log('🔍 PlayerDashboard: Fetching season averages for user:', userId);
     const { data, error } = await supabase
       .from('player_season_averages')
       .select('*')
-      .eq('player_id', user.id)
+      .eq('player_id', userId)
       .single();
     if (error) {
       if (error.code === 'PGRST116') {
@@ -206,17 +203,16 @@ export class PlayerDashboardService {
     return toSeasonAverages(data);
   }
 
-  static async getCareerHighs(): Promise<CareerHighs | null> {
-    const user = await authServiceV2.getUserProfile();
-    if (!user) {
-      console.log('🔍 PlayerDashboard: No authenticated user for career highs');
+  static async getCareerHighs(userId: string): Promise<CareerHighs | null> {
+    if (!userId) {
+      console.log('🔍 PlayerDashboard: No user ID provided for career highs');
       return null;
     }
-    console.log('🔍 PlayerDashboard: Fetching career highs for user:', user.id);
+    console.log('🔍 PlayerDashboard: Fetching career highs for user:', userId);
     const { data, error } = await supabase
       .from('player_career_highs')
       .select('*')
-      .eq('player_id', user.id)
+      .eq('player_id', userId)
       .single();
     if (error) {
       if (error.code === 'PGRST116') {
@@ -230,19 +226,18 @@ export class PlayerDashboardService {
     return toCareerHighs(data);
   }
 
-  static async getPerformance(): Promise<{ kpis: PerformanceKpis | null; series: PerformanceSeriesEntry[] }> {
-    const user = await authServiceV2.getUserProfile();
-    if (!user) {
-      console.log('🔍 PlayerDashboard: No authenticated user for performance');
+  static async getPerformance(userId: string): Promise<{ kpis: PerformanceKpis | null; series: PerformanceSeriesEntry[] }> {
+    if (!userId) {
+      console.log('🔍 PlayerDashboard: No user ID provided for performance');
       return { kpis: null, series: [] };
     }
     
     try {
-      console.log('🔍 PlayerDashboard: Fetching performance analytics for user:', user.id);
+      console.log('🔍 PlayerDashboard: Fetching performance analytics for user:', userId);
       const { data, error } = await supabase
         .from('player_performance_analytics')
         .select('*')
-        .eq('player_id', user.id);
+        .eq('player_id', userId);
         
       console.log('🔍 PlayerDashboard: Raw response:', { data, error, hasData: !!data, dataLength: data?.length });
       
@@ -274,47 +269,43 @@ export class PlayerDashboardService {
     }
   }
 
-  static async getAchievements(): Promise<AchievementItem[]> {
-    const user = await authServiceV2.getUserProfile();
-    if (!user) return [];
+  static async getAchievements(userId: string): Promise<AchievementItem[]> {
+    if (!userId) return [];
     const { data, error } = await supabase
       .from('player_achievements')
       .select('*')
-      .eq('player_id', user.id)
+      .eq('player_id', userId)
       .order('unlocked_at', { ascending: false });
     if (error || !data) return [];
     return data.map(toAchievement);
   }
 
-  static async getNotifications(): Promise<NotificationItem[]> {
-    const user = await authServiceV2.getUserProfile();
-    if (!user) return [];
+  static async getNotifications(userId: string): Promise<NotificationItem[]> {
+    if (!userId) return [];
     const { data, error } = await supabase
       .from('player_notifications')
       .select('*')
-      .eq('player_id', user.id)
+      .eq('player_id', userId)
       .order('created_at', { ascending: false })
       .limit(20);
     if (error || !data) return [];
     return data.map(toNotification);
   }
 
-  static async getUpcomingGames(): Promise<UpcomingGame[]> {
-    const user = await authServiceV2.getUserProfile();
-    if (!user) return [];
+  static async getUpcomingGames(userId: string): Promise<UpcomingGame[]> {
+    if (!userId) return [];
     console.log('🔍 PlayerDashboard: Upcoming games - team_id column not available yet, returning empty array');
     // TODO: Backend team needs to add team_id column to users table
     // or provide alternative way to link users to teams
     return [];
   }
 
-  static async getTrialState(): Promise<TrialState> {
-    const user = await authServiceV2.getUserProfile();
-    if (!user) return { isTrialActive: false };
+  static async getTrialState(userId: string): Promise<TrialState> {
+    if (!userId) return { isTrialActive: false };
     const { data } = await supabase
       .from('users')
       .select('trial_start')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
     const trialStart = (data as any)?.trial_start as string | null | undefined;
     if (!trialStart) return { isTrialActive: false, trialStart: null };

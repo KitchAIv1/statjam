@@ -16,6 +16,7 @@ import { SubscriptionModal } from "./SubscriptionModal";
 import { EditProfileModal } from "./EditProfileModal";
 import { NotificationBell } from "./NotificationBell";
 import { usePlayerDashboardData } from "@/hooks/usePlayerDashboardData";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3 } from "lucide-react";
 
@@ -45,7 +46,8 @@ const defaultPlayerData = {
 
 export function PlayerDashboard() {
   const router = useRouter();
-  const { data, loading, refetch } = usePlayerDashboardData();
+  const { user } = useAuthContext(); // ✅ Use centralized auth
+  const { data, loading, refetch } = usePlayerDashboardData(user);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [currentPlayerData, setCurrentPlayerData] = useState(defaultPlayerData);
