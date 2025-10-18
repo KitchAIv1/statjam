@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { useAuthV2 } from '@/hooks/useAuthV2';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { useTracker } from '@/hooks/useTracker';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
@@ -45,7 +45,7 @@ interface Player {
 }
 
 function StatTrackerV3Content() {
-  const { user, loading } = useAuthV2();
+  const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
   const router = useRouter();
   const userRole = user?.role;
   const params = useSearchParams();

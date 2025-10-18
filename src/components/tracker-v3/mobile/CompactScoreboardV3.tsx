@@ -27,6 +27,12 @@ interface CompactScoreboardV3Props {
   onStopClock: () => void;
   onResetClock: () => void;
   onSetCustomTime?: (minutes: number, seconds: number) => void; // NEW: Manual time setting
+  // Shot Clock Props
+  shotClockSeconds?: number;
+  shotClockIsRunning?: boolean;
+  shotClockIsVisible?: boolean;
+  onShotClockReset?: (seconds?: number) => void;
+  onShotClockSetTime?: (seconds: number) => void;
 }
 
 export function CompactScoreboardV3({
@@ -50,7 +56,12 @@ export function CompactScoreboardV3({
   onStartClock,
   onStopClock,
   onResetClock,
-  onSetCustomTime
+  onSetCustomTime,
+  shotClockSeconds = 24,
+  shotClockIsRunning = false,
+  shotClockIsVisible = true,
+  onShotClockReset,
+  onShotClockSetTime
 }: CompactScoreboardV3Props) {
   const formatTime = (min: number, sec: number) => {
     return `${min}:${sec.toString().padStart(2, '0')}`;
@@ -75,64 +86,74 @@ export function CompactScoreboardV3({
       }}
     >
       {/* Main Scoreboard Row */}
-      <div className="grid grid-cols-3 items-center gap-2 text-center mb-1">
-        {/* Team A */}
+      <div className="grid grid-cols-5 items-center gap-1 text-center mb-1">
+        {/* Team A - Narrower */}
         <Button
           onClick={() => onTeamSelect('A')}
           variant={selectedTeam === 'A' ? 'default' : 'outline'}
-          className={`h-24 p-2 flex flex-col justify-center gap-1 text-xs font-bold transition-all ${
+          className={`h-28 p-1 flex flex-col justify-center gap-1 text-xs font-bold transition-all ${
             selectedTeam === 'A' 
               ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' 
               : 'hover:border-orange-500 hover:text-orange-500'
           }`}
         >
-          <div className="text-[12px] leading-none">{formatTeamName(teamAName)}</div>
-          <div className="text-5xl leading-none font-black">{teamAScore}</div>
+          <div className="text-[10px] leading-none">{formatTeamName(teamAName)}</div>
+          <div className="text-4xl leading-none font-black font-mono tracking-tight">{teamAScore}</div>
         </Button>
 
-        {/* Central Clock Area - V1 Style Unified */}
-        <div className="flex flex-col items-center justify-center gap-1">
-          {/* Game Details */}
-          <div className="text-center">
-            <div 
-              className="text-[10px] leading-none"
-              style={{ color: 'var(--dashboard-text-secondary)' }}
+        {/* Left Container - Quarter Section + Start/Reset Buttons (beside T1) */}
+        <div className="col-span-1 flex flex-col items-center justify-center gap-2">
+          {/* Quarter Section */}
+          <div className="flex flex-col items-center justify-center gap-1">
+            <Badge 
+              variant="outline"
+              className="text-orange-500 border-orange-500 bg-orange-500/10 px-2 py-1 text-xs font-bold"
             >
-              {tournamentName || 'Basketball Tournament'}
+              Q{quarter}
+            </Badge>
+            <div 
+              className={`text-2xl font-black font-mono leading-none ${
+                isRunning ? 'text-green-500' : 'text-orange-500'
+              }`}
+            >
+              {formatTime(minutes, seconds)}
             </div>
-            {gameDate && (
-              <div 
-                className="text-[9px] leading-none mt-0.5"
-                style={{ color: 'var(--dashboard-text-secondary)' }}
-              >
-                {gameDate}
-              </div>
-            )}
           </div>
-          
-          {/* Quarter Badge */}
-          <Badge 
-            variant="outline"
-            className="text-orange-500 border-orange-500 bg-orange-500/10 px-3 py-1 text-sm font-bold"
-          >
-            Q{quarter}
-          </Badge>
-          
-          {/* MASSIVE Clock Display */}
-          <div 
-            className={`text-4xl font-black font-mono leading-none ${
-              isRunning ? 'text-green-500' : 'text-orange-500'
-            }`}
-          >
-            {formatTime(minutes, seconds)}
+
+          {/* Start/Reset Buttons */}
+          <div className="flex flex-col gap-1">
+            <Button
+              onClick={isRunning ? onStopClock : onStartClock}
+              size="sm"
+              className={`h-8 px-3 flex items-center gap-2 text-[10px] font-bold ${
+                isRunning 
+                  ? 'bg-red-500 hover:bg-red-600 text-white' 
+                  : 'bg-green-500 hover:bg-green-600 text-white'
+              }`}
+            >
+              {isRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+              {isRunning ? 'Stop' : 'Start'}
+            </Button>
+            
+            <Button
+              onClick={onResetClock}
+              variant="outline"
+              size="sm"
+              className="h-8 px-3 flex items-center gap-2 text-[10px] font-bold hover:border-orange-500 hover:text-orange-500"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset
+            </Button>
           </div>
-          
-          {/* Possession Arrow - Centered */}
+        </div>
+
+        {/* Center - Team Selector */}
+        <div className="col-span-1 flex items-center justify-center">
           <Button
             onClick={onPossessionToggle}
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-orange-500 hover:bg-orange-500/20 flex items-center justify-center text-[10px]"
+            className="h-8 px-3 text-orange-500 hover:bg-orange-500/20 flex items-center justify-center text-[10px] font-bold"
             style={{ color: 'var(--dashboard-primary)' }}
           >
             {possessionTeam === 'A' ? (
@@ -141,47 +162,100 @@ export function CompactScoreboardV3({
               <>{formatTeamName(teamBName)} →</>
             )}
           </Button>
-          
-          {/* Clock Controls - Compact */}
-          <div className="flex gap-1">
-            <Button
-              onClick={isRunning ? onStopClock : onStartClock}
-              size="sm"
-              className={`h-5 px-2 flex items-center gap-1 text-[9px] ${
-                isRunning 
-                  ? 'bg-red-500 hover:bg-red-600 text-white' 
-                  : 'bg-green-500 hover:bg-green-600 text-white'
-              }`}
-            >
-              {isRunning ? <Pause className="w-2 h-2" /> : <Play className="w-2 h-2" />}
-              {isRunning ? 'Stop' : 'Start'}
-            </Button>
-            
-            <Button
-              onClick={onResetClock}
-              variant="outline"
-              size="sm"
-              className="h-5 px-2 flex items-center gap-1 text-[9px] hover:border-orange-500 hover:text-orange-500"
-            >
-              <RotateCcw className="w-2 h-2" />
-              Reset
-            </Button>
-          </div>
         </div>
 
-        {/* Team B */}
+        {/* Right Container - Shot Clock Section + Buttons (beside T2) */}
+        {shotClockIsVisible && (
+          <div className="col-span-1 flex flex-col items-center justify-center gap-2">
+            {/* Shot Clock Section */}
+            <div className="flex flex-col items-center justify-center gap-1">
+              <Badge 
+                variant="outline"
+                className="text-gray-400 border-gray-400 bg-gray-400/10 px-2 py-1 text-xs font-bold"
+              >
+                Shot
+              </Badge>
+              <div 
+                className={`text-2xl font-black font-mono leading-none ${
+                  shotClockSeconds !== undefined && shotClockSeconds <= 5 ? 'text-red-500' : 
+                  shotClockSeconds !== undefined && shotClockSeconds <= 10 ? 'text-orange-500' : 
+                  shotClockIsRunning ? 'text-green-500' : 'text-gray-400'
+                }`}
+                style={{ 
+                  textShadow: shotClockSeconds !== undefined && shotClockSeconds <= 5 ? '0 0 6px rgba(239, 68, 68, 0.6)' : 'none'
+                }}
+              >
+                {shotClockSeconds !== undefined ? shotClockSeconds.toString().padStart(2, '0') : '24'}
+              </div>
+            </div>
+
+            {/* Shot Clock Buttons - 2x2 Grid */}
+            <div className="grid grid-cols-2 gap-1">
+              <Button
+                onClick={() => onShotClockReset?.(24)}
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-[9px] font-bold border-gray-600 text-gray-400 hover:border-orange-500 hover:text-orange-500"
+              >
+                24s
+              </Button>
+              <Button
+                onClick={() => onShotClockReset?.(14)}
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-[9px] font-bold border-gray-600 text-gray-400 hover:border-orange-500 hover:text-orange-500"
+              >
+                14s
+              </Button>
+              <Button
+                onClick={() => onShotClockReset?.()}
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-[9px] font-bold border-gray-600 text-gray-400 hover:border-gray-500"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </Button>
+              <Button
+                onClick={() => {
+                  // TODO: Implement edit functionality
+                  console.log('Edit shot clock time');
+                  alert('Edit functionality will be implemented');
+                }}
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-[9px] font-bold border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
+              >
+                ✏️
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Team B - Narrower */}
         <Button
           onClick={() => onTeamSelect('B')}
           variant={selectedTeam === 'B' ? 'default' : 'outline'}
-          className={`h-24 p-2 flex flex-col justify-center gap-1 text-xs font-bold transition-all ${
+          className={`h-28 p-1 flex flex-col justify-center gap-1 text-xs font-bold transition-all ${
             selectedTeam === 'B' 
               ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' 
               : 'hover:border-orange-500 hover:text-orange-500'
           }`}
         >
-          <div className="text-[12px] leading-none">{formatTeamName(teamBName)}</div>
-          <div className="text-5xl leading-none font-black">{teamBScore}</div>
+          <div className="text-[10px] leading-none">{formatTeamName(teamBName)}</div>
+          <div className="text-4xl leading-none font-black font-mono tracking-tight">{teamBScore}</div>
         </Button>
+      </div>
+
+      {/* Date Row */}
+      <div className="flex justify-center mt-2">
+        {gameDate && (
+          <div 
+            className="text-[8px] leading-none"
+            style={{ color: 'var(--dashboard-text-secondary)' }}
+          >
+            {gameDate}
+          </div>
+        )}
       </div>
 
 

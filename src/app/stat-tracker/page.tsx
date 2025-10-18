@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuthV2 } from '@/hooks/useAuthV2';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Undo2 } from 'lucide-react';
 import { GameService } from '@/lib/services/gameService';
@@ -13,7 +13,7 @@ import { supabase } from '@/lib/supabase';
 import GameCompletionManager from '@/components/game/GameCompletionManager';
 
 const StatTracker = () => {
-  const { user, loading } = useAuthV2();
+  const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
   const router = useRouter();
   const userRole = user?.role;
   

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useGameStream } from './useGameStream';
 import { usePlayFeed } from './usePlayFeed';
-import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useResponsive } from './useResponsive';
 import { GameViewerData, PlayByPlayEntry } from '@/lib/types/playByPlay';
 import { supabase } from '@/lib/supabase';
@@ -28,7 +27,6 @@ export interface GameViewerState {
   
   // Auth state
   user: any;
-  authLoading: boolean;
   
   // Device state
   isMobile: boolean;
@@ -73,7 +71,7 @@ export interface UseGameViewerDataReturn extends GameViewerState {
  * Provides both V1 (useGameStream) and V2 (usePlayFeed) data sources.
  * Includes player statistics calculation and device detection.
  */
-export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
+export const useGameViewerData = (gameId: string, user: { id: string } | null): UseGameViewerDataReturn => {
   const [playerStatsMap, setPlayerStatsMap] = useState<Map<string, PlayerStats>>(new Map());
   const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'polling' | 'disconnected'>('disconnected');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -85,7 +83,6 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
   // V1 provides all game data, V2 just provides better stats/feed
   
   // Core hooks - Always use V1 for game data, but V1 will skip stats queries when V2 enabled
-  const { user, loading: authLoading } = useAuthV2();
   const { gameData, loading, error, isLive } = useGameStream(gameId, enableViewerV2); // Pass V2 flag to skip stats
   const { isMobile, isTablet, isDesktop } = useResponsive();
 
@@ -269,7 +266,6 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
     
     // Auth state
     user,
-    authLoading,
     
     // Device state
     isMobile,

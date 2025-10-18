@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthV2 } from '@/hooks/useAuthV2';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { GameService } from '@/lib/services/gameService';
 import { GameServiceV3 } from '@/lib/services/gameServiceV3';
 import { TeamService } from '@/lib/services/tournamentService';
@@ -13,7 +13,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar } from 'lucide-react';
 
 const StatAdminDashboard = () => {
-  const { user, loading } = useAuthV2();
+  const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
   const router = useRouter();
   const userRole = user?.role;
   

@@ -1,6 +1,5 @@
 import { useSearchParams } from "next/navigation";
 import { Users } from "lucide-react";
-import { useAuthV2 } from "@/hooks/useAuthV2";
 import { OrganizerDashboardOverview } from "./OrganizerDashboardOverview";
 import { OrganizerTournamentManager } from "./OrganizerTournamentManager";
 import { OrganizerGameScheduler } from "./OrganizerGameScheduler";
@@ -8,9 +7,12 @@ import { OrganizerLiveStream } from "./OrganizerLiveStream";
 
 type ActiveSection = 'overview' | 'tournaments' | 'teams' | 'games' | 'live-stream';
 
-export function OrganizerDashboard() {
+interface OrganizerDashboardProps {
+  user: { id: string } | null;
+}
+
+export function OrganizerDashboard({ user }: OrganizerDashboardProps) {
   const searchParams = useSearchParams();
-  const { user } = useAuthV2();
   
   // Get current section from URL params, default to overview
   const currentSection = (searchParams.get('section') || 'overview') as ActiveSection;

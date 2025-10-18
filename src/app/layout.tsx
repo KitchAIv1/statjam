@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 export const metadata: Metadata = {
   title: 'StatJam - Your Courtside Command Center',
@@ -15,9 +16,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ErrorBoundary showDetails={true}>
-          {children}
-        </ErrorBoundary>
+        <AuthProvider>
+          <ErrorBoundary showDetails={true}>
+            {children}
+          </ErrorBoundary>
+        </AuthProvider>
       </body>
     </html>
   )

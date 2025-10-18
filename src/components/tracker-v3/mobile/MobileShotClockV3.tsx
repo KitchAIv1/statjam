@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Play, Pause, RotateCcw, Edit3, Check, X } from 'lucide-react';
+import { RotateCcw, Edit3, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 
@@ -66,17 +66,37 @@ export function MobileShotClockV3({
         boxShadow: seconds <= 5 ? '0 0 15px rgba(239, 68, 68, 0.4)' : 'none'
       }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-gray-300">Shot Clock</span>
-        {seconds <= 5 && isRunning && (
-          <span className="text-xs font-bold text-red-500 animate-pulse">⚠️</span>
-        )}
-      </div>
-
-      {/* Display */}
+      {/* Display with Label on Same Row */}
       <div className="text-center mb-3">
         {isEditMode ? (
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="text-xs font-medium text-gray-300">Shot Clock</span>
+            {seconds <= 5 && isRunning && (
+              <span className="text-xs font-bold text-red-500 animate-pulse">⚠️</span>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center mb-2">
+            {/* Shot Clock Label - Centered above */}
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <span className="text-xs font-medium text-gray-300">Shot Clock</span>
+              {seconds <= 5 && isRunning && (
+                <span className="text-xs font-bold text-red-500 animate-pulse">⚠️</span>
+              )}
+            </div>
+            {/* Time Number - Centered */}
+            <div 
+              className={`text-3xl font-bold font-mono ${getDisplayColor()}`}
+              style={{ 
+                textShadow: seconds <= 5 ? '0 0 10px rgba(239, 68, 68, 0.8)' : 'none'
+              }}
+            >
+              {formatTime(seconds)}
+            </div>
+          </div>
+        )}
+        
+        {isEditMode && (
           <div className="flex items-center justify-center gap-2">
             <Input
               type="number"
@@ -87,15 +107,6 @@ export function MobileShotClockV3({
               className="w-16 h-8 text-center text-lg font-bold bg-gray-700 border-gray-600 text-white"
             />
             <span className="text-gray-400 text-sm">sec</span>
-          </div>
-        ) : (
-          <div 
-            className={`text-3xl font-bold font-mono ${getDisplayColor()}`}
-            style={{ 
-              textShadow: seconds <= 5 ? '0 0 10px rgba(239, 68, 68, 0.8)' : 'none'
-            }}
-          >
-            {formatTime(seconds)}
           </div>
         )}
       </div>
@@ -125,35 +136,10 @@ export function MobileShotClockV3({
             </Button>
           </div>
         ) : (
-          // Normal Mode Controls
+          // Normal Mode Controls - Start/Stop buttons removed, Edit moved to same row as quick reset
           <>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                onClick={isRunning ? onStop : onStart}
-                size="sm"
-                className={`h-8 text-xs ${
-                  isRunning 
-                    ? 'bg-red-500 hover:bg-red-600 text-white' 
-                    : 'bg-green-500 hover:bg-green-600 text-white'
-                }`}
-              >
-                {isRunning ? <Pause className="w-3 h-3 mr-1" /> : <Play className="w-3 h-3 mr-1" />}
-                {isRunning ? 'Stop' : 'Start'}
-              </Button>
-              <Button
-                onClick={handleEditToggle}
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
-                disabled={!onSetTime}
-              >
-                <Edit3 className="w-3 h-3 mr-1" />
-                Edit
-              </Button>
-            </div>
-            
-            {/* Quick Reset */}
-            <div className="grid grid-cols-3 gap-1">
+            {/* Quick Reset with Edit button */}
+            <div className="grid grid-cols-4 gap-1">
               <Button
                 onClick={() => onReset(24)}
                 size="sm"
@@ -177,6 +163,15 @@ export function MobileShotClockV3({
                 className="h-6 text-xs py-0 border-gray-600 text-gray-400 hover:border-gray-500"
               >
                 <RotateCcw className="w-3 h-3" />
+              </Button>
+              <Button
+                onClick={handleEditToggle}
+                size="sm"
+                variant="outline"
+                className="h-6 text-xs py-0 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
+                disabled={!onSetTime}
+              >
+                <Edit3 className="w-3 h-3" />
               </Button>
             </div>
           </>

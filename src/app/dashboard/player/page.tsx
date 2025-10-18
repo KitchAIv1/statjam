@@ -2,12 +2,12 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthV2 } from '@/hooks/useAuthV2';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { PlayerDashboard } from '@/components/PlayerDashboard';
 import { NavigationHeader } from '@/components/NavigationHeader';
 
 const PlayerDashboardPage = () => {
-  const { user, loading } = useAuthV2();
+  const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
   const router = useRouter();
   const userRole = user?.role;
 

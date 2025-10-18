@@ -2,12 +2,12 @@
 
 import React, { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuthV2 } from '@/hooks/useAuthV2';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { OrganizerDashboard } from '@/components/OrganizerDashboard';
 import { NavigationHeader } from '@/components/NavigationHeader';
 
 const OrganizerDashboardContent = () => {
-  const { user, loading } = useAuthV2();
+  const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
   const router = useRouter();
   const searchParams = useSearchParams();
   const userRole = user?.role;
@@ -54,7 +54,7 @@ const OrganizerDashboardContent = () => {
   return (
     <>
       <NavigationHeader />
-      <OrganizerDashboard />
+      <OrganizerDashboard user={user} />
     </>
   );
 };

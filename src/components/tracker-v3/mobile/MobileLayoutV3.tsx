@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { CompactScoreboardV3 } from './CompactScoreboardV3';
 import { DualTeamHorizontalRosterV3 } from './DualTeamHorizontalRosterV3';
 import { MobileStatGridV3 } from './MobileStatGridV3';
-import { MobileShotClockV3 } from './MobileShotClockV3'; // NEW: Mobile Shot Clock
 
 import { SubstitutionModalV3 } from '../SubstitutionModalV3';
 
@@ -189,7 +188,7 @@ export function MobileLayoutV3({
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #1f2937, #111827)' }}>
       <div className="flex-1 flex flex-col px-2 py-1 w-full space-y-1 overflow-y-auto">
         
-        {/* Compact Scoreboard */}
+        {/* Compact Scoreboard with Integrated Shot Clock */}
         <CompactScoreboardV3
           gameId={gameData.id}
           tournamentName={gameData.tournament?.name || 'Demo Tournament'}
@@ -212,6 +211,11 @@ export function MobileLayoutV3({
           onStopClock={tracker.stopClock}
           onResetClock={tracker.resetClock}
           onSetCustomTime={tracker.setCustomTime} // NEW: Manual clock editing
+          shotClockSeconds={tracker.shotClock.secondsRemaining}
+          shotClockIsRunning={tracker.shotClock.isRunning}
+          shotClockIsVisible={tracker.shotClock.isVisible}
+          onShotClockReset={tracker.resetShotClock}
+          onShotClockSetTime={tracker.setShotClockTime}
         />
 
         {/* Dual Team Horizontal Roster */}
@@ -223,17 +227,6 @@ export function MobileLayoutV3({
           selectedPlayer={selectedPlayer}
           onPlayerSelect={onPlayerSelect}
           onSubstitution={handleSubstitution}
-        />
-
-        {/* NEW: Mobile Shot Clock */}
-        <MobileShotClockV3
-          seconds={tracker.shotClock.secondsRemaining}
-          isRunning={tracker.shotClock.isRunning}
-          isVisible={tracker.shotClock.isVisible}
-          onStart={tracker.startShotClock}
-          onStop={tracker.stopShotClock}
-          onReset={tracker.resetShotClock}
-          onSetTime={tracker.setShotClockTime}
         />
 
         {/* Mobile Stat Grid */}

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { UserDropdownMenu } from "@/components/ui/UserDropdownMenu";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useAuthV2 } from "@/hooks/useAuthV2";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { getNavigationForRole } from "@/lib/navigation-config";
 import { Menu, X } from "lucide-react";
 
@@ -12,7 +12,7 @@ export function NavigationHeader() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user, loading, signOut } = useAuthV2();
+  const { user, loading, signOut } = useAuthContext(); // ✅ NO API CALL - Uses context
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const userRole = user?.role;

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuthV2 } from '@/hooks/useAuthV2';
 import { GameService } from '@/lib/services/gameService';
 import { OfflineSyncService } from '@/lib/services/offlineSyncService';
 import { Game, PlayerGameStats } from '@/lib/types/game';
@@ -24,8 +23,7 @@ interface UseGameStateReturn {
   refreshGame: () => Promise<void>;
 }
 
-export const useGameState = (): UseGameStateReturn => {
-  const { user } = useAuthV2();
+export const useGameState = (user: { id: string } | null): UseGameStateReturn => {
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
