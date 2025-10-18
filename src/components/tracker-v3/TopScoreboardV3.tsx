@@ -23,6 +23,14 @@ interface TopScoreboardV3Props {
   teamBFouls?: number;
   teamATimeouts?: number;
   teamBTimeouts?: number;
+  // Shot Clock Props
+  shotClockSeconds?: number;
+  shotClockIsRunning?: boolean;
+  shotClockIsVisible?: boolean;
+  onShotClockStart?: () => void;
+  onShotClockStop?: () => void;
+  onShotClockReset?: () => void;
+  onShotClockSetTime?: (seconds: number) => void;
 }
 
 export function TopScoreboardV3({
@@ -41,7 +49,15 @@ export function TopScoreboardV3({
   teamAFouls = 0,
   teamBFouls = 0,
   teamATimeouts = 7,
-  teamBTimeouts = 7
+  teamBTimeouts = 7,
+  // Shot Clock Props
+  shotClockSeconds = 24,
+  shotClockIsRunning = false,
+  shotClockIsVisible = true,
+  onShotClockStart,
+  onShotClockStop,
+  onShotClockReset,
+  onShotClockSetTime
 }: TopScoreboardV3Props) {
 
   // NEW: Edit mode state
@@ -139,19 +155,41 @@ export function TopScoreboardV3({
           </div>
         </div>
 
-        {/* Center - Clock and Quarter */}
+        {/* Center - Quarter and Shot Clock Side by Side */}
         <div className="flex flex-col items-center justify-center space-y-3">
-          {/* Quarter Display */}
-          <div 
-            className="px-4 py-2 rounded-xl text-lg font-black border-2 shadow-lg"
-            style={{ 
-              background: 'linear-gradient(135deg, #f97316, #ea580c)',
-              color: 'white',
-              borderColor: '#fb923c',
-              boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)'
-            }}
-          >
-            {getQuarterDisplay(quarter)}
+          {/* Quarter and Shot Clock Row */}
+          <div className="flex items-center gap-4">
+            {/* Quarter Display */}
+            <div 
+              className="px-4 py-2 rounded-xl text-lg font-black border-2 shadow-lg"
+              style={{ 
+                background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                color: 'white',
+                borderColor: '#fb923c',
+                boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)'
+              }}
+            >
+              {getQuarterDisplay(quarter)}
+            </div>
+
+            {/* Shot Clock Display */}
+            {shotClockIsVisible && (
+              <div className="flex flex-col items-center">
+                <div className="text-xs font-semibold text-gray-600 mb-1">SHOT CLOCK</div>
+                <div 
+                  className={`text-2xl font-mono font-black leading-none px-3 py-1 rounded-lg border-2 ${
+                    shotClockSeconds !== undefined && shotClockSeconds <= 5 ? 'text-red-500 bg-red-50 border-red-300' : 
+                    shotClockSeconds !== undefined && shotClockSeconds <= 10 ? 'text-orange-500 bg-orange-50 border-orange-300' : 
+                    shotClockIsRunning ? 'text-green-500 bg-green-50 border-green-300' : 'text-gray-500 bg-gray-50 border-gray-300'
+                  }`}
+                  style={{ 
+                    textShadow: shotClockSeconds !== undefined && shotClockSeconds <= 5 ? '0 0 6px rgba(239, 68, 68, 0.6)' : 'none'
+                  }}
+                >
+                  {shotClockSeconds !== undefined ? shotClockSeconds.toString().padStart(2, '0') : '24'}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Clock Display */}
@@ -272,6 +310,61 @@ export function TopScoreboardV3({
               </>
             )}
           </div>
+
+          {/* Shot Clock Controls */}
+          {shotClockIsVisible && (
+            <div className="flex items-center gap-2 mt-2">
+              <Button
+                onClick={shotClockIsRunning ? onShotClockStop : onShotClockStart}
+                className={`h-7 px-2 text-xs font-bold transition-all duration-200 rounded-lg ${
+                  shotClockIsRunning
+                    ? 'bg-red-500 hover:bg-red-600 text-white border-red-400'
+                    : 'bg-green-500 hover:bg-green-600 text-white border-green-400'
+                } border-2 hover:shadow-md hover:scale-105 active:scale-95`}
+                disabled={!onShotClockStart || !onShotClockStop}
+              >
+                {shotClockIsRunning ? (
+                  <>
+                    <Pause className="w-3 h-3 mr-1" />
+                    STOP
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3 h-3 mr-1" />
+                    START
+                  </>
+                )}
+              </Button>
+
+              <Button
+                onClick={() => onShotClockSetTime?.(24)}
+                variant="outline"
+                className="h-7 px-2 text-xs font-bold border-2 border-orange-300 text-orange-600 hover:bg-orange-500 hover:text-white hover:border-orange-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                disabled={!onShotClockSetTime}
+              >
+                24s
+              </Button>
+
+              <Button
+                onClick={() => onShotClockSetTime?.(14)}
+                variant="outline"
+                className="h-7 px-2 text-xs font-bold border-2 border-orange-300 text-orange-600 hover:bg-orange-500 hover:text-white hover:border-orange-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                disabled={!onShotClockSetTime}
+              >
+                14s
+              </Button>
+
+              <Button
+                onClick={onShotClockReset}
+                variant="outline"
+                className="h-7 px-2 text-xs font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-500 hover:text-white hover:border-gray-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                disabled={!onShotClockReset}
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                RESET
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Team B Section */}

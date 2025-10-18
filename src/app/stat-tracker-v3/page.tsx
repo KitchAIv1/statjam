@@ -19,7 +19,6 @@ import { TopScoreboardV3 } from '@/components/tracker-v3/TopScoreboardV3';
 import { TeamRosterV3 } from '@/components/tracker-v3/TeamRosterV3';
 import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
-import { ShotClockV3 } from '@/components/tracker-v3/ShotClockV3'; // NEW: Shot Clock Component
 
 interface GameData {
   id: string;
@@ -400,7 +399,7 @@ function StatTrackerV3Content() {
           onBack={() => router.push('/dashboard')}
         />
 
-        {/* Top Scoreboard & Clock */}
+        {/* Top Scoreboard & Clock with Integrated Shot Clock */}
         <TopScoreboardV3
           key={`scoreboard-${JSON.stringify(tracker.scores)}`} // ✅ FORCE RE-RENDER
           teamAName={gameData.team_a?.name || 'Team A'}
@@ -420,6 +419,14 @@ function StatTrackerV3Content() {
           teamBFouls={6}
           teamATimeouts={5}
           teamBTimeouts={4}
+          // Shot Clock Props
+          shotClockSeconds={tracker.shotClock.secondsRemaining}
+          shotClockIsRunning={tracker.shotClock.isRunning}
+          shotClockIsVisible={tracker.shotClock.isVisible}
+          onShotClockStart={tracker.startShotClock}
+          onShotClockStop={tracker.stopShotClock}
+          onShotClockReset={tracker.resetShotClock}
+          onShotClockSetTime={tracker.setShotClockTime}
         />
 
         {/* Main Content Grid - iPad Optimized Layout: No Scrolling */}
@@ -438,41 +445,25 @@ function StatTrackerV3Content() {
             </div>
           </div>
 
-          {/* Center Column - Stat Interface & Shot Clock */}
+          {/* Center Column - Stat Interface */}
           <div className="lg:col-span-3">
-            <div className="h-full flex flex-col gap-3">
-              {/* Shot Clock - Top of center column */}
-              <div className="flex-shrink-0">
-                <ShotClockV3
-                  seconds={tracker.shotClock.secondsRemaining}
-                  isRunning={tracker.shotClock.isRunning}
-                  isVisible={tracker.shotClock.isVisible}
-                  onStart={tracker.startShotClock}
-                  onStop={tracker.stopShotClock}
-                  onReset={tracker.resetShotClock}
-                  onSetTime={tracker.setShotClockTime}
-                />
-              </div>
-
-              {/* Stat Interface - Main area */}
-              <div className="flex-1 min-h-0">
-                <DesktopStatGridV3
-                  selectedPlayer={selectedPlayer}
-                  selectedPlayerData={[...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer)}
-                  isClockRunning={tracker.clock.isRunning}
-                  onStatRecord={handleStatRecord}
-                  onFoulRecord={handleFoulRecord}
-                  onTimeOut={() => {
-                    // TODO: Implement timeout functionality
-                    console.log('⏰ Time out called');
-                    alert('Time out functionality will be implemented');
-                  }}
-                  onSubstitution={() => selectedPlayer && handleSubstitution(selectedPlayer)}
-                  onGameEnd={tracker.closeGame}
-                  lastAction={tracker.lastAction}
-                  lastActionPlayerId={tracker.lastActionPlayerId}
-                />
-              </div>
+            <div className="h-full">
+              <DesktopStatGridV3
+                selectedPlayer={selectedPlayer}
+                selectedPlayerData={[...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer)}
+                isClockRunning={tracker.clock.isRunning}
+                onStatRecord={handleStatRecord}
+                onFoulRecord={handleFoulRecord}
+                onTimeOut={() => {
+                  // TODO: Implement timeout functionality
+                  console.log('⏰ Time out called');
+                  alert('Time out functionality will be implemented');
+                }}
+                onSubstitution={() => selectedPlayer && handleSubstitution(selectedPlayer)}
+                onGameEnd={tracker.closeGame}
+                lastAction={tracker.lastAction}
+                lastActionPlayerId={tracker.lastActionPlayerId}
+              />
             </div>
           </div>
 
