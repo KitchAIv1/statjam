@@ -1,7 +1,8 @@
-# 🏗️ StatJam System Architecture: Visual Diagrams
+# 🏗️ StatJam System Architecture
 
-**Date**: October 17, 2025  
-**Purpose**: Visual reference for system architecture
+**Version**: 0.9.6  
+**Date**: October 18, 2025  
+**Status**: Production Ready
 
 ---
 
@@ -9,28 +10,33 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        STATJAM SYSTEM                            │
+│                        STATJAM MVP v0.9.6                        │
 │                                                                   │
 │  ┌───────────┐      ┌───────────┐      ┌───────────┐           │
-│  │ ORGANIZER │      │STAT ADMIN │      │  VIEWER   │           │
-│  │ Dashboard │      │  Tracker  │      │Live Games │           │
+│  │ ORGANIZER │      │STAT ADMIN │      │  PLAYER   │           │
+│  │ Dashboard │      │  Tracker  │      │ Dashboard │           │
 │  └─────┬─────┘      └─────┬─────┘      └─────┬─────┘           │
+│        │                   │                   │                 │
 │        │                   │                   │                 │
 │        ▼                   ▼                   ▼                 │
 │  ┌───────────────────────────────────────────────────┐         │
-│  │         FRONTEND (Next.js + TypeScript)            │         │
+│  │      FRONTEND (Next.js 15.4.5 + TypeScript)       │         │
 │  │                                                     │         │
-│  │  Services → Hooks → Components → Pages             │         │
+│  │  • React Context (AuthContext)                     │         │
+│  │  • Custom Hooks (V3 Architecture)                  │         │
+│  │  • Service Layer (Raw HTTP + Supabase Client)     │         │
+│  │  • Real-time Manager (WebSocket Subscriptions)    │         │
 │  └────────────────────┬──────────────────────────────┘         │
 │                       │                                          │
 │                       ▼                                          │
 │  ┌───────────────────────────────────────────────────┐         │
-│  │      SUPABASE (PostgreSQL + Realtime + Auth)      │         │
+│  │      SUPABASE (PostgreSQL + Real-time + Auth)     │         │
 │  │                                                     │         │
-│  │  • 20 Tables (tournaments, games, game_stats...)   │         │
-│  │  • RLS Policies (role-based access control)        │         │
+│  │  • 20+ Tables (V3 Schema)                          │         │
+│  │  • RLS Policies (Role-based access control)        │         │
 │  │  • Real-Time Subscriptions (WebSocket)             │         │
-│  │  • Storage (images, logos)                         │         │
+│  │  • Storage (card-assets bucket)                    │         │
+│  │  • Edge Functions (card generation)                │         │
 │  └───────────────────────────────────────────────────┘         │
 └───────────────────────────────────────────────────────────────────┘
 ```
@@ -41,31 +47,30 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                    DATABASE SCHEMA (CORE)                         │
+│                    DATABASE SCHEMA (V3)                           │
 └──────────────────────────────────────────────────────────────────┘
 
            ┌──────────────┐
-           │    users     │ (id, email, role, premium_status)
+           │    users     │ (id, email, role, name, jersey_number)
            └──────┬───────┘
                   │
         ┌─────────┼─────────────────┐
         │         │                 │
         ▼         ▼                 ▼
 ┌───────────┐ ┌───────────┐ ┌──────────────┐
-│tournaments│ │team_players│ │ (stat_admin) │
-│(organizer)│ │ (players) │ │              │
-└─────┬─────┘ └─────┬─────┘ └──────┬───────┘
-      │             │               │
-      │             │               │
-      ▼             ▼               │
- ┌────────┐    ┌────────┐          │
- │ teams  │◄───┤ teams  │          │
- └───┬────┘    └────────┘          │
-     │                              │
-     ▼                              │
- ┌────────┐                         │
- │ games  │◄────────────────────────┘
- │        │ (team_a_id, team_b_id, stat_admin_id)
+│tournaments│ │team_players│ │player_achievements│
+│(organizer)│ │ (roster)  │ │ (career_highs)│
+└─────┬─────┘ └─────┬─────┘ └──────────────┘
+      │             │
+      │             │
+      ▼             ▼
+ ┌────────┐    ┌────────┐
+ │ teams  │◄───┤ teams  │
+ └───┬────┘    └────────┘
+     │
+     ▼
+ ┌────────┐
+ │ games  │ (team_a_id, team_b_id, status, start_time)
  └───┬────┘
      │
      ├─────────────────────────┐
@@ -73,431 +78,474 @@
      ▼                         ▼
 ┌──────────────┐      ┌─────────────────┐
 │  game_stats  │      │game_substitutions│
+│  (V3 ENGINE) │      │  (V3 ENGINE)    │
 │              │      │                 │
-│ (player_id,  │      │ (player_in_id,  │
-│  team_id,    │      │  player_out_id, │
-│  stat_type,  │      │  team_id,       │
-│  stat_value) │      │  quarter)       │
-└──────────────┘      └─────────────────┘
+│ • player_id  │      │ • player_in_id  │
+│ • team_id    │      │ • player_out_id │
+│ • stat_type  │      │ • team_id       │
+│ • stat_value │      │ • quarter       │
+│ • quarter    │      │ • timestamp     │
+│ • game_time  │      └─────────────────┘
+└──────────────┘
 ```
+
+**Key Tables**:
+- `users` - Player profiles, organizers, stat admins
+- `tournaments` - Tournament metadata
+- `teams` - Team information
+- `team_players` - Roster assignments (many-to-many)
+- `games` - Game schedules and status
+- `game_stats` - **PRIMARY DATA SOURCE** for all stats (V3)
+- `game_substitutions` - Player substitutions during games
 
 ---
 
-## 🔄 DATA FLOW: STAT RECORDING (CURRENT STATE)
+## 🔄 DATA FLOW: STAT TRACKING (V3 ENGINE)
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│                    STAT RECORDING FLOW                              │
+│                  STAT RECORDING FLOW (V3)                           │
 └────────────────────────────────────────────────────────────────────┘
 
-USER ACTION: "Player scores 2-point shot"
-│
-├─► [1] FRONTEND: StatButtonsV3.tsx
-│   │   ↓ onClick handler
-│   │
-│   ├─► [2] TRACKER: recordStat({ statType: 'field_goal', playerId, teamId })
-│   │   │   ↓ useTracker hook
-│   │   │
-│   │   ├─► [3] SERVICE: GameService.recordStat()
-│   │   │   │   ↓ Validate session
-│   │   │   │   ↓ Prepare data
-│   │   │   │
-│   │   │   ├─► [4] SUPABASE: INSERT INTO game_stats
-│   │   │   │   │   (game_id, player_id, team_id, stat_type, stat_value=2)
-│   │   │   │   │
-│   │   │   │   ├─► [5] POSTGRESQL: Write to database
-│   │   │   │   │   │   ✅ Stat saved successfully
-│   │   │   │   │   │
-│   │   │   │   │   ├─► [6] RLS POLICY CHECK:
-│   │   │   │   │   │   │   • INSERT: ✅ Stat admin has permission
-│   │   │   │   │   │   │   • SELECT: ❌ Public viewers blocked!
-│   │   │   │   │   │   │
-│   │   │   │   │   │   └─► [7a] REAL-TIME ATTEMPT:
-│   │   │   │   │   │       │   ❌ Broadcast blocked (no SELECT permission)
-│   │   │   │   │   │       │   ❌ Live viewers don't receive update
-│   │   │   │   │   │       │
-│   │   │   │   │   │       └─► [FALLBACK] Polling (every 2 seconds)
-│   │   │   │   │   │           │   🔄 Frontend: CustomEvent('force-game-refresh')
-│   │   │   │   │   │           │   🔄 usePlayFeed: fetchAll()
-│   │   │   │   │   │           │   🔄 Query: SELECT * FROM game_stats
-│   │   │   │   │   │           │   ✅ Score updates after 2-second delay
-│   │   │   │   │   │
-│   │   │   │   │   └─► [7b] SCORE SYNC:
-│   │   │   │   │       │   ⚠️ games.home_score NOT updated
-│   │   │   │   │       │   ⚠️ Must calculate from game_stats SUM
-│   │   │   │   │       │   ⚠️ Potential desync
-│   │   │   │   │
-│   │   │   │   └─► [8] RESPONSE: { success: true }
-│   │   │   │
-│   │   │   └─► [9] UI UPDATE: 
-│   │   │       │   ✅ Local state updated
-│   │   │       │   ✅ Score display incremented
-│   │   │       │   ✅ Play-by-play feed updated (after 2s)
-│   │   │
-│   │   └─► ✅ STAT RECORDED (but real-time broken)
-│
-└─► ⚠️ LIVE VIEWERS: See update after 2-second polling delay
+1. STAT ADMIN UI
+   │
+   ├─► Click "2PT Made" for Player #23
+   │
+   ▼
+2. STAT TRACKER (src/app/stat-tracker-v3/page.tsx)
+   │
+   ├─► useTracker hook
+   │   ├─► tracker.recordStat(playerId, "2pt_made", 2)
+   │   │
+   │   ▼
+   ├─► GameServiceV3.recordStat()
+   │   ├─► Raw HTTP POST request
+   │   ├─► Authorization: Bearer {JWT}
+   │   ├─► Body: { player_id, team_id, stat_type, stat_value, quarter, game_time }
+   │   │
+   │   ▼
+   └─► Supabase PostgreSQL
+       ├─► INSERT INTO game_stats
+       ├─► ✅ Stat saved to database
+       │
+       ▼
+3. REAL-TIME BROADCAST (WebSocket)
+   │
+   ├─► gameSubscriptionManager detects INSERT
+   ├─► Broadcasts to all subscribed clients
+   │
+   ▼
+4. LIVE VIEWER (src/app/game-viewer/[gameId]/page.tsx)
+   │
+   ├─► useGameViewerV2 receives update
+   ├─► Transform game_stats → PlayByPlayEntry
+   ├─► Calculate running scores
+   ├─► React.memo prevents unnecessary re-renders
+   │
+   └─► ✅ UI updates silently (no loading state)
+
+5. STAT TRACKER UI
+   │
+   └─► ✅ Score updates immediately (optimistic + confirmed)
+
+RESULT: ✅ True real-time updates with <100ms latency
 ```
 
 ---
 
-## 🔄 DATA FLOW: STAT RECORDING (AFTER FIXES)
+## 🔄 DATA FLOW: SUBSTITUTIONS (V3 ENGINE)
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│              STAT RECORDING FLOW (FIXED)                            │
+│                  SUBSTITUTION FLOW (V3)                             │
 └────────────────────────────────────────────────────────────────────┘
 
-USER ACTION: "Player scores 2-point shot"
-│
-├─► [1-4] SAME AS BEFORE (Frontend → Service → Supabase → PostgreSQL)
-│   │
-│   └─► [5] POSTGRESQL: Write to database
-│       │   ✅ Stat saved successfully
-│       │
-│       ├─► [6] DATABASE TRIGGER (NEW!):
-│       │   │   ↓ update_game_scores()
-│       │   │   │
-│       │   │   ├─► Calculate: home_score = SUM(game_stats WHERE team_id = team_a)
-│       │   │   ├─► Calculate: away_score = SUM(game_stats WHERE team_id = team_b)
-│       │   │   └─► UPDATE games SET home_score = X, away_score = Y
-│       │   │       ✅ Scores auto-synced!
-│       │   │
-│       │   ├─► [7] RLS POLICY CHECK (UPDATED!):
-│       │   │   │   • INSERT: ✅ Stat admin has permission
-│       │   │   │   • SELECT: ✅ Public viewers allowed (NEW!)
-│       │   │   │
-│       │   │   └─► [8] REAL-TIME BROADCAST (WORKING!):
-│       │   │       │
-│       │   │       ├─► [8a] Event: game_stats INSERT
-│       │   │       │   │   ✅ Broadcast to all subscribers
-│       │   │       │   │   ✅ usePlayFeed callback fires
-│       │   │       │   │   ✅ Live viewer updates INSTANTLY
-│       │   │       │
-│       │   │       └─► [8b] Event: games UPDATE (from trigger)
-│       │   │           │   ✅ Broadcast score change
-│       │   │           │   ✅ useGameStream callback fires
-│       │   │           │   ✅ Scores synced everywhere
-│       │   │
-│       │   └─► [9] UI UPDATE:
-│       │       │   ✅ Local state updated
-│       │       │   ✅ Score display incremented
-│       │       │   ✅ Play-by-play feed updated INSTANTLY
-│       │       │   ✅ No polling needed!
-│       │
-│       └─► ✅ STAT RECORDED (real-time working!)
-│
-└─► ✅ LIVE VIEWERS: See update INSTANTLY (<100ms)
-```
-
----
-
-## 👥 USER ROLE FLOWS
-
-### ORGANIZER FLOW ✅ (Working)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    ORGANIZER WORKFLOW                        │
-└─────────────────────────────────────────────────────────────┘
-
-1. CREATE TOURNAMENT
-   ├─► tournaments table
-   └─► RLS: organizer_id = auth.uid() ✅
-
-2. CREATE TEAMS
-   ├─► teams table (tournament_id FK)
-   ├─► UPDATE tournaments.current_teams
-   └─► RLS: Via tournament ownership ✅
-
-3. ADD PLAYERS TO TEAMS
-   ├─► team_players table (team_id, player_id)
-   ├─► ⚠️ NO VALIDATION: Can add same player to multiple teams
-   └─► FIX: Add frontend validation (FRONTEND_ACTION_PLAN.md)
-
-4. CREATE GAMES
-   ├─► games table (team_a_id, team_b_id, stat_admin_id)
-   └─► RLS: Via tournament ownership ✅
-
-5. ASSIGN STAT ADMIN
-   ├─► UPDATE games.stat_admin_id
-   └─► Round-robin distribution ✅
-```
-
-### STAT ADMIN FLOW ⚠️ (Partially Working)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                 STAT ADMIN WORKFLOW                          │
-└─────────────────────────────────────────────────────────────┘
-
-1. VIEW ASSIGNED GAMES
-   ├─► Query: SELECT * FROM games WHERE stat_admin_id = auth.uid()
-   ├─► Group by organizer
-   └─► RLS: stat_admin_id = auth.uid() ✅
-
-2. LAUNCH STAT BOARD
-   ├─► Navigate to /stat-tracker?gameId=xxx
-   └─► Load game + teams + players ✅
-
-3. START GAME
-   ├─► UPDATE games SET status='in_progress'
-   └─► RLS: stat_admin_id = auth.uid() ✅
-
-4. RECORD STATS
-   ├─► INSERT INTO game_stats
-   ├─► ✅ Stat saved
-   ├─► ❌ Real-time broadcast blocked (FIX NEEDED)
-   └─► ⚠️ games.home_score not updated (FIX NEEDED)
-
-5. RECORD SUBSTITUTIONS
+1. STAT ADMIN UI
+   │
+   ├─► Click player on court → Opens substitution modal
+   ├─► Select bench player → Click "Substitute"
+   │
+   ▼
+2. SUBSTITUTION MODAL (SubstitutionModalV3.tsx)
+   │
+   ├─► handleSubConfirm()
+   │   ├─► tracker.substitute(playerOut, playerIn, teamId)
+   │   │
+   │   ▼
    ├─► INSERT INTO game_substitutions
-   ├─► ✅ Substitution saved
-   └─► ❌ Real-time broadcast blocked (FIX NEEDED)
+   │   ├─► player_out_id, player_in_id, team_id, quarter, game_time
+   │   │
+   │   ▼
+   └─► TeamServiceV3.getTeamPlayersWithSubstitutions()
+       ├─► Fetch base roster from team_players
+       ├─► Apply substitutions chronologically
+       ├─► Return current on-court vs bench status
+       │
+       ▼
+3. UI UPDATE
+   │
+   ├─► Update teamAPlayers / teamBPlayers state
+   ├─► Force re-render with rosterRefreshKey
+   ├─► Player avatars swap positions
+   │
+   └─► ✅ UI reflects new roster state immediately
 
-6. END GAME
-   ├─► UPDATE games SET status='completed', end_time=NOW()
-   └─► RLS: stat_admin_id = auth.uid() ✅
+4. LIVE VIEWER
+   │
+   ├─► Real-time subscription detects substitution
+   ├─► Add to play-by-play feed with 🔄 icon
+   │
+   └─► ✅ Substitution appears in feed with NBA styling
+
+RESULT: ✅ Auto-UI update + play-by-play integration
 ```
 
-### VIEWER FLOW ❌ (Broken - Polling Fallback)
+---
+
+## 🔐 AUTHENTICATION FLOW (CENTRALIZED)
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│              AUTHENTICATION ARCHITECTURE (V2)                       │
+└────────────────────────────────────────────────────────────────────┘
+
+1. APP INITIALIZATION (src/app/layout.tsx)
+   │
+   ├─► <AuthProvider> wraps entire app
+   │   ├─► useAuthV2() hook initialized
+   │   ├─► Check localStorage for session
+   │   ├─► Verify JWT expiration
+   │   │
+   │   ▼
+   └─► If token expires < 5 min → Auto-refresh
+
+2. USER SIGNS IN (src/components/auth/AuthPageV2.tsx)
+   │
+   ├─► authServiceV2.signIn(email, password)
+   ├─► Raw HTTP POST to Supabase Auth
+   ├─► Store access_token, refresh_token in localStorage
+   │
+   ▼
+3. AUTH CONTEXT PROVIDES
+   │
+   ├─► { user, loading, error, signIn, signUp, signOut, refreshSession }
+   ├─► Available to all components via useAuthContext()
+   │
+   └─► ✅ Single source of truth
+
+4. CHILD COMPONENTS
+   │
+   ├─► const { user } = useAuthContext()
+   ├─► Pass user to hooks/services
+   │
+   └─► ✅ NO redundant useAuthV2() calls
+
+5. AUTO-REFRESH TIMER
+   │
+   ├─► setInterval every 45 minutes
+   ├─► authServiceV2.refreshToken()
+   ├─► Update localStorage with new tokens
+   │
+   └─► ✅ Never expires during active session
+
+6. API CALLS (GameServiceV3, TeamServiceV3)
+   │
+   ├─► Include Authorization: Bearer {JWT}
+   ├─► On 401/403 → Auto-refresh & retry once
+   │
+   └─► ✅ Seamless token refresh
+
+RESULT: 97% reduction in auth API calls, auto-refresh, no manual login
+```
+
+---
+
+## 👁️ LIVE VIEWER FLOW (V2 ENGINE)
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                  LIVE VIEWER DATA FLOW (V2)                         │
+└────────────────────────────────────────────────────────────────────┘
+
+1. USER NAVIGATES TO GAME (/game-viewer/[gameId])
+   │
+   ├─► GameViewerPage component loads
+   │   ├─► useGameViewerV2(gameId, user)
+   │   │
+   │   ▼
+   └─► INITIAL DATA FETCH (Raw HTTP)
+       ├─► GET /games?id=eq.{gameId}
+       ├─► GET /game_stats?game_id=eq.{gameId}
+       ├─► GET /game_substitutions?game_id=eq.{gameId}
+       ├─► GET /teams (for team_a and team_b)
+       │
+       └─► ✅ Loading state shown ONLY on initial load
+
+2. DATA TRANSFORMATION
+   │
+   ├─► Fetch player names for all player_ids
+   ├─► Merge game_stats + game_substitutions by timestamp
+   ├─► Sort chronologically (oldest first)
+   ├─► Calculate running scores per play
+   ├─► Transform to PlayByPlayEntry[] format
+   │
+   └─► ✅ Play-by-play feed ready
+
+3. REAL-TIME SUBSCRIPTION (WebSocket)
+   │
+   ├─► gameSubscriptionManager.subscribe(gameId)
+   ├─► Listen for INSERT/UPDATE on game_stats
+   ├─► Listen for INSERT on game_substitutions
+   │
+   ▼
+4. REAL-TIME UPDATE RECEIVED
+   │
+   ├─► fetchGameData(true) ← isUpdate flag
+   ├─► ❌ setLoading(false) NOT called (silent update)
+   ├─► Fetch latest data
+   ├─► Re-transform to PlayByPlayEntry[]
+   ├─► React.memo prevents re-render if data unchanged
+   │
+   └─► ✅ UI updates smoothly, no white screen
+
+5. COMPONENT RENDERING
+   │
+   ├─► PlayByPlayFeed (React.memo)
+   │   ├─► Maps PlayByPlayEntry[] to PlayEntry components
+   │   ├─► Each entry shows: icon, player, action, score, time
+   │   └─► NBA-style player points display: "(15 PTS)"
+   │
+   └─► ✅ Professional NBA-level viewer
+
+RESULT: ✅ Silent updates, no flicker, real-time play-by-play
+```
+
+---
+
+## 👤 PLAYER DASHBOARD FLOW
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                  PLAYER DASHBOARD DATA FLOW                         │
+└────────────────────────────────────────────────────────────────────┘
+
+1. PLAYER SIGNS IN
+   │
+   ├─► Redirect to /dashboard/player
+   │   ├─► PlayerDashboardPage component
+   │   ├─► useAuthContext() provides user
+   │   │
+   │   ▼
+   └─► usePlayerDashboardData(user)
+
+2. DATA FETCHING (PlayerDashboardService)
+   │
+   ├─► getIdentity(userId)
+   │   └─► Query users table for profile data
+   │
+   ├─► getSeasonAverages(userId)
+   │   └─► Query player_season_averages (currently empty)
+   │
+   ├─► getCareerHighs(userId)
+   │   └─► Query player_career_highs
+   │
+   ├─► getUpcomingGames(userId) ✅ NEW
+   │   ├─► Query team_players for player's teams
+   │   ├─► Query games WHERE team_a_id OR team_b_id IN (player's teams)
+   │   ├─► Filter by status: scheduled, in_progress
+   │   ├─► Transform to UpcomingGame format
+   │   └─► ✅ Returns actual upcoming games
+   │
+   └─► getPerformanceAnalytics(userId)
+       └─► Query player_performance_analytics (placeholder)
+
+3. GAME STATS TABLE (GameStatsTable.tsx)
+   │
+   ├─► PlayerGameStatsService.getPlayerGameStats(userId)
+   │   ├─► Query game_stats table
+   │   ├─► GROUP BY game_id
+   │   ├─► Calculate FG%, 3P%, FT%, shooting efficiency
+   │   └─► Return GameStatsSummary[] (NBA-style box score)
+   │
+   └─► ✅ Display game log with all stats
+
+4. MY TOURNAMENTS SECTION
+   │
+   ├─► Map UpcomingGame[] to TournamentCard components
+   │   ├─► Display opponent team name
+   │   ├─► Display formatted date/time
+   │   ├─► Display tournament venue
+   │   │
+   │   └─► ✅ "No upcoming games" if player not on team
+
+5. EDIT PROFILE MODAL
+   │
+   ├─► EditProfileModal component
+   │   ├─► Populate form with currentPlayerData
+   │   ├─► Parse height/weight to proper format
+   │   ├─► Update users table on save
+   │   │
+   │   └─► ✅ Profile data editable and persisted
+
+RESULT: ✅ Complete player dashboard with live data
+```
+
+---
+
+## 🏗️ FRONTEND ARCHITECTURE
+
+### Directory Structure
+```
+src/
+├── app/                          # Next.js 15 app router
+│   ├── layout.tsx               # Root layout with AuthProvider
+│   ├── page.tsx                 # Home page
+│   ├── dashboard/
+│   │   ├── page.tsx             # Organizer dashboard
+│   │   ├── stat-admin/page.tsx  # Stat admin dashboard
+│   │   └── player/page.tsx      # Player dashboard
+│   ├── stat-tracker-v3/page.tsx # V3 stat tracker
+│   └── game-viewer/[gameId]/    # Live game viewer
+│
+├── components/                   # React components
+│   ├── auth/                    # Authentication components
+│   ├── tracker-v3/              # Stat tracker V3 components
+│   ├── ui/                      # Shadcn UI components
+│   └── *.tsx                    # Feature components
+│
+├── contexts/
+│   └── AuthContext.tsx          # Centralized auth state
+│
+├── hooks/                        # Custom React hooks
+│   ├── useAuthV2.ts             # Auth hook with auto-refresh
+│   ├── useTracker.ts            # Stat tracking state
+│   ├── useGameViewerV2.ts       # Live viewer data
+│   └── usePlayerDashboardData.ts # Player dashboard data
+│
+├── lib/
+│   ├── services/                # Business logic layer
+│   │   ├── gameServiceV3.ts     # Game CRUD (Raw HTTP)
+│   │   ├── teamServiceV3.ts     # Team data (Raw HTTP)
+│   │   ├── authServiceV2.ts     # Authentication (Raw HTTP)
+│   │   ├── playerDashboardService.ts # Player data
+│   │   └── organizerDashboardService.ts # Organizer data
+│   │
+│   ├── types/                   # TypeScript interfaces
+│   ├── utils/                   # Utility functions
+│   └── supabase.ts              # Supabase client config
+│
+└── lib/utils/
+    ├── gameSubscriptionManager.ts # Real-time subscriptions
+    └── tokenRefresh.ts            # JWT refresh logic
+```
+
+### Key Patterns
+
+**1. Centralized Authentication**
+- AuthProvider wraps app
+- useAuthContext() for all components
+- No redundant auth calls
+
+**2. Service Layer Pattern**
+- Business logic in `lib/services/`
+- Raw HTTP for V3 services
+- Supabase client for legacy features
+
+**3. Custom Hooks for State**
+- `useTracker` - Game tracking state
+- `useGameViewerV2` - Live viewer data
+- `usePlayerDashboardData` - Player profile data
+
+**4. Real-time Manager**
+- `gameSubscriptionManager` - WebSocket subscriptions
+- Centralized subscription management
+- Automatic cleanup on unmount
+
+---
+
+## 🔧 TECHNICAL STACK
+
+### Frontend
+- **Framework**: Next.js 15.4.5 (Turbopack)
+- **Language**: TypeScript
+- **UI Library**: React 19
+- **Styling**: Tailwind CSS + Shadcn UI
+- **State**: React Context API + Custom Hooks
+- **Data Fetching**: Raw HTTP + Supabase Client (Hybrid)
+
+### Backend
+- **BaaS**: Supabase
+- **Database**: PostgreSQL 15
+- **Auth**: Supabase Auth (JWT)
+- **Real-time**: WebSocket subscriptions
+- **Storage**: Supabase Storage (card-assets bucket)
+- **Functions**: Supabase Edge Functions
+
+### Development
+- **Build Tool**: Turbopack
+- **Package Manager**: npm
+- **Linting**: ESLint
+- **Version Control**: Git + GitHub
+
+---
+
+## 🚀 DEPLOYMENT ARCHITECTURE
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    VIEWER WORKFLOW                           │
+│                  PRODUCTION DEPLOYMENT                       │
 └─────────────────────────────────────────────────────────────┘
 
-1. VIEW LIVE GAMES (Home Page)
-   ├─► Query: SELECT * FROM games WHERE status IN ('live', 'in_progress')
-   ├─► ✅ Initial fetch works
-   ├─► Subscribe to games table UPDATE
-   ├─► ✅ Real-time works for games table
-   └─► ⚠️ Scores only update if games.home_score/away_score updated
+Frontend (Vercel)
+├─► Next.js app deployed to Vercel
+├─► Automatic deployments from main branch
+├─► Environment variables configured
+└─► Edge network for global distribution
 
-2. VIEW INDIVIDUAL GAME
-   ├─► Query: SELECT * FROM games WHERE id = xxx
-   ├─► Query: SELECT * FROM game_stats WHERE game_id = xxx
-   ├─► ✅ Initial fetch works
-   │
-   ├─► V1: useGameStream (Legacy)
-   │   ├─► Subscribe to games UPDATE ✅
-   │   ├─► Subscribe to game_stats INSERT ❌
-   │   └─► Subscribe to game_substitutions INSERT ❌
-   │
-   ├─► V2: usePlayFeed (Current)
-   │   ├─► Subscribe to game_stats INSERT ❌
-   │   └─► Subscribe to game_substitutions INSERT ❌
-   │
-   └─► FALLBACK: Polling (every 2 seconds)
-       ├─► CustomEvent('force-game-refresh')
-       ├─► fetchAll() re-queries database
-       └─► ⚠️ 2-second delay, not true real-time
+Backend (Supabase)
+├─► PostgreSQL database (hosted)
+├─► Real-time engine (hosted)
+├─► Storage bucket (hosted)
+├─► Edge Functions (hosted)
+└─► Automatic backups
 
-PROBLEM: Real-time subscriptions blocked by RLS
-FIX: Add public SELECT policy (BACKEND_COORDINATION_REQUIRED.md)
+DNS & SSL
+├─► Custom domain support
+└─► Automatic SSL certificates
+
+Monitoring
+├─► Vercel Analytics
+├─► Supabase Dashboard
+└─► Browser Console Logging
 ```
 
 ---
 
-## 🔒 RLS POLICY OVERVIEW
+## 📝 CURRENT STATUS
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                   RLS POLICY STRUCTURE                            │
-└──────────────────────────────────────────────────────────────────┘
+### What's Working ✅
+- Authentication with centralized context
+- Real-time stat tracking (V3 engine)
+- Live viewer with silent updates
+- Substitution system with auto-UI updates
+- Player Dashboard with upcoming games
+- Responsive design for all devices
+- JWT auto-refresh
+- Performance optimizations
 
-TABLE: tournaments
-├─► Policy: organizer_policy
-│   └─► FOR ALL USING (organizer_id = auth.uid()) ✅
-└─► Policy: public_policy
-    └─► FOR SELECT USING (is_public = true) ✅
+### Known Limitations
+- Aggregated tables empty (backend pipeline needed)
+- Historical stats table not integrated
+- NBA card generation placeholder
+- No mobile app (web-only)
 
-TABLE: teams
-├─► Policy: organizer_policy
-│   └─► FOR ALL USING (tournament.organizer_id = auth.uid()) ✅
-└─► Policy: public_policy
-    └─► FOR SELECT USING (tournament.is_public = true) ✅
-
-TABLE: games
-├─► Policy: organizer_policy
-│   └─► FOR ALL USING (tournament.organizer_id = auth.uid()) ✅
-├─► Policy: stat_admin_policy
-│   └─► FOR ALL USING (stat_admin_id = auth.uid()) ✅
-└─► Policy: public_policy
-    └─► FOR SELECT USING (tournament.is_public = true) ✅
-
-TABLE: game_stats
-├─► Policy: stat_admin_policy
-│   └─► FOR ALL USING (game.stat_admin_id = auth.uid()) ✅
-└─► Policy: public_realtime (MISSING! ❌)
-    └─► FOR SELECT USING (tournament.is_public = true) ⚠️ NEED TO ADD
-
-TABLE: game_substitutions
-├─► Policy: stat_admin_policy
-│   └─► FOR ALL USING (game.stat_admin_id = auth.uid()) ✅
-└─► Policy: public_realtime (MISSING! ❌)
-    └─► FOR SELECT USING (tournament.is_public = true) ⚠️ NEED TO ADD
-```
+### Next Phase Features
+See `FEATURES_COMPLETE.md` for full roadmap
 
 ---
 
-## 🌐 REAL-TIME SUBSCRIPTION ARCHITECTURE
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│            SUPABASE REAL-TIME ARCHITECTURE                        │
-└──────────────────────────────────────────────────────────────────┘
-
-FRONTEND (Browser)
-│
-├─► WebSocket Connection
-│   ├─► supabase.channel('consolidated-game-123')
-│   │   ├─► .on('postgres_changes', { table: 'games', event: 'UPDATE' })
-│   │   ├─► .on('postgres_changes', { table: 'game_stats', event: 'INSERT' })
-│   │   └─► .on('postgres_changes', { table: 'game_substitutions', event: 'INSERT' })
-│   │
-│   └─► .subscribe((status) => { ... })
-│       ├─► Status: 'SUBSCRIBED' ✅ (Connection successful)
-│       └─► Waiting for events...
-│
-▼
-SUPABASE BACKEND
-│
-├─► PostgreSQL Database
-│   ├─► [1] INSERT INTO game_stats (...)
-│   │   │   ✅ Record saved
-│   │   │
-│   │   ├─► [2] Realtime Publication Check
-│   │   │   │   ✅ game_stats in supabase_realtime publication?
-│   │   │   │   ✅ YES (or ❌ NO - need to add)
-│   │   │   │
-│   │   │   ├─► [3] RLS Policy Check for SELECT
-│   │   │   │   │   ❌ BLOCKED: No public SELECT policy
-│   │   │   │   │   ❌ Real-time event NOT broadcast
-│   │   │   │   │
-│   │   │   │   └─► [FIX] Add public SELECT policy
-│   │   │   │       │   CREATE POLICY "game_stats_public_realtime"
-│   │   │   │       │   ON game_stats FOR SELECT
-│   │   │   │       │   USING (tournament.is_public = true)
-│   │   │   │       │
-│   │   │   │       └─► [4] Broadcast Event
-│   │   │   │           │   ✅ WebSocket: { event: 'INSERT', table: 'game_stats', ... }
-│   │   │   │           │   ✅ All subscribers receive update
-│   │   │   │           │
-│   │   │   │           └─► FRONTEND: Callback fires
-│   │   │   │               │   🔔 SubscriptionManager: INSERT detected
-│   │   │   │               │   🔔 V2 Feed: Callback received
-│   │   │   │               │   ✅ UI updates instantly
-│   │   │   │
-│   │   │   └─► [CURRENT] No broadcast
-│   │   │       │   ⚠️ Frontend: Timeout waiting for event
-│   │   │       │   🔄 Fallback: Polling (every 2 seconds)
-│   │   │
-│   │   └─► Response: { success: true }
-│   │
-│   └─► WebSocket Server
-│       └─► Manages subscriptions and broadcasts
-```
-
----
-
-## 🎯 SERVICE LAYER ARCHITECTURE
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│               FRONTEND SERVICE LAYER                              │
-└──────────────────────────────────────────────────────────────────┘
-
-src/lib/services/
-│
-├─► gameService.ts (Game Management)
-│   ├─► createGame()
-│   ├─► updateGameState()
-│   ├─► startGame()
-│   ├─► recordStat() ⚠️ Core function
-│   ├─► recordSubstitution()
-│   └─► getAssignedGames()
-│
-├─► tournamentService.ts (Tournament + Team Management)
-│   ├─► createTournament()
-│   ├─► getTournamentsByOrganizer()
-│   ├─► TeamService.createTeam()
-│   ├─► TeamService.addPlayerToTeam() ⚠️ Needs validation
-│   ├─► TeamService.getTeamPlayers()
-│   └─► TeamService.getStatAdmins()
-│
-├─► statsService.ts (Stat Queries)
-│   └─► getByGameId() (No JOINs for performance)
-│
-├─► substitutionsService.ts (Substitution Queries)
-│   └─► getByGameId()
-│
-└─► organizerDashboardService.ts (Dashboard Aggregations)
-    ├─► getDashboardData()
-    ├─► getRecentTournaments()
-    └─► getUpcomingGames()
-
-HOOK LAYER (src/hooks/)
-│
-├─► useGameStream.tsx (V1 - Legacy) ⚠️ Deprecate
-├─► usePlayFeed.tsx (V2 - Current) ✅ Primary
-├─► useLiveGames.ts (Home Page)
-├─► useTracker.ts (Stat Tracker State)
-└─► useOrganizerDashboardData.ts (Dashboard State)
-```
-
----
-
-## 🔧 FIX IMPLEMENTATION MAP
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                    FIXES OVERVIEW                                 │
-└──────────────────────────────────────────────────────────────────┘
-
-BACKEND FIXES (Supabase SQL) - 15-30 minutes
-│
-├─► [1] Enable Realtime Publication
-│   └─► ALTER PUBLICATION supabase_realtime ADD TABLE game_stats;
-│   └─► ALTER PUBLICATION supabase_realtime ADD TABLE game_substitutions;
-│
-├─► [2] Add Public RLS Policies
-│   └─► CREATE POLICY "game_stats_public_realtime" ON game_stats...
-│   └─► CREATE POLICY "game_substitutions_public_realtime" ON game_substitutions...
-│
-└─► [3] Add Score Sync Trigger
-    └─► CREATE FUNCTION update_game_scores()...
-    └─► CREATE TRIGGER game_stats_update_scores...
-
-FRONTEND FIXES (TypeScript) - 2-3 hours
-│
-├─► [1] Player Locking Validation
-│   └─► Location: src/lib/services/tournamentService.ts
-│   └─► Function: TeamService.addPlayerToTeam()
-│   └─► Add: Check existing assignments before INSERT
-│
-├─► [2] Data Flow Consolidation
-│   └─► Location: src/hooks/useGameViewerData.ts
-│   └─► Add: ENABLE_V1_FALLBACK feature flag
-│   └─► Goal: Clean separation of V1 and V2
-│
-├─► [3] Score Validation Logging
-│   └─► Location: src/hooks/usePlayFeed.tsx
-│   └─► Add: Compare calculated vs database scores
-│   └─► Goal: Detect desync issues
-│
-├─► [4] Error Handling Improvements
-│   └─► Location: src/lib/services/gameService.ts
-│   └─► Function: recordStat()
-│   └─► Add: User-friendly error messages
-│
-└─► [5] Real-Time Status Indicator
-    └─► Location: src/hooks/useGameViewerData.ts
-    └─► Add: realtimeStatus state
-    └─► UI: Show "Live" or "Polling" badge
-```
-
----
-
-**END OF VISUAL DIAGRAMS - For detailed implementation, see action plan documents**
-
+**For detailed feature documentation, see:**
+- `docs/04-features/` - Feature-specific guides
+- `docs/03-architecture/` - Detailed architecture docs
+- `CHANGELOG.md` - Version history
+- `README.md` - Quick start guide
