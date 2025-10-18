@@ -39,6 +39,7 @@ Developer guidelines and procedures
 - Coding Standards
 - Testing Guide
 - Deployment Guide
+- **Performance Measurement** - Authentication optimization metrics
 
 ### 🏗️ [03-Architecture](03-architecture/)
 System design and architecture
@@ -47,6 +48,7 @@ System design and architecture
 - Database Schema
 - Real-time Architecture
 - **Raw HTTP Pattern** - Enterprise Supabase integration solution
+- **Architecture Design** - Centralized Auth Context implementation
 
 ### 🛠️ [04-Fixes](04-fixes/)
 Critical fixes and system resolutions
@@ -57,10 +59,10 @@ Critical fixes and system resolutions
 
 ### 🎯 [04-Features](04-features/)
 Feature-specific documentation
-- **Authentication** - Auth V2 system, integration, troubleshooting
+- **Authentication** - Auth V2 system, integration, troubleshooting, audit
 - **Stat Tracker** - V3 implementation, user guide, API
-- **Live Viewer** - V2 implementation, NBA-level hybrid system
-- **Dashboards** - Player, Organizer, Admin dashboards
+- **Live Viewer** - V2 implementation, NBA-level hybrid system, data analysis, UI analysis
+- **Dashboards** - Player, Organizer, Admin dashboards, data audit, analysis
 - **Player Cards** - Card generation, template system
 
 ### 🗄️ [05-Database](05-database/)
@@ -102,8 +104,15 @@ Historical and deprecated documentation
 | **Changelog** | [../CHANGELOG.md](../CHANGELOG.md) |
 | **Raw HTTP Pattern** | [03-architecture/RAW_HTTP_PATTERN.md](03-architecture/RAW_HTTP_PATTERN.md) |
 | Authentication V2 | [04-features/authentication/](04-features/authentication/) |
+| Authentication Audit | [04-features/authentication/AUTHENTICATION_AUDIT.md](04-features/authentication/AUTHENTICATION_AUDIT.md) |
 | Stat Tracker V3 | [04-features/stat-tracker/](04-features/stat-tracker/) |
 | Live Viewer | [04-features/live-viewer/](04-features/live-viewer/) |
+| Live Viewer Data Analysis | [04-features/live-viewer/LIVE_VIEWER_DATA_ANALYSIS.md](04-features/live-viewer/LIVE_VIEWER_DATA_ANALYSIS.md) |
+| Live Viewer UI Analysis | [04-features/live-viewer/LIVE_VIEWER_UI_ANALYSIS.md](04-features/live-viewer/LIVE_VIEWER_UI_ANALYSIS.md) |
+| Player Dashboard Analysis | [04-features/dashboards/PLAYER_DASHBOARD_ANALYSIS.md](04-features/dashboards/PLAYER_DASHBOARD_ANALYSIS.md) |
+| Player Dashboard Data Audit | [04-features/dashboards/PLAYER_DASHBOARD_DATA_AUDIT.md](04-features/dashboards/PLAYER_DASHBOARD_DATA_AUDIT.md) |
+| Architecture Design | [03-architecture/ARCHITECTURE_DESIGN.md](03-architecture/ARCHITECTURE_DESIGN.md) |
+| Performance Measurement | [02-development/PERFORMANCE_MEASUREMENT.md](02-development/PERFORMANCE_MEASUREMENT.md) |
 | Substitution System | [01-project/FEATURES_COMPLETE.md#substitution-system](01-project/FEATURES_COMPLETE.md) |
 | Database Schema | [03-architecture/DATABASE_SCHEMA.md](03-architecture/DATABASE_SCHEMA.md) |
 | RLS Policies | [05-database/RLS_POLICIES.md](05-database/RLS_POLICIES.md) |
