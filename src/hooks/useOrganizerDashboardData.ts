@@ -8,7 +8,7 @@ import {
 } from '@/lib/types/organizerDashboard';
 
 export function useOrganizerDashboardData() {
-  const { user, initialized, loading: authLoading } = useAuthStore();
+  const { user, loading: authLoading } = useAuthV2();
   const [state, setState] = useState<OrganizerDashboardState>({
     data: defaultOrganizerDashboardData,
     loading: true,
@@ -49,12 +49,12 @@ export function useOrganizerDashboardData() {
     }
   }, [user?.id]);
 
-  // Load data when auth is initialized and user is available
+  // Load data when auth is ready and user is available
   useEffect(() => {
-    if (initialized && !authLoading && user?.id) {
+    if (!authLoading && user?.id) {
       refetch();
     }
-  }, [initialized, authLoading, user?.id, refetch]);
+  }, [authLoading, user?.id, refetch]);
 
   // Return the state and refetch function
   return {

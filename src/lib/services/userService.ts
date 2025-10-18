@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { authServiceV2 } from '@/lib/services/authServiceV2';
 
 export interface UserProfile {
   id: string;
@@ -29,9 +30,9 @@ export class UserService {
   // Get current user profile - lightweight version for auth initialization
   static async getUserProfile(skipRetries = false): Promise<UserProfile | null> {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const user = await authServiceV2.getUserProfile();
       
-      if (authError || !user) {
+      if (!user) {
         return null;
       }
 
@@ -93,10 +94,10 @@ export class UserService {
   // Get user subscription
   static async getUserSubscription(): Promise<UserSubscription | null> {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const user = await authServiceV2.getUserProfile();
       
-      if (authError || !user) {
-        console.error('Auth error getting user:', authError);
+      if (!user) {
+        console.error('No authenticated user found');
         return null;
       }
 
@@ -125,9 +126,9 @@ export class UserService {
   // Update user profile
   static async updateUserProfile(updates: Partial<UserProfile>): Promise<UserProfile | null> {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const user = await authServiceV2.getUserProfile();
       
-      if (authError || !user) {
+      if (!user) {
         throw new Error('User not authenticated');
       }
 

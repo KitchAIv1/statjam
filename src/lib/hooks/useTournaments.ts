@@ -5,7 +5,7 @@ import { useAuthV2 } from '@/hooks/useAuthV2';
 
 // Custom Hook for Tournament Data Management
 export function useTournaments() {
-  const { user, userProfile } = useAuthStore();
+  const { user } = useAuthV2();
   const [state, setState] = useState<TournamentListState>({
     tournaments: [],
     loading: false,

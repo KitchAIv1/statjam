@@ -29,21 +29,47 @@ const AuthPageV2 = () => {
     agreeToTerms: false
   });
 
+  // ✅ EMERGENCY: Clear stuck redirect flags on component mount
+  useEffect(() => {
+    // Clear any stuck redirect flags when auth page loads
+    const clearStuckFlags = () => {
+      const isRedirecting = sessionStorage.getItem('auth-redirecting');
+      const redirectTimestamp = sessionStorage.getItem('auth-redirect-timestamp');
+      const now = Date.now();
+      
+      if (isRedirecting === 'true' && redirectTimestamp) {
+        const timeDiff = now - parseInt(redirectTimestamp);
+        if (timeDiff > 3000) { // 3 seconds
+          console.log('🚨 AuthPageV2: Clearing stuck redirect flags on mount');
+          sessionStorage.removeItem('auth-redirecting');
+          sessionStorage.removeItem('auth-redirect-timestamp');
+        }
+      }
+    };
+    
+    clearStuckFlags();
+  }, []); // Run once on mount
+
   // Redirect if user is already logged in
   useEffect(() => {
     if (user && !loading) {
       // ✅ FIX: Check if we're currently redirecting to prevent infinite loop
       const isRedirecting = sessionStorage.getItem('auth-redirecting');
+      const redirectTimestamp = sessionStorage.getItem('auth-redirect-timestamp');
+      const now = Date.now();
       
+      // ✅ AGGRESSIVE FIX: Always clear redirect flags if user is authenticated
       if (isRedirecting === 'true') {
-        console.log('🔒 AuthPageV2 (V2): Already redirecting, skipping...');
-        return;
+        console.log('🚨 AuthPageV2 (V2): User is authenticated, clearing redirect flags and proceeding...');
+        sessionStorage.removeItem('auth-redirecting');
+        sessionStorage.removeItem('auth-redirect-timestamp');
       }
       
       console.log('🔐 AuthPageV2 (V2): User is logged in, redirecting based on role:', user.role);
       
-      // Mark that we're redirecting
+      // Mark that we're redirecting with timestamp
       sessionStorage.setItem('auth-redirecting', 'true');
+      sessionStorage.setItem('auth-redirect-timestamp', now.toString());
       
       // ✅ Use window.location.href for hard redirect
       let redirectUrl = '/dashboard';

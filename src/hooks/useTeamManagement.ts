@@ -15,7 +15,7 @@ interface TeamManagementState {
 }
 
 export function useTeamManagement(tournamentId: string) {
-  const { user, initialized, loading: authLoading } = useAuthStore();
+  const { user, loading: authLoading } = useAuthV2();
   const [state, setState] = useState<TeamManagementState>({
     teams: [],
     loading: true,
@@ -160,10 +160,10 @@ export function useTeamManagement(tournamentId: string) {
 
   // Initial data load
   useEffect(() => {
-    if (initialized && !authLoading && user?.id && tournamentId) {
+    if (!authLoading && user?.id && tournamentId) {
       fetchTeams();
     }
-  }, [initialized, authLoading, user?.id, tournamentId, fetchTeams]);
+  }, [authLoading, user?.id, tournamentId, fetchTeams]);
 
   return {
     ...state,

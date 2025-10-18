@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase';
+import { authServiceV2 } from '@/lib/services/authServiceV2';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import type {
   PlayerIdentity,
@@ -127,7 +128,7 @@ function toNotification(row: Record<string, unknown>): NotificationItem {
 
 export class PlayerDashboardService {
   static async getIdentity(): Promise<PlayerIdentity | null> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authServiceV2.getUserProfile();
     if (!user) {
       console.log('🔍 PlayerDashboard: No authenticated user');
       return null;
@@ -182,7 +183,7 @@ export class PlayerDashboardService {
   }
 
   static async getSeasonAverages(): Promise<SeasonAverages | null> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authServiceV2.getUserProfile();
     if (!user) {
       console.log('🔍 PlayerDashboard: No authenticated user for season averages');
       return null;
@@ -206,7 +207,7 @@ export class PlayerDashboardService {
   }
 
   static async getCareerHighs(): Promise<CareerHighs | null> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authServiceV2.getUserProfile();
     if (!user) {
       console.log('🔍 PlayerDashboard: No authenticated user for career highs');
       return null;
@@ -230,7 +231,7 @@ export class PlayerDashboardService {
   }
 
   static async getPerformance(): Promise<{ kpis: PerformanceKpis | null; series: PerformanceSeriesEntry[] }> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authServiceV2.getUserProfile();
     if (!user) {
       console.log('🔍 PlayerDashboard: No authenticated user for performance');
       return { kpis: null, series: [] };
@@ -274,7 +275,7 @@ export class PlayerDashboardService {
   }
 
   static async getAchievements(): Promise<AchievementItem[]> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authServiceV2.getUserProfile();
     if (!user) return [];
     const { data, error } = await supabase
       .from('player_achievements')
@@ -286,7 +287,7 @@ export class PlayerDashboardService {
   }
 
   static async getNotifications(): Promise<NotificationItem[]> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authServiceV2.getUserProfile();
     if (!user) return [];
     const { data, error } = await supabase
       .from('player_notifications')
@@ -299,7 +300,7 @@ export class PlayerDashboardService {
   }
 
   static async getUpcomingGames(): Promise<UpcomingGame[]> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authServiceV2.getUserProfile();
     if (!user) return [];
     console.log('🔍 PlayerDashboard: Upcoming games - team_id column not available yet, returning empty array');
     // TODO: Backend team needs to add team_id column to users table
@@ -308,7 +309,7 @@ export class PlayerDashboardService {
   }
 
   static async getTrialState(): Promise<TrialState> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authServiceV2.getUserProfile();
     if (!user) return { isTrialActive: false };
     const { data } = await supabase
       .from('users')

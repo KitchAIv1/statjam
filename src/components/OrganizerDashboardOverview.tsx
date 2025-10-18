@@ -145,7 +145,7 @@ export function OrganizerDashboardOverview() {
                 variant="ghost" 
                 size="sm" 
                 className="gap-1"
-                onClick={() => router.push('/dashboard/tournaments')}
+                onClick={() => router.push('/dashboard?section=tournaments')}
               >
                 View All
                 <ArrowRight className="w-4 h-4" />

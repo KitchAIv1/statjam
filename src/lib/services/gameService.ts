@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { authServiceV2 } from '@/lib/services/authServiceV2';
 import { Game, GameStat, PlayerGameStats, GameSubstitution, AuditLog } from '@/lib/types/game';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 
@@ -698,7 +699,7 @@ export class GameService {
         // Silently skip until audit_logs endpoint/policies are ready
         return false;
       }
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await authServiceV2.getUserProfile();
       
       if (!user) {
         // Skip without noisy logging

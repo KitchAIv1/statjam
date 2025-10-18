@@ -7,19 +7,23 @@ import { OrganizerDashboard } from '@/components/OrganizerDashboard';
 import { NavigationHeader } from '@/components/NavigationHeader';
 
 const OrganizerDashboardContent = () => {
-  const { user, userRole, loading, initialized } = useAuthStore();
+  const { user, loading } = useAuthV2();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const userRole = user?.role;
 
   // Handle redirects in useEffect - wait for auth to fully initialize
   useEffect(() => {
+    // ✅ Clear redirect flag when dashboard loads successfully
+    sessionStorage.removeItem('auth-redirecting');
+    
     // Only redirect after auth is fully initialized
-    if (initialized && !loading && !user) {
+    if (!loading && !user) {
       router.push('/auth');
       return;
     }
     
-    if (initialized && !loading && user && userRole && userRole !== 'organizer') {
+    if (!loading && user && userRole && userRole !== 'organizer') {
       if (userRole === 'player') {
         router.push('/dashboard/player');
       } else if (userRole === 'stat_admin') {
@@ -30,13 +34,13 @@ const OrganizerDashboardContent = () => {
     }
 
     // If no section is specified, default to overview
-    if (initialized && !loading && user && userRole === 'organizer' && !searchParams.get('section')) {
+    if (!loading && user && userRole === 'organizer' && !searchParams.get('section')) {
       router.replace('/dashboard?section=overview');
     }
-  }, [initialized, loading, user, userRole, router, searchParams]);
+  }, [loading, user, userRole, router, searchParams]);
 
   // Show loading screen only while auth is initializing
-  if (!initialized || loading || !user || !userRole) {
+  if (loading || !user || !userRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
         <div className="flex items-center gap-4 text-lg font-medium">

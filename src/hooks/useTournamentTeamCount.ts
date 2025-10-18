@@ -27,7 +27,7 @@ export function useTournamentTeamCount(
   tournamentId: string, 
   options: UseTournamentTeamCountOptions = {}
 ): TournamentTeamCount {
-  const { user, initialized, loading: authLoading } = useAuthStore();
+  const { user, loading: authLoading } = useAuthV2();
   const [state, setState] = useState<Omit<TournamentTeamCount, 'refetch'>>({
     currentTeams: 0,
     maxTeams: options.maxTeams || 0,
@@ -89,10 +89,10 @@ export function useTournamentTeamCount(
 
   // Initial data load
   useEffect(() => {
-    if (initialized && !authLoading && user?.id && tournamentId) {
+    if (!authLoading && user?.id && tournamentId) {
       fetchTeamCount();
     }
-  }, [initialized, authLoading, user?.id, tournamentId, fetchTeamCount]);
+  }, [authLoading, user?.id, tournamentId, fetchTeamCount]);
 
   return {
     ...state,

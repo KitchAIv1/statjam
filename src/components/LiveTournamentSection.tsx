@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useMemo, memo } from 'react';
-import { Button } from "@/components/ui/Button";
-import { Play } from "lucide-react";
 import LiveGameCard from "@/components/LiveGameCard";
 import { useLiveGamesHybrid } from "@/hooks/useLiveGamesHybrid";
 import { useRouter } from "next/navigation";

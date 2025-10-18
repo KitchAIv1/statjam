@@ -1,5 +1,6 @@
 import { Tournament, TournamentCreateRequest, TournamentUpdateRequest, Team, Player } from '@/lib/types/tournament';
 import { supabase } from '@/lib/supabase';
+import { authServiceV2 } from '@/lib/services/authServiceV2';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 
 // Tournament Business Logic Layer
@@ -597,7 +598,7 @@ export class TeamService {
         console.log('⚠️ No players found in users table, creating demo players');
         
         // Get current user for reference
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        const currentUser = await authServiceV2.getUserProfile();
         if (currentUser) {
           console.log('✅ Current user found, creating demo players based on auth system');
           
@@ -910,8 +911,8 @@ export class TeamService {
       console.log('🔍 TeamService: Fetching stat admins');
       
       // First, let's try to get the current user to check permissions
-      const { data: currentUser } = await supabase.auth.getUser();
-      console.log('🔍 TeamService: Current user:', currentUser?.user?.id, currentUser?.user?.email);
+      const currentUser = await authServiceV2.getUserProfile();
+      console.log('🔍 TeamService: Current user:', currentUser?.id, currentUser?.email);
       
       // Try the query with detailed error logging
       const { data: statAdmins, error } = await supabase

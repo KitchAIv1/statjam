@@ -4,8 +4,6 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useAuthV2 } from '@/hooks/useAuthV2';
-import { supabase } from '@/lib/supabase';
-import { TeamService } from '@/lib/services/tournamentService';
 import { useTracker } from '@/hooks/useTracker';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';

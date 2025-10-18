@@ -28,7 +28,6 @@ export interface GameViewerState {
   
   // Auth state
   user: any;
-  initialized: boolean;
   authLoading: boolean;
   
   // Device state
@@ -86,7 +85,7 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
   // V1 provides all game data, V2 just provides better stats/feed
   
   // Core hooks - Always use V1 for game data, but V1 will skip stats queries when V2 enabled
-  const { user, initialized, loading: authLoading } = useAuthStore();
+  const { user, loading: authLoading } = useAuthV2();
   const { gameData, loading, error, isLive } = useGameStream(gameId, enableViewerV2); // Pass V2 flag to skip stats
   const { isMobile, isTablet, isDesktop } = useResponsive();
 
@@ -270,7 +269,6 @@ export const useGameViewerData = (gameId: string): UseGameViewerDataReturn => {
     
     // Auth state
     user,
-    initialized,
     authLoading,
     
     // Device state
