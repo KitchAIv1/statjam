@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.6] - 2025-10-18
+
+### 🎉 New Features
+
+#### My Tournaments Section
+- **Fixed**: Player Dashboard "My Tournaments" section now displays actual upcoming games
+- **Added**: `PlayerDashboardService.getUpcomingGames()` full implementation
+- **Added**: Queries `team_players` table to find player's team assignments
+- **Added**: Queries `games` table for upcoming games involving player's teams
+- **Added**: Data transformation to match UI requirements
+- **Fixed**: Proper mapping of `UpcomingGame` fields to `TournamentCard` component
+
+#### Live Game Status
+- **Fixed**: Home page live game cards now show "LIVE" status correctly
+- **Added**: `GameServiceV3.updateGameStatus()` method
+- **Added**: Automatic status update from 'scheduled' to 'in_progress' when tracker starts
+- **Fixed**: Status persistence so games show as live after tracker is running
+
+### 📚 Documentation
+
+#### Organization
+- **Moved**: All root-level documentation files into proper `docs/` folder structure
+- **Moved**: `ARCHITECTURE_DESIGN.md` → `docs/03-architecture/`
+- **Moved**: `AUTHENTICATION_AUDIT.md` → `docs/04-features/authentication/`
+- **Moved**: `PERFORMANCE_MEASUREMENT.md` → `docs/02-development/`
+- **Moved**: `LIVE_VIEWER_DATA_ANALYSIS.md` → `docs/04-features/live-viewer/`
+- **Moved**: `LIVE_VIEWER_UI_ANALYSIS.md` → `docs/04-features/live-viewer/`
+- **Moved**: `PLAYER_DASHBOARD_ANALYSIS.md` → `docs/04-features/dashboards/`
+- **Moved**: `PLAYER_DASHBOARD_DATA_AUDIT.md` → `docs/04-features/dashboards/`
+- **Updated**: `docs/INDEX.md` with all new document locations and quick search links
+- **Archived**: Legacy PRD from parent directory to `docs/08-archive/LEGACY_PRD_ORIGINAL.md`
+
+---
+
 ## [0.9.5] - 2025-10-18
 
 ### 🎉 Major Features

@@ -194,7 +194,7 @@
 
 ### 👤 **Player Dashboard**
 
-**Status**: ✅ 95% Complete
+**Status**: ✅ 100% Complete
 
 **Features**:
 - Player profile card with stats
@@ -204,7 +204,8 @@
 - Season averages display
 - Career highs display
 - Achievement badges
-- Upcoming games schedule
+- **My Tournaments section with live upcoming games**
+- Game Stats Table (Box Score)
 - Performance analytics (charts placeholder)
 - NBA card generation (coming soon)
 
@@ -219,8 +220,17 @@
 - Season averages (points, assists, rebounds, etc.)
 - Career highs per stat category
 - Achievement badges with icons
+- **My Tournaments: Upcoming games with opponent, time, venue**
+- **Game Stats Table: NBA-style box score per game**
 - Notification system
 - Trial status tracking
+
+**My Tournaments Implementation**:
+- Queries `team_players` table to find player's teams
+- Queries `games` table for upcoming/in-progress games
+- Displays opponent team name, scheduled time, venue
+- Filters by player's team assignments
+- Shows "No upcoming games" if player not on any team
 
 **Technical**:
 - Centralized auth with user prop passing
