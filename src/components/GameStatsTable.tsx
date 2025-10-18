@@ -190,65 +190,65 @@ export function GameStatsTable({ userId }: GameStatsTableProps) {
                 </div>
               </div>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-4 gap-3 mb-3">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{game.points}</div>
-                  <div className="text-xs text-muted-foreground">PTS</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-card-foreground">{game.rebounds}</div>
-                  <div className="text-xs text-muted-foreground">REB</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-card-foreground">{game.assists}</div>
-                  <div className="text-xs text-muted-foreground">AST</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-card-foreground">{game.minutesPlayed}</div>
-                  <div className="text-xs text-muted-foreground">MIN</div>
-                </div>
-              </div>
-
-              {/* Shooting Stats */}
-              <div className="grid grid-cols-3 gap-2 text-center pt-3 border-t border-border/30">
-                <div>
-                  <div className="text-sm font-semibold text-card-foreground">
-                    {game.fieldGoalPercentage > 0 ? `${game.fieldGoalPercentage}%` : '-'}
+              {/* Single Row Stats - Scrollable (NBA Mobile Style) */}
+              <div className="overflow-x-auto -mx-4 px-4">
+                <div className="flex gap-4 min-w-max pb-2">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-primary">{game.minutesPlayed}</div>
+                    <div className="text-xs text-muted-foreground">MIN</div>
                   </div>
-                  <div className="text-xs text-muted-foreground">FG%</div>
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-card-foreground">
-                    {game.threePointPercentage > 0 ? `${game.threePointPercentage}%` : '-'}
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-primary">{game.points}</div>
+                    <div className="text-xs text-muted-foreground">PTS</div>
                   </div>
-                  <div className="text-xs text-muted-foreground">3P%</div>
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-card-foreground">
-                    {game.freeThrowPercentage > 0 ? `${game.freeThrowPercentage}%` : '-'}
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-card-foreground">{game.rebounds}</div>
+                    <div className="text-xs text-muted-foreground">REB</div>
                   </div>
-                  <div className="text-xs text-muted-foreground">FT%</div>
-                </div>
-              </div>
-
-              {/* Additional Stats */}
-              <div className="flex justify-around pt-3 mt-3 border-t border-border/30 text-xs">
-                <div className="text-center">
-                  <span className="text-muted-foreground">STL:</span>
-                  <span className="ml-1 font-semibold text-card-foreground">{game.steals}</span>
-                </div>
-                <div className="text-center">
-                  <span className="text-muted-foreground">BLK:</span>
-                  <span className="ml-1 font-semibold text-card-foreground">{game.blocks}</span>
-                </div>
-                <div className="text-center">
-                  <span className="text-muted-foreground">TO:</span>
-                  <span className="ml-1 font-semibold text-card-foreground">{game.turnovers}</span>
-                </div>
-                <div className="text-center">
-                  <span className="text-muted-foreground">PF:</span>
-                  <span className="ml-1 font-semibold text-card-foreground">{game.fouls}</span>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-card-foreground">{game.assists}</div>
+                    <div className="text-xs text-muted-foreground">AST</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-card-foreground">{game.steals}</div>
+                    <div className="text-xs text-muted-foreground">STL</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-card-foreground">{game.blocks}</div>
+                    <div className="text-xs text-muted-foreground">BLK</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-card-foreground">
+                      {game.fieldGoalPercentage > 0 ? `${game.fieldGoalPercentage}%` : '-'}
+                    </div>
+                    <div className="text-xs text-muted-foreground">FG%</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-card-foreground">
+                      {game.threePointPercentage > 0 ? `${game.threePointPercentage}%` : '-'}
+                    </div>
+                    <div className="text-xs text-muted-foreground">3P%</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-card-foreground">
+                      {game.freeThrowPercentage > 0 ? `${game.freeThrowPercentage}%` : '-'}
+                    </div>
+                    <div className="text-xs text-muted-foreground">FT%</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-card-foreground">{game.turnovers}</div>
+                    <div className="text-xs text-muted-foreground">TO</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-card-foreground">{game.fouls}</div>
+                    <div className="text-xs text-muted-foreground">PF</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-card-foreground">
+                      {game.plusMinus > 0 ? `+${game.plusMinus}` : game.plusMinus}
+                    </div>
+                    <div className="text-xs text-muted-foreground">+/-</div>
+                  </div>
                 </div>
               </div>
             </div>
