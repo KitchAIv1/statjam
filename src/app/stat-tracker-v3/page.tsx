@@ -80,6 +80,7 @@ function StatTrackerV3Content() {
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [subOutPlayer, setSubOutPlayer] = useState<string | null>(null);
+  const [shotClockViolation, setShotClockViolation] = useState(false);
 
   // Initialize tracker with game data (only when we have valid team IDs)
   const tracker = useTracker({
@@ -219,6 +220,7 @@ function StatTrackerV3Content() {
         if (tracker.shotClock.secondsRemaining <= 1) {
           console.log('🚨 Shot clock violation!');
           tracker.stopShotClock();
+          setShotClockViolation(true);
           // TODO: Add shot clock violation handling (buzzer, turnover, etc.)
         }
       }, 1000);
@@ -235,11 +237,18 @@ function StatTrackerV3Content() {
     if (!tracker.clock.isRunning && tracker.shotClock.isRunning) {
       tracker.stopShotClock();
     }
-    // Auto-start shot clock when game clock starts (if shot clock is enabled)
-    else if (tracker.clock.isRunning && !tracker.shotClock.isRunning && tracker.shotClock.isVisible) {
+    // Auto-start shot clock when game clock starts (if shot clock is enabled and no violation)
+    else if (tracker.clock.isRunning && !tracker.shotClock.isRunning && tracker.shotClock.isVisible && !shotClockViolation) {
       tracker.startShotClock();
     }
-  }, [tracker.clock.isRunning, tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker]);
+  }, [tracker.clock.isRunning, tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker, shotClockViolation]);
+
+  // Clear shot clock violation when manually reset
+  useEffect(() => {
+    if (tracker.shotClock.secondsRemaining > 20) {
+      setShotClockViolation(false);
+    }
+  }, [tracker.shotClock.secondsRemaining]);
 
   // Sync scores with actual team IDs when game data loads
   useEffect(() => {
@@ -316,6 +325,8 @@ function StatTrackerV3Content() {
     if (success) {
       setShowSubModal(false);
       setSubOutPlayer(null);
+      // Refresh team rosters to reflect the substitution
+      await loadTeamPlayers();
     }
   };
 

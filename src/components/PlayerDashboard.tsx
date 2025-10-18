@@ -94,31 +94,64 @@ export function PlayerDashboard() {
       // Update local state immediately for better UX
       setCurrentPlayerData(updatedData);
       
-      // Save to database via Supabase
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      // Get user from context instead of supabase.auth (more reliable)
+      if (!user?.id) {
         console.error('💾 No authenticated user for profile save');
+        alert('Please sign in to save your profile.');
         return;
       }
       
+      // Helper function to convert height to inches (if in ft'in" format)
+      const parseHeight = (heightStr: string): number | null => {
+        if (!heightStr || heightStr === 'N/A') return null;
+        
+        // Check if it's in ft'in" format (e.g., "6'0\"")
+        const feetInchesMatch = heightStr.match(/(\d+)'(\d+)"/);
+        if (feetInchesMatch) {
+          const feet = parseInt(feetInchesMatch[1]);
+          const inches = parseInt(feetInchesMatch[2]);
+          return (feet * 12) + inches; // Convert to total inches
+        }
+        
+        // Check if it's already a number
+        const numValue = parseInt(heightStr);
+        if (!isNaN(numValue)) return numValue;
+        
+        return null;
+      };
+      
+      // Helper function to extract numeric weight (e.g., "180 lbs" -> 180)
+      const parseWeight = (weightStr: string): number | null => {
+        if (!weightStr || weightStr === 'N/A') return null;
+        const numMatch = weightStr.match(/(\d+)/);
+        return numMatch ? parseInt(numMatch[1]) : null;
+      };
+      
+      // Prepare data with proper type conversions
+      const updateData = {
+        name: updatedData.name || null,
+        jersey_number: updatedData.jerseyNumber ? parseInt(String(updatedData.jerseyNumber)) : null,
+        position: updatedData.position || null,
+        age: updatedData.age ? parseInt(String(updatedData.age)) : null,
+        height: parseHeight(updatedData.height), // Convert to inches (INTEGER)
+        weight: parseWeight(updatedData.weight), // Extract number (INTEGER)
+        profile_photo_url: updatedData.profilePhoto || null,
+        pose_photo_url: updatedData.posePhoto || null,
+      };
+      
+      console.log('💾 Prepared update data:', updateData);
+      console.log('💾 Updating user ID:', user.id);
+      
       const { data, error } = await supabase
         .from('users')
-        .update({
-          name: updatedData.name,
-          jersey_number: parseInt(updatedData.jerseyNumber as string) || null,
-          position: updatedData.position,
-          age: updatedData.age,
-          height: updatedData.height,
-          weight: updatedData.weight,
-          profile_photo_url: updatedData.profilePhoto || null,
-          pose_photo_url: updatedData.posePhoto || null,
-        })
+        .update(updateData)
         .eq('id', user.id)
         .select();
       
       if (error) {
         console.error('💾 Error saving profile:', error);
-        alert('Failed to save profile. Please try again.');
+        console.error('💾 Error details:', error.message, error.code, error.details);
+        alert(`Failed to save profile: ${error.message}`);
         return;
       }
       

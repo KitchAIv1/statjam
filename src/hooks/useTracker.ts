@@ -188,7 +188,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
             teamBId: teamBId
           });
         } else {
-          console.warn('⚠️ Could not load stats for score initialization:', statsError?.message);
+          console.log('🔍 No existing stats found, initializing scores to 0');
           // Ensure scores start at 0 if no stats found
           setScores({
             [teamAId]: 0,
