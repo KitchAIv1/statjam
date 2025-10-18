@@ -27,7 +27,25 @@ export const formatQuarter = (quarter: number): string => {
  * Format date for display
  */
 export const formatGameDate = (dateString: string): string => {
+  if (!dateString) {
+    return new Date().toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+  
   const date = new Date(dateString);
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return new Date().toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+  
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',

@@ -125,6 +125,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
           awayScore: actualGame.away_score || 0,
           status: actualGame.status || 'Unknown',
           quarter: actualGame.quarter || 1,
+          startTime: actualGame.created_at || new Date().toISOString(),
         }}
         isLive={actualGame.status?.toLowerCase().includes('live') || actualGame.status?.toLowerCase().includes('progress')}
         lastUpdated={actualGame.updated_at || ''}
