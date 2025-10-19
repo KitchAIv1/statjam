@@ -183,6 +183,10 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
                   <span>Quarter: {actualGame.quarter}</span>
                   <span>Time: {String(actualGame.game_clock_minutes || 0).padStart(2, '0')}:{String(actualGame.game_clock_seconds || 0).padStart(2, '0')}</span>
                 </div>
+                <div style={styles.gameSummaryMeta}>
+                  <span>Team Fouls: {actualGame.team_a_fouls || 0} - {actualGame.team_b_fouls || 0}</span>
+                  <span>Timeouts: {actualGame.team_a_timeouts_remaining || 7} - {actualGame.team_b_timeouts_remaining || 7}</span>
+                </div>
               </div>
             </div>
           </TabsContent>

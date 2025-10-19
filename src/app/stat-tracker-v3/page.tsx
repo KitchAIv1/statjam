@@ -317,6 +317,24 @@ function StatTrackerV3Content() {
     });
   };
 
+  // Handle timeout recording
+  const handleTimeout = async () => {
+    if (!gameData) return;
+    
+    // Show confirmation to select which team called timeout
+    const teamAName = gameData.team_a?.name || 'Team A';
+    const teamBName = gameData.team_b?.name || 'Team B';
+    
+    const team = window.confirm(`${teamAName} timeout?\n\nClick OK for ${teamAName}\nClick Cancel for ${teamBName}`);
+    const teamId = team ? gameData.team_a_id : gameData.team_b_id;
+    const teamName = team ? teamAName : teamBName;
+    
+    const confirmed = window.confirm(`Record timeout for ${teamName}?`);
+    if (!confirmed) return;
+    
+    await tracker.recordTimeout(teamId);
+  };
+
 
 
   // Substitution (unified logic for both mobile and desktop)
@@ -489,6 +507,7 @@ function StatTrackerV3Content() {
           // Force re-render with new key
           setRosterRefreshKey(Date.now());
         }}
+        onTimeOut={handleTimeout}
       />
     );
   }
@@ -520,10 +539,10 @@ function StatTrackerV3Content() {
           onReset={tracker.resetClock}
           onSetCustomTime={tracker.setCustomTime} // NEW: Manual clock editing
           // NBA Standard: Team fouls and timeouts (placeholder values for now)
-          teamAFouls={3}
-          teamBFouls={6}
-          teamATimeouts={5}
-          teamBTimeouts={4}
+          teamAFouls={tracker.teamFouls[gameData.team_a_id] || 0}
+          teamBFouls={tracker.teamFouls[gameData.team_b_id] || 0}
+          teamATimeouts={tracker.teamTimeouts[gameData.team_a_id] || 7}
+          teamBTimeouts={tracker.teamTimeouts[gameData.team_b_id] || 7}
           // Shot Clock Props
           shotClockSeconds={tracker.shotClock.secondsRemaining}
           shotClockIsRunning={tracker.shotClock.isRunning}
@@ -565,11 +584,7 @@ function StatTrackerV3Content() {
                 isClockRunning={tracker.clock.isRunning}
                 onStatRecord={handleStatRecord}
                 onFoulRecord={handleFoulRecord}
-                onTimeOut={() => {
-                  // TODO: Implement timeout functionality
-                  console.log('⏰ Time out called');
-                  alert('Time out functionality will be implemented');
-                }}
+                onTimeOut={handleTimeout}
                 onSubstitution={() => selectedPlayer && handleSubstitution(selectedPlayer)}
                 onGameEnd={tracker.closeGame}
                 lastAction={tracker.lastAction}

@@ -27,6 +27,8 @@ interface TrackerData {
     secondsRemaining: number;
   };
   scores: Record<string, number>;
+  teamFouls: { [teamId: string]: number };
+  teamTimeouts: { [teamId: string]: number };
   lastAction: string | null;
   recordStat: (stat: any) => Promise<void>;
   substitute: (sub: any) => Promise<boolean>;
@@ -43,6 +45,7 @@ interface MobileLayoutV3Props {
   onPlayerSelect: (playerId: string) => void;
   onSubstitution: (playerId: string) => void;
   onTeamPlayersUpdate?: (teamAPlayers: Player[], teamBPlayers: Player[]) => void; // Add callback to update main state
+  onTimeOut: () => void; // Add timeout handler from main page
 }
 
 export function MobileLayoutV3({
@@ -55,7 +58,8 @@ export function MobileLayoutV3({
   onTeamSelect,
   onPlayerSelect,
   onSubstitution,
-  onTeamPlayersUpdate
+  onTeamPlayersUpdate,
+  onTimeOut
 }: MobileLayoutV3Props) {
   const [possessionTeam, setPossessionTeam] = useState<'A' | 'B'>('A');
 
@@ -111,8 +115,8 @@ export function MobileLayoutV3({
           teamBName={gameData.team_b?.name || 'Team B'}
           teamAScore={tracker.scores[gameData.team_a_id] || 0}
           teamBScore={tracker.scores[gameData.team_b_id] || 0}
-          teamAFouls={0} // TODO: Add team fouls tracking
-          teamBFouls={0} // TODO: Add team fouls tracking
+          teamAFouls={tracker.teamFouls?.[gameData.team_a_id] || 0}
+          teamBFouls={tracker.teamFouls?.[gameData.team_b_id] || 0}
           quarter={tracker.quarter}
           minutes={Math.floor(tracker.clock.secondsRemaining / 60)}
           seconds={tracker.clock.secondsRemaining % 60}
@@ -150,11 +154,7 @@ export function MobileLayoutV3({
           isClockRunning={tracker.clock.isRunning}
           onStatRecord={handleStatRecord}
           onFoulRecord={handleFoulRecord}
-          onTimeOut={() => {
-            // TODO: Implement timeout functionality
-            console.log('⏰ Time out called');
-            alert('Time out functionality will be implemented');
-          }}
+          onTimeOut={onTimeOut}
           onSubstitution={() => selectedPlayer && onSubstitution(selectedPlayer)}
           lastAction={tracker.lastAction}
           lastActionPlayerId={tracker.lastActionPlayerId}

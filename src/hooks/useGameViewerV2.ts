@@ -31,6 +31,10 @@ interface GameData {
   tournament_name?: string;
   created_at?: string;
   updated_at?: string;
+  team_a_fouls?: number;
+  team_b_fouls?: number;
+  team_a_timeouts_remaining?: number;
+  team_b_timeouts_remaining?: number;
 }
 
 interface GameStats {

@@ -22,6 +22,10 @@ interface GameHeaderProps {
     isClockRunning: boolean;
     homeScore: number;
     awayScore: number;
+    teamAFouls?: number;
+    teamBFouls?: number;
+    teamATimeouts?: number;
+    teamBTimeouts?: number;
   };
   isLive: boolean;
   lastUpdated: string;
@@ -103,6 +107,20 @@ const GameHeader: React.FC<GameHeaderProps> = ({ game, isLive, lastUpdated, isMo
           <span style={styles.statLabel}>Status:</span>
           <span style={styles.statValue}>
             {game.isClockRunning ? 'RUNNING' : 'STOPPED'}
+          </span>
+        </div>
+
+        <div style={styles.statItem}>
+          <span style={styles.statLabel}>Team Fouls:</span>
+          <span style={styles.statValue}>
+            {game.teamAFouls || 0} - {game.teamBFouls || 0}
+          </span>
+        </div>
+
+        <div style={styles.statItem}>
+          <span style={styles.statLabel}>Timeouts:</span>
+          <span style={styles.statValue}>
+            {game.teamATimeouts || 7} - {game.teamBTimeouts || 7}
           </span>
         </div>
       </div>

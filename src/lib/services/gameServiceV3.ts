@@ -261,7 +261,7 @@ export class GameServiceV3 {
       console.log('🚀 GameServiceV3: Fetching single game via raw HTTP for:', gameId);
 
       const games = await this.makeRequest<any>('games', {
-        'select': 'id,tournament_id,team_a_id,team_b_id,start_time,status,created_at,quarter,game_clock_minutes,game_clock_seconds,is_clock_running,home_score,away_score',
+        'select': 'id,tournament_id,team_a_id,team_b_id,start_time,status,created_at,quarter,game_clock_minutes,game_clock_seconds,is_clock_running,home_score,away_score,team_a_fouls,team_b_fouls,team_a_timeouts_remaining,team_b_timeouts_remaining',
         'id': `eq.${gameId}`
       });
 
@@ -433,6 +433,90 @@ export class GameServiceV3 {
     } catch (error: any) {
       console.error('❌ GameServiceV3: Failed to record stat:', error);
       throw new Error(`Failed to record stat: ${error.message}`);
+    }
+  }
+
+  /**
+   * Record a timeout using raw HTTP requests
+   */
+  static async recordTimeout(data: {
+    gameId: string;
+    teamId: string;
+    quarter: number;
+    gameClockMinutes: number;
+    gameClockSeconds: number;
+  }): Promise<boolean> {
+    try {
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('No access token found - user not authenticated');
+      }
+
+      console.log('⏰ GameServiceV3: Recording timeout via raw HTTP:', data);
+
+      // Insert into game_timeouts table
+      const timeoutUrl = `${this.SUPABASE_URL}/rest/v1/game_timeouts`;
+      const timeoutResponse = await fetch(timeoutUrl, {
+        method: 'POST',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          game_id: data.gameId,
+          team_id: data.teamId,
+          quarter: data.quarter,
+          game_clock_minutes: data.gameClockMinutes,
+          game_clock_seconds: data.gameClockSeconds
+        })
+      });
+
+      if (!timeoutResponse.ok) {
+        const errorText = await timeoutResponse.text();
+        console.error(`❌ GameServiceV3: Failed to record timeout - HTTP ${timeoutResponse.status}:`, errorText);
+        throw new Error(`Failed to record timeout: HTTP ${timeoutResponse.status}`);
+      }
+
+      console.log('✅ GameServiceV3: Timeout recorded to game_timeouts table');
+
+      // Decrement timeout count in games table
+      const currentGame = await this.getGame(data.gameId);
+      if (!currentGame) {
+        throw new Error('Game not found');
+      }
+
+      const isTeamA = currentGame.team_a_id === data.teamId;
+      const timeoutField = isTeamA ? 'team_a_timeouts_remaining' : 'team_b_timeouts_remaining';
+      const currentCount = isTeamA ? (currentGame.team_a_timeouts_remaining || 7) : (currentGame.team_b_timeouts_remaining || 7);
+
+      const gameUrl = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${data.gameId}`;
+      const gameResponse = await fetch(gameUrl, {
+        method: 'PATCH',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          [timeoutField]: Math.max(0, currentCount - 1)
+        })
+      });
+
+      if (!gameResponse.ok) {
+        const errorText = await gameResponse.text();
+        console.error(`❌ GameServiceV3: Failed to update timeout count - HTTP ${gameResponse.status}:`, errorText);
+        throw new Error(`Failed to update timeout count: HTTP ${gameResponse.status}`);
+      }
+
+      console.log('✅ GameServiceV3: Timeout count decremented successfully');
+      return true;
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to record timeout:', error);
+      return false;
     }
   }
 }
