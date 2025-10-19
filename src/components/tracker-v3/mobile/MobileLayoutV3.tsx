@@ -5,8 +5,6 @@ import { CompactScoreboardV3 } from './CompactScoreboardV3';
 import { DualTeamHorizontalRosterV3 } from './DualTeamHorizontalRosterV3';
 import { MobileStatGridV3 } from './MobileStatGridV3';
 
-import { SubstitutionModalV3 } from '../SubstitutionModalV3';
-
 interface Player {
   id: string;
   name: string;
@@ -60,35 +58,6 @@ export function MobileLayoutV3({
   onTeamPlayersUpdate
 }: MobileLayoutV3Props) {
   const [possessionTeam, setPossessionTeam] = useState<'A' | 'B'>('A');
-  const [showSubModal, setShowSubModal] = useState(false);
-  const [subOutPlayer, setSubOutPlayer] = useState<string | null>(null);
-  
-  // V1 pattern: Track current roster and bench state (like V1)
-  const [currentRosterA, setCurrentRosterA] = useState<Player[]>([]);
-  const [currentBenchA, setCurrentBenchA] = useState<Player[]>([]);
-  const [currentRosterB, setCurrentRosterB] = useState<Player[]>([]);
-  const [currentBenchB, setCurrentBenchB] = useState<Player[]>([]);
-
-  // Initialize rosters when team data loads (V1 pattern)
-  React.useEffect(() => {
-    if (teamAPlayers.length > 0) {
-      setCurrentRosterA(teamAPlayers.slice(0, 5)); // First 5 on court
-      setCurrentBenchA(teamAPlayers.slice(5));     // Rest on bench
-    }
-    if (teamBPlayers.length > 0) {
-      setCurrentRosterB(teamBPlayers.slice(0, 5)); // First 5 on court
-      setCurrentBenchB(teamBPlayers.slice(5));     // Rest on bench
-    }
-  }, [teamAPlayers, teamBPlayers]);
-
-  // Get current team data (V1 pattern)
-  const currentRoster = selectedTeam === 'A' ? currentRosterA : currentRosterB;
-  const currentBench = selectedTeam === 'A' ? currentBenchA : currentBenchB;
-  const currentPlayers = selectedTeam === 'A' ? teamAPlayers : teamBPlayers;
-  const currentTeamName = selectedTeam === 'A' 
-    ? (gameData.team_a?.name || 'Team A')
-    : (gameData.team_b?.name || 'Team B');
-  const currentTeamId = selectedTeam === 'A' ? gameData.team_a_id : gameData.team_b_id;
 
   // Get selected player details from both teams
   const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
@@ -127,76 +96,7 @@ export function MobileLayoutV3({
     });
   };
 
-  // Handle substitution
-  const handleSubstitution = (playerId: string) => {
-    setSubOutPlayer(playerId);
-    setShowSubModal(true);
-  };
-
-  const handleSubConfirm = async (playerInId: string) => {
-    if (!subOutPlayer) return;
-
-    // Determine which team the player being substituted belongs to
-    const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
-    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-    const currentRoster = isTeamAPlayer ? currentRosterA : currentRosterB;
-    const currentBench = isTeamAPlayer ? currentBenchA : currentBenchB;
-
-    // Find the players in current roster and bench
-    const subbingOutPlayerData = currentRoster.find(p => p.id === subOutPlayer);
-    const subbingInPlayerData = currentBench.find(p => p.id === playerInId);
-
-    if (subbingOutPlayerData && subbingInPlayerData) {
-      // Record substitution to database
-      const success = await tracker.substitute({
-        gameId: gameData.id,
-        teamId,
-        playerOutId: subOutPlayer,
-        playerInId,
-        quarter: tracker.quarter,
-        gameTimeSeconds: tracker.clock.secondsRemaining
-      });
-
-      if (success) {
-        // Swap players between roster and bench
-        const newRoster = currentRoster.map(player => 
-          player.id === subOutPlayer ? subbingInPlayerData : player
-        );
-        const newBench = currentBench.map(player => 
-          player.id === playerInId ? subbingOutPlayerData : player
-        );
-
-        // Update the appropriate team's roster and bench
-        if (isTeamAPlayer) {
-          setCurrentRosterA(newRoster);
-          setCurrentBenchA(newBench);
-          
-          // Update main state - rebuild teamAPlayers with new order
-          const updatedTeamAPlayers = [...newRoster, ...newBench];
-          if (onTeamPlayersUpdate) {
-            onTeamPlayersUpdate(updatedTeamAPlayers, teamBPlayers);
-          }
-        } else {
-          setCurrentRosterB(newRoster);
-          setCurrentBenchB(newBench);
-          
-          // Update main state - rebuild teamBPlayers with new order
-          const updatedTeamBPlayers = [...newRoster, ...newBench];
-          if (onTeamPlayersUpdate) {
-            onTeamPlayersUpdate(teamAPlayers, updatedTeamBPlayers);
-          }
-        }
-
-        // Update selected player if it was the subbed out player
-        if (selectedPlayer === subbingOutPlayerData.id) {
-          onPlayerSelect(subbingInPlayerData.id);
-        }
-
-        setShowSubModal(false);
-        setSubOutPlayer(null);
-      }
-    }
-  };
+  // Substitution now handled by main page - just use the prop
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #1f2937, #111827)' }}>
@@ -240,7 +140,7 @@ export function MobileLayoutV3({
           teamBName={gameData.team_b?.name || 'Team B'}
           selectedPlayer={selectedPlayer}
           onPlayerSelect={onPlayerSelect}
-          onSubstitution={handleSubstitution}
+          onSubstitution={onSubstitution}
         />
 
         {/* Mobile Stat Grid */}
@@ -255,7 +155,7 @@ export function MobileLayoutV3({
             console.log('⏰ Time out called');
             alert('Time out functionality will be implemented');
           }}
-          onSubstitution={() => selectedPlayer && handleSubstitution(selectedPlayer)}
+          onSubstitution={() => selectedPlayer && onSubstitution(selectedPlayer)}
           lastAction={tracker.lastAction}
           lastActionPlayerId={tracker.lastActionPlayerId}
         />
@@ -277,22 +177,7 @@ export function MobileLayoutV3({
           </button>
         </div>
 
-        {/* Modals */}
-
-        <SubstitutionModalV3
-          isOpen={showSubModal}
-          onClose={() => {
-            setShowSubModal(false);
-            setSubOutPlayer(null);
-          }}
-          playerOutId={subOutPlayer}
-          benchPlayers={(() => {
-            if (!subOutPlayer) return [];
-            const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
-            return isTeamAPlayer ? currentBenchA : currentBenchB;
-          })()}
-          onConfirm={handleSubConfirm}
-        />
+        {/* Modals now handled by main page */}
 
 
       </div>

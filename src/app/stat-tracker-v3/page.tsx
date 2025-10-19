@@ -76,13 +76,18 @@ function StatTrackerV3Content() {
   const [error, setError] = useState<string | null>(null);
   
   // UI State
-
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [subOutPlayer, setSubOutPlayer] = useState<string | null>(null);
   const [isSubstituting, setIsSubstituting] = useState(false);
   const [shotClockViolation, setShotClockViolation] = useState(false);
   const [rosterRefreshKey, setRosterRefreshKey] = useState<string | number>(0);
+
+  // Roster/Bench State (lifted from MobileLayoutV3 for unified substitution logic)
+  const [currentRosterA, setCurrentRosterA] = useState<Player[]>([]);
+  const [currentBenchA, setCurrentBenchA] = useState<Player[]>([]);
+  const [currentRosterB, setCurrentRosterB] = useState<Player[]>([]);
+  const [currentBenchB, setCurrentBenchB] = useState<Player[]>([]);
 
   // Initialize tracker with game data (only when we have valid team IDs)
   const tracker = useTracker({
@@ -99,6 +104,18 @@ function StatTrackerV3Content() {
       router.push('/auth');
     }
   }, [user, userRole, loading, router]);
+
+  // Initialize rosters when team data loads (lifted from MobileLayoutV3)
+  useEffect(() => {
+    if (teamAPlayers.length > 0) {
+      setCurrentRosterA(teamAPlayers.slice(0, 5)); // First 5 on court
+      setCurrentBenchA(teamAPlayers.slice(5));     // Rest on bench
+    }
+    if (teamBPlayers.length > 0) {
+      setCurrentRosterB(teamBPlayers.slice(0, 5)); // First 5 on court
+      setCurrentBenchB(teamBPlayers.slice(5));     // Rest on bench
+    }
+  }, [teamAPlayers, teamBPlayers]);
 
   // Load Game Data Effect - RESTORED LIVE TOURNAMENT FUNCTIONALITY
   useEffect(() => {
@@ -302,19 +319,90 @@ function StatTrackerV3Content() {
 
 
 
-  // Substitution
+  // Substitution (unified logic for both mobile and desktop)
   const handleSubstitution = (playerOutId: string) => {
     setSubOutPlayer(playerOutId);
     setShowSubModal(true);
   };
 
-  // DISABLED: Buggy main page substitution handler - using MobileLayoutV3 handler instead
-  /*
   const handleSubConfirm = async (playerInId: string) => {
-    // This handler had bugs and was never properly tested
-    // Using the working MobileLayoutV3 handler instead
+    if (!subOutPlayer || !gameData) return;
+
+    // Determine which team the player being substituted belongs to
+    const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
+    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+    const currentRoster = isTeamAPlayer ? currentRosterA : currentRosterB;
+    const currentBench = isTeamAPlayer ? currentBenchA : currentBenchB;
+
+    // Find the players in current roster and bench
+    const subbingOutPlayerData = currentRoster.find(p => p.id === subOutPlayer);
+    const subbingInPlayerData = currentBench.find(p => p.id === playerInId);
+
+    if (subbingOutPlayerData && subbingInPlayerData) {
+      setIsSubstituting(true);
+      
+      try {
+        // Record substitution to database
+        const success = await tracker.substitute({
+          gameId: gameData.id,
+          teamId,
+          playerOutId: subOutPlayer,
+          playerInId,
+          quarter: tracker.quarter,
+          gameTimeSeconds: tracker.clock.secondsRemaining
+        });
+
+        if (success) {
+          // Swap players between roster and bench
+          const newRoster = currentRoster.map(player => 
+            player.id === subOutPlayer ? subbingInPlayerData : player
+          );
+          const newBench = currentBench.map(player => 
+            player.id === playerInId ? subbingOutPlayerData : player
+          );
+
+          // Update the appropriate team's roster and bench
+          if (isTeamAPlayer) {
+            setCurrentRosterA(newRoster);
+            setCurrentBenchA(newBench);
+            
+            // Update main state - rebuild teamAPlayers with new order
+            const updatedTeamAPlayers = [...newRoster, ...newBench];
+            setTeamAPlayers(updatedTeamAPlayers);
+          } else {
+            setCurrentRosterB(newRoster);
+            setCurrentBenchB(newBench);
+            
+            // Update main state - rebuild teamBPlayers with new order
+            const updatedTeamBPlayers = [...newRoster, ...newBench];
+            setTeamBPlayers(updatedTeamBPlayers);
+          }
+
+          // Update selected player if it was the subbed out player
+          if (selectedPlayer === subbingOutPlayerData.id) {
+            setSelectedPlayer(subbingInPlayerData.id);
+          }
+
+          // Force roster refresh
+          setRosterRefreshKey(Date.now());
+
+          setShowSubModal(false);
+          setSubOutPlayer(null);
+        }
+      } catch (error) {
+        console.error('❌ Substitution failed:', error);
+      } finally {
+        setIsSubstituting(false);
+      }
+    }
   };
-  */
+
+  // Team players update callback for mobile layout
+  const handleTeamPlayersUpdate = (updatedTeamAPlayers: Player[], updatedTeamBPlayers: Player[]) => {
+    setTeamAPlayers(updatedTeamAPlayers);
+    setTeamBPlayers(updatedTeamBPlayers);
+    setRosterRefreshKey(Date.now());
+  };
 
   // Loading States
   if (loading) {
@@ -507,7 +595,25 @@ function StatTrackerV3Content() {
           </div>
         </div>
 
-        {/* Substitution Modal - Handled by MobileLayoutV3 */}
+        {/* Substitution Modal - Unified for both mobile and desktop */}
+        <SubstitutionModalV3
+          isOpen={showSubModal}
+          onClose={() => {
+            setShowSubModal(false);
+            setSubOutPlayer(null);
+          }}
+          playerOutId={subOutPlayer}
+          playerOutData={(() => {
+            if (!subOutPlayer) return null;
+            return [...teamAPlayers, ...teamBPlayers].find(p => p.id === subOutPlayer) || null;
+          })()}
+          benchPlayers={(() => {
+            if (!subOutPlayer) return [];
+            const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
+            return isTeamAPlayer ? currentBenchA : currentBenchB;
+          })()}
+          onConfirm={handleSubConfirm}
+        />
 
         {/* Substitution Loading Overlay */}
         {isSubstituting && (
