@@ -59,21 +59,31 @@ export class AuthServiceV2 {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!url || !anonKey) {
-      throw new Error('AuthServiceV2: Missing Supabase environment variables');
-    }
-
     this.config = {
-      url,
-      anonKey,
+      url: url || '',
+      anonKey: anonKey || '',
       timeout: 10000, // 10 seconds
       maxRetries: 2,
     };
+
+    // Graceful degradation instead of throwing at construction time
+    if (!url || !anonKey) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ AuthServiceV2: Missing Supabase environment variables - auth methods will fail gracefully');
+      }
+      // Methods that require config will check and throw with clear message
+      return;
+    }
 
     console.log('🔐 AuthServiceV2: Enterprise auth service initialized');
   }
 
   private getHeaders(accessToken?: string) {
+    // Validate config before using
+    if (!this.config.url || !this.config.anonKey) {
+      throw new Error('AuthServiceV2: Missing Supabase configuration. Please check environment variables.');
+    }
+
     const headers: Record<string, string> = {
       'apikey': this.config.anonKey,
       'Content-Type': 'application/json',

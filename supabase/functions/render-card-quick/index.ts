@@ -710,23 +710,39 @@ class EntitlementService {
 // EDGE FUNCTION HANDLER
 // ============================================================================
 
+// Allowed origins for CORS (production domains)
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000', // Development
+  'https://statjam.vercel.app', // Production (update with actual domain)
+  'https://app.statjam.com', // Production (update with actual domain)
+];
+
 serve(async (req) => {
   console.log('🚀 render-card-quick function called with method:', req.method);
   
-  // Handle CORS
+  // Handle CORS with origin validation
   if (req.method === 'OPTIONS') {
-    console.log('✅ CORS preflight request handled');
+    const origin = req.headers.get('origin') || '';
+    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    
+    console.log('✅ CORS preflight request handled for origin:', origin);
     return new Response('ok', {
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': allowedOrigin,
         'Access-Control-Allow-Methods': 'POST',
         'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Vary': 'Origin',
       },
     });
   }
 
   try {
     console.log('🔧 Starting request processing...');
+    
+    // Get validated origin for responses
+    const origin = req.headers.get('origin') || '';
+    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    
     // Verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -736,7 +752,7 @@ serve(async (req) => {
           status: 401, 
           headers: { 
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Origin': allowedOrigin,
           } 
         }
       );
@@ -760,7 +776,7 @@ serve(async (req) => {
           status: 401, 
           headers: { 
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Origin': allowedOrigin,
           } 
         }
       );
@@ -794,7 +810,7 @@ serve(async (req) => {
           status: 400, 
           headers: { 
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Origin': allowedOrigin,
           } 
         }
       );
@@ -808,7 +824,7 @@ serve(async (req) => {
           status: 403, 
           headers: { 
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Origin': allowedOrigin,
           } 
         }
       );
@@ -829,7 +845,7 @@ serve(async (req) => {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': allowedOrigin,
         },
       }
     );
@@ -846,7 +862,7 @@ serve(async (req) => {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': allowedOrigin,
         },
       }
     );
