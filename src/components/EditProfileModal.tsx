@@ -56,17 +56,41 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     team: data.team || '',
     profilePhoto: data.profilePhoto || '',
     posePhoto: data.posePhoto || '',
+    seasonAverages: data.seasonAverages,
+    careerHigh: data.careerHigh,
   });
 
   const [formData, setFormData] = useState<PlayerProfile>(sanitizePlayerData(playerData));
   const [previewProfilePhoto, setPreviewProfilePhoto] = useState<string | null>(null);
   const [previewPosePhoto, setPreviewPosePhoto] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (field: keyof PlayerProfile, value: string | number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+    // Clear validation error for this field when user types
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleBlur = async (field: keyof PlayerProfile) => {
+    // Validate field on blur
+    const { validatePlayerProfile } = await import('@/lib/validation/profileValidation');
+    const errors = validatePlayerProfile({ [field]: formData[field] });
+    
+    if (errors[field as keyof typeof errors]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [field]: errors[field as keyof typeof errors]!
+      }));
+    }
   };
 
   const handlePhotoUpload = (type: 'profile' | 'pose', event: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,15 +111,41 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     }
   };
 
-  const handleSave = () => {
-    onSave(formData);
-    onClose();
+  const handleSave = async () => {
+    // Validate all fields before saving
+    const { validatePlayerProfile } = await import('@/lib/validation/profileValidation');
+    const { notify } = await import('@/lib/services/notificationService');
+    
+    const errors = validatePlayerProfile(formData);
+    
+    if (Object.keys(errors).length > 0) {
+      // Convert ProfileValidationErrors to Record<string, string>
+      const errorRecord: Record<string, string> = {};
+      (Object.keys(errors) as Array<keyof typeof errors>).forEach(key => {
+        if (errors[key]) {
+          errorRecord[key] = errors[key]!;
+        }
+      });
+      setValidationErrors(errorRecord);
+      notify.error('Validation error', 'Please fix the errors before saving');
+      return;
+    }
+
+    try {
+      onSave(formData);
+      notify.success('Profile updated successfully');
+      onClose();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save profile';
+      notify.error('Failed to save profile', errorMessage);
+    }
   };
 
   const handleCancel = () => {
     setFormData(sanitizePlayerData(playerData));
     setPreviewProfilePhoto(null);
     setPreviewPosePhoto(null);
+    setValidationErrors({});
     onClose();
   };
 
@@ -207,9 +257,14 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
+                onBlur={() => handleBlur('name')}
                 placeholder="Enter your full name"
                 className="bg-input-background"
+                aria-invalid={!!validationErrors.name}
               />
+              {validationErrors.name && (
+                <p className="text-sm text-destructive">{validationErrors.name}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -238,11 +293,16 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 type="number"
                 value={formData.age || ''}
                 onChange={(e) => handleInputChange('age', parseInt(e.target.value) || 0)}
+                onBlur={() => handleBlur('age')}
                 placeholder="Enter your age"
-                min="15"
-                max="50"
+                min="10"
+                max="99"
                 className="bg-input-background"
+                aria-invalid={!!validationErrors.age}
               />
+              {validationErrors.age && (
+                <p className="text-sm text-destructive">{validationErrors.age}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -251,10 +311,15 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 id="jersey"
                 value={formData.jerseyNumber}
                 onChange={(e) => handleInputChange('jerseyNumber', e.target.value)}
+                onBlur={() => handleBlur('jerseyNumber')}
                 placeholder="Enter jersey number"
                 maxLength={2}
                 className="bg-input-background"
+                aria-invalid={!!validationErrors.jerseyNumber}
               />
+              {validationErrors.jerseyNumber && (
+                <p className="text-sm text-destructive">{validationErrors.jerseyNumber}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -263,9 +328,14 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 id="height"
                 value={formData.height}
                 onChange={(e) => handleInputChange('height', e.target.value)}
+                onBlur={() => handleBlur('height')}
                 placeholder="e.g., 6'8&quot;"
                 className="bg-input-background"
+                aria-invalid={!!validationErrors.height}
               />
+              {validationErrors.height && (
+                <p className="text-sm text-destructive">{validationErrors.height}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -274,9 +344,14 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 id="weight"
                 value={formData.weight}
                 onChange={(e) => handleInputChange('weight', e.target.value)}
+                onBlur={() => handleBlur('weight')}
                 placeholder="e.g., 235 lbs"
                 className="bg-input-background"
+                aria-invalid={!!validationErrors.weight}
               />
+              {validationErrors.weight && (
+                <p className="text-sm text-destructive">{validationErrors.weight}</p>
+              )}
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -302,7 +377,8 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
           </Button>
           <Button
             onClick={handleSave}
-            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+            disabled={Object.keys(validationErrors).length > 0}
+            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Changes
           </Button>

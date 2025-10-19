@@ -59,21 +59,31 @@ export class AuthServiceV2 {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!url || !anonKey) {
-      throw new Error('AuthServiceV2: Missing Supabase environment variables');
-    }
-
     this.config = {
-      url,
-      anonKey,
+      url: url || '',
+      anonKey: anonKey || '',
       timeout: 10000, // 10 seconds
       maxRetries: 2,
     };
+
+    // Graceful degradation instead of throwing at construction time
+    if (!url || !anonKey) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ AuthServiceV2: Missing Supabase environment variables - auth methods will fail gracefully');
+      }
+      // Methods that require config will check and throw with clear message
+      return;
+    }
 
     console.log('🔐 AuthServiceV2: Enterprise auth service initialized');
   }
 
   private getHeaders(accessToken?: string) {
+    // Validate config before using
+    if (!this.config.url || !this.config.anonKey) {
+      throw new Error('AuthServiceV2: Missing Supabase configuration. Please check environment variables.');
+    }
+
     const headers: Record<string, string> = {
       'apikey': this.config.anonKey,
       'Content-Type': 'application/json',
@@ -84,6 +94,52 @@ export class AuthServiceV2 {
     }
 
     return headers;
+  }
+
+  /**
+   * Convert auth error responses to user-friendly messages
+   */
+  private getAuthErrorMessage(status: number, errorData: any): string {
+    const message = errorData?.error_description || errorData?.message || '';
+    
+    // Check for specific error messages from Supabase
+    if (message.includes('Invalid login credentials')) {
+      return 'Invalid email or password';
+    }
+    
+    if (message.includes('Email not confirmed')) {
+      return 'Please confirm your email before signing in';
+    }
+    
+    if (message.includes('User already registered')) {
+      return 'This email is already registered. Please sign in instead.';
+    }
+    
+    if (message.includes('Password should be at least')) {
+      return 'Password must be at least 6 characters long';
+    }
+
+    if (message.includes('Invalid email')) {
+      return 'Please enter a valid email address';
+    }
+
+    // Fall back to status-based messages
+    switch (status) {
+      case 400:
+        return 'Invalid email or password format';
+      case 401:
+        return 'Invalid email or password';
+      case 422:
+        return 'Invalid email or password provided';
+      case 429:
+        return 'Too many login attempts. Please try again in a few minutes.';
+      case 500:
+      case 502:
+      case 503:
+        return 'Authentication service unavailable. Please try again later.';
+      default:
+        return message || 'Authentication failed. Please try again.';
+    }
   }
 
   /**
@@ -107,7 +163,8 @@ export class AuthServiceV2 {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.error_description || errorData.message || 'Sign in failed');
+        const errorMessage = this.getAuthErrorMessage(response.status, errorData);
+        throw new Error(errorMessage);
       }
 
       const data: SignInResponse = await response.json();
@@ -157,7 +214,8 @@ export class AuthServiceV2 {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.error_description || errorData.message || 'Sign up failed');
+        const errorMessage = this.getAuthErrorMessage(response.status, errorData);
+        throw new Error(errorMessage);
       }
 
       const data: SignUpResponse = await response.json();

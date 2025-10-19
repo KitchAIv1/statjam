@@ -248,38 +248,81 @@ export class TournamentService {
       errors.name = 'Tournament name is required';
     } else if (data.name.length < 3) {
       errors.name = 'Tournament name must be at least 3 characters';
+    } else if (data.name.length > 100) {
+      errors.name = 'Tournament name cannot exceed 100 characters';
     }
 
     if (!data.description?.trim()) {
       errors.description = 'Tournament description is required';
+    } else if (data.description.length > 500) {
+      errors.description = 'Description cannot exceed 500 characters';
     }
 
     if (!data.venue?.trim()) {
       errors.venue = 'Venue is required';
+    } else if (data.venue.length > 200) {
+      errors.venue = 'Venue cannot exceed 200 characters';
     }
 
     if (!data.startDate) {
       errors.startDate = 'Start date is required';
+    } else {
+      const startDate = new Date(data.startDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time for fair comparison
+      
+      if (startDate < today) {
+        errors.startDate = 'Start date cannot be in the past';
+      }
     }
 
     if (!data.endDate) {
       errors.endDate = 'End date is required';
     }
 
-    if (data.startDate && data.endDate && new Date(data.startDate) >= new Date(data.endDate)) {
-      errors.endDate = 'End date must be after start date';
+    if (data.startDate && data.endDate) {
+      const startDate = new Date(data.startDate);
+      const endDate = new Date(data.endDate);
+      
+      if (endDate <= startDate) {
+        errors.endDate = 'End date must be after start date';
+      }
+      
+      // Check if tournament duration is reasonable (max 1 year)
+      const daysDiff = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff > 365) {
+        errors.endDate = 'Tournament duration cannot exceed 1 year';
+      }
     }
 
     if (!data.maxTeams || data.maxTeams < 2) {
       errors.maxTeams = 'At least 2 teams required';
+    } else if (data.maxTeams > 128) {
+      errors.maxTeams = 'Maximum 128 teams allowed';
+    } else if (data.tournamentType === 'single_elimination' || data.tournamentType === 'double_elimination') {
+      // For elimination tournaments, suggest power of 2 for bracket fairness
+      const isPowerOf2 = (data.maxTeams & (data.maxTeams - 1)) === 0;
+      if (!isPowerOf2) {
+        // This is a warning, not an error - still allow it
+        // Storing in errors for display, but could be separated into warnings
+        errors.maxTeamsWarning = `For elimination tournaments, power of 2 teams (4, 8, 16, 32, 64) creates balanced brackets`;
+      }
     }
 
-    if (data.entryFee && data.entryFee < 0) {
-      errors.entryFee = 'Entry fee cannot be negative';
+    if (data.entryFee !== undefined && data.entryFee !== null) {
+      if (data.entryFee < 0) {
+        errors.entryFee = 'Entry fee cannot be negative';
+      } else if (data.entryFee > 10000) {
+        errors.entryFee = 'Entry fee cannot exceed $10,000';
+      }
     }
 
-    if (data.prizePool && data.prizePool < 0) {
-      errors.prizePool = 'Prize pool cannot be negative';
+    if (data.prizePool !== undefined && data.prizePool !== null) {
+      if (data.prizePool < 0) {
+        errors.prizePool = 'Prize pool cannot be negative';
+      } else if (data.prizePool > 1000000) {
+        errors.prizePool = 'Prize pool cannot exceed $1,000,000';
+      }
     }
 
     return errors;

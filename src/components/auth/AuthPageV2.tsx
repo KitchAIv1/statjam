@@ -610,9 +610,8 @@ const AuthPageV2 = () => {
           }
         }
         
-        /* Performance optimizations */
-        .auth-form, .auth-input, .auth-button {
-          will-change: transform, box-shadow;
+        /* Performance optimizations - only for animated elements */
+        .auth-form {
           transform: translateZ(0);
         }
       `}</style>

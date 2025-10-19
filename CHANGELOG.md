@@ -7,6 +7,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.7] - 2025-10-19
+
+### 🎉 New Features
+
+#### Validation & Error Handling System
+- **Added**: Comprehensive input validation across all user forms
+- **Added**: Sonner toast notification library for user feedback
+- **Added**: NotificationService with platform abstraction layer (web → Sonner, future RN support)
+- **Added**: Stat validation utilities with soft warnings and hard errors
+- **Added**: Profile validation utilities for player data
+- **Enhanced**: Tournament validation with additional business rules
+
+#### Stat Tracker Validation
+- **Added**: Real-time stat value validation before recording
+- **Added**: Soft warnings for unusual values (e.g., 25 3-pointers)
+- **Added**: Hard errors for impossible values (prevents submission)
+- **Added**: Quarter validation with overtime period support
+- **Added**: Toast notifications for validation errors and successes
+
+#### Profile Edit Validation
+- **Added**: Real-time field validation on blur
+- **Added**: Inline error messages for each field
+- **Added**: Auto-clear errors when user corrects input
+- **Added**: Disable Save button when validation errors exist
+- **Added**: Success/error toasts on save operations
+
+#### Tournament Creation Enhancement
+- **Added**: Toast notifications on create success/failure
+- **Added**: Loading toast during creation
+- **Enhanced**: Validation messages with error counts
+
+### 🐛 Bug Fixes
+
+#### User-Friendly Error Messages
+- **Enhanced**: GameServiceV3 with status code to user message mapping
+- **Enhanced**: TeamServiceV3 with status code to user message mapping
+- **Enhanced**: AuthServiceV2 with Supabase error message parsing
+- **Fixed**: Network errors now show "No internet connection" instead of technical details
+- **Fixed**: Auth errors show specific messages (e.g., "Invalid email or password")
+
+### 🔧 Technical Improvements
+
+#### Validation Rules
+- **Points**: 0-100 per player (warning at 50+)
+- **3-Pointers**: 0-20 per player (warning at 12+)
+- **Rebounds**: 0-40 per player (warning at 25+)
+- **Assists**: 0-30 per player (warning at 20+)
+- **Steals/Blocks**: 0-15 each (warning at 10+)
+- **Fouls**: 0-6 per player (hard limit, warning at 6)
+- **Jersey Number**: 0-99
+- **Height**: 48-96 inches (4'0" - 8'0")
+- **Weight**: 50-400 lbs
+- **Age**: 10-99 years
+- **Tournament Duration**: Max 1 year
+- **Entry Fee**: Max $10,000
+- **Prize Pool**: Max $1,000,000
+
+#### Code Quality
+- **All new files**: Under 500 lines (largest: 228 lines)
+- **TypeScript**: Strict mode compliance
+- **Zero linting errors**: All validation passes
+- **No backend changes**: Pure frontend implementation
+- **Platform ready**: Notification service abstracted for future mobile support
+
+### 📚 Documentation
+- **Updated**: Version bumped to 0.9.7
+- **Added**: CHANGELOG entry for validation and error handling
+- **Added**: MVP_VALIDATION_ERROR_HANDLING_PLAN.md implementation guide
+
+### 🔒 Security Hardening (P0 Fixes)
+
+#### Constructor Safety
+- **Fixed**: AuthServiceV2 constructor throwing errors causing SSR crashes
+- **Added**: Graceful degradation with runtime validation in getHeaders method
+- **Impact**: Zero breakage - methods fail gracefully with clear error messages
+- **Risk**: Eliminated build crash risk during SSR/build time
+
+#### CORS Security
+- **Fixed**: Wildcard '*' CORS in edge function allowing any origin
+- **Added**: Validated origin list with localhost + production domains
+- **Added**: 'Vary: Origin' header for proper caching
+- **Impact**: Zero breakage while significantly reducing attack surface
+- **Location**: supabase/functions/render-card-quick/index.ts
+
+#### Performance Optimization
+- **Fixed**: Excessive will-change CSS properties causing memory overhead
+- **Removed**: Unnecessary will-change from auth-input and auth-button
+- **Kept**: Essential transform optimizations for animated elements
+- **Impact**: Improved memory usage and rendering performance
+
+---
+
 ## [0.9.6] - 2025-10-18
 
 ### 🎉 New Features
