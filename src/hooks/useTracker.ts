@@ -58,7 +58,12 @@ interface UseTrackerReturn {
   // Team Fouls & Timeouts
   teamFouls: { [teamId: string]: number };
   teamTimeouts: { [teamId: string]: number };
-  recordTimeout: (teamId: string) => Promise<boolean>;
+  timeoutActive: boolean;
+  timeoutTeamId: string | null;
+  timeoutSecondsRemaining: number;
+  timeoutType: 'full' | '30_second';
+  startTimeout: (teamId: string, type: 'full' | '30_second') => Promise<boolean>;
+  resumeFromTimeout: () => void;
 }
 
 export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps): UseTrackerReturn => {
@@ -87,6 +92,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     [teamAId]: 7,
     [teamBId]: 7
   });
+  const [timeoutActive, setTimeoutActive] = useState(false);
+  const [timeoutTeamId, setTimeoutTeamId] = useState<string | null>(null);
+  const [timeoutSecondsRemaining, setTimeoutSecondsRemaining] = useState(60);
+  const [timeoutType, setTimeoutType] = useState<'full' | '30_second'>('full');
   const [rosterA, setRosterA] = useState<RosterState>({
     teamId: teamAId,
     onCourt: [],
@@ -526,6 +535,23 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     }
   }, [clock.secondsRemaining, quarter, setQuarter, resetClock, scores]);
 
+  // Timeout Countdown Effect
+  useEffect(() => {
+    if (!timeoutActive) return;
+    
+    const interval = setInterval(() => {
+      setTimeoutSecondsRemaining(prev => {
+        if (prev <= 1) {
+          // Timeout expired - but don't auto-resume, let admin manually resume
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [timeoutActive]);
+
   // Stat Recording
   const recordStat = useCallback(async (stat: Omit<StatRecord, 'createdAt' | 'quarter' | 'gameTimeSeconds'>) => {
     try {
@@ -686,8 +712,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     }
   }, [teamAId, teamBId, setRosterA, setRosterB]);
 
-  // Timeout Recording
-  const recordTimeout = useCallback(async (teamId: string): Promise<boolean> => {
+  // Enhanced Timeout Management
+  const startTimeout = useCallback(async (teamId: string, type: 'full' | '30_second'): Promise<boolean> => {
     try {
       const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
       const { notify } = await import('@/lib/services/notificationService');
@@ -698,7 +724,18 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         return false;
       }
       
-      console.log('⏰ Recording timeout for team:', teamId);
+      console.log('⏰ Starting timeout for team:', teamId, 'Type:', type);
+      
+      // Stop all clocks immediately
+      stopClock();
+      stopShotClock();
+      
+      // Set timeout state
+      const duration = type === 'full' ? 60 : 30;
+      setTimeoutActive(true);
+      setTimeoutTeamId(teamId);
+      setTimeoutType(type);
+      setTimeoutSecondsRemaining(duration);
       
       // Record timeout to database
       const success = await GameServiceV3.recordTimeout({
@@ -706,7 +743,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         teamId,
         quarter,
         gameClockMinutes: Math.floor(clock.secondsRemaining / 60),
-        gameClockSeconds: clock.secondsRemaining % 60
+        gameClockSeconds: clock.secondsRemaining % 60,
+        timeoutType: type
       });
       
       if (success) {
@@ -716,23 +754,37 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
           [teamId]: Math.max(0, prev[teamId] - 1)
         }));
         
-        console.log('✅ Timeout recorded successfully');
-        notify.success('Timeout recorded', `Team timeout called in Q${quarter}`);
-        setLastAction(`Timeout called`);
+        console.log('✅ Timeout started successfully');
+        notify.success('Timeout started', `${type === 'full' ? '60' : '30'} second timeout`);
+        setLastAction(`Timeout - ${type === 'full' ? 'Full' : '30s'}`);
         return true;
       } else {
-        console.error('❌ Failed to record timeout');
-        notify.error('Timeout failed', 'Could not record timeout.');
+        console.error('❌ Failed to start timeout');
+        notify.error('Timeout failed', 'Could not start timeout.');
+        // Revert timeout state
+        setTimeoutActive(false);
+        setTimeoutTeamId(null);
         return false;
       }
       
     } catch (error) {
-      console.error('❌ Error recording timeout:', error);
+      console.error('❌ Error starting timeout:', error);
       const { notify } = await import('@/lib/services/notificationService');
-      notify.error('Timeout error', 'An error occurred while recording the timeout.');
+      notify.error('Timeout error', 'An error occurred while starting the timeout.');
+      setTimeoutActive(false);
+      setTimeoutTeamId(null);
       return false;
     }
-  }, [gameId, teamTimeouts, quarter, clock.secondsRemaining]);
+  }, [gameId, teamTimeouts, quarter, clock.secondsRemaining, stopClock, stopShotClock]);
+
+  const resumeFromTimeout = useCallback(() => {
+    console.log('▶️ Resuming play from timeout');
+    setTimeoutActive(false);
+    setTimeoutTeamId(null);
+    setTimeoutSecondsRemaining(60);
+    setLastAction('Play resumed');
+    // Don't auto-start clocks - let admin start manually
+  }, []);
 
   // Game Management
   const closeGame = useCallback(async () => {
@@ -793,6 +845,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     playerSeconds,
     teamFouls,
     teamTimeouts,
-    recordTimeout
+    timeoutActive,
+    timeoutTeamId,
+    timeoutSecondsRemaining,
+    timeoutType,
+    startTimeout,
+    resumeFromTimeout
   };
 };

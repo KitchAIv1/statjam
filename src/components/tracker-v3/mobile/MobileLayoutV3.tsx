@@ -18,6 +18,7 @@ interface GameData {
   team_b_id: string;
   team_a?: { name?: string | null } | null;
   team_b?: { name?: string | null } | null;
+  tournament?: { name?: string | null } | null;
 }
 
 interface TrackerData {
@@ -26,10 +27,26 @@ interface TrackerData {
     isRunning: boolean;
     secondsRemaining: number;
   };
+  shotClock: {
+    isRunning: boolean;
+    secondsRemaining: number;
+    isVisible: boolean;
+  };
   scores: Record<string, number>;
   teamFouls: { [teamId: string]: number };
   teamTimeouts: { [teamId: string]: number };
+  timeoutActive: boolean;
+  timeoutSecondsRemaining: number;
+  timeoutTeamId: string | null;
+  startClock: () => void;
+  stopClock: () => void;
+  resetClock: () => void;
+  setCustomTime: (minutes: number, seconds: number) => Promise<void>;
+  resetShotClock: (seconds?: number) => void;
+  setShotClockTime: (seconds: number) => void;
   lastAction: string | null;
+  lastActionPlayerId: string | null;
+  closeGame: () => Promise<void>;
   recordStat: (stat: any) => Promise<void>;
   substitute: (sub: any) => Promise<boolean>;
 }
@@ -151,7 +168,7 @@ export function MobileLayoutV3({
         <MobileStatGridV3
           selectedPlayer={selectedPlayer}
           selectedPlayerData={selectedPlayerData}
-          isClockRunning={tracker.clock.isRunning}
+          isClockRunning={tracker.clock.isRunning && !tracker.timeoutActive}
           onStatRecord={handleStatRecord}
           onFoulRecord={handleFoulRecord}
           onTimeOut={onTimeOut}
