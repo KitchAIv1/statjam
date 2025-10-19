@@ -23,6 +23,38 @@ export class GameServiceV3 {
   }
 
   /**
+   * Convert HTTP status codes to user-friendly error messages
+   */
+  private static getUserFriendlyError(status: number, errorText: string): string {
+    switch (status) {
+      case 401:
+        return 'Session expired. Please sign in again.';
+      case 403:
+        return 'You don\'t have permission to perform this action.';
+      case 404:
+        return 'The requested game was not found. It may have been deleted.';
+      case 409:
+        return 'This action conflicts with recent changes. Please refresh and try again.';
+      case 422:
+        return 'Invalid data provided. Please check your input and try again.';
+      case 429:
+        return 'Too many requests. Please wait a moment and try again.';
+      case 500:
+      case 502:
+      case 503:
+        return 'Server error. Please try again in a moment.';
+      case 504:
+        return 'Request timed out. Please check your connection and try again.';
+      default:
+        // Check for network errors
+        if (errorText.includes('fetch') || errorText.includes('network')) {
+          return 'No internet connection. Please check your network.';
+        }
+        return `An error occurred (${status}). Please try again.`;
+    }
+  }
+
+  /**
    * Make authenticated HTTP request to Supabase REST API with automatic token refresh
    */
   private static async makeRequest<T>(
@@ -88,7 +120,9 @@ export class GameServiceV3 {
         }
       }
       
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
+      // Throw user-friendly error message based on status code
+      const userMessage = this.getUserFriendlyError(response.status, errorText);
+      throw new Error(userMessage);
     }
 
     const data = await response.json();

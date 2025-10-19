@@ -87,6 +87,52 @@ export class AuthServiceV2 {
   }
 
   /**
+   * Convert auth error responses to user-friendly messages
+   */
+  private getAuthErrorMessage(status: number, errorData: any): string {
+    const message = errorData?.error_description || errorData?.message || '';
+    
+    // Check for specific error messages from Supabase
+    if (message.includes('Invalid login credentials')) {
+      return 'Invalid email or password';
+    }
+    
+    if (message.includes('Email not confirmed')) {
+      return 'Please confirm your email before signing in';
+    }
+    
+    if (message.includes('User already registered')) {
+      return 'This email is already registered. Please sign in instead.';
+    }
+    
+    if (message.includes('Password should be at least')) {
+      return 'Password must be at least 6 characters long';
+    }
+
+    if (message.includes('Invalid email')) {
+      return 'Please enter a valid email address';
+    }
+
+    // Fall back to status-based messages
+    switch (status) {
+      case 400:
+        return 'Invalid email or password format';
+      case 401:
+        return 'Invalid email or password';
+      case 422:
+        return 'Invalid email or password provided';
+      case 429:
+        return 'Too many login attempts. Please try again in a few minutes.';
+      case 500:
+      case 502:
+      case 503:
+        return 'Authentication service unavailable. Please try again later.';
+      default:
+        return message || 'Authentication failed. Please try again.';
+    }
+  }
+
+  /**
    * 🔐 SIGN IN - Raw HTTP (never hangs)
    */
   async signIn(email: string, password: string): Promise<{ data: SignInResponse | null; error: Error | null }> {
@@ -107,7 +153,8 @@ export class AuthServiceV2 {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.error_description || errorData.message || 'Sign in failed');
+        const errorMessage = this.getAuthErrorMessage(response.status, errorData);
+        throw new Error(errorMessage);
       }
 
       const data: SignInResponse = await response.json();
@@ -157,7 +204,8 @@ export class AuthServiceV2 {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.error_description || errorData.message || 'Sign up failed');
+        const errorMessage = this.getAuthErrorMessage(response.status, errorData);
+        throw new Error(errorMessage);
       }
 
       const data: SignUpResponse = await response.json();

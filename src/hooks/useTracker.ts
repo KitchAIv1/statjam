@@ -502,6 +502,20 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
 
       console.log('🏀 Recording stat to database:', fullStat);
 
+      // Import validation and notification services
+      const { validateStatValue, validateQuarter } = await import('@/lib/validation/statValidation');
+      const { notify } = await import('@/lib/services/notificationService');
+
+      // Validate quarter
+      const quarterValidation = validateQuarter(quarter);
+      if (!quarterValidation.valid) {
+        notify.error('Invalid quarter', quarterValidation.error);
+        return;
+      }
+      if (quarterValidation.warning) {
+        notify.warning(quarterValidation.warning);
+      }
+
       // Import GameServiceV3 (raw HTTP - never hangs, triggers still fire for real-time)
       const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
       
@@ -518,6 +532,19 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
       } else if (!stat.modifier) {
         // ✅ FIXED: Non-scoring stats (assist, rebound, steal, block, turnover) default to 1
         statValue = 1;
+      }
+
+      // Validate stat value (only for made stats)
+      if (stat.modifier === 'made' || !stat.modifier) {
+        const validation = validateStatValue(stat.statType, statValue);
+        if (!validation.valid) {
+          notify.error('Invalid stat value', validation.error);
+          return;
+        }
+        if (validation.warning) {
+          // Show warning but allow the stat to be recorded
+          notify.warning('Unusual stat value', validation.warning);
+        }
       }
 
       // Record stat in database (V3 - raw HTTP, never hangs)
@@ -550,6 +577,12 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);
+      
+      // Import notification service for error display
+      const { notify } = await import('@/lib/services/notificationService');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to record stat';
+      notify.error('Failed to record stat', errorMessage);
+      
       setLastAction('Error recording stat');
       setLastActionPlayerId(stat.playerId);
     }
