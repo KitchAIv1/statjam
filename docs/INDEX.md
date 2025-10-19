@@ -77,6 +77,7 @@ Issue resolution and debugging
 - Common Issues & FAQ
 - RLS Debugging
 - Auth Debugging
+- Stat Admin Diagnostics
 - Performance Issues
 
 ### 🔧 [07-Maintenance](07-maintenance/)
@@ -116,6 +117,7 @@ Historical and deprecated documentation
 | Substitution System | [01-project/FEATURES_COMPLETE.md#substitution-system](01-project/FEATURES_COMPLETE.md) |
 | Database Schema | [03-architecture/DATABASE_SCHEMA.md](03-architecture/DATABASE_SCHEMA.md) |
 | RLS Policies | [05-database/RLS_POLICIES.md](05-database/RLS_POLICIES.md) |
+| Stat Admin Diagnostics | [06-troubleshooting/STAT_ADMIN_DIAGNOSTIC.sql](06-troubleshooting/STAT_ADMIN_DIAGNOSTIC.sql) |
 | Setup Instructions | [02-development/SETUP_GUIDE.md](02-development/SETUP_GUIDE.md) |
 | Common Issues | [06-troubleshooting/COMMON_ISSUES.md](06-troubleshooting/COMMON_ISSUES.md) |
 
