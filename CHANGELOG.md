@@ -74,6 +74,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 📚 Documentation
 - **Updated**: Version bumped to 0.9.7
 - **Added**: CHANGELOG entry for validation and error handling
+- **Added**: MVP_VALIDATION_ERROR_HANDLING_PLAN.md implementation guide
+
+### 🔒 Security Hardening (P0 Fixes)
+
+#### Constructor Safety
+- **Fixed**: AuthServiceV2 constructor throwing errors causing SSR crashes
+- **Added**: Graceful degradation with runtime validation in getHeaders method
+- **Impact**: Zero breakage - methods fail gracefully with clear error messages
+- **Risk**: Eliminated build crash risk during SSR/build time
+
+#### CORS Security
+- **Fixed**: Wildcard '*' CORS in edge function allowing any origin
+- **Added**: Validated origin list with localhost + production domains
+- **Added**: 'Vary: Origin' header for proper caching
+- **Impact**: Zero breakage while significantly reducing attack surface
+- **Location**: supabase/functions/render-card-quick/index.ts
+
+#### Performance Optimization
+- **Fixed**: Excessive will-change CSS properties causing memory overhead
+- **Removed**: Unnecessary will-change from auth-input and auth-button
+- **Kept**: Essential transform optimizations for animated elements
+- **Impact**: Improved memory usage and rendering performance
 
 ---
 

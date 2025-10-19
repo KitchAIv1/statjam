@@ -40,6 +40,7 @@ Developer guidelines and procedures
 - Testing Guide
 - Deployment Guide
 - **Performance Measurement** - Authentication optimization metrics
+- **MVP Validation & Error Handling Plan** - Implementation guide for v0.9.7
 
 ### 🏗️ [03-Architecture](03-architecture/)
 System design and architecture
@@ -103,6 +104,7 @@ Historical and deprecated documentation
 |-------|----------|
 | **Features Complete** | [01-project/FEATURES_COMPLETE.md](01-project/FEATURES_COMPLETE.md) |
 | **Changelog** | [../CHANGELOG.md](../CHANGELOG.md) |
+| **Validation & Error Handling** | [02-development/MVP_VALIDATION_ERROR_HANDLING_PLAN.md](02-development/MVP_VALIDATION_ERROR_HANDLING_PLAN.md) |
 | **Raw HTTP Pattern** | [03-architecture/RAW_HTTP_PATTERN.md](03-architecture/RAW_HTTP_PATTERN.md) |
 | Authentication V2 | [04-features/authentication/](04-features/authentication/) |
 | Authentication Audit | [04-features/authentication/AUTHENTICATION_AUDIT.md](04-features/authentication/AUTHENTICATION_AUDIT.md) |
@@ -143,7 +145,7 @@ When adding new documentation:
 
 ---
 
-**Last Updated**: October 18, 2025  
+**Last Updated**: October 19, 2025  
 **Maintained By**: Development Team  
-**Status**: ✅ MVP Complete (v0.9.5) - All Core Features Functional  
-**Recent Updates**: Substitution system, Play-by-play integration, Performance optimization
+**Status**: ✅ MVP Complete (v0.9.7) - Production Ready with Security Hardening  
+**Recent Updates**: Validation & error handling, P0 security fixes, CORS hardening, Constructor safety
