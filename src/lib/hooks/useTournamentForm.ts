@@ -130,15 +130,28 @@ export function useTournamentForm() {
   const submitTournament = async (organizerId: string): Promise<boolean> => {
     console.log('🏆 Starting tournament submission...', { organizerId, data: state.data });
     
+    // Import notification service
+    const { notify } = await import('@/lib/services/notificationService');
+    
     // Validate all data
     const allErrors = TournamentService.validateTournamentData(state.data);
     if (Object.keys(allErrors).length > 0) {
       console.error('❌ Validation errors:', allErrors);
       setState(prev => ({ ...prev, errors: allErrors }));
+      
+      // Show error toast
+      const errorCount = Object.keys(allErrors).length;
+      notify.error(
+        'Validation failed',
+        `Please fix ${errorCount} error${errorCount > 1 ? 's' : ''} before creating the tournament`
+      );
       return false;
     }
 
     setState(prev => ({ ...prev, loading: true, errors: {} }));
+
+    // Show loading toast
+    const loadingToastId = notify.loading('Creating tournament...');
 
     try {
       const tournamentData = state.data as TournamentCreateRequest;
@@ -147,15 +160,28 @@ export function useTournamentForm() {
       const result = await TournamentService.createTournament(tournamentData, organizerId);
       console.log('✅ Tournament created successfully:', result);
       
+      // Dismiss loading toast and show success
+      notify.dismiss(loadingToastId);
+      notify.success(
+        'Tournament created!',
+        `${result.name} has been created successfully`
+      );
+      
       setState(prev => ({ ...prev, loading: false }));
       return true;
     } catch (error) {
       console.error('❌ Tournament creation failed:', error);
+      
+      // Dismiss loading toast and show error
+      notify.dismiss(loadingToastId);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create tournament';
+      notify.error('Failed to create tournament', errorMessage);
+      
       setState(prev => ({
         ...prev,
         loading: false,
         errors: { 
-          submit: error instanceof Error ? error.message : 'Failed to create tournament' 
+          submit: errorMessage
         }
       }));
       return false;

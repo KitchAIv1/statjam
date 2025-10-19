@@ -2,20 +2,22 @@
 
 Professional-grade sports tournament app for real-time stat tracking and tournament management.
 
-## 🎯 **Current Status: 🚀 MVP Complete (v0.9.5)** 
+## 🎯 **Current Status: 🚀 MVP Complete (v0.9.7)** 
 
-**Phase**: Production-Ready MVP  
-**Version**: 0.9.5  
-**Last Updated**: October 18, 2025
+**Phase**: Production-Ready MVP with Validation  
+**Version**: 0.9.7  
+**Last Updated**: October 19, 2025
 **Target**: v1.0.0 Launch
 
 **Authentication**: ✅ Centralized Auth Context with JWT Auto-Refresh  
 **Live Tracking**: ✅ NBA-Grade V3 Engine with Real-time Sync  
-**Stat Tracker**: ✅ V3 Raw HTTP Architecture + Substitution System  
+**Stat Tracker**: ✅ V3 Raw HTTP Architecture + Validation + Substitution System  
 **Live Viewer**: ✅ Hybrid System with Zero Flickering + Play-by-Play  
 **Substitutions**: ✅ Auto-UI Update + Play-by-Play Integration  
-**Player Dashboard**: ✅ Profile Management + Game Stats Table  
+**Player Dashboard**: ✅ Profile Management + Validation + Game Stats Table  
 **Organizer Dashboard**: ✅ Tournament Management + Team Roster System  
+**Validation**: ✅ Comprehensive Input Validation + Error Handling  
+**Notifications**: ✅ Toast Notifications for All User Actions  
 **Architecture**: ✅ Enterprise-Grade Foundation Complete
 
 ## 📚 **Documentation**
@@ -56,6 +58,7 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 
 ### **👤 Player Dashboard**
 - ✅ **Profile Management**: Editable profiles with photo uploads
+- ✅ **Real-time Validation**: Inline errors on blur with auto-clear
 - ✅ **Type Conversion**: Smart height/weight parsing (6'0" → 72 inches)
 - ✅ **Game Stats Table**: NBA-style box scores (ready for data)
 - ✅ **Performance Analytics**: Season averages, career highs, achievements
@@ -67,11 +70,20 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 - ✅ **Player Validation**: Drafted players hidden from opposing teams
 - ✅ **Independent Profiles**: Players control their own names/data
 
+### **✅ Validation & Error Handling**
+- ✅ **Toast Notifications**: Sonner-based notifications for all user actions
+- ✅ **Input Validation**: Real-time validation with soft warnings and hard errors
+- ✅ **Stat Validation**: 0-100 points, 0-20 3PT, 0-6 fouls, etc.
+- ✅ **Profile Validation**: Jersey number 0-99, height 4'0"-8'0", weight 50-400 lbs
+- ✅ **User-Friendly Errors**: HTTP status codes mapped to helpful messages
+- ✅ **Platform Abstraction**: NotificationService ready for mobile (RN) support
+
 ### **🏗️ Enterprise Architecture**
 - ✅ **Hybrid System**: WebSocket + Silent Updates + Raw HTTP
 - ✅ **Type-Safe**: Full TypeScript throughout
 - ✅ **Scalable Foundation**: Ready for enterprise deployment
 - ✅ **Performance Optimized**: Reduced API calls, memoization, React.memo
+- ✅ **Code Quality**: All files <500 lines, strict mode, zero linting errors
 
 ## 🚀 **Quick Start**
 
