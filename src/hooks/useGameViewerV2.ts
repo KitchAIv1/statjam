@@ -89,7 +89,8 @@ function transformStatsToPlays(
   teamBId: string,
   teamAName: string,
   teamBName: string,
-  substitutions: any[] = []
+  substitutions: any[] = [],
+  timeouts: any[] = []
 ): PlayByPlayEntry[] {
   let runningScoreHome = 0;
   let runningScoreAway = 0;
@@ -205,8 +206,38 @@ function transformStatsToPlays(
     };
   });
 
-  // Merge stats and substitutions, sort by timestamp (newest first)
-  const allPlays = [...statPlays, ...substitutionPlays].sort((a, b) => {
+  // Convert timeouts to play entries
+  const timeoutPlays = timeouts.map(timeout => {
+    const teamName = timeout.team_id === teamAId ? teamAName : 
+                     timeout.team_id === teamBId ? teamBName : 
+                     'Unknown Team';
+    
+    const timeoutTypeDisplay = timeout.timeout_type === 'full' ? 'Full Timeout' : '30-Second Timeout';
+    const description = `${teamName} ${timeoutTypeDisplay}`;
+    
+    return {
+      id: timeout.id,
+      timestamp: timeout.created_at,
+      quarter: timeout.quarter || 1,
+      gameTimeMinutes: timeout.game_clock_minutes || 0,
+      gameTimeSeconds: timeout.game_clock_seconds || 0,
+      description,
+      statType: 'timeout',
+      playerId: '', // No player for timeout
+      playerName: '',
+      teamId: timeout.team_id || '',
+      teamName,
+      modifier: timeout.timeout_type, // Store timeout type in modifier
+      points: 0,
+      scoreAfter: {
+        home: runningScoreHome,
+        away: runningScoreAway
+      }
+    };
+  });
+
+  // Merge stats, substitutions, AND timeouts, sort by timestamp (newest first)
+  const allPlays = [...statPlays, ...substitutionPlays, ...timeoutPlays].sort((a, b) => {
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });
 
@@ -384,7 +415,21 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         console.error('❌ useGameViewerV2: Failed to fetch substitutions:', subsResponse.status, await subsResponse.text());
       }
 
-      // 6. Enrich game data
+      // 6. Fetch game timeouts
+      const timeoutsResponse = await fetch(
+        `${supabaseUrl}/rest/v1/game_timeouts?select=*&game_id=eq.${gameId}&order=created_at.desc`,
+        { headers }
+      );
+
+      let gameTimeouts: any[] = [];
+      if (timeoutsResponse.ok) {
+        gameTimeouts = await timeoutsResponse.json();
+        console.log('⏰ useGameViewerV2: Fetched', gameTimeouts.length, 'timeouts');
+      } else {
+        console.error('❌ useGameViewerV2: Failed to fetch timeouts:', timeoutsResponse.status);
+      }
+
+      // 7. Enrich game data
       const teamAName = teamsMap.get(gameInfo.team_a_id) || 'Team A';
       const teamBName = teamsMap.get(gameInfo.team_b_id) || 'Team B';
       
@@ -395,14 +440,15 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         tournament_name: tournamentName
       };
 
-      // 7. Transform stats AND substitutions into play-by-play entries
+      // 8. Transform stats, substitutions, AND timeouts into play-by-play entries
       const playByPlayEntries = transformStatsToPlays(
         gameStats,
         gameInfo.team_a_id,
         gameInfo.team_b_id,
         teamAName,
         teamBName,
-        gameSubstitutions
+        gameSubstitutions,
+        gameTimeouts
       );
 
       console.log('🏀 useGameViewerV2: Fetched', gameStats.length, 'stats, transformed into', playByPlayEntries.length, 'plays');

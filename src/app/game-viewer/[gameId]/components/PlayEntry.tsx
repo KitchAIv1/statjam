@@ -80,12 +80,14 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   const scoringInfo = getScoringInfo(play.statType, play.modifier);
   const teamName = getTeamName();
   const isSubstitution = play.statType === 'substitution';
+  const isTimeout = play.statType === 'timeout';
 
   return (
     <div style={{
       ...styles.container,
       ...(isLatest ? styles.latestPlay : {}),
-      ...(isSubstitution ? styles.substitutionPlay : {})
+      ...(isSubstitution ? styles.substitutionPlay : {}),
+      ...(isTimeout ? styles.timeoutPlay : {})
     }}>
       {/* Time and Quarter Info */}
         <div style={styles.timeSection}>
@@ -114,12 +116,22 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
 
         {/* Play Details */}
         <div style={styles.playDetails}>
-                  <div style={styles.playDescription}>
+                  <div style={{
+            ...styles.playDescription,
+            ...(isSubstitution ? styles.substitutionText : {}),
+            ...(isTimeout ? styles.timeoutText : {})
+          }}>
           <span style={styles.playIcon}>{getPlayIcon(play.statType)}</span>
           {getEnhancedPlayDescription(play.description, play.statType, play.modifier, playerStats)}
           {/* NBA-Style Player Points Display */}
           {typeof playerPoints === 'number' && scoringInfo && (
             <span style={styles.playerPointsBadge}>({playerPoints} PTS)</span>
+          )}
+          {/* Timeout Duration Display */}
+          {isTimeout && play.modifier && (
+            <span style={{ fontSize: '12px', marginLeft: '8px', opacity: 0.8, color: '#fbbf24' }}>
+              ({play.modifier === 'full' ? '60s' : '30s'})
+            </span>
           )}
         </div>
           
@@ -397,11 +409,24 @@ const styles = {
     backgroundColor: 'rgba(99, 102, 241, 0.08)', // Indigo tint for substitutions
     borderLeft: `3px solid ${figmaColors.accent.blue}`
   },
+  timeoutPlay: {
+    backgroundColor: 'rgba(251, 191, 36, 0.1)', // Amber tint for timeouts
+    borderLeft: '4px solid #fbbf24'
+  },
   substitutionText: {
     fontSize: figmaTypography.fontSize.sm,
     fontWeight: figmaTypography.fontWeight.bold,
     color: figmaColors.accent.blue,
     backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    padding: `${figmaSpacing[1]} ${figmaSpacing[2]}`,
+    borderRadius: figmaRadius.base,
+    letterSpacing: '0.05em'
+  },
+  timeoutText: {
+    fontSize: figmaTypography.fontSize.sm,
+    fontWeight: '600',
+    color: '#fbbf24', // Amber text for timeouts
+    backgroundColor: 'rgba(251, 191, 36, 0.12)',
     padding: `${figmaSpacing[1]} ${figmaSpacing[2]}`,
     borderRadius: figmaRadius.base,
     letterSpacing: '0.05em'

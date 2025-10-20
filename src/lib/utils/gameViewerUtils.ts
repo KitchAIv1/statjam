@@ -227,6 +227,8 @@ export const getPlayIcon = (statType?: string): string => {
       return '⚠️';
     case 'substitution':
       return '🔄';
+    case 'timeout':
+      return '⏸️';
     default:
       return '🏀';
   }
