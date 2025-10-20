@@ -13,7 +13,9 @@ const PlayerDashboardPage = () => {
 
   useEffect(() => {
     // ✅ Clear redirect flag when dashboard loads successfully
-    sessionStorage.removeItem('auth-redirecting');
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('auth-redirecting');
+    }
     
     if (!loading && (!user || userRole !== 'player')) {
       router.push('/auth');

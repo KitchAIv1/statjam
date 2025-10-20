@@ -45,16 +45,18 @@ export const useAuthFlow = (): UseAuthFlowReturn => {
   // ✅ EMERGENCY: Clear stuck redirect flags on component mount
   useEffect(() => {
     const clearStuckFlags = () => {
-      const isRedirecting = sessionStorage.getItem('auth-redirecting');
-      const redirectTimestamp = sessionStorage.getItem('auth-redirect-timestamp');
-      const now = Date.now();
-      
-      if (isRedirecting === 'true' && redirectTimestamp) {
-        const timeDiff = now - parseInt(redirectTimestamp);
-        if (timeDiff > 3000) { // 3 seconds
-          console.log('🚨 useAuthFlow: Clearing stuck redirect flags on mount');
-          sessionStorage.removeItem('auth-redirecting');
-          sessionStorage.removeItem('auth-redirect-timestamp');
+      if (typeof window !== 'undefined') {
+        const isRedirecting = sessionStorage.getItem('auth-redirecting');
+        const redirectTimestamp = sessionStorage.getItem('auth-redirect-timestamp');
+        const now = Date.now();
+        
+        if (isRedirecting === 'true' && redirectTimestamp) {
+          const timeDiff = now - parseInt(redirectTimestamp);
+          if (timeDiff > 3000) { // 3 seconds
+            console.log('🚨 useAuthFlow: Clearing stuck redirect flags on mount');
+            sessionStorage.removeItem('auth-redirecting');
+            sessionStorage.removeItem('auth-redirect-timestamp');
+          }
         }
       }
     };
@@ -64,7 +66,7 @@ export const useAuthFlow = (): UseAuthFlowReturn => {
 
   // Redirect if user is already logged in
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && typeof window !== 'undefined') {
       // ✅ FIX: Check if we're currently redirecting to prevent infinite loop
       const isRedirecting = sessionStorage.getItem('auth-redirecting');
       const redirectTimestamp = sessionStorage.getItem('auth-redirect-timestamp');
@@ -190,8 +192,10 @@ export const useAuthFlow = (): UseAuthFlowReturn => {
    * Clears session data
    */
   const clearSession = useCallback(() => {
-    sessionStorage.removeItem('auth-redirecting');
-    sessionStorage.removeItem('auth-redirect-timestamp');
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('auth-redirecting');
+      sessionStorage.removeItem('auth-redirect-timestamp');
+    }
   }, []);
 
   return {

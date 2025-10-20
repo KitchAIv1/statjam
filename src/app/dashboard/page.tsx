@@ -15,7 +15,9 @@ const OrganizerDashboardContent = () => {
   // Handle redirects in useEffect - wait for auth to fully initialize
   useEffect(() => {
     // ✅ Clear redirect flag when dashboard loads successfully
-    sessionStorage.removeItem('auth-redirecting');
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('auth-redirecting');
+    }
     
     // Only redirect after auth is fully initialized
     if (!loading && !user) {
