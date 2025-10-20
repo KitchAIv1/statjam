@@ -24,6 +24,12 @@ export interface AuthFormData {
   agreeToTerms: boolean;
 }
 
+export interface UseAuthFormCallbacks {
+  onPasswordChange?: (password: string) => void;
+  onFirstNameChange?: (firstName: string) => void;
+  onLastNameChange?: (lastName: string) => void;
+}
+
 export interface UseAuthFormReturn {
   formData: AuthFormData;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -31,6 +37,7 @@ export interface UseAuthFormReturn {
   validateForm: (isLogin: boolean) => ValidationResult;
   getSignUpData: () => SignUpFormData;
   getSignInData: () => SignInFormData;
+  setCallbacks: (callbacks: UseAuthFormCallbacks) => void;
 }
 
 const initialFormData: AuthFormData = {
@@ -48,9 +55,11 @@ const initialFormData: AuthFormData = {
  */
 export const useAuthForm = (): UseAuthFormReturn => {
   const [formData, setFormData] = useState<AuthFormData>(initialFormData);
+  const [callbacks, setCallbacks] = useState<UseAuthFormCallbacks>({});
 
   /**
    * Handles input changes with proper normalization and sanitization
+   * Enhanced with Tier 2 callbacks for password strength and name validation
    */
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -73,7 +82,16 @@ export const useAuthForm = (): UseAuthFormReturn => {
       ...prev,
       [name]: processedValue
     }));
-  }, []);
+    
+    // Tier 2: Trigger callbacks for enhanced features
+    if (name === 'password' && typeof processedValue === 'string') {
+      callbacks.onPasswordChange?.(processedValue);
+    } else if (name === 'firstName' && typeof processedValue === 'string') {
+      callbacks.onFirstNameChange?.(processedValue);
+    } else if (name === 'lastName' && typeof processedValue === 'string') {
+      callbacks.onLastNameChange?.(processedValue);
+    }
+  }, [callbacks]);
 
   /**
    * Resets form to initial state
@@ -122,6 +140,7 @@ export const useAuthForm = (): UseAuthFormReturn => {
     resetForm,
     validateForm,
     getSignUpData,
-    getSignInData
+    getSignInData,
+    setCallbacks
   };
 };

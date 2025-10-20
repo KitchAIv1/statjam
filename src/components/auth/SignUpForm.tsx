@@ -1,12 +1,16 @@
 /**
  * SignUpForm Component - Extracted from AuthPageV2
  * Handles sign-up specific form fields and logic
+ * Enhanced with Tier 2 features: Password Strength & Name Validation
  */
 
 import React from 'react';
 import { AuthInput } from './AuthInput';
 import { RoleSelector, type UserRole } from './RoleSelector';
+import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';
 import { authPageStyles } from './styles/AuthPageStyles';
+import { type PasswordStrength } from '@/utils/validators/authValidators';
+import { type NameErrors } from '@/hooks/useNameValidation';
 
 export interface SignUpFormData {
   firstName: string;
@@ -24,6 +28,11 @@ export interface SignUpFormProps {
   userType: UserRole;
   onUserTypeChange: (role: UserRole) => void;
   disabled?: boolean;
+  // Tier 2 #1: Password Strength
+  passwordStrength?: PasswordStrength;
+  // Tier 2 #4: Name Validation
+  nameErrors?: NameErrors;
+  onNameBlur?: (field: 'firstName' | 'lastName') => void;
 }
 
 /**
@@ -36,7 +45,10 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
   loading,
   userType,
   onUserTypeChange,
-  disabled = false
+  disabled = false,
+  passwordStrength,
+  nameErrors,
+  onNameBlur
 }) => {
   return (
     <form onSubmit={onSubmit}>
@@ -47,8 +59,14 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
         value={formData.firstName}
         onChange={onInputChange}
         required
+        minLength={2}
         disabled={disabled || loading}
       />
+      {nameErrors?.firstName && (
+        <small style={{ color: '#dc3545', fontSize: '12px', display: 'block', marginTop: '-12px', marginBottom: '8px' }}>
+          {nameErrors.firstName}
+        </small>
+      )}
       
       <AuthInput
         type="text"
@@ -57,8 +75,14 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
         value={formData.lastName}
         onChange={onInputChange}
         required
+        minLength={2}
         disabled={disabled || loading}
       />
+      {nameErrors?.lastName && (
+        <small style={{ color: '#dc3545', fontSize: '12px', display: 'block', marginTop: '-12px', marginBottom: '8px' }}>
+          {nameErrors.lastName}
+        </small>
+      )}
 
       <RoleSelector
         userType={userType}
@@ -89,9 +113,13 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
         disabled={disabled || loading}
       />
       
-      <div style={{ marginBottom: '8px', fontSize: '12px', color: '#6b7280' }}>
-        Password must be at least 6 characters long
-      </div>
+      {/* Tier 2 #1: Password Strength Indicator */}
+      {passwordStrength && (
+        <PasswordStrengthIndicator
+          password={formData.password}
+          passwordStrength={passwordStrength}
+        />
+      )}
       
       <AuthInput
         type="password"
