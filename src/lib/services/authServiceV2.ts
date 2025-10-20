@@ -147,6 +147,9 @@ export class AuthServiceV2 {
    */
   async signIn(email: string, password: string): Promise<{ data: SignInResponse | null; error: Error | null }> {
     try {
+      // ✅ CRITICAL FIX #1: Normalize email (trim and lowercase) for sign-in too
+      email = email.trim().toLowerCase();
+      
       console.log('🔐 AuthServiceV2: Signing in user:', email);
 
       const controller = new AbortController();
@@ -194,6 +197,9 @@ export class AuthServiceV2 {
     metadata?: { firstName?: string; lastName?: string; userType?: string }
   ): Promise<{ data: SignUpResponse | null; error: Error | null }> {
     try {
+      // ✅ CRITICAL FIX #1: Normalize email (trim and lowercase)
+      email = email.trim().toLowerCase();
+      
       console.log('🔐 AuthServiceV2: Signing up user:', email, {
         passwordLength: password?.length || 0,
         hasMetadata: !!metadata,

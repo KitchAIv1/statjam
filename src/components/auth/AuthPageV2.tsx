@@ -92,9 +92,17 @@ const AuthPageV2 = () => {
 
   const handleInputChange = (e: any) => {
     const { name, value, type, checked } = e.target;
+    
+    // ✅ CRITICAL FIX #1: Trim email input to prevent whitespace issues
+    const processedValue = type === 'checkbox' 
+      ? checked 
+      : name === 'email' 
+        ? value.trim() 
+        : value;
+    
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: processedValue
     });
   };
 
@@ -848,6 +856,7 @@ const AuthPageV2 = () => {
             onChange={handleInputChange}
             style={styles.input}
             className="auth-input"
+            autoComplete="email"
             onFocus={(e) => {
               e.target.style.borderColor = '#f97316';
               e.target.style.boxShadow = '0 0 0 3px rgba(251, 146, 60, 0.1)';
