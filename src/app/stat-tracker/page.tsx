@@ -36,18 +36,20 @@ const StatTracker = () => {
   
   useEffect(() => {
     // Parse URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const gameIdParam = urlParams.get('gameId');
-    const tournamentIdParam = urlParams.get('tournamentId');
-    
-    setGameId(gameIdParam);
-    setTournamentId(tournamentIdParam);
-    
-    console.log('Stat Tracker loaded for:', { gameId: gameIdParam, tournamentId: tournamentIdParam });
-    
-    // Load real game data when gameId is available
-    if (gameIdParam) {
-      loadGameData(gameIdParam);
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const gameIdParam = urlParams.get('gameId');
+      const tournamentIdParam = urlParams.get('tournamentId');
+      
+      setGameId(gameIdParam);
+      setTournamentId(tournamentIdParam);
+      
+      console.log('Stat Tracker loaded for:', { gameId: gameIdParam, tournamentId: tournamentIdParam });
+      
+      // Load real game data when gameId is available
+      if (gameIdParam) {
+        loadGameData(gameIdParam);
+      }
     }
   }, []);
 

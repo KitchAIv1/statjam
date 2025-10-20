@@ -87,15 +87,17 @@ export const useAuthFlow = (): UseAuthFlowReturn => {
       
       // Use setTimeout to ensure redirect happens after render
       setTimeout(() => {
-        if (user.role === 'organizer') {
-          window.location.href = '/dashboard';
-        } else if (user.role === 'player') {
-          window.location.href = '/dashboard/player';
-        } else if (user.role === 'stat_admin') {
-          window.location.href = '/dashboard/stat-admin';
-        } else {
-          console.warn('⚠️ useAuthFlow: Unknown user role, redirecting to general dashboard');
-          window.location.href = '/dashboard';
+        if (typeof window !== 'undefined') {
+          if (user.role === 'organizer') {
+            window.location.href = '/dashboard';
+          } else if (user.role === 'player') {
+            window.location.href = '/dashboard/player';
+          } else if (user.role === 'stat_admin') {
+            window.location.href = '/dashboard/stat-admin';
+          } else {
+            console.warn('⚠️ useAuthFlow: Unknown user role, redirecting to general dashboard');
+            window.location.href = '/dashboard';
+          }
         }
       }, 100);
     }

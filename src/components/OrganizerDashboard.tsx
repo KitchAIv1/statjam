@@ -37,7 +37,11 @@ export function OrganizerDashboard({ user }: OrganizerDashboardProps) {
               </p>
               <div className="flex gap-3 justify-center">
                 <button 
-                  onClick={() => window.location.href = '/dashboard?section=tournaments'}
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/dashboard?section=tournaments';
+                    }
+                  }}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                 >
                   Go to Tournaments

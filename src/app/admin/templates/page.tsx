@@ -180,7 +180,11 @@ const AdminTemplatesPage = () => {
                       <Button 
                         variant="outline" 
                         className="mt-4"
-                        onClick={() => window.location.reload()}
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            window.location.reload();
+                          }
+                        }}
                       >
                         Retry
                       </Button>
