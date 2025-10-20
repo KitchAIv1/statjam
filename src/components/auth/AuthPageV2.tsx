@@ -133,11 +133,29 @@ const AuthPageV2 = () => {
         
         console.log('✅ AuthPageV2 (V2): Sign up successful!');
         
-        // Check if user was auto-signed in (email confirmation disabled)
+        // ✅ ENHANCED: Handle different signup outcomes
         if (result.autoSignedIn) {
           console.log('🚀 AuthPageV2 (V2): Auto sign-in enabled, user will be redirected by useEffect');
+          
+          // ✅ NEW: Show role confirmation if available
+          if (result.profile) {
+            console.log(`👤 AuthPageV2 (V2): User signed up as ${result.profile.role}`);
+          }
+          
           // Don't show email confirmation - user is already signed in
           // The useEffect will handle the redirect to dashboard
+          return;
+        }
+        
+        // ✅ NEW: Handle delayed profile sync warning
+        if (result.warning) {
+          console.warn('⚠️ AuthPageV2 (V2):', result.warning);
+          setError(`Account created successfully! ${result.warning}`);
+          // Still show email confirmation or redirect to sign in
+          setTimeout(() => {
+            setIsLogin(true); // Switch to sign in mode
+            setError('');
+          }, 3000);
           return;
         }
         

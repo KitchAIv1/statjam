@@ -416,6 +416,62 @@ export class AuthServiceV2 {
   }
 
   /**
+   * 🔐 CREATE USER PROFILE - Manual profile creation fallback
+   */
+  async createUserProfile(profileData: {
+    email: string;
+    role: string;
+    name?: string;
+    country?: string;
+  }): Promise<{ data: any | null; error: Error | null }> {
+    try {
+      console.log('🔐 AuthServiceV2: Creating user profile manually:', profileData.email);
+
+      const session = this.getSession();
+      if (!session.accessToken) {
+        throw new Error('No access token available for profile creation');
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+
+      const response = await fetch(`${this.config.url}/rest/v1/users`, {
+        method: 'POST',
+        headers: {
+          'apikey': this.config.anonKey,
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          email: profileData.email,
+          role: profileData.role,
+          name: profileData.name || '',
+          country: profileData.country || 'US',
+          premium_status: false
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(`Profile creation failed: ${errorData.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ AuthServiceV2: User profile created manually');
+      
+      return { data: data[0] || data, error: null };
+
+    } catch (error: any) {
+      console.error('❌ AuthServiceV2: Create profile error:', error.message);
+      return { data: null, error };
+    }
+  }
+
+  /**
    * 🔐 RESEND CONFIRMATION EMAIL - Raw HTTP (never hangs)
    */
   async resendConfirmationEmail(email: string): Promise<{ error: Error | null }> {

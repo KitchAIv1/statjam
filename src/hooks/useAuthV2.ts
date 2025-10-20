@@ -189,7 +189,7 @@ export function useAuthV2() {
   }, []);
 
   /**
-   * 🔐 SIGN UP
+   * 🔐 SIGN UP - Enhanced with retry logic for profile creation
    */
   const signUp = useCallback(async (
     email: string, 
@@ -199,7 +199,7 @@ export function useAuthV2() {
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      console.log('🔐 useAuthV2: Signing up...');
+      console.log('🔐 useAuthV2: Signing up...', { email, userType: metadata?.userType });
       const { data, error } = await authServiceV2.signUp(email, password, metadata);
       
       if (error || !data) {
@@ -210,10 +210,81 @@ export function useAuthV2() {
       
       // If auto sign-in is enabled (access_token returned)
       if (data.access_token) {
-        const { data: profile } = await authServiceV2.getUserProfile(data.access_token);
+        console.log('🔍 useAuthV2: Attempting to fetch user profile...');
+        
+        // ✅ ENHANCED: Retry logic for profile creation timing
+        let profile = null;
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (attempts < maxAttempts && !profile) {
+          attempts++;
+          console.log(`🔄 useAuthV2: Profile fetch attempt ${attempts}/${maxAttempts}`);
+          
+          const { data: profileData, error: profileError } = await authServiceV2.getUserProfile(data.access_token);
+          
+          if (profileData) {
+            profile = profileData;
+            console.log('✅ useAuthV2: Profile found:', { role: profile.role, email: profile.email });
+            break;
+          }
+          
+          if (profileError) {
+            console.warn(`⚠️ useAuthV2: Profile fetch attempt ${attempts} failed:`, profileError.message);
+          }
+          
+          // Wait before retry (exponential backoff)
+          if (attempts < maxAttempts) {
+            const delay = Math.min(500 * Math.pow(1.5, attempts - 1), 3000); // 500ms, 750ms, 1125ms, 1687ms, 2531ms
+            console.log(`⏳ useAuthV2: Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+        
         if (profile) {
+          // ✅ ENHANCED: Validate role matches requested userType
+          const requestedRole = metadata?.userType || 'player';
+          if (profile.role !== requestedRole) {
+            console.warn(`⚠️ useAuthV2: Role mismatch! Requested: ${requestedRole}, Got: ${profile.role}`);
+            // Still proceed but log the issue
+          }
+          
           setState({ user: profile, loading: false, error: null });
-          return { success: true, autoSignedIn: true };
+          return { success: true, autoSignedIn: true, profile };
+        } else {
+          console.error('❌ useAuthV2: Profile not found after all retry attempts');
+          
+          // ✅ ULTIMATE FALLBACK: Try to create profile manually
+          if (metadata) {
+            console.log('🔧 useAuthV2: Attempting manual profile creation as fallback...');
+            
+            try {
+              const { data: createdProfile, error: createError } = await authServiceV2.createUserProfile({
+                email: data.user.email,
+                role: metadata.userType || 'player',
+                name: `${metadata.firstName || ''} ${metadata.lastName || ''}`.trim(),
+                country: 'US'
+              });
+              
+              if (createdProfile && !createError) {
+                console.log('✅ useAuthV2: Manual profile creation successful!');
+                setState({ user: createdProfile, loading: false, error: null });
+                return { success: true, autoSignedIn: true, profile: createdProfile };
+              } else {
+                console.error('❌ useAuthV2: Manual profile creation failed:', createError?.message);
+              }
+            } catch (fallbackError: any) {
+              console.error('❌ useAuthV2: Manual profile creation threw error:', fallbackError.message);
+            }
+          }
+          
+          // Still return success since auth user was created
+          setState({ user: null, loading: false, error: null });
+          return { 
+            success: true, 
+            autoSignedIn: false, 
+            warning: 'Account created but profile sync delayed. Please try signing in.' 
+          };
         }
       }
 
