@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Shield, Trophy } from 'lucide-react';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useRouter } from 'next/navigation';
+import DOMPurify from 'dompurify';
 import EmailConfirmationPending from './EmailConfirmationPending';
 
 const AuthPageV2 = () => {
@@ -650,7 +651,17 @@ const AuthPageV2 = () => {
           </p>
         </div>
 
-        {error && <div style={styles.error}>{error}</div>}
+        {error && (
+          <div 
+            style={styles.error}
+            dangerouslySetInnerHTML={{ 
+              __html: DOMPurify.sanitize(error, { 
+                ALLOWED_TAGS: [], // Strip all HTML tags
+                ALLOWED_ATTR: [] // Strip all attributes
+              }) 
+            }}
+          />
+        )}
 
         <form onSubmit={handleSubmit}>
           {!isLogin && (
