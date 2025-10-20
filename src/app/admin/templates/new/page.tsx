@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+
+// Force dynamic rendering to prevent SSG issues
+export const dynamic = 'force-dynamic';
 import { useRouter } from 'next/navigation';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TemplateService } from '@/lib/services/templateService';
