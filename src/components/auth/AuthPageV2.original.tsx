@@ -75,7 +75,7 @@ const AuthPageV2 = () => {
       // ✅ Use window.location.href for hard redirect
       let redirectUrl = '/dashboard';
       if (user.role === 'admin') {
-        redirectUrl = '/admin/templates';
+        redirectUrl = '/dashboard'; // Admin templates temporarily disabled
       } else if (user.role === 'player') {
         redirectUrl = '/dashboard/player';
       } else if (user.role === 'stat_admin') {

@@ -17,7 +17,7 @@ export const navigationConfig: Record<string, NavigationConfig> = {
     primary: [
       {
         label: 'Templates',
-        href: '/admin/templates',
+        href: '/dashboard', // Admin templates temporarily disabled
         icon: Palette,
         description: 'Manage card templates'
       },

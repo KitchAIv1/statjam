@@ -29,7 +29,7 @@ const OrganizerDashboardContent = () => {
       } else if (userRole === 'stat_admin') {
         router.push('/dashboard/stat-admin');
       } else if (userRole === 'admin') {
-        router.push('/admin/templates');
+        router.push('/dashboard'); // Admin templates temporarily disabled
       }
     }
 
