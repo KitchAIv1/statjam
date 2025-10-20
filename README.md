@@ -2,10 +2,10 @@
 
 Professional-grade sports tournament app for real-time stat tracking and tournament management.
 
-## 🎯 **Current Status: 🚀 MVP Complete (v0.9.7)** 
+## 🎯 **Current Status: 🚀 MVP Complete (v0.9.8)** 
 
-**Phase**: Production-Ready MVP with Validation  
-**Version**: 0.9.7  
+**Phase**: Production-Ready MVP with Enhanced Features  
+**Version**: 0.9.8  
 **Last Updated**: October 19, 2025
 **Target**: v1.0.0 Launch
 
@@ -14,6 +14,8 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 **Stat Tracker**: ✅ V3 Raw HTTP Architecture + Validation + Substitution System  
 **Live Viewer**: ✅ Hybrid System with Zero Flickering + Play-by-Play  
 **Substitutions**: ✅ Auto-UI Update + Play-by-Play Integration  
+**Team Fouls**: ✅ Auto-Tracking with Bonus Indicator  
+**Timeouts**: ✅ Interactive Modal with Countdown Timer + Play-by-Play  
 **Player Dashboard**: ✅ Profile Management + Validation + Game Stats Table  
 **Organizer Dashboard**: ✅ Tournament Management + Team Roster System  
 **Validation**: ✅ Comprehensive Input Validation + Error Handling  
@@ -45,14 +47,18 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 - ✅ **Database Trigger Fix**: Critical scoring bug resolved
 - ✅ **NBA-Grade Performance**: Zero flickering, instant updates
 - ✅ **Raw HTTP V3**: Bulletproof service architecture
-- ✅ **Substitution System**: Real-time roster updates with auto-UI refresh
+- ✅ **Substitution System**: Real-time roster updates with auto-UI refresh + unified desktop/mobile logic
+- ✅ **Team Fouls Tracking**: Auto-aggregation with bonus indicator at 5+ fouls
+- ✅ **Timeout Management**: Interactive modal with countdown timer, clock auto-stop, type selection (Full/30s)
 - ✅ **Responsive Design**: Mobile, tablet, and desktop optimized
 - ✅ **Shot Clock Integration**: Compact mobile and desktop layouts
 
 ### **📺 Live Viewer System V2**
 - ✅ **Silent Updates**: No loading screens on real-time data changes
-- ✅ **Play-by-Play Feed**: NBA-style with player points and running scores
-- ✅ **Substitution Integration**: Substitutions appear in play-by-play
+- ✅ **Play-by-Play Feed**: NBA-style with player points, running scores, substitutions, and timeouts
+- ✅ **Substitution Integration**: Substitutions appear in play-by-play with indigo styling
+- ✅ **Timeout Integration**: Timeout events appear with amber styling, team name, and duration
+- ✅ **Team Stats Display**: Team fouls and timeouts remaining shown in game summary
 - ✅ **Fixed Width Layout**: Professional 800px centered design
 - ✅ **Real-time Streaming**: gameSubscriptionManager with WebSocket
 

@@ -2,7 +2,7 @@
 
 **Date**: October 19, 2025  
 **Status**: ✅ MVP COMPLETE - PRODUCTION READY  
-**Version**: 0.9.7
+**Version**: 0.9.8
 
 ---
 
@@ -18,25 +18,27 @@
 - Code quality is high with TypeScript throughout
 
 **Recent Achievements** ✅:
-1. **Validation & Error Handling**: Comprehensive input validation with toast notifications
-2. **Security Hardening (P0)**: Constructor safety, CORS validation, performance optimization
-3. **My Tournaments**: Player Dashboard now shows actual upcoming games
-4. **Live Game Status**: Home page cards correctly show LIVE status when tracker is running
-5. **Documentation Organization**: All docs moved to proper folder structure
-6. **Centralized Authentication**: AuthContext eliminates redundant API calls (97% reduction)
-7. **Substitution System**: Real-time UI updates with play-by-play integration
-8. **Player Dashboard**: Profile management with game stats table and tournaments
-9. **Live Viewer**: Silent updates, NBA-style play-by-play, fixed layout
+1. **Team Fouls & Timeouts**: Complete NBA-style implementation with auto-tracking and interactive modal
+2. **Enhanced Timeout UX**: Countdown timer, clock control, type selection (Full/30s), play-by-play integration
+3. **Desktop Substitution Fix**: Unified desktop/mobile substitution logic, now 100% functional
+4. **Validation & Error Handling**: Comprehensive input validation with toast notifications
+5. **Security Hardening (P0)**: Constructor safety, CORS validation, performance optimization
+6. **My Tournaments**: Player Dashboard now shows actual upcoming games
+7. **Live Game Status**: Home page cards correctly show LIVE status when tracker is running
+8. **Centralized Authentication**: AuthContext eliminates redundant API calls (97% reduction)
+9. **Live Viewer**: Silent updates, NBA-style play-by-play with stats, subs, and timeouts
 10. **Performance**: JWT auto-refresh, memoization, optimized re-renders
 
 **System Status**:
 - 🟢 **Organizer Dashboard**: 100% functional (tournament management, team rosters)
-- 🟢 **Stat Tracker V3**: 100% functional (tracking, substitutions, shot clock, validation)
-- 🟢 **Live Viewer V2**: 100% functional (real-time updates, play-by-play)
+- 🟢 **Stat Tracker V3**: 100% functional (tracking, substitutions, shot clock, team fouls, timeouts, validation)
+- 🟢 **Live Viewer V2**: 100% functional (real-time updates, play-by-play with timeouts)
 - 🟢 **Player Dashboard**: 100% functional (profile, stats, tournaments, game log, validation)
 - 🟢 **Authentication**: 100% functional (centralized, auto-refresh, security hardened)
 - 🟢 **Live Game Cards**: 100% functional (automatic status updates)
 - 🟢 **Validation & Errors**: 100% functional (input validation, toast notifications, user-friendly errors)
+- 🟢 **Team Fouls**: 100% functional (auto-tracking, bonus indicator, database trigger)
+- 🟢 **Timeouts**: 100% functional (interactive modal, countdown, play-by-play integration)
 
 ---
 

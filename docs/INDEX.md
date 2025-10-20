@@ -147,5 +147,5 @@ When adding new documentation:
 
 **Last Updated**: October 19, 2025  
 **Maintained By**: Development Team  
-**Status**: ✅ MVP Complete (v0.9.7) - Production Ready with Security Hardening  
-**Recent Updates**: Validation & error handling, P0 security fixes, CORS hardening, Constructor safety
+**Status**: ✅ MVP Complete (v0.9.8) - NBA-Standard Features Complete  
+**Recent Updates**: Team fouls & timeouts, Enhanced timeout UX, Desktop substitution fix, Play-by-play integration

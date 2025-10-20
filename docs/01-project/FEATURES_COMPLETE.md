@@ -1,8 +1,8 @@
 # ✅ StatJam MVP - Completed Features
 
-**Version**: 0.9.5  
-**Date**: October 18, 2025  
-**Status**: Production Ready
+**Version**: 0.9.8  
+**Date**: October 19, 2025  
+**Status**: Production Ready - NBA-Standard Features Complete
 
 ---
 
@@ -62,16 +62,38 @@
 
 **Substitution System**:
 - ✅ Substitution modal with bench player selection
+- ✅ Unified desktop/mobile substitution logic (fixed desktop non-functionality)
 - ✅ Real-time UI updates without page refresh
 - ✅ Roster order reflects substitutions
 - ✅ On-court (first 5) vs bench tracking
 - ✅ Chronological substitution history in database
 - ✅ Auto-selected player switching
+- ✅ Play-by-play integration with indigo styling
+
+**Team Fouls System**:
+- ✅ Auto-aggregating team fouls from player fouls
+- ✅ Database trigger for automatic increment
+- ✅ NBA-standard bonus indicator (red "BONUS" at 5+ fouls)
+- ✅ Real-time display in scoreboard (mobile + desktop)
+- ✅ Display in live viewer game summary
+- ✅ Persistent storage in games table
+
+**Timeout Management System**:
+- ✅ Interactive TimeoutModalV3 with NBA-style design
+- ✅ Team selection with visual buttons
+- ✅ Timeout type selection (Full 60s / Short 30s)
+- ✅ Live countdown timer with progress bar
+- ✅ Auto-stop all clocks on timeout start
+- ✅ Dimmed overlay prevents stat entry during timeout
+- ✅ Resume Play button for manual control
+- ✅ Timeout validation (prevents over-use)
+- ✅ Play-by-play integration with amber styling
+- ✅ Database persistence with timeout history
 
 **UI Enhancements**:
 - Compact mobile scoreboard with integrated shot clock
 - Desktop dual-container layout (quarter + shot clock)
-- Team fouls and timeouts display (placeholder)
+- Team fouls and timeouts real-time display
 - Last action feedback
 - Shot clock violation prevention
 - Responsive grid layouts for different screen sizes
@@ -107,12 +129,14 @@
 **Play-by-Play Feed**:
 - Chronological event display (newest first)
 - Player avatars with team indicators
-- Stat type icons (🏀 🎯 🤝 📥 🔥 🛡️ 😤 ⚠️ 🔄)
+- Stat type icons (🏀 🎯 🤝 📥 🔥 🛡️ 😤 ⚠️ 🔄 ⏸️)
 - Running score display with lead indicators
 - NBA-style player points display (e.g., "(15 PTS)")
 - Quarter and game time stamps
 - Relative time display (e.g., "2 min ago")
 - Substitution events with indigo styling
+- **Timeout events with amber styling** (team name, type, duration)
+- **Team fouls and timeouts display** in game summary section
 
 **Real-time Updates**:
 - gameSubscriptionManager with WebSocket

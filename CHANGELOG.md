@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.8] - 2025-10-19
+
+### 🎉 New Features
+
+#### Team Fouls Tracking System
+- **Added**: Auto-aggregating team fouls tracking
+- **Added**: Database trigger to auto-increment team fouls when player commits foul
+- **Added**: Real-time team foul display in scoreboard (mobile + desktop)
+- **Added**: NBA-standard bonus indicator (red "BONUS" at 5+ fouls)
+- **Added**: Team foul display in live viewer game summary
+- **Backend**: Added `team_a_fouls`, `team_b_fouls` columns to games table
+
+#### Enhanced Timeout Management System
+- **Added**: Interactive TimeoutModalV3 component with NBA-style design (200 lines)
+- **Added**: Team selection with visual buttons (Team A / Team B)
+- **Added**: Timeout type selection (Full 60s / Short 30s)
+- **Added**: Live countdown timer with progress bar and glow effect
+- **Added**: Auto-stop all clocks (game clock + shot clock) on timeout start
+- **Added**: Dimmed overlay prevents stat entry during timeout
+- **Added**: Resume Play button for manual timeout end
+- **Added**: Auto-warning when < 5 seconds remaining
+- **Added**: Timeout validation (prevents recording with 0 timeouts left)
+- **Backend**: Added `team_a_timeouts_remaining`, `team_b_timeouts_remaining` columns
+- **Backend**: Created `game_timeouts` table for timeout history
+- **Backend**: Added `timeout_type` and `duration_seconds` columns
+
+#### Timeout Play-by-Play Integration
+- **Added**: Timeout events appear in live viewer play-by-play feed
+- **Added**: ⏸️ icon for instant timeout recognition
+- **Added**: Amber visual theme (distinct from stats orange and substitutions indigo)
+- **Added**: Shows team name + timeout type + duration (e.g., "Lakers Full Timeout (60s)")
+- **Added**: Chronological integration with all other plays
+- **Enhanced**: Complete game flow visibility for fans
+
+### 🐛 Bug Fixes
+
+#### Desktop Substitution System
+- **Fixed**: Desktop substitution was completely non-functional (0% working)
+- **Fixed**: Modal never appeared on desktop view
+- **Fixed**: Unified substitution logic between mobile and desktop
+- **Added**: SubstitutionModalV3 rendering for desktop layout
+- **Result**: Desktop substitution now 100% functional
+
+### 🔧 Technical Improvements
+
+#### Database Schema
+- **Added**: Migration 006 - Team fouls and basic timeouts
+- **Added**: Migration 007 - Enhanced timeout UX (type, duration, in_progress flag)
+- **Added**: Auto-increment trigger for team fouls
+- **Added**: RLS policies for game_timeouts table
+- **Added**: Indexes for performance optimization
+
+#### State Management
+- **Enhanced**: useTracker hook with team fouls and timeouts state
+- **Added**: Timeout countdown effect (1-second intervals)
+- **Added**: Timeout active state management
+- **Added**: Clock auto-control during timeouts
+
+#### Service Layer
+- **Enhanced**: GameServiceV3.recordTimeout with timeout type parameter
+- **Updated**: SELECT queries to include team_fouls and timeouts columns
+- **Added**: Timeout history recording to game_timeouts table
+- **Added**: Automatic timeout count decrement
+
+### 📚 Documentation
+- **Added**: Team Fouls & Timeouts Analysis document
+- **Added**: Migration 006 and 007 SQL files with rollback instructions
+- **Added**: MVP Readiness Audit report
+- **Updated**: README.md with team fouls and timeout features
+- **Updated**: Version bumped to 0.9.8
+
+---
+
 ## [0.9.7] - 2025-10-19
 
 ### 🎉 New Features
