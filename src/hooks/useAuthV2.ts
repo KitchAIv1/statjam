@@ -246,7 +246,20 @@ export function useAuthV2() {
           const requestedRole = metadata?.userType || 'player';
           if (profile.role !== requestedRole) {
             console.warn(`⚠️ useAuthV2: Role mismatch! Requested: ${requestedRole}, Got: ${profile.role}`);
-            // Still proceed but log the issue
+            
+            // ✅ CRITICAL FIX: Update profile with correct role immediately
+            console.log('🔧 useAuthV2: Attempting to fix role mismatch...');
+            try {
+              const { data: updatedProfile, error: updateError } = await authServiceV2.updateUserRole(profile.id, requestedRole);
+              if (updatedProfile && !updateError) {
+                console.log('✅ useAuthV2: Role corrected successfully!');
+                profile.role = requestedRole; // Update local profile
+              } else {
+                console.error('❌ useAuthV2: Role correction failed:', updateError?.message);
+              }
+            } catch (roleFixError: any) {
+              console.error('❌ useAuthV2: Role correction threw error:', roleFixError.message);
+            }
           }
           
           setState({ user: profile, loading: false, error: null });

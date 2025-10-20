@@ -194,7 +194,22 @@ export class AuthServiceV2 {
     metadata?: { firstName?: string; lastName?: string; userType?: string }
   ): Promise<{ data: SignUpResponse | null; error: Error | null }> {
     try {
-      console.log('🔐 AuthServiceV2: Signing up user:', email);
+      console.log('🔐 AuthServiceV2: Signing up user:', email, {
+        passwordLength: password?.length || 0,
+        hasMetadata: !!metadata,
+        userType: metadata?.userType
+      });
+
+      // ✅ VALIDATION: Check password length (Supabase requires min 6 characters)
+      if (!password || password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+
+      // ✅ VALIDATION: Check email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        throw new Error('Please enter a valid email address');
+      }
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
@@ -214,6 +229,11 @@ export class AuthServiceV2 {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        console.error('❌ AuthServiceV2: Signup API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
         const errorMessage = this.getAuthErrorMessage(response.status, errorData);
         throw new Error(errorMessage);
       }
@@ -467,6 +487,53 @@ export class AuthServiceV2 {
 
     } catch (error: any) {
       console.error('❌ AuthServiceV2: Create profile error:', error.message);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * 🔐 UPDATE USER ROLE - Fix role mismatch issues
+   */
+  async updateUserRole(userId: string, newRole: string): Promise<{ data: any | null; error: Error | null }> {
+    try {
+      console.log('🔐 AuthServiceV2: Updating user role:', { userId, newRole });
+
+      const session = this.getSession();
+      if (!session.accessToken) {
+        throw new Error('No access token available for role update');
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+
+      const response = await fetch(`${this.config.url}/rest/v1/users?id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': this.config.anonKey,
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          role: newRole
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(`Role update failed: ${errorData.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ AuthServiceV2: User role updated successfully');
+      
+      return { data: data[0] || data, error: null };
+
+    } catch (error: any) {
+      console.error('❌ AuthServiceV2: Update role error:', error.message);
       return { data: null, error };
     }
   }
