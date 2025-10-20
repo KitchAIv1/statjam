@@ -12,7 +12,7 @@ import {
   type SignUpFormData,
   type SignInFormData,
   type ValidationResult
-} from '../components/auth/utils/authValidation';
+} from '@/components/auth/utils/authValidation';
 
 export interface AuthFormData {
   email: string;

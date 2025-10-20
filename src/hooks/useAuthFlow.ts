@@ -5,8 +5,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthV2 } from './useAuthV2';
-import { type UserRole } from '../components/auth/RoleSelector';
-import { type SignUpFormData, type SignInFormData } from '../components/auth/utils/authValidation';
+import { type UserRole } from '@/components/auth/RoleSelector';
+import { type SignUpFormData, type SignInFormData } from '@/components/auth/utils/authValidation';
 
 export interface AuthFlowState {
   showEmailConfirmation: boolean;
