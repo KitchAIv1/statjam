@@ -876,6 +876,8 @@ const AuthPageV2 = () => {
             onChange={handleInputChange}
             style={styles.input}
             className="auth-input"
+            minLength={6}
+            autoComplete="new-password"
             onFocus={(e) => {
               e.target.style.borderColor = '#f97316';
               e.target.style.boxShadow = '0 0 0 3px rgba(251, 146, 60, 0.1)';
@@ -886,26 +888,50 @@ const AuthPageV2 = () => {
             }}
             required
           />
+          <small style={{
+            display: 'block',
+            marginTop: '4px',
+            marginBottom: '12px',
+            fontSize: '12px',
+            color: '#6b7280',
+            fontStyle: 'italic'
+          }}>
+            Password must be at least 6 characters
+          </small>
 
           {!isLogin && (
-            <input
-              type={showConfirmPassword ? 'text' : 'password'}
-              name="confirmPassword"
-              placeholder="Confirm Password"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              style={styles.input}
-              className="auth-input"
-              onFocus={(e) => {
-                e.target.style.borderColor = '#f97316';
-                e.target.style.boxShadow = '0 0 0 3px rgba(251, 146, 60, 0.1)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                e.target.style.boxShadow = 'none';
-              }}
-              required
-            />
+            <>
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                name="confirmPassword"
+                placeholder="Confirm Password"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                style={styles.input}
+                className="auth-input"
+                minLength={6}
+                autoComplete="new-password"
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#f97316';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(251, 146, 60, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                  e.target.style.boxShadow = 'none';
+                }}
+                required
+              />
+              <small style={{
+                display: 'block',
+                marginTop: '4px',
+                marginBottom: '12px',
+                fontSize: '12px',
+                color: '#6b7280',
+                fontStyle: 'italic'
+              }}>
+                Password must be at least 6 characters
+              </small>
+            </>
           )}
 
           <button
