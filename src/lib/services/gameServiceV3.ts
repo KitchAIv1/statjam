@@ -445,6 +445,7 @@ export class GameServiceV3 {
     quarter: number;
     gameClockMinutes: number;
     gameClockSeconds: number;
+    timeoutType: 'full' | '30_second';
   }): Promise<boolean> {
     try {
       const accessToken = this.getAccessToken();
@@ -469,7 +470,9 @@ export class GameServiceV3 {
           team_id: data.teamId,
           quarter: data.quarter,
           game_clock_minutes: data.gameClockMinutes,
-          game_clock_seconds: data.gameClockSeconds
+          game_clock_seconds: data.gameClockSeconds,
+          timeout_type: data.timeoutType,
+          duration_seconds: data.timeoutType === 'full' ? 60 : 30
         })
       });
 

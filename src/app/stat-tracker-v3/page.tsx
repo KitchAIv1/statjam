@@ -19,6 +19,7 @@ import { TopScoreboardV3 } from '@/components/tracker-v3/TopScoreboardV3';
 import { TeamRosterV3 } from '@/components/tracker-v3/TeamRosterV3';
 import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
+import { TimeoutModalV3 } from '@/components/tracker-v3/TimeoutModalV3';
 
 interface GameData {
   id: string;
@@ -82,6 +83,7 @@ function StatTrackerV3Content() {
   const [isSubstituting, setIsSubstituting] = useState(false);
   const [shotClockViolation, setShotClockViolation] = useState(false);
   const [rosterRefreshKey, setRosterRefreshKey] = useState<string | number>(0);
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
 
   // Roster/Bench State (lifted from MobileLayoutV3 for unified substitution logic)
   const [currentRosterA, setCurrentRosterA] = useState<Player[]>([]);
@@ -317,22 +319,22 @@ function StatTrackerV3Content() {
     });
   };
 
-  // Handle timeout recording
-  const handleTimeout = async () => {
-    if (!gameData) return;
-    
-    // Show confirmation to select which team called timeout
-    const teamAName = gameData.team_a?.name || 'Team A';
-    const teamBName = gameData.team_b?.name || 'Team B';
-    
-    const team = window.confirm(`${teamAName} timeout?\n\nClick OK for ${teamAName}\nClick Cancel for ${teamBName}`);
-    const teamId = team ? gameData.team_a_id : gameData.team_b_id;
-    const teamName = team ? teamAName : teamBName;
-    
-    const confirmed = window.confirm(`Record timeout for ${teamName}?`);
-    if (!confirmed) return;
-    
-    await tracker.recordTimeout(teamId);
+  // Handle timeout with enhanced modal
+  const handleTimeoutClick = () => {
+    setShowTimeoutModal(true);
+  };
+
+  const handleStartTimeout = async (teamId: string, type: 'full' | '30_second') => {
+    await tracker.startTimeout(teamId, type);
+  };
+
+  const handleResumePlay = () => {
+    tracker.resumeFromTimeout();
+    setShowTimeoutModal(false);
+  };
+
+  const handleCancelTimeout = () => {
+    setShowTimeoutModal(false);
   };
 
 
@@ -507,7 +509,7 @@ function StatTrackerV3Content() {
           // Force re-render with new key
           setRosterRefreshKey(Date.now());
         }}
-        onTimeOut={handleTimeout}
+        onTimeOut={handleTimeoutClick}
       />
     );
   }
@@ -581,10 +583,10 @@ function StatTrackerV3Content() {
               <DesktopStatGridV3
                 selectedPlayer={selectedPlayer}
                 selectedPlayerData={[...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer)}
-                isClockRunning={tracker.clock.isRunning}
+                isClockRunning={tracker.clock.isRunning && !tracker.timeoutActive}
                 onStatRecord={handleStatRecord}
                 onFoulRecord={handleFoulRecord}
-                onTimeOut={handleTimeout}
+                onTimeOut={handleTimeoutClick}
                 onSubstitution={() => selectedPlayer && handleSubstitution(selectedPlayer)}
                 onGameEnd={tracker.closeGame}
                 lastAction={tracker.lastAction}
@@ -629,6 +631,28 @@ function StatTrackerV3Content() {
           })()}
           onConfirm={handleSubConfirm}
         />
+
+        {/* Timeout Modal - Enhanced UX with countdown */}
+        <TimeoutModalV3
+          isOpen={showTimeoutModal}
+          teamAName={gameData.team_a?.name || 'Team A'}
+          teamBName={gameData.team_b?.name || 'Team B'}
+          teamAId={gameData.team_a_id}
+          teamBId={gameData.team_b_id}
+          onStartTimeout={handleStartTimeout}
+          onResume={handleResumePlay}
+          onCancel={handleCancelTimeout}
+          timeoutActive={tracker.timeoutActive}
+          timeoutSecondsRemaining={tracker.timeoutSecondsRemaining}
+          timeoutTeamId={tracker.timeoutTeamId}
+        />
+
+        {/* Dimmed Overlay During Timeout - Prevents Stat Entry */}
+        {tracker.timeoutActive && (
+          <div className="fixed inset-0 bg-black/60 z-40 pointer-events-none">
+            {/* Overlay blocks interaction with stat tracker during timeout */}
+          </div>
+        )}
 
         {/* Substitution Loading Overlay */}
         {isSubstituting && (
