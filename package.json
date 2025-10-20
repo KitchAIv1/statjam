@@ -58,6 +58,8 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.4.5",
+    "eslint-plugin-sonarjs": "^3.0.5",
+    "eslint-plugin-unicorn": "^61.0.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.16",
     "typescript": "^5"
