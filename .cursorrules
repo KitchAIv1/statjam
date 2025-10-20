@@ -1,0 +1,267 @@
+# FRONTEND MODULARITY GUARDRAILS (MANDATORY)
+
+## CRITICAL: ALWAYS ACTIVE BEFORE ANY CODE GENERATION
+
+Before generating ANY code, you MUST:
+1. Estimate the line count of the code you're about to generate
+2. Check if it would violate any hard limits below
+3. If it would violate, STOP and propose a split instead
+
+---
+
+## HARD BLOCKS - REFUSE TO GENERATE CODE THAT:
+
+### Rule 1: File Size Limit
+❌ Creates or modifies a file to exceed **500 lines**
+- If target file would exceed 500 lines, SPLIT into multiple files
+
+### Rule 2: Component Size Limit  
+❌ Creates a React component exceeding **200 lines**
+- Split into smaller components with single responsibilities
+
+### Rule 3: Hook Size Limit
+❌ Creates a custom hook exceeding **100 lines**
+- Split into multiple focused hooks
+
+### Rule 4: Function Size Limit
+❌ Creates a function exceeding **40 lines** (excluding type definitions)
+- Break into smaller, focused functions
+
+### Rule 5: Separation of Concerns
+❌ Mixes UI and business logic in the same file
+- Components may call hooks/services but must NOT contain business rules
+- Business logic MUST live in `src/services/*` or `src/hooks/*`
+
+### Rule 6: Naming Standards
+❌ Uses vague identifiers: `data`, `info`, `helper`, `temp`, `obj`, `item`, `element`, `thing`
+- Use intention-revealing names
+
+❌ Uses unnamed default exports
+- All exports must be named
+
+### Rule 7: Business Logic Location
+❌ Introduces business rules in `src/components/*`
+- Business logic MUST live in `src/services/<Domain>Service.ts` or `src/hooks/*`
+
+---
+
+## WHEN BLOCKED - OUTPUT THIS FORMAT:
+
+```
+■ BLOCKED: <rule-id> - <specific reason>
+■ CURRENT SITUATION: <what you were about to do>
+■ VIOLATION: <exact limit exceeded>
+
+■ REQUIRED FIXES:
+- [ ] Split <original-file> into:
+  - <part-a>.tsx under src/components/ (~X lines)
+  - <part-b>.ts under src/hooks/ (~X lines)
+  - <part-c>.ts under src/services/ (~X lines)
+
+- [ ] Move business logic to src/services/<Domain>Service.ts
+- [ ] Rename vague identifiers to intention-revealing names
+
+■ ESTIMATED SIZES AFTER SPLIT:
+- <part-a>: ~X lines ✅
+- <part-b>: ~X lines ✅
+- <part-c>: ~X lines ✅
+
+Would you like me to proceed with this split?
+```
+
+---
+
+## NAMING CONVENTIONS (MANDATORY)
+
+### Components
+- **Format**: PascalCase
+- **Example**: `ProductManagement`, `UserDashboard`
+- **NOT**: `productManagement`, `user_dashboard`
+
+### Functions & Variables
+- **Format**: camelCase  
+- **Example**: `calculateCommission`, `userProfile`
+- **NOT**: `CalculateCommission`, `user_profile`
+
+### Files
+- **Components**: PascalCase (e.g., `UserProfile.tsx`)
+- **Hooks**: camelCase with 'use' prefix (e.g., `useAuth.ts`)
+- **Services**: PascalCase with 'Service' suffix (e.g., `AuthService.ts`)
+- **Utils**: camelCase (e.g., `validators.ts`)
+
+### Banned Identifier Names
+NEVER use: `data`, `info`, `helper`, `temp`, `obj`, `item`, `element`, `thing`
+
+Use descriptive names instead:
+- ❌ `data` → ✅ `userData`, `gameData`, `profileData`
+- ❌ `info` → ✅ `userInfo`, `gameInfo`
+- ❌ `helper` → ✅ `formatDate`, `validateEmail`
+
+---
+
+## ARCHITECTURE PATTERNS (MANDATORY)
+
+### Manager/Service Pattern
+```
+src/
+├── components/        # UI only, no business logic
+│   └── ProductList.tsx
+├── hooks/            # Custom hooks, state management
+│   └── useProducts.ts
+├── services/         # Business logic, API calls
+│   └── ProductService.ts
+└── providers/        # Context providers
+    └── ProductContext.tsx
+```
+
+### Component Structure
+```typescript
+// ❌ BAD - Business logic in component
+function ProductList() {
+  const [products, setProducts] = useState([]);
+  
+  // ❌ Business logic in component
+  const calculateDiscount = (price, discount) => {
+    return price * (1 - discount / 100);
+  };
+  
+  return <div>...</div>;
+}
+
+// ✅ GOOD - Business logic in service
+function ProductList() {
+  const { products, calculateDiscount } = useProducts(); // Hook calls service
+  return <div>...</div>;
+}
+```
+
+---
+
+## FOLDER STRUCTURE VERIFICATION
+
+Before generating code, verify these folders exist:
+- `src/components/` - UI components only
+- `src/hooks/` - Custom hooks
+- `src/services/` - Business logic services
+- `src/providers/` - Context providers
+- `src/utils/` - Pure utility functions
+
+If generating code for a missing folder, CREATE THE FOLDER FIRST.
+
+---
+
+## COMPLEXITY LIMITS
+
+### Cyclomatic Complexity
+- **Maximum**: 10 per function
+- If complexity > 10, SPLIT the function
+
+### Nesting Depth
+- **Maximum**: 4 levels
+- Use early returns or extract to functions
+
+### Parameters
+- **Maximum**: 5 parameters per function
+- If more needed, use object parameter
+
+---
+
+## PRE-CODE GENERATION CHECKLIST
+
+Before generating ANY code, verify:
+
+- [ ] Estimated file size < 500 lines?
+- [ ] Estimated component size < 200 lines?
+- [ ] Estimated hook size < 100 lines?
+- [ ] All functions < 40 lines?
+- [ ] UI and business logic separated?
+- [ ] No vague identifier names?
+- [ ] Proper PascalCase/camelCase naming?
+- [ ] Business logic in services/ or hooks/?
+- [ ] Single Responsibility Principle followed?
+
+**IF ANY ANSWER IS NO**: STOP and propose a split.
+
+---
+
+## EXAMPLES
+
+### Example 1: Blocked Component
+```
+USER: "Add user profile editing to UserDashboard.tsx"
+
+ANALYSIS:
+- Current UserDashboard.tsx: 180 lines
+- Profile editing feature: ~150 lines
+- Total would be: 330 lines
+
+■ BLOCKED: Rule #2 - Component Size Limit (200 lines)
+■ VIOLATION: Would create 330-line component (limit: 200)
+
+■ REQUIRED FIXES:
+- [ ] Extract profile editing to ProfileEditor.tsx (~150 lines)
+- [ ] Keep UserDashboard.tsx as container (~180 lines)
+- [ ] Create useProfileEditor.ts hook for logic (~80 lines)
+
+Would you like me to proceed with this split?
+```
+
+### Example 2: Blocked Function
+```
+USER: "Add complex validation to handleSubmit"
+
+ANALYSIS:
+- Current handleSubmit: 35 lines
+- New validation logic: 25 lines
+- Total would be: 60 lines
+
+■ BLOCKED: Rule #4 - Function Size Limit (40 lines)
+■ VIOLATION: Would create 60-line function (limit: 40)
+
+■ REQUIRED FIXES:
+- [ ] Extract validation to validateFormData() function (~25 lines)
+- [ ] Keep handleSubmit lean (~35 lines, calls validateFormData)
+- [ ] Move validation to src/utils/validators/formValidators.ts
+
+Would you like me to proceed with this split?
+```
+
+---
+
+## ENFORCEMENT
+
+These rules are **NON-NEGOTIABLE**. If user asks you to violate them:
+1. Explain why it violates the rule
+2. Show the required split
+3. Ask for confirmation to proceed with proper architecture
+4. Only proceed if user explicitly overrides (document the override)
+
+---
+
+## SUCCESS CRITERIA
+
+Code is acceptable when:
+- ✅ All files < 500 lines
+- ✅ All components < 200 lines
+- ✅ All hooks < 100 lines
+- ✅ All functions < 40 lines
+- ✅ Clear separation of concerns
+- ✅ Descriptive, intention-revealing names
+- ✅ Business logic in services/hooks
+- ✅ Single Responsibility Principle followed
+
+---
+
+## REMEMBER
+
+**The goal is maintainable, scalable, testable code.**
+
+Small, focused files are:
+- Easier to understand
+- Easier to test
+- Easier to debug
+- Easier to reuse
+- Easier to review
+- Harder to break
+
+**ALWAYS propose splits over monoliths.**

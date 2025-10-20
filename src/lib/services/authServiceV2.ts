@@ -206,13 +206,30 @@ export class AuthServiceV2 {
         userType: metadata?.userType
       });
 
+      // ✅ VALIDATION: Check metadata and userType (Tier 2 #3)
+      if (!metadata || !metadata.userType) {
+        console.error('❌ AuthServiceV2: Missing userType in metadata');
+        throw new Error('User type must be selected');
+      }
+
+      const validUserTypes = ['player', 'organizer', 'stat_admin'];
+      if (!validUserTypes.includes(metadata.userType)) {
+        console.error('❌ AuthServiceV2: Invalid userType:', metadata.userType);
+        throw new Error(`Invalid user type. Must be one of: ${validUserTypes.join(', ')}`);
+      }
+
+      console.log('✅ AuthServiceV2: Metadata validated:', {
+        userType: metadata.userType,
+        hasOtherMetadata: Object.keys(metadata).length > 1
+      });
+
       // ✅ VALIDATION: Check password length (Supabase requires min 6 characters)
       if (!password || password.length < 6) {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      // ✅ VALIDATION: Check email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // ✅ VALIDATION: Check email format (improved regex - Tier 2 #2)
+      const emailRegex = /^[a-zA-Z0-9][a-zA-Z0-9._%+-]*[a-zA-Z0-9]@[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/;
       if (!email || !emailRegex.test(email)) {
         throw new Error('Please enter a valid email address');
       }

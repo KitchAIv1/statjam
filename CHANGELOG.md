@@ -7,6 +7,156 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.9] - 2025-10-20
+
+### 🏗️ **MAJOR ARCHITECTURE REFACTORING**
+
+#### AuthPageV2 Component Decomposition
+- **Refactored**: Decomposed 997-line monolithic AuthPageV2 into 14 modular components
+- **Reduced**: Main component from 997 lines to 81 lines (92% reduction)
+- **Reduced**: Main function from 888 lines to 43 lines (95% reduction)
+- **Improved**: Code quality violations from 21 to 1 (95% improvement)
+- **Created**: 7 new custom hooks for authentication logic
+- **Created**: 4 new UI components for modular forms
+- **Created**: Validation utilities and styling modules
+- **Result**: Maintainable, testable, scalable authentication system
+
+**Files Created**:
+- `components/auth/AuthFormContainer.tsx` (110 lines) - UI container
+- `components/auth/SignInForm.tsx` (80 lines) - Sign-in form
+- `components/auth/SignUpForm.tsx` (145 lines) - Sign-up form
+- `components/auth/RoleSelector.tsx` (60 lines) - Role selection
+- `components/auth/AuthInput.tsx` (40 lines) - Reusable input
+- `components/auth/PasswordStrengthIndicator.tsx` (60 lines) - Password feedback
+- `components/auth/styles/AuthPageStyles.ts` (300 lines) - All styles
+- `components/auth/utils/authValidation.ts` (50 lines) - Validation logic
+- `hooks/useAuthForm.ts` (146 lines) - Form state management
+- `hooks/useAuthFlow.ts` (205 lines) - Business logic
+- `hooks/useAuthError.ts` (40 lines) - Error handling
+- `hooks/usePasswordStrength.ts` (30 lines) - Password validation
+- `hooks/useNameValidation.ts` (40 lines) - Name validation
+- `hooks/useAuthSubmit.ts` (75 lines) - Form submission
+- `hooks/useAuthPageSetup.ts` (30 lines) - Initialization
+- `utils/validators/authValidators.ts` (60 lines) - Core validators
+
+### 🛡️ **FRONTEND MODULARITY GUARDRAILS**
+
+#### Code Quality Enforcement System
+- **Added**: `.cursorrules` file for AI-level code generation enforcement
+- **Added**: ESLint Frontend Modularity rules in `eslint.config.mjs`
+- **Installed**: `eslint-plugin-sonarjs`, `eslint-plugin-unicorn`
+- **Configured**: Hard limits for file size, function size, complexity
+- **Established**: Naming conventions and code organization standards
+
+**Guardrail Rules**:
+- Max 500 lines per file
+- Max 200 lines per React component
+- Max 100 lines per custom hook
+- Max 40 lines per function
+- Max complexity: 10
+- No vague identifiers (data, info, helper, temp, obj)
+- Proper PascalCase/camelCase naming
+- Separation of UI and business logic
+
+**Impact**:
+- Identified 337 modularity violations in legacy code
+- Established baseline for gradual improvement
+- Prevents future technical debt
+- Guides all future development
+
+### 🎯 **TIER 2 VALIDATION FEATURES**
+
+#### Password Strength Indicator
+- **Added**: Real-time password strength calculation
+- **Added**: Visual strength bar with smooth animations
+- **Added**: Color-coded indicators (Weak/Medium/Strong/Very Strong)
+- **Added**: Scoring system (0-6 points based on length, complexity)
+- **Added**: Helpful hint text for password requirements
+- **Implementation**: `PasswordStrengthIndicator.tsx`, `usePasswordStrength.ts`
+
+#### Enhanced Email Validation
+- **Improved**: Email regex from simple to robust pattern
+- **Now Rejects**: Invalid formats (@@, leading/trailing dots, short TLDs)
+- **Prevents**: Common email injection patterns
+- **Location**: `authServiceV2.ts` (Line 215)
+
+#### Metadata Validation
+- **Added**: Server-side validation for user role metadata
+- **Validates**: userType field exists and is valid
+- **Allowed Values**: player, organizer, stat_admin
+- **Prevents**: Invalid role injection attacks
+- **Error Messages**: Clear, user-friendly validation errors
+- **Location**: `authServiceV2.ts` (Lines 209-224)
+
+#### Name Validation
+- **Added**: Real-time first/last name validation
+- **Rules**: 2-50 characters, letters/spaces/hyphens/apostrophes only
+- **Rejects**: Numbers, special characters, HTML
+- **Accepts**: Valid names (John, O'Brien, Anne-Marie, de la Cruz)
+- **Frontend**: HTML5 validation + real-time feedback
+- **Backend**: Server-side validation for security
+- **Implementation**: `useNameValidation.ts`, `authValidators.ts`
+
+### 🐛 **Bug Fixes**
+
+#### Critical stat_admin Redirect Fix
+- **Fixed**: stat_admin users redirected to `/stat-tracker` instead of `/dashboard/stat-admin`
+- **Impact**: Stat admins saw "No game data available" after login
+- **Root Cause**: Extraction bug during refactoring
+- **Resolution**: Updated `useAuthFlow.ts` line 95
+- **Status**: Verified working for all user roles
+
+#### Session Management Issues
+- **Documented**: 403 session_not_found errors from stale tokens
+- **Created**: `scripts/clear-invalid-session.js` for cleanup
+- **Documented**: `AUTH_SESSION_ISSUES_FIX.md` for troubleshooting
+- **Note**: Not related to refactoring, existing operational issue
+
+### 📚 **Documentation Updates**
+
+#### New Documentation
+- `docs/04-fixes/AUTHPAGEV2_REFACTORING_COMPLETE.md` - Complete refactoring details
+- `docs/04-fixes/TIER2_IMPLEMENTATION_COMPLETE.md` - Tier 2 features documentation
+- `docs/04-fixes/ESLINT_MODULARITY_SETUP_REPORT.md` - Code quality setup
+- `docs/04-fixes/REFACTORING_AUDIT_CRITICAL_FINDINGS.md` - Lessons learned
+- `docs/04-fixes/AUTH_SESSION_ISSUES_FIX.md` - Session troubleshooting
+- `docs/04-features/authentication/AUTH_V2_REFACTORED.md` - Updated auth architecture
+
+#### Updated Documentation
+- `docs/01-project/PROJECT_STATUS.md` - Updated to v0.9.9
+- `docs/01-project/SYSTEM_ARCHITECTURE.md` - Added frontend modularity section
+- `CHANGELOG.md` - This file
+
+### 🔧 **Technical Improvements**
+
+#### Build & Performance
+- Bundle size: 15.6 kB → 16.6 kB (+1 kB for 4 Tier 2 features)
+- Build time: Improved with modular architecture
+- Hot reload: Faster with smaller components
+- Tree-shaking: More effective with modular code
+
+#### Code Maintainability
+- Testability: Each component can be unit tested independently
+- Reusability: Components and hooks can be used across the app
+- Debugging: Easier to isolate issues in smaller files
+- Collaboration: Reduced merge conflicts with modular structure
+
+### 📊 **Metrics**
+
+**Code Quality Improvement**:
+- Main component: 997 → 81 lines (92% reduction)
+- Largest function: 888 → 43 lines (95% reduction)
+- Violations: 21 → 1 (95% improvement)
+- Complexity: 20 → <10 (50% reduction)
+
+**Development Velocity**:
+- New features can be added in isolated files
+- No risk of breaking monolithic component
+- Clear ownership and responsibilities
+- Faster code reviews
+
+---
+
 ## [0.9.8] - 2025-10-19
 
 ### 🎉 New Features

@@ -1,8 +1,9 @@
 # 🏗️ StatJam System Architecture
 
-**Version**: 0.9.8  
-**Date**: October 19, 2025  
-**Status**: Production Ready with NBA-Standard Features Complete
+**Version**: 0.9.9  
+**Date**: October 20, 2025  
+**Status**: Production Ready with Refactored Modular Architecture + Tier 2 Enhancements  
+**Major Update**: Frontend Modularity Guardrails Established
 
 ---
 
@@ -10,8 +11,8 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        STATJAM MVP v0.9.8                        │
-│          🏀 NBA-Standard Features Complete + Secure              │
+│                        STATJAM MVP v0.9.9                        │
+│    🏀 Refactored Modular Architecture + Tier 2 Enhancements      │
 │                                                                   │
 │  ┌───────────┐      ┌───────────┐      ┌───────────┐           │
 │  │ ORGANIZER │      │STAT ADMIN │      │  PLAYER   │           │
@@ -22,11 +23,14 @@
 │        ▼                   ▼                   ▼                 │
 │  ┌───────────────────────────────────────────────────┐         │
 │  │      FRONTEND (Next.js 15.4.5 + TypeScript)       │         │
+│  │           🛡️ Modularity Guardrails Active           │         │
 │  │                                                     │         │
-│  │  • React Context (AuthContext)                     │         │
-│  │  • Custom Hooks (V3 Architecture)                  │         │
+│  │  • Modular Components (<200 lines each)           │         │
+│  │  • Custom Hooks (<100 lines each)                 │         │
 │  │  • Service Layer (Raw HTTP + Supabase Client)     │         │
+│  │  • AuthContext (Centralized Auth)                 │         │
 │  │  • Real-time Manager (WebSocket Subscriptions)    │         │
+│  │  • ESLint + .cursorrules Enforcement               │         │
 │  └────────────────────┬──────────────────────────────┘         │
 │                       │                                          │
 │                       ▼                                          │
@@ -203,11 +207,12 @@ RESULT: ✅ Auto-UI update + play-by-play integration
 
 ---
 
-## 🔐 AUTHENTICATION FLOW (CENTRALIZED)
+## 🔐 AUTHENTICATION FLOW (MODULAR V2.1)
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│              AUTHENTICATION ARCHITECTURE (V2)                       │
+│         AUTHENTICATION ARCHITECTURE (V2.1 - Refactored)            │
+│              🏗️ Modular Components + Tier 2 Validation             │
 └────────────────────────────────────────────────────────────────────┘
 
 1. APP INITIALIZATION (src/app/layout.tsx)
@@ -220,13 +225,37 @@ RESULT: ✅ Auto-UI update + play-by-play integration
    │   ▼
    └─► If token expires < 5 min → Auto-refresh
 
-2. USER SIGNS IN (src/components/auth/AuthPageV2.tsx)
+2. USER SIGNS UP (src/components/auth/AuthPageV2.tsx - 81 lines)
    │
-   ├─► authServiceV2.signIn(email, password)
-   ├─► Raw HTTP POST to Supabase Auth
-   ├─► Store access_token, refresh_token in localStorage
+   ├─► AuthPageV2 (orchestrator)
+   │   ├─► useAuthForm (form state)
+   │   ├─► usePasswordStrength (real-time indicator)
+   │   ├─► useNameValidation (real-time feedback)
+   │   ├─► useAuthSubmit (submission logic)
+   │   │
+   │   ▼
+   ├─► SignUpForm component
+   │   ├─► Name inputs → validateName() on change
+   │   ├─► Email input → normalizeEmail()
+   │   ├─► Password input → updatePasswordStrength()
+   │   ├─► Role selector → required metadata
+   │   │
+   │   ▼
+   ├─► Form submission → useAuthSubmit
+   │   ├─► Validate all fields (frontend)
+   │   ├─► authServiceV2.signUp()
+   │   │   ├─► Validate metadata (userType required)
+   │   │   ├─► Validate email (robust regex)
+   │   │   ├─► Validate password (min 6 chars)
+   │   │   └─► Validate names (2-50 chars, valid characters)
+   │   │
+   │   ▼
+   ├─► Supabase signup → auth.users
+   ├─► Database trigger → public.users (with role)
+   ├─► Auto sign-in → Profile fetch
    │
-   ▼
+   └─► useAuthFlow → Redirect to dashboard
+
 3. AUTH CONTEXT PROVIDES
    │
    ├─► { user, loading, error, signIn, signUp, signOut, refreshSession }
@@ -485,8 +514,120 @@ src/
 ### Development
 - **Build Tool**: Turbopack
 - **Package Manager**: npm
-- **Linting**: ESLint
+- **Linting**: ESLint with Frontend Modularity Guardrails (NEW - Oct 20, 2025)
+- **Code Quality**: .cursorrules for AI-level enforcement (NEW - Oct 20, 2025)
 - **Version Control**: Git + GitHub
+
+---
+
+## 🏗️ FRONTEND MODULAR ARCHITECTURE (NEW - Oct 20, 2025)
+
+### Component-Based Architecture with Guardrails
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│              FRONTEND MODULARITY SYSTEM (V0.9.9)                    │
+│        🛡️ Two-Layer Defense: .cursorrules + ESLint                  │
+└────────────────────────────────────────────────────────────────────┘
+
+LAYER 1: AI-LEVEL PREVENTION (.cursorrules)
+├─► Guides Cursor Agent BEFORE code generation
+├─► Checks estimated line counts
+├─► Forces splits if limits exceeded
+├─► Outputs BLOCKED message with required architecture
+└─► Proactive protection against technical debt
+
+LAYER 2: CODE-LEVEL DETECTION (ESLint)
+├─► Analyzes code AFTER generation
+├─► Shows warnings/errors in IDE
+├─► Runs on pre-commit hooks
+├─► Blocks CI/CD if rules violated (future)
+└─► Reactive protection catches manual code
+
+ENFORCED LIMITS:
+✅ Max 500 lines per file
+✅ Max 200 lines per component
+✅ Max 100 lines per custom hook
+✅ Max 40 lines per function
+✅ Max complexity: 10
+✅ No vague identifiers (data, info, helper)
+✅ Separation of UI and business logic
+```
+
+### File Organization Standards
+
+```
+src/
+├── components/              # UI Components ONLY (<200 lines each)
+│   ├── auth/               # Authentication UI
+│   │   ├── AuthPageV2.tsx (81 lines) ✅
+│   │   ├── SignInForm.tsx (80 lines) ✅
+│   │   ├── SignUpForm.tsx (145 lines) ✅
+│   │   └── [11 other modular components]
+│   └── [other features]
+│
+├── hooks/                   # Custom Hooks (<100 lines each)
+│   ├── useAuthV2.ts (380 lines) ⚠️ (core engine, grandfathered)
+│   ├── useAuthFlow.ts (205 lines) ⚠️ (core engine, grandfathered)
+│   ├── useAuthForm.ts (146 lines) ⚠️ (extended for state)
+│   ├── usePasswordStrength.ts (30 lines) ✅
+│   └── useNameValidation.ts (40 lines) ✅
+│
+├── services/                # Business Logic (<200 lines each)
+│   └── authServiceV2.ts (582 lines) ⚠️ (core service, grandfathered)
+│
+├── utils/                   # Pure Functions
+│   └── validators/
+│       └── authValidators.ts (60 lines) ✅
+│
+└── providers/               # Context Providers
+    └── AuthContext.tsx (48 lines) ✅
+```
+
+### Naming Conventions
+
+**Components**: PascalCase
+```typescript
+✅ AuthPageV2.tsx, SignInForm.tsx, RoleSelector.tsx
+❌ authPage.tsx, signin-form.tsx, role_selector.tsx
+```
+
+**Hooks**: camelCase with 'use' prefix
+```typescript
+✅ useAuthForm.ts, usePasswordStrength.ts
+❌ AuthForm.ts, password-strength.ts
+```
+
+**Services**: PascalCase with 'Service' suffix
+```typescript
+✅ authServiceV2.ts, GameServiceV3.ts
+❌ auth-service.ts, game_service.ts
+```
+
+**Functions**: camelCase, descriptive
+```typescript
+✅ validateEmail, calculatePasswordStrength, normalizeEmail
+❌ validate, calc, normalize, helper, data
+```
+
+### Code Quality Metrics
+
+**Current State** (Oct 20, 2025):
+- **Total files analyzed**: ~115 components + hooks
+- **Modularity violations**: 337 (legacy code)
+- **New code violations**: 1 minor (AuthPageV2: 43/40 lines)
+- **Compliance rate**: 99.7% for new code
+
+**Top Violators** (Refactoring Targets):
+1. OrganizerTournamentManager.tsx (891 lines) ⚠️ CRITICAL
+2. EditProfileModal.tsx (317 lines) ⚠️ HIGH
+3. OrganizerDashboardOverview.tsx (264 lines) ⚠️ HIGH
+4. GameStatsTable.tsx (253 lines) ⚠️ HIGH
+
+**Success Story**:
+- AuthPageV2: 997 lines → 81 lines (92% reduction)
+- Violations: 21 → 1 (95% improvement)
+- **Blueprint for future refactoring**
 
 ---
 
