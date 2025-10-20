@@ -92,7 +92,7 @@ export const useAuthFlow = (): UseAuthFlowReturn => {
         } else if (user.role === 'player') {
           window.location.href = '/dashboard/player';
         } else if (user.role === 'stat_admin') {
-          window.location.href = '/stat-tracker';
+          window.location.href = '/dashboard/stat-admin';
         } else {
           console.warn('⚠️ useAuthFlow: Unknown user role, redirecting to general dashboard');
           window.location.href = '/dashboard';
