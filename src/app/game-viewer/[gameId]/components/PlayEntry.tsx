@@ -424,7 +424,7 @@ const styles = {
   },
   timeoutText: {
     fontSize: figmaTypography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '600' as const,
     color: '#fbbf24', // Amber text for timeouts
     backgroundColor: 'rgba(251, 191, 36, 0.12)',
     padding: `${figmaSpacing[1]} ${figmaSpacing[2]}`,
