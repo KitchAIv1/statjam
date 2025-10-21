@@ -6,6 +6,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { OrganizerDashboard } from '@/components/OrganizerDashboard';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { OrganizerGuidePanel } from '@/components/guide';
+import { OrganizerGuideProvider } from '@/contexts/OrganizerGuideContext';
 
 const OrganizerDashboardContent = () => {
   const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
@@ -55,11 +56,11 @@ const OrganizerDashboardContent = () => {
   }
 
   return (
-    <>
+    <OrganizerGuideProvider>
       <NavigationHeader />
       <OrganizerDashboard user={user} />
       {userRole === 'organizer' && <OrganizerGuidePanel />}
-    </>
+    </OrganizerGuideProvider>
   );
 };
 

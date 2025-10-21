@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { X, Trophy, Users, Target } from 'lucide-react';
-import { useOrganizerGuide } from '@/hooks/useOrganizerGuide';
+import { useOrganizerGuide } from '@/contexts/OrganizerGuideContext';
 
 export function OrganizerGuideCallout() {
   const { showCallout, openGuide, dismissCallout } = useOrganizerGuide();

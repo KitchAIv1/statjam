@@ -15,7 +15,7 @@ import {
   ExternalLink,
   CheckCircle
 } from 'lucide-react';
-import { useOrganizerGuide } from '@/hooks/useOrganizerGuide';
+import { useOrganizerGuide } from '@/contexts/OrganizerGuideContext';
 import { GuideSection } from './GuideSection';
 import { GuideSection as GuideSectionType } from '@/lib/types/guide';
 
@@ -272,11 +272,11 @@ export function OrganizerGuidePanel() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-2 border-blue-200 hover:bg-blue-100 dark:border-blue-800 dark:hover:bg-blue-900"
-                  onClick={() => window.open('mailto:support@statjam.app', '_blank')}
+                  className="gap-2 border-green-200 hover:bg-green-100 dark:border-green-800 dark:hover:bg-green-900"
+                  onClick={() => window.open('https://wa.me/7472189711', '_blank')}
                 >
                   <Mail className="w-4 h-4" />
-                  support@statjam.app
+                  WhatsApp: +7472189711
                   <ExternalLink className="w-3 h-3" />
                 </Button>
               </div>

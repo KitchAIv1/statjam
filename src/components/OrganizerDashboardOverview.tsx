@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useOrganizerDashboardData } from "@/hooks/useOrganizerDashboardData";
 import { useRouter } from "next/navigation";
 import { OrganizerGuideCallout } from "@/components/guide";
-import { useOrganizerGuide } from "@/hooks/useOrganizerGuide";
+import { useOrganizerGuide } from "@/contexts/OrganizerGuideContext";
 
 // Enhanced status styling function for overview cards
 function getOverviewStatusClasses(status: string) {

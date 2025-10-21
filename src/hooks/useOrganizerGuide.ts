@@ -54,6 +54,7 @@ export function useOrganizerGuide(): GuideHookReturn {
 
   // Open guide panel
   const openGuide = useCallback(() => {
+    console.log('🔍 openGuide called, setting isGuideOpen to true');
     setIsGuideOpen(true);
     setGuideState(prevState => {
       const newState = {
