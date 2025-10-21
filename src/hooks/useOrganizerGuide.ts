@@ -20,37 +20,59 @@ export function useOrganizerGuide(): GuideHookReturn {
     }
   }, []);
 
-  // Save state to localStorage whenever it changes
-  const saveState = useCallback((newState: GuideState) => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(GUIDE_STORAGE_KEY, JSON.stringify(newState));
-        setGuideState(newState);
-      } catch (error) {
-        console.warn('Failed to save guide state to localStorage:', error);
-      }
-    }
-  }, []);
 
   // Increment session count (call on dashboard load)
   const incrementSession = useCallback(() => {
-    const newState = {
-      ...guideState,
-      sessionCount: guideState.sessionCount + 1,
-      lastShown: new Date().toISOString(),
-    };
-    saveState(newState);
-  }, [guideState, saveState]);
+    setGuideState(prevState => {
+      // Only increment if it's a new day or first time
+      const today = new Date().toDateString();
+      const lastShownDate = prevState.lastShown ? new Date(prevState.lastShown).toDateString() : '';
+      
+      if (lastShownDate === today) {
+        // Same day, don't increment
+        return prevState;
+      }
+      
+      const newState = {
+        ...prevState,
+        sessionCount: prevState.sessionCount + 1,
+        lastShown: new Date().toISOString(),
+      };
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(GUIDE_STORAGE_KEY, JSON.stringify(newState));
+        } catch (error) {
+          console.warn('Failed to save guide state to localStorage:', error);
+        }
+      }
+      
+      return newState;
+    });
+  }, []); // No dependencies - uses functional state update
 
   // Open guide panel
   const openGuide = useCallback(() => {
     setIsGuideOpen(true);
-    const newState = {
-      ...guideState,
-      panelOpenCount: guideState.panelOpenCount + 1,
-    };
-    saveState(newState);
-  }, [guideState, saveState]);
+    setGuideState(prevState => {
+      const newState = {
+        ...prevState,
+        panelOpenCount: prevState.panelOpenCount + 1,
+      };
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(GUIDE_STORAGE_KEY, JSON.stringify(newState));
+        } catch (error) {
+          console.warn('Failed to save guide state to localStorage:', error);
+        }
+      }
+      
+      return newState;
+    });
+  }, []);
 
   // Close guide panel
   const closeGuide = useCallback(() => {
@@ -59,12 +81,24 @@ export function useOrganizerGuide(): GuideHookReturn {
 
   // Dismiss callout permanently
   const dismissCallout = useCallback(() => {
-    const newState = {
-      ...guideState,
-      calloutDismissed: true,
-    };
-    saveState(newState);
-  }, [guideState, saveState]);
+    setGuideState(prevState => {
+      const newState = {
+        ...prevState,
+        calloutDismissed: true,
+      };
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(GUIDE_STORAGE_KEY, JSON.stringify(newState));
+        } catch (error) {
+          console.warn('Failed to save guide state to localStorage:', error);
+        }
+      }
+      
+      return newState;
+    });
+  }, []);
 
   // Computed properties
   const showCallout = guideState.sessionCount <= 3 && !guideState.calloutDismissed;
