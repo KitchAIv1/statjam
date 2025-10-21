@@ -134,3 +134,9 @@ export function useOrganizerGuide() {
   }
   return context;
 }
+
+// Safe version that returns null if provider is not available
+export function useOrganizerGuideSafe() {
+  const context = useContext(OrganizerGuideContext);
+  return context;
+}

@@ -2,10 +2,18 @@ import React from 'react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen } from 'lucide-react';
-import { useOrganizerGuide } from '@/contexts/OrganizerGuideContext';
+import { useOrganizerGuideSafe } from '@/contexts/OrganizerGuideContext';
 
 export function OrganizerGuideButton() {
-  const { openGuide, showBadge, isGuideOpen } = useOrganizerGuide();
+  // Safety check: only render if provider is available
+  const guideContext = useOrganizerGuideSafe();
+  
+  // If no provider available (not on dashboard page), don't render
+  if (!guideContext) {
+    return null;
+  }
+
+  const { openGuide, showBadge, isGuideOpen } = guideContext;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
