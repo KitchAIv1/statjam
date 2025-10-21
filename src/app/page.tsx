@@ -24,6 +24,13 @@ export default function HomePage() {
     setCurrentView('landing');
   };
 
+  const scrollToLiveGames = () => {
+    const liveGamesSection = document.getElementById('live-games');
+    if (liveGamesSection) {
+      liveGamesSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   if (currentView === 'tournament') {
     return <TournamentViewer onBack={navigateToLanding} />;
   }
@@ -38,7 +45,7 @@ export default function HomePage() {
         <NavigationHeader />
       </Suspense>
       <HeroSection 
-        onWatchLive={navigateToTournament} 
+        onWatchLive={scrollToLiveGames} 
         onViewTournament={navigateToTournamentPage}
       />
       <PlayerPremiumSection />

@@ -85,7 +85,7 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
   ];
 
   return (
-    <section className="py-20 bg-white">
+    <section id="live-games" className="py-20 bg-white">
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
       {/* Header */}
             <div className="text-center mb-12">
