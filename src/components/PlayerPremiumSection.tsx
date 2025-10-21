@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { TrendingUp, Video, User, Trophy } from "lucide-react";
+import { TrendingUp, Video, User, Trophy, Zap, Target, BarChart3, Clock } from "lucide-react";
 
 export function PlayerPremiumSection() {
   return (
@@ -136,22 +136,68 @@ export function PlayerPremiumSection() {
         </div>
 
         {/* Coming Soon: Solo Stat Tracking */}
-        <div className="mt-16 pt-16 border-t border-gray-200">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-800 rounded-full text-sm font-semibold mb-6">
-              <span className="animate-pulse">●</span>
-              Coming Soon
+        <div className="mt-16">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 via-white to-orange-50 border-2 border-orange-200/50 shadow-xl">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-5">
+              <div className="absolute top-4 left-4 w-24 h-24 bg-orange-500 rounded-full blur-2xl"></div>
+              <div className="absolute bottom-4 right-4 w-20 h-20 bg-orange-400 rounded-full blur-xl"></div>
             </div>
-            <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              Solo Stat Tracking
-            </h3>
-            <p className="text-lg sm:text-xl text-gray-600 mb-4 leading-relaxed">
-              Record your own pickup games, practices, or scrimmages — no team or tournament needed.
-            </p>
-            <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
-              Use the same pro-grade controls to log your stats, improve your performance, and own your journey.
-            </p>
-          </div>
+            
+            <div className="relative p-6 sm:p-8">
+              {/* Main Content */}
+              <div className="text-center max-w-3xl mx-auto">
+                <div className="flex justify-center items-center gap-3 mb-4 relative">
+                  <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <Target className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                    Solo Stat Tracking
+                  </h3>
+                  {/* Coming Soon Badge - positioned on the right */}
+                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full text-xs font-bold shadow-lg">
+                      <Clock className="w-3 h-3 animate-spin" />
+                      Coming Soon
+                      <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-lg sm:text-xl text-gray-700 mb-6 leading-relaxed">
+                  Record your own pickup games, practices, or scrimmages — no team or tournament needed.
+                  Use the same pro-grade controls to log your stats, improve your performance, and own your journey.
+                </p>
+
+                {/* Feature Preview Cards */}
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-orange-100 shadow-sm">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <Zap className="w-5 h-5 text-orange-500" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-1 text-sm">Quick Setup</h4>
+                    <p className="text-xs text-gray-600">Start tracking in seconds, anywhere you play</p>
+                  </div>
+                  
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-orange-100 shadow-sm">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <BarChart3 className="w-5 h-5 text-orange-500" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-1 text-sm">Personal Analytics</h4>
+                    <p className="text-xs text-gray-600">Track your improvement over time</p>
+                  </div>
+                  
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-orange-100 shadow-sm">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <Trophy className="w-5 h-5 text-orange-500" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-1 text-sm">Achievement Goals</h4>
+                    <p className="text-xs text-gray-600">Set and reach personal milestones</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
     </section>
