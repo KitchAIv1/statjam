@@ -62,9 +62,10 @@ interface TournamentCardProps {
   onManageTeams: (tournament: Tournament) => void;
   onManageSchedule: (tournament: Tournament) => void;
   onOpenSettings: (tournament: Tournament) => void;
+  onDeleteTournament: (tournament: Tournament) => void;
 }
 
-function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSettings }: TournamentCardProps) {
+function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSettings, onDeleteTournament }: TournamentCardProps) {
   const { currentTeams, maxTeams, loading: teamCountLoading } = useTournamentTeamCount(tournament.id, {
     maxTeams: tournament.maxTeams
   });
@@ -155,7 +156,7 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
           </div>
         </div>
         
-        <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-border/50">
+        <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-border/50">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -213,6 +214,23 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
             <Settings className="w-3 h-3" />
             <span className="hidden sm:inline">Settings</span>
           </Button>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="gap-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-950"
+                onClick={() => onDeleteTournament(tournament)}
+              >
+                <Trash2 className="w-3 h-3" />
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Delete Tournament</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </CardContent>
     </Card>
@@ -237,6 +255,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   const [isPlayerManagerOpen, setIsPlayerManagerOpen] = useState(false);
   const [selectedTeamForPlayers, setSelectedTeamForPlayers] = useState<any>(null);
   const [isCreateTeamDialogOpen, setIsCreateTeamDialogOpen] = useState(false);
+  
+  // Delete confirmation states
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [tournamentToDelete, setTournamentToDelete] = useState<Tournament | null>(null);
   
   // Stat admin management states
   const [statAdmins, setStatAdmins] = useState<{ id: string; name: string; email: string }[]>([]);
@@ -368,6 +390,23 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
     setSelectedTeamForPlayers(null);
     // Refresh team data
     teamManagement?.refetch();
+  };
+
+  // Delete tournament handlers
+  const handleDeleteTournament = (tournament: Tournament) => {
+    setTournamentToDelete(tournament);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!tournamentToDelete) return;
+
+    const success = await deleteTournament(tournamentToDelete.id);
+    if (success) {
+      setIsDeleteDialogOpen(false);
+      setTournamentToDelete(null);
+    }
+    // Error handling is already in the hook
   };
 
 
@@ -569,6 +608,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
             onManageTeams={handleManageTeams}
             onManageSchedule={handleManageSchedule}
             onOpenSettings={handleOpenSettings}
+            onDeleteTournament={handleDeleteTournament}
           />
         ))}
       </div>
@@ -1176,6 +1216,49 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
               }
             }}>
               Create Team
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />
+              Delete Tournament
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{tournamentToDelete?.name}"? 
+              This action cannot be undone and will remove all associated teams, games, and statistics.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={loading}
+              className="gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Delete Tournament
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
