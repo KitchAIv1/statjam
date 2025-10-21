@@ -86,7 +86,7 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
       description: `${data.stats.totalTournaments} total tournaments`,
       icon: Trophy,
       color: "text-white",
-      bgGradient: "bg-gradient-to-br from-primary to-primary/80",
+      bgGradient: "bg-primary",
       trend: data.stats.trends.tournaments
     },
     {
@@ -179,7 +179,7 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
               <div 
                 key={index} 
                 className="group p-4 border rounded-xl hover:border-primary/30 hover:bg-muted/30 transition-all duration-300 cursor-pointer"
-                onClick={() => router.push(`/dashboard/tournaments/${tournament.id}`)}
+                onClick={() => router.push('/dashboard?section=tournaments')}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
