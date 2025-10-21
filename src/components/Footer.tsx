@@ -66,6 +66,15 @@ export function Footer() {
 
         <Separator className="mb-8 bg-gray-700" />
 
+        {/* Unifying tagline */}
+        <div className="text-center mb-8">
+          <p className="text-lg text-gray-300 italic">
+            StatJam — Built for ballers, coaches, and organizers who play anywhere but want to look pro.
+          </p>
+        </div>
+
+        <Separator className="mb-8 bg-gray-700" />
+
         {/* Bottom section */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           {/* Copyright */}

@@ -71,7 +71,10 @@ export function PlayerPremiumSection() {
             <div>
               <h2 className="text-4xl font-bold mb-6">Turn Your Game Into Your Brand</h2>
               <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-                With Player Premium, every game you play gets tracked like the pros — real-time stats, personal highlight reels, and a shareable profile that gets you noticed.
+                With Player Premium, every game you play gets tracked like the pros — real-time stats, automatic highlight reels, and a career profile that tells your story.
+              </p>
+              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+                Whether it's your school league, streetball run, or local tournament — every play counts.
               </p>
             </div>
 
@@ -81,8 +84,8 @@ export function PlayerPremiumSection() {
                   <TrendingUp className="w-6 h-6 text-orange-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Pro-style live stat tracking</h3>
-                  <p className="text-muted-foreground">Every shot, pass, and defensive play tracked in real-time with professional accuracy.</p>
+                  <h3 className="font-semibold mb-2">Pro-Grade Stat Tracking</h3>
+                  <p className="text-muted-foreground">Every shot, assist, and rebound logged live with professional accuracy.</p>
                 </div>
               </div>
 
@@ -91,8 +94,8 @@ export function PlayerPremiumSection() {
                   <Video className="w-6 h-6 text-orange-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Automated highlight reels</h3>
-                  <p className="text-muted-foreground">AI-powered highlight creation captures your best moments automatically.</p>
+                  <h3 className="font-semibold mb-2">AI Highlight Reels</h3>
+                  <p className="text-muted-foreground">Your best moments captured automatically — no editing needed.</p>
                 </div>
               </div>
 
@@ -101,8 +104,8 @@ export function PlayerPremiumSection() {
                   <User className="w-6 h-6 text-orange-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Public player profile & career history</h3>
-                  <p className="text-muted-foreground">Showcase your growth with detailed career stats and game history.</p>
+                  <h3 className="font-semibold mb-2">Career Profile & History</h3>
+                  <p className="text-muted-foreground">Showcase your growth, season after season.</p>
                 </div>
               </div>
 
@@ -111,14 +114,14 @@ export function PlayerPremiumSection() {
                   <Trophy className="w-6 h-6 text-orange-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Tournament performance badges</h3>
-                  <p className="text-muted-foreground">Earn recognition for clutch performances and tournament achievements.</p>
+                  <h3 className="font-semibold mb-2">Performance Badges</h3>
+                  <p className="text-muted-foreground">Earn recognition for clutch plays and tournament achievements.</p>
                 </div>
               </div>
             </div>
 
             <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4">
-              Upgrade to Player Premium
+              Upgrade to Player Premium — Start Building Your Legacy
             </Button>
 
             <div className="pt-4">
