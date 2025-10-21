@@ -119,17 +119,116 @@ export class TournamentService {
 
   static async deleteTournament(id: string): Promise<void> {
     try {
-      const { error } = await supabase
+      console.log('🗑️ Starting tournament deletion process for:', id);
+
+      // Step 0: Get tournament info and validate deletion is allowed
+      const tournament = await this.getTournament(id);
+      if (!tournament) {
+        throw new Error('Tournament not found');
+      }
+
+      // Prevent deletion of active tournaments
+      if (tournament.status === 'active') {
+        throw new Error('Cannot delete an active tournament. Please set it to draft or completed status first.');
+      }
+
+      // Step 1: Get all teams for this tournament
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('tournament_id', id);
+
+      if (teamsError) {
+        console.error('Error fetching teams for deletion:', teamsError);
+        throw new Error(`Failed to fetch teams: ${teamsError.message}`);
+      }
+
+      const teamIds = teams?.map(team => team.id) || [];
+      console.log('🗑️ Found teams to delete:', teamIds.length);
+
+      // Step 2: Delete all team_players relationships
+      if (teamIds.length > 0) {
+        const { error: teamPlayersError } = await supabase
+          .from('team_players')
+          .delete()
+          .in('team_id', teamIds);
+
+        if (teamPlayersError) {
+          console.error('Error deleting team players:', teamPlayersError);
+          throw new Error(`Failed to delete team players: ${teamPlayersError.message}`);
+        }
+        console.log('🗑️ Deleted team_players relationships');
+      }
+
+      // Step 3: Delete all game-related data
+      const { data: games, error: gamesError } = await supabase
+        .from('games')
+        .select('id')
+        .eq('tournament_id', id);
+
+      if (gamesError) {
+        console.error('Error fetching games for deletion:', gamesError);
+        throw new Error(`Failed to fetch games: ${gamesError.message}`);
+      }
+
+      const gameIds = games?.map(game => game.id) || [];
+      console.log('🗑️ Found games to delete:', gameIds.length);
+
+      // Step 4: Delete game stats and related data
+      if (gameIds.length > 0) {
+        // Delete player_game_stats
+        const { error: statsError } = await supabase
+          .from('player_game_stats')
+          .delete()
+          .in('game_id', gameIds);
+
+        if (statsError) {
+          console.error('Error deleting game stats:', statsError);
+          throw new Error(`Failed to delete game stats: ${statsError.message}`);
+        }
+        console.log('🗑️ Deleted player_game_stats');
+
+        // Delete games
+        const { error: deleteGamesError } = await supabase
+          .from('games')
+          .delete()
+          .eq('tournament_id', id);
+
+        if (deleteGamesError) {
+          console.error('Error deleting games:', deleteGamesError);
+          throw new Error(`Failed to delete games: ${deleteGamesError.message}`);
+        }
+        console.log('🗑️ Deleted games');
+      }
+
+      // Step 5: Delete teams
+      if (teamIds.length > 0) {
+        const { error: deleteTeamsError } = await supabase
+          .from('teams')
+          .delete()
+          .eq('tournament_id', id);
+
+        if (deleteTeamsError) {
+          console.error('Error deleting teams:', deleteTeamsError);
+          throw new Error(`Failed to delete teams: ${deleteTeamsError.message}`);
+        }
+        console.log('🗑️ Deleted teams');
+      }
+
+      // Step 6: Finally delete the tournament
+      const { error: deleteTournamentError } = await supabase
         .from('tournaments')
         .delete()
         .eq('id', id);
 
-      if (error) {
-        console.error('Supabase error deleting tournament:', error);
-        throw new Error(`Failed to delete tournament: ${error.message}`);
+      if (deleteTournamentError) {
+        console.error('Error deleting tournament:', deleteTournamentError);
+        throw new Error(`Failed to delete tournament: ${deleteTournamentError.message}`);
       }
+
+      console.log('✅ Tournament deletion completed successfully');
     } catch (error) {
-      console.error('Error deleting tournament:', error);
+      console.error('Error in tournament deletion process:', error);
       throw error instanceof Error ? error : new Error('Failed to delete tournament');
     }
   }

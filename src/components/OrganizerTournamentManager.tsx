@@ -23,6 +23,7 @@ import { Tournament } from "@/lib/types/tournament";
 import { PlayerManager } from "@/components/PlayerManager";
 import { TeamService, TournamentService } from "@/lib/services/tournamentService";
 import { useRouter } from 'next/navigation';
+import { notify } from '@/lib/services/notificationService';
 
 // Utility function for tournament status variants with enhanced styling
 function getStatusVariant(status: Tournament['status']) {
@@ -401,12 +402,24 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   const handleConfirmDelete = async () => {
     if (!tournamentToDelete) return;
 
-    const success = await deleteTournament(tournamentToDelete.id);
-    if (success) {
-      setIsDeleteDialogOpen(false);
-      setTournamentToDelete(null);
+    try {
+      const success = await deleteTournament(tournamentToDelete.id);
+      if (success) {
+        notify.success(
+          'Tournament deleted successfully',
+          `"${tournamentToDelete.name}" and all associated data have been permanently removed.`
+        );
+        setIsDeleteDialogOpen(false);
+        setTournamentToDelete(null);
+      }
+    } catch (error) {
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete tournament';
+      notify.error(
+        'Failed to delete tournament',
+        errorMessage
+      );
     }
-    // Error handling is already in the hook
   };
 
 
@@ -1230,8 +1243,17 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
               Delete Tournament
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{tournamentToDelete?.name}"? 
-              This action cannot be undone and will remove all associated teams, games, and statistics.
+              Are you sure you want to delete "{tournamentToDelete?.name}"?
+              <br /><br />
+              <strong>This will permanently delete:</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>All teams and their player assignments</li>
+                <li>All scheduled and completed games</li>
+                <li>All game statistics and player stats</li>
+                <li>Tournament settings and configurations</li>
+              </ul>
+              <br />
+              <span className="text-red-600 font-medium">This action cannot be undone.</span>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
