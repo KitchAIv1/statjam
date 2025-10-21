@@ -64,12 +64,24 @@ export function PersonalGameForm({ onGameCreated, creating, onSubmit }: Personal
   const calculatedStats = calculatePersonalGameStats(gameData);
   const validation = validatePersonalGameStats(gameData);
 
-  // Handle stat button clicks
+  // Handle stat button clicks (Security: Validate bounds to prevent manipulation)
   const handleStatClick = useCallback((statId: string, increment: number) => {
-    setGameData(prev => ({
-      ...prev,
-      [statId]: Math.max(0, prev[statId as keyof PersonalGameInput] as number + increment)
-    }));
+    setGameData(prev => {
+      const currentValue = prev[statId as keyof PersonalGameInput] as number;
+      const newValue = Math.max(0, currentValue + increment);
+      
+      // Add upper bounds check to prevent stat manipulation
+      const maxValue = statId === 'fouls' ? 6 :
+                       statId === 'points' ? 200 :
+                       statId === 'turnovers' ? 30 :
+                       statId === 'steals' || statId === 'blocks' ? 25 :
+                       50; // rebounds, assists
+      
+      return {
+        ...prev,
+        [statId]: Math.min(maxValue, newValue)
+      };
+    });
   }, []);
 
   // Handle shooting stat changes
@@ -171,8 +183,9 @@ export function PersonalGameForm({ onGameCreated, creating, onSubmit }: Personal
             placeholder="e.g., Local gym, Park court"
             value={gameData.location}
             onChange={(e) => handleFieldChange('location', e.target.value)}
-            maxLength={100}
+            maxLength={200}
           />
+          <p className="text-xs text-muted-foreground">{gameData.location?.length || 0}/200 characters</p>
         </div>
 
         <div className="space-y-2">
@@ -187,6 +200,7 @@ export function PersonalGameForm({ onGameCreated, creating, onSubmit }: Personal
             onChange={(e) => handleFieldChange('opponent', e.target.value)}
             maxLength={100}
           />
+          <p className="text-xs text-muted-foreground">{gameData.opponent?.length || 0}/100 characters</p>
         </div>
       </div>
 
@@ -397,6 +411,7 @@ export function PersonalGameForm({ onGameCreated, creating, onSubmit }: Personal
           maxLength={500}
           rows={3}
         />
+        <p className="text-xs text-muted-foreground">{gameData.notes?.length || 0}/500 characters</p>
       </div>
 
       {/* Validation Errors */}

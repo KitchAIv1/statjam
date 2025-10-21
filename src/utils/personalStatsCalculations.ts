@@ -8,6 +8,21 @@
  */
 
 import { validateStatValue, validateQuarter } from '@/lib/validation/statValidation';
+import DOMPurify from 'dompurify';
+
+/**
+ * Sanitize text input for personal games to prevent XSS attacks
+ * Follows pattern from useAuthError.ts
+ */
+export function sanitizePersonalGameText(text: string): string {
+  if (!text) return '';
+  if (typeof window === 'undefined') return text.trim();
+  
+  return DOMPurify.sanitize(text.trim(), {
+    ALLOWED_TAGS: [],
+    ALLOWED_ATTR: []
+  });
+}
 
 export interface ShootingStats {
   made: number;
@@ -373,6 +388,23 @@ export function validatePersonalGameStats(gameData: {
   
   if (Math.abs(gameData.points - calculatedPoints) > 5) {
     warnings.push(`Points (${gameData.points}) don't match calculated points (${calculatedPoints}). Please verify.`);
+  }
+
+  // Add warnings for unusual stats (Security: Prevent stat manipulation)
+  if (gameData.points > 50) {
+    warnings.push('Points over 50 is unusual - please verify this is correct');
+  }
+  
+  if (gameData.fgMade === 0 && gameData.points > 0) {
+    warnings.push('Points recorded but no field goals made - is this correct?');
+  }
+
+  if (gameData.rebounds > 30) {
+    warnings.push('Rebounds over 30 is unusual - please verify');
+  }
+
+  if (gameData.assists > 20) {
+    warnings.push('Assists over 20 is unusual - please verify');
   }
 
   return {

@@ -35,7 +35,12 @@ export function NavigationHeader() {
     router.push('/');
   };
 
-  const handleNavigation = (href: string) => {
+  const handleNavigation = (href: string, disabled?: boolean) => {
+    if (disabled || href.startsWith('#disabled')) {
+      // Don't navigate for disabled items
+      return;
+    }
+    
     if (href.startsWith('#')) {
       // Handle anchor links for landing page
       if (pathname === '/') {
@@ -82,15 +87,19 @@ export function NavigationHeader() {
             {navigation.primary.map((item) => {
               const Icon = item.icon;
               const isActive = isActiveLink(item.href);
+              const isDisabled = item.disabled || item.href.startsWith('#disabled');
               
               return (
                 <button
                   key={item.href}
-                  onClick={() => handleNavigation(item.href)}
+                  onClick={() => handleNavigation(item.href, item.disabled)}
+                  disabled={isDisabled}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                    isActive 
-                      ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
-                      : 'text-white hover:text-orange-400 hover:bg-orange-400/10'
+                    isDisabled
+                      ? 'text-white/40 cursor-not-allowed opacity-60'
+                      : isActive 
+                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
+                        : 'text-white hover:text-orange-400 hover:bg-orange-400/10'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -148,15 +157,19 @@ export function NavigationHeader() {
               {navigation.primary.map((item) => {
                 const Icon = item.icon;
                 const isActive = isActiveLink(item.href);
+                const isDisabled = item.disabled || item.href.startsWith('#disabled');
                 
                 return (
                   <button
                     key={item.href}
-                    onClick={() => handleNavigation(item.href)}
+                    onClick={() => handleNavigation(item.href, item.disabled)}
+                    disabled={isDisabled}
                     className={`flex items-center space-x-3 w-full px-4 py-3 rounded-lg transition-colors ${
-                      isActive 
-                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
-                        : 'text-white hover:text-orange-400 hover:bg-orange-400/10'
+                      isDisabled
+                        ? 'text-white/40 cursor-not-allowed opacity-60'
+                        : isActive 
+                          ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
+                          : 'text-white hover:text-orange-400 hover:bg-orange-400/10'
                     }`}
                   >
                     <Icon className="w-5 h-5" />

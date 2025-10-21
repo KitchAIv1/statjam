@@ -9,6 +9,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { PersonalGamesService, PersonalGame, PersonalGameInput, PersonalGamesListResponse } from '@/lib/services/personalGamesService';
 import { notify } from '@/lib/services/notificationService';
 
+/**
+ * Conditional debug logging (only in development)
+ * Security: Prevents exposure of sensitive data in production logs
+ */
+const logDebug = (message: string, data?: any): void => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(message, data);
+  }
+};
+
 export interface UsePersonalGamesOptions {
   limit?: number;
   autoLoad?: boolean;
@@ -71,7 +81,7 @@ export function usePersonalGames(
    */
   const loadGames = useCallback(async (offset: number = 0) => {
     if (!playerId) {
-      console.warn('usePersonalGames: No player ID provided');
+      logDebug('⚠️ usePersonalGames: No player ID provided');
       return;
     }
 
@@ -79,7 +89,7 @@ export function usePersonalGames(
       setLoading(true);
       setError(null);
       
-      console.log('🎮 usePersonalGames: Loading games', { playerId, offset, limit });
+      logDebug('🎮 usePersonalGames: Loading games', { playerId, offset, limit });
       
       const response = await PersonalGamesService.getPersonalGames(playerId, {
         limit,
@@ -99,7 +109,7 @@ export function usePersonalGames(
       setTotalGames(response.total);
       setHasMore(response.has_more);
       
-      console.log('✅ usePersonalGames: Games loaded successfully', {
+      logDebug('✅ usePersonalGames: Games loaded successfully', {
         count: response.games.length,
         total: response.total,
         hasMore: response.has_more
@@ -145,7 +155,7 @@ export function usePersonalGames(
       setCreating(true);
       setError(null);
       
-      console.log('🎮 usePersonalGames: Creating game', gameData);
+      logDebug('🎮 usePersonalGames: Creating game', gameData);
       
       const newGame = await PersonalGamesService.createPersonalGame(playerId, gameData);
       
@@ -160,7 +170,7 @@ export function usePersonalGames(
       
       notify.success('Game saved!', 'Your personal game has been recorded');
       
-      console.log('✅ usePersonalGames: Game created successfully', newGame.id);
+      logDebug('✅ usePersonalGames: Game created successfully', newGame.id);
       
       return newGame;
       
@@ -186,7 +196,7 @@ export function usePersonalGames(
       setUpdating(true);
       setError(null);
       
-      console.log('🎮 usePersonalGames: Updating game', { gameId, updates });
+      logDebug('🎮 usePersonalGames: Updating game', { gameId, updates });
       
       const updatedGame = await PersonalGamesService.updatePersonalGame(gameId, updates);
       
@@ -204,7 +214,7 @@ export function usePersonalGames(
       
       notify.success('Game updated!', 'Your changes have been saved');
       
-      console.log('✅ usePersonalGames: Game updated successfully', gameId);
+      logDebug('✅ usePersonalGames: Game updated successfully', gameId);
       
       return updatedGame;
       
@@ -227,7 +237,7 @@ export function usePersonalGames(
       setDeleting(true);
       setError(null);
       
-      console.log('🎮 usePersonalGames: Deleting game', gameId);
+      logDebug('🎮 usePersonalGames: Deleting game', gameId);
       
       await PersonalGamesService.deletePersonalGame(gameId);
       
@@ -237,7 +247,7 @@ export function usePersonalGames(
       
       notify.success('Game deleted', 'The game has been removed from your history');
       
-      console.log('✅ usePersonalGames: Game deleted successfully', gameId);
+      logDebug('✅ usePersonalGames: Game deleted successfully', gameId);
       
       return true;
       
@@ -264,7 +274,7 @@ export function usePersonalGames(
    */
   useEffect(() => {
     if (autoLoad && playerId && games.length === 0) {
-      console.log('🎮 usePersonalGames: Auto-loading games for player', playerId);
+      logDebug('🎮 usePersonalGames: Auto-loading games for player', playerId);
       loadGames(0);
     }
   }, [autoLoad, playerId, games.length, loadGames]);

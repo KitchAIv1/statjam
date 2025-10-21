@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
+import { sanitizePersonalGameText } from '@/utils/personalStatsCalculations';
 import { 
   Calendar, 
   MapPin, 
@@ -41,6 +42,20 @@ export function PersonalGameCard({
   onView
 }: PersonalGameCardProps) {
   const [showDetails, setShowDetails] = useState(false);
+
+  // Security: Sanitize text fields on display to prevent XSS
+  const safeLocation = useMemo(() => 
+    game.location ? sanitizePersonalGameText(game.location) : null, 
+    [game.location]
+  );
+  const safeOpponent = useMemo(() => 
+    game.opponent ? sanitizePersonalGameText(game.opponent) : null, 
+    [game.opponent]
+  );
+  const safeNotes = useMemo(() => 
+    game.notes ? sanitizePersonalGameText(game.notes) : null, 
+    [game.notes]
+  );
 
   // Format game date
   const gameDate = new Date(game.game_date);
@@ -101,17 +116,17 @@ export function PersonalGameCard({
 
             {/* Location and opponent */}
             <div className="space-y-1">
-              {game.location && (
+              {safeLocation && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="w-3 h-3" />
-                  {game.location}
+                  {safeLocation}
                 </div>
               )}
               
-              {game.opponent && (
+              {safeOpponent && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Users className="w-3 h-3" />
-                  vs {game.opponent}
+                  vs {safeOpponent}
                 </div>
               )}
             </div>
@@ -188,11 +203,11 @@ export function PersonalGameCard({
                 )}
 
                 {/* Notes */}
-                {game.notes && (
+                {safeNotes && (
                   <div className="pt-2">
                     <div className="text-xs text-muted-foreground mb-1">Notes:</div>
                     <div className="text-sm bg-muted/50 rounded p-2">
-                      {game.notes}
+                      {safeNotes}
                     </div>
                   </div>
                 )}

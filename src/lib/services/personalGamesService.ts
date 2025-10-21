@@ -89,6 +89,16 @@ export class PersonalGamesService {
   private static readonly SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   /**
+   * Conditional debug logging (only in development)
+   * Security: Prevents exposure of sensitive data in production logs
+   */
+  private static logDebug(message: string, data?: any): void {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(message, data);
+    }
+  }
+
+  /**
    * Get access token from authServiceV2 localStorage
    */
   private static getAccessToken(): string | null {
@@ -151,7 +161,7 @@ export class PersonalGamesService {
     const queryString = new URLSearchParams(params).toString();
     const url = `${this.SUPABASE_URL}/rest/v1/${endpoint}${queryString ? `?${queryString}` : ''}`;
 
-    console.log(`🎮 PersonalGamesService: ${method} request to ${endpoint}`, { url, params });
+    this.logDebug(`🎮 PersonalGamesService: ${method} request to ${endpoint}`, { url, params });
 
     const requestOptions: RequestInit = {
       method,
@@ -176,7 +186,7 @@ export class PersonalGamesService {
       
       // Check if it's an authentication error and we haven't retried yet
       if ((response.status === 401 || response.status === 403) && retryCount === 0) {
-        console.log('🔐 PersonalGamesService: Authentication error detected, attempting token refresh...');
+        this.logDebug('🔐 PersonalGamesService: Authentication error detected, attempting token refresh...');
         
         try {
           // Import authServiceV2 dynamically to avoid circular dependencies
@@ -187,7 +197,7 @@ export class PersonalGamesService {
             const { data, error } = await authServiceV2.refreshToken(session.refreshToken);
             
             if (data && !error) {
-              console.log('✅ PersonalGamesService: Token refreshed, retrying request...');
+              this.logDebug('✅ PersonalGamesService: Token refreshed, retrying request...');
               // Retry the request with the new token
               return this.makeRequest(method, endpoint, body, params, retryCount + 1);
             } else {
@@ -212,7 +222,7 @@ export class PersonalGamesService {
     }
 
     const data = await response.json();
-    console.log(`✅ PersonalGamesService: ${method} ${endpoint} successful`);
+    this.logDebug(`✅ PersonalGamesService: ${method} ${endpoint} successful`);
     return data;
   }
 
@@ -274,6 +284,17 @@ export class PersonalGamesService {
       errors.push('Game date cannot be in the future');
     }
 
+    // Text field length validation (Security: Prevent buffer overflow)
+    if (input.location && input.location.length > 200) {
+      errors.push('Location must be 200 characters or less');
+    }
+    if (input.opponent && input.opponent.length > 100) {
+      errors.push('Opponent name must be 100 characters or less');
+    }
+    if (input.notes && input.notes.length > 500) {
+      errors.push('Notes must be 500 characters or less');
+    }
+
     // Shooting ratio validation
     if (input.fg_made > input.fg_attempted) {
       errors.push('Field goals made cannot exceed attempts');
@@ -285,6 +306,14 @@ export class PersonalGamesService {
       errors.push('Free throws made cannot exceed attempts');
     }
 
+    // 3-point validation (Security: Ensure 3PT are subset of FG)
+    if (input.three_pt_made > input.fg_made) {
+      errors.push('3-pointers made cannot exceed total field goals made');
+    }
+    if (input.three_pt_attempted > input.fg_attempted) {
+      errors.push('3-point attempts cannot exceed total field goal attempts');
+    }
+
     // Range validation
     if (input.points < 0 || input.points > 200) {
       errors.push('Points must be between 0 and 200');
@@ -294,6 +323,15 @@ export class PersonalGamesService {
     }
     if (input.assists < 0 || input.assists > 50) {
       errors.push('Assists must be between 0 and 50');
+    }
+    if (input.steals < 0 || input.steals > 25) {
+      errors.push('Steals must be between 0 and 25');
+    }
+    if (input.blocks < 0 || input.blocks > 25) {
+      errors.push('Blocks must be between 0 and 25');
+    }
+    if (input.turnovers < 0 || input.turnovers > 30) {
+      errors.push('Turnovers must be between 0 and 30');
     }
     if (input.fouls < 0 || input.fouls > 6) {
       errors.push('Fouls must be between 0 and 6');
@@ -320,6 +358,9 @@ export class PersonalGamesService {
    * Create a new personal game
    */
   static async createPersonalGame(playerId: string, gameData: PersonalGameInput): Promise<PersonalGame> {
+    // Import sanitization function
+    const { sanitizePersonalGameText } = await import('@/utils/personalStatsCalculations');
+    
     // Validate input
     const validation = this.validateGameInput(gameData);
     if (!validation.valid) {
@@ -342,10 +383,28 @@ export class PersonalGamesService {
       console.warn('Could not check rate limit:', error);
     }
 
+    // Security: Sanitize text inputs to prevent XSS (following DOMPurify pattern from auth)
+    // Security: Let RLS handle player_id verification via auth.uid()
     const gamePayload = {
-      ...gameData,
-      player_id: playerId,
+      game_date: gameData.game_date,
+      location: gameData.location ? sanitizePersonalGameText(gameData.location) : null,
+      opponent: gameData.opponent ? sanitizePersonalGameText(gameData.opponent) : null,
+      notes: gameData.notes ? sanitizePersonalGameText(gameData.notes) : null,
+      points: gameData.points,
+      rebounds: gameData.rebounds,
+      assists: gameData.assists,
+      steals: gameData.steals,
+      blocks: gameData.blocks,
+      turnovers: gameData.turnovers,
+      fouls: gameData.fouls,
+      fg_made: gameData.fg_made,
+      fg_attempted: gameData.fg_attempted,
+      three_pt_made: gameData.three_pt_made,
+      three_pt_attempted: gameData.three_pt_attempted,
+      ft_made: gameData.ft_made,
+      ft_attempted: gameData.ft_attempted,
       is_public: gameData.is_public || false
+      // Note: player_id is NOT included - RLS will set it via auth.uid() for security
     };
 
     const response = await this.makeRequest<PersonalGame[]>(
