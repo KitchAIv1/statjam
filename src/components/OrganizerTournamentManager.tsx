@@ -175,27 +175,34 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
             </Tooltip>
           </TooltipProvider>
           
-          <Button 
-            size="sm" 
-            variant={hasGames ? "default" : "outline"}
-            className={`gap-1 ${
-              hasGames 
-                ? "bg-green-600 hover:bg-green-700 text-white border-green-600"
-                : "hover:bg-orange/10 hover:text-orange-600 hover:border-orange/30"
-            }`}
-            onClick={() => onManageSchedule(tournament)}
-            disabled={gameStatusLoading}
-          >
-            <CalendarDays className="w-3 h-3" />
-            <span className="hidden sm:inline">
-              {gameStatusLoading ? "..." : hasGames ? "Schedule" : "Create"}
-            </span>
-            {hasGames && gameCount > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs px-1 py-0 h-4 min-w-4">
-                {gameCount}
-              </Badge>
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                size="sm" 
+                variant={hasGames ? "default" : "outline"}
+                className={`gap-1 ${
+                  hasGames 
+                    ? "bg-green-600 hover:bg-green-700 text-white border-green-600"
+                    : "hover:bg-orange/10 hover:text-orange-600 hover:border-orange/30"
+                }`}
+                onClick={() => onManageSchedule(tournament)}
+                disabled={gameStatusLoading}
+              >
+                <CalendarDays className="w-3 h-3" />
+                <span className="hidden sm:inline">
+                  {gameStatusLoading ? "..." : hasGames ? "Schedule" : "Create"}
+                </span>
+                {hasGames && gameCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs px-1 py-0 h-4 min-w-4">
+                    {gameCount}
+                  </Badge>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{hasGames ? "Manage Game Schedules" : "Create Game Schedules"}</p>
+            </TooltipContent>
+          </Tooltip>
           
           <Button 
             size="sm" 
