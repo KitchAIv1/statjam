@@ -119,7 +119,7 @@ export class TournamentService {
 
   static async deleteTournament(id: string): Promise<void> {
     try {
-      console.log('🗑️ Starting comprehensive tournament deletion process for:', id);
+      console.log('🗑️ Starting MASTER DELETE tournament deletion process for:', id);
 
       // Step 0: Get tournament info and validate deletion is allowed
       const tournament = await this.getTournament(id);
@@ -196,39 +196,55 @@ export class TournamentService {
       console.log('🗑️ Found ALL games to delete:', allGameIds.length);
 
       if (allGameIds.length > 0) {
-        // Delete game_stats first
+        // MASTER DELETE: Delete ALL tables that reference games(id)
+        
+        // 1. Delete game_stats
         const { error: statsError } = await supabase
           .from('game_stats')
           .delete()
           .in('game_id', allGameIds);
 
-        if (statsError) {
-          if (statsError.code === '42P01') {
-            console.warn('⚠️ game_stats table does not exist, skipping stats deletion');
-          } else {
-            console.error('Error deleting game stats:', statsError);
-            throw new Error(`Failed to delete game stats: ${statsError.message}`);
-          }
-        } else {
-          console.log('🗑️ Deleted game_stats');
+        if (statsError && statsError.code !== '42P01') {
+          console.error('Error deleting game_stats:', statsError);
+          throw new Error(`Failed to delete game_stats: ${statsError.message}`);
         }
+        console.log('🗑️ Deleted game_stats');
 
-        // Delete game_substitutions second
+        // 2. Delete game_substitutions
         const { error: substitutionsError } = await supabase
           .from('game_substitutions')
           .delete()
           .in('game_id', allGameIds);
 
-        if (substitutionsError) {
-          if (substitutionsError.code === '42P01') {
-            console.warn('⚠️ game_substitutions table does not exist, skipping substitutions deletion');
-          } else {
-            console.error('Error deleting game substitutions:', substitutionsError);
-            throw new Error(`Failed to delete game substitutions: ${substitutionsError.message}`);
-          }
-        } else {
-          console.log('🗑️ Deleted game_substitutions');
+        if (substitutionsError && substitutionsError.code !== '42P01') {
+          console.error('Error deleting game_substitutions:', substitutionsError);
+          throw new Error(`Failed to delete game_substitutions: ${substitutionsError.message}`);
         }
+        console.log('🗑️ Deleted game_substitutions');
+
+        // 3. Delete game_timeouts (NEW - this was missing!)
+        const { error: timeoutsError } = await supabase
+          .from('game_timeouts')
+          .delete()
+          .in('game_id', allGameIds);
+
+        if (timeoutsError && timeoutsError.code !== '42P01') {
+          console.error('Error deleting game_timeouts:', timeoutsError);
+          throw new Error(`Failed to delete game_timeouts: ${timeoutsError.message}`);
+        }
+        console.log('🗑️ Deleted game_timeouts');
+
+        // 4. Delete legacy stats table (if exists)
+        const { error: legacyStatsError } = await supabase
+          .from('stats')
+          .delete()
+          .in('game_id', allGameIds);
+
+        if (legacyStatsError && legacyStatsError.code !== '42P01') {
+          console.error('Error deleting legacy stats:', legacyStatsError);
+          throw new Error(`Failed to delete legacy stats: ${legacyStatsError.message}`);
+        }
+        console.log('🗑️ Deleted legacy stats');
       }
 
       // Delete games (now should work since all references are gone)
