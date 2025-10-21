@@ -16,7 +16,7 @@ export function OrganizerGuideButton() {
             variant="ghost"
             size="sm"
             onClick={openGuide}
-            className="relative gap-2 hover:bg-primary/10"
+            className="relative gap-2 text-white hover:text-orange-400 hover:bg-orange-400/10"
           >
             <BookOpen className="w-4 h-4" />
             <span className="hidden sm:inline">Guide</span>
