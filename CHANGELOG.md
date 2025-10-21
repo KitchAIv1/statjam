@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.1] - 2025-10-21
+
+### 🗑️ **TOURNAMENT DELETION RLS FIX**
+
+#### Critical Database Policy Issue Resolved
+- **Problem**: Tournament deletion failing with foreign key constraint errors
+- **Root Cause**: Missing RLS policy for organizers to delete game_substitutions
+- **Impact**: Organizers could not delete tournaments containing substitutions
+- **Solution**: Added `game_substitutions_organizer_delete` RLS policy
+
+#### RLS Policy Analysis
+**Issue Identified**:
+- `game_substitutions` table had restrictive RLS policies
+- Only `stat_admin` users could DELETE substitutions (not organizers)
+- Tournament deletion required organizer DELETE permissions
+- Foreign key constraint `game_substitutions_game_id_fkey` prevented games deletion
+
+**Policy Added**:
+```sql
+CREATE POLICY "game_substitutions_organizer_delete"
+ON public.game_substitutions FOR DELETE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.games g
+    JOIN public.tournaments t ON g.tournament_id = t.id
+    WHERE g.id = game_substitutions.game_id 
+    AND t.organizer_id = auth.uid()
+  )
+);
+```
+
+#### Enhanced Tournament Deletion Logic
+- **Comprehensive Cascade Deletion**: Handles all related tables in proper order
+- **RLS-Aware Deletion**: Uses proper policies for organizer permissions
+- **Diagnostic Logging**: Clear error messages and solution guidance
+- **Foreign Key Safety**: Ensures all references deleted before parent records
+
+#### Deletion Sequence (Fixed)
+1. **team_players** → 2. **game_stats** → 3. **game_substitutions** → 4. **game_timeouts** → 5. **stats** (legacy) → 6. **games** → 7. **teams** → 8. **tournament**
+
+#### Files Modified
+- `tournamentService.ts`: Enhanced deletion logic with RLS awareness
+- `FIX_TOURNAMENT_DELETION_RLS.sql`: New migration for RLS policy
+- Comprehensive diagnostic logging for troubleshooting
+
+#### Technical Implementation
+- **Database Migration**: Applied RLS policy to allow organizer deletion
+- **Service Layer**: Simplified deletion logic with proper error handling
+- **Diagnostic Tools**: Enhanced logging for future troubleshooting
+- **Foreign Key Resolution**: Complete cascade deletion implementation
+
+### 🐛 **Bug Fixes**
+
+#### Tournament Deletion Foreign Key Constraints
+- **Fixed**: Foreign key constraint violations during tournament deletion
+- **Fixed**: RLS policy blocking organizer substitution deletion
+- **Fixed**: Orphaned substitution records preventing games deletion
+- **Fixed**: Missing cascade deletion for game_timeouts table
+
+#### Database Schema Issues
+- **Fixed**: Legacy stats table column name mismatch (match_id vs game_id)
+- **Fixed**: Missing game_timeouts table in deletion cascade
+- **Fixed**: RLS policy gaps for tournament management operations
+
+### 🔧 **Technical Improvements**
+
+#### RLS Policy Management
+- **Added**: Comprehensive RLS policy for tournament deletion scenarios
+- **Enhanced**: Database migration with verification queries
+- **Improved**: Error handling with clear solution guidance
+- **Optimized**: Deletion sequence for foreign key constraint compliance
+
+#### Service Layer Enhancements
+- **Simplified**: Tournament deletion logic with RLS awareness
+- **Enhanced**: Diagnostic logging for troubleshooting
+- **Improved**: Error messages with actionable solutions
+- **Optimized**: Cascade deletion performance
+
+### 📝 **Documentation Updates**
+- Updated PROJECT_STATUS.md to v0.10.1
+- Added RLS policy documentation
+- Enhanced troubleshooting guides
+- Updated system architecture with RLS details
+
+---
+
 ## [0.10.0] - 2025-10-21
 
 ### 🎓 **ORGANIZER GUIDE UX SYSTEM**

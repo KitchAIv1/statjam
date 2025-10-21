@@ -375,6 +375,44 @@ CREATE POLICY "games_stat_admin_policy"
   USING (stat_admin_id = auth.uid());
 
 -- ⚠️ MISSING: Public SELECT policy for live viewers
+```
+
+### game_substitutions
+```sql
+-- Stat admins manage substitutions for their assigned games
+CREATE POLICY "game_substitutions_stat_admin_manage"
+ON public.game_substitutions FOR ALL TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.games g
+    WHERE g.id = game_substitutions.game_id 
+    AND g.stat_admin_id = auth.uid()
+  )
+);
+
+-- Organizers can DELETE substitutions when deleting tournaments
+CREATE POLICY "game_substitutions_organizer_delete"
+ON public.game_substitutions FOR DELETE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.games g
+    JOIN public.tournaments t ON g.tournament_id = t.id
+    WHERE g.id = game_substitutions.game_id 
+    AND t.organizer_id = auth.uid()
+  )
+);
+
+-- Public can read substitutions in public tournaments
+CREATE POLICY "game_substitutions_public_read"
+ON public.game_substitutions FOR SELECT TO anon, authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.games g
+    JOIN public.tournaments t ON g.tournament_id = t.id
+    WHERE g.id = game_substitutions.game_id 
+    AND t.is_public = TRUE
+  )
+);
 -- This might be why real-time works for games UPDATE but not game_stats INSERT
 ```
 
