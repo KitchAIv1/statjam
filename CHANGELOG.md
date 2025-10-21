@@ -7,6 +7,191 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.0] - 2025-10-21
+
+### 🎓 **ORGANIZER GUIDE UX SYSTEM**
+
+#### Complete 3-Surface Guide Implementation
+- **Added**: Comprehensive guide system for organizer onboarding and reference
+- **Architecture**: React Context-based state management for proper state synchronization
+- **Persistence**: localStorage integration for user preferences and session tracking
+- **Mobile-First**: Fully responsive design with right-side slide panel
+
+#### Guide Surfaces
+
+**1. Header Guide Button**
+- **Component**: `OrganizerGuideButton.tsx` (41 lines)
+- **Features**:
+  - Visible only to authenticated organizer users
+  - "New" badge displayed for first 3 sessions
+  - Smooth animation and hover effects
+  - White text with orange hover state matching navbar theme
+  - Tooltip: "Organizer Guide: setup, statisticians, live tracking"
+  - Proper event handling to prevent propagation issues
+
+**2. Dashboard Callout Card**
+- **Component**: `OrganizerGuideCallout.tsx` (57 lines)
+- **Features**:
+  - Auto-shows for first 3 sessions or until dismissed
+  - Dismissible with X button (persists across sessions)
+  - Gradient background design for high visibility
+  - Quick start bullet points:
+    * Create tournament and add teams
+    * Assign a Stat Profile in Game Settings
+    * Stat admin launches Stat Tracker for live stats
+  - "Open Guide" CTA button
+
+**3. Comprehensive Guide Panel**
+- **Component**: `OrganizerGuidePanel.tsx` (295 lines)
+- **Features**:
+  - Right-side slide panel (Shadcn Sheet component)
+  - Scrollable content with 6 comprehensive sections
+  - Mobile responsive (full width mobile, 384px max desktop)
+  - ESC key and click-outside to close
+  - WhatsApp support integration (+7472189711)
+
+**Guide Content Sections**:
+1. **Quick Start**: Overview and welcome message
+2. **Create Organizer Account**: Account setup and profile completion
+3. **Create Tournament & Teams**: Tournament creation, team/player management
+4. **Assign a Statistician**: Stat profile setup and assignment workflow
+5. **Run the Game**: Live stat tracking process and requirements
+6. **Review & Share**: Post-game summaries, stats, and sharing features
+7. **Beta Feedback**: WhatsApp contact for support and feedback
+
+#### Technical Implementation
+
+**New Files Created**:
+- `contexts/OrganizerGuideContext.tsx` (136 lines) - Centralized state management
+- `components/guide/OrganizerGuideButton.tsx` (41 lines) - Header button
+- `components/guide/OrganizerGuidePanel.tsx` (295 lines) - Main guide panel
+- `components/guide/OrganizerGuideCallout.tsx` (57 lines) - Dashboard callout
+- `components/guide/GuideSection.tsx` (25 lines) - Reusable section component
+- `components/guide/index.ts` (4 lines) - Barrel exports
+- `hooks/useOrganizerGuide.ts` (121 lines) - Hook wrapper for context
+- `lib/types/guide.ts` (40 lines) - TypeScript interfaces
+
+**Context Provider Pattern**:
+```typescript
+interface OrganizerGuideContextType {
+  // State
+  isGuideOpen: boolean;
+  showCallout: boolean;
+  showBadge: boolean;
+  sessionCount: number;
+  
+  // Actions
+  openGuide: () => void;
+  closeGuide: () => void;
+  dismissCallout: () => void;
+  incrementSession: () => void;
+}
+```
+
+**State Management**:
+- Centralized state via React Context API
+- Solves state synchronization issues between components
+- All components share single source of truth
+- Prevents duplicate hook instances
+
+**localStorage Schema**:
+```typescript
+interface GuideState {
+  sessionCount: number;        // Number of dashboard visits
+  calloutDismissed: boolean;   // Permanent dismissal flag
+  panelOpenCount: number;      // Times panel was opened
+  lastShown?: string;          // ISO date of last session
+}
+```
+
+**Session Tracking**:
+- Auto-increments on dashboard load (once per day)
+- Badge shows for first 3 sessions AND zero panel opens
+- Callout shows for first 3 sessions AND not dismissed
+- Date-based duplicate prevention
+
+#### Integrations
+
+**Navigation Header**:
+- Guide button conditionally rendered for organizer role
+- Integrated into right-side actions section
+- Positioned between nav links and user dropdown
+
+**Dashboard Page**:
+- Wrapped with `OrganizerGuideProvider` for state access
+- Guide panel rendered at root level (outside scrolling content)
+
+**Dashboard Overview**:
+- Callout card rendered at top (before stats cards)
+- Auto-triggers session increment on mount
+- Respects dismissal state
+
+### 🐛 **Bug Fixes**
+
+#### State Synchronization Issue
+- **Problem**: Guide button clicks worked but panel didn't open
+- **Root Cause**: Each component created separate hook instances with isolated state
+- **Solution**: Migrated from individual `useState` hooks to React Context
+- **Impact**: Button and panel now share state perfectly, instant synchronization
+
+#### Guide Button Clickability
+- **Fixed**: Badge overlay blocking button clicks
+- **Added**: `pointer-events-none` to badge elements
+- **Added**: Proper event handling with `preventDefault` and `stopPropagation`
+- **Added**: z-index layering for proper stacking
+
+#### Session Counting
+- **Fixed**: Multiple increments on same day
+- **Added**: Date comparison logic (`toDateString()` check)
+- **Impact**: Session count accurately reflects unique dashboard visits
+
+### 🎨 **UI/UX Improvements**
+
+#### Support Contact Enhancement
+- **Changed**: Email contact (support@statjam.app) → WhatsApp (+7472189711)
+- **Reason**: Better real-time support and accessibility
+- **Visual**: Green themed button (was blue) for WhatsApp branding
+- **Action**: Opens WhatsApp web/app in new tab
+
+#### Guide Button Styling
+- **Text Color**: White (default), Orange on hover
+- **Background**: Transparent ghost, Orange tint on hover
+- **Badge**: Primary colored with pulse animation
+- **Consistency**: Matches existing navbar button patterns
+
+#### Mobile Responsiveness
+- **Panel**: Full-width on mobile, constrained on desktop
+- **Button**: Icon-only on small screens, text visible on sm+
+- **Callout**: Responsive padding and typography
+- **Sheet**: Native mobile slide animations
+
+### 🔧 **Technical Improvements**
+
+#### Code Quality
+- **Clean Architecture**: Separation of state, UI, and business logic
+- **TypeScript**: Full type safety across all components
+- **No Console Pollution**: All debug logs removed from production code
+- **Linting**: Zero ESLint errors, follows modularity guidelines
+
+#### Performance
+- **Memoization**: Used `useCallback` for all actions (empty deps with functional updates)
+- **Conditional Rendering**: Guide components only mount for organizer role
+- **Lazy State Init**: localStorage read only on initial mount
+- **Efficient Updates**: Functional state updates prevent unnecessary re-renders
+
+#### SSR Safety
+- **localStorage Checks**: All access wrapped in `typeof window !== 'undefined'`
+- **Error Handling**: Try-catch blocks for localStorage operations
+- **Fallback State**: Default values when localStorage unavailable
+
+### 📝 **Documentation Updates**
+- Updated PROJECT_STATUS.md to v0.10.0
+- Updated CHANGELOG.md with comprehensive v0.10.0 entry
+- Documented all new components and their purposes
+- Added technical implementation details
+
+---
+
 ## [0.9.9] - 2025-10-20
 
 ### 🏗️ **MAJOR ARCHITECTURE REFACTORING**
