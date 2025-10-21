@@ -396,11 +396,13 @@ export function PlayerDashboard() {
 
                           <div className="flex flex-wrap gap-3 mt-4">
                             <Button 
-                              className="bg-white/60 text-red-600/60 px-6 py-3 border-0 cursor-not-allowed hover:bg-white/60"
+                              className="bg-white/30 text-white/50 px-6 py-3 border-0 cursor-not-allowed hover:bg-white/30"
                               disabled
-                              title="Feature coming soon"
+                              title="NBA Card Generator - Coming Soon"
                             >
+                              <Sparkles className="w-4 h-4 mr-2 opacity-50" />
                               GENERATE MY NBA CARD
+                              <Badge variant="secondary" className="ml-2 bg-white/20 text-white/70 text-xs">Coming Soon</Badge>
                             </Button>
                             <Button 
                               variant="outline" 
@@ -507,7 +509,30 @@ export function PlayerDashboard() {
                 </Card>
 
                 {/* Game Stats Table - NBA Box Score */}
-                {user?.id && <GameStatsTable userId={user.id} />}
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="text-card-foreground flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-primary" />
+                      My Stats
+                      <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800">Premium</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center py-12">
+                    <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-semibold mb-2">Premium Feature</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Detailed game statistics and analytics are available with Premium access.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      disabled
+                      className="cursor-not-allowed opacity-60"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Upgrade to Premium
+                    </Button>
+                  </CardContent>
+                </Card>
 
                 {/* Premium Features (Phase 1: hidden) */}
 
@@ -551,8 +576,27 @@ export function PlayerDashboard() {
                     <CardTitle className="text-card-foreground flex items-center gap-2">
                       <Calendar className="w-5 h-5 text-primary" />
                       My Tournaments
+                      <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800">Coming Soon</Badge>
                     </CardTitle>
                   </CardHeader>
+                  <CardContent className="text-center py-12">
+                    <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-semibold mb-2">Coming Soon</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Tournament registration and management features are coming soon.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      disabled
+                      className="cursor-not-allowed opacity-60"
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      View Tournaments
+                    </Button>
+                  </CardContent>
+                </Card>
+                {/* Hidden original tournament content */}
+                <div className="hidden">
                   <CardContent className="space-y-4">
                     {data.upcomingGames && data.upcomingGames.length > 0 ? (
                       data.upcomingGames.map((game, index) => (
@@ -576,7 +620,8 @@ export function PlayerDashboard() {
                       </div>
                     )}
                   </CardContent>
-                </Card>
+                </div>
+                {/* End hidden tournament content */}
 
                 {/* Achievements */}
                 <Card className="glass-card">
