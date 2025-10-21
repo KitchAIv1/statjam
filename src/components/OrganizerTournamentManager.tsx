@@ -1242,18 +1242,20 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
               <Trash2 className="w-5 h-5" />
               Delete Tournament
             </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete "{tournamentToDelete?.name}"?
-              <br /><br />
-              <strong>This will permanently delete:</strong>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>All teams and their player assignments</li>
-                <li>All scheduled and completed games</li>
-                <li>All game statistics and player stats</li>
-                <li>Tournament settings and configurations</li>
-              </ul>
-              <br />
-              <span className="text-red-600 font-medium">This action cannot be undone.</span>
+            <DialogDescription asChild>
+              <div>
+                <p>Are you sure you want to delete "{tournamentToDelete?.name}"?</p>
+                <br />
+                <p><strong>This will permanently delete:</strong></p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>All teams and their player assignments</li>
+                  <li>All scheduled and completed games</li>
+                  <li>All game statistics and player stats</li>
+                  <li>Tournament settings and configurations</li>
+                </ul>
+                <br />
+                <p className="text-red-600 font-medium">This action cannot be undone.</p>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">

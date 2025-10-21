@@ -119,7 +119,7 @@ export class TournamentService {
 
   static async deleteTournament(id: string): Promise<void> {
     try {
-      console.log('🗑️ Starting tournament deletion process for:', id);
+      console.log('🗑️ Starting comprehensive tournament deletion process for:', id);
 
       // Step 0: Get tournament info and validate deletion is allowed
       const tournament = await this.getTournament(id);
@@ -154,10 +154,16 @@ export class TournamentService {
           .in('team_id', teamIds);
 
         if (teamPlayersError) {
-          console.error('Error deleting team players:', teamPlayersError);
-          throw new Error(`Failed to delete team players: ${teamPlayersError.message}`);
+          // If table doesn't exist, log warning but continue (not critical for deletion)
+          if (teamPlayersError.code === '42P01') {
+            console.warn('⚠️ team_players table does not exist, skipping team players deletion');
+          } else {
+            console.error('Error deleting team players:', teamPlayersError);
+            throw new Error(`Failed to delete team players: ${teamPlayersError.message}`);
+          }
+        } else {
+          console.log('🗑️ Deleted team_players relationships');
         }
-        console.log('🗑️ Deleted team_players relationships');
       }
 
       // Step 3: Delete all game-related data
@@ -174,19 +180,43 @@ export class TournamentService {
       const gameIds = games?.map(game => game.id) || [];
       console.log('🗑️ Found games to delete:', gameIds.length);
 
-      // Step 4: Delete game stats and related data
+      // Step 4: Delete all game-related data (in dependency order)
       if (gameIds.length > 0) {
-        // Delete player_game_stats
+        // Delete game_stats first
         const { error: statsError } = await supabase
-          .from('player_game_stats')
+          .from('game_stats')
           .delete()
           .in('game_id', gameIds);
 
         if (statsError) {
-          console.error('Error deleting game stats:', statsError);
-          throw new Error(`Failed to delete game stats: ${statsError.message}`);
+          // If table doesn't exist, log warning but continue (not critical for deletion)
+          if (statsError.code === '42P01') {
+            console.warn('⚠️ game_stats table does not exist, skipping stats deletion');
+          } else {
+            console.error('Error deleting game stats:', statsError);
+            throw new Error(`Failed to delete game stats: ${statsError.message}`);
+          }
+        } else {
+          console.log('🗑️ Deleted game_stats');
         }
-        console.log('🗑️ Deleted player_game_stats');
+
+        // Delete game_substitutions second
+        const { error: substitutionsError } = await supabase
+          .from('game_substitutions')
+          .delete()
+          .in('game_id', gameIds);
+
+        if (substitutionsError) {
+          // If table doesn't exist, log warning but continue (not critical for deletion)
+          if (substitutionsError.code === '42P01') {
+            console.warn('⚠️ game_substitutions table does not exist, skipping substitutions deletion');
+          } else {
+            console.error('Error deleting game substitutions:', substitutionsError);
+            throw new Error(`Failed to delete game substitutions: ${substitutionsError.message}`);
+          }
+        } else {
+          console.log('🗑️ Deleted game_substitutions');
+        }
 
         // Delete games
         const { error: deleteGamesError } = await supabase
