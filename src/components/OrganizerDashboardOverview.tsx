@@ -113,7 +113,7 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
       description: "Games completed on time",
       icon: Target,
       color: "text-white",
-      bgGradient: "bg-gradient-to-br from-red-500 to-red-600",
+      bgGradient: "bg-red-600",
       trend: data.stats.trends.completion
     }
   ];
@@ -124,12 +124,32 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
   // Use live upcoming games data
   const upcomingGames = data.upcomingGames;
 
+  // Helper function to get filter parameter for stat cards
+  const getStatusFilter = (title: string): string => {
+    switch (title) {
+      case 'Active Tournaments':
+        return 'active';
+      case 'Total Teams':
+        return 'all';
+      case 'Games Scheduled':
+        return 'scheduled';
+      case 'Completion Rate':
+        return 'completed';
+      default:
+        return 'all';
+    }
+  };
+
   return (
     <div className="space-y-6 mt-6">
       {/* Enhanced Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <Card key={index} className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
+          <Card 
+            key={index} 
+            className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden cursor-pointer"
+            onClick={() => router.push(`/dashboard?section=tournaments&filter=${getStatusFilter(stat.title)}`)}
+          >
             <div className={`${stat.bgGradient} relative`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
                 <CardTitle className="text-sm font-medium text-white/90">{stat.title}</CardTitle>

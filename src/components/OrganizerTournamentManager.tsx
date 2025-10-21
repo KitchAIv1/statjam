@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2, UserCheck, UserX, Target, CalendarDays } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -155,15 +156,24 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
         </div>
         
         <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-border/50">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-            onClick={() => onManageTeams(tournament)}
-          >
-            <UserPlus className="w-3 h-3" />
-            <span className="hidden sm:inline">Teams</span>
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                  onClick={() => onManageTeams(tournament)}
+                >
+                  <UserPlus className="w-3 h-3" />
+                  <span className="hidden sm:inline">Teams</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Add Players</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <Button 
             size="sm" 
@@ -736,17 +746,9 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                                   <Button 
                                     size="sm" 
                                     variant="ghost" 
-                                    className="hover:bg-blue-500/10 hover:text-blue-600"
-                                    onClick={() => handleManagePlayers(team)}
-                                    title="Manage Players"
-                                  >
-                                    <Users className="w-4 h-4" />
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="ghost" 
                                     className="hover:bg-primary/10 hover:text-primary"
-                                    title="Edit Team Info"
+                                    onClick={() => handleManagePlayers(team)}
+                                    title="Edit Team & Manage Players"
                                   >
                                     <Edit className="w-4 h-4" />
                                   </Button>
@@ -755,6 +757,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                                      variant="ghost" 
                                      className="hover:bg-destructive/10 hover:text-destructive"
                                      onClick={() => teamManagement?.deleteTeam(team.id)}
+                                     title="Delete Team"
                                    >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
@@ -770,13 +773,9 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                           <Users className="w-8 h-8 text-muted-foreground" />
                         </div>
                         <h3 className="text-lg font-semibold mb-2">No Teams Yet</h3>
-                        <p className="text-muted-foreground mb-4">
-                          This tournament doesn't have any teams yet. Create your first team to get started.
+                        <p className="text-muted-foreground">
+                          This tournament doesn't have any teams yet. Use the "Add Team" button above to create your first team.
                         </p>
-                        <Button className="gap-2">
-                          <Plus className="w-4 h-4" />
-                          Create First Team
-                        </Button>
                       </div>
                     )}
                   </>
@@ -809,6 +808,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                       <Trophy className="w-4 h-4" />
                       General
                     </TabsTrigger>
+                    <TabsTrigger value="stat-admin" className="gap-2">
+                      <Shield className="w-4 h-4" />
+                      Stat Admin
+                    </TabsTrigger>
                     <TabsTrigger value="venue" className="gap-2">
                       <MapPin className="w-4 h-4" />
                       Venue
@@ -816,10 +819,6 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                     <TabsTrigger value="prizes" className="gap-2">
                       <Award className="w-4 h-4" />
                       Prizes
-                    </TabsTrigger>
-                    <TabsTrigger value="advanced" className="gap-2">
-                      <Shield className="w-4 h-4" />
-                      Advanced
                     </TabsTrigger>
                   </TabsList>
                 </div>
@@ -984,12 +983,12 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                     </Card>
                   </TabsContent>
 
-                  <TabsContent value="advanced" className="space-y-6 mt-6">
+                  <TabsContent value="stat-admin" className="space-y-6 mt-6">
                     {/* Stat Admin Management */}
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                          <Target className="w-5 h-5 text-primary" />
+                          <Shield className="w-5 h-5 text-primary" />
                           Stat Admin Management
                         </CardTitle>
                         <CardDescription>
