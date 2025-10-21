@@ -5,6 +5,7 @@ export interface NavigationItem {
   href: string;
   icon: React.ComponentType<any>;
   description?: string;
+  disabled?: boolean;
 }
 
 export interface NavigationConfig {
@@ -114,15 +115,17 @@ export const navigationConfig: Record<string, NavigationConfig> = {
       },
       {
         label: 'NBA Cards',
-        href: '/dashboard/player/cards',
+        href: '#disabled-nba-cards',
         icon: Palette,
-        description: 'Generate NBA trading cards'
+        description: 'Generate NBA trading cards',
+        disabled: true
       },
       {
         label: 'My Stats',
-        href: '/dashboard/player/stats',
+        href: '#disabled-my-stats',
         icon: BarChart3,
-        description: 'View your statistics'
+        description: 'View your statistics',
+        disabled: true
       },
       {
         label: 'Tournaments',
