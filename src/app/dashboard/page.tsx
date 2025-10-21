@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { OrganizerDashboard } from '@/components/OrganizerDashboard';
 import { NavigationHeader } from '@/components/NavigationHeader';
+import { OrganizerGuidePanel } from '@/components/guide';
 
 const OrganizerDashboardContent = () => {
   const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
@@ -57,6 +58,7 @@ const OrganizerDashboardContent = () => {
     <>
       <NavigationHeader />
       <OrganizerDashboard user={user} />
+      {userRole === 'organizer' && <OrganizerGuidePanel />}
     </>
   );
 };

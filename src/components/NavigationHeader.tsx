@@ -7,6 +7,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { getNavigationForRole } from "@/lib/navigation-config";
 import { Menu, X } from "lucide-react";
+import { OrganizerGuideButton } from "@/components/guide";
 
 export function NavigationHeader() {
   const router = useRouter();
@@ -106,7 +107,10 @@ export function NavigationHeader() {
               <div className="w-8 h-8 animate-pulse bg-gray-700 rounded-full" />
             ) : isAuthenticated ? (
               // Authenticated user menu
-              <UserDropdownMenu user={user} userRole={userRole || 'fan'} signOut={signOut} />
+              <>
+                {userRole === 'organizer' && <OrganizerGuideButton />}
+                <UserDropdownMenu user={user} userRole={userRole || 'fan'} signOut={signOut} />
+              </>
             ) : (
               // Guest auth buttons
               <div className="hidden md:flex items-center space-x-4">

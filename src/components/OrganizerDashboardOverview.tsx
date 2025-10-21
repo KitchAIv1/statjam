@@ -1,3 +1,4 @@
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Users, Calendar, Target, TrendingUp, Award, Clock, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -5,6 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/Button";
 import { useOrganizerDashboardData } from "@/hooks/useOrganizerDashboardData";
 import { useRouter } from "next/navigation";
+import { OrganizerGuideCallout } from "@/components/guide";
+import { useOrganizerGuide } from "@/hooks/useOrganizerGuide";
 
 // Enhanced status styling function for overview cards
 function getOverviewStatusClasses(status: string) {
@@ -30,6 +33,12 @@ interface OrganizerDashboardOverviewProps {
 export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewProps) {
   const { data, loading, error } = useOrganizerDashboardData(user);
   const router = useRouter();
+  const { incrementSession } = useOrganizerGuide();
+
+  // Increment session count when dashboard loads (must be before any returns)
+  React.useEffect(() => {
+    incrementSession();
+  }, [incrementSession]);
 
   // Show loading state
   if (loading) {
@@ -126,6 +135,9 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
 
   return (
     <div className="space-y-6 mt-6">
+      {/* Guide Callout Card */}
+      <OrganizerGuideCallout />
+      
       {/* Enhanced Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
