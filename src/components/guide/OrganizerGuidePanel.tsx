@@ -13,7 +13,9 @@ import {
   BarChart3, 
   Mail,
   ExternalLink,
-  CheckCircle
+  CheckCircle,
+  Eye,
+  Share2
 } from 'lucide-react';
 import { useOrganizerGuide } from '@/contexts/OrganizerGuideContext';
 import { GuideSection } from './GuideSection';
@@ -40,6 +42,7 @@ export function OrganizerGuidePanel() {
               <li>• Setting up teams and player rosters</li>
               <li>• Assigning statisticians for live tracking</li>
               <li>• Running games with real-time stats</li>
+              <li>• Sharing live games with families and fans</li>
             </ul>
           </div>
         </div>
@@ -178,6 +181,7 @@ export function OrganizerGuidePanel() {
                 <li>• Player stats (points, rebounds, assists) are tracked live</li>
                 <li>• Fouls, timeouts, and substitutions are recorded</li>
                 <li>• Spectators can follow along via the live game viewer</li>
+                <li>• Families and fans can watch on the main website</li>
               </ul>
             </div>
 
@@ -189,6 +193,43 @@ export function OrganizerGuidePanel() {
                 <li>• Track team fouls and timeouts</li>
                 <li>• End game when complete</li>
               </ul>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'live-viewer',
+      title: 'Share with Families & Fans',
+      icon: Eye,
+      content: (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Let families and fans watch live games with real-time stats and play-by-play updates.
+          </p>
+          
+          <div className="space-y-3">
+            <div>
+              <h4 className="font-medium mb-2">1. Games Are Public</h4>
+              <p className="text-sm text-muted-foreground mb-2">
+                All games are automatically public - no settings needed.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="font-medium mb-2">2. Share Live Viewer</h4>
+              <ul className="text-sm text-muted-foreground ml-4 space-y-1">
+                <li>• Go to main website homepage</li>
+                <li>• Find your game in "Live Games" section</li>
+                <li>• Click game to open Live Viewer</li>
+                <li>• Share the URL with families and fans</li>
+              </ul>
+            </div>
+
+            <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="text-sm text-green-800 dark:text-green-200">
+                <strong>Tip:</strong> Share the link on social media before games start!
+              </p>
             </div>
           </div>
         </div>
