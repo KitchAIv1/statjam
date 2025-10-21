@@ -69,11 +69,11 @@ export function PlayerPremiumSection() {
           {/* Right side - Content */}
           <div className="space-y-8">
             <div>
-              <h2 className="text-4xl font-bold mb-6">Turn Your Game Into Your Brand</h2>
-              <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+              <h2 className="text-3xl sm:text-4xl font-bold mb-6">Turn Your Game Into Your Brand</h2>
+              <p className="text-lg sm:text-xl text-muted-foreground mb-6 sm:mb-8 leading-relaxed">
                 With Player Premium, every game you play gets tracked like the pros — real-time stats, automatic highlight reels, and a career profile that tells your story.
               </p>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 leading-relaxed">
                 Whether it's your school league, streetball run, or local tournament — every play counts.
               </p>
             </div>
@@ -120,8 +120,9 @@ export function PlayerPremiumSection() {
               </div>
             </div>
 
-            <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4">
-              Upgrade to Player Premium — Start Building Your Legacy
+            <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg">
+              <span className="hidden sm:inline">Upgrade to Player Premium — Start Building Your Legacy</span>
+              <span className="sm:hidden">Upgrade to Player Premium</span>
             </Button>
 
             <div className="pt-4">
@@ -131,6 +132,25 @@ export function PlayerPremiumSection() {
                 <span className="font-semibold">For fans:</span> Watch the action live, with every play at your fingertips.
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Coming Soon: Solo Stat Tracking */}
+        <div className="mt-16 pt-16 border-t border-gray-200">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-800 rounded-full text-sm font-semibold mb-6">
+              <span className="animate-pulse">●</span>
+              Coming Soon
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+              Solo Stat Tracking
+            </h3>
+            <p className="text-lg sm:text-xl text-gray-600 mb-4 leading-relaxed">
+              Record your own pickup games, practices, or scrimmages — no team or tournament needed.
+            </p>
+            <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+              Use the same pro-grade controls to log your stats, improve your performance, and own your journey.
+            </p>
           </div>
         </div>
       </div>

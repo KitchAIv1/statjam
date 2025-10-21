@@ -35,13 +35,13 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
                 <h1 className="text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
                   StatJam
                 </h1>
-                <div className="text-xl lg:text-2xl opacity-90 leading-relaxed">
+                <div className="text-lg sm:text-xl lg:text-2xl opacity-90 leading-relaxed">
                   Your Courtside Command Center
                 </div>
-                <div className="text-lg lg:text-xl opacity-80 leading-relaxed mt-2">
+                <div className="text-base sm:text-lg lg:text-xl opacity-80 leading-relaxed mt-2">
                   Track every point, rebound, and clutch moment — live, anywhere.
                 </div>
-                <div className="text-base lg:text-lg opacity-70 leading-relaxed mt-1">
+                <div className="text-sm sm:text-base lg:text-lg opacity-70 leading-relaxed mt-1">
                   For organizers, players, and fans who want real stats that feel pro.
                 </div>
               </div>

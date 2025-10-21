@@ -89,15 +89,18 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
       {/* Header */}
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                <span className="text-orange-500">Live</span> Tournament Action — Stream Every Stat, Every Moment
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+                <span className="text-orange-500">Live</span> Tournament Action
+                <span className="hidden sm:inline"> — Stream Every Stat, Every Moment</span>
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
                 Follow real-time games from tournaments worldwide. See how StatJam tracks every play, score, and stat as it happens.
               </p>
-              <p className="text-lg text-gray-500 max-w-3xl mx-auto mt-2">
-                <em>No live games right now — check back soon or explore past tournaments.</em>
-              </p>
+              {actualGames && actualGames.length === 0 && (
+                <p className="text-base sm:text-lg text-gray-500 max-w-3xl mx-auto mt-2">
+                  <em>No live games right now — check back soon or explore past tournaments.</em>
+                </p>
+              )}
               {/* 🏀 NBA-Level Connection Status */}
               {connectionStatus === 'connected' && (
                 <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
