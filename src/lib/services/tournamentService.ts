@@ -180,16 +180,29 @@ export class TournamentService {
       const gameIds = games?.map(game => game.id) || [];
       console.log('🗑️ Found games to delete:', gameIds.length);
 
-      // Step 4: Delete all game-related data (in dependency order)
-      if (gameIds.length > 0) {
+      // Step 4: Delete all game-related data (comprehensive approach)
+      // First, get ALL games for this tournament to ensure we don't miss any
+      const { data: allGames, error: allGamesError } = await supabase
+        .from('games')
+        .select('id')
+        .eq('tournament_id', id);
+
+      if (allGamesError) {
+        console.error('Error fetching all games for deletion:', allGamesError);
+        throw new Error(`Failed to fetch all games: ${allGamesError.message}`);
+      }
+
+      const allGameIds = allGames?.map(game => game.id) || [];
+      console.log('🗑️ Found ALL games to delete:', allGameIds.length);
+
+      if (allGameIds.length > 0) {
         // Delete game_stats first
         const { error: statsError } = await supabase
           .from('game_stats')
           .delete()
-          .in('game_id', gameIds);
+          .in('game_id', allGameIds);
 
         if (statsError) {
-          // If table doesn't exist, log warning but continue (not critical for deletion)
           if (statsError.code === '42P01') {
             console.warn('⚠️ game_stats table does not exist, skipping stats deletion');
           } else {
@@ -204,10 +217,9 @@ export class TournamentService {
         const { error: substitutionsError } = await supabase
           .from('game_substitutions')
           .delete()
-          .in('game_id', gameIds);
+          .in('game_id', allGameIds);
 
         if (substitutionsError) {
-          // If table doesn't exist, log warning but continue (not critical for deletion)
           if (substitutionsError.code === '42P01') {
             console.warn('⚠️ game_substitutions table does not exist, skipping substitutions deletion');
           } else {
@@ -217,19 +229,19 @@ export class TournamentService {
         } else {
           console.log('🗑️ Deleted game_substitutions');
         }
-
-        // Delete games
-        const { error: deleteGamesError } = await supabase
-          .from('games')
-          .delete()
-          .eq('tournament_id', id);
-
-        if (deleteGamesError) {
-          console.error('Error deleting games:', deleteGamesError);
-          throw new Error(`Failed to delete games: ${deleteGamesError.message}`);
-        }
-        console.log('🗑️ Deleted games');
       }
+
+      // Delete games (now should work since all references are gone)
+      const { error: deleteGamesError } = await supabase
+        .from('games')
+        .delete()
+        .eq('tournament_id', id);
+
+      if (deleteGamesError) {
+        console.error('Error deleting games:', deleteGamesError);
+        throw new Error(`Failed to delete games: ${deleteGamesError.message}`);
+      }
+      console.log('🗑️ Deleted games');
 
       // Step 5: Delete teams
       if (teamIds.length > 0) {
