@@ -124,32 +124,12 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
   // Use live upcoming games data
   const upcomingGames = data.upcomingGames;
 
-  // Helper function to get filter parameter for stat cards
-  const getStatusFilter = (title: string): string => {
-    switch (title) {
-      case 'Active Tournaments':
-        return 'active';
-      case 'Total Teams':
-        return 'all';
-      case 'Games Scheduled':
-        return 'scheduled';
-      case 'Completion Rate':
-        return 'completed';
-      default:
-        return 'all';
-    }
-  };
-
   return (
     <div className="space-y-6 mt-6">
       {/* Enhanced Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <Card 
-            key={index} 
-            className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden cursor-pointer"
-            onClick={() => router.push(`/dashboard?section=tournaments&filter=${getStatusFilter(stat.title)}`)}
-          >
+          <Card key={index} className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
             <div className={`${stat.bgGradient} relative`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
                 <CardTitle className="text-sm font-medium text-white/90">{stat.title}</CardTitle>
@@ -196,7 +176,11 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
           </CardHeader>
           <CardContent className="space-y-4 pt-6">
             {recentTournaments.length > 0 ? recentTournaments.map((tournament, index) => (
-              <div key={index} className="group p-4 border rounded-xl hover:border-primary/30 hover:bg-muted/30 transition-all duration-300">
+              <div 
+                key={index} 
+                className="group p-4 border rounded-xl hover:border-primary/30 hover:bg-muted/30 transition-all duration-300 cursor-pointer"
+                onClick={() => router.push(`/dashboard/tournaments/${tournament.id}`)}
+              >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
