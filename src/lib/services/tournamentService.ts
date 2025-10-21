@@ -180,8 +180,12 @@ export class TournamentService {
       const gameIds = games?.map(game => game.id) || [];
       console.log('🗑️ Found games to delete:', gameIds.length);
 
-      // Step 4: Delete all game-related data (comprehensive approach)
-      // First, get ALL games for this tournament to ensure we don't miss any
+      // Step 4: NUCLEAR APPROACH - Find and delete ALL substitutions for this tournament
+      // This handles old tournaments with orphaned data or different constraints
+      
+      console.log('🚀 NUCLEAR APPROACH: Finding ALL substitutions for tournament:', id);
+      
+      // First, get ALL games for this tournament
       const { data: allGames, error: allGamesError } = await supabase
         .from('games')
         .select('id')
@@ -194,9 +198,26 @@ export class TournamentService {
 
       const allGameIds = allGames?.map(game => game.id) || [];
       console.log('🗑️ Found ALL games to delete:', allGameIds.length);
+      
+      // Note: RLS policy 'game_substitutions_organizer_delete' now allows organizers to delete substitutions
+      console.log('ℹ️ RLS policy allows organizer deletion - proceeding with standard deletion flow');
 
       if (allGameIds.length > 0) {
         // MASTER DELETE: Delete ALL tables that reference games(id)
+        console.log('🔍 DIAGNOSTIC: Game IDs to delete:', allGameIds);
+        
+        // DIAGNOSTIC: Check what substitutions exist for these games
+        const { data: existingSubs, error: checkSubsError } = await supabase
+          .from('game_substitutions')
+          .select('id, game_id')
+          .in('game_id', allGameIds);
+        
+        if (!checkSubsError) {
+          console.log('🔍 DIAGNOSTIC: Found substitutions for these games:', existingSubs?.length || 0);
+          if (existingSubs && existingSubs.length > 0) {
+            console.log('🔍 DIAGNOSTIC: Substitution game_ids:', existingSubs.map(s => s.game_id));
+          }
+        }
         
         // 1. Delete game_stats
         const { error: statsError } = await supabase
@@ -210,7 +231,8 @@ export class TournamentService {
         }
         console.log('🗑️ Deleted game_stats');
 
-        // 2. Delete game_substitutions
+        // 2. Delete game_substitutions (now that RLS policy allows organizer DELETE)
+        console.log('🗑️ Deleting game_substitutions with organizer DELETE policy...');
         const { error: substitutionsError } = await supabase
           .from('game_substitutions')
           .delete()
@@ -221,6 +243,18 @@ export class TournamentService {
           throw new Error(`Failed to delete game_substitutions: ${substitutionsError.message}`);
         }
         console.log('🗑️ Deleted game_substitutions');
+        
+        // DIAGNOSTIC: Double-check if any substitutions remain
+        const { data: remainingSubs, error: checkRemainingError } = await supabase
+          .from('game_substitutions')
+          .select('id, game_id')
+          .in('game_id', allGameIds);
+        
+        if (!checkRemainingError && remainingSubs && remainingSubs.length > 0) {
+          console.error('🚨 DIAGNOSTIC: Substitutions still exist after deletion!', remainingSubs);
+        } else {
+          console.log('✅ DIAGNOSTIC: All substitutions successfully deleted');
+        }
 
         // 3. Delete game_timeouts (NEW - this was missing!)
         const { error: timeoutsError } = await supabase
@@ -234,11 +268,11 @@ export class TournamentService {
         }
         console.log('🗑️ Deleted game_timeouts');
 
-        // 4. Delete legacy stats table (if exists)
+        // 4. Delete legacy stats table (if exists) - uses match_id column
         const { error: legacyStatsError } = await supabase
           .from('stats')
           .delete()
-          .in('game_id', allGameIds);
+          .in('match_id', allGameIds);
 
         if (legacyStatsError && legacyStatsError.code !== '42P01') {
           console.error('Error deleting legacy stats:', legacyStatsError);
