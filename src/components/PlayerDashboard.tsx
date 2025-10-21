@@ -16,6 +16,7 @@ import { SubscriptionModal } from "./SubscriptionModal";
 import { EditProfileModal } from "./EditProfileModal";
 import { NotificationBell } from "./NotificationBell";
 import { GameStatsTable } from "./GameStatsTable";
+import { PersonalStatTracker } from "./player-dashboard/PersonalStatTracker";
 import { usePlayerDashboardData } from "@/hooks/usePlayerDashboardData";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -296,10 +297,19 @@ export function PlayerDashboard() {
 
         {/* Navigation Tabs */}
         <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 glass-card mb-8">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 glass-card mb-8">
             <TabsTrigger value="dashboard" className="data-[state=active]:glass-card-accent data-[state=active]:text-primary">
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
+            </TabsTrigger>
+            <TabsTrigger 
+              value="personal-stats" 
+              className="data-[state=active]:glass-card-accent data-[state=active]:text-primary"
+            >
+              <div className="flex items-center">
+                <Trophy className="w-4 h-4 mr-2" />
+                Personal Stats
+              </div>
             </TabsTrigger>
             <TabsTrigger 
               value="ai-coaching" 
@@ -622,6 +632,11 @@ export function PlayerDashboard() {
                 </Card>
               </div>
             </div>
+          </TabsContent>
+
+          {/* Personal Stats Content */}
+          <TabsContent value="personal-stats">
+            <PersonalStatTracker />
           </TabsContent>
 
           {/* AI Coaching Content */}
