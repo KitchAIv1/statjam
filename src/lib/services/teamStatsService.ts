@@ -368,46 +368,114 @@ export class TeamStatsService {
   }
 
   /**
-   * Calculate plus/minus for players (simplified approach for MVP)
+   * Calculate plus/minus for players (NBA-standard calculation)
+   * 
+   * CORRECT LOGIC: Plus/minus = team points scored while player is on court − opponent points scored while player is on court
    */
   private static async calculatePlusMinusForPlayers(gameId: string, teamId: string, playerIds: string[]): Promise<Map<string, number>> {
     try {
-      console.log('📊 TeamStatsService: Calculating plus/minus (simplified for MVP)');
+      console.log('📊 TeamStatsService: Calculating NBA-standard plus/minus');
 
       const playerPlusMinus = new Map<string, number>();
       
-      // ✅ CORRECT: For MVP, use simplified plus/minus calculation
-      // This matches the existing playerGameStatsService approach
-      for (const playerId of playerIds) {
-        // Get player's individual stats
-        const playerStats = await this.makeRequest<any>('game_stats', {
-          'select': 'stat_type,stat_value,modifier',
-          'game_id': `eq.${gameId}`,
-          'player_id': `eq.${playerId}`
-        });
+      // Step 1: Get all substitutions to track when players were on court
+      const substitutions = await this.makeRequest<any>('game_substitutions', {
+        'select': 'player_in_id,player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
+        'game_id': `eq.${gameId}`,
+        'order': 'created_at.asc'
+      });
 
-        // Simple plus/minus: player's points scored minus turnovers
-        let playerPoints = 0;
-        let turnovers = 0;
+      console.log(`📊 TeamStatsService: Found ${substitutions.length} substitutions for plus/minus calculation`);
 
-        playerStats.forEach((stat: any) => {
-          if (stat.modifier === 'made' && stat.stat_value) {
-            playerPoints += stat.stat_value;
-          }
-          if (stat.stat_type === 'turnover') {
-            turnovers += stat.stat_value || 1;
-          }
-        });
+      // Step 2: Get all scoring events with timestamps
+      const allScoringStats = await this.makeRequest<any>('game_stats', {
+        'select': 'player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at',
+        'game_id': `eq.${gameId}`,
+        'stat_type': 'in.(field_goal,two_pointer,3_pointer,free_throw)',
+        'modifier': 'eq.made',
+        'order': 'created_at.asc'
+      });
 
-        // Simplified plus/minus calculation
-        const plusMinus = playerPoints - turnovers;
-        
-        playerPlusMinus.set(playerId, plusMinus);
-        
-        console.log(`📊 TeamStatsService: Player ${playerId.substring(0, 8)} +/- = ${playerPoints} points - ${turnovers} turnovers = ${plusMinus}`);
+      console.log(`📊 TeamStatsService: Found ${allScoringStats.length} scoring events`);
+
+      // Step 3: Get opponent team ID
+      const game = await this.makeRequest<any>('games', {
+        'select': 'team_a_id,team_b_id',
+        'id': `eq.${gameId}`
+      });
+
+      if (game.length === 0) {
+        throw new Error('Game not found');
       }
 
-      console.log('✅ TeamStatsService: Plus/minus calculated successfully');
+      const opponentTeamId = game[0].team_a_id === teamId ? game[0].team_b_id : game[0].team_a_id;
+      console.log(`📊 TeamStatsService: Team ${teamId.substring(0, 8)} vs Opponent ${opponentTeamId.substring(0, 8)}`);
+
+      // Step 4: Build player on-court timeline
+      const playerTimeline = new Map<string, Array<{ start: number; end: number | null }>>();
+      
+      // Initialize all players (assume first 5 are starters)
+      playerIds.forEach((playerId, index) => {
+        const isStarter = index < 5;
+        playerTimeline.set(playerId, isStarter ? [{ start: 0, end: null }] : []);
+      });
+
+      // Process substitutions to build timeline
+      substitutions.forEach((sub: any) => {
+        const subTime = this.convertGameTimeToSeconds(sub.quarter, sub.game_time_minutes, sub.game_time_seconds);
+        
+        // Player coming in
+        if (sub.player_in_id && playerIds.includes(sub.player_in_id)) {
+          const timeline = playerTimeline.get(sub.player_in_id) || [];
+          timeline.push({ start: subTime, end: null });
+          playerTimeline.set(sub.player_in_id, timeline);
+        }
+        
+        // Player going out
+        if (sub.player_out_id && playerIds.includes(sub.player_out_id)) {
+          const timeline = playerTimeline.get(sub.player_out_id) || [];
+          if (timeline.length > 0) {
+            const lastStint = timeline[timeline.length - 1];
+            if (lastStint.end === null) {
+              lastStint.end = subTime;
+            }
+          }
+          playerTimeline.set(sub.player_out_id, timeline);
+        }
+      });
+
+      // Step 5: Calculate plus/minus for each player
+      for (const playerId of playerIds) {
+        const timeline = playerTimeline.get(playerId) || [];
+        let teamPoints = 0;
+        let opponentPoints = 0;
+
+        // For each scoring event, check if player was on court
+        allScoringStats.forEach((stat: any) => {
+          const statTime = this.convertGameTimeToSeconds(stat.quarter, stat.game_time_minutes, stat.game_time_seconds);
+          const points = stat.stat_value || (stat.stat_type === '3_pointer' ? 3 : stat.stat_type === 'free_throw' ? 1 : 2);
+          
+          // Check if player was on court during this scoring event
+          const wasOnCourt = timeline.some(stint => 
+            statTime >= stint.start && (stint.end === null || statTime <= stint.end)
+          );
+
+          if (wasOnCourt) {
+            if (stat.team_id === teamId) {
+              teamPoints += points;
+            } else if (stat.team_id === opponentTeamId) {
+              opponentPoints += points;
+            }
+          }
+        });
+
+        const plusMinus = teamPoints - opponentPoints;
+        playerPlusMinus.set(playerId, plusMinus);
+        
+        console.log(`📊 TeamStatsService: Player ${playerId.substring(0, 8)} +/- = ${teamPoints} (team) - ${opponentPoints} (opp) = ${plusMinus}`);
+      }
+
+      console.log('✅ TeamStatsService: NBA-standard plus/minus calculated successfully');
       return playerPlusMinus;
 
     } catch (error: any) {
@@ -419,6 +487,16 @@ export class TeamStatsService {
       });
       return fallbackPlusMinus;
     }
+  }
+
+  /**
+   * Helper: Convert game time to seconds for timeline comparison
+   */
+  private static convertGameTimeToSeconds(quarter: number, minutes: number, seconds: number): number {
+    // Convert to total game seconds (game clock counts down, so we invert)
+    const quarterStartSeconds = (quarter - 1) * 12 * 60; // Each quarter is 12 minutes
+    const timeIntoQuarter = (12 * 60) - (minutes * 60 + seconds); // Invert because clock counts down
+    return quarterStartSeconds + timeIntoQuarter;
   }
 
   /**
