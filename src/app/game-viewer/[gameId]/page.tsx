@@ -173,76 +173,84 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
           </TabsList>
 
               {/* Feed Tab - NBA-Level Play-by-Play */}
-              <TabsContent value="feed" className="mt-0">
-                <PlayByPlayFeed
-                  playByPlay={playsV2 || []}
-                  game={memoizedGame}
-                  isLive={actualGame?.status?.toLowerCase().includes('live') || actualGame?.status?.toLowerCase().includes('in_progress') || false}
-                  isMobile={false}
-                  calculatePlayerPoints={calculatePlayerPoints}
-                />
+              <TabsContent value="feed" className="mt-0" style={styles.tabContent}>
+                <div style={styles.scrollContainer} className="game-viewer-scroll">
+                  <PlayByPlayFeed
+                    playByPlay={playsV2 || []}
+                    game={memoizedGame}
+                    isLive={actualGame?.status?.toLowerCase().includes('live') || actualGame?.status?.toLowerCase().includes('in_progress') || false}
+                    isMobile={false}
+                    calculatePlayerPoints={calculatePlayerPoints}
+                  />
+                </div>
               </TabsContent>
 
           {/* Game Tab (real data from hook) */}
-          <TabsContent value="game" className="mt-0">
-            <div style={styles.gameSummarySection}>
-              <div style={styles.gameSummaryCard}>
-                <div style={styles.gameSummaryHeader}>Game Summary</div>
-                <div style={styles.gameSummaryRow}>
-                  <div style={styles.gameSummaryTeam}>{actualGame.team_a_name || 'Team A'}</div>
-                  <div style={styles.gameSummaryScore}>
-                    {actualGame.home_score || 0}
+          <TabsContent value="game" className="mt-0" style={styles.tabContent}>
+            <div style={styles.scrollContainer} className="game-viewer-scroll">
+              <div style={styles.gameSummarySection}>
+                <div style={styles.gameSummaryCard}>
+                  <div style={styles.gameSummaryHeader}>Game Summary</div>
+                  <div style={styles.gameSummaryRow}>
+                    <div style={styles.gameSummaryTeam}>{actualGame.team_a_name || 'Team A'}</div>
+                    <div style={styles.gameSummaryScore}>
+                      {actualGame.home_score || 0}
+                    </div>
                   </div>
-                </div>
-                <div style={styles.gameSummaryRow}>
-                  <div style={styles.gameSummaryTeam}>{actualGame.team_b_name || 'Team B'}</div>
-                  <div style={styles.gameSummaryScore}>
-                    {actualGame.away_score || 0}
+                  <div style={styles.gameSummaryRow}>
+                    <div style={styles.gameSummaryTeam}>{actualGame.team_b_name || 'Team B'}</div>
+                    <div style={styles.gameSummaryScore}>
+                      {actualGame.away_score || 0}
+                    </div>
                   </div>
-                </div>
-                <div style={styles.gameSummaryMeta}>
-                  <span>Status: {actualGame.status}</span>
-                  <span>Quarter: {actualGame.quarter}</span>
-                  <span>Time: {String(actualGame.game_clock_minutes || 0).padStart(2, '0')}:{String(actualGame.game_clock_seconds || 0).padStart(2, '0')}</span>
-                </div>
-                <div style={styles.gameSummaryMeta}>
-                  <span>Team Fouls: {actualGame.team_a_fouls || 0} - {actualGame.team_b_fouls || 0}</span>
-                  <span>Timeouts: {actualGame.team_a_timeouts_remaining || 7} - {actualGame.team_b_timeouts_remaining || 7}</span>
+                  <div style={styles.gameSummaryMeta}>
+                    <span>Status: {actualGame.status}</span>
+                    <span>Quarter: {actualGame.quarter}</span>
+                    <span>Time: {String(actualGame.game_clock_minutes || 0).padStart(2, '0')}:{String(actualGame.game_clock_seconds || 0).padStart(2, '0')}</span>
+                  </div>
+                  <div style={styles.gameSummaryMeta}>
+                    <span>Team Fouls: {actualGame.team_a_fouls || 0} - {actualGame.team_b_fouls || 0}</span>
+                    <span>Timeouts: {actualGame.team_a_timeouts_remaining || 7} - {actualGame.team_b_timeouts_remaining || 7}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </TabsContent>
 
           {/* Team A Tab - ✅ PHASE 2: Instant loading with prefetched data */}
-          <TabsContent value="teamA" className="mt-0">
-            <TeamStatsTab 
-              gameId={gameId} 
-              teamId={actualGame.team_a_id} 
-              teamName={actualGame.team_a_name || 'Team A'}
-              prefetchedData={
-                teamAPrefetch.loading || teamAPrefetch.error ? undefined : {
-                  teamStats: teamAPrefetch.teamStats,
-                  onCourtPlayers: teamAPrefetch.onCourtPlayers,
-                  benchPlayers: teamAPrefetch.benchPlayers
+          <TabsContent value="teamA" className="mt-0" style={styles.tabContent}>
+            <div style={styles.scrollContainer} className="game-viewer-scroll">
+              <TeamStatsTab 
+                gameId={gameId} 
+                teamId={actualGame.team_a_id} 
+                teamName={actualGame.team_a_name || 'Team A'}
+                prefetchedData={
+                  teamAPrefetch.loading || teamAPrefetch.error ? undefined : {
+                    teamStats: teamAPrefetch.teamStats,
+                    onCourtPlayers: teamAPrefetch.onCourtPlayers,
+                    benchPlayers: teamAPrefetch.benchPlayers
+                  }
                 }
-              }
-            />
+              />
+            </div>
           </TabsContent>
 
           {/* Team B Tab - ✅ PHASE 2: Instant loading with prefetched data */}
-          <TabsContent value="teamB" className="mt-0">
-            <TeamStatsTab 
-              gameId={gameId} 
-              teamId={actualGame.team_b_id} 
-              teamName={actualGame.team_b_name || 'Team B'}
-              prefetchedData={
-                teamBPrefetch.loading || teamBPrefetch.error ? undefined : {
-                  teamStats: teamBPrefetch.teamStats,
-                  onCourtPlayers: teamBPrefetch.onCourtPlayers,
-                  benchPlayers: teamBPrefetch.benchPlayers
+          <TabsContent value="teamB" className="mt-0" style={styles.tabContent}>
+            <div style={styles.scrollContainer} className="game-viewer-scroll">
+              <TeamStatsTab 
+                gameId={gameId} 
+                teamId={actualGame.team_b_id} 
+                teamName={actualGame.team_b_name || 'Team B'}
+                prefetchedData={
+                  teamBPrefetch.loading || teamBPrefetch.error ? undefined : {
+                    teamStats: teamBPrefetch.teamStats,
+                    onCourtPlayers: teamBPrefetch.onCourtPlayers,
+                    benchPlayers: teamBPrefetch.benchPlayers
+                  }
                 }
-              }
-            />
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
@@ -286,7 +294,27 @@ const styles = {
   tabsContainer: {
     backgroundColor: figmaColors.secondary,
     borderBottom: `1px solid ${figmaColors.border.primary}`,
+    height: 'calc(100vh - 200px)', // ✅ SCROLLING FIX: Fixed height for viewport
+    display: 'flex',
+    flexDirection: 'column' as const
   },
+  tabContent: {
+    flex: 1,
+    overflow: 'hidden' // ✅ SCROLLING FIX: Prevent tab content overflow
+  },
+  scrollContainer: {
+    height: '100%',
+    overflowY: 'auto' as const, // ✅ SCROLLING FIX: Enable vertical scrolling
+    overflowX: 'hidden' as const,
+    padding: '0',
+    // ✅ SCROLLING FIX: Custom scrollbar styling for dark theme
+    scrollbarWidth: 'thin' as const,
+    scrollbarColor: '#4B5563 #1F2937',
+    // ✅ SCROLLING FIX: Mobile touch scrolling
+    WebkitOverflowScrolling: 'touch',
+    // ✅ SCROLLING FIX: Momentum scrolling on iOS
+    touchAction: 'pan-y'
+  } as React.CSSProperties,
   gameSummarySection: {
     padding: '16px',
   },
