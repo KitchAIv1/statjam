@@ -1251,7 +1251,6 @@ function BracketBuilderModal({
               <option value="single_elimination">Single Elimination</option>
               <option value="double_elimination">Double Elimination</option>
               <option value="round_robin">Round Robin</option>
-              <option value="swiss">Swiss System</option>
             </select>
           </div>
 

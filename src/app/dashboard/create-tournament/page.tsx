@@ -474,7 +474,6 @@ const CreateTournamentV2 = () => {
                   { value: 'single_elimination', title: 'Single Elimination', desc: 'One loss and you\'re out' },
                   { value: 'double_elimination', title: 'Double Elimination', desc: 'Two chances to compete' },
                   { value: 'round_robin', title: 'Round Robin', desc: 'Everyone plays everyone' },
-                  { value: 'swiss', title: 'Swiss System', desc: 'Multiple rounds, best records advance' },
                 ].map((type) => (
                   <div
                     key={type.value}
