@@ -20,10 +20,28 @@ export interface TeamStatsTabProps {
   gameId: string;
   teamId: string;
   teamName: string;
+  // ✅ PHASE 2: Optional prefetched data for instant rendering
+  prefetchedData?: {
+    teamStats: any;
+    onCourtPlayers: any[];
+    benchPlayers: any[];
+  };
 }
 
-export function TeamStatsTab({ gameId, teamId, teamName }: TeamStatsTabProps) {
-  const { teamStats, onCourtPlayers, benchPlayers, loading, error } = useTeamStats(gameId, teamId);
+export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamStatsTabProps) {
+  // ✅ PHASE 2: Use prefetched data if available, otherwise fetch normally
+  const hookData = useTeamStats(gameId, teamId, { 
+    enabled: !prefetchedData // Skip hook if we have prefetched data
+  });
+  
+  // ✅ PHASE 2: Smart data selection - prefetched takes priority
+  const { teamStats, onCourtPlayers, benchPlayers, loading, error } = prefetchedData ? {
+    teamStats: prefetchedData.teamStats,
+    onCourtPlayers: prefetchedData.onCourtPlayers,
+    benchPlayers: prefetchedData.benchPlayers,
+    loading: false, // Prefetched data is ready
+    error: null
+  } : hookData;
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {

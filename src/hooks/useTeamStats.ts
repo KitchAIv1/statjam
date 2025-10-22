@@ -25,7 +25,16 @@ export interface TeamStatsData {
   error: string | null;
 }
 
-export function useTeamStats(gameId: string, teamId: string): TeamStatsData {
+export interface UseTeamStatsOptions {
+  prefetch?: boolean; // ✅ PHASE 2: Enable prefetching mode
+  enabled?: boolean;  // ✅ PHASE 2: Allow conditional fetching
+}
+
+export function useTeamStats(
+  gameId: string, 
+  teamId: string, 
+  options: UseTeamStatsOptions = {}
+): TeamStatsData {
   const [teamStats, setTeamStats] = useState<TeamStats | null>(null);
   const [onCourtPlayers, setOnCourtPlayers] = useState<PlayerStats[]>([]);
   const [benchPlayers, setBenchPlayers] = useState<PlayerStats[]>([]);
@@ -37,10 +46,14 @@ export function useTeamStats(gameId: string, teamId: string): TeamStatsData {
    */
   const fetchTeamData = useCallback(async (isUpdate: boolean = false) => {
     if (!gameId || !teamId) return;
+    
+    // ✅ PHASE 2: Respect enabled option (default true for backward compatibility)
+    if (options.enabled === false) return;
 
     try {
-      // Only show loading spinner on initial load, not on updates
-      if (!isUpdate) {
+      // ✅ PHASE 2: Smart loading state management
+      // Only show loading spinner on initial load, not on updates or prefetch
+      if (!isUpdate && !options.prefetch) {
         setLoading(true);
       }
       setError(null);
@@ -96,12 +109,16 @@ export function useTeamStats(gameId: string, teamId: string): TeamStatsData {
       setOnCourtPlayers([]);
       setBenchPlayers([]);
     } finally {
-      // Only set loading to false on initial load
-      if (!isUpdate) {
+      // ✅ PHASE 2: Smart loading state management
+      // Only set loading to false on initial load (not prefetch or updates)
+      if (!isUpdate && !options.prefetch) {
+        setLoading(false);
+      } else if (options.prefetch) {
+        // For prefetch, set loading to false immediately since data is ready
         setLoading(false);
       }
     }
-  }, [gameId, teamId]);
+  }, [gameId, teamId, options.enabled, options.prefetch]);
 
   /**
    * Initial data fetch

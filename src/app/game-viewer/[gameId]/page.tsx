@@ -6,6 +6,7 @@ import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
 import PlayByPlayFeed from './components/PlayByPlayFeed';
 import { TeamStatsTab } from './components/TeamStatsTab';
+import { useTeamStats } from '@/hooks/useTeamStats'; // ✅ PHASE 2: Import for prefetching
 import { figmaColors, figmaTypography } from '@/lib/design/figmaTokens';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -41,6 +42,26 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   const actualGame = gameV2;
   const actualLoading = loadingV2;
   const actualError = errorV2;
+
+  // ✅ PHASE 2: PREEMPTIVE PREFETCHING - Start loading team data immediately
+  // This runs as soon as game data is available, not when tabs are clicked
+  const teamAPrefetch = useTeamStats(
+    gameId, 
+    actualGame?.team_a_id || '', 
+    { 
+      prefetch: true, 
+      enabled: !!actualGame?.team_a_id // Only fetch when team ID is available
+    }
+  );
+  
+  const teamBPrefetch = useTeamStats(
+    gameId, 
+    actualGame?.team_b_id || '', 
+    { 
+      prefetch: true, 
+      enabled: !!actualGame?.team_b_id // Only fetch when team ID is available
+    }
+  );
 
   // Memoize game object to prevent unnecessary re-renders
   const memoizedGame = useMemo(() => ({
@@ -192,21 +213,35 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
             </div>
           </TabsContent>
 
-          {/* Team A Tab */}
+          {/* Team A Tab - ✅ PHASE 2: Instant loading with prefetched data */}
           <TabsContent value="teamA" className="mt-0">
             <TeamStatsTab 
               gameId={gameId} 
               teamId={actualGame.team_a_id} 
-              teamName={actualGame.team_a_name || 'Team A'} 
+              teamName={actualGame.team_a_name || 'Team A'}
+              prefetchedData={
+                teamAPrefetch.loading || teamAPrefetch.error ? undefined : {
+                  teamStats: teamAPrefetch.teamStats,
+                  onCourtPlayers: teamAPrefetch.onCourtPlayers,
+                  benchPlayers: teamAPrefetch.benchPlayers
+                }
+              }
             />
           </TabsContent>
 
-          {/* Team B Tab */}
+          {/* Team B Tab - ✅ PHASE 2: Instant loading with prefetched data */}
           <TabsContent value="teamB" className="mt-0">
             <TeamStatsTab 
               gameId={gameId} 
               teamId={actualGame.team_b_id} 
-              teamName={actualGame.team_b_name || 'Team B'} 
+              teamName={actualGame.team_b_name || 'Team B'}
+              prefetchedData={
+                teamBPrefetch.loading || teamBPrefetch.error ? undefined : {
+                  teamStats: teamBPrefetch.teamStats,
+                  onCourtPlayers: teamBPrefetch.onCourtPlayers,
+                  benchPlayers: teamBPrefetch.benchPlayers
+                }
+              }
             />
           </TabsContent>
         </Tabs>
