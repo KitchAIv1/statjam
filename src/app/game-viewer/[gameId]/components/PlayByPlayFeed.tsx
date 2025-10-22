@@ -133,7 +133,6 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
 const styles = {
   container: {
     backgroundColor: figmaColors.primary,
-    minHeight: '60vh',
     color: figmaColors.text.primary,
     fontFamily: figmaTypography.fontFamily.primary,
   },

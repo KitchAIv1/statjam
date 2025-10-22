@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.0] - 2025-10-22
+
+### 🏀 **NEW FEATURE: Team Stats Tab in Live Viewer**
+
+#### Added
+- **Team Stats Tab** - Comprehensive team and player statistics view
+  - Team performance summary with aggregate stats (FG, 3FG, FTS, TO, REB, AST)
+  - On Court section displaying 5 active players with real-time stats
+  - Bench section showing remaining players
+  - Player statistics grid: MIN, PTS, REB, AST, STL, BLK, +/-
+  - Color-coded plus/minus display (green/red/gray)
+  - Mobile responsive layout (3x2 grid on mobile devices)
+  - Custom dark-themed skeleton loading states
+  - NBA-style professional design
+  - Instant tab switching with preemptive data prefetching
+  - Natural scrolling behavior across all tabs
+
+#### New Files Created
+- `/src/lib/services/teamStatsService.ts` - Team statistics aggregation service
+- `/src/hooks/useTeamStats.ts` - Team stats data management hook
+- `/src/app/game-viewer/[gameId]/components/TeamStatsTab.tsx` - Main team stats component
+- `/src/app/game-viewer/[gameId]/components/PlayerStatsRow.tsx` - Reusable player row component
+- `/docs/04-features/live-viewer/TEAM_STATS_TAB.md` - Comprehensive feature documentation
+
+#### Modified
+- `/src/lib/services/teamServiceV3.ts`
+  - Updated authentication pattern to use public access (SUPABASE_ANON_KEY)
+  - Removed user authentication requirement for team data fetching
+  - Aligned with public game viewer access pattern
+
+#### Fixed
+- **Player Minutes Calculation**
+  - Now displays whole numbers only (removed decimals)
+  - Implemented realistic live minutes based on actual game clock
+  - Calculates cumulative floor time using substitution timestamps
+  - Fallback to game clock elapsed time when no substitutions exist
+  - NBA-standard calculation: tracks actual floor time, not game clock time
+  
+- **Plus/Minus Calculation**
+  - Implemented correct NBA-standard formula
+  - Calculates: team points scored while player on court - opponent points scored while player on court
+  - Tracks player on-court timeline using substitutions
+  - Matches all scoring events to player timeline for accurate differential
+  
+- **Mobile Responsiveness**
+  - Team stats grid adjusts from 6 columns to 3x2 layout on mobile
+  - Player row spacing, fonts, and avatars optimized for small screens
+  - Dynamic mobile detection with resize event handling
+  - Responsive breakpoint at 768px width
+
+- **Loading UX**
+  - Lightweight skeleton loading (87% fewer DOM elements)
+  - Parallel API calls for faster data fetching
+  - Preemptive data prefetching for instant tab switching
+  - Dark-themed pulse animations for visual consistency
+  - Smooth transitions from loading to content state
+
+- **UI Consistency**
+  - Removed black boxes below empty states
+  - Natural content-driven height sizing (removed forced viewport heights)
+  - Consistent UI behavior across all tabs
+  - Clean, professional appearance without visual artifacts
+
+#### Technical Details
+- **Architecture**: V3 Engine with raw HTTP requests
+- **Authentication**: Public access (no user login required)
+- **Real-time Updates**: Integrated with gameSubscriptionManager
+- **Performance**: 
+  - Phase 1: Lightweight skeleton (8 vs 62 DOM elements) + parallel API calls
+  - Phase 2: Preemptive data prefetching for instant tab switching (300ms → 0ms)
+  - Optimized with React.memo and smart state management
+- **Data Sources**: Aggregates from `game_stats`, `game_substitutions`, `users`, `games` tables
+- **Calculations**:
+  - Player minutes: Cumulative floor time from substitution timestamps
+  - Plus/Minus: NBA-standard score differential while player on court
+
+#### Documentation
+- Created comprehensive feature documentation at `/docs/04-features/live-viewer/TEAM_STATS_TAB.md`
+- Updated `/docs/01-project/FEATURES_COMPLETE.md` with Team Stats Tab details
+- Updated `/docs/INDEX.md` quick navigation links
+
+---
+
 ## [0.11.0] - 2025-10-21
 
 ### 🔒 **CRITICAL SECURITY FIXES - PRODUCTION READY**

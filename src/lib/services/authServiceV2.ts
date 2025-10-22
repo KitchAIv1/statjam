@@ -437,7 +437,15 @@ export class AuthServiceV2 {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error('Token refresh failed');
+        const errorText = await response.text();
+        console.error(`❌ AuthServiceV2: Token refresh failed with ${response.status}:`, errorText);
+        
+        // If 400, it means refresh token is expired/invalid
+        if (response.status === 400) {
+          throw new Error('Refresh token expired or invalid');
+        }
+        
+        throw new Error(`Token refresh failed: ${response.status}`);
       }
 
       const data: SignInResponse = await response.json();

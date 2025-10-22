@@ -138,6 +138,21 @@
 - **Timeout events with amber styling** (team name, type, duration)
 - **Team fouls and timeouts display** in game summary section
 
+**Team Stats Tab** (NEW):
+- Team performance summary with aggregate statistics
+  * Field Goals (FG): Made/Attempted + Percentage
+  * 3-Pointers (3FG): Made/Attempted + Percentage
+  * Free Throws (FTS): Made/Attempted + Percentage
+  * Turnovers, Rebounds, Assists
+- On Court section showing 5 active players
+- Bench section showing remaining players
+- Player statistics grid (MIN, PTS, REB, AST, STL, BLK, +/-)
+- Real-time player minutes calculation (whole numbers)
+- Color-coded plus/minus display
+- Mobile responsive layout (3x2 grid on mobile)
+- Custom skeleton loading states
+- NBA-style dark mode design
+
 **Real-time Updates**:
 - gameSubscriptionManager with WebSocket
 - isInitialLoad state to prevent white screens
@@ -146,14 +161,18 @@
 
 **Technical**:
 - useGameViewerV2 hook with raw HTTP fetches
+- useTeamStats hook for team/player aggregations
 - Direct REST API calls to avoid client issues
 - Combines game_stats + game_substitutions
 - Chronological sorting by timestamp
 - Memoized components to prevent unnecessary re-renders
+- Public access pattern (no authentication required)
 
 **Files**:
 - `/src/app/game-viewer/[gameId]/page.tsx` - Main viewer page
 - `/src/hooks/useGameViewerV2.ts` - Data fetching hook
+- `/src/hooks/useTeamStats.ts` - Team stats aggregation hook
+- `/src/lib/services/teamStatsService.ts` - Team stats service
 - `/src/app/game-viewer/[gameId]/components/` - UI components
 - `/src/lib/utils/gameViewerUtils.ts` - Utility functions
 

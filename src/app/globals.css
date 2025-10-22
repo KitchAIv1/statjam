@@ -2,6 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ✅ SCROLLING FIX: Custom scrollbar styling for game viewer tabs */
+.game-viewer-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.game-viewer-scroll::-webkit-scrollbar-track {
+  background: #1F2937;
+  border-radius: 4px;
+}
+
+.game-viewer-scroll::-webkit-scrollbar-thumb {
+  background: #4B5563;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.game-viewer-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+}
+
+/* ✅ SCROLLING FIX: Smooth scrolling behavior */
+.game-viewer-scroll {
+  scroll-behavior: smooth;
+}
+
 :root {
   --font-size: 14px;
   --background: #fefaf7;
