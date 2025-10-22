@@ -779,117 +779,47 @@ export class TeamService {
 
   static async getAllPlayers(): Promise<Player[]> {
     try {
-      console.log('🔍 TeamService: Fetching all available players');
+      console.log('🚀 TeamService: Fetching all available players (optimized)');
       
-      // Since the users table might have RLS issues, let's try multiple approaches
-      let players: Player[] = [];
-      
-      // Approach 1: Try to get all users first (to check RLS and table access)
-      try {
-        console.log('🔍 Approach 1: Fetching ALL users to check access');
-        const { data: allUsers, error: allUsersError } = await supabase
-          .from('users')
-          .select('id, email, role, premium_status, country, created_at');
-        
-        if (allUsersError) {
-          console.log('❌ Users table error:', allUsersError.message);
-          if (allUsersError.message.includes('infinite recursion') || allUsersError.message.includes('operator does not exist')) {
-            console.log('🔧 RLS policy issue detected - backend fix needed');
-          }
-        } else {
-          console.log('✅ Users table accessible, found:', allUsers?.length || 0, 'users');
-          
-          // Filter for players
-          const playerUsers = (allUsers || []).filter(user => user.role === 'player');
-          console.log('✅ Found', playerUsers.length, 'users with role="player"');
-          
-          if (playerUsers.length > 0) {
-            // Map real players to Player interface
-            players = playerUsers.map(user => ({
-              id: user.id,
-              name: user.email.split('@')[0], // Use email prefix as name for now
-              email: user.email,
-              position: 'PG' as const,
-              jerseyNumber: Math.floor(Math.random() * 99) + 1, // Random jersey number for now
-              isPremium: user.premium_status || false,
-              country: user.country || 'US',
-              createdAt: user.created_at || new Date().toISOString(),
-            }));
-          } else {
-            // Show what users we found for debugging
-            console.log('⚠️ No players found. Existing users:');
-            allUsers?.slice(0, 3).forEach((user, index) => {
-              console.log(`   User ${index + 1}: role="${user.role}", email="${user.email}"`);
-            });
-          }
-        }
-      } catch (usersError) {
-        console.log('❌ Users table approach failed:', usersError);
-      }
-      
-      // Approach 2: If no players found, create some demo players from current user
-      if (players.length === 0) {
-        console.log('⚠️ No players found in users table, creating demo players');
-        
-        // Get current user for reference
-        const currentUser = await authServiceV2.getUserProfile();
-        if (currentUser) {
-          console.log('✅ Current user found, creating demo players based on auth system');
-          
-          // Create demo players with different roles/premiums
-          players = [
-            {
-              id: 'demo-1',
-              name: 'Premium Player 1',
-              email: 'premium1@statjam.com',
-              position: 'PG' as const,
-              jerseyNumber: 23,
-              isPremium: true,
-              country: 'US',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'demo-2', 
-              name: 'Premium Player 2',
-              email: 'premium2@statjam.com',
-              position: 'SG' as const,
-              jerseyNumber: 24,
-              isPremium: true,
-              country: 'US',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'demo-3',
-              name: 'Regular Player 1',
-              email: 'player1@statjam.com', 
-              position: 'SF' as const,
-              jerseyNumber: 7,
-              isPremium: false,
-              country: 'US',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'demo-4',
-              name: 'Regular Player 2',
-              email: 'player2@statjam.com',
-              position: 'PF' as const,
-              jerseyNumber: 21,
-              isPremium: false,
-              country: 'US', 
-              createdAt: new Date().toISOString(),
-            }
-          ];
-          
-          console.log('✅ Created', players.length, 'demo players for testing');
-        }
+      // ✅ PHASE 1 OPTIMIZATION: Direct, efficient query with proper error handling
+      const { data: playerUsers, error: playersError } = await supabase
+        .from('users')
+        .select('id, email, role, premium_status, country, created_at, name')
+        .eq('role', 'player')
+        .order('premium_status', { ascending: false }) // Premium players first
+        .order('created_at', { ascending: false })
+        .limit(100); // Reasonable limit to prevent performance issues
+
+      if (playersError) {
+        console.error('❌ Error fetching players:', playersError.message);
+        // Return empty array instead of falling back to expensive operations
+        return [];
       }
 
-      console.log('🔍 TeamService: Final player count:', players.length);
-      return players;
+      if (!playerUsers || playerUsers.length === 0) {
+        console.log('ℹ️ No players found in database');
+        return [];
+      }
+
+      console.log('✅ Found', playerUsers.length, 'players');
       
+      // ✅ PHASE 1 OPTIMIZATION: Efficient mapping without random operations
+      const players = playerUsers.map((user, index) => ({
+        id: user.id,
+        name: user.name || user.email.split('@')[0],
+        email: user.email,
+        position: 'PG' as const, // Default position
+        jerseyNumber: index + 1, // Sequential jersey numbers (more predictable)
+        isPremium: user.premium_status || false,
+        country: user.country || 'US',
+        createdAt: user.created_at || new Date().toISOString(),
+      }));
+
+      return players;
     } catch (error) {
-      console.error('Error getting players:', error);
-      return []; // Return empty array instead of throwing
+      console.error('❌ Error getting all players:', error);
+      // Return empty array instead of throwing to prevent modal crashes
+      return [];
     }
   }
 
@@ -914,36 +844,41 @@ export class TeamService {
   // Team-Player Relationship Management
   static async addPlayerToTeam(teamId: string, playerId: string, position?: string, jerseyNumber?: number): Promise<void> {
     try {
-      console.log('🔍 TeamService: Adding player to team:', { teamId, playerId });
+      console.log('🚀 TeamService: Adding player to team (optimized):', { teamId, playerId });
       console.log('⚠️ Note: position and jerseyNumber are ignored as team_players table only has (team_id, player_id)');
       
-      // STEP 1: Get tournament ID for this team
-      const { data: team, error: teamError } = await supabase
-        .from('teams')
-        .select('tournament_id')
-        .eq('id', teamId)
-        .single();
-      
-      if (teamError || !team) {
-        throw new Error(`Failed to get team information: ${teamError?.message}`);
+      // ✅ PHASE 1 OPTIMIZATION: Parallel database calls instead of sequential
+      const [teamResult, existingAssignmentsResult] = await Promise.all([
+        // Get tournament ID for this team
+        supabase
+          .from('teams')
+          .select('tournament_id')
+          .eq('id', teamId)
+          .single(),
+        
+        // Check existing assignments in parallel
+        supabase
+          .from('team_players')
+          .select(`
+            team_id,
+            teams!inner(tournament_id, name)
+          `)
+          .eq('player_id', playerId)
+      ]);
+
+      // Handle team lookup result
+      if (teamResult.error || !teamResult.data) {
+        throw new Error(`Failed to get team information: ${teamResult.error?.message}`);
       }
-      
-      // STEP 2: Check if player is already assigned to another team in this tournament
-      const { data: existingAssignments, error: checkError } = await supabase
-        .from('team_players')
-        .select(`
-          team_id,
-          teams!inner(tournament_id, name)
-        `)
-        .eq('player_id', playerId);
-      
-      if (checkError) {
-        console.error('❌ Error checking existing player assignments:', checkError);
+
+      // Handle existing assignments check
+      if (existingAssignmentsResult.error) {
+        console.error('❌ Error checking existing player assignments:', existingAssignmentsResult.error);
         // Don't block the assignment if check fails (fail open)
-      } else if (existingAssignments && existingAssignments.length > 0) {
+      } else if (existingAssignmentsResult.data && existingAssignmentsResult.data.length > 0) {
         // Filter for assignments in the same tournament
-        const sameTournamentAssignments = existingAssignments.filter(
-          (assignment: any) => assignment.teams?.tournament_id === team.tournament_id
+        const sameTournamentAssignments = existingAssignmentsResult.data.filter(
+          (assignment: any) => assignment.teams?.tournament_id === teamResult.data.tournament_id
         );
         
         if (sameTournamentAssignments.length > 0) {
@@ -955,7 +890,7 @@ export class TeamService {
         }
       }
       
-      // STEP 3: Proceed with assignment if validation passed
+      // Proceed with assignment if validation passed
       const { error } = await supabase
         .from('team_players')
         .upsert({
@@ -970,7 +905,7 @@ export class TeamService {
         throw new Error(`Failed to add player to team: ${error.message}`);
       }
 
-      console.log('✅ Player successfully added to team in database');
+      console.log('✅ Player successfully added to team in database (optimized)');
     } catch (error) {
       console.error('Error adding player to team:', error);
       throw error instanceof Error ? error : new Error('Failed to add player to team');

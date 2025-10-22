@@ -1025,6 +1025,49 @@ function AddPlayerModal({ team, teams, onClose, onSave }: { team: Team; teams: T
       color: '#FFD700',
       marginLeft: '8px',
     },
+    // ✅ PHASE 2 OPTIMIZATION: Skeleton loading styles
+    skeletonContainer: {
+      padding: '16px 0',
+    },
+    skeletonPlayerItem: {
+      display: 'flex',
+      alignItems: 'center',
+      padding: '12px 0',
+      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    },
+    skeletonAvatar: {
+      width: '40px',
+      height: '40px',
+      borderRadius: '50%',
+      backgroundColor: '#374151',
+      marginRight: '12px',
+      animation: 'pulse 1.5s ease-in-out infinite',
+    },
+    skeletonContent: {
+      flex: 1,
+    },
+    skeletonName: {
+      height: '16px',
+      backgroundColor: '#374151',
+      borderRadius: '4px',
+      marginBottom: '8px',
+      width: '60%',
+      animation: 'pulse 1.5s ease-in-out infinite',
+    },
+    skeletonEmail: {
+      height: '12px',
+      backgroundColor: '#374151',
+      borderRadius: '4px',
+      width: '80%',
+      animation: 'pulse 1.5s ease-in-out infinite',
+    },
+    skeletonButton: {
+      width: '80px',
+      height: '32px',
+      backgroundColor: '#374151',
+      borderRadius: '8px',
+      animation: 'pulse 1.5s ease-in-out infinite',
+    },
   };
 
   return (
@@ -1034,17 +1077,18 @@ function AddPlayerModal({ team, teams, onClose, onSave }: { team: Team; teams: T
         <p style={styles.subtitle}>Available Players Roster - Premium players listed first</p>
         
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              border: '2px solid #FFD700',
-              borderTopColor: 'transparent',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 16px'
-            }} />
-            Loading players...
+          <div style={styles.skeletonContainer}>
+            {/* ✅ PHASE 2 OPTIMIZATION: Skeleton loading instead of spinner */}
+            {[1, 2, 3, 4, 5].map((index) => (
+              <div key={index} style={styles.skeletonPlayerItem}>
+                <div style={styles.skeletonAvatar} />
+                <div style={styles.skeletonContent}>
+                  <div style={styles.skeletonName} />
+                  <div style={styles.skeletonEmail} />
+                </div>
+                <div style={styles.skeletonButton} />
+              </div>
+            ))}
           </div>
         ) : (
           <div style={styles.resultsList}>
@@ -1075,15 +1119,23 @@ function AddPlayerModal({ team, teams, onClose, onSave }: { team: Team; teams: T
                   onClick={async () => {
                     if (draftedPlayers.has(player.id)) return; // Prevent clicking drafted players
                     
-                    console.log('🔍 Add to Team button clicked:', { playerId: player.id, teamId: team.id, playerName: player.name });
+                    console.log('🚀 Add to Team button clicked (optimized):', { playerId: player.id, teamId: team.id, playerName: player.name });
+                    
+                    // ✅ PHASE 2 OPTIMIZATION: Optimistic update - mark as drafted immediately
+                    setDraftedPlayers(prev => new Set([...prev, player.id]));
                     setAddingPlayer(player.id);
+                    
                     try {
                       await onSave({ player: player, teamId: team.id });
-                      // Mark player as drafted after successful addition
-                      setDraftedPlayers(prev => new Set([...prev, player.id]));
-                      console.log('✅ Player marked as drafted:', player.name);
+                      console.log('✅ Player successfully added to team:', player.name);
                     } catch (error) {
-                      console.error('Failed to add player:', error);
+                      console.error('❌ Failed to add player:', error);
+                      // ✅ PHASE 2 OPTIMIZATION: Rollback optimistic update on error
+                      setDraftedPlayers(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(player.id);
+                        return newSet;
+                      });
                     } finally {
                       setAddingPlayer(null);
                     }
