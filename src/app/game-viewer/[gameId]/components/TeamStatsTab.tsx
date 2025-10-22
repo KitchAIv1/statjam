@@ -12,10 +12,9 @@
  * STYLING: Dark mode theme matching existing game viewer
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { PlayerStatsRow } from './PlayerStatsRow';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export interface TeamStatsTabProps {
   gameId: string;
@@ -25,22 +24,33 @@ export interface TeamStatsTabProps {
 
 export function TeamStatsTab({ gameId, teamId, teamName }: TeamStatsTabProps) {
   const { teamStats, onCourtPlayers, benchPlayers, loading, error } = useTeamStats(gameId, teamId);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   if (loading) {
     return (
       <div style={styles.container}>
         {/* Team Performance Summary Skeleton */}
-        <div style={styles.teamSummary}>
+        <div style={isMobile ? styles.teamSummaryMobile : styles.teamSummary}>
           <div style={styles.teamHeader}>
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-4 w-16" />
+            <div style={styles.skeletonTitle} />
+            <div style={styles.skeletonSubtitle} />
           </div>
-          <div style={styles.teamStatsGrid}>
+          <div style={isMobile ? styles.teamStatsGridMobile : styles.teamStatsGrid}>
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} style={styles.teamStatItem}>
-                <Skeleton className="h-5 w-12" />
-                <Skeleton className="h-3 w-8" />
-                <Skeleton className="h-3 w-10" />
+                <div style={styles.skeletonStatValue} />
+                <div style={styles.skeletonStatLabel} />
+                <div style={styles.skeletonStatPercent} />
               </div>
             ))}
           </div>
@@ -53,17 +63,17 @@ export function TeamStatsTab({ gameId, teamId, teamName }: TeamStatsTabProps) {
             {Array.from({ length: 5 }).map((_, index) => (
               <div key={index} style={styles.playerRow}>
                 <div style={styles.playerInfo}>
-                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div style={styles.skeletonAvatar} />
                   <div style={styles.playerDetails}>
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-8" />
+                    <div style={styles.skeletonPlayerName} />
+                    <div style={styles.skeletonPlayerPosition} />
                   </div>
                 </div>
                 <div style={styles.statsGrid}>
                   {Array.from({ length: 7 }).map((_, statIndex) => (
                     <div key={statIndex} style={styles.statCell}>
-                      <Skeleton className="h-4 w-8" />
-                      <Skeleton className="h-3 w-6" />
+                      <div style={styles.skeletonStatNumber} />
+                      <div style={styles.skeletonStatLabel} />
                     </div>
                   ))}
                 </div>
@@ -79,17 +89,17 @@ export function TeamStatsTab({ gameId, teamId, teamName }: TeamStatsTabProps) {
             {Array.from({ length: 3 }).map((_, index) => (
               <div key={index} style={styles.playerRow}>
                 <div style={styles.playerInfo}>
-                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div style={styles.skeletonAvatar} />
                   <div style={styles.playerDetails}>
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-8" />
+                    <div style={styles.skeletonPlayerName} />
+                    <div style={styles.skeletonPlayerPosition} />
                   </div>
                 </div>
                 <div style={styles.statsGrid}>
                   {Array.from({ length: 7 }).map((_, statIndex) => (
                     <div key={statIndex} style={styles.statCell}>
-                      <Skeleton className="h-4 w-8" />
-                      <Skeleton className="h-3 w-6" />
+                      <div style={styles.skeletonStatNumber} />
+                      <div style={styles.skeletonStatLabel} />
                     </div>
                   ))}
                 </div>
@@ -120,13 +130,13 @@ export function TeamStatsTab({ gameId, teamId, teamName }: TeamStatsTabProps) {
   return (
     <div style={styles.container}>
       {/* Team Performance Summary */}
-      <div style={styles.teamSummary}>
+      <div style={isMobile ? styles.teamSummaryMobile : styles.teamSummary}>
         <div style={styles.teamHeader}>
           <div style={styles.teamName}>{teamName}</div>
           <div style={styles.teamSpread}>▼ 2.5</div>
         </div>
         
-        <div style={styles.teamStatsGrid}>
+        <div style={isMobile ? styles.teamStatsGridMobile : styles.teamStatsGrid}>
           <div style={styles.teamStatItem}>
             <div style={styles.teamStatValue}>
               {teamStats.fieldGoalsMade}/{teamStats.fieldGoalsAttempted}
@@ -261,7 +271,12 @@ const styles = {
   },
   teamSummary: {
     backgroundColor: '#111827', // gray-900
-    padding: '20px',
+    padding: '16px',
+    borderBottom: '1px solid #374151' // gray-700
+  },
+  teamSummaryMobile: {
+    backgroundColor: '#111827', // gray-900
+    padding: '12px',
     borderBottom: '1px solid #374151' // gray-700
   },
   teamHeader: {
@@ -280,15 +295,21 @@ const styles = {
     color: '#9ca3af' // gray-400
   },
   teamStatsGrid: {
-    display: 'flex',
-    gap: '24px',
-    flexWrap: 'wrap' as const
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, 1fr)',
+    gap: '16px'
+  },
+  teamStatsGridMobile: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '12px'
   },
   teamStatItem: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    minWidth: '60px'
+    minWidth: '50px',
+    textAlign: 'center' as const
   },
   teamStatValue: {
     fontSize: '16px',
@@ -326,5 +347,90 @@ const styles = {
     fontSize: '14px',
     padding: '20px',
     textAlign: 'center' as const
+  },
+  
+  // ✅ SKELETON STYLES - Custom dark theme skeleton matching game viewer
+  skeletonTitle: {
+    height: '24px',
+    width: '128px',
+    backgroundColor: '#1f2937',
+    borderRadius: '4px',
+    animation: 'pulse 1.5s ease-in-out infinite',
+    marginBottom: '8px'
+  },
+  skeletonSubtitle: {
+    height: '16px',
+    width: '64px',
+    backgroundColor: '#1f2937',
+    borderRadius: '4px',
+    animation: 'pulse 1.5s ease-in-out infinite'
+  },
+  skeletonStatValue: {
+    height: '20px',
+    width: '48px',
+    backgroundColor: '#1f2937',
+    borderRadius: '4px',
+    animation: 'pulse 1.5s ease-in-out infinite',
+    marginBottom: '4px'
+  },
+  skeletonStatLabel: {
+    height: '12px',
+    width: '32px',
+    backgroundColor: '#1f2937',
+    borderRadius: '4px',
+    animation: 'pulse 1.5s ease-in-out infinite',
+    marginBottom: '4px'
+  },
+  skeletonStatPercent: {
+    height: '12px',
+    width: '40px',
+    backgroundColor: '#1f2937',
+    borderRadius: '4px',
+    animation: 'pulse 1.5s ease-in-out infinite'
+  },
+  skeletonAvatar: {
+    height: '40px',
+    width: '40px',
+    backgroundColor: '#1f2937',
+    borderRadius: '50%',
+    animation: 'pulse 1.5s ease-in-out infinite'
+  },
+  skeletonPlayerName: {
+    height: '16px',
+    width: '96px',
+    backgroundColor: '#1f2937',
+    borderRadius: '4px',
+    animation: 'pulse 1.5s ease-in-out infinite',
+    marginBottom: '4px'
+  },
+  skeletonPlayerPosition: {
+    height: '12px',
+    width: '32px',
+    backgroundColor: '#1f2937',
+    borderRadius: '4px',
+    animation: 'pulse 1.5s ease-in-out infinite'
+  },
+  skeletonStatNumber: {
+    height: '16px',
+    width: '32px',
+    backgroundColor: '#1f2937',
+    borderRadius: '4px',
+    animation: 'pulse 1.5s ease-in-out infinite',
+    marginBottom: '4px'
   }
 };
+
+// ✅ Add CSS animations for skeleton loading
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+  `;
+  if (!document.head.querySelector('style[data-skeleton-animations]')) {
+    style.setAttribute('data-skeleton-animations', 'true');
+    document.head.appendChild(style);
+  }
+}

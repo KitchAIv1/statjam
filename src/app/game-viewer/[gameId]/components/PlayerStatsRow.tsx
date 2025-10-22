@@ -8,7 +8,7 @@
  * STATS: MIN, PTS, REB, AST, STL, BLK, +/-
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export interface PlayerStatsRowProps {
   player: {
@@ -28,6 +28,17 @@ export interface PlayerStatsRowProps {
 }
 
 export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const { name, position } = player;
   const { minutes, points, rebounds, assists, steals, blocks, plusMinus } = stats;
 
@@ -45,10 +56,10 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
   const plusMinusFormatted = formatPlusMinus(plusMinus);
 
   return (
-    <div style={styles.playerRow}>
+    <div style={isMobile ? styles.playerRowMobile : styles.playerRow}>
       {/* Left Section: Player Info */}
-      <div style={styles.playerInfo}>
-        <div style={styles.playerPhoto}>
+      <div style={isMobile ? styles.playerInfoMobile : styles.playerInfo}>
+        <div style={isMobile ? styles.playerPhotoMobile : styles.playerPhoto}>
           <div style={styles.playerPhotoPlaceholder}>
             {name.charAt(0).toUpperCase()}
           </div>
@@ -62,36 +73,39 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
       </div>
 
       {/* Right Section: Stats Grid */}
-      <div style={styles.statsGrid}>
+      <div style={isMobile ? styles.statsGridMobile : styles.statsGrid}>
         <div style={styles.statCell}>
-          <div style={styles.statValue}>{minutes}</div>
-          <div style={styles.statLabel}>MIN</div>
+          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{minutes}</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>MIN</div>
         </div>
         <div style={styles.statCell}>
-          <div style={styles.statValue}>{points}</div>
-          <div style={styles.statLabel}>PTS</div>
+          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{points}</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>PTS</div>
         </div>
         <div style={styles.statCell}>
-          <div style={styles.statValue}>{rebounds}</div>
-          <div style={styles.statLabel}>REB</div>
+          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{rebounds}</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>REB</div>
         </div>
         <div style={styles.statCell}>
-          <div style={styles.statValue}>{assists}</div>
-          <div style={styles.statLabel}>AST</div>
+          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{assists}</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>AST</div>
         </div>
         <div style={styles.statCell}>
-          <div style={styles.statValue}>{steals}</div>
-          <div style={styles.statLabel}>STL</div>
+          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{steals}</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>STL</div>
         </div>
         <div style={styles.statCell}>
-          <div style={styles.statValue}>{blocks}</div>
-          <div style={styles.statLabel}>BLK</div>
+          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{blocks}</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>BLK</div>
         </div>
         <div style={styles.statCell}>
-          <div style={{ ...styles.statValue, color: plusMinusFormatted.color }}>
+          <div style={{ 
+            ...(isMobile ? styles.statValueMobile : styles.statValue), 
+            color: plusMinusFormatted.color 
+          }}>
             {plusMinusFormatted.text}
           </div>
-          <div style={styles.statLabel}>+/-</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>+/-</div>
         </div>
       </div>
     </div>
@@ -103,20 +117,44 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '12px 16px',
+    padding: '12px 12px',
     borderBottom: '1px solid #374151', // gray-700
     backgroundColor: '#111827', // gray-900
     minHeight: '60px'
   },
+  playerRowMobile: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 8px',
+    borderBottom: '1px solid #374151', // gray-700
+    backgroundColor: '#111827', // gray-900
+    minHeight: '56px'
+  },
   playerInfo: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    flex: 1
+    gap: '10px',
+    flex: 1,
+    minWidth: '120px'
+  },
+  playerInfoMobile: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flex: 1,
+    minWidth: '100px'
   },
   playerPhoto: {
-    width: '40px',
-    height: '40px',
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    overflow: 'hidden',
+    flexShrink: 0
+  },
+  playerPhotoMobile: {
+    width: '32px',
+    height: '32px',
     borderRadius: '50%',
     overflow: 'hidden',
     flexShrink: 0
@@ -149,26 +187,50 @@ const styles = {
     fontWeight: '400'
   },
   statsGrid: {
-    display: 'flex',
-    gap: '16px',
-    alignItems: 'center'
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, 1fr)',
+    gap: '8px',
+    alignItems: 'center',
+    minWidth: '280px'
+  },
+  statsGridMobile: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, minmax(28px, 1fr))',
+    gap: '4px',
+    alignItems: 'center',
+    minWidth: '240px'
   },
   statCell: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    minWidth: '32px'
+    minWidth: '28px',
+    textAlign: 'center' as const
   },
   statValue: {
     color: '#ffffff',
-    fontSize: '14px',
+    fontSize: '13px',
+    fontWeight: '600',
+    lineHeight: '1.2',
+    marginBottom: '2px'
+  },
+  statValueMobile: {
+    color: '#ffffff',
+    fontSize: '12px',
     fontWeight: '600',
     lineHeight: '1.2',
     marginBottom: '2px'
   },
   statLabel: {
     color: '#9ca3af', // gray-400
-    fontSize: '10px',
+    fontSize: '9px',
+    fontWeight: '400',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px'
+  },
+  statLabelMobile: {
+    color: '#9ca3af', // gray-400
+    fontSize: '8px',
     fontWeight: '400',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px'

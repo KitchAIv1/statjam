@@ -54,18 +54,12 @@ export class TeamServiceV3 {
   }
 
   /**
-   * Make authenticated HTTP request to Supabase REST API
+   * Make public HTTP request to Supabase REST API (same pattern as Play by Play feed)
    */
   private static async makeRequest<T>(
     table: string, 
     params: Record<string, string> = {}
   ): Promise<T[]> {
-    const accessToken = this.getAccessToken();
-    
-    if (!accessToken) {
-      throw new Error('No access token found - user not authenticated');
-    }
-
     if (!this.SUPABASE_URL || !this.SUPABASE_ANON_KEY) {
       throw new Error('Missing Supabase configuration');
     }
@@ -74,13 +68,14 @@ export class TeamServiceV3 {
     const queryString = new URLSearchParams(params).toString();
     const url = `${this.SUPABASE_URL}/rest/v1/${table}${queryString ? `?${queryString}` : ''}`;
 
-    console.log(`🌐 TeamServiceV3: Raw HTTP request to ${table}`, { url, params });
+    console.log(`🌐 TeamServiceV3: Public HTTP request to ${table}`, { url, params });
 
+    // ✅ FIX: Use same public access pattern as Play by Play feed
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'apikey': this.SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${accessToken}`,
+        'Authorization': `Bearer ${this.SUPABASE_ANON_KEY}`, // ← PUBLIC ACCESS like Play by Play
         'Content-Type': 'application/json',
         'Prefer': 'return=representation',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
