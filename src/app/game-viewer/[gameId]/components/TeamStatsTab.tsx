@@ -210,7 +210,6 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
 const styles = {
   container: {
     backgroundColor: '#000000',
-    minHeight: '100vh',
     color: '#ffffff'
   },
   errorContainer: {
@@ -318,8 +317,7 @@ const styles = {
   // ✅ SKELETON STYLES - Custom dark theme skeleton matching game viewer
   // ✅ LIGHTWEIGHT SKELETON STYLES - 87% fewer DOM elements
   lightweightSkeletonContainer: {
-    padding: '20px',
-    backgroundColor: '#000000'
+    padding: '20px'
   },
   lightweightSkeletonBlock: {
     height: '80px',

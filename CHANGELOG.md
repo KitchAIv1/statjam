@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Mobile responsive layout (3x2 grid on mobile devices)
   - Custom dark-themed skeleton loading states
   - NBA-style professional design
+  - Instant tab switching with preemptive data prefetching
+  - Natural scrolling behavior across all tabs
 
 #### New Files Created
 - `/src/lib/services/teamStatsService.ts` - Team statistics aggregation service
@@ -41,6 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented realistic live minutes based on actual game clock
   - Calculates cumulative floor time using substitution timestamps
   - Fallback to game clock elapsed time when no substitutions exist
+  - NBA-standard calculation: tracks actual floor time, not game clock time
+  
+- **Plus/Minus Calculation**
+  - Implemented correct NBA-standard formula
+  - Calculates: team points scored while player on court - opponent points scored while player on court
+  - Tracks player on-court timeline using substitutions
+  - Matches all scoring events to player timeline for accurate differential
   
 - **Mobile Responsiveness**
   - Team stats grid adjusts from 6 columns to 3x2 layout on mobile
@@ -49,17 +58,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Responsive breakpoint at 768px width
 
 - **Loading UX**
-  - Replaced generic spinner with custom skeleton scaffolding
-  - Maintains fixed positions during loading (no overlapping)
+  - Lightweight skeleton loading (87% fewer DOM elements)
+  - Parallel API calls for faster data fetching
+  - Preemptive data prefetching for instant tab switching
   - Dark-themed pulse animations for visual consistency
   - Smooth transitions from loading to content state
+
+- **UI Consistency**
+  - Removed black boxes below empty states
+  - Natural content-driven height sizing (removed forced viewport heights)
+  - Consistent UI behavior across all tabs
+  - Clean, professional appearance without visual artifacts
 
 #### Technical Details
 - **Architecture**: V3 Engine with raw HTTP requests
 - **Authentication**: Public access (no user login required)
 - **Real-time Updates**: Integrated with gameSubscriptionManager
-- **Performance**: Optimized with React.memo and smart state management
-- **Data Sources**: Aggregates from `game_stats`, `game_substitutions`, `users` tables
+- **Performance**: 
+  - Phase 1: Lightweight skeleton (8 vs 62 DOM elements) + parallel API calls
+  - Phase 2: Preemptive data prefetching for instant tab switching (300ms → 0ms)
+  - Optimized with React.memo and smart state management
+- **Data Sources**: Aggregates from `game_stats`, `game_substitutions`, `users`, `games` tables
+- **Calculations**:
+  - Player minutes: Cumulative floor time from substitution timestamps
+  - Plus/Minus: NBA-standard score differential while player on court
 
 #### Documentation
 - Created comprehensive feature documentation at `/docs/04-features/live-viewer/TEAM_STATS_TAB.md`

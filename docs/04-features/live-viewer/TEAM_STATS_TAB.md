@@ -2,8 +2,9 @@
 
 **Date**: October 22, 2025  
 **Status**: ✅ COMPLETE  
-**Version**: 1.0.0  
-**Architecture**: V3 Engine (Raw HTTP + Public Access)
+**Version**: 1.0.1  
+**Architecture**: V3 Engine (Raw HTTP + Public Access)  
+**Performance**: Instant tab switching with preemptive data prefetching
 
 ---
 
@@ -35,13 +36,13 @@ The Team Stats Tab is a new feature added to the Live Viewer that displays compr
   - Player name and position
   - Real-time statistics grid
 - **Statistics Tracked**:
-  - MIN: Minutes played (whole numbers)
+  - MIN: Minutes played (whole numbers, cumulative floor time)
   - PTS: Points scored
   - REB: Rebounds
   - AST: Assists
   - STL: Steals
   - BLK: Blocks
-  - +/-: Plus/Minus (color-coded: green for positive, red for negative, gray for zero)
+  - +/-: Plus/Minus (NBA-standard: team pts - opponent pts while on court, color-coded: green for positive, red for negative, gray for zero)
 
 ### **3. Bench Section**
 - **Bench Players Display**: Shows remaining players not currently on court
@@ -127,6 +128,11 @@ headers: {
 
 **Real-time Updates**: Integrates with `gameSubscriptionManager` for live stat updates
 
+**Performance Optimizations**:
+- **Prefetching Support**: Optional `prefetch` and `enabled` flags for background data loading
+- **Parallel API Calls**: Uses `Promise.all()` for concurrent team and player stats fetching
+- **Smart Loading State**: No spinner for prefetch mode, improving perceived performance
+
 **Effect Dependencies**:
 ```typescript
 useEffect(() => {
@@ -134,6 +140,19 @@ useEffect(() => {
   setupSubscriptions();
   return () => cleanup();
 }, [gameId, teamId]);
+```
+
+**Prefetching API**:
+```typescript
+export interface UseTeamStatsOptions {
+  prefetch?: boolean; // Enable background prefetching
+  enabled?: boolean;  // Conditional fetching control
+}
+
+const teamAPrefetch = useTeamStats(gameId, teamAId, { 
+  prefetch: true, 
+  enabled: !!teamAId 
+});
 ```
 
 ### **Component Layer**
@@ -147,16 +166,28 @@ interface TeamStatsTabProps {
   gameId: string;
   teamId: string;
   teamName: string;
+  prefetchedData?: { // Optional prefetched data for instant rendering
+    teamStats: any;
+    onCourtPlayers: any[];
+    benchPlayers: any[];
+  };
 }
 ```
 
 **Features**:
 - Mobile responsive detection (`useState` + `useEffect` + window resize listener)
 - Conditional styling based on screen width (768px breakpoint)
-- Custom skeleton loading states
+- Lightweight skeleton loading (8 DOM elements vs 62, 87% reduction)
+- Instant rendering with prefetched data
 - Error handling with user-friendly messages
+- Natural scrolling with content-driven height
 
-**Styling Approach**: Inline styles with separate mobile/desktop variants
+**Performance Enhancements**:
+- **Phase 1**: Lightweight skeleton + parallel API calls
+- **Phase 2**: Preemptive data prefetching for 0ms tab switching
+- Smart data selection (prefetched data takes priority over hook data)
+
+**Styling Approach**: Inline styles with separate mobile/desktop variants, no forced viewport heights
 
 #### **PlayerStatsRow.tsx**
 **Location**: `/src/app/game-viewer/[gameId]/components/PlayerStatsRow.tsx`
@@ -474,9 +505,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ## 🐛 **KNOWN LIMITATIONS**
 
 ### **Plus/Minus Calculation**
-- **Current**: Simplified calculation (points - turnovers)
-- **Desired**: True NBA-style (team points - opponent points while on court)
-- **Blocker**: Requires timestamp-based score tracking in database
+- **Status**: ✅ RESOLVED (v1.0.1)
+- **Solution**: Implemented NBA-standard calculation using player timelines and scoring events
+- **Formula**: `team points scored while player on court - opponent points scored while player on court`
 
 ### **Player Positions**
 - **Current**: Hardcoded position assignment (G/F/C based on index)
