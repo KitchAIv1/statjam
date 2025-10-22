@@ -112,6 +112,7 @@ Historical and deprecated documentation
 | Live Viewer | [04-features/live-viewer/](04-features/live-viewer/) |
 | Live Viewer Data Analysis | [04-features/live-viewer/LIVE_VIEWER_DATA_ANALYSIS.md](04-features/live-viewer/LIVE_VIEWER_DATA_ANALYSIS.md) |
 | Live Viewer UI Analysis | [04-features/live-viewer/LIVE_VIEWER_UI_ANALYSIS.md](04-features/live-viewer/LIVE_VIEWER_UI_ANALYSIS.md) |
+| **Team Stats Tab** | [04-features/live-viewer/TEAM_STATS_TAB.md](04-features/live-viewer/TEAM_STATS_TAB.md) |
 | Player Dashboard Analysis | [04-features/dashboards/PLAYER_DASHBOARD_ANALYSIS.md](04-features/dashboards/PLAYER_DASHBOARD_ANALYSIS.md) |
 | Player Dashboard Data Audit | [04-features/dashboards/PLAYER_DASHBOARD_DATA_AUDIT.md](04-features/dashboards/PLAYER_DASHBOARD_DATA_AUDIT.md) |
 | Architecture Design | [03-architecture/ARCHITECTURE_DESIGN.md](03-architecture/ARCHITECTURE_DESIGN.md) |
@@ -145,7 +146,7 @@ When adding new documentation:
 
 ---
 
-**Last Updated**: October 19, 2025  
+**Last Updated**: October 22, 2025  
 **Maintained By**: Development Team  
-**Status**: ✅ MVP Complete (v0.9.8) - NBA-Standard Features Complete  
-**Recent Updates**: Team fouls & timeouts, Enhanced timeout UX, Desktop substitution fix, Play-by-play integration
+**Status**: ✅ MVP Complete (v0.12.0) - NBA-Standard Features Complete  
+**Recent Updates**: Team Stats Tab (NEW), Player minutes calculation, Mobile responsiveness, Team fouls & timeouts, Enhanced timeout UX

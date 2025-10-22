@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.0] - 2025-10-22
+
+### 🏀 **NEW FEATURE: Team Stats Tab in Live Viewer**
+
+#### Added
+- **Team Stats Tab** - Comprehensive team and player statistics view
+  - Team performance summary with aggregate stats (FG, 3FG, FTS, TO, REB, AST)
+  - On Court section displaying 5 active players with real-time stats
+  - Bench section showing remaining players
+  - Player statistics grid: MIN, PTS, REB, AST, STL, BLK, +/-
+  - Color-coded plus/minus display (green/red/gray)
+  - Mobile responsive layout (3x2 grid on mobile devices)
+  - Custom dark-themed skeleton loading states
+  - NBA-style professional design
+
+#### New Files Created
+- `/src/lib/services/teamStatsService.ts` - Team statistics aggregation service
+- `/src/hooks/useTeamStats.ts` - Team stats data management hook
+- `/src/app/game-viewer/[gameId]/components/TeamStatsTab.tsx` - Main team stats component
+- `/src/app/game-viewer/[gameId]/components/PlayerStatsRow.tsx` - Reusable player row component
+- `/docs/04-features/live-viewer/TEAM_STATS_TAB.md` - Comprehensive feature documentation
+
+#### Modified
+- `/src/lib/services/teamServiceV3.ts`
+  - Updated authentication pattern to use public access (SUPABASE_ANON_KEY)
+  - Removed user authentication requirement for team data fetching
+  - Aligned with public game viewer access pattern
+
+#### Fixed
+- **Player Minutes Calculation**
+  - Now displays whole numbers only (removed decimals)
+  - Implemented realistic live minutes based on actual game clock
+  - Calculates cumulative floor time using substitution timestamps
+  - Fallback to game clock elapsed time when no substitutions exist
+  
+- **Mobile Responsiveness**
+  - Team stats grid adjusts from 6 columns to 3x2 layout on mobile
+  - Player row spacing, fonts, and avatars optimized for small screens
+  - Dynamic mobile detection with resize event handling
+  - Responsive breakpoint at 768px width
+
+- **Loading UX**
+  - Replaced generic spinner with custom skeleton scaffolding
+  - Maintains fixed positions during loading (no overlapping)
+  - Dark-themed pulse animations for visual consistency
+  - Smooth transitions from loading to content state
+
+#### Technical Details
+- **Architecture**: V3 Engine with raw HTTP requests
+- **Authentication**: Public access (no user login required)
+- **Real-time Updates**: Integrated with gameSubscriptionManager
+- **Performance**: Optimized with React.memo and smart state management
+- **Data Sources**: Aggregates from `game_stats`, `game_substitutions`, `users` tables
+
+#### Documentation
+- Created comprehensive feature documentation at `/docs/04-features/live-viewer/TEAM_STATS_TAB.md`
+- Updated `/docs/01-project/FEATURES_COMPLETE.md` with Team Stats Tab details
+- Updated `/docs/INDEX.md` quick navigation links
+
+---
+
 ## [0.11.0] - 2025-10-21
 
 ### 🔒 **CRITICAL SECURITY FIXES - PRODUCTION READY**
