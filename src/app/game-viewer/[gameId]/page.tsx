@@ -5,6 +5,7 @@ import { useGameViewerV2 } from '@/hooks/useGameViewerV2';
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer';
 import GameHeader from './components/GameHeader';
 import PlayByPlayFeed from './components/PlayByPlayFeed';
+import { TeamStatsTab } from './components/TeamStatsTab';
 import { figmaColors, figmaTypography } from '@/lib/design/figmaTokens';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -191,20 +192,22 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
             </div>
           </TabsContent>
 
-          {/* Team A Tab (placeholder for real roster; logic stays in hooks/services) */}
+          {/* Team A Tab */}
           <TabsContent value="teamA" className="mt-0">
-            <div style={styles.teamSection}>
-              <div style={styles.teamHeader}>{actualGame.team_a_name || 'Team A'}</div>
-              <div style={styles.teamPlaceholder}>Team roster and stats coming soon.</div>
-            </div>
+            <TeamStatsTab 
+              gameId={gameId} 
+              teamId={actualGame.team_a_id} 
+              teamName={actualGame.team_a_name || 'Team A'} 
+            />
           </TabsContent>
 
-          {/* Team B Tab (placeholder for real roster; logic stays in hooks/services) */}
+          {/* Team B Tab */}
           <TabsContent value="teamB" className="mt-0">
-            <div style={styles.teamSection}>
-              <div style={styles.teamHeader}>{actualGame.team_b_name || 'Team B'}</div>
-              <div style={styles.teamPlaceholder}>Team roster and stats coming soon.</div>
-            </div>
+            <TeamStatsTab 
+              gameId={gameId} 
+              teamId={actualGame.team_b_id} 
+              teamName={actualGame.team_b_name || 'Team B'} 
+            />
           </TabsContent>
         </Tabs>
       </div>
