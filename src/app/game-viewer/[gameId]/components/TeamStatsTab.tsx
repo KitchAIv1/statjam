@@ -15,6 +15,7 @@
 import React from 'react';
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { PlayerStatsRow } from './PlayerStatsRow';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export interface TeamStatsTabProps {
   gameId: string;
@@ -27,9 +28,75 @@ export function TeamStatsTab({ gameId, teamId, teamName }: TeamStatsTabProps) {
 
   if (loading) {
     return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.loadingSpinner} />
-        <div style={styles.loadingText}>Loading team statistics...</div>
+      <div style={styles.container}>
+        {/* Team Performance Summary Skeleton */}
+        <div style={styles.teamSummary}>
+          <div style={styles.teamHeader}>
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+          <div style={styles.teamStatsGrid}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} style={styles.teamStatItem}>
+                <Skeleton className="h-5 w-12" />
+                <Skeleton className="h-3 w-8" />
+                <Skeleton className="h-3 w-10" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* On Court Section Skeleton */}
+        <div style={styles.section}>
+          <div style={styles.sectionHeader}>On court</div>
+          <div style={styles.playersList}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} style={styles.playerRow}>
+                <div style={styles.playerInfo}>
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div style={styles.playerDetails}>
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-8" />
+                  </div>
+                </div>
+                <div style={styles.statsGrid}>
+                  {Array.from({ length: 7 }).map((_, statIndex) => (
+                    <div key={statIndex} style={styles.statCell}>
+                      <Skeleton className="h-4 w-8" />
+                      <Skeleton className="h-3 w-6" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bench Section Skeleton */}
+        <div style={styles.section}>
+          <div style={styles.sectionHeader}>Bench</div>
+          <div style={styles.playersList}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} style={styles.playerRow}>
+                <div style={styles.playerInfo}>
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div style={styles.playerDetails}>
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-8" />
+                  </div>
+                </div>
+                <div style={styles.statsGrid}>
+                  {Array.from({ length: 7 }).map((_, statIndex) => (
+                    <div key={statIndex} style={styles.statCell}>
+                      <Skeleton className="h-4 w-8" />
+                      <Skeleton className="h-3 w-6" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -169,27 +236,6 @@ const styles = {
     backgroundColor: '#000000',
     minHeight: '100vh',
     color: '#ffffff'
-  },
-  loadingContainer: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px',
-    backgroundColor: '#000000'
-  },
-  loadingSpinner: {
-    width: '32px',
-    height: '32px',
-    border: '3px solid #374151',
-    borderTop: '3px solid #3b82f6',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-    marginBottom: '16px'
-  },
-  loadingText: {
-    color: '#9ca3af',
-    fontSize: '14px'
   },
   errorContainer: {
     display: 'flex',

@@ -60,11 +60,13 @@ export function useAuthV2() {
         
         console.log('🔐 useAuthV2: Token expires in', Math.round(timeUntilExpiry / 1000 / 60), 'minutes');
         
-        // If token expires in less than 5 minutes, refresh it immediately
+        // If token is expired or expires in less than 5 minutes, refresh it immediately
         if (timeUntilExpiry < 5 * 60 * 1000) {
-          console.log('🔐 useAuthV2: Token expires soon, refreshing immediately...');
+          console.log('🔐 useAuthV2: Token expires soon or is expired, refreshing immediately...');
           const refreshResult = await refreshSession();
           if (!refreshResult.success) {
+            console.log('🔐 useAuthV2: Refresh failed, clearing invalid session');
+            await authServiceV2.signOut();
             if (isMounted) setState({ user: null, loading: false, error: null });
             return;
           }
@@ -362,7 +364,9 @@ export function useAuthV2() {
 
     } catch (error: any) {
       console.error('❌ useAuthV2: Refresh session error:', error);
-      // If refresh fails, sign out user
+      // If refresh fails (expired refresh token), clear invalid session
+      console.log('🔐 useAuthV2: Clearing invalid session due to refresh failure');
+      await authServiceV2.signOut();
       setState({ user: null, loading: false, error: null });
       return { success: false };
     }

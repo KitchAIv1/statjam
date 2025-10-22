@@ -104,22 +104,40 @@ export class TeamStatsService {
     });
 
     // Handle authentication errors with automatic token refresh
-    if (response.status === 401 || response.status === 403) {
-      if (retryCount < 1) {
-        console.log('🔄 TeamStatsService: Token expired, attempting refresh...');
-        // Force token refresh by clearing and re-fetching
-        localStorage.removeItem('sb-access-token');
-        const newToken = this.getAccessToken();
-        if (newToken && newToken !== accessToken) {
-          return this.makeRequest(table, params, retryCount + 1);
-        }
-      }
-      throw new Error(this.getUserFriendlyError(response.status, 'Authentication failed'));
-    }
-
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(this.getUserFriendlyError(response.status, errorText));
+      console.error(`❌ TeamStatsService: HTTP ${response.status}:`, errorText);
+      
+      // Check if it's an authentication error and we haven't retried yet
+      if ((response.status === 401 || response.status === 403) && retryCount === 0) {
+        console.log('🔐 TeamStatsService: Authentication error detected, attempting token refresh...');
+        
+        try {
+          // Import authServiceV2 dynamically to avoid circular dependencies
+          const { authServiceV2 } = await import('@/lib/services/authServiceV2');
+          const session = authServiceV2.getSession();
+          
+          if (session.refreshToken) {
+            const { data, error } = await authServiceV2.refreshToken(session.refreshToken);
+            
+            if (data && !error) {
+              console.log('✅ TeamStatsService: Token refreshed, retrying request...');
+              // Retry the request with the new token
+              return this.makeRequest(table, params, retryCount + 1);
+            } else {
+              console.error('❌ TeamStatsService: Token refresh failed:', error);
+            }
+          } else {
+            console.error('❌ TeamStatsService: No refresh token available');
+          }
+        } catch (refreshError) {
+          console.error('❌ TeamStatsService: Error during token refresh:', refreshError);
+        }
+      }
+      
+      // Throw user-friendly error message based on status code
+      const userMessage = this.getUserFriendlyError(response.status, errorText);
+      throw new Error(userMessage);
     }
 
     const data = await response.json();
@@ -237,6 +255,238 @@ export class TeamStatsService {
   }
 
   /**
+   * Calculate accurate player minutes based on substitution timestamps
+   */
+  private static async calculatePlayerMinutes(gameId: string, teamId: string, playerIds: string[]): Promise<Map<string, number>> {
+    try {
+      console.log('⏱️ TeamStatsService: Calculating player minutes from substitutions');
+
+      // Fetch all substitutions for this game and team
+      const substitutions = await this.makeRequest<any>('game_substitutions', {
+        'select': 'player_in_id,player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
+        'game_id': `eq.${gameId}`,
+        'team_id': `eq.${teamId}`,
+        'order': 'created_at.asc'
+      });
+
+      console.log(`📊 TeamStatsService: Found ${substitutions.length} substitutions for minutes calculation`);
+
+      const playerMinutes = new Map<string, number>();
+      
+      // Initialize all players with 0 minutes
+      playerIds.forEach(playerId => {
+        playerMinutes.set(playerId, 0);
+      });
+
+      if (substitutions.length === 0) {
+        // No substitutions - assume all players played full game
+        // This is a fallback - in real NBA games there are always substitutions
+        console.log('📝 TeamStatsService: No substitutions found, using fallback minutes calculation');
+        return playerMinutes;
+      }
+
+      // For each player, calculate their on-court time
+      for (const playerId of playerIds) {
+        let totalMinutes = 0;
+        let currentStintStart: Date | null = null;
+        let isOnCourt = false;
+
+        // Process substitutions chronologically
+        for (const sub of substitutions) {
+          const subTime = new Date(sub.created_at);
+          
+          if (sub.player_in_id === playerId) {
+            // Player coming in
+            if (!isOnCourt) {
+              currentStintStart = subTime;
+              isOnCourt = true;
+            }
+          } else if (sub.player_out_id === playerId) {
+            // Player going out
+            if (isOnCourt && currentStintStart) {
+              const stintMinutes = (subTime.getTime() - currentStintStart.getTime()) / (1000 * 60);
+              totalMinutes += stintMinutes;
+              currentStintStart = null;
+              isOnCourt = false;
+            }
+          }
+        }
+
+        // Handle case where player is still on court (no final SUB OUT)
+        if (isOnCourt && currentStintStart) {
+          const currentTime = new Date();
+          const stintMinutes = (currentTime.getTime() - currentStintStart.getTime()) / (1000 * 60);
+          totalMinutes += stintMinutes;
+        }
+
+        // Handle case where player started on court (no initial SUB IN)
+        // If player has no SUB IN events, assume they started on court
+        const hasSubIn = substitutions.some(sub => sub.player_in_id === playerId);
+        if (!hasSubIn) {
+          // Player started on court - calculate from game start to first SUB OUT or current time
+          const firstSubOut = substitutions.find(sub => sub.player_out_id === playerId);
+          if (firstSubOut) {
+            const gameStart = new Date(substitutions[0].created_at); // Approximate game start
+            const subOutTime = new Date(firstSubOut.created_at);
+            const minutesFromStart = (subOutTime.getTime() - gameStart.getTime()) / (1000 * 60);
+            totalMinutes += minutesFromStart;
+          } else {
+            // Player never subbed out - played entire game
+            const gameStart = new Date(substitutions[0].created_at);
+            const currentTime = new Date();
+            const fullGameMinutes = (currentTime.getTime() - gameStart.getTime()) / (1000 * 60);
+            totalMinutes += fullGameMinutes;
+          }
+        }
+
+        playerMinutes.set(playerId, Math.round(totalMinutes * 10) / 10); // Round to 1 decimal
+      }
+
+      console.log('✅ TeamStatsService: Player minutes calculated successfully');
+      return playerMinutes;
+
+    } catch (error: any) {
+      console.error('❌ TeamStatsService: Failed to calculate player minutes:', error);
+      // Return fallback minutes (quarters * 10) if calculation fails
+      const fallbackMinutes = new Map<string, number>();
+      playerIds.forEach(playerId => {
+        fallbackMinutes.set(playerId, 10); // Fallback to 10 minutes
+      });
+      return fallbackMinutes;
+    }
+  }
+
+  /**
+   * Calculate plus/minus for players based on score differential while on court
+   */
+  private static async calculatePlusMinusForPlayers(gameId: string, teamId: string, playerIds: string[]): Promise<Map<string, number>> {
+    try {
+      console.log('📊 TeamStatsService: Calculating plus/minus from score differential');
+
+      // Fetch all substitutions for this game and team
+      const substitutions = await this.makeRequest<any>('game_substitutions', {
+        'select': 'player_in_id,player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
+        'game_id': `eq.${gameId}`,
+        'team_id': `eq.${teamId}`,
+        'order': 'created_at.asc'
+      });
+
+      // Fetch all scoring stats for the game
+      const scoringStats = await this.makeRequest<any>('game_stats', {
+        'select': 'player_id,team_id,stat_type,stat_value,modifier,created_at',
+        'game_id': `eq.${gameId}`,
+        'stat_type': `in.(field_goal,three_pointer,free_throw)`,
+        'modifier': `eq.made`,
+        'order': 'created_at.asc'
+      });
+
+      console.log(`📊 TeamStatsService: Found ${substitutions.length} substitutions and ${scoringStats.length} scoring events`);
+
+      const playerPlusMinus = new Map<string, number>();
+      
+      // Initialize all players with 0 plus/minus
+      playerIds.forEach(playerId => {
+        playerPlusMinus.set(playerId, 0);
+      });
+
+      if (substitutions.length === 0 || scoringStats.length === 0) {
+        console.log('📝 TeamStatsService: No substitutions or scoring events found, plus/minus remains 0');
+        return playerPlusMinus;
+      }
+
+      // For each player, calculate their plus/minus
+      for (const playerId of playerIds) {
+        let plusMinus = 0;
+        let isOnCourt = false;
+        let stintStartTime: Date | null = null;
+
+        // Process events chronologically (substitutions and scoring)
+        const allEvents = [
+          ...substitutions.map(sub => ({ ...sub, type: 'substitution', player_in_id: sub.player_in_id, player_out_id: sub.player_out_id })),
+          ...scoringStats.map(stat => ({ ...stat, type: 'scoring' }))
+        ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+        for (const event of allEvents) {
+          const eventTime = new Date(event.created_at);
+
+          if (event.type === 'substitution') {
+            if (event.player_in_id === playerId) {
+              // Player coming in
+              if (!isOnCourt) {
+                stintStartTime = eventTime;
+                isOnCourt = true;
+              }
+            } else if (event.player_out_id === playerId) {
+              // Player going out
+              if (isOnCourt && stintStartTime) {
+                // Calculate plus/minus for this stint
+                const stintPlusMinus = this.calculateStintPlusMinus(stintStartTime, eventTime, scoringStats, teamId);
+                plusMinus += stintPlusMinus;
+                stintStartTime = null;
+                isOnCourt = false;
+              }
+            }
+          }
+        }
+
+        // Handle case where player is still on court (no final SUB OUT)
+        if (isOnCourt && stintStartTime) {
+          const currentTime = new Date();
+          const stintPlusMinus = this.calculateStintPlusMinus(stintStartTime, currentTime, scoringStats, teamId);
+          plusMinus += stintPlusMinus;
+        }
+
+        // Handle case where player started on court (no initial SUB IN)
+        const hasSubIn = substitutions.some(sub => sub.player_in_id === playerId);
+        if (!hasSubIn) {
+          // Player started on court - calculate from game start
+          const gameStart = new Date(allEvents[0].created_at);
+          const firstSubOut = substitutions.find(sub => sub.player_out_id === playerId);
+          const endTime = firstSubOut ? new Date(firstSubOut.created_at) : new Date();
+          const stintPlusMinus = this.calculateStintPlusMinus(gameStart, endTime, scoringStats, teamId);
+          plusMinus += stintPlusMinus;
+        }
+
+        playerPlusMinus.set(playerId, Math.round(plusMinus));
+      }
+
+      console.log('✅ TeamStatsService: Plus/minus calculated successfully');
+      return playerPlusMinus;
+
+    } catch (error: any) {
+      console.error('❌ TeamStatsService: Failed to calculate plus/minus:', error);
+      // Return 0 for all players if calculation fails
+      const fallbackPlusMinus = new Map<string, number>();
+      playerIds.forEach(playerId => {
+        fallbackPlusMinus.set(playerId, 0);
+      });
+      return fallbackPlusMinus;
+    }
+  }
+
+  /**
+   * Calculate plus/minus for a specific time period
+   */
+  private static calculateStintPlusMinus(startTime: Date, endTime: Date, scoringStats: any[], teamId: string): number {
+    let teamPoints = 0;
+    let opponentPoints = 0;
+
+    for (const stat of scoringStats) {
+      const statTime = new Date(stat.created_at);
+      if (statTime >= startTime && statTime <= endTime) {
+        const points = stat.stat_value || 0;
+        if (stat.team_id === teamId) {
+          teamPoints += points;
+        } else {
+          opponentPoints += points;
+        }
+      }
+    }
+
+    return teamPoints - opponentPoints;
+  }
+
+  /**
    * Aggregate player statistics from game_stats table
    */
   static async aggregatePlayerStats(gameId: string, teamId: string, playerIds: string[]): Promise<PlayerStats[]> {
@@ -270,6 +520,12 @@ export class TeamStatsService {
         ])
       );
 
+      // Calculate accurate player minutes from substitutions
+      const playerMinutesMap = await this.calculatePlayerMinutes(gameId, teamId, playerIds);
+
+      // Calculate plus/minus for players
+      const playerPlusMinusMap = await this.calculatePlusMinusForPlayers(gameId, teamId, playerIds);
+
       // Aggregate stats per player
       const playerStatsMap = new Map<string, any>();
 
@@ -277,14 +533,14 @@ export class TeamStatsService {
         playerStatsMap.set(playerId, {
           playerId,
           playerName: playersMap.get(playerId) || `Player ${playerId.substring(0, 8)}`,
-          minutes: 0,
+          minutes: playerMinutesMap.get(playerId) || 0,
           points: 0,
           rebounds: 0,
           assists: 0,
           steals: 0,
           blocks: 0,
           turnovers: 0,
-          plusMinus: 0, // Simplified to 0 for MVP
+          plusMinus: playerPlusMinusMap.get(playerId) || 0,
           quartersPlayed: new Set()
         });
       });
@@ -338,20 +594,19 @@ export class TeamStatsService {
         }
       });
 
-      // Calculate minutes and finalize stats
+      // Finalize stats (minutes already calculated from substitutions)
       const playerStats: PlayerStats[] = Array.from(playerStatsMap.values()).map(player => {
-        const minutes = player.quartersPlayed.size * 10; // 10 minutes per quarter estimate
         return {
           playerId: player.playerId,
           playerName: player.playerName,
-          minutes,
+          minutes: player.minutes, // Already calculated from substitutions
           points: player.points,
           rebounds: player.rebounds,
           assists: player.assists,
           steals: player.steals,
           blocks: player.blocks,
           turnovers: player.turnovers,
-          plusMinus: 0 // Simplified for MVP
+          plusMinus: player.plusMinus // Will be calculated in next step
         };
       });
 
