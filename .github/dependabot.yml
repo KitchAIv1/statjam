@@ -1,128 +1,55 @@
-# ============================================================================
-# DEPENDABOT CONFIGURATION - STATJAM PROJECT
-# ============================================================================
-# Purpose: Automated dependency updates and security vulnerability management
-# Aligned with: Enterprise-grade security standards (A- rating maintenance)
-# ============================================================================
-
 version: 2
 updates:
-  # ========================================
-  # NPM DEPENDENCY UPDATES
-  # ========================================
+  # Enable version updates for npm
   - package-ecosystem: "npm"
-    directory: "/"
+    directory: "/statjam"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-      timezone: "America/New_York"
-    
-    # PR Management
     open-pull-requests-limit: 5
-    reviewers:
-      - "willis"  # Replace with your GitHub username
-    assignees:
-      - "willis"  # Replace with your GitHub username
-    
-    # Commit Message Format
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
       include: "scope"
-    
-    # Security & Critical Updates
-    allow:
-      - dependency-type: "direct"
-      - dependency-type: "indirect"
-    
-    # Group related updates
     groups:
-      # Next.js ecosystem updates
-      nextjs:
+      react:
         patterns:
-          - "next"
+          - "react*"
+          - "@types/react*"
+      next:
+        patterns:
+          - "next*"
           - "@next/*"
-          - "react"
-          - "react-dom"
-      
-      # TypeScript ecosystem
-      typescript:
-        patterns:
-          - "typescript"
-          - "@types/*"
-      
-      # Supabase ecosystem
       supabase:
         patterns:
           - "@supabase/*"
           - "supabase"
-      
-      # UI/Styling libraries
-      ui-libraries:
+      tailwind:
         patterns:
           - "tailwindcss"
           - "@tailwindcss/*"
-          - "@radix-ui/*"
-          - "lucide-react"
-      
-      # Development tools
-      dev-tools:
+      typescript:
         patterns:
-          - "eslint"
-          - "@eslint/*"
-          - "prettier"
-          - "@typescript-eslint/*"
-    
-    # Labels for organization
-    labels:
-      - "dependencies"
-      - "automated-pr"
-    
-    # Ignore specific updates if needed
+          - "typescript"
+          - "@types/*"
     ignore:
-      # Ignore major version updates for critical dependencies
-      # (uncomment and customize as needed)
-      # - dependency-name: "react"
-      #   update-types: ["version-update:semver-major"]
+      # Ignore major version updates for stable dependencies
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
 
-  # ========================================
-  # GITHUB ACTIONS UPDATES
-  # ========================================
+  # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "10:00"
-      timezone: "America/New_York"
-    
     open-pull-requests-limit: 3
-    reviewers:
-      - "willis"  # Replace with your GitHub username
-    
     commit-message:
       prefix: "ci"
       include: "scope"
-    
-    labels:
-      - "github-actions"
-      - "automated-pr"
-
-# ========================================
-# CONFIGURATION NOTES
-# ========================================
-# 1. Security Updates: Enabled automatically via GitHub settings
-# 2. Weekly Schedule: Reduces PR noise while maintaining security
-# 3. Grouped Updates: Related dependencies updated together
-# 4. Review Assignment: Ensures human oversight of changes
-# 5. Commit Prefixes: Maintains clean git history
-# 
-# Expected Weekly PRs: 2-5 (normal), 10-15 (first week)
-# Security Alerts: Immediate notifications for vulnerabilities
-# 
-# To customize:
-# - Replace "willis" with your GitHub username
-# - Adjust timezone if needed
-# - Modify ignore patterns for specific dependencies
-# ========================================
