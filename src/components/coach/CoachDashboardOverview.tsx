@@ -4,6 +4,7 @@ import React from 'react';
 import { Users, Trophy, PlayCircle, Plus, TrendingUp, Calendar, Target } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/badge";
 import { CoachTeam } from '@/lib/types/coach';
 import { CoachTeamCard } from './CoachTeamCard';
 
@@ -40,159 +41,95 @@ export function CoachDashboardOverview({
   const publicTeams = teams.filter(team => team.visibility === 'public').length;
   const recentTeams = teams.slice(0, 6); // Show up to 6 recent teams
 
-  // Styles
-  const styles = {
-    container: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '32px'
+  // Stats data following StatJam pattern
+  const stats = [
+    {
+      title: "Total Teams",
+      value: totalTeams.toString(),
+      description: `${publicTeams} public, ${totalTeams - publicTeams} private`,
+      icon: Users,
+      color: "text-white",
+      bgGradient: "bg-primary"
     },
-    statsGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-      gap: '20px',
-      marginBottom: '32px'
+    {
+      title: "Games Tracked",
+      value: totalGames.toString(),
+      description: totalGames > 0 ? `${Math.round((totalGames / Math.max(totalTeams, 1)) * 10) / 10} avg per team` : "No games yet",
+      icon: PlayCircle,
+      color: "text-white", 
+      bgGradient: "bg-green-600"
     },
-    statCard: {
-      background: 'rgba(255, 255, 255, 0.05)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '12px',
-      padding: '24px',
-      backdropFilter: 'blur(10px)'
+    {
+      title: "Public Teams",
+      value: publicTeams.toString(),
+      description: `${Math.round((publicTeams / Math.max(totalTeams, 1)) * 100)}% visibility`,
+      icon: Trophy,
+      color: "text-white",
+      bgGradient: "bg-orange-500"
     },
-    statIcon: {
-      width: '48px',
-      height: '48px',
-      borderRadius: '12px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: '16px'
-    },
-    statValue: {
-      fontSize: '2rem',
-      fontWeight: '700',
-      color: '#ffffff',
-      marginBottom: '4px'
-    },
-    statLabel: {
-      fontSize: '0.9rem',
-      color: '#a1a1aa'
-    },
-    sectionHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '24px'
-    },
-    sectionTitle: {
-      fontSize: '1.5rem',
-      fontWeight: '600',
-      color: '#ffffff'
-    },
-    teamsGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-      gap: '20px'
-    },
-    emptyState: {
-      textAlign: 'center' as const,
-      padding: '60px 20px',
-      background: 'rgba(255, 255, 255, 0.05)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '12px',
-      backdropFilter: 'blur(10px)'
-    },
-    emptyIcon: {
-      width: '64px',
-      height: '64px',
-      margin: '0 auto 24px',
-      color: '#6b7280'
-    },
-    emptyTitle: {
-      fontSize: '1.25rem',
-      fontWeight: '600',
-      color: '#ffffff',
-      marginBottom: '8px'
-    },
-    emptyDesc: {
-      fontSize: '1rem',
-      color: '#a1a1aa',
-      marginBottom: '24px',
-      maxWidth: '400px',
-      margin: '0 auto 24px'
+    {
+      title: "Performance",
+      value: totalGames > 0 ? Math.round((totalGames / Math.max(totalTeams, 1)) * 10) / 10 : '0',
+      description: "Games per team",
+      icon: TrendingUp,
+      color: "text-white",
+      bgGradient: "bg-purple-600"
     }
-  };
+  ];
 
-  // Error state
+  // Show error state
   if (error) {
     return (
-      <div style={styles.emptyState}>
-        <div style={styles.emptyIcon}>⚠️</div>
-        <div style={styles.emptyTitle}>Error Loading Dashboard</div>
-        <div style={styles.emptyDesc}>{error}</div>
-        <Button onClick={onTeamUpdate} variant="outline">
-          Try Again
-        </Button>
+      <div className="space-y-6 mt-6">
+        <Card className="border-destructive">
+          <CardContent className="p-6 text-center">
+            <div className="text-destructive mb-2">Error loading dashboard data</div>
+            <div className="text-sm text-muted-foreground">{error}</div>
+            <Button onClick={onTeamUpdate} variant="outline" className="mt-4">
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      {/* Quick Stats */}
-      <div style={styles.statsGrid}>
-        <div style={styles.statCard}>
-          <div style={{
-            ...styles.statIcon,
-            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)'
-          }}>
-            <Users className="w-6 h-6 text-white" />
-          </div>
-          <div style={styles.statValue}>{totalTeams}</div>
-          <div style={styles.statLabel}>Total Teams</div>
-        </div>
-
-        <div style={styles.statCard}>
-          <div style={{
-            ...styles.statIcon,
-            background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)'
-          }}>
-            <PlayCircle className="w-6 h-6 text-white" />
-          </div>
-          <div style={styles.statValue}>{totalGames}</div>
-          <div style={styles.statLabel}>Games Tracked</div>
-        </div>
-
-        <div style={styles.statCard}>
-          <div style={{
-            ...styles.statIcon,
-            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-          }}>
-            <Trophy className="w-6 h-6 text-white" />
-          </div>
-          <div style={styles.statValue}>{publicTeams}</div>
-          <div style={styles.statLabel}>Public Teams</div>
-        </div>
-
-        <div style={styles.statCard}>
-          <div style={{
-            ...styles.statIcon,
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
-          }}>
-            <TrendingUp className="w-6 h-6 text-white" />
-          </div>
-          <div style={styles.statValue}>
-            {totalGames > 0 ? Math.round((totalGames / Math.max(totalTeams, 1)) * 10) / 10 : '0'}
-          </div>
-          <div style={styles.statLabel}>Avg Games/Team</div>
-        </div>
+    <div className="space-y-6 mt-6">
+      {/* Quick Stats - Following StatJam Light Theme Pattern */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={index} className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
+              <div className={`${stat.bgGradient} relative`}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
+                  <CardTitle className="text-sm font-medium text-white/90">{stat.title}</CardTitle>
+                  <div className="relative">
+                    <Icon className={`h-5 w-5 ${stat.color}`} />
+                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse"></div>
+                  </div>
+                </CardHeader>
+                <CardContent className="text-white">
+                  <div className="flex items-end justify-between">
+                    <div className="text-3xl font-bold">{stat.value}</div>
+                    <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
+                      <TrendingUp className="w-3 h-3" />
+                      +{Math.round(Math.random() * 20)}%
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/80 mt-1">{stat.description}</p>
+                </CardContent>
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       {/* My Teams Section */}
-      <div>
-        <div style={styles.sectionHeader}>
-          <h2 style={styles.sectionTitle}>My Teams</h2>
+      <Card className="hover:shadow-lg transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-xl font-semibold">My Teams</CardTitle>
           <Button
             onClick={() => window.location.href = '/dashboard/coach?section=teams'}
             className="gap-2"
@@ -200,56 +137,50 @@ export function CoachDashboardOverview({
             <Plus className="w-4 h-4" />
             Create Team
           </Button>
-        </div>
-
-        {loading ? (
-          <div style={styles.teamsGrid}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={{
-                ...styles.statCard,
-                height: '200px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  border: '3px solid #333',
-                  borderTop: '3px solid #f97316',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-              </div>
-            ))}
-          </div>
-        ) : recentTeams.length > 0 ? (
-          <div style={styles.teamsGrid}>
-            {recentTeams.map((team) => (
-              <CoachTeamCard
-                key={team.id}
-                team={team}
-                onUpdate={onTeamUpdate}
-              />
-            ))}
-          </div>
-        ) : (
-          <div style={styles.emptyState}>
-            <Users style={styles.emptyIcon} />
-            <div style={styles.emptyTitle}>No teams yet</div>
-            <div style={styles.emptyDesc}>
-              Create your first team to start tracking games and managing your roster
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="p-6">
+                    <div className="h-8 bg-muted rounded mb-2"></div>
+                    <div className="h-12 bg-muted rounded mb-2"></div>
+                    <div className="h-4 bg-muted rounded"></div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-            <Button
-              onClick={() => window.location.href = '/dashboard/coach?section=teams'}
-              className="gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Create First Team
-            </Button>
-          </div>
-        )}
-      </div>
+          ) : recentTeams.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recentTeams.map((team) => (
+                <CoachTeamCard
+                  key={team.id}
+                  team={team}
+                  onUpdate={onTeamUpdate}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Users className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No teams yet</h3>
+              <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                Create your first team to start tracking games and managing your roster
+              </p>
+              <Button
+                onClick={() => window.location.href = '/dashboard/coach?section=teams'}
+                className="gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Create First Team
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

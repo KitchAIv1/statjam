@@ -5,6 +5,7 @@ import {
   Users, PlayCircle, Trophy, Settings, Share2, Eye, EyeOff, 
   MapPin, Calendar, MoreVertical, Edit, Trash2 
 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { CoachTeam } from '@/lib/types/coach';
@@ -74,75 +75,6 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
     }
   };
 
-  // Styles
-  const styles = {
-    card: {
-      background: 'rgba(255, 255, 255, 0.05)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '12px',
-      padding: '20px',
-      backdropFilter: 'blur(10px)',
-      transition: 'all 0.3s ease',
-      cursor: 'pointer',
-      position: 'relative' as const
-    },
-    cardHover: {
-      transform: 'translateY(-2px)',
-      boxShadow: '0 8px 32px rgba(249, 115, 22, 0.2)',
-      borderColor: 'rgba(249, 115, 22, 0.3)'
-    },
-    header: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: '16px'
-    },
-    teamInfo: {
-      flex: 1
-    },
-    teamName: {
-      fontSize: '1.25rem',
-      fontWeight: '600',
-      color: '#ffffff',
-      marginBottom: '4px'
-    },
-    teamMeta: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      marginBottom: '8px'
-    },
-    metaItem: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-      fontSize: '0.875rem',
-      color: '#a1a1aa'
-    },
-    badges: {
-      display: 'flex',
-      gap: '8px',
-      marginBottom: '16px'
-    },
-    actions: {
-      display: 'flex',
-      gap: '8px',
-      flexWrap: 'wrap' as const
-    },
-    primaryButton: {
-      flex: 1,
-      minWidth: '120px'
-    },
-    secondaryButton: {
-      padding: '8px'
-    },
-    actionsMenu: {
-      position: 'absolute' as const,
-      top: '16px',
-      right: '16px',
-      zIndex: 10
-    }
-  };
 
   return (
     <>

@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import { Plus, Users, Search, Filter } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { CoachTeam } from '@/lib/types/coach';
 import { CoachTeamCard } from './CoachTeamCard';
 import { CreateCoachTeamModal } from './CreateCoachTeamModal';
@@ -42,89 +44,6 @@ export function CoachTeamsSection({ teams, loading, error, onTeamUpdate }: Coach
     return matchesSearch && matchesVisibility;
   });
 
-  // Styles
-  const styles = {
-    container: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '24px'
-    },
-    header: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      flexWrap: 'wrap' as const,
-      gap: '16px'
-    },
-    title: {
-      fontSize: '1.5rem',
-      fontWeight: '600',
-      color: '#ffffff'
-    },
-    filters: {
-      display: 'flex',
-      gap: '12px',
-      alignItems: 'center',
-      flexWrap: 'wrap' as const
-    },
-    searchInput: {
-      minWidth: '200px'
-    },
-    filterButton: {
-      padding: '8px 16px',
-      borderRadius: '6px',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      background: 'transparent',
-      color: '#a1a1aa',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease'
-    },
-    filterButtonActive: {
-      borderColor: '#f97316',
-      backgroundColor: 'rgba(249, 115, 22, 0.1)',
-      color: '#f97316'
-    },
-    teamsGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-      gap: '20px'
-    },
-    emptyState: {
-      textAlign: 'center' as const,
-      padding: '60px 20px',
-      background: 'rgba(255, 255, 255, 0.05)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '12px',
-      backdropFilter: 'blur(10px)'
-    },
-    emptyIcon: {
-      width: '64px',
-      height: '64px',
-      margin: '0 auto 24px',
-      color: '#6b7280'
-    },
-    emptyTitle: {
-      fontSize: '1.25rem',
-      fontWeight: '600',
-      color: '#ffffff',
-      marginBottom: '8px'
-    },
-    emptyDesc: {
-      fontSize: '1rem',
-      color: '#a1a1aa',
-      marginBottom: '24px',
-      maxWidth: '400px',
-      margin: '0 auto 24px'
-    },
-    stats: {
-      display: 'flex',
-      gap: '24px',
-      marginBottom: '24px',
-      fontSize: '0.875rem',
-      color: '#a1a1aa'
-    }
-  };
-
   // Handle create team
   const handleCreateTeam = () => {
     setShowCreateTeam(true);
@@ -136,129 +55,124 @@ export function CoachTeamsSection({ teams, loading, error, onTeamUpdate }: Coach
     onTeamUpdate();
   };
 
-  // Error state
+  // Show error state
   if (error) {
     return (
-      <div style={styles.emptyState}>
-        <div style={styles.emptyIcon}>⚠️</div>
-        <div style={styles.emptyTitle}>Error Loading Teams</div>
-        <div style={styles.emptyDesc}>{error}</div>
-        <Button onClick={onTeamUpdate} variant="outline">
-          Try Again
-        </Button>
+      <div className="space-y-6 mt-6">
+        <Card className="border-destructive">
+          <CardContent className="p-6 text-center">
+            <div className="text-destructive mb-2">Error Loading Teams</div>
+            <div className="text-sm text-muted-foreground">{error}</div>
+            <Button onClick={onTeamUpdate} variant="outline" className="mt-4">
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <>
-      <div style={styles.container}>
+      <div className="space-y-6 mt-6">
         {/* Header */}
-        <div style={styles.header}>
-          <h2 style={styles.title}>My Teams</h2>
-          <Button onClick={handleCreateTeam} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Create Team
-          </Button>
-        </div>
-
-        {/* Stats */}
-        {teams.length > 0 && (
-          <div style={styles.stats}>
-            <span>Total: {teams.length}</span>
-            <span>Public: {teams.filter(t => t.visibility === 'public').length}</span>
-            <span>Private: {teams.filter(t => t.visibility === 'private').length}</span>
-            <span>Games: {teams.reduce((sum, t) => sum + (t.games_count || 0), 0)}</span>
-          </div>
-        )}
-
-        {/* Filters */}
-        {teams.length > 0 && (
-          <div style={styles.filters}>
-            <Input
-              placeholder="Search teams..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={styles.searchInput}
-              className="gap-2"
-            />
-            
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {['all', 'public', 'private'].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setVisibilityFilter(filter as any)}
-                  style={{
-                    ...styles.filterButton,
-                    ...(visibilityFilter === filter ? styles.filterButtonActive : {})
-                  }}
-                >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Teams Grid */}
-        {loading ? (
-          <div style={styles.teamsGrid}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                padding: '20px',
-                height: '200px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  border: '3px solid #333',
-                  borderTop: '3px solid #f97316',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-              </div>
-            ))}
-          </div>
-        ) : filteredTeams.length > 0 ? (
-          <div style={styles.teamsGrid}>
-            {filteredTeams.map((team) => (
-              <CoachTeamCard
-                key={team.id}
-                team={team}
-                onUpdate={onTeamUpdate}
-              />
-            ))}
-          </div>
-        ) : teams.length > 0 ? (
-          <div style={styles.emptyState}>
-            <Search style={styles.emptyIcon} />
-            <div style={styles.emptyTitle}>No teams match your search</div>
-            <div style={styles.emptyDesc}>
-              Try adjusting your search terms or filters
-            </div>
-            <Button onClick={() => { setSearchTerm(''); setVisibilityFilter('all'); }}>
-              Clear Filters
-            </Button>
-          </div>
-        ) : (
-          <div style={styles.emptyState}>
-            <Users style={styles.emptyIcon} />
-            <div style={styles.emptyTitle}>No teams yet</div>
-            <div style={styles.emptyDesc}>
-              Create your first team to start tracking games and managing your roster
-            </div>
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="text-xl font-semibold">My Teams</CardTitle>
             <Button onClick={handleCreateTeam} className="gap-2">
               <Plus className="w-4 h-4" />
-              Create First Team
+              Create Team
             </Button>
-          </div>
-        )}
+          </CardHeader>
+          <CardContent>
+            {/* Stats */}
+            {teams.length > 0 && (
+              <div className="flex flex-wrap gap-4 mb-6 text-sm text-muted-foreground">
+                <Badge variant="outline">Total: {teams.length}</Badge>
+                <Badge variant="outline">Public: {teams.filter(t => t.visibility === 'public').length}</Badge>
+                <Badge variant="outline">Private: {teams.filter(t => t.visibility === 'private').length}</Badge>
+                <Badge variant="outline">Games: {teams.reduce((sum, t) => sum + (t.games_count || 0), 0)}</Badge>
+              </div>
+            )}
+
+            {/* Filters */}
+            {teams.length > 0 && (
+              <div className="flex flex-wrap gap-4 mb-6 items-center">
+                <Input
+                  placeholder="Search teams..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="min-w-[200px] max-w-sm"
+                />
+                
+                <div className="flex gap-2">
+                  {['all', 'public', 'private'].map((filter) => (
+                    <Button
+                      key={filter}
+                      variant={visibilityFilter === filter ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setVisibilityFilter(filter as any)}
+                    >
+                      {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Teams Grid */}
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardContent className="p-6">
+                      <div className="h-8 bg-muted rounded mb-2"></div>
+                      <div className="h-12 bg-muted rounded mb-2"></div>
+                      <div className="h-4 bg-muted rounded"></div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredTeams.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredTeams.map((team) => (
+                  <CoachTeamCard
+                    key={team.id}
+                    team={team}
+                    onUpdate={onTeamUpdate}
+                  />
+                ))}
+              </div>
+            ) : teams.length > 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Search className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">No teams match your search</h3>
+                <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                  Try adjusting your search terms or filters
+                </p>
+                <Button onClick={() => { setSearchTerm(''); setVisibilityFilter('all'); }}>
+                  Clear Filters
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Users className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">No teams yet</h3>
+                <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                  Create your first team to start tracking games and managing your roster
+                </p>
+                <Button onClick={handleCreateTeam} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Create First Team
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Create Team Modal */}

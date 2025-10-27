@@ -161,45 +161,24 @@ const CoachDashboard = () => {
 
   return (
     <ErrorBoundary>
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-        color: '#ffffff'
-      }}>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 text-foreground">
         <NavigationHeader user={user} />
         
-        <main style={{
-          padding: '24px',
-          maxWidth: '1400px',
-          margin: '0 auto'
-        }}>
-          {/* Page Header */}
-          <div style={{
-            marginBottom: '32px',
-            textAlign: 'center'
-          }}>
-            <h1 style={{
-              fontSize: '2.5rem',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #f97316 0%, #fb923c 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              marginBottom: '8px'
-            }}>
-              Coach Dashboard
-            </h1>
-            <p style={{
-              fontSize: '1.1rem',
-              color: '#a1a1aa',
-              maxWidth: '600px',
-              margin: '0 auto'
-            }}>
-              Manage your teams, track games, and connect with tournaments
-            </p>
-          </div>
+        <main className="pt-16 p-6">
+          <div className="max-w-7xl mx-auto">
+            {/* Page Header */}
+            <div className="mb-8 text-center">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+                Coach Dashboard
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Manage your teams, track games, and connect with tournaments
+              </p>
+            </div>
 
-          {/* Section Content */}
-          {renderSectionContent()}
+            {/* Section Content */}
+            {renderSectionContent()}
+          </div>
         </main>
       </div>
     </ErrorBoundary>
