@@ -61,22 +61,20 @@ export function CreateCustomPlayerForm({
         return;
       }
 
-      // TODO: Implement custom player creation
-      // This would require a custom_players table in the database
-      setError('Custom players not yet implemented. Please add existing StatJam users for now.');
+      // Create custom player
+      const { CoachPlayerService } = await import('@/lib/services/coachPlayerService');
+      const response = await CoachPlayerService.createCustomPlayer({
+        team_id: teamId,
+        name: formData.name.trim(),
+        jersey_number: formData.jersey_number,
+        position: formData.position
+      });
       
-      // Placeholder for future implementation:
-      // const { CoachPlayerService } = await import('@/lib/services/coachPlayerService');
-      // const response = await CoachPlayerService.createCustomPlayer({
-      //   team_id: teamId,
-      //   ...formData
-      // });
-      
-      // if (response.success && response.player) {
-      //   onPlayerCreated(response.player);
-      // } else {
-      //   setError(response.message || 'Failed to create player');
-      // }
+      if (response.success && response.player) {
+        onPlayerCreated(response.player);
+      } else {
+        setError(response.message || 'Failed to create player');
+      }
       
     } catch (error) {
       console.error('❌ Error creating custom player:', error);
@@ -175,8 +173,8 @@ export function CreateCustomPlayerForm({
 
       {/* Info Note */}
       <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
-        <strong>Note:</strong> Custom players are team-specific and won't have StatJam profiles. 
-        For full features, consider inviting players to create StatJam accounts.
+        <strong>Note:</strong> Custom players are team-specific and won't have StatJam profiles or premium features. 
+        They can still participate in games and stat tracking. For full features, invite players to create StatJam accounts.
       </div>
     </div>
   );

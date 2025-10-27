@@ -146,9 +146,18 @@ export function CoachPlayerManagementModal({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm">{player.name}</h4>
-                      {player.email && (
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-sm">{player.name}</h4>
+                        {player.is_custom_player && (
+                          <Badge variant="outline" className="text-xs">Custom</Badge>
+                        )}
+                      </div>
+                      {player.email ? (
                         <p className="text-xs text-muted-foreground truncate">{player.email}</p>
+                      ) : player.jersey_number ? (
+                        <p className="text-xs text-muted-foreground">#{player.jersey_number}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Team-specific player</p>
                       )}
                     </div>
 

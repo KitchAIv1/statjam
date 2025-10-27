@@ -17,38 +17,81 @@ import {
 
 export class CoachPlayerService {
   /**
-   * Get players for a coach team
+   * Get players for a coach team (both StatJam users and custom players)
    */
   static async getCoachTeamPlayers(teamId: string): Promise<CoachPlayer[]> {
     try {
-      const { data, error } = await supabase
-        .from('team_players')
-        .select(`
-          id,
-          player_id,
-          users!inner (
+      // Get both regular players and custom players
+      const [regularPlayersResult, customPlayersResult] = await Promise.all([
+        // Regular StatJam users
+        supabase
+          .from('team_players')
+          .select(`
             id,
-            name,
-            email,
-            premium_status,
-            created_at
-          )
-        `)
-        .eq('team_id', teamId);
+            player_id,
+            users!inner (
+              id,
+              name,
+              email,
+              premium_status,
+              created_at
+            )
+          `)
+          .eq('team_id', teamId)
+          .not('player_id', 'is', null),
+        
+        // Custom players
+        supabase
+          .from('team_players')
+          .select(`
+            id,
+            custom_player_id,
+            custom_players!inner (
+              id,
+              name,
+              jersey_number,
+              position,
+              created_at
+            )
+          `)
+          .eq('team_id', teamId)
+          .not('custom_player_id', 'is', null)
+      ]);
 
-      if (error) throw error;
+      if (regularPlayersResult.error) throw regularPlayersResult.error;
+      if (customPlayersResult.error) throw customPlayersResult.error;
 
-      return (data || []).map(tp => ({
-        id: tp.users.id,
-        name: tp.users.name || 'Unknown Player',
-        email: tp.users.email,
-        is_custom_player: false,
-        profile_player_id: tp.users.id,
-        premium_status: tp.users.premium_status,
-        created_at: tp.users.created_at,
-        team_player_id: tp.id,
-        is_on_team: true
-      }));
+      const players: CoachPlayer[] = [];
+
+      // Add regular players
+      (regularPlayersResult.data || []).forEach(tp => {
+        players.push({
+          id: tp.users.id,
+          name: tp.users.name || 'Unknown Player',
+          email: tp.users.email,
+          is_custom_player: false,
+          profile_player_id: tp.users.id,
+          premium_status: tp.users.premium_status,
+          created_at: tp.users.created_at,
+          team_player_id: tp.id,
+          is_on_team: true
+        });
+      });
+
+      // Add custom players
+      (customPlayersResult.data || []).forEach(tp => {
+        players.push({
+          id: tp.custom_players.id,
+          name: tp.custom_players.name,
+          jersey_number: tp.custom_players.jersey_number,
+          is_custom_player: true,
+          created_at: tp.custom_players.created_at,
+          team_player_id: tp.id,
+          is_on_team: true
+        });
+      });
+
+      return players;
     } catch (error) {
       console.error('❌ Error fetching coach team players:', error);
       throw error;
@@ -137,11 +180,13 @@ export class CoachPlayerService {
           message: 'Player added to team successfully'
         };
       } else if (request.custom_player) {
-        // Create custom player (not implemented yet - would need custom players table)
-        return {
-          success: false,
-          message: 'Custom players not yet implemented'
-        };
+        // Create custom player and add to team
+        return await this.createCustomPlayer({
+          team_id: request.team_id,
+          name: request.custom_player.name,
+          jersey_number: request.custom_player.jersey_number,
+          position: request.custom_player.position
+        });
       } else {
         throw new Error('Either player_id or custom_player must be provided');
       }
@@ -150,6 +195,71 @@ export class CoachPlayerService {
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to add player'
+      };
+    }
+  }
+
+  /**
+   * Create custom player for a team
+   */
+  static async createCustomPlayer(request: CreateCustomPlayerRequest): Promise<PlayerManagementResponse> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Step 1: Create custom player record
+      const { data: customPlayer, error: customPlayerError } = await supabase
+        .from('custom_players')
+        .insert({
+          team_id: request.team_id,
+          coach_id: user.id,
+          name: request.name,
+          jersey_number: request.jersey_number,
+          position: request.position
+        })
+        .select()
+        .single();
+
+      if (customPlayerError) {
+        if (customPlayerError.code === '23505') { // Unique constraint violation
+          return {
+            success: false,
+            message: 'Jersey number already taken on this team'
+          };
+        }
+        throw customPlayerError;
+      }
+
+      // Step 2: Add to team_players table
+      const { error: teamPlayerError } = await supabase
+        .from('team_players')
+        .insert({
+          team_id: request.team_id,
+          custom_player_id: customPlayer.id
+        });
+
+      if (teamPlayerError) throw teamPlayerError;
+
+      // Step 3: Return success with player data
+      const player: CoachPlayer = {
+        id: customPlayer.id,
+        name: customPlayer.name,
+        jersey_number: customPlayer.jersey_number,
+        is_custom_player: true,
+        created_at: customPlayer.created_at,
+        is_on_team: true
+      };
+
+      return {
+        success: true,
+        message: 'Custom player created successfully',
+        player
+      };
+    } catch (error) {
+      console.error('❌ Error creating custom player:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to create custom player'
       };
     }
   }

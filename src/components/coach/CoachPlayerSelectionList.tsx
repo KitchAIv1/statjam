@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Check, User, Crown, Mail } from 'lucide-react';
+import { Search, Plus, Check, User, Crown, Mail, UserPlus, Users } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CoachPlayer, SearchPlayersRequest } from '@/lib/types/coach';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
+import { CreateCustomPlayerForm } from './CreateCustomPlayerForm';
 
 interface CoachPlayerSelectionListProps {
   teamId: string;
@@ -33,6 +34,9 @@ export function CoachPlayerSelectionList({
   onPlayerRemove, 
   className = '' 
 }: CoachPlayerSelectionListProps) {
+  // Mode state
+  const [mode, setMode] = useState<'search' | 'create'>('search');
+  
   // State
   const [players, setPlayers] = useState<CoachPlayer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -117,24 +121,62 @@ export function CoachPlayerSelectionList({
     }
   };
 
+  // Handle custom player creation
+  const handleCustomPlayerCreated = (player: CoachPlayer) => {
+    onPlayerAdd(player);
+    setMode('search'); // Switch back to search mode
+  };
+
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Search Header */}
+      {/* Header with Mode Toggle */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Search className="w-5 h-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Add Players</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {mode === 'search' ? (
+              <Search className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <UserPlus className="w-5 h-5 text-muted-foreground" />
+            )}
+            <h3 className="text-lg font-semibold">
+              {mode === 'search' ? 'Add Players' : 'Create Custom Player'}
+            </h3>
+          </div>
+          
+          {/* Mode Toggle */}
+          <div className="flex gap-1 bg-muted rounded-lg p-1">
+            <Button
+              size="sm"
+              variant={mode === 'search' ? 'default' : 'ghost'}
+              onClick={() => setMode('search')}
+              className="gap-2 h-8"
+            >
+              <Users className="w-4 h-4" />
+              Search Users
+            </Button>
+            <Button
+              size="sm"
+              variant={mode === 'create' ? 'default' : 'ghost'}
+              onClick={() => setMode('create')}
+              className="gap-2 h-8"
+            >
+              <UserPlus className="w-4 h-4" />
+              Create Custom
+            </Button>
+          </div>
         </div>
         
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search players by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        {mode === 'search' && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search players by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        )}
       </div>
 
       {/* Error Message */}
@@ -144,9 +186,11 @@ export function CoachPlayerSelectionList({
         </div>
       )}
 
-      {/* Players List */}
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {loading ? (
+      {/* Content Area */}
+      {mode === 'search' ? (
+        /* Search Mode - Players List */
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {loading ? (
           // Loading skeleton
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -235,7 +279,15 @@ export function CoachPlayerSelectionList({
             <p className="text-xs mt-1">Start typing a name or email above</p>
           </div>
         )}
-      </div>
+        </div>
+      ) : (
+        /* Create Mode - Custom Player Form */
+        <CreateCustomPlayerForm
+          teamId={teamId}
+          onPlayerCreated={handleCustomPlayerCreated}
+          onCancel={() => setMode('search')}
+        />
+      )}
     </div>
   );
 }
