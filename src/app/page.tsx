@@ -56,4 +56,4 @@ export default function HomePage() {
       <Footer />
     </div>
   );
-}
+}// Test: CodeRabbit review demo - Mon Oct 27 09:41:38 EDT 2025
