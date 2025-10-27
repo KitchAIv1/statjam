@@ -32,6 +32,8 @@ const OrganizerDashboardContent = () => {
         router.push('/dashboard/player');
       } else if (userRole === 'stat_admin') {
         router.push('/dashboard/stat-admin');
+      } else if (userRole === 'coach') {
+        router.push('/dashboard/coach');
       } else if (userRole === 'admin') {
         router.push('/dashboard'); // Admin templates temporarily disabled
       }

@@ -19,6 +19,7 @@ interface TeamRosterV3Props {
   onPlayerSelect: (playerId: string) => void;
   onSubstitution?: (playerId: string) => void;
   refreshKey?: string | number; // Add refresh key to force re-render
+  isCoachMode?: boolean; // Add coach mode flag
 }
 
 export function TeamRosterV3({
@@ -28,7 +29,8 @@ export function TeamRosterV3({
   selectedPlayer,
   onPlayerSelect,
   onSubstitution,
-  refreshKey = 0
+  refreshKey = 0,
+  isCoachMode = false
 }: TeamRosterV3Props) {
   
   // Generate player initials with proper fallback handling
@@ -66,8 +68,12 @@ export function TeamRosterV3({
   };
 
   // Get first 5 players (on court) and rest (bench)
+  // For coach teams, show all players since there's no strict on-court limit
   const onCourtPlayers = players.slice(0, 5);
   const benchPlayers = players.slice(5);
+  
+  // Use the passed isCoachMode prop to determine display logic
+  const displayPlayers = isCoachMode ? players : onCourtPlayers;
 
   const teamColor = teamSide === 'left' ? 'orange' : 'blue';
   const gradientClass = teamSide === 'left' 
@@ -119,17 +125,17 @@ export function TeamRosterV3({
           <h4 className={`text-lg font-semibold ${
             teamSide === 'left' ? 'text-orange-800' : 'text-blue-800'
           }`}>
-            Players
+            {isCoachMode ? 'All Players' : 'Players'}
           </h4>
           <div className={`px-2 py-1 rounded text-xs font-bold text-white ${
             teamSide === 'left' ? 'bg-orange-500' : 'bg-blue-500'
           }`}>
-            {onCourtPlayers.length}/5
+            {isCoachMode ? `${players.length} Total` : `${onCourtPlayers.length}/5`}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 flex-1 overflow-y-auto">
-          {onCourtPlayers.map((player, index) => {
+        <div className="grid grid-cols-1 gap-2 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+          {displayPlayers.map((player, index) => {
             const isSelected = selectedPlayer === player.id;
             const playerColor = getPlayerColor(player.name);
             

@@ -63,6 +63,7 @@ interface MobileLayoutV3Props {
   onSubstitution: (playerId: string) => void;
   onTeamPlayersUpdate?: (teamAPlayers: Player[], teamBPlayers: Player[]) => void; // Add callback to update main state
   onTimeOut: () => void; // Add timeout handler from main page
+  isCoachMode?: boolean; // Add coach mode flag
 }
 
 export function MobileLayoutV3({
@@ -76,7 +77,8 @@ export function MobileLayoutV3({
   onPlayerSelect,
   onSubstitution,
   onTeamPlayersUpdate,
-  onTimeOut
+  onTimeOut,
+  isCoachMode = false
 }: MobileLayoutV3Props) {
   const [possessionTeam, setPossessionTeam] = useState<'A' | 'B'>('A');
 
@@ -162,6 +164,7 @@ export function MobileLayoutV3({
           selectedPlayer={selectedPlayer}
           onPlayerSelect={onPlayerSelect}
           onSubstitution={onSubstitution}
+          isCoachMode={isCoachMode}
         />
 
         {/* Mobile Stat Grid */}

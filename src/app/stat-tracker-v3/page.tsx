@@ -180,8 +180,24 @@ function StatTrackerV3Content() {
         // Load Team A players with individual error handling (including substitutions)
         let teamAPlayersData: Player[] = [];
         try {
-          teamAPlayersData = await TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_a_id, game.id);
-          console.log('✅ Team A players loaded (with substitutions):', teamAPlayersData.length);
+          if (coachMode && coachTeamIdParam) {
+            // Coach mode: Load coach team players
+            console.log('🏀 Coach mode: Loading coach team players for team:', coachTeamIdParam);
+            const { CoachPlayerService } = await import('@/lib/services/coachPlayerService');
+            const coachPlayers = await CoachPlayerService.getCoachTeamPlayers(coachTeamIdParam);
+            
+            // Transform coach players to match Player interface
+            teamAPlayersData = coachPlayers.map(cp => ({
+              id: cp.id, // Always use the id field (works for both StatJam users and custom players)
+              name: cp.name,
+              jerseyNumber: cp.jersey_number
+            }));
+            console.log('✅ Coach team players loaded:', teamAPlayersData.length);
+          } else {
+            // Tournament mode: Load tournament team players
+            teamAPlayersData = await TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_a_id, game.id);
+            console.log('✅ Team A players loaded (with substitutions):', teamAPlayersData.length);
+          }
           setTeamAPlayers(teamAPlayersData);
         } catch (teamAError) {
           console.error('❌ Failed to load Team A players:', teamAError);
@@ -531,6 +547,7 @@ function StatTrackerV3Content() {
           setRosterRefreshKey(Date.now());
         }}
         onTimeOut={handleTimeoutClick}
+        isCoachMode={coachMode}
       />
     );
   }
@@ -594,6 +611,7 @@ function StatTrackerV3Content() {
                 onPlayerSelect={setSelectedPlayer}
                 onSubstitution={handleSubstitution}
                 refreshKey={rosterRefreshKey}
+                isCoachMode={coachMode}
               />
             </div>
           </div>
@@ -635,6 +653,7 @@ function StatTrackerV3Content() {
                   onPlayerSelect={setSelectedPlayer}
                   onSubstitution={handleSubstitution}
                   refreshKey={rosterRefreshKey}
+                  isCoachMode={coachMode}
                 />
               )}
             </div>

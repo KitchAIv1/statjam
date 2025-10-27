@@ -14,6 +14,7 @@ export class MigrationChecker {
   static async hasCustomPlayersMigration(): Promise<{
     hasTable: boolean;
     hasColumn: boolean;
+    hasIdColumn: boolean;
     isComplete: boolean;
     message?: string;
   }> {
@@ -36,20 +37,31 @@ export class MigrationChecker {
         hasColumn = false;
       }
 
-      const isComplete = hasTable && hasColumn;
+      // Check if team_players.id column exists (this was the main issue)
+      let hasIdColumn = false;
+      try {
+        const result = await supabase.from('team_players').select('id').limit(1);
+        hasIdColumn = !result.error;
+      } catch (error) {
+        hasIdColumn = false;
+      }
+
+      const isComplete = hasTable && hasColumn && hasIdColumn;
 
       let message = '';
-      if (!hasTable && !hasColumn) {
-        message = 'Custom players migration not applied. Please run 005_custom_players_schema.sql';
-      } else if (hasTable && !hasColumn) {
-        message = 'Migration partially applied. Please run 005_fix_team_players_column.sql to add the missing custom_player_id column';
-      } else if (!hasTable && hasColumn) {
-        message = 'Migration partially applied. Missing custom_players table';
+      if (!isComplete) {
+        const missing = [];
+        if (!hasTable) missing.push('custom_players table');
+        if (!hasColumn) missing.push('team_players.custom_player_id column');
+        if (!hasIdColumn) missing.push('team_players.id column');
+        
+        message = `Migration incomplete. Missing: ${missing.join(', ')}. Please run migration 006_fix_team_players_rls.sql`;
       }
 
       return {
         hasTable,
         hasColumn,
+        hasIdColumn,
         isComplete,
         message: isComplete ? undefined : message
       };
@@ -58,6 +70,7 @@ export class MigrationChecker {
       return {
         hasTable: false,
         hasColumn: false,
+        hasIdColumn: false,
         isComplete: false,
         message: 'Unable to check migration status'
       };

@@ -19,6 +19,7 @@ interface DualTeamHorizontalRosterV3Props {
   selectedPlayer: string | null;
   onPlayerSelect: (playerId: string) => void;
   onSubstitution?: (playerId: string) => void;
+  isCoachMode?: boolean; // Add coach mode flag
 }
 
 export function DualTeamHorizontalRosterV3({
@@ -28,16 +29,28 @@ export function DualTeamHorizontalRosterV3({
   teamBName,
   selectedPlayer,
   onPlayerSelect,
-  onSubstitution
+  onSubstitution,
+  isCoachMode = false
 }: DualTeamHorizontalRosterV3Props) {
   
-  // Get first 5 players for each team
-  const teamAOnCourt = teamAPlayers.slice(0, 5);
-  const teamBOnCourt = teamBPlayers.slice(0, 5);
+  // Get first 5 players for each team (tournament mode) or all players (coach mode)
+  const teamADisplay = isCoachMode ? teamAPlayers : teamAPlayers.slice(0, 5);
+  const teamBDisplay = isCoachMode ? teamBPlayers : teamBPlayers.slice(0, 5);
   
-  // Check which team the selected player belongs to (check on-court players only)
-  const selectedPlayerTeam = teamAOnCourt.find(p => p.id === selectedPlayer) ? 'A' : 
-                            teamBOnCourt.find(p => p.id === selectedPlayer) ? 'B' : null;
+  // Debug logging
+  console.log('📱 DualTeamHorizontalRosterV3:', {
+    isCoachMode,
+    teamATotal: teamAPlayers.length,
+    teamBTotal: teamBPlayers.length,
+    teamADisplay: teamADisplay.length,
+    teamBDisplay: teamBDisplay.length,
+    teamANames: teamADisplay.map(p => p.name),
+    teamBNames: teamBDisplay.map(p => p.name)
+  });
+  
+  // Check which team the selected player belongs to
+  const selectedPlayerTeam = teamADisplay.find(p => p.id === selectedPlayer) ? 'A' : 
+                            teamBDisplay.find(p => p.id === selectedPlayer) ? 'B' : null;
 
   // Generate player initials with proper fallback handling
   const getPlayerInitials = (name: string) => {
@@ -86,8 +99,8 @@ export function DualTeamHorizontalRosterV3({
     return displayPlayers;
   };
 
-  const displayTeamA = fillEmptySpots(teamAOnCourt, 'A');
-  const displayTeamB = fillEmptySpots(teamBOnCourt, 'B');
+  const displayTeamA = fillEmptySpots(teamADisplay, 'A');
+  const displayTeamB = fillEmptySpots(teamBDisplay, 'B');
 
   const renderPlayerRow = (players: Player[], team: 'A' | 'B', teamName: string) => {
     const isTeamSelected = selectedPlayerTeam === team;

@@ -7,6 +7,133 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.13.0] - 2025-10-22
+
+### 👨‍🏫 **NEW FEATURE: Coach Team Card System**
+
+#### Added
+- **Complete Coach Role System** - Dedicated coach authentication and dashboard
+  - Coach role added to user authentication system
+  - Coach-specific navigation and permissions
+  - Coach dashboard with team overview and management
+  - Team creation with 2-step process (team details → player management)
+  - Team visibility controls (public/private)
+  - Quick Track integration with Stat Tracker V3
+
+- **Player Management System** - Comprehensive player roster management
+  - Mixed roster support (existing StatJam users + custom players)
+  - Search and add existing StatJam users to teams
+  - Create custom players for team-specific rosters
+  - List-based modern UI for player selection (not card-based)
+  - Player removal and roster management
+  - Minimum 5 players validation for Quick Track
+  - Real-time player count updates in team cards
+
+- **Custom Players Database Schema** - Team-specific player management
+  - `custom_players` table for team-specific players
+  - `team_players` table extension with `custom_player_id` column
+  - Mixed roster constraint (either `player_id` OR `custom_player_id`)
+  - Comprehensive RLS policies for coach data access
+  - Graceful degradation for missing migrations
+
+- **Quick Track Integration** - Coach-specific stat tracking
+  - Reuses Stat Tracker V3 interface for coach teams
+  - Opponent Team panel replaces Team B roster
+  - Non-tournament game creation with coach-specific data
+  - Player validation before game creation
+  - Coach-specific game tracking and statistics
+
+#### New Files Created
+- `/src/app/dashboard/coach/page.tsx` - Main coach dashboard
+- `/src/components/coach/CoachDashboardOverview.tsx` - Dashboard overview component
+- `/src/components/coach/CoachTeamCard.tsx` - Individual team card component
+- `/src/components/coach/CoachTeamsSection.tsx` - Team listing and management
+- `/src/components/coach/CreateCoachTeamModal.tsx` - 2-step team creation modal
+- `/src/components/coach/CoachQuickTrackModal.tsx` - Quick Track game creation
+- `/src/components/coach/CoachPlayerManagementModal.tsx` - Player management interface
+- `/src/components/coach/CoachPlayerSelectionList.tsx` - Player search and selection
+- `/src/components/coach/CreateCustomPlayerForm.tsx` - Custom player creation form
+- `/src/components/tracker-v3/OpponentTeamPanel.tsx` - Opponent team panel for coach mode
+- `/src/lib/services/coachTeamService.ts` - Team management service
+- `/src/lib/services/coachPlayerService.ts` - Player management service
+- `/src/lib/services/coachGameService.ts` - Game management service
+- `/src/lib/types/coach.ts` - Coach-specific data types
+- `/src/lib/utils/migrationChecker.ts` - Database migration status checker
+- `/docs/04-features/coach-team-card/COACH_TEAM_CARD_IMPLEMENTATION.md` - Complete implementation guide
+- `/docs/05-database/migrations/004_coach_team_card_schema.sql` - Core coach schema migration
+- `/docs/05-database/migrations/005_custom_players_schema.sql` - Custom players schema migration
+- `/docs/05-database/migrations/005_fix_team_players_column.sql` - Team players column fix migration
+- `/docs/05-database/migrations/005_make_tournament_id_nullable.sql` - Tournament ID nullable migration
+- `/docs/05-database/migrations/README.md` - Database migrations documentation
+
+#### Modified
+- `/src/components/auth/RoleSelector.tsx` - Added coach role option
+- `/src/lib/services/authServiceV2.ts` - Added coach to valid user types
+- `/src/components/auth/styles/AuthPageStyles.ts` - Updated role grid for coach option
+- `/src/lib/navigation-config.ts` - Added coach navigation configuration
+- `/src/app/stat-tracker-v3/page.tsx` - Added coach mode support with OpponentTeamPanel
+
+#### Fixed
+- **Database Schema Issues**
+  - Fixed `team_players` table missing `custom_player_id` column
+  - Fixed `team_players_player_required` constraint for either/or validation
+  - Fixed RLS policies for coach data access
+  - Fixed infinite recursion errors during signup
+  - Fixed tournament_id NOT NULL constraint for coach teams
+
+- **Error Handling and Migration Support**
+  - Added comprehensive error handling for missing database migrations
+  - Added migration status checker utility
+  - Added graceful degradation when custom players migration not applied
+  - Added specific error messages for different failure types
+  - Added recovery suggestions and next steps
+
+- **UI/UX Improvements**
+  - Fixed coach dashboard theme consistency (light theme)
+  - Fixed team visibility toggle functionality
+  - Fixed create team modal visibility selection
+  - Fixed player management modal 400/403 errors
+  - Fixed React Select component validation errors
+  - Fixed custom player creation form validation
+
+#### Database Changes
+- **New Tables**:
+  - `custom_players` - Team-specific players with coach ownership
+  - `team_import_tokens` - Team sharing and import functionality
+
+- **Table Extensions**:
+  - `users` - Added coach role constraint
+  - `teams` - Added `coach_id` and `visibility` columns
+  - `games` - Added `is_coach_game` and `opponent_name` columns
+  - `team_players` - Added `custom_player_id` column
+
+- **RLS Policies**:
+  - Coach access policies for all coach-owned data
+  - Public access policies for public teams
+  - Stat admin access policies for game management
+  - Mixed roster support policies
+
+#### Technical Improvements
+- **Service Layer Architecture**
+  - CoachTeamService for team management operations
+  - CoachPlayerService for player management operations
+  - CoachGameService for Quick Track game operations
+  - Migration checker utility for database status
+
+- **Error Handling**
+  - Comprehensive try-catch blocks with specific error messages
+  - Graceful degradation for missing database components
+  - User-friendly error messages with recovery suggestions
+  - Migration status validation and warnings
+
+- **Performance Optimizations**
+  - Parallel data fetching with Promise.all()
+  - Efficient mixed roster queries
+  - Proper indexing on foreign keys
+  - Caching for player counts and migration status
+
+---
+
 ## [0.12.0] - 2025-10-22
 
 ### 🏀 **NEW FEATURE: Team Stats Tab in Live Viewer**

@@ -1,8 +1,8 @@
 # ✅ StatJam MVP - Completed Features
 
-**Version**: 0.9.8  
-**Date**: October 19, 2025  
-**Status**: Production Ready - NBA-Standard Features Complete
+**Version**: 0.13.0  
+**Date**: October 22, 2025  
+**Status**: Production Ready - NBA-Standard Features Complete + Coach Team Card
 
 ---
 
@@ -363,7 +363,19 @@ DATABASE
 
 ---
 
-## 🚀 **Recent Updates (October 18, 2025)**
+## 🚀 **Recent Updates (October 22, 2025)**
+
+### **Coach Team Card System Implementation**
+- ✅ Complete coach role authentication and dashboard
+- ✅ Team creation with 2-step process (team details → player management)
+- ✅ Player management (existing StatJam users + custom players)
+- ✅ Quick Track integration with Stat Tracker V3
+- ✅ Custom players database schema and RLS policies
+- ✅ Mixed roster support (StatJam users + custom players)
+- ✅ Minimum 5 players validation for Quick Track
+- ✅ Team visibility controls (public/private)
+- ✅ Comprehensive error handling and migration status checks
+- ✅ Database schema fixes for team_players table
 
 ### **Substitution System Overhaul**
 - ✅ Fixed UI auto-update without page refresh
@@ -397,6 +409,66 @@ DATABASE
 - ✅ Invalid date display: Robust error handling in formatGameDate
 - ✅ Height/weight parsing: Type conversion for database integers
 - ✅ PlayersMap scope issue: Moved to parent scope for substitutions
+
+---
+
+### 👨‍🏫 **Coach Team Card System**
+
+**Status**: ✅ 100% Complete
+
+**Features**:
+- Coach role authentication and dashboard
+- Team creation and management (non-tournament teams)
+- Player management (existing StatJam users + custom players)
+- Quick Track stat tracking for coach teams
+- Team visibility controls (public/private)
+- Minimum 5 players validation for Quick Track
+- Mixed roster support (StatJam users + custom players)
+
+**Coach Dashboard**:
+- Team overview with player counts and game statistics
+- Create new teams with 2-step process (team details → player management)
+- Manage existing teams with full player roster control
+- Quick Track button with player validation
+- Team visibility toggle (public/private)
+
+**Player Management**:
+- Search and add existing StatJam users to teams
+- Create custom players for team-specific rosters
+- List-based UI for player selection (modern, not card-based)
+- Player removal and roster management
+- Minimum 5 players validation before Quick Track
+
+**Quick Track Integration**:
+- Reuses Stat Tracker V3 interface for coach teams
+- Opponent Team panel replaces Team B roster
+- Non-tournament game creation with coach-specific data
+- Player validation before game creation
+- Coach-specific game tracking and statistics
+
+**Database Schema**:
+- `custom_players` table for team-specific players
+- `team_players` table with `custom_player_id` column
+- RLS policies for coach data access
+- Coach role constraint in users table
+- Team visibility enum and constraints
+
+**Technical**:
+- CoachTeamService for team management
+- CoachPlayerService for player operations
+- CoachGameService for Quick Track games
+- Migration checker utility for graceful degradation
+- Comprehensive error handling and validation
+
+**Files**:
+- `/src/app/dashboard/coach/page.tsx` - Coach dashboard
+- `/src/components/coach/` - Coach-specific components
+- `/src/lib/services/coachTeamService.ts` - Team management
+- `/src/lib/services/coachPlayerService.ts` - Player management
+- `/src/lib/services/coachGameService.ts` - Game management
+- `/src/lib/types/coach.ts` - Coach data types
+- `/docs/05-database/migrations/004_coach_team_card_schema.sql` - Database schema
+- `/docs/05-database/migrations/005_custom_players_schema.sql` - Custom players schema
 
 ---
 
@@ -459,11 +531,12 @@ StatJam MVP is **production-ready** with all core features implemented and teste
 ✅ **Substitutions**: Auto-UI update + play-by-play integration  
 ✅ **Responsive Design**: Mobile, tablet, desktop optimized  
 ✅ **Performance**: Optimized API calls and re-renders  
+✅ **Coach Team Card**: Complete coach role with team management  
 
 **Ready for user testing and production deployment!** 🚀
 
 ---
 
-**Last Updated**: October 18, 2025  
+**Last Updated**: October 22, 2025  
 **Maintained By**: Development Team
 
