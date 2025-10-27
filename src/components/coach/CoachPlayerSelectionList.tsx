@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Check, User, Crown, Mail, UserPlus, Users } from 'lucide-react';
+import { Search, Plus, Check, User, Crown, Mail, UserPlus, Users, AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -282,11 +282,24 @@ export function CoachPlayerSelectionList({
         </div>
       ) : (
         /* Create Mode - Custom Player Form */
-        <CreateCustomPlayerForm
-          teamId={teamId}
-          onPlayerCreated={handleCustomPlayerCreated}
-          onCancel={() => setMode('search')}
-        />
+        <div className="space-y-4">
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-2 text-orange-800 text-sm">
+              <AlertCircle className="w-4 h-4" />
+              <strong>Custom Players Feature</strong>
+            </div>
+            <p className="text-orange-700 text-sm mt-1">
+              To use custom players, please apply the database migration first. 
+              For now, you can add existing StatJam users to your team.
+            </p>
+          </div>
+          
+          <CreateCustomPlayerForm
+            teamId={teamId}
+            onPlayerCreated={handleCustomPlayerCreated}
+            onCancel={() => setMode('search')}
+          />
+        </div>
       )}
     </div>
   );

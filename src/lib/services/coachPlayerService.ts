@@ -21,10 +21,24 @@ export class CoachPlayerService {
    */
   static async getCoachTeamPlayers(teamId: string): Promise<CoachPlayer[]> {
     try {
-      // Get both regular players and custom players
-      const [regularPlayersResult, customPlayersResult] = await Promise.all([
-        // Regular StatJam users
-        supabase
+      console.log('🔍 CoachPlayerService: Fetching players for team:', teamId);
+      
+      // First, check if custom_players table exists by trying a simple query
+      let hasCustomPlayersTable = false;
+      try {
+        await supabase.from('custom_players').select('id').limit(1);
+        hasCustomPlayersTable = true;
+        console.log('✅ custom_players table exists');
+      } catch (error) {
+        console.log('⚠️ custom_players table does not exist yet, falling back to regular players only');
+        hasCustomPlayersTable = false;
+      }
+
+      const players: CoachPlayer[] = [];
+
+      // Always get regular StatJam users
+      try {
+        const regularPlayersResult = await supabase
           .from('team_players')
           .select(`
             id,
@@ -38,63 +52,78 @@ export class CoachPlayerService {
             )
           `)
           .eq('team_id', teamId)
-          .not('player_id', 'is', null),
-        
-        // Custom players
-        supabase
-          .from('team_players')
-          .select(`
-            id,
-            custom_player_id,
-            custom_players!inner (
+          .not('player_id', 'is', null);
+
+        if (regularPlayersResult.error) {
+          console.error('❌ Error fetching regular players:', regularPlayersResult.error);
+        } else {
+          // Add regular players
+          (regularPlayersResult.data || []).forEach(tp => {
+            players.push({
+              id: tp.users.id,
+              name: tp.users.name || 'Unknown Player',
+              email: tp.users.email,
+              is_custom_player: false,
+              profile_player_id: tp.users.id,
+              premium_status: tp.users.premium_status,
+              created_at: tp.users.created_at,
+              team_player_id: tp.id,
+              is_on_team: true
+            });
+          });
+          console.log('✅ Loaded', regularPlayersResult.data?.length || 0, 'regular players');
+        }
+      } catch (error) {
+        console.error('❌ Error in regular players query:', error);
+      }
+
+      // Only try to get custom players if the table exists
+      if (hasCustomPlayersTable) {
+        try {
+          const customPlayersResult = await supabase
+            .from('team_players')
+            .select(`
               id,
-              name,
-              jersey_number,
-              position,
-              created_at
-            )
-          `)
-          .eq('team_id', teamId)
-          .not('custom_player_id', 'is', null)
-      ]);
+              custom_player_id,
+              custom_players!inner (
+                id,
+                name,
+                jersey_number,
+                position,
+                created_at
+              )
+            `)
+            .eq('team_id', teamId)
+            .not('custom_player_id', 'is', null);
 
-      if (regularPlayersResult.error) throw regularPlayersResult.error;
-      if (customPlayersResult.error) throw customPlayersResult.error;
+          if (customPlayersResult.error) {
+            console.error('❌ Error fetching custom players:', customPlayersResult.error);
+          } else {
+            // Add custom players
+            (customPlayersResult.data || []).forEach(tp => {
+              players.push({
+                id: tp.custom_players.id,
+                name: tp.custom_players.name,
+                jersey_number: tp.custom_players.jersey_number,
+                is_custom_player: true,
+                created_at: tp.custom_players.created_at,
+                team_player_id: tp.id,
+                is_on_team: true
+              });
+            });
+            console.log('✅ Loaded', customPlayersResult.data?.length || 0, 'custom players');
+          }
+        } catch (error) {
+          console.error('❌ Error in custom players query:', error);
+        }
+      }
 
-      const players: CoachPlayer[] = [];
-
-      // Add regular players
-      (regularPlayersResult.data || []).forEach(tp => {
-        players.push({
-          id: tp.users.id,
-          name: tp.users.name || 'Unknown Player',
-          email: tp.users.email,
-          is_custom_player: false,
-          profile_player_id: tp.users.id,
-          premium_status: tp.users.premium_status,
-          created_at: tp.users.created_at,
-          team_player_id: tp.id,
-          is_on_team: true
-        });
-      });
-
-      // Add custom players
-      (customPlayersResult.data || []).forEach(tp => {
-        players.push({
-          id: tp.custom_players.id,
-          name: tp.custom_players.name,
-          jersey_number: tp.custom_players.jersey_number,
-          is_custom_player: true,
-          created_at: tp.custom_players.created_at,
-          team_player_id: tp.id,
-          is_on_team: true
-        });
-      });
-
+      console.log('✅ Total players loaded:', players.length);
       return players;
     } catch (error) {
       console.error('❌ Error fetching coach team players:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent UI crashes
+      return [];
     }
   }
 
@@ -207,6 +236,16 @@ export class CoachPlayerService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Check if custom_players table exists
+      try {
+        await supabase.from('custom_players').select('id').limit(1);
+      } catch (error) {
+        return {
+          success: false,
+          message: 'Custom players feature not available yet. Please apply the database migration first.'
+        };
+      }
+
       // Step 1: Create custom player record
       const { data: customPlayer, error: customPlayerError } = await supabase
         .from('custom_players')
@@ -227,7 +266,11 @@ export class CoachPlayerService {
             message: 'Jersey number already taken on this team'
           };
         }
-        throw customPlayerError;
+        console.error('❌ Custom player creation error:', customPlayerError);
+        return {
+          success: false,
+          message: `Database error: ${customPlayerError.message}`
+        };
       }
 
       // Step 2: Add to team_players table
@@ -238,7 +281,13 @@ export class CoachPlayerService {
           custom_player_id: customPlayer.id
         });
 
-      if (teamPlayerError) throw teamPlayerError;
+      if (teamPlayerError) {
+        console.error('❌ Team player insertion error:', teamPlayerError);
+        return {
+          success: false,
+          message: `Failed to add player to team: ${teamPlayerError.message}`
+        };
+      }
 
       // Step 3: Return success with player data
       const player: CoachPlayer = {

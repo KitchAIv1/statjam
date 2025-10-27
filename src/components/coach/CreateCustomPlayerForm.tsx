@@ -126,14 +126,14 @@ export function CreateCustomPlayerForm({
         <div className="space-y-2">
           <Label>Position (Optional)</Label>
           <Select
-            value={formData.position || ''}
-            onValueChange={(value) => updateFormData({ position: value || undefined })}
+            value={formData.position || 'none'}
+            onValueChange={(value) => updateFormData({ position: value === 'none' ? undefined : value })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select position" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No Position</SelectItem>
+              <SelectItem value="none">No Position</SelectItem>
               <SelectItem value="PG">Point Guard (PG)</SelectItem>
               <SelectItem value="SG">Shooting Guard (SG)</SelectItem>
               <SelectItem value="SF">Small Forward (SF)</SelectItem>
