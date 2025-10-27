@@ -78,34 +78,26 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
 
   return (
     <>
-      <div
-        style={styles.card}
-        onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.cardHover)}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0px)';
-          e.currentTarget.style.boxShadow = 'none';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-        }}
-      >
-        {/* Header */}
-        <div style={styles.header}>
-          <div style={styles.teamInfo}>
-            <h3 style={styles.teamName}>{team.name}</h3>
+      <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative">
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+          <div className="flex-1">
+            <CardTitle className="text-lg font-semibold mb-2">{team.name}</CardTitle>
             
-            <div style={styles.teamMeta}>
-              <div style={styles.metaItem}>
+            {/* Team Meta */}
+            <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2 flex-wrap">
+              <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
                 <span>{team.player_count || 0} players</span>
               </div>
               
               {team.location?.city && (
-                <div style={styles.metaItem}>
+                <div className="flex items-center gap-1">
                   <MapPin className="w-4 h-4" />
                   <span>{team.location.city}</span>
                 </div>
               )}
               
-              <div style={styles.metaItem}>
+              <div className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
                 <span>{team.games_count || 0} games</span>
               </div>
@@ -113,107 +105,101 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
           </div>
 
           {/* Actions Menu */}
-          <div style={styles.actionsMenu}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowActions(!showActions)}
-              style={styles.secondaryButton}
-            >
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Badges */}
-        <div style={styles.badges}>
-          <Badge 
-            variant={team.visibility === 'public' ? 'default' : 'secondary'}
-            className="gap-1"
-          >
-            {team.visibility === 'public' ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-            {team.visibility === 'public' ? 'Public' : 'Private'}
-          </Badge>
-          
-          {team.tournament_id ? (
-            <Badge variant="outline" className="gap-1">
-              <Trophy className="w-3 h-3" />
-              Tournament Linked
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="gap-1">
-              Independent Team
-            </Badge>
-          )}
-        </div>
-
-        {/* Primary Actions */}
-        <div style={styles.actions}>
           <Button
-            onClick={() => setShowQuickTrack(true)}
-            className="gap-2"
-            style={styles.primaryButton}
-            disabled={loadingAction === 'quicktrack'}
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowActions(!showActions)}
+            className="h-8 w-8 p-0"
           >
-            <PlayCircle className="w-4 h-4" />
-            {loadingAction === 'quicktrack' ? 'Starting...' : 'Quick Track'}
+            <MoreVertical className="w-4 h-4" />
           </Button>
+        </CardHeader>
 
-          <Button
-            onClick={() => setShowTournamentSearch(true)}
-            variant="outline"
-            className="gap-2"
-            style={styles.primaryButton}
-            disabled={loadingAction === 'tournament'}
-          >
-            <Trophy className="w-4 h-4" />
-            {loadingAction === 'tournament' ? 'Searching...' : 'Add to Tournament'}
-          </Button>
-        </div>
-
-        {/* Secondary Actions (when expanded) */}
-        {showActions && (
-          <div style={{
-            ...styles.actions,
-            marginTop: '12px',
-            paddingTop: '12px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
-            <Button
+        <CardContent>
+          {/* Badges */}
+          <div className="flex gap-2 mb-4 flex-wrap">
+            <Badge 
+              variant={team.visibility === 'public' ? 'default' : 'secondary'}
+              className="gap-1 cursor-pointer hover:opacity-80"
               onClick={handleVisibilityToggle}
-              variant="ghost"
-              size="sm"
-              className="gap-2"
-              disabled={loadingAction === 'visibility'}
             >
-              {team.visibility === 'public' ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              {loadingAction === 'visibility' ? 'Updating...' : 
-               team.visibility === 'public' ? 'Make Private' : 'Make Public'}
+              {team.visibility === 'public' ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+              {team.visibility === 'public' ? 'Public' : 'Private'}
+            </Badge>
+            
+            {team.tournament_id ? (
+              <Badge variant="outline" className="gap-1">
+                <Trophy className="w-3 h-3" />
+                Tournament Linked
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="gap-1">
+                Independent Team
+              </Badge>
+            )}
+          </div>
+
+          {/* Primary Actions */}
+          <div className="flex gap-2 flex-wrap mb-4">
+            <Button
+              onClick={() => setShowQuickTrack(true)}
+              className="flex-1 min-w-[120px] gap-2"
+              disabled={loadingAction === 'quicktrack'}
+            >
+              <PlayCircle className="w-4 h-4" />
+              {loadingAction === 'quicktrack' ? 'Starting...' : 'Quick Track'}
             </Button>
 
             <Button
-              onClick={handleGenerateShareToken}
-              variant="ghost"
-              size="sm"
-              className="gap-2"
-              disabled={loadingAction === 'share' || team.visibility === 'private'}
+              onClick={() => setShowTournamentSearch(true)}
+              variant="outline"
+              className="flex-1 min-w-[120px] gap-2"
+              disabled={loadingAction === 'tournament'}
             >
-              <Share2 className="w-4 h-4" />
-              {loadingAction === 'share' ? 'Generating...' : 'Share Token'}
-            </Button>
-
-            <Button
-              onClick={() => console.log('Edit team:', team.id)}
-              variant="ghost"
-              size="sm"
-              className="gap-2"
-            >
-              <Edit className="w-4 h-4" />
-              Edit
+              <Trophy className="w-4 h-4" />
+              {loadingAction === 'tournament' ? 'Searching...' : 'Add to Tournament'}
             </Button>
           </div>
-        )}
-      </div>
+
+          {/* Secondary Actions (when expanded) */}
+          {showActions && (
+            <div className="flex gap-2 flex-wrap pt-3 border-t border-border">
+              <Button
+                onClick={handleVisibilityToggle}
+                variant="ghost"
+                size="sm"
+                className="gap-2"
+                disabled={loadingAction === 'visibility'}
+              >
+                {team.visibility === 'public' ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {loadingAction === 'visibility' ? 'Updating...' : 
+                 team.visibility === 'public' ? 'Make Private' : 'Make Public'}
+              </Button>
+
+              <Button
+                onClick={handleGenerateShareToken}
+                variant="ghost"
+                size="sm"
+                className="gap-2"
+                disabled={loadingAction === 'share' || team.visibility === 'private'}
+              >
+                <Share2 className="w-4 h-4" />
+                {loadingAction === 'share' ? 'Generating...' : 'Share Token'}
+              </Button>
+
+              <Button
+                onClick={() => console.log('Edit team:', team.id)}
+                variant="ghost"
+                size="sm"
+                className="gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Edit
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Modals */}
       {showQuickTrack && (

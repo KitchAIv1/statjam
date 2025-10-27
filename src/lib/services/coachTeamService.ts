@@ -64,6 +64,7 @@ export class CoachTeamService {
         .insert({
           name: request.name,
           coach_id: user.id,
+          tournament_id: null, // Coach teams can exist without tournaments
           visibility: request.visibility,
           // Store location and level in metadata if needed
         })

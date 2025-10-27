@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Users, Save } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,143 +83,73 @@ export function CreateCoachTeamModal({ onClose, onTeamCreated }: CreateCoachTeam
     }
   };
 
-  // Styles
-  const styles = {
-    overlay: {
-      position: 'fixed' as const,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '20px'
-    },
-    modal: {
-      background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '16px',
-      padding: '24px',
-      width: '100%',
-      maxWidth: '500px',
-      maxHeight: '90vh',
-      overflowY: 'auto' as const,
-      backdropFilter: 'blur(20px)'
-    },
-    header: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '24px'
-    },
-    title: {
-      fontSize: '1.5rem',
-      fontWeight: '600',
-      color: '#ffffff'
-    },
-    formGroup: {
-      marginBottom: '20px'
-    },
-    label: {
-      display: 'block',
-      marginBottom: '8px',
-      fontSize: '0.875rem',
-      fontWeight: '500',
-      color: '#e5e7eb'
-    },
-    input: {
-      width: '100%',
-      padding: '12px',
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      borderRadius: '8px',
-      color: '#ffffff',
-      fontSize: '0.875rem'
-    },
-    locationGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-      gap: '12px'
-    },
-    actions: {
-      display: 'flex',
-      gap: '12px',
-      marginTop: '24px'
-    },
-    error: {
-      color: '#ef4444',
-      fontSize: '0.875rem',
-      marginTop: '8px'
-    }
-  };
 
   return (
-    <div style={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={styles.modal}>
-        {/* Header */}
-        <div style={styles.header}>
-          <h2 style={styles.title}>Create Team</h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Create Team
+          </DialogTitle>
+          <DialogDescription>
+            Create a new team to track games and manage your roster. You can change these settings later.
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Form */}
-        <div>
-          <div style={styles.formGroup}>
-            <Label style={styles.label}>Team Name *</Label>
+        <div className="space-y-6">
+          {/* Team Name */}
+          <div className="space-y-2">
+            <Label htmlFor="team-name">Team Name *</Label>
             <Input
+              id="team-name"
               value={formData.name}
               onChange={(e) => updateFormData({ name: e.target.value })}
               placeholder="e.g., Eagles U16"
-              style={styles.input}
             />
           </div>
           
-          <div style={styles.formGroup}>
-            <Label style={styles.label}>Level (Optional)</Label>
+          {/* Level */}
+          <div className="space-y-2">
+            <Label htmlFor="level">Level (Optional)</Label>
             <Input
+              id="level"
               value={formData.level}
               onChange={(e) => updateFormData({ level: e.target.value })}
               placeholder="e.g., High School, Youth, College"
-              style={styles.input}
             />
           </div>
 
-          <div style={styles.formGroup}>
-            <Label style={styles.label}>Location</Label>
-            <div style={styles.locationGrid}>
+          {/* Location */}
+          <div className="space-y-2">
+            <Label>Location</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Input
-                value={formData.location?.city}
+                value={formData.location?.city || ''}
                 onChange={(e) => updateFormData({ location: { city: e.target.value } })}
                 placeholder="City"
-                style={styles.input}
               />
               <Input
-                value={formData.location?.region}
+                value={formData.location?.region || ''}
                 onChange={(e) => updateFormData({ location: { region: e.target.value } })}
                 placeholder="State/Region"
-                style={styles.input}
               />
               <Input
-                value={formData.location?.country}
+                value={formData.location?.country || ''}
                 onChange={(e) => updateFormData({ location: { country: e.target.value } })}
                 placeholder="Country"
-                style={styles.input}
               />
             </div>
           </div>
 
-          <div style={styles.formGroup}>
-            <Label style={styles.label}>Visibility</Label>
+          {/* Visibility */}
+          <div className="space-y-2">
+            <Label>Visibility</Label>
             <Select
               value={formData.visibility}
               onValueChange={(value: 'private' | 'public') => updateFormData({ visibility: value })}
             >
-              <SelectTrigger style={styles.input}>
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -226,34 +157,36 @@ export function CreateCoachTeamModal({ onClose, onTeamCreated }: CreateCoachTeam
                 <SelectItem value="public">Public - Organizers can discover</SelectItem>
               </SelectContent>
             </Select>
-            <p style={{ fontSize: '0.75rem', color: '#a1a1aa', marginTop: '4px' }}>
+            <p className="text-xs text-muted-foreground">
               {formData.visibility === 'public' 
                 ? 'Organizers can find and import this team' 
                 : 'Only you and assigned stat admins can see this team'}
             </p>
           </div>
-        </div>
 
-        {/* Error */}
-        {error && (
-          <div style={styles.error}>{error}</div>
-        )}
+          {/* Error */}
+          {error && (
+            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+              {error}
+            </div>
+          )}
 
-        {/* Actions */}
-        <div style={styles.actions}>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleCreateTeam}
-            disabled={loading || !formData.name.trim()}
-            className="gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {loading ? 'Creating...' : 'Create Team'}
-          </Button>
+          {/* Actions */}
+          <div className="flex gap-3 pt-4">
+            <Button variant="outline" onClick={onClose} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateTeam}
+              disabled={loading || !formData.name.trim()}
+              className="flex-1 gap-2"
+            >
+              <Save className="w-4 h-4" />
+              {loading ? 'Creating...' : 'Create Team'}
+            </Button>
+          </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
