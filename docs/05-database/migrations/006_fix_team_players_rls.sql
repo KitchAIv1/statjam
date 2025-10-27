@@ -102,17 +102,27 @@ CREATE POLICY "team_players_organizer_full_access" ON team_players
   USING (
     EXISTS (
       SELECT 1 FROM teams t
-      JOIN tournaments tr ON t.tournament_id = tr.id
+      LEFT JOIN tournaments tr ON t.tournament_id = tr.id
       WHERE t.id = team_players.team_id 
-      AND tr.organizer_id = auth.uid()
+      AND (
+        -- Tournament teams owned by organizer
+        (t.tournament_id IS NOT NULL AND tr.organizer_id = auth.uid()) OR
+        -- Coach teams are not accessible to organizers (coach owns them)
+        FALSE
+      )
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM teams t
-      JOIN tournaments tr ON t.tournament_id = tr.id
+      LEFT JOIN tournaments tr ON t.tournament_id = tr.id
       WHERE t.id = team_players.team_id 
-      AND tr.organizer_id = auth.uid()
+      AND (
+        -- Tournament teams owned by organizer
+        (t.tournament_id IS NOT NULL AND tr.organizer_id = auth.uid()) OR
+        -- Coach teams are not accessible to organizers (coach owns them)
+        FALSE
+      )
     )
   );
 
