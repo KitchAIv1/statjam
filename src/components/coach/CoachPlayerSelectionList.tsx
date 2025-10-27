@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { CoachPlayer, SearchPlayersRequest } from '@/lib/types/coach';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { CreateCustomPlayerForm } from './CreateCustomPlayerForm';
+import { MigrationChecker } from '@/lib/utils/migrationChecker';
 
 interface CoachPlayerSelectionListProps {
   teamId: string;
@@ -43,6 +44,12 @@ export function CoachPlayerSelectionList({
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [processingPlayer, setProcessingPlayer] = useState<string | null>(null);
+  
+  // Migration status
+  const [migrationStatus, setMigrationStatus] = useState<{
+    isComplete: boolean;
+    message?: string;
+  } | null>(null);
 
   // Debounced search
   const searchPlayers = useCallback(async (query: string) => {
@@ -65,6 +72,19 @@ export function CoachPlayerSelectionList({
       setLoading(false);
     }
   }, [teamId]);
+
+  // Check migration status on mount
+  useEffect(() => {
+    const checkMigration = async () => {
+      const status = await MigrationChecker.hasCustomPlayersMigration();
+      setMigrationStatus({
+        isComplete: status.isComplete,
+        message: status.message
+      });
+    };
+    
+    checkMigration();
+  }, []);
 
   // Initial load and search effect
   useEffect(() => {
@@ -283,16 +303,20 @@ export function CoachPlayerSelectionList({
       ) : (
         /* Create Mode - Custom Player Form */
         <div className="space-y-4">
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-            <div className="flex items-center gap-2 text-orange-800 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              <strong>Custom Players Feature</strong>
+          {migrationStatus && !migrationStatus.isComplete && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2 text-orange-800 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                <strong>Migration Required</strong>
+              </div>
+              <p className="text-orange-700 text-sm mt-1">
+                {migrationStatus.message}
+              </p>
+              <p className="text-orange-600 text-xs mt-2">
+                For now, you can add existing StatJam users to your team using the "Search Users" tab.
+              </p>
             </div>
-            <p className="text-orange-700 text-sm mt-1">
-              To use custom players, please apply the database migration first. 
-              For now, you can add existing StatJam users to your team.
-            </p>
-          </div>
+          )}
           
           <CreateCustomPlayerForm
             teamId={teamId}

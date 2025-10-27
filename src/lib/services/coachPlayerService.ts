@@ -23,20 +23,9 @@ export class CoachPlayerService {
     try {
       console.log('🔍 CoachPlayerService: Fetching players for team:', teamId);
       
-      // First, check if custom_players table exists by trying a simple query
-      let hasCustomPlayersTable = false;
-      try {
-        await supabase.from('custom_players').select('id').limit(1);
-        hasCustomPlayersTable = true;
-        console.log('✅ custom_players table exists');
-      } catch (error) {
-        console.log('⚠️ custom_players table does not exist yet, falling back to regular players only');
-        hasCustomPlayersTable = false;
-      }
-
       const players: CoachPlayer[] = [];
 
-      // Always get regular StatJam users
+      // Get regular StatJam users (this should always work)
       try {
         const regularPlayersResult = await supabase
           .from('team_players')
@@ -77,9 +66,17 @@ export class CoachPlayerService {
         console.error('❌ Error in regular players query:', error);
       }
 
-      // Only try to get custom players if the table exists
-      if (hasCustomPlayersTable) {
-        try {
+      // Try to get custom players - this will fail gracefully if migration not applied
+      try {
+        // Check if custom_player_id column exists by trying a simple query
+        const testResult = await supabase
+          .from('team_players')
+          .select('custom_player_id')
+          .limit(1);
+
+        if (!testResult.error) {
+          console.log('✅ custom_player_id column exists, trying to fetch custom players');
+          
           const customPlayersResult = await supabase
             .from('team_players')
             .select(`
@@ -97,7 +94,7 @@ export class CoachPlayerService {
             .not('custom_player_id', 'is', null);
 
           if (customPlayersResult.error) {
-            console.error('❌ Error fetching custom players:', customPlayersResult.error);
+            console.log('⚠️ Custom players query failed (expected if no custom players exist):', customPlayersResult.error.message);
           } else {
             // Add custom players
             (customPlayersResult.data || []).forEach(tp => {
@@ -113,9 +110,11 @@ export class CoachPlayerService {
             });
             console.log('✅ Loaded', customPlayersResult.data?.length || 0, 'custom players');
           }
-        } catch (error) {
-          console.error('❌ Error in custom players query:', error);
+        } else {
+          console.log('⚠️ custom_player_id column does not exist yet - migration not applied');
         }
+      } catch (error) {
+        console.log('⚠️ Custom players not available - migration not applied:', error);
       }
 
       console.log('✅ Total players loaded:', players.length);
@@ -236,13 +235,22 @@ export class CoachPlayerService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Check if custom_players table exists
+      // Check if custom_players table and custom_player_id column exist
       try {
+        // Test both table and column existence
         await supabase.from('custom_players').select('id').limit(1);
+        const columnTest = await supabase.from('team_players').select('custom_player_id').limit(1);
+        
+        if (columnTest.error) {
+          return {
+            success: false,
+            message: 'Database migration incomplete. The custom_player_id column is missing from team_players table.'
+          };
+        }
       } catch (error) {
         return {
           success: false,
-          message: 'Custom players feature not available yet. Please apply the database migration first.'
+          message: 'Custom players feature not available. Please apply the database migration (005_custom_players_schema.sql) first.'
         };
       }
 
