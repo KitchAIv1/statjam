@@ -1,17 +1,7 @@
-# CodeRabbit Configuration
-# Simplified config to avoid parsing errors
-
-# Review settings
 reviews:
   auto_review: true
-
-# Ignore patterns
 ignore:
   - "**/*.generated.*"
   - "**/node_modules/**"
   - "**/dist/**"
   - "**/build/**"
-  - "**/*.config.*"
-  - "**/.*rc.*"
-  - "**/*.test.*"
-  - "**/*.spec.*"

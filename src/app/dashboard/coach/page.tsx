@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { NavigationHeader } from '@/components/NavigationHeader';
@@ -11,17 +11,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CoachTeam } from '@/lib/types/coach';
 
 /**
- * CoachDashboard - Main dashboard page for coaches
- * 
- * Features:
- * - Team management with cards grid
- * - Quick track game launching
- * - Tournament integration
- * - Import token sharing
- * 
- * Follows .cursorrules: <200 lines, single responsibility
+ * CoachDashboardContent - Main dashboard content with search params
  */
-const CoachDashboard = () => {
+const CoachDashboardContent = () => {
   const { user, loading } = useAuthContext();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -182,6 +174,22 @@ const CoachDashboard = () => {
         </main>
       </div>
     </ErrorBoundary>
+  );
+};
+
+/**
+ * CoachDashboard - Main dashboard page with Suspense wrapper
+ */
+const CoachDashboard = () => {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+        <p className="text-muted-foreground">Loading coach dashboard...</p>
+      </div>
+    </div>}>
+      <CoachDashboardContent />
+    </Suspense>
   );
 };
 
