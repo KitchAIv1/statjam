@@ -17,6 +17,7 @@ import { MobileLayoutV3 } from '@/components/tracker-v3/mobile/MobileLayoutV3';
 import { GameHeaderV3 } from '@/components/tracker-v3/GameHeaderV3';
 import { TopScoreboardV3 } from '@/components/tracker-v3/TopScoreboardV3';
 import { TeamRosterV3 } from '@/components/tracker-v3/TeamRosterV3';
+import { OpponentTeamPanel } from '@/components/tracker-v3/OpponentTeamPanel';
 import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
 import { TimeoutModalV3 } from '@/components/tracker-v3/TimeoutModalV3';
@@ -69,6 +70,11 @@ function StatTrackerV3Content() {
   const teamAParam = params.get('teamAId') || '';
   const teamBParam = params.get('teamBId') || '';
   
+  // Coach Mode Parameters
+  const coachMode = params.get('coachMode') === 'true';
+  const coachTeamIdParam = params.get('coachTeamId') || '';
+  const opponentNameParam = params.get('opponentName') || 'Opponent';
+  
   // Game State
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [teamAPlayers, setTeamAPlayers] = useState<Player[]>([]);
@@ -98,14 +104,29 @@ function StatTrackerV3Content() {
     teamBId: gameData?.team_b_id || 'teamB'
   });
 
-  // Auth Check
+  // Auth Check - Allow both stat_admin and coach roles
   useEffect(() => {
-    console.log('🔐 Auth check:', { loading, user: !!user, userRole });
-    if (!loading && (!user || userRole !== 'stat_admin')) {
+    console.log('🔐 Auth check:', { loading, user: !!user, userRole, coachMode });
+    if (!loading && !user) {
       console.log('🔄 Redirecting to auth...');
       router.push('/auth');
+      return;
     }
-  }, [user, userRole, loading, router]);
+    
+    // Stat admin mode: require stat_admin role
+    if (!loading && !coachMode && userRole !== 'stat_admin') {
+      console.log('🔄 Not a stat admin, redirecting...');
+      router.push('/auth');
+      return;
+    }
+    
+    // Coach mode: require coach role
+    if (!loading && coachMode && userRole !== 'coach') {
+      console.log('🔄 Not a coach, redirecting...');
+      router.push('/auth');
+      return;
+    }
+  }, [user, userRole, loading, router, coachMode]);
 
   // Initialize rosters when team data loads (lifted from MobileLayoutV3)
   useEffect(() => {
@@ -595,19 +616,27 @@ function StatTrackerV3Content() {
             </div>
           </div>
 
-          {/* Right Column - Team B Roster */}
+          {/* Right Column - Team B Roster OR Opponent Panel (Coach Mode) */}
           <div className={isTablet ? "md:col-span-2" : "lg:col-span-2"}>
             <div className="h-full">
-              <TeamRosterV3
-                key={`teamB-${rosterRefreshKey}`}
-                players={teamBPlayers}
-                teamName={gameData.team_b?.name || 'Team B'}
-                teamSide="right"
-                selectedPlayer={selectedPlayer}
-                onPlayerSelect={setSelectedPlayer}
-                onSubstitution={handleSubstitution}
-                refreshKey={rosterRefreshKey}
-              />
+              {coachMode ? (
+                <OpponentTeamPanel
+                  opponentName={opponentNameParam}
+                  selectedPlayer={selectedPlayer}
+                  onPlayerSelect={setSelectedPlayer}
+                />
+              ) : (
+                <TeamRosterV3
+                  key={`teamB-${rosterRefreshKey}`}
+                  players={teamBPlayers}
+                  teamName={gameData.team_b?.name || 'Team B'}
+                  teamSide="right"
+                  selectedPlayer={selectedPlayer}
+                  onPlayerSelect={setSelectedPlayer}
+                  onSubstitution={handleSubstitution}
+                  refreshKey={rosterRefreshKey}
+                />
+              )}
             </div>
           </div>
         </div>

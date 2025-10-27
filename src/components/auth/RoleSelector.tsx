@@ -6,7 +6,7 @@
 import React from 'react';
 import { authPageStyles, roleButtonHandlers } from './styles/AuthPageStyles';
 
-export type UserRole = 'player' | 'organizer' | 'stat_admin';
+export type UserRole = 'player' | 'organizer' | 'stat_admin' | 'coach';
 
 export interface RoleSelectorProps {
   userType: UserRole;
@@ -23,7 +23,8 @@ interface RoleOption {
 const roleOptions: RoleOption[] = [
   { value: 'player', label: 'Player', icon: '🏀' },
   { value: 'organizer', label: 'Organizer', icon: '🏆' },
-  { value: 'stat_admin', label: 'Stat Admin', icon: '📊' }
+  { value: 'stat_admin', label: 'Stat Admin', icon: '📊' },
+  { value: 'coach', label: 'Coach', icon: '👨‍🏫' }
 ];
 
 /**

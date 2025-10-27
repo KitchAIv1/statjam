@@ -175,6 +175,49 @@ export const navigationConfig: Record<string, NavigationConfig> = {
     ]
   },
   
+  coach: {
+    primary: [
+      {
+        label: 'Dashboard',
+        href: '/dashboard/coach',
+        icon: Home,
+        description: 'Coach dashboard overview'
+      },
+      {
+        label: 'My Teams',
+        href: '/dashboard/coach?section=teams',
+        icon: Users,
+        description: 'Manage your teams'
+      },
+      {
+        label: 'Quick Track',
+        href: '/dashboard/coach?section=quick-track',
+        icon: PlayCircle,
+        description: 'Start tracking a game'
+      },
+      {
+        label: 'Game History',
+        href: '/dashboard/coach/games',
+        icon: Calendar,
+        description: 'View your game history'
+      },
+      {
+        label: 'Tournaments',
+        href: '/dashboard/coach/tournaments',
+        icon: Trophy,
+        description: 'Tournament connections'
+      }
+    ],
+    secondary: [
+      {
+        label: 'Settings',
+        href: '/dashboard/coach/settings',
+        icon: Settings,
+        description: 'Account settings'
+      }
+    ]
+  },
+  
   fan: {
     primary: [
       {

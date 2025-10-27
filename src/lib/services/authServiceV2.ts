@@ -212,7 +212,7 @@ export class AuthServiceV2 {
         throw new Error('User type must be selected');
       }
 
-      const validUserTypes = ['player', 'organizer', 'stat_admin'];
+      const validUserTypes = ['player', 'organizer', 'stat_admin', 'coach'];
       if (!validUserTypes.includes(metadata.userType)) {
         console.error('❌ AuthServiceV2: Invalid userType:', metadata.userType);
         throw new Error(`Invalid user type. Must be one of: ${validUserTypes.join(', ')}`);

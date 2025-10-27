@@ -234,7 +234,7 @@ export const authPageStyles: AuthPageStylesType = {
   },
   roleGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr',
+    gridTemplateColumns: 'repeat(2, 1fr)',
     gap: '8px',
     marginBottom: '8px'
   },
