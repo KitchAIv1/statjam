@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, PlayCircle, Trophy, Settings, Share2, Eye, EyeOff, 
-  MapPin, Calendar, MoreVertical, Edit, Trash2 
+  MapPin, Calendar, MoreVertical, Edit, Trash2, UserPlus, AlertCircle 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { CoachTeam } from '@/lib/types/coach';
 import { CoachQuickTrackModal } from './CoachQuickTrackModal';
 import { CoachTournamentSearchModal } from './CoachTournamentSearchModal';
+import { CoachPlayerManagementModal } from './CoachPlayerManagementModal';
+import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 
 interface CoachTeamCardProps {
   team: CoachTeam;
@@ -33,9 +35,31 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   const [showQuickTrack, setShowQuickTrack] = useState(false);
   const [showTournamentSearch, setShowTournamentSearch] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [showPlayerManagement, setShowPlayerManagement] = useState(false);
   
   // Loading states
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  
+  // Player count state
+  const [playerCount, setPlayerCount] = useState<number>(team.player_count || 0);
+  const [playerCountLoading, setPlayerCountLoading] = useState(false);
+
+  // Load accurate player count on mount
+  useEffect(() => {
+    const loadPlayerCount = async () => {
+      try {
+        setPlayerCountLoading(true);
+        const count = await CoachPlayerService.getTeamPlayerCount(team.id);
+        setPlayerCount(count);
+      } catch (error) {
+        console.error('❌ Error loading player count:', error);
+      } finally {
+        setPlayerCountLoading(false);
+      }
+    };
+
+    loadPlayerCount();
+  }, [team.id]);
 
   // Handle visibility toggle
   const handleVisibilityToggle = async () => {
@@ -75,6 +99,42 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
     }
   };
 
+  // Handle Quick Track with validation
+  const handleQuickTrack = async () => {
+    // Validate minimum players
+    const validation = await CoachPlayerService.validateMinimumPlayers(team.id, 5);
+    
+    if (!validation.isValid) {
+      // Show error and redirect to player management
+      alert(validation.message || 'Need at least 5 players to start tracking');
+      setShowPlayerManagement(true);
+      return;
+    }
+    
+    setShowQuickTrack(true);
+  };
+
+  // Handle player management modal
+  const handlePlayerManagement = () => {
+    setShowPlayerManagement(true);
+  };
+
+  // Handle player management update
+  const handlePlayerUpdate = () => {
+    // Reload player count
+    const loadPlayerCount = async () => {
+      try {
+        const count = await CoachPlayerService.getTeamPlayerCount(team.id);
+        setPlayerCount(count);
+      } catch (error) {
+        console.error('❌ Error reloading player count:', error);
+      }
+    };
+    
+    loadPlayerCount();
+    onUpdate();
+  };
+
 
   return (
     <>
@@ -83,25 +143,30 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
           <div className="flex-1">
             <CardTitle className="text-lg font-semibold mb-2">{team.name}</CardTitle>
             
-            {/* Team Meta */}
-            <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2 flex-wrap">
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span>{team.player_count || 0} players</span>
-              </div>
-              
-              {team.location?.city && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>{team.location.city}</span>
-                </div>
-              )}
-              
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>{team.games_count || 0} games</span>
-              </div>
-            </div>
+                    {/* Team Meta */}
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2 flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        <span>
+                          {playerCountLoading ? '...' : playerCount} players
+                          {playerCount < 5 && (
+                            <AlertCircle className="w-3 h-3 ml-1 text-orange-500 inline" />
+                          )}
+                        </span>
+                      </div>
+                      
+                      {team.location?.city && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          <span>{team.location.city}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{team.games_count || 0} games</span>
+                      </div>
+                    </div>
           </div>
 
           {/* Actions Menu */}
@@ -142,12 +207,22 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
           {/* Primary Actions */}
           <div className="flex gap-2 flex-wrap mb-4">
             <Button
-              onClick={() => setShowQuickTrack(true)}
+              onClick={handleQuickTrack}
               className="flex-1 min-w-[120px] gap-2"
-              disabled={loadingAction === 'quicktrack'}
+              disabled={loadingAction === 'quicktrack' || playerCountLoading}
+              variant={playerCount < 5 ? "secondary" : "default"}
             >
-              <PlayCircle className="w-4 h-4" />
-              {loadingAction === 'quicktrack' ? 'Starting...' : 'Quick Track'}
+              {playerCount < 5 ? (
+                <>
+                  <AlertCircle className="w-4 h-4" />
+                  Add Players First
+                </>
+              ) : (
+                <>
+                  <PlayCircle className="w-4 h-4" />
+                  {loadingAction === 'quicktrack' ? 'Starting...' : 'Quick Track'}
+                </>
+              )}
             </Button>
 
             <Button
@@ -164,6 +239,16 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
           {/* Secondary Actions (when expanded) */}
           {showActions && (
             <div className="flex gap-2 flex-wrap pt-3 border-t border-border">
+              <Button
+                onClick={handlePlayerManagement}
+                variant="ghost"
+                size="sm"
+                className="gap-2"
+              >
+                <UserPlus className="w-4 h-4" />
+                Manage Players
+              </Button>
+
               <Button
                 onClick={handleVisibilityToggle}
                 variant="ghost"
@@ -215,6 +300,14 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
           team={team}
           onClose={() => setShowTournamentSearch(false)}
           onTournamentAttached={onUpdate}
+        />
+      )}
+
+      {showPlayerManagement && (
+        <CoachPlayerManagementModal
+          team={team}
+          onClose={() => setShowPlayerManagement(false)}
+          onUpdate={handlePlayerUpdate}
         />
       )}
     </>

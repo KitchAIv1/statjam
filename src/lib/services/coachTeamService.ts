@@ -8,46 +8,89 @@
 import { supabase } from '../supabase';
 import {
   CoachTeam,
+  CoachPlayer,
   CreateCoachTeamRequest,
   UpdateCoachTeamRequest,
   TeamImportToken,
   GenerateImportTokenRequest,
   TournamentSearchRequest,
   TournamentAttachmentRequest,
-  Tournament
+  Tournament,
+  AddPlayerToTeamRequest,
+  RemovePlayerFromTeamRequest,
+  SearchPlayersRequest,
+  CreateCustomPlayerRequest,
+  PlayerManagementResponse
 } from '../types/coach';
+import { CoachPlayerService } from './coachPlayerService';
 
 export class CoachTeamService {
   /**
-   * Get all teams for a coach
+   * Get all teams for a coach with accurate player counts
    */
   static async getCoachTeams(coachId: string): Promise<CoachTeam[]> {
     try {
-      const { data, error } = await supabase
+      // Get basic team data first
+      const { data: teams, error } = await supabase
         .from('teams')
         .select(`
-          *,
-          team_players (count)
+          id,
+          name,
+          coach_id,
+          tournament_id,
+          visibility,
+          created_at,
+          updated_at
         `)
         .eq('coach_id', coachId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      return (data || []).map(team => ({
-        id: team.id,
-        name: team.name,
-        coach_id: team.coach_id,
-        tournament_id: team.tournament_id,
-        visibility: team.visibility,
-        created_at: team.created_at,
-        updated_at: team.updated_at,
-        player_count: team.team_players?.[0]?.count || 0,
-        games_count: 0 // TODO: Add games count query
-      }));
+      // Get accurate counts for each team in parallel
+      const teamsWithCounts = await Promise.all(
+        (teams || []).map(async (team) => {
+          const [playerCount, gamesCount] = await Promise.all([
+            CoachPlayerService.getTeamPlayerCount(team.id),
+            this.getTeamGamesCount(team.id)
+          ]);
+          
+          return {
+            id: team.id,
+            name: team.name,
+            coach_id: team.coach_id,
+            tournament_id: team.tournament_id,
+            visibility: team.visibility,
+            created_at: team.created_at,
+            updated_at: team.updated_at,
+            player_count: playerCount,
+            games_count: gamesCount
+          };
+        })
+      );
+
+      return teamsWithCounts;
     } catch (error) {
       console.error('❌ Error fetching coach teams:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get games count for a team
+   */
+  private static async getTeamGamesCount(teamId: string): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from('games')
+        .select('*', { count: 'exact', head: true })
+        .or(`team_a_id.eq.${teamId},team_b_id.eq.${teamId}`);
+
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      console.error('❌ Error getting team games count:', error);
+      return 0;
     }
   }
 

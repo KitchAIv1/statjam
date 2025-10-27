@@ -27,10 +27,27 @@ export interface CoachTeam {
   updated_at: string;
   
   // Computed fields
-  players?: CoachTeamPlayer[];
+  players?: CoachPlayer[];
   player_count?: number;
   games_count?: number;
   recent_games?: CoachGame[];
+}
+
+// Player types for coach teams
+export interface CoachPlayer {
+  id: string;
+  name: string;
+  email?: string;
+  jersey_number?: number;
+  position?: string;
+  is_custom_player: boolean; // true for team-specific, false for StatJam users
+  profile_player_id?: string; // Links to users table if StatJam user
+  premium_status?: boolean;
+  created_at: string;
+  
+  // Team-specific data
+  team_player_id?: string; // ID in team_players table
+  is_on_team?: boolean; // For selection UI
 }
 
 export interface CoachTeamPlayer {
@@ -178,6 +195,41 @@ export interface UseImportTokenRequest {
   target_tournament_id?: string;
 }
 
+// Player Management Request Types
+export interface AddPlayerToTeamRequest {
+  team_id: string;
+  player_id?: string; // For existing StatJam users
+  custom_player?: {
+    name: string;
+    jersey_number?: number;
+    position?: string;
+  };
+}
+
+export interface RemovePlayerFromTeamRequest {
+  team_id: string;
+  team_player_id: string;
+}
+
+export interface SearchPlayersRequest {
+  query?: string;
+  exclude_team_id?: string; // Exclude players already on this team
+  limit?: number;
+}
+
+export interface CreateCustomPlayerRequest {
+  team_id: string;
+  name: string;
+  jersey_number?: number;
+  position?: string;
+}
+
+export interface PlayerManagementResponse {
+  success: boolean;
+  message?: string;
+  player?: CoachPlayer;
+}
+
 // ========================================
 // UI STATE TYPES
 // ========================================
@@ -320,6 +372,7 @@ export type TournamentAttachmentType = 'existing' | 'stub';
 export type {
   // Core types
   CoachTeam,
+  CoachPlayer,
   CoachTeamPlayer,
   CoachGame,
   TeamImportToken,
@@ -333,6 +386,11 @@ export type {
   TournamentAttachmentRequest,
   GenerateImportTokenRequest,
   UseImportTokenRequest,
+  AddPlayerToTeamRequest,
+  RemovePlayerFromTeamRequest,
+  SearchPlayersRequest,
+  CreateCustomPlayerRequest,
+  PlayerManagementResponse,
   
   // UI State types
   CoachDashboardState,

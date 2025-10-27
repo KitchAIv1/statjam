@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, PlayCircle, Settings, ArrowRight, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, PlayCircle, Settings, ArrowRight, ArrowLeft, AlertCircle, Users } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CoachTeam, QuickTrackGameRequest } from '@/lib/types/coach';
+import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 
 interface CoachQuickTrackModalProps {
   team: CoachTeam;
@@ -30,6 +31,36 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
   const [step, setStep] = useState<'opponent' | 'settings' | 'confirm'>('opponent');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Player validation state
+  const [playerValidation, setPlayerValidation] = useState<{
+    isValid: boolean;
+    currentCount: number;
+    message?: string;
+  } | null>(null);
+  const [validationLoading, setValidationLoading] = useState(true);
+
+  // Validate players on mount
+  useEffect(() => {
+    const validatePlayers = async () => {
+      try {
+        setValidationLoading(true);
+        const validation = await CoachPlayerService.validateMinimumPlayers(team.id, 5);
+        setPlayerValidation(validation);
+        
+        if (!validation.isValid) {
+          setError(validation.message);
+        }
+      } catch (error) {
+        console.error('❌ Error validating players:', error);
+        setError('Unable to validate team players');
+      } finally {
+        setValidationLoading(false);
+      }
+    };
+
+    validatePlayers();
+  }, [team.id]);
   
   // Form data
   const [formData, setFormData] = useState<QuickTrackGameRequest>({
@@ -61,6 +92,13 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
     try {
       setLoading(true);
       setError(null);
+
+      // Re-validate players before creating game
+      const validation = await CoachPlayerService.validateMinimumPlayers(team.id, 5);
+      if (!validation.isValid) {
+        setError(validation.message || 'Need at least 5 players to start tracking');
+        return;
+      }
 
       // Validate required fields
       if (!formData.opponent_name.trim()) {
@@ -314,6 +352,7 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
         );
       
       case 'confirm':
+        const canStart = playerValidation?.isValid && !loading && !validationLoading;
         return (
           <>
             <Button variant="outline" onClick={() => setStep('settings')} className="gap-2">
@@ -322,11 +361,26 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
             </Button>
             <Button
               onClick={handleCreateAndLaunch}
-              disabled={loading}
+              disabled={!canStart}
               className="gap-2"
+              variant={canStart ? "default" : "secondary"}
             >
-              <PlayCircle className="w-4 h-4" />
-              {loading ? 'Starting...' : 'Start Tracking'}
+              {!playerValidation?.isValid ? (
+                <>
+                  <AlertCircle className="w-4 h-4" />
+                  Need {5 - (playerValidation?.currentCount || 0)} More Players
+                </>
+              ) : loading ? (
+                <>
+                  <PlayCircle className="w-4 h-4" />
+                  Starting...
+                </>
+              ) : (
+                <>
+                  <PlayCircle className="w-4 h-4" />
+                  Start Tracking
+                </>
+              )}
             </Button>
           </>
         );
@@ -357,6 +411,30 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
             />
           ))}
         </div>
+
+        {/* Player Validation Warning */}
+        {!validationLoading && playerValidation && !playerValidation.isValid && (
+          <div style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <AlertCircle style={{ width: '16px', height: '16px', color: '#ef4444' }} />
+            <div>
+              <div style={{ color: '#ef4444', fontSize: '0.875rem', fontWeight: '500' }}>
+                Insufficient Players
+              </div>
+              <div style={{ color: '#fca5a5', fontSize: '0.75rem', marginTop: '2px' }}>
+                {playerValidation.message} Add more players to continue.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         {renderStepContent()}
