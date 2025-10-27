@@ -37,17 +37,6 @@ export function DualTeamHorizontalRosterV3({
   const teamADisplay = isCoachMode ? teamAPlayers : teamAPlayers.slice(0, 5);
   const teamBDisplay = isCoachMode ? teamBPlayers : teamBPlayers.slice(0, 5);
   
-  // Debug logging
-  console.log('📱 DualTeamHorizontalRosterV3:', {
-    isCoachMode,
-    teamATotal: teamAPlayers.length,
-    teamBTotal: teamBPlayers.length,
-    teamADisplay: teamADisplay.length,
-    teamBDisplay: teamBDisplay.length,
-    teamANames: teamADisplay.map(p => p.name),
-    teamBNames: teamBDisplay.map(p => p.name)
-  });
-  
   // Check which team the selected player belongs to
   const selectedPlayerTeam = teamADisplay.find(p => p.id === selectedPlayer) ? 'A' : 
                             teamBDisplay.find(p => p.id === selectedPlayer) ? 'B' : null;
