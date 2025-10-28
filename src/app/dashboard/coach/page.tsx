@@ -82,6 +82,8 @@ const CoachDashboardContent = () => {
           setTeams(coachTeams);
         } catch (error) {
           console.error('❌ Error reloading teams:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to reload teams';
+          setError(errorMessage);
         }
       };
       loadTeams();
@@ -154,7 +156,7 @@ const CoachDashboardContent = () => {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 text-foreground">
-        <NavigationHeader user={user} />
+        <NavigationHeader />
         
         <main className="pt-16 p-6">
           <div className="max-w-7xl mx-auto">
