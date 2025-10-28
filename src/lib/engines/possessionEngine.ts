@@ -84,68 +84,66 @@ export class PossessionEngine {
     // Determine if possession should flip based on event type
     switch (event.type) {
       case 'made_shot':
-        // Made shot → Possession flips to opponent
-        if (currentState.currentPossession === event.teamId) {
-          newState.currentPossession = event.opponentTeamId;
-          shouldFlip = true;
-          shouldPersist = flags.persistState;
-          endReason = 'made_shot';
-          actions.push(`Possession flipped to opponent (made shot)`);
-        }
+        // ✅ Made shot → Possession ALWAYS flips to opponent (unconditional)
+        // This ensures possession tracking works from game start, regardless of initial state
+        newState.currentPossession = event.opponentTeamId;
+        shouldFlip = true;
+        shouldPersist = flags.persistState;
+        endReason = 'made_shot';
+        actions.push(`Possession flipped to ${event.opponentTeamId} (made shot by ${event.teamId})`);
         break;
         
       case 'turnover':
-        // Turnover → Possession flips to opponent
-        if (currentState.currentPossession === event.teamId) {
-          newState.currentPossession = event.opponentTeamId;
-          shouldFlip = true;
-          shouldPersist = flags.persistState;
-          endReason = 'turnover';
-          actions.push(`Possession flipped to opponent (turnover)`);
-        }
+        // ✅ Turnover → Possession ALWAYS flips to opponent (unconditional)
+        newState.currentPossession = event.opponentTeamId;
+        shouldFlip = true;
+        shouldPersist = flags.persistState;
+        endReason = 'turnover';
+        actions.push(`Possession flipped to ${event.opponentTeamId} (turnover by ${event.teamId})`);
         break;
         
       case 'steal':
-        // Steal → Possession flips to stealing team
-        if (currentState.currentPossession !== event.teamId) {
-          newState.currentPossession = event.teamId;
-          shouldFlip = true;
-          shouldPersist = flags.persistState;
-          endReason = 'steal';
-          actions.push(`Possession flipped to ${event.teamId} (steal)`);
-        }
+        // ✅ Steal → Possession ALWAYS flips to stealing team (unconditional)
+        newState.currentPossession = event.teamId;
+        shouldFlip = true;
+        shouldPersist = flags.persistState;
+        endReason = 'steal';
+        actions.push(`Possession flipped to ${event.teamId} (steal)`);
         break;
         
       case 'defensive_rebound':
-        // Defensive rebound → Possession flips to rebounding team
-        if (currentState.currentPossession !== event.teamId) {
-          newState.currentPossession = event.teamId;
-          shouldFlip = true;
-          shouldPersist = flags.persistState;
-          endReason = 'defensive_rebound';
-          actions.push(`Possession flipped to ${event.teamId} (defensive rebound)`);
-        }
+        // ✅ Defensive rebound → Possession ALWAYS flips to rebounding team (unconditional)
+        newState.currentPossession = event.teamId;
+        shouldFlip = true;
+        shouldPersist = flags.persistState;
+        endReason = 'defensive_rebound';
+        actions.push(`Possession flipped to ${event.teamId} (defensive rebound)`);
         break;
         
       case 'offensive_rebound':
-        // Offensive rebound → Possession stays with rebounding team
-        // No flip needed, but we may want to persist for analytics
+        // ✅ Offensive rebound → Possession stays with rebounding team
+        // Only persist if the rebounding team already has possession (sanity check)
         if (currentState.currentPossession === event.teamId) {
           shouldPersist = flags.persistState;
           endReason = 'offensive_rebound';
-          actions.push(`Possession retained (offensive rebound)`);
+          actions.push(`Possession retained by ${event.teamId} (offensive rebound)`);
+        } else {
+          // Edge case: Offensive rebound but possession was wrong - correct it
+          newState.currentPossession = event.teamId;
+          shouldFlip = true;
+          shouldPersist = flags.persistState;
+          endReason = 'offensive_rebound';
+          actions.push(`Possession corrected to ${event.teamId} (offensive rebound)`);
         }
         break;
         
       case 'violation':
-        // Violation → Possession flips to opponent
-        if (currentState.currentPossession === event.teamId) {
-          newState.currentPossession = event.opponentTeamId;
-          shouldFlip = true;
-          shouldPersist = flags.persistState;
-          endReason = 'violation';
-          actions.push(`Possession flipped to opponent (violation)`);
-        }
+        // ✅ Violation → Possession ALWAYS flips to opponent (unconditional)
+        newState.currentPossession = event.opponentTeamId;
+        shouldFlip = true;
+        shouldPersist = flags.persistState;
+        endReason = 'violation';
+        actions.push(`Possession flipped to ${event.opponentTeamId} (violation by ${event.teamId})`);
         break;
         
       case 'jump_ball':
