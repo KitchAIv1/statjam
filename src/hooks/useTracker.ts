@@ -859,13 +859,34 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         
         // Only process if we have a valid possession event
         if (possessionEventType) {
-          const opponentTeamId = stat.teamId === teamAId ? teamBId : teamAId;
+          // ✅ COACH MODE FIX: Use 'opponent-team' identifier for possession tracking
+          // For opponent stats, use 'opponent-team' as the teamId for possession logic
+          const possessionTeamId = (isCoachMode && stat.isOpponentStat) 
+            ? 'opponent-team' 
+            : stat.teamId;
+          
+          const opponentTeamId = isCoachMode 
+            ? (stat.isOpponentStat ? teamAId : 'opponent-team')
+            : (stat.teamId === teamAId ? teamBId : teamAId);
           
           console.log('🏀 PHASE 3 DEBUG: Processing possession event', {
             eventType: possessionEventType,
+            possessionTeamId: possessionTeamId,
+            statTeamId: stat.teamId,
+            opponentTeamId: opponentTeamId,
             currentPossession: possession.currentTeamId,
-            flags: automationFlags.possession
+            isCoachMode: isCoachMode,
+            isOpponentStat: stat.isOpponentStat
           });
+          console.log('🏀 PHASE 3 DEBUG (EXPANDED):', JSON.stringify({
+            eventType: possessionEventType,
+            possessionTeamId: possessionTeamId,
+            statTeamId: stat.teamId,
+            opponentTeamId: opponentTeamId,
+            currentPossession: possession.currentTeamId,
+            isCoachMode: isCoachMode,
+            isOpponentStat: stat.isOpponentStat
+          }, null, 2));
           
           const possessionResult = PossessionEngine.processEvent(
             {
@@ -874,7 +895,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             },
             {
               type: possessionEventType,
-              teamId: stat.teamId,
+              teamId: possessionTeamId,  // ✅ Use possessionTeamId for logic
               opponentTeamId: opponentTeamId
             },
             ruleset,
@@ -884,6 +905,12 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           // Apply possession state changes immediately
           if (possessionResult.actions.length > 0) {
             console.log('🏀 Possession automation:', possessionResult.actions);
+            console.log('🏀 POSSESSION RESULT (EXPANDED):', JSON.stringify({
+              newPossession: possessionResult.newState.currentPossession,
+              oldPossession: possession.currentTeamId,
+              shouldFlip: possessionResult.shouldFlip,
+              actions: possessionResult.actions
+            }, null, 2));
             
             setPossession({
               currentTeamId: possessionResult.newState.currentPossession,

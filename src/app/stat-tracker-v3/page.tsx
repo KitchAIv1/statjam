@@ -346,7 +346,7 @@ function StatTrackerV3Content() {
     if (coachMode && selectedPlayer === 'opponent-team') {
       // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
       actualPlayerId = user?.id || null;
-      actualTeamId = gameData.team_a_id; // Use coach's team ID (same as team_b_id in coach mode)
+      actualTeamId = gameData.team_a_id; // ✅ Use coach's team ID for database (UUID required)
       isOpponentStat = true; // FLAG: This is an opponent stat
       console.log('✅ Recording opponent team stat (flagged as opponent), team_id:', actualTeamId, 'isOpponentStat:', isOpponentStat);
     } else {
@@ -680,7 +680,7 @@ function StatTrackerV3Content() {
             <PossessionIndicator
               currentTeamId={tracker.possession.currentTeamId}
               teamAId={gameData.team_a_id}
-              teamBId={gameData.team_b_id}
+              teamBId={coachMode ? 'opponent-team' : gameData.team_b_id}
               teamAName={gameData.team_a?.name || 'Team A'}
               teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
               possessionArrow={tracker.possession.possessionArrow}

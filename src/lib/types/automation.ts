@@ -158,7 +158,7 @@ export const DEFAULT_AUTOMATION_FLAGS: AutomationFlags = {
 /**
  * Coach-specific automation flags
  * Clock automation enabled by default for coach games
- * NBA rules with Phase 2 clock automation
+ * NBA rules with Phase 2 clock automation + Phase 3 possession tracking
  */
 export const COACH_AUTOMATION_FLAGS: AutomationFlags = {
   clock: {
@@ -169,10 +169,10 @@ export const COACH_AUTOMATION_FLAGS: AutomationFlags = {
     madeBasketStop: true    // ✅ NBA last 2-min rule
   },
   possession: {
-    enabled: false,         // Phase 3 (not yet implemented)
-    autoFlip: false,
-    persistState: false,
-    jumpBallArrow: false
+    enabled: true,          // ✅ Phase 3: Possession tracking ON
+    autoFlip: true,         // ✅ Auto-flip on made shots, turnovers, steals, rebounds
+    persistState: true,     // ✅ Persist to database (game_possessions table)
+    jumpBallArrow: true     // ✅ Track alternating possession arrow
   },
   sequences: {
     enabled: false,         // Phase 4 (not yet implemented)

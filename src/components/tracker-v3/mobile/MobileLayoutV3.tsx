@@ -171,9 +171,9 @@ export function MobileLayoutV3({
             <PossessionIndicator
               currentTeamId={tracker.possession.currentTeamId}
               teamAId={gameData.team_a_id}
-              teamBId={gameData.team_b_id}
+              teamBId={isCoachMode ? 'opponent-team' : gameData.team_b_id}
               teamAName={gameData.team_a?.name || 'Team A'}
-              teamBName={gameData.team_b?.name || 'Team B'}
+              teamBName={isCoachMode ? 'Opponent' : (gameData.team_b?.name || 'Team B')}
               possessionArrow={tracker.possession.possessionArrow}
               isMobile={true}
             />

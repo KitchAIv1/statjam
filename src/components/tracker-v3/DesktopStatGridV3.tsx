@@ -36,6 +36,7 @@ export function DesktopStatGridV3({
   lastAction,
   lastActionPlayerId
 }: DesktopStatGridV3Props) {
+  // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
 
   const handleStatClick = async (statType: string, modifier?: string) => {
@@ -49,11 +50,15 @@ export function DesktopStatGridV3({
       return;
     }
 
-    setIsRecording(statType);
+    // ✅ Create unique identifier for this specific button
+    const statId = `${statType}-${modifier || 'default'}`;
+    setIsRecording(statId);
+    
     try {
       await onStatRecord(statType, modifier);
     } finally {
-      setIsRecording(null);
+      // ✅ Small delay to ensure smooth visual feedback
+      setTimeout(() => setIsRecording(null), 50);
     }
   };
 
@@ -235,56 +240,68 @@ export function DesktopStatGridV3({
 
       {/* Made Stats Row - Desktop Optimized */}
       <div className="grid grid-cols-4 gap-4 mb-6">
-        {madeStats.map((stat) => (
-          <Button
-            key={stat.id}
-            onClick={() => handleStatClick(stat.statType, stat.modifier)}
-            disabled={isDisabled || isRecording === stat.statType}
-            className={`h-20 flex flex-col justify-center items-center text-base font-bold transition-all duration-200 rounded-xl border-2 shadow-md ${
-              isRecording === stat.statType && (stat.modifier === 'made' || stat.modifier === 'offensive')
-                ? 'bg-green-600 border-green-400 text-white animate-pulse shadow-xl scale-105' 
-                : isDisabled
-                  ? 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400'
-                  : 'bg-green-500 border-green-400 hover:bg-green-600 hover:border-green-300 text-white hover:shadow-lg hover:scale-105 active:scale-95'
-            }`}
-            style={{
-              minHeight: '80px',
-              fontSize: '15px'
-            }}
-          >
-            <div className="font-black text-xl">{stat.label}</div>
-            <div className="text-sm opacity-90 font-semibold">
-              {stat.statType === 'rebound' ? '⚡ Offensive' : '✓ MADE'}
-            </div>
-          </Button>
-        ))}
+        {madeStats.map((stat) => {
+          const statId = `${stat.statType}-${stat.modifier}`;
+          const isThisButtonRecording = isRecording === statId;
+          
+          return (
+            <Button
+              key={stat.id}
+              onClick={() => handleStatClick(stat.statType, stat.modifier)}
+              disabled={isDisabled || isThisButtonRecording}
+              className={`h-20 flex flex-col justify-center items-center text-base font-bold transition-colors duration-150 rounded-xl border-2 shadow-md ${
+                isThisButtonRecording
+                  ? 'bg-green-600 border-green-400 text-white shadow-xl' 
+                  : isDisabled
+                    ? 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400'
+                    : 'bg-green-500 border-green-400 hover:bg-green-600 hover:border-green-300 text-white hover:shadow-lg active:scale-95'
+              }`}
+              style={{
+                minHeight: '80px',
+                fontSize: '15px',
+                willChange: 'background-color, border-color'
+              }}
+            >
+              <div className="font-black text-xl">{stat.label}</div>
+              <div className="text-sm opacity-90 font-semibold">
+                {stat.statType === 'rebound' ? '⚡ Offensive' : '✓ MADE'}
+              </div>
+            </Button>
+          );
+        })}
       </div>
 
       {/* Missed Stats Row - Desktop Optimized */}
       <div className="grid grid-cols-4 gap-4 mb-6">
-        {missedStats.map((stat) => (
-          <Button
-            key={stat.id}
-            onClick={() => handleStatClick(stat.statType, stat.modifier)}
-            disabled={isDisabled || isRecording === stat.statType}
-            className={`h-20 flex flex-col justify-center items-center text-base font-medium transition-all duration-200 rounded-xl border-2 shadow-md ${
-              isRecording === stat.statType && (stat.modifier === 'missed' || stat.modifier === 'defensive')
-                ? 'bg-red-600 border-red-400 text-white animate-pulse shadow-xl scale-105' 
-                : isDisabled
-                  ? 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400'
-                  : 'bg-red-400 border-red-300 hover:bg-red-500 hover:border-red-300 text-white hover:shadow-lg hover:scale-105 active:scale-95'
-            }`}
-            style={{
-              minHeight: '80px',
-              fontSize: '15px'
-            }}
-          >
-            <div className="font-black text-xl">{stat.label}</div>
-            <div className="text-sm opacity-90 font-semibold">
-              {stat.statType === 'rebound' ? '🛡️ Defensive' : '✗ MISS'}
-            </div>
-          </Button>
-        ))}
+        {missedStats.map((stat) => {
+          const statId = `${stat.statType}-${stat.modifier}`;
+          const isThisButtonRecording = isRecording === statId;
+          
+          return (
+            <Button
+              key={stat.id}
+              onClick={() => handleStatClick(stat.statType, stat.modifier)}
+              disabled={isDisabled || isThisButtonRecording}
+              className={`h-20 flex flex-col justify-center items-center text-base font-medium transition-colors duration-150 rounded-xl border-2 shadow-md ${
+                isThisButtonRecording
+                  ? 'bg-red-600 border-red-400 text-white shadow-xl' 
+                  : isDisabled
+                    ? 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400'
+                    : 'bg-red-400 border-red-300 hover:bg-red-500 hover:border-red-300 text-white hover:shadow-lg active:scale-95'
+              }`}
+              style={{
+                minHeight: '80px',
+                fontSize: '15px',
+                willChange: 'background-color, border-color'
+              }}
+            >
+              <div className="font-black text-xl">{stat.label}</div>
+              <div className="text-sm opacity-90 font-semibold">
+                {stat.statType === 'rebound' ? '🛡️ Defensive' : '✗ MISS'}
+              </div>
+            </Button>
+          );
+        })}
       </div>
 
       {/* Single Action Stats - Desktop Optimized */}
