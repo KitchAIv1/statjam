@@ -166,7 +166,7 @@ export function ClockControlsV3({
               </Button>
 
               <Button
-                onClick={onReset}
+                onClick={() => onReset?.()}
                 size="lg"
                 variant="outline"
                 className="flex flex-col gap-1 h-16 hover:bg-orange-500/10 hover:border-orange-500"
@@ -194,7 +194,7 @@ export function ClockControlsV3({
               </Button>
 
               <Button
-                onClick={onReset}
+                onClick={() => onReset?.()}
                 size="lg"
                 variant="outline"
                 className="flex flex-col gap-1 h-16 hover:bg-orange-500/10 hover:border-orange-500"

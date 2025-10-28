@@ -312,7 +312,7 @@ export function TopScoreboardV3({
                     </Button>
 
                     <Button
-                      onClick={onReset}
+                      onClick={() => onReset?.()}
                       variant="outline"
                       className="h-9 px-4 text-xs font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-500 hover:text-white hover:border-gray-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
                     >
@@ -375,7 +375,7 @@ export function TopScoreboardV3({
                   </Button>
 
                   <Button
-                    onClick={onShotClockReset}
+                    onClick={() => onShotClockReset?.()}
                     variant="outline"
                     className="h-10 px-4 text-sm font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-500 hover:text-white hover:border-gray-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
                     disabled={!onShotClockReset}
