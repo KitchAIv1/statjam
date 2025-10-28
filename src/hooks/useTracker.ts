@@ -861,19 +861,23 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         if (possessionEventType) {
           const opponentTeamId = stat.teamId === teamAId ? teamBId : teamAId;
           
+          console.log('🏀 PHASE 3 DEBUG: Processing possession event', {
+            eventType: possessionEventType,
+            currentPossession: possession.currentTeamId,
+            flags: automationFlags.possession
+          });
+          
           const possessionResult = PossessionEngine.processEvent(
             {
               currentPossession: possession.currentTeamId,
-              possessionArrow: possession.possessionArrow,
-              quarter: quarter,
-              gameClockSeconds: clock.secondsRemaining
+              possessionArrow: possession.possessionArrow
             },
             {
               type: possessionEventType,
               teamId: stat.teamId,
-              playerId: stat.playerId || undefined,
               opponentTeamId: opponentTeamId
             },
+            ruleset,
             automationFlags.possession
           );
           

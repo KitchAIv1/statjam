@@ -10,8 +10,12 @@
 -- ============================================================================
 UPDATE tournaments
 SET automation_settings = jsonb_set(
-  COALESCE(automation_settings, '{}'::jsonb),
-  '{possession,enabled}',
+  jsonb_set(
+    COALESCE(automation_settings, '{}'::jsonb),
+    '{possession,enabled}',
+    'true'::jsonb
+  ),
+  '{possession,autoFlip}',
   'true'::jsonb
 )
 WHERE automation_settings IS NOT NULL;
@@ -30,8 +34,12 @@ WHERE automation_settings IS NULL;
 -- Replace 'YOUR_TOURNAMENT_ID' with actual tournament ID
 UPDATE tournaments
 SET automation_settings = jsonb_set(
-  COALESCE(automation_settings, '{}'::jsonb),
-  '{possession,enabled}',
+  jsonb_set(
+    COALESCE(automation_settings, '{}'::jsonb),
+    '{possession,enabled}',
+    'true'::jsonb
+  ),
+  '{possession,autoFlip}',
   'true'::jsonb
 )
 WHERE id = 'YOUR_TOURNAMENT_ID';
