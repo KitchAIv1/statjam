@@ -266,9 +266,10 @@ function StatTrackerV3Content() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [tracker.clock.isRunning, tracker]);
+  }, [tracker.clock.isRunning, tracker.tick, tracker.advanceIfNeeded, tracker.clock.secondsRemaining]);
 
   // NEW: Shot Clock Tick Effect
+  // ✅ PERFORMANCE FIX: Removed `tracker` dependency to prevent interval recreation on every shot clock update
   useEffect(() => {
     let shotClockInterval: NodeJS.Timeout;
     
@@ -289,7 +290,7 @@ function StatTrackerV3Content() {
     return () => {
       if (shotClockInterval) clearInterval(shotClockInterval);
     };
-  }, [tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker]);
+  }, [tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker.shotClockTick, tracker.stopShotClock, tracker.shotClock.secondsRemaining]);
 
   // NEW: Sync shot clock with game clock
   useEffect(() => {
@@ -301,7 +302,7 @@ function StatTrackerV3Content() {
     else if (tracker.clock.isRunning && !tracker.shotClock.isRunning && tracker.shotClock.isVisible && !shotClockViolation) {
       tracker.startShotClock();
     }
-  }, [tracker.clock.isRunning, tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker, shotClockViolation]);
+  }, [tracker.clock.isRunning, tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker.stopShotClock, tracker.startShotClock, shotClockViolation]);
 
   // Clear shot clock violation when manually reset
   useEffect(() => {
