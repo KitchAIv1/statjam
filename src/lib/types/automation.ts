@@ -156,6 +156,45 @@ export const DEFAULT_AUTOMATION_FLAGS: AutomationFlags = {
 };
 
 /**
+ * Coach-specific automation flags
+ * Clock automation enabled by default for coach games
+ * NBA rules with Phase 2 clock automation
+ */
+export const COACH_AUTOMATION_FLAGS: AutomationFlags = {
+  clock: {
+    enabled: true,          // ✅ Clock automation ON
+    autoPause: true,        // ✅ Auto-pause on fouls, timeouts
+    autoReset: true,        // ✅ Auto-reset shot clock
+    ftMode: true,           // ✅ Free throw mode
+    madeBasketStop: true    // ✅ NBA last 2-min rule
+  },
+  possession: {
+    enabled: false,         // Phase 3 (not yet implemented)
+    autoFlip: false,
+    persistState: false,
+    jumpBallArrow: false
+  },
+  sequences: {
+    enabled: false,         // Phase 4 (not yet implemented)
+    promptAssists: false,
+    promptRebounds: false,
+    promptBlocks: false,
+    linkEvents: false,
+    freeThrowSequence: false
+  },
+  fouls: {
+    enabled: false,         // Phase 5 (not yet implemented)
+    bonusFreeThrows: false,
+    foulOutEnforcement: false,
+    technicalEjection: false
+  },
+  undo: {
+    enabled: false,
+    maxHistorySize: 50
+  }
+};
+
+/**
  * Type guard to check if automation flags are valid
  */
 export function isValidAutomationFlags(flags: unknown): flags is AutomationFlags {

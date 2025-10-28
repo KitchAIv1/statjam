@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { StatRecord, RosterState, ScoreByTeam } from '@/lib/types/tracker';
 import { Ruleset } from '@/lib/types/ruleset';
-import { AutomationFlags, DEFAULT_AUTOMATION_FLAGS } from '@/lib/types/automation';
+import { AutomationFlags, DEFAULT_AUTOMATION_FLAGS, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation';
 import { RulesetService } from '@/lib/config/rulesetService';
 
 interface UseTrackerProps {
   initialGameId: string;
   teamAId: string;
   teamBId: string;
+  isCoachMode?: boolean; // ✅ NEW: Detect coach games for automation
 }
 
 interface UseTrackerReturn {
@@ -73,7 +74,7 @@ interface UseTrackerReturn {
   resumeFromTimeout: () => void;
 }
 
-export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps): UseTrackerReturn => {
+export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = false }: UseTrackerProps): UseTrackerReturn => {
   // State
   const [gameId] = useState(initialGameId);
   const [quarter, setQuarterState] = useState(1);
@@ -212,7 +213,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
             
             // Fetch tournament data to get ruleset and automation settings
             const tournamentId = game.tournament_id;
+            console.log('🔍 Phase 1 DEBUG: tournament_id =', tournamentId, 'type:', typeof tournamentId);
+            
             if (tournamentId) {
+              console.log('✅ Phase 1: Tournament ID found, fetching tournament data...');
               const tournamentResponse = await fetch(
                 `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/tournaments?id=eq.${tournamentId}&select=ruleset,ruleset_config,automation_settings`,
                 {
@@ -225,8 +229,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
               
               if (tournamentResponse.ok) {
                 const tournaments = await tournamentResponse.json();
+                console.log('🔍 Phase 1 DEBUG: Tournament response:', tournaments);
+                
                 if (tournaments && tournaments.length > 0) {
                   const tournament = tournaments[0];
+                  console.log('🔍 Phase 1 DEBUG: Tournament data:', tournament);
                   
                   // Load ruleset
                   const rulesetId = tournament.ruleset || 'NBA';
@@ -260,13 +267,31 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
                 }
               }
             } else {
-              console.warn('⚠️ Phase 1: No tournament_id found, using default NBA ruleset');
+              // No tournament_id - use coach defaults if in coach mode
+              console.warn('⚠️ Phase 1: No tournament_id found');
               setRuleset(RulesetService.getRuleset('NBA'));
+              
+              if (isCoachMode) {
+                console.log('✅ Phase 1: Coach mode detected, using COACH_AUTOMATION_FLAGS');
+                setAutomationFlags(COACH_AUTOMATION_FLAGS);
+                console.log('✅ Phase 1: Clock automation ENABLED for coach game');
+              } else {
+                console.log('✅ Phase 1: Using DEFAULT_AUTOMATION_FLAGS (all OFF)');
+                setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
+              }
             }
           } catch (rulesetError) {
             console.error('❌ Phase 1: Error loading ruleset:', rulesetError);
             // Fallback to NBA ruleset
             setRuleset(RulesetService.getRuleset('NBA'));
+            
+            // Fallback automation flags
+            if (isCoachMode) {
+              console.log('✅ Phase 1 FALLBACK: Coach mode, using COACH_AUTOMATION_FLAGS');
+              setAutomationFlags(COACH_AUTOMATION_FLAGS);
+            } else {
+              setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
+            }
           }
         } else {
           console.warn('⚠️ Could not load game state from database');

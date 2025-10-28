@@ -100,7 +100,8 @@ function StatTrackerV3Content() {
   const tracker = useTracker({
     initialGameId: gameIdParam || 'unknown',
     teamAId: gameData?.team_a_id || 'teamA',
-    teamBId: gameData?.team_b_id || 'teamB'
+    teamBId: gameData?.team_b_id || 'teamB',
+    isCoachMode: coachMode // ✅ Pass coach mode flag for automation
   });
 
   // Auth Check - Allow both stat_admin and coach roles
