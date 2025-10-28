@@ -190,7 +190,9 @@ function StatTrackerV3Content() {
             teamAPlayersData = coachPlayers.map(cp => ({
               id: cp.id, // Always use the id field (works for both StatJam users and custom players)
               name: cp.name,
-              jerseyNumber: cp.jersey_number
+              jerseyNumber: cp.jersey_number,
+              email: cp.email, // Preserve email for regular players
+              is_custom_player: cp.is_custom_player // Preserve custom player flag
             }));
             console.log('✅ Coach team players loaded:', teamAPlayersData.length);
           } else {
@@ -340,7 +342,7 @@ function StatTrackerV3Content() {
     
     // Check if this is a custom player (not in users table)
     const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-    const isCustomPlayer = selectedPlayerData && !selectedPlayerData.email; // Custom players don't have email
+    const isCustomPlayer = selectedPlayerData && selectedPlayerData.is_custom_player === true;
     
     if (isCustomPlayer) {
       console.warn('⚠️ Custom player stats not yet fully supported:', selectedPlayerData?.name);
