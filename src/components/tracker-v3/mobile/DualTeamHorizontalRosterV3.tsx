@@ -34,8 +34,10 @@ export function DualTeamHorizontalRosterV3({
 }: DualTeamHorizontalRosterV3Props) {
   
   // Get first 5 players for each team (tournament mode) or all players (coach mode)
-  const teamADisplay = isCoachMode ? teamAPlayers : teamAPlayers.slice(0, 5);
-  const teamBDisplay = isCoachMode ? teamBPlayers : teamBPlayers.slice(0, 5);
+  // Always show only first 5 players (on-court)
+  // Bench players accessible via substitution modal
+  const teamADisplay = teamAPlayers.slice(0, 5);
+  const teamBDisplay = teamBPlayers.slice(0, 5);
   
   // Check which team the selected player belongs to
   const selectedPlayerTeam = teamADisplay.find(p => p.id === selectedPlayer) ? 'A' : 

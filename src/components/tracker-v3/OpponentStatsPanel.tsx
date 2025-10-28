@@ -36,6 +36,9 @@ export function OpponentStatsPanel({
   const { teamStats, onCourtPlayers, benchPlayers, loading, error } = useTeamStats(gameId, teamId);
   const { teamStats: opponentTeamStats } = useOpponentStats(gameId);
 
+  // Combine all players (on-court + bench)
+  const allPlayers = [...onCourtPlayers, ...benchPlayers];
+  
   // Debug logging
   console.log('🎯 OpponentStatsPanel: Data loaded', {
     gameId,
@@ -45,6 +48,7 @@ export function OpponentStatsPanel({
     error,
     onCourtPlayers: onCourtPlayers.length,
     benchPlayers: benchPlayers.length,
+    allPlayers: allPlayers.length,
     onCourtPlayersData: onCourtPlayers,
     benchPlayersData: benchPlayers,
     teamStats: !!teamStats,
@@ -68,10 +72,6 @@ export function OpponentStatsPanel({
       </div>
     );
   }
-
-  // Combine all players (on-court + bench)
-  const allPlayers = [...onCourtPlayers, ...benchPlayers];
-  console.log('🎯 OpponentStatsPanel: Total players to display:', allPlayers.length);
 
   return (
     <div style={styles.container}>

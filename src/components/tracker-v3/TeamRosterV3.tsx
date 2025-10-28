@@ -72,8 +72,9 @@ export function TeamRosterV3({
   const onCourtPlayers = players.slice(0, 5);
   const benchPlayers = players.slice(5);
   
-  // Use the passed isCoachMode prop to determine display logic
-  const displayPlayers = isCoachMode ? players : onCourtPlayers;
+  // Always display only first 5 players (on-court)
+  // Bench players are accessible via substitution modal
+  const displayPlayers = onCourtPlayers;
 
   const teamColor = teamSide === 'left' ? 'orange' : 'blue';
   const gradientClass = teamSide === 'left' 
@@ -125,12 +126,12 @@ export function TeamRosterV3({
           <h4 className={`text-lg font-semibold ${
             teamSide === 'left' ? 'text-orange-800' : 'text-blue-800'
           }`}>
-            {isCoachMode ? 'All Players' : 'Players'}
+            On Court
           </h4>
           <div className={`px-2 py-1 rounded text-xs font-bold text-white ${
             teamSide === 'left' ? 'bg-orange-500' : 'bg-blue-500'
           }`}>
-            {isCoachMode ? `${players.length} Total` : `${onCourtPlayers.length}/5`}
+            {onCourtPlayers.length}/5
           </div>
         </div>
 
