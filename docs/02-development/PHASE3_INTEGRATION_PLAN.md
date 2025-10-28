@@ -282,6 +282,13 @@ WHERE id = 'YOUR_TOURNAMENT_ID';
 **Cause**: Missing null check for `flags` parameter  
 **Fix**: Added `!flags ||` check in `possessionEngine.ts` line 68
 
+### **Issue 4**: Possession only working after steal (CRITICAL)
+**Cause**: Conditional checks prevented possession from flipping on made shots at game start  
+**Symptoms**: Made shots, turnovers, and violations didn't flip possession until a steal occurred  
+**Fix**: Removed all conditional checks - possession now **unconditionally** flips on made_shot, turnover, steal, defensive_rebound, and violation events  
+**Date Fixed**: October 28, 2025  
+**Commit**: `549faab` - "fix(possession): Remove conditional checks for possession flipping"
+
 ---
 
 ## 📝 **FILES MODIFIED**

@@ -63,6 +63,23 @@
 **Status**: ✅ FIXED  
 **Fix**: Added `ruleset` parameter to `PossessionEngine.processEvent()` call in `useTracker.ts`
 
+### **Bug 4**: Possession only working after steal event (CRITICAL)
+**Severity**: CRITICAL  
+**Status**: ✅ FIXED (October 28, 2025)  
+**Root Cause**: Conditional checks in `possessionEngine.ts` prevented possession from flipping on made shots at game start  
+**Symptoms**: 
+- Made shots didn't flip possession
+- Turnovers didn't flip possession
+- Only steal events worked correctly
+**Fix**: Removed all conditional checks for possession-flipping events:
+- `made_shot`: Now **unconditionally** flips to opponent
+- `turnover`: Now **unconditionally** flips to opponent
+- `steal`: Now **unconditionally** flips to stealing team (removed condition)
+- `defensive_rebound`: Now **unconditionally** flips to rebounding team
+- `violation`: Now **unconditionally** flips to opponent
+- `offensive_rebound`: Enhanced with edge case handling for possession correction
+**Impact**: Possession tracking now works from the **first stat recorded**, regardless of game state or initial possession
+
 ---
 
 ## 📊 **PERFORMANCE METRICS**
@@ -129,7 +146,7 @@
 ---
 
 **Last Updated**: October 28, 2025  
-**Tested By**: AI Assistant  
+**Tested By**: AI Assistant + User  
 **Approved By**: User  
-**Version**: 1.0
+**Version**: 1.1 (Bug 4 Fix - Unconditional Possession Flipping)
 
