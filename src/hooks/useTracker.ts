@@ -690,23 +690,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
 
       console.log('🏀 Recording stat to database:', fullStat);
 
-      // Import validation and notification services
-      const { validateStatValue, validateQuarter } = await import('@/lib/validation/statValidation');
-      const { notify } = await import('@/lib/services/notificationService');
-
-      // Validate quarter
-      const quarterValidation = validateQuarter(quarter);
-      if (!quarterValidation.valid) {
-        notify.error('Invalid quarter', quarterValidation.error);
-        return;
-      }
-      if (quarterValidation.warning) {
-        notify.warning(quarterValidation.warning);
-      }
-
-      // Import GameServiceV3 (raw HTTP - never hangs, triggers still fire for real-time)
-      const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
-      
       // Map stat value for database (points for scoring stats, 1 for others)
       let statValue = 1;
       if (stat.statType === 'field_goal' && stat.modifier === 'made') {
@@ -722,62 +705,78 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         statValue = 1;
       }
 
-      // Validate stat value (only for made stats)
-      if (stat.modifier === 'made' || !stat.modifier) {
-        const validation = validateStatValue(stat.statType, statValue);
-        if (!validation.valid) {
-          notify.error('Invalid stat value', validation.error);
-          return;
-        }
-        if (validation.warning) {
-          // Show warning but allow the stat to be recorded
-          notify.warning('Unusual stat value', validation.warning);
+      // ✅ OPTIMIZATION 1: Batch all UI updates in a single setState
+      // This prevents multiple re-renders and provides instant feedback
+      const uiUpdates: {
+        scores?: Record<string, number>;
+        teamFouls?: Record<string, number>;
+        lastAction?: string;
+        lastActionPlayerId?: string | null;
+        clock?: { secondsRemaining: number; isRunning: boolean };
+        shotClock?: { secondsRemaining: number; isRunning: boolean; isVisible: boolean };
+      } = {};
+
+      // Prepare score update (optimistic UI)
+      if (stat.modifier === 'made' && statValue > 0) {
+        if (stat.isOpponentStat) {
+          uiUpdates.scores = { opponent: statValue };
+        } else {
+          uiUpdates.scores = { [stat.teamId]: statValue };
         }
       }
 
-      // Record stat in database (V3 - raw HTTP, never hangs)
-      await GameServiceV3.recordStat({
-        gameId: stat.gameId,
-        playerId: stat.playerId,
-        customPlayerId: stat.customPlayerId,
-        isOpponentStat: stat.isOpponentStat,
-        teamId: stat.teamId,
-        statType: stat.statType,
-        statValue: statValue,
-        modifier: stat.modifier || null, // ✅ FIXED: Use null instead of empty string
-        quarter: quarter,
-        gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
-        gameTimeSeconds: clock.secondsRemaining % 60
-      });
+      // Prepare foul update (optimistic UI)
+      if (stat.statType === 'foul') {
+        uiUpdates.teamFouls = { [stat.teamId]: 1 };
+      }
 
-      // V3 throws on error, so if we reach here, it succeeded
-      
-      console.log('✅ Stat recorded successfully in database');
-      
-      // ✅ PHASE 2: Process clock automation
+      // Prepare last action message
+      if (stat.isOpponentStat) {
+        uiUpdates.lastAction = `Opponent Team: ${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
+        uiUpdates.lastActionPlayerId = null;
+      } else {
+        uiUpdates.lastAction = `${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
+        uiUpdates.lastActionPlayerId = stat.playerId;
+      }
+
+      // ✅ OPTIMIZATION 2: Apply ALL UI updates at once (single re-render)
+      if (uiUpdates.scores) {
+        setScores(prev => ({
+          ...prev,
+          ...(stat.isOpponentStat 
+            ? { opponent: (prev.opponent || 0) + uiUpdates.scores!.opponent }
+            : { [stat.teamId]: (prev[stat.teamId] || 0) + uiUpdates.scores![stat.teamId] }
+          )
+        }));
+      }
+      if (uiUpdates.teamFouls) {
+        setTeamFouls(prev => ({
+          ...prev,
+          [stat.teamId]: (prev[stat.teamId] || 0) + 1
+        }));
+      }
+      if (uiUpdates.lastAction) {
+        setLastAction(uiUpdates.lastAction);
+        setLastActionPlayerId(uiUpdates.lastActionPlayerId || null);
+      }
+
+      // ✅ OPTIMIZATION 3: Process clock automation BEFORE database write (non-blocking)
+      // This provides instant visual feedback while the network request is in flight
       if (ruleset && automationFlags.clock.enabled) {
         const { ClockEngine } = await import('@/lib/engines/clockEngine');
         
-        // ✅ Map stat types to ClockEngine event types
+        // Map stat types to ClockEngine event types
         let eventType: 'foul' | 'made_shot' | 'missed_shot' | 'turnover' | 'timeout' | 'free_throw' | 'substitution' | 'steal';
         let reboundType: 'offensive' | 'defensive' | undefined = undefined;
         
-        // Map scoring stats to made_shot/missed_shot
         if (stat.statType === 'field_goal' || stat.statType === 'three_pointer') {
           eventType = stat.modifier === 'made' ? 'made_shot' : 'missed_shot';
-        }
-        // Map rebounds as missed_shot with reboundType
-        // ClockEngine expects rebounds to be part of missed_shot event
-        else if (stat.statType === 'rebound') {
+        } else if (stat.statType === 'rebound') {
           eventType = 'missed_shot';
           reboundType = stat.modifier as 'offensive' | 'defensive';
-        }
-        // Map steals as separate event (resets shot clock, clock keeps running)
-        else if (stat.statType === 'steal') {
+        } else if (stat.statType === 'steal') {
           eventType = 'steal';
-        }
-        // Pass through other stats as-is
-        else {
+        } else {
           eventType = stat.statType as 'foul' | 'turnover' | 'timeout' | 'free_throw' | 'substitution';
         }
         
@@ -803,19 +802,19 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           automationFlags.clock
         );
         
-        // Apply clock state changes
+        // Apply clock state changes immediately
         if (clockResult.actions.length > 0) {
           console.log('🕐 Clock automation:', clockResult.actions);
           
-          // Update game clock
           const newGameClockSeconds = (clockResult.newState.gameClockMinutes * 60) + clockResult.newState.gameClockSeconds;
+          
+          // ✅ OPTIMIZATION 4: Batch clock updates together
           setClock(prev => ({
             ...prev,
             secondsRemaining: newGameClockSeconds,
             isRunning: clockResult.newState.gameClockRunning
           }));
           
-          // Update shot clock
           setShotClock(prev => ({
             ...prev,
             secondsRemaining: clockResult.newState.shotClock,
@@ -824,48 +823,51 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           }));
         }
       }
-        
-      // Update local scores for immediate UI feedback (only for scoring stats)
-      if (stat.modifier === 'made' && statValue > 0) {
-        // Handle opponent stats in coach mode
-        if (stat.isOpponentStat) {
-          // Opponent stat: update the opponent score
-          setScores(prev => ({
-            ...prev,
-            opponent: (prev.opponent || 0) + statValue
-          }));
-        } else {
-          // Regular stat: update the team score
-          setScores(prev => ({
-            ...prev,
-            [stat.teamId]: (prev[stat.teamId] || 0) + statValue
-          }));
-        }
-      }
-      
-      // Auto-increment team fouls locally (database trigger handles persistence)
-      if (stat.statType === 'foul') {
-        setTeamFouls(prev => ({
-          ...prev,
-          [stat.teamId]: (prev[stat.teamId] || 0) + 1
-        }));
-        console.log('📊 Team foul incremented locally for team:', stat.teamId);
+
+      // ✅ OPTIMIZATION 5: Database write happens AFTER UI updates (non-blocking)
+      // Use Promise.all to load imports in parallel
+      const [
+        { GameServiceV3 },
+        { validateStatValue, validateQuarter },
+        { notify }
+      ] = await Promise.all([
+        import('@/lib/services/gameServiceV3'),
+        import('@/lib/validation/statValidation'),
+        import('@/lib/services/notificationService')
+      ]);
+
+      // Validate quarter
+      const quarterValidation = validateQuarter(quarter);
+      if (!quarterValidation.valid) {
+        notify.error('Invalid quarter', quarterValidation.error);
+        return;
       }
 
-      // Create appropriate last action message
-      console.log('🎯 Setting last action for stat:', { isOpponentStat: stat.isOpponentStat, statType: stat.statType, modifier: stat.modifier });
-      
-      if (stat.isOpponentStat) {
-        const actionMessage = `Opponent Team: ${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
-        console.log('🎯 Opponent stat - setting last action:', actionMessage);
-        setLastAction(actionMessage);
-        setLastActionPlayerId(null); // No specific player for opponent
-      } else {
-        const actionMessage = `${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
-        console.log('🎯 Regular stat - setting last action:', actionMessage);
-        setLastAction(actionMessage);
-        setLastActionPlayerId(stat.playerId);
+      // Validate stat value (only for made stats)
+      if (stat.modifier === 'made' || !stat.modifier) {
+        const validation = validateStatValue(stat.statType, statValue);
+        if (!validation.valid) {
+          notify.error('Invalid stat value', validation.error);
+          return;
+        }
       }
+
+      // Record stat in database (V3 - raw HTTP, never hangs)
+      await GameServiceV3.recordStat({
+        gameId: stat.gameId,
+        playerId: stat.playerId,
+        customPlayerId: stat.customPlayerId,
+        isOpponentStat: stat.isOpponentStat,
+        teamId: stat.teamId,
+        statType: stat.statType,
+        statValue: statValue,
+        modifier: stat.modifier || null,
+        quarter: quarter,
+        gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
+        gameTimeSeconds: clock.secondsRemaining % 60
+      });
+
+      console.log('✅ Stat recorded successfully in database');
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);
