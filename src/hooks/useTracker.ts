@@ -277,7 +277,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
           
           const points = stat.stat_value || 0;
           
-          if (stat.team_id === teamAId) {
+          // ✅ NEW: Check is_opponent_stat flag for coach mode
+          if (stat.is_opponent_stat) {
+            // Opponent stats go to team B score
+            teamBScore += points;
+          } else if (stat.team_id === teamAId) {
             teamAScore += points;
           } else if (stat.team_id === teamBId) {
             teamBScore += points;
@@ -289,7 +293,16 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         const newScores = { [teamAId]: teamAScore, [teamBId]: teamBScore };
         
         // Update scores to match database exactly
-        setScores(newScores);
+        // Handle coach mode where both team IDs are the same
+        if (teamAId === teamBId) {
+          // Coach mode: opponent score is now correctly calculated via is_opponent_stat flag
+          // Since team A and B IDs are the same, we use the same key but calculate separately
+          // For opponent stats, we calculate them but store them separately if needed
+          setScores({ [teamAId]: teamAScore, opponent: teamBScore });
+        } else {
+          // Tournament mode: use both scores
+          setScores(newScores);
+        }
       }
     } catch (error) {
       console.error('❌ Error refreshing scores:', error);
@@ -613,6 +626,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
       await GameServiceV3.recordStat({
         gameId: stat.gameId,
         playerId: stat.playerId,
+        customPlayerId: stat.customPlayerId,
+        isOpponentStat: stat.isOpponentStat,
         teamId: stat.teamId,
         statType: stat.statType,
         statValue: statValue,
@@ -628,10 +643,20 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         
       // Update local scores for immediate UI feedback (only for scoring stats)
       if (stat.modifier === 'made' && statValue > 0) {
-        setScores(prev => ({
-          ...prev,
-          [stat.teamId]: prev[stat.teamId] + statValue
-        }));
+        // Handle opponent stats in coach mode
+        if (stat.isOpponentStat) {
+          // Opponent stat: update the opponent score
+          setScores(prev => ({
+            ...prev,
+            opponent: (prev.opponent || 0) + statValue
+          }));
+        } else {
+          // Regular stat: update the team score
+          setScores(prev => ({
+            ...prev,
+            [stat.teamId]: (prev[stat.teamId] || 0) + statValue
+          }));
+        }
       }
       
       // Auto-increment team fouls locally (database trigger handles persistence)

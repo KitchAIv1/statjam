@@ -314,7 +314,7 @@ export class GameServiceV3 {
       console.log('🚀 GameServiceV3: Fetching game stats via raw HTTP for:', gameId);
 
       const stats = await this.makeRequest<any>('game_stats', {
-        'select': 'team_id,stat_type,stat_value,modifier',
+        'select': 'team_id,stat_type,stat_value,modifier,is_opponent_stat',
         'game_id': `eq.${gameId}`,
         'order': 'created_at.asc'
       });
@@ -378,7 +378,9 @@ export class GameServiceV3 {
    */
   static async recordStat(statData: {
     gameId: string;
-    playerId: string;
+    playerId?: string; // Optional for custom players
+    customPlayerId?: string; // For custom players
+    isOpponentStat?: boolean; // For coach mode opponent stats
     teamId: string;
     statType: string;
     modifier: string | null; // ✅ FIXED: Allow null modifier
@@ -409,7 +411,9 @@ export class GameServiceV3 {
         },
         body: JSON.stringify({
           game_id: statData.gameId,
-          player_id: statData.playerId,
+          player_id: statData.playerId || null,
+          custom_player_id: statData.customPlayerId || null,
+          is_opponent_stat: statData.isOpponentStat || false,
           team_id: statData.teamId,
           stat_type: statData.statType,
           modifier: statData.modifier,

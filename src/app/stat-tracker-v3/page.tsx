@@ -328,32 +328,46 @@ function StatTrackerV3Content() {
   const handleStatRecord = async (statType: string, modifier?: string) => {
     if (!selectedPlayer || !gameData) return;
     
-    // Handle opponent team stats in coach mode
+    // Handle different player types in coach mode
+    let actualPlayerId = null;
+    let actualCustomPlayerId = null;
+    let actualTeamId = gameData.team_a_id; // Default to coach team
+    let isOpponentStat = false;
+    
     if (coachMode && selectedPlayer === 'opponent-team') {
-      // For opponent stats, we'll use a special handling
-      // For now, skip opponent stats until we implement proper solution
-      console.warn('⚠️ Opponent team stats not yet implemented for coach mode');
-      return;
-    }
-    
-    // Determine which team the selected player belongs to
-    const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
-    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-    
-    // Check if this is a custom player (not in users table)
-    const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-    const isCustomPlayer = selectedPlayerData && selectedPlayerData.is_custom_player === true;
-    
-    if (isCustomPlayer) {
-      console.warn('⚠️ Custom player stats not yet fully supported:', selectedPlayerData?.name);
-      // For now, skip custom player stats until we fix the database schema
-      return;
+      // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
+      actualPlayerId = user?.id || null;
+      actualTeamId = gameData.team_a_id; // Use coach's team ID (same as team_b_id in coach mode)
+      isOpponentStat = true; // FLAG: This is an opponent stat
+      console.log('🏀 Recording opponent team stat (flagged as opponent), team_id:', actualTeamId);
+    } else {
+      // Determine which team the selected player belongs to
+      const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+      actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+      
+      // Check if this is a custom player
+      const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+      const isCustomPlayer = selectedPlayerData && selectedPlayerData.is_custom_player === true;
+      
+      if (isCustomPlayer) {
+        // CUSTOM PLAYER STATS: Use the actual custom player ID
+        actualCustomPlayerId = selectedPlayer; // This is the custom_players.id
+        actualPlayerId = null; // Don't set player_id for custom players
+        console.log('🏀 Recording custom player stat for:', selectedPlayerData?.name, 'ID:', selectedPlayer);
+      } else {
+        // REGULAR PLAYER STATS: Use the user ID
+        actualPlayerId = selectedPlayer; // This is the users.id
+        actualCustomPlayerId = null; // Don't set custom_player_id for regular players
+        console.log('🏀 Recording regular player stat for ID:', selectedPlayer);
+      }
     }
     
     await tracker.recordStat({
       gameId: gameData.id,
-      teamId,
-      playerId: selectedPlayer,
+      teamId: actualTeamId,
+      playerId: actualPlayerId,
+      customPlayerId: actualCustomPlayerId,
+      isOpponentStat: isOpponentStat,
       statType: statType as 'field_goal' | 'three_pointer' | 'free_throw' | 'assist' | 'rebound' | 'steal' | 'block' | 'turnover' | 'foul',
       modifier: modifier as 'made' | 'missed' | 'offensive' | 'defensive' | 'shooting' | 'personal' | 'technical' | 'flagrant' | undefined
     });
@@ -363,14 +377,38 @@ function StatTrackerV3Content() {
   const handleFoulRecord = async (foulType: 'personal' | 'technical') => {
     if (!selectedPlayer || !gameData) return;
 
-    // Determine which team the selected player belongs to
-    const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
-    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+    // Use the same logic as handleStatRecord for player type handling
+    let actualPlayerId = null;
+    let actualCustomPlayerId = null;
+    let actualTeamId = gameData.team_a_id;
+    let isOpponentStat = false;
+    
+    if (coachMode && selectedPlayer === 'opponent-team') {
+      actualPlayerId = user?.id || null;
+      actualTeamId = gameData.team_a_id;
+      isOpponentStat = true; // FLAG: This is an opponent stat
+    } else {
+      const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+      actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+      
+      const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+      const isCustomPlayer = selectedPlayerData && selectedPlayerData.is_custom_player === true;
+      
+      if (isCustomPlayer) {
+        actualCustomPlayerId = selectedPlayer;
+        actualPlayerId = null;
+      } else {
+        actualPlayerId = selectedPlayer;
+        actualCustomPlayerId = null;
+      }
+    }
 
     await tracker.recordStat({
       gameId: gameData.id,
-      teamId,
-      playerId: selectedPlayer,
+      teamId: actualTeamId,
+      playerId: actualPlayerId,
+      customPlayerId: actualCustomPlayerId,
+      isOpponentStat: isOpponentStat,
       statType: 'foul',
       modifier: foulType
     });
@@ -588,8 +626,19 @@ function StatTrackerV3Content() {
           key={`scoreboard-${JSON.stringify(tracker.scores)}`} // ✅ FORCE RE-RENDER
           teamAName={gameData.team_a?.name || 'Team A'}
           teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
-          teamAScore={tracker.scores[gameData.team_a_id] || 0}
-          teamBScore={tracker.scores[gameData.team_b_id] || 0}
+          teamAScore={(() => {
+            const score = tracker.scores[gameData.team_a_id] || 0;
+            console.log('🔍 SCOREBOARD DEBUG:', {
+              coachMode,
+              team_a_id: gameData.team_a_id,
+              team_b_id: gameData.team_b_id,
+              tracker_scores: tracker.scores,
+              teamAScore: score,
+              teamBScore: coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)
+            });
+            return score;
+          })()}
+          teamBScore={coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)}
           quarter={tracker.quarter}
           minutes={Math.floor(tracker.clock.secondsRemaining / 60)}
           seconds={tracker.clock.secondsRemaining % 60}

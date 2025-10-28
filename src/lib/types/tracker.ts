@@ -51,7 +51,9 @@ export interface StatRecord {
   id?: string;
   gameId: GameId;
   teamId: TeamId;
-  playerId: PlayerId;
+  playerId?: PlayerId; // Optional for custom players
+  customPlayerId?: string; // For custom players from custom_players table
+  isOpponentStat?: boolean; // For coach mode: true if this stat is for the opponent team
   statType: StatType;
   modifier?: StatModifier;
   createdAt?: string; // ISO
