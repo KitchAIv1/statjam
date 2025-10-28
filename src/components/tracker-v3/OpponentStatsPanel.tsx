@@ -58,8 +58,50 @@ export function OpponentStatsPanel({
   if (loading) {
     return (
       <div style={styles.container}>
-        <div style={styles.loadingContainer}>
-          <div style={styles.loadingText}>Loading stats...</div>
+        {/* Skeleton Loading - Matches actual structure */}
+        <div style={styles.scrollableContent} className="opponent-stats-scroll">
+          {/* Player Stats Skeleton */}
+          <div style={styles.playersSubsection}>
+            <div style={styles.subsectionTitle}>{teamName} Players</div>
+            {/* Skeleton rows for 5 players */}
+            {[...Array(5)].map((_, index) => (
+              <div key={`skeleton-${index}`} style={styles.skeletonPlayerRow}>
+                <div style={styles.skeletonAvatar}></div>
+                <div style={styles.skeletonContent}>
+                  <div style={styles.skeletonName}></div>
+                  <div style={styles.skeletonStats}>
+                    <div style={styles.skeletonStat}></div>
+                    <div style={styles.skeletonStat}></div>
+                    <div style={styles.skeletonStat}></div>
+                    <div style={styles.skeletonStat}></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Fixed Team Aggregates Skeleton */}
+        <div style={styles.fixedAggregatesContainer}>
+          {/* Coach's Team Summary Skeleton */}
+          <div style={styles.teamSummaryRow}>
+            <div style={styles.skeletonTeamLabel}></div>
+            <div style={styles.teamRowStats}>
+              {[...Array(6)].map((_, i) => (
+                <div key={`team-stat-${i}`} style={styles.skeletonTeamStat}></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Opponent Summary Skeleton */}
+          <div style={styles.opponentSummaryRow}>
+            <div style={styles.skeletonOpponentLabel}></div>
+            <div style={styles.teamRowStats}>
+              {[...Array(6)].map((_, i) => (
+                <div key={`opp-stat-${i}`} style={styles.skeletonTeamStat}></div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -253,6 +295,64 @@ const styles = {
     color: '#e5e7eb',
     fontSize: '9px',
     whiteSpace: 'nowrap' as const
+  },
+  // ✅ SKELETON LOADING STYLES
+  skeletonPlayerRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 10px',
+    borderBottom: '1px solid #374151',
+    animation: 'pulse 1.5s ease-in-out infinite'
+  },
+  skeletonAvatar: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    backgroundColor: '#374151',
+    flexShrink: 0
+  },
+  skeletonContent: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '4px'
+  },
+  skeletonName: {
+    width: '60%',
+    height: '12px',
+    backgroundColor: '#374151',
+    borderRadius: '4px'
+  },
+  skeletonStats: {
+    display: 'flex',
+    gap: '6px'
+  },
+  skeletonStat: {
+    width: '40px',
+    height: '10px',
+    backgroundColor: '#374151',
+    borderRadius: '4px'
+  },
+  skeletonTeamLabel: {
+    width: '80px',
+    height: '10px',
+    backgroundColor: '#374151',
+    borderRadius: '4px',
+    marginBottom: '4px'
+  },
+  skeletonOpponentLabel: {
+    width: '80px',
+    height: '10px',
+    backgroundColor: '#374151',
+    borderRadius: '4px',
+    marginBottom: '4px'
+  },
+  skeletonTeamStat: {
+    width: '60px',
+    height: '9px',
+    backgroundColor: '#374151',
+    borderRadius: '4px'
   }
 };
 

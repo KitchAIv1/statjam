@@ -48,6 +48,18 @@
 }
 
 /* Show scrollbar on hover to indicate scrollability */
+
+/* ✅ SKELETON LOADING ANIMATION: Smooth pulse effect */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Show scrollbar on hover to indicate scrollability */
 .opponent-stats-scroll::-webkit-scrollbar-thumb {
   background: transparent;
 }
