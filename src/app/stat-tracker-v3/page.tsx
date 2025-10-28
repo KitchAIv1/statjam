@@ -14,7 +14,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { MobileLayoutV3 } from '@/components/tracker-v3/mobile/MobileLayoutV3';
 
 // V3 Components
-import { GameHeaderV3 } from '@/components/tracker-v3/GameHeaderV3';
 import { TopScoreboardV3 } from '@/components/tracker-v3/TopScoreboardV3';
 import { TeamRosterV3 } from '@/components/tracker-v3/TeamRosterV3';
 import { OpponentTeamPanel } from '@/components/tracker-v3/OpponentTeamPanel';
@@ -615,14 +614,9 @@ function StatTrackerV3Content() {
     <ErrorBoundary>
       <div className="min-h-screen overflow-y-auto" style={{ background: 'linear-gradient(135deg, #1f2937, #111827)' }}>
         <div className="container mx-auto px-3 py-3 max-w-7xl min-h-screen flex flex-col">
-        {/* Header */}
-        <GameHeaderV3 
-          gameId={gameData.id}
-          onBack={() => router.push('/dashboard')}
-        />
-
         {/* Top Scoreboard & Clock with Integrated Shot Clock */}
         <TopScoreboardV3
+          onBack={() => router.push('/dashboard')}
           key={`scoreboard-${JSON.stringify(tracker.scores)}`} // ✅ FORCE RE-RENDER
           teamAName={gameData.team_a?.name || 'Team A'}
           teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
@@ -711,6 +705,9 @@ function StatTrackerV3Content() {
                   opponentName={opponentNameParam}
                   selectedPlayer={selectedPlayer}
                   onPlayerSelect={setSelectedPlayer}
+                  gameId={gameData.id}
+                  teamId={gameData.team_a_id}
+                  teamName={gameData.team_a?.name || 'My Team'}
                 />
               ) : (
                 <TeamRosterV3

@@ -501,6 +501,7 @@ export class TeamStatsService {
 
   /**
    * Aggregate player statistics from game_stats table
+   * Handles both regular players (from users table) and custom players (from custom_players table)
    */
   static async aggregatePlayerStats(gameId: string, teamId: string, playerIds: string[]): Promise<PlayerStats[]> {
     try {
@@ -510,22 +511,34 @@ export class TeamStatsService {
         return [];
       }
 
-      // Fetch all game stats for this team's players
+      // Fetch all game stats for this team's players (including custom players)
       const gameStats = await this.makeRequest<any>('game_stats', {
-        'select': 'player_id,stat_type,stat_value,modifier,quarter',
+        'select': 'player_id,custom_player_id,stat_type,stat_value,modifier,quarter',
         'game_id': `eq.${gameId}`,
-        'team_id': `eq.${teamId}`,
-        'player_id': `in.(${playerIds.join(',')})`
+        'team_id': `eq.${teamId}`
       });
 
-      console.log(`📊 TeamStatsService: Found ${gameStats.length} stats for ${playerIds.length} players`);
+      console.log(`📊 TeamStatsService: Found ${gameStats.length} stats for team`);
 
-      // Fetch player names
+      // Fetch regular player names from users table
       const playersResponse = await this.makeRequest<any>('users', {
         'select': 'id,name,email',
         'id': `in.(${playerIds.join(',')})`
       });
 
+      // Fetch custom player names from custom_players table
+      let customPlayersResponse: any[] = [];
+      try {
+        customPlayersResponse = await this.makeRequest<any>('custom_players', {
+          'select': 'id,name,team_id',
+          'team_id': `eq.${teamId}`
+        });
+        console.log(`📊 TeamStatsService: Found ${customPlayersResponse.length} custom players`);
+      } catch (error) {
+        console.log('⚠️ TeamStatsService: No custom_players table or no custom players found');
+      }
+
+      // Build combined players map
       const playersMap = new Map(
         playersResponse.map((p: any) => [
           p.id,
@@ -533,16 +546,40 @@ export class TeamStatsService {
         ])
       );
 
-      // Calculate accurate player minutes from substitutions
-      const playerMinutesMap = await this.calculatePlayerMinutes(gameId, teamId, playerIds);
+      // Add custom players to map
+      customPlayersResponse.forEach((p: any) => {
+        playersMap.set(p.id, p.name || `Custom Player ${p.id.substring(0, 8)}`);
+      });
 
-      // Calculate plus/minus for players
-      const playerPlusMinusMap = await this.calculatePlusMinusForPlayers(gameId, teamId, playerIds);
+      // Build final player list:
+      // 1. Start with roster playerIds (to show all players even with 0 stats)
+      // 2. Add any additional players from game_stats (in case stats exist for players not in roster)
+      const finalPlayerIds = new Set<string>(playerIds);
+      
+      // Add custom players from the team
+      customPlayersResponse.forEach((p: any) => {
+        finalPlayerIds.add(p.id);
+      });
+      
+      // Also add any players who have stats but might not be in roster
+      gameStats.forEach((stat: any) => {
+        if (stat.player_id) finalPlayerIds.add(stat.player_id);
+        if (stat.custom_player_id) finalPlayerIds.add(stat.custom_player_id);
+      });
+
+      const finalPlayerIdsArray = Array.from(finalPlayerIds);
+      console.log(`📊 TeamStatsService: Processing ${finalPlayerIdsArray.length} total players (roster: ${playerIds.length}, custom: ${customPlayersResponse.length}, from stats: ${gameStats.length > 0 ? 'yes' : 'no'})`);
+
+      // Calculate accurate player minutes from substitutions (use finalPlayerIdsArray to include custom players)
+      const playerMinutesMap = await this.calculatePlayerMinutes(gameId, teamId, finalPlayerIdsArray);
+
+      // Calculate plus/minus for players (use finalPlayerIdsArray to include custom players)
+      const playerPlusMinusMap = await this.calculatePlusMinusForPlayers(gameId, teamId, finalPlayerIdsArray);
 
       // Aggregate stats per player
       const playerStatsMap = new Map<string, any>();
 
-      playerIds.forEach(playerId => {
+      finalPlayerIdsArray.forEach(playerId => {
         playerStatsMap.set(playerId, {
           playerId,
           playerName: playersMap.get(playerId) || `Player ${playerId.substring(0, 8)}`,
@@ -558,9 +595,11 @@ export class TeamStatsService {
         });
       });
 
-      // Process each stat
+      // Process each stat (handle both player_id and custom_player_id)
       gameStats.forEach(stat => {
-        const playerId = stat.player_id;
+        const playerId = stat.player_id || stat.custom_player_id;
+        if (!playerId) return;
+        
         const playerStats = playerStatsMap.get(playerId);
         if (!playerStats) return;
 

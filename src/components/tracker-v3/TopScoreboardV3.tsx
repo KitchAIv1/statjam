@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Play, Pause, RotateCcw, Edit3, Check, X } from 'lucide-react';
+import { Play, Pause, RotateCcw, Edit3, Check, X, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 interface TopScoreboardV3Props {
   teamAName: string;
@@ -31,6 +32,8 @@ interface TopScoreboardV3Props {
   onShotClockStop?: () => void;
   onShotClockReset?: () => void;
   onShotClockSetTime?: (seconds: number) => void;
+  // Navigation Props
+  onBack?: () => void;
 }
 
 export function TopScoreboardV3({
@@ -57,7 +60,9 @@ export function TopScoreboardV3({
   onShotClockStart,
   onShotClockStop,
   onShotClockReset,
-  onShotClockSetTime
+  onShotClockSetTime,
+  // Navigation Props
+  onBack
 }: TopScoreboardV3Props) {
 
   // NEW: Edit mode state
@@ -106,7 +111,7 @@ export function TopScoreboardV3({
 
   return (
     <div 
-      className="w-full rounded-xl p-4 mb-3"
+      className="w-full rounded-xl p-4 mb-3 relative"
       style={{ 
         background: '#ffffff', 
         borderColor: '#e5e7eb',
@@ -114,8 +119,39 @@ export function TopScoreboardV3({
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
       }}
     >
+      {/* Top Corner Navigation - Back Button (Left) & LIVE Indicator (Right) */}
+      <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+        {/* Back Button - Top Left */}
+        {onBack && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onBack}
+            className="hover:bg-orange-500/10 hover:border-orange-500 pointer-events-auto"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Dashboard
+          </Button>
+        )}
+        
+        {/* LIVE Indicator - Top Right */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <Badge 
+            variant="outline"
+            className="text-orange-500 border-orange-500 bg-orange-500/10 text-xs"
+          >
+            Live
+          </Badge>
+          
+          <div 
+            className="w-2 h-2 rounded-full bg-green-500 animate-pulse"
+            title="Connected"
+          />
+        </div>
+      </div>
+
       {/* NBA Standard Layout: Team Names & Scores */}
-      <div className="grid grid-cols-3 gap-8 md:gap-16 lg:gap-24 xl:gap-32 items-center mb-4">
+      <div className="grid grid-cols-3 gap-8 md:gap-16 lg:gap-24 xl:gap-32 items-center mb-4 mt-6">
         
         {/* Team A Section */}
         <div className="text-center">

@@ -1,8 +1,8 @@
 # 👨‍🏫 Coach Team Card System - Implementation Guide
 
-**Version**: 1.0.0  
-**Date**: October 22, 2025  
-**Status**: ✅ Complete Implementation  
+**Version**: 1.1.0  
+**Date**: October 28, 2025  
+**Status**: ✅ Complete Implementation with Custom Players & Opponent Stats  
 **Branch**: `feature/coach-team-card`
 
 ---
@@ -512,5 +512,49 @@ The Coach Team Card System is **fully implemented** and **production-ready**:
 
 ---
 
-**Last Updated**: October 22, 2025  
+---
+
+## 🎉 Latest Updates (v1.1.0 - October 28, 2025)
+
+### Custom Players & Opponent Stats Support
+
+**New Features**:
+- ✅ **Custom Player Stats**: Custom players can now record stats successfully
+- ✅ **Opponent Team Stats**: Dedicated opponent stat tracking with score separation
+- ✅ **Database Integration**: Full support for custom players in `game_stats` and `stats` tables
+- ✅ **Trigger Updates**: Modified aggregation triggers to handle both player types
+- ✅ **Score Calculation**: Correct score attribution for coach vs opponent teams
+- ✅ **UI Feedback**: Instant score updates with optimistic UI rendering
+- ✅ **Last Action Display**: Opponent stats now show in last action with distinct visual indicator
+
+**Database Changes**:
+- Added `custom_player_id` column to `game_stats` and `stats` tables
+- Added `is_opponent_stat` flag to `game_stats` and `stats` tables
+- Updated unique constraints with partial indexes for proper player type handling
+- Modified `update_player_stats()` trigger function for dual player type support
+
+**Code Updates**:
+- Updated `StatRecord` interface to include `customPlayerId` and `isOpponentStat`
+- Modified `GameServiceV3.recordStat()` to handle opponent flag
+- Enhanced `useTracker` hook for opponent score calculation
+- Fixed score refresh logic to read `is_opponent_stat` from database
+- Updated `DesktopStatGridV3` to display opponent team last actions
+
+**Migrations Applied**:
+- `007_game_stats_custom_players.sql` - Custom player schema
+- `fix-stats-table-safe.sql` - Stats table migration
+- `fix-stats-unique-constraint.sql` - Partial unique indexes
+- `update-trigger-for-new-indexes.sql` - Trigger function updates
+- `add-opponent-flag-to-game-stats.sql` - Opponent flag support
+
+**Testing Status**:
+- ✅ Regular players: Fully functional
+- ✅ Custom players: Fully functional
+- ✅ Opponent stats: Fully functional with correct score separation
+- ✅ Score display: Instant updates, correct attribution
+- ✅ Last action: Displays for all player types including opponent
+
+---
+
+**Last Updated**: October 28, 2025  
 **Maintained By**: Development Team

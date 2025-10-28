@@ -54,6 +54,52 @@ export class TeamServiceV3 {
   }
 
   /**
+   * Make authenticated HTTP request to Supabase REST API
+   */
+  private static async makeAuthenticatedRequest<T>(
+    table: string, 
+    params: Record<string, string> = {}
+  ): Promise<T[]> {
+    if (!this.SUPABASE_URL || !this.SUPABASE_ANON_KEY) {
+      throw new Error('Missing Supabase configuration');
+    }
+
+    const accessToken = this.getAccessToken();
+    if (!accessToken) {
+      throw new Error('Not authenticated');
+    }
+
+    // Build query string
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${this.SUPABASE_URL}/rest/v1/${table}${queryString ? `?${queryString}` : ''}`;
+
+    console.log(`🔐 TeamServiceV3: Authenticated HTTP request to ${table}`, { url, params });
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'apikey': this.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${accessToken}`, // ← AUTHENTICATED ACCESS
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ TeamServiceV3: HTTP ${response.status}:`, errorText);
+      const userMessage = this.getUserFriendlyError(response.status, errorText);
+      throw new Error(userMessage);
+    }
+
+    const data = await response.json();
+    console.log(`✅ TeamServiceV3: ${table} query successful:`, data.length, 'records');
+    return data as T[];
+  }
+
+  /**
    * Make public HTTP request to Supabase REST API (same pattern as Play by Play feed)
    */
   private static async makeRequest<T>(
@@ -103,9 +149,10 @@ export class TeamServiceV3 {
     try {
       console.log('🚀 TeamServiceV3: Fetching team players via raw HTTP for team:', teamId);
 
-      // Step 1: Get team_players relationships (only player_id exists in this table)
-      const teamPlayers = await this.makeRequest<any>('team_players', {
-        'select': 'player_id',
+      // Step 1: Get team_players relationships (includes both player_id and custom_player_id)
+      // Use authenticated request for coach teams (RLS requires it)
+      const teamPlayers = await this.makeAuthenticatedRequest<any>('team_players', {
+        'select': 'player_id,custom_player_id',
         'team_id': `eq.${teamId}`
       });
 
@@ -116,28 +163,69 @@ export class TeamServiceV3 {
 
       console.log('✅ TeamServiceV3: Found', teamPlayers.length, 'team player relationships');
 
-      // Step 2: Get player details (jersey_number and position are in users table)
-      const playerIds = teamPlayers.map(tp => tp.player_id);
-      const players = await this.makeRequest<any>('users', {
-        'select': 'id,name,email,jersey_number,position',
-        'id': `in.(${playerIds.join(',')})`
-      });
+      // Step 2: Separate regular players and custom players
+      const regularPlayerIds = teamPlayers
+        .filter(tp => tp.player_id)
+        .map(tp => tp.player_id);
+      const customPlayerIds = teamPlayers
+        .filter(tp => tp.custom_player_id)
+        .map(tp => tp.custom_player_id);
 
-      console.log('✅ TeamServiceV3: Found', players.length, 'player details');
+      console.log(`📊 TeamServiceV3: ${regularPlayerIds.length} regular players, ${customPlayerIds.length} custom players`);
 
-      // Step 3: Map user data to player format
+      // Step 3: Fetch regular player details from users table
+      let players: any[] = [];
+      if (regularPlayerIds.length > 0) {
+        players = await this.makeRequest<any>('users', {
+          'select': 'id,name,email,jersey_number,position',
+          'id': `in.(${regularPlayerIds.join(',')})`
+        });
+        console.log('✅ TeamServiceV3: Found', players.length, 'regular player details');
+      }
+
+      // Step 4: Fetch custom player details from custom_players table
+      let customPlayers: any[] = [];
+      if (customPlayerIds.length > 0) {
+        try {
+          customPlayers = await this.makeRequest<any>('custom_players', {
+            'select': 'id,name,jersey_number,position',
+            'id': `in.(${customPlayerIds.join(',')})`
+          });
+          console.log('✅ TeamServiceV3: Found', customPlayers.length, 'custom player details');
+        } catch (error) {
+          console.log('⚠️ TeamServiceV3: No custom_players table or no custom players found');
+        }
+      }
+
+      // Step 5: Map regular players to player format
       const enrichedPlayers = players.map(player => {
         return {
           id: player.id,
           name: player.name || player.email || 'Unknown Player',
           email: player.email || '',
-          jerseyNumber: player.jersey_number || 0, // From users table
-          position: player.position || 'Player' // From users table
+          jerseyNumber: player.jersey_number || 0,
+          position: player.position || 'Player',
+          isCustomPlayer: false
         };
       });
 
-      console.log('🎯 TeamServiceV3: Successfully enriched', enrichedPlayers.length, 'players');
-      return enrichedPlayers;
+      // Step 6: Map custom players to player format
+      const enrichedCustomPlayers = customPlayers.map(player => {
+        return {
+          id: player.id,
+          name: player.name || 'Custom Player',
+          email: '',
+          jerseyNumber: player.jersey_number || 0,
+          position: player.position || 'Player',
+          isCustomPlayer: true
+        };
+      });
+
+      // Step 7: Combine both lists
+      const allPlayers = [...enrichedPlayers, ...enrichedCustomPlayers];
+
+      console.log(`✅ TeamServiceV3: Team players loaded successfully (${enrichedPlayers.length} regular + ${enrichedCustomPlayers.length} custom = ${allPlayers.length} total)`);
+      return allPlayers;
 
     } catch (error: any) {
       console.error('❌ TeamServiceV3: Failed to get team players:', error);
