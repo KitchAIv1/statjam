@@ -163,14 +163,15 @@ export function DesktopStatGridV3({
 
   return (
     <div 
-      className="w-full h-full rounded-xl p-6 flex flex-col"
+      className="w-full h-full rounded-xl p-4 flex flex-col"
       style={{ 
         background: '#ffffff', 
         borderColor: '#e5e7eb',
         borderWidth: '1px',
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        minHeight: '700px',
-        maxHeight: '700px',
+        minHeight: '650px',
+        maxHeight: '650px',
+        height: '650px',
         overflow: 'hidden'
       }}
     >
@@ -178,14 +179,14 @@ export function DesktopStatGridV3({
 
       {/* ✅ FIXED: Last Action Section - Fixed Height to Prevent Button Shifting */}
       <div 
-        className="w-full rounded-xl p-4 mb-4 flex-shrink-0"
+        className="w-full rounded-xl p-3 mb-3 flex-shrink-0"
         style={{ 
           background: '#ffffff', 
           borderColor: '#e5e7eb',
           borderWidth: '1px',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          minHeight: '140px',
-          maxHeight: '140px',
+          minHeight: '130px',
+          maxHeight: '130px',
           overflow: 'hidden'
         }}
       >
@@ -285,7 +286,7 @@ export function DesktopStatGridV3({
         }}
       >
       {/* Made Stats Row - Desktop Optimized */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-3 mb-4">
         {madeStats.map((stat) => {
           const statId = `${stat.statType}-${stat.modifier}`;
           const isThisButtonRecording = isRecording === statId;
@@ -318,7 +319,7 @@ export function DesktopStatGridV3({
       </div>
 
       {/* Missed Stats Row - Desktop Optimized */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-3 mb-4">
         {missedStats.map((stat) => {
           const statId = `${stat.statType}-${stat.modifier}`;
           const isThisButtonRecording = isRecording === statId;
@@ -351,7 +352,7 @@ export function DesktopStatGridV3({
       </div>
 
       {/* Single Action Stats - Desktop Optimized */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-3 mb-4">
         {singleStats.map((stat) => (
           <Button
             key={stat.id}
@@ -376,7 +377,7 @@ export function DesktopStatGridV3({
       </div>
 
       {/* Special Actions - Desktop Layout */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-3 mb-4">
         {secondaryActions.map((action) => {
           const Icon = action.icon;
           const isRecordingThis = isRecording === `foul-${action.id === 'foul' ? 'personal' : 'technical'}`;
@@ -427,9 +428,9 @@ export function DesktopStatGridV3({
       {/* ✅ END: Scrollable Stat Grids Container */}
 
       {/* ✅ FIXED: End Game Button - Always Visible at Bottom */}
-      <div className="mt-4 flex-shrink-0">
+      <div className="mt-3 flex-shrink-0">
         <button
-          className="w-full text-lg font-black py-4 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
+          className="w-full text-lg font-black py-3 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
           onClick={() => {
             if (confirm('End Game?\n\nThis will mark the game as completed and save all statistics. This action cannot be undone.')) {
               onGameEnd();
