@@ -64,8 +64,7 @@ export class PossessionEngine {
     ruleset: Ruleset,
     flags: PossessionAutomationFlags
   ): PossessionEngineResult {
-    // ✅ PHASE 1 STUB: Return current state unchanged
-    
+    // Return unchanged if automation disabled
     if (!flags.enabled || !flags.autoFlip) {
       return {
         newState: currentState,
@@ -75,20 +74,107 @@ export class PossessionEngine {
       };
     }
     
-    // ✅ PHASE 1: Even with flags ON, return no-op
-    // Phase 3 will implement actual logic here
+    // ✅ PHASE 3: Implement auto-flip logic
+    const actions: string[] = [];
+    let newState = { ...currentState };
+    let shouldFlip = false;
+    let shouldPersist = false;
+    let endReason: string | undefined;
     
-    console.log('[PossessionEngine] Phase 1 stub - no automation yet', {
-      event,
-      ruleset: ruleset.id,
-      flags
-    });
+    // Determine if possession should flip based on event type
+    switch (event.type) {
+      case 'made_shot':
+        // Made shot → Possession flips to opponent
+        if (currentState.currentPossession === event.teamId) {
+          newState.currentPossession = event.opponentTeamId;
+          shouldFlip = true;
+          shouldPersist = flags.persistState;
+          endReason = 'made_shot';
+          actions.push(`Possession flipped to opponent (made shot)`);
+        }
+        break;
+        
+      case 'turnover':
+        // Turnover → Possession flips to opponent
+        if (currentState.currentPossession === event.teamId) {
+          newState.currentPossession = event.opponentTeamId;
+          shouldFlip = true;
+          shouldPersist = flags.persistState;
+          endReason = 'turnover';
+          actions.push(`Possession flipped to opponent (turnover)`);
+        }
+        break;
+        
+      case 'steal':
+        // Steal → Possession flips to stealing team
+        if (currentState.currentPossession !== event.teamId) {
+          newState.currentPossession = event.teamId;
+          shouldFlip = true;
+          shouldPersist = flags.persistState;
+          endReason = 'steal';
+          actions.push(`Possession flipped to ${event.teamId} (steal)`);
+        }
+        break;
+        
+      case 'defensive_rebound':
+        // Defensive rebound → Possession flips to rebounding team
+        if (currentState.currentPossession !== event.teamId) {
+          newState.currentPossession = event.teamId;
+          shouldFlip = true;
+          shouldPersist = flags.persistState;
+          endReason = 'defensive_rebound';
+          actions.push(`Possession flipped to ${event.teamId} (defensive rebound)`);
+        }
+        break;
+        
+      case 'offensive_rebound':
+        // Offensive rebound → Possession stays with rebounding team
+        // No flip needed, but we may want to persist for analytics
+        if (currentState.currentPossession === event.teamId) {
+          shouldPersist = flags.persistState;
+          endReason = 'offensive_rebound';
+          actions.push(`Possession retained (offensive rebound)`);
+        }
+        break;
+        
+      case 'violation':
+        // Violation → Possession flips to opponent
+        if (currentState.currentPossession === event.teamId) {
+          newState.currentPossession = event.opponentTeamId;
+          shouldFlip = true;
+          shouldPersist = flags.persistState;
+          endReason = 'violation';
+          actions.push(`Possession flipped to opponent (violation)`);
+        }
+        break;
+        
+      case 'jump_ball':
+        // Jump ball → Use alternating possession arrow (if enabled)
+        if (flags.jumpBallArrow && currentState.possessionArrow) {
+          newState.currentPossession = currentState.possessionArrow;
+          // Flip arrow to other team for next jump ball
+          newState.possessionArrow = currentState.possessionArrow === event.teamId 
+            ? event.opponentTeamId 
+            : event.teamId;
+          shouldFlip = true;
+          shouldPersist = flags.persistState;
+          endReason = 'jump_ball';
+          actions.push(`Possession awarded via jump ball arrow`);
+          actions.push(`Arrow flipped to ${newState.possessionArrow}`);
+        }
+        break;
+        
+      default:
+        // Unknown event type - no change
+        break;
+    }
     
     return {
-      newState: currentState,
-      shouldFlip: false,
-      shouldPersist: false,
-      actions: []
+      newState,
+      shouldFlip,
+      shouldPersist,
+      endReason,
+      actions
     };
   }
   
