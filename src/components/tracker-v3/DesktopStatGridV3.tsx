@@ -169,21 +169,24 @@ export function DesktopStatGridV3({
         borderColor: '#e5e7eb',
         borderWidth: '1px',
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        minHeight: '650px',
-        maxHeight: '650px',
+        minHeight: '700px',
+        maxHeight: '700px',
         overflow: 'hidden'
       }}
     >
 
 
-      {/* ✅ FIXED: Last Action Section - Always Visible at Top */}
+      {/* ✅ FIXED: Last Action Section - Fixed Height to Prevent Button Shifting */}
       <div 
         className="w-full rounded-xl p-4 mb-4 flex-shrink-0"
         style={{ 
           background: '#ffffff', 
           borderColor: '#e5e7eb',
           borderWidth: '1px',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          minHeight: '140px',
+          maxHeight: '140px',
+          overflow: 'hidden'
         }}
       >
         {/* Possession Indicator replaces "Last Action" text */}
