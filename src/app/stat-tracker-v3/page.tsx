@@ -326,9 +326,27 @@ function StatTrackerV3Content() {
   const handleStatRecord = async (statType: string, modifier?: string) => {
     if (!selectedPlayer || !gameData) return;
     
+    // Handle opponent team stats in coach mode
+    if (coachMode && selectedPlayer === 'opponent-team') {
+      // For opponent stats, we'll use a special handling
+      // For now, skip opponent stats until we implement proper solution
+      console.warn('⚠️ Opponent team stats not yet implemented for coach mode');
+      return;
+    }
+    
     // Determine which team the selected player belongs to
     const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
     const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+    
+    // Check if this is a custom player (not in users table)
+    const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+    const isCustomPlayer = selectedPlayerData && !selectedPlayerData.email; // Custom players don't have email
+    
+    if (isCustomPlayer) {
+      console.warn('⚠️ Custom player stats not yet fully supported:', selectedPlayerData?.name);
+      // For now, skip custom player stats until we fix the database schema
+      return;
+    }
     
     await tracker.recordStat({
       gameId: gameData.id,
@@ -567,7 +585,7 @@ function StatTrackerV3Content() {
         <TopScoreboardV3
           key={`scoreboard-${JSON.stringify(tracker.scores)}`} // ✅ FORCE RE-RENDER
           teamAName={gameData.team_a?.name || 'Team A'}
-          teamBName={gameData.team_b?.name || 'Team B'}
+          teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
           teamAScore={tracker.scores[gameData.team_a_id] || 0}
           teamBScore={tracker.scores[gameData.team_b_id] || 0}
           quarter={tracker.quarter}
