@@ -76,7 +76,7 @@ export function OpponentStatsPanel({
   return (
     <div style={styles.container}>
       {/* Scrollable Player Stats Section */}
-      <div style={styles.scrollableContent}>
+      <div style={styles.scrollableContent} className="opponent-stats-scroll">
         {/* Player Stats */}
         <div style={styles.playersSubsection}>
           <div style={styles.subsectionTitle}>{teamName} Players</div>
@@ -189,7 +189,13 @@ const styles = {
   scrollableContent: {
     flex: 1,
     overflowY: 'auto' as const,
-    overflowX: 'hidden' as const
+    overflowX: 'hidden' as const,
+    // Custom scrollbar styling
+    scrollbarWidth: 'thin' as const,
+    scrollbarColor: '#4b5563 #1f2937',
+    // Webkit scrollbar styling
+    WebkitOverflowScrolling: 'touch' as const,
+    cursor: 'default'
   },
   playersSubsection: {
     marginBottom: '0'
