@@ -24,7 +24,7 @@ export interface ClockState {
 }
 
 export interface ClockEvent {
-  type: 'foul' | 'made_shot' | 'missed_shot' | 'turnover' | 'timeout' | 'free_throw' | 'substitution';
+  type: 'foul' | 'made_shot' | 'missed_shot' | 'turnover' | 'timeout' | 'free_throw' | 'substitution' | 'steal';
   modifier?: string;
   ballLocation?: 'frontcourt' | 'backcourt';
   reboundType?: 'offensive' | 'defensive';
@@ -175,8 +175,10 @@ export class ClockEngine {
           // FIBA: Keep current shot clock
           return currentShotClock;
         } else {
-          // NBA: Reset to 14s, NCAA: Reset to 20s
-          return rules.offensiveReboundReset as number;
+          // NBA: Reset to 14s ONLY if current < 14s, otherwise keep current
+          // NCAA: Reset to 20s ONLY if current < 20s, otherwise keep current
+          const resetValue = rules.offensiveReboundReset as number;
+          return currentShotClock < resetValue ? resetValue : currentShotClock;
         }
       }
     }
@@ -194,6 +196,11 @@ export class ClockEngine {
     
     // Turnover → Full reset (new possession)
     if (event.type === 'turnover') {
+      return rules.fullReset;
+    }
+    
+    // Steal → Full reset (change of possession, clock keeps running)
+    if (event.type === 'steal') {
       return rules.fullReset;
     }
     

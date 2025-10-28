@@ -720,7 +720,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         const { ClockEngine } = await import('@/lib/engines/clockEngine');
         
         // ✅ Map stat types to ClockEngine event types
-        let eventType: 'foul' | 'made_shot' | 'missed_shot' | 'turnover' | 'timeout' | 'free_throw' | 'substitution';
+        let eventType: 'foul' | 'made_shot' | 'missed_shot' | 'turnover' | 'timeout' | 'free_throw' | 'substitution' | 'steal';
         let reboundType: 'offensive' | 'defensive' | undefined = undefined;
         
         // Map scoring stats to made_shot/missed_shot
@@ -733,9 +733,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
           eventType = 'missed_shot';
           reboundType = stat.modifier as 'offensive' | 'defensive';
         }
-        // Map steals as turnovers (should reset shot clock)
+        // Map steals as separate event (resets shot clock, clock keeps running)
         else if (stat.statType === 'steal') {
-          eventType = 'turnover';
+          eventType = 'steal';
         }
         // Pass through other stats as-is
         else {
