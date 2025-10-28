@@ -75,83 +75,80 @@ export function OpponentStatsPanel({
 
   return (
     <div style={styles.container}>
-      {/* Unified List Container */}
-      <div style={styles.listContainer}>
-        {/* Section Header */}
-        <div style={styles.sectionHeader}>Team Statistics</div>
-        
-        {/* Scrollable Content */}
-        <div style={styles.scrollableContent}>
-          {/* Player Stats */}
-          <div style={styles.playersSubsection}>
-            <div style={styles.subsectionTitle}>{teamName} Players</div>
-            {allPlayers.length > 0 ? (
-              allPlayers.map((player, index) => (
-                <PlayerStatsRow
-                  key={player.playerId}
-                  player={{
-                    id: player.playerId,
-                    name: player.playerName,
-                    position: index < 2 ? 'G' : index < 4 ? 'F' : 'C'
-                  }}
-                  stats={{
-                    minutes: player.minutes,
-                    points: player.points,
-                    rebounds: player.rebounds,
-                    assists: player.assists,
-                    steals: player.steals,
-                    blocks: player.blocks,
-                    plusMinus: player.plusMinus
-                  }}
-                />
-              ))
-            ) : (
-              <div style={styles.emptyText}>No player stats available yet</div>
-            )}
-          </div>
-
-          {/* Coach's Team Summary - Single Row */}
-          {teamStats && (
-            <div style={styles.teamSummaryRow}>
-              <div style={styles.teamRowLabel}>{teamName}</div>
-              <div style={styles.teamRowStats}>
-                <span style={styles.statCompact}>
-                  {teamStats.fieldGoalsMade}/{teamStats.fieldGoalsAttempted} FG ({teamStats.fieldGoalPercentage}%)
-                </span>
-                <span style={styles.statCompact}>
-                  {teamStats.threePointersMade}/{teamStats.threePointersAttempted} 3PT ({teamStats.threePointPercentage}%)
-                </span>
-                <span style={styles.statCompact}>
-                  {teamStats.freeThrowsMade}/{teamStats.freeThrowsAttempted} FT ({teamStats.freeThrowPercentage}%)
-                </span>
-                <span style={styles.statCompact}>{teamStats.rebounds} REB</span>
-                <span style={styles.statCompact}>{teamStats.assists} AST</span>
-                <span style={styles.statCompact}>{teamStats.turnovers} TO</span>
-              </div>
-            </div>
-          )}
-
-          {/* Opponent Summary - Single Row */}
-          {opponentTeamStats && (
-            <div style={styles.opponentSummaryRow}>
-              <div style={styles.opponentRowLabel}>{opponentName}</div>
-              <div style={styles.teamRowStats}>
-                <span style={styles.statCompact}>
-                  {opponentTeamStats.fieldGoalsMade}/{opponentTeamStats.fieldGoalsAttempted} FG ({opponentTeamStats.fieldGoalPercentage}%)
-                </span>
-                <span style={styles.statCompact}>
-                  {opponentTeamStats.threePointersMade}/{opponentTeamStats.threePointersAttempted} 3PT ({opponentTeamStats.threePointPercentage}%)
-                </span>
-                <span style={styles.statCompact}>
-                  {opponentTeamStats.freeThrowsMade}/{opponentTeamStats.freeThrowsAttempted} FT ({opponentTeamStats.freeThrowPercentage}%)
-                </span>
-                <span style={styles.statCompact}>{opponentTeamStats.rebounds} REB</span>
-                <span style={styles.statCompact}>{opponentTeamStats.assists} AST</span>
-                <span style={styles.statCompact}>{opponentTeamStats.turnovers} TO</span>
-              </div>
-            </div>
+      {/* Scrollable Player Stats Section */}
+      <div style={styles.scrollableContent}>
+        {/* Player Stats */}
+        <div style={styles.playersSubsection}>
+          <div style={styles.subsectionTitle}>{teamName} Players</div>
+          {allPlayers.length > 0 ? (
+            allPlayers.map((player, index) => (
+              <PlayerStatsRow
+                key={player.playerId}
+                player={{
+                  id: player.playerId,
+                  name: player.playerName,
+                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C'
+                }}
+                stats={{
+                  minutes: player.minutes,
+                  points: player.points,
+                  rebounds: player.rebounds,
+                  assists: player.assists,
+                  steals: player.steals,
+                  blocks: player.blocks,
+                  plusMinus: player.plusMinus
+                }}
+              />
+            ))
+          ) : (
+            <div style={styles.emptyText}>No player stats available yet</div>
           )}
         </div>
+      </div>
+
+      {/* Fixed Team Aggregates at Bottom */}
+      <div style={styles.fixedAggregatesContainer}>
+        {/* Coach's Team Summary - Compact Row */}
+        {teamStats && (
+          <div style={styles.teamSummaryRow}>
+            <div style={styles.teamRowLabel}>{teamName}</div>
+            <div style={styles.teamRowStats}>
+              <span style={styles.statCompact}>
+                {teamStats.fieldGoalsMade}/{teamStats.fieldGoalsAttempted} FG ({teamStats.fieldGoalPercentage}%)
+              </span>
+              <span style={styles.statCompact}>
+                {teamStats.threePointersMade}/{teamStats.threePointersAttempted} 3PT ({teamStats.threePointPercentage}%)
+              </span>
+              <span style={styles.statCompact}>
+                {teamStats.freeThrowsMade}/{teamStats.freeThrowsAttempted} FT ({teamStats.freeThrowPercentage}%)
+              </span>
+              <span style={styles.statCompact}>{teamStats.rebounds} REB</span>
+              <span style={styles.statCompact}>{teamStats.assists} AST</span>
+              <span style={styles.statCompact}>{teamStats.turnovers} TO</span>
+            </div>
+          </div>
+        )}
+
+        {/* Opponent Summary - Compact Row */}
+        {opponentTeamStats && (
+          <div style={styles.opponentSummaryRow}>
+            <div style={styles.opponentRowLabel}>{opponentName}</div>
+            <div style={styles.teamRowStats}>
+              <span style={styles.statCompact}>
+                {opponentTeamStats.fieldGoalsMade}/{opponentTeamStats.fieldGoalsAttempted} FG ({opponentTeamStats.fieldGoalPercentage}%)
+              </span>
+              <span style={styles.statCompact}>
+                {opponentTeamStats.threePointersMade}/{opponentTeamStats.threePointersAttempted} 3PT ({opponentTeamStats.threePointPercentage}%)
+              </span>
+              <span style={styles.statCompact}>
+                {opponentTeamStats.freeThrowsMade}/{opponentTeamStats.freeThrowsAttempted} FT ({opponentTeamStats.freeThrowPercentage}%)
+              </span>
+              <span style={styles.statCompact}>{opponentTeamStats.rebounds} REB</span>
+              <span style={styles.statCompact}>{opponentTeamStats.assists} AST</span>
+              <span style={styles.statCompact}>{opponentTeamStats.turnovers} TO</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -189,81 +186,66 @@ const styles = {
     padding: '12px',
     textAlign: 'center' as const
   },
-  listContainer: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    height: '100%',
-    overflow: 'hidden'
-  },
-  sectionHeader: {
-    fontSize: '12px',
-    fontWeight: '600' as const,
-    color: '#9ca3af',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '1px',
-    padding: '10px 12px',
-    backgroundColor: '#1f2937',
-    borderBottom: '1px solid #374151',
-    flexShrink: 0
-  },
   scrollableContent: {
     flex: 1,
     overflowY: 'auto' as const,
     overflowX: 'hidden' as const
   },
   playersSubsection: {
-    marginBottom: '8px'
+    marginBottom: '0'
   },
   subsectionTitle: {
-    fontSize: '11px',
+    fontSize: '10px',
     fontWeight: '600' as const,
     color: '#60a5fa',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px',
-    padding: '8px 12px',
+    padding: '6px 10px',
     backgroundColor: '#1f2937',
     borderBottom: '1px solid #374151'
+  },
+  fixedAggregatesContainer: {
+    flexShrink: 0,
+    borderTop: '2px solid #374151'
   },
   teamSummaryRow: {
     display: 'flex',
     flexDirection: 'column' as const,
-    padding: '10px 12px',
+    padding: '6px 10px',
     backgroundColor: '#1f2937',
-    borderTop: '2px solid #374151',
-    marginBottom: '2px'
+    borderBottom: '1px solid #374151'
   },
   opponentSummaryRow: {
     display: 'flex',
     flexDirection: 'column' as const,
-    padding: '10px 12px',
-    backgroundColor: '#1e293b',
-    borderTop: '2px solid #475569'
+    padding: '6px 10px',
+    backgroundColor: '#1e293b'
   },
   teamRowLabel: {
-    fontSize: '12px',
+    fontSize: '10px',
     fontWeight: '700' as const,
     color: '#60a5fa',
-    marginBottom: '6px',
+    marginBottom: '4px',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px'
   },
   opponentRowLabel: {
-    fontSize: '12px',
+    fontSize: '10px',
     fontWeight: '700' as const,
     color: '#f87171',
-    marginBottom: '6px',
+    marginBottom: '4px',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px'
   },
   teamRowStats: {
     display: 'flex',
     flexWrap: 'wrap' as const,
-    gap: '8px',
-    fontSize: '11px'
+    gap: '6px',
+    fontSize: '9px'
   },
   statCompact: {
     color: '#e5e7eb',
-    fontSize: '11px',
+    fontSize: '9px',
     whiteSpace: 'nowrap' as const
   }
 };

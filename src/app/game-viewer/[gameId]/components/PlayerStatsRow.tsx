@@ -57,18 +57,11 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
 
   return (
     <div style={isMobile ? styles.playerRowMobile : styles.playerRow}>
-      {/* Left Section: Player Info */}
+      {/* Left Section: Player Info (Compact - No Avatar) */}
       <div style={isMobile ? styles.playerInfoMobile : styles.playerInfo}>
-        <div style={isMobile ? styles.playerPhotoMobile : styles.playerPhoto}>
-          <div style={styles.playerPhotoPlaceholder}>
-            {name.charAt(0).toUpperCase()}
-          </div>
-        </div>
-        <div style={styles.playerDetails}>
-          <div style={styles.playerName}>{name}</div>
-          {position && (
-            <div style={styles.playerPosition}>{position}</div>
-          )}
+        <div style={styles.playerName}>
+          {name}
+          {position && <span style={styles.playerPosition}> ({position})</span>}
         </div>
       </div>
 
@@ -117,69 +110,37 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '12px 12px',
+    padding: '10px 12px',
     borderBottom: '1px solid #374151', // gray-700
     backgroundColor: '#111827', // gray-900
-    minHeight: '60px'
+    minHeight: '48px'
   },
   playerRowMobile: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '10px 8px',
+    padding: '8px 8px',
     borderBottom: '1px solid #374151', // gray-700
     backgroundColor: '#111827', // gray-900
-    minHeight: '56px'
+    minHeight: '44px'
   },
   playerInfo: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
     flex: 1,
-    minWidth: '120px'
+    minWidth: '100px'
   },
   playerInfoMobile: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
     flex: 1,
-    minWidth: '100px'
-  },
-  playerPhoto: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '50%',
-    overflow: 'hidden',
-    flexShrink: 0
-  },
-  playerPhotoMobile: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    overflow: 'hidden',
-    flexShrink: 0
-  },
-  playerPhotoPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#4b5563', // gray-600
-    color: '#ffffff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '16px',
-    fontWeight: '600'
-  },
-  playerDetails: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '2px'
+    minWidth: '80px'
   },
   playerName: {
     color: '#ffffff',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: '600',
-    lineHeight: '1.2'
+    lineHeight: '1.3'
   },
   playerPosition: {
     color: '#9ca3af', // gray-400
