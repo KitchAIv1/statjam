@@ -6,6 +6,7 @@ import { useTournamentForm } from '@/lib/hooks/useTournamentForm';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { getRulesetDisplayName, getRulesetDescription } from '@/lib/types/ruleset';
 
 const CreateTournamentV2 = () => {
   const { user, loading } = useAuthV2();
@@ -521,6 +522,37 @@ const CreateTournamentV2 = () => {
                 </select>
               </div>
             </div>
+
+            {/* ✅ PHASE 1: Ruleset Selector */}
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Game Rules</label>
+              <div style={{ marginBottom: '8px', fontSize: '13px', color: 'var(--dashboard-text-secondary)' }}>
+                Choose the official ruleset for your tournament
+              </div>
+              <div style={styles.typeGrid}>
+                {[
+                  { value: 'NBA', title: 'NBA', desc: '12 min quarters, 24s shot clock' },
+                  { value: 'FIBA', title: 'FIBA', desc: '10 min quarters, 24s shot clock' },
+                  { value: 'NCAA', title: 'NCAA', desc: '20 min halves, 30s shot clock' },
+                ].map((ruleset) => (
+                  <div
+                    key={ruleset.value}
+                    style={{
+                      ...styles.typeOption,
+                      ...(data.ruleset === ruleset.value ? styles.typeOptionSelected : {}),
+                      minHeight: '80px'
+                    }}
+                    onClick={() => updateData('ruleset', ruleset.value)}
+                  >
+                    <div style={styles.typeOptionTitle}>{ruleset.title}</div>
+                    <div style={styles.typeOptionDesc}>{ruleset.desc}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--dashboard-text-tertiary)' }}>
+                💡 All automation features are OFF by default. You can enable them later in tournament settings.
+              </div>
+            </div>
           </div>
         );
 
@@ -641,6 +673,12 @@ const CreateTournamentV2 = () => {
                   <span style={styles.reviewLabel}>Format</span>
                   <span style={styles.reviewValue}>
                     {data.tournamentType?.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Game Rules</span>
+                  <span style={styles.reviewValue}>
+                    {data.ruleset || 'NBA'} ({getRulesetDescription(data.ruleset || 'NBA')})
                   </span>
                 </div>
                 <div style={styles.reviewItem}>

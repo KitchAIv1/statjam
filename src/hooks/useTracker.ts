@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { StatRecord, RosterState, ScoreByTeam } from '@/lib/types/tracker';
+import { Ruleset } from '@/lib/types/ruleset';
+import { AutomationFlags, DEFAULT_AUTOMATION_FLAGS } from '@/lib/types/automation';
+import { RulesetService } from '@/lib/config/rulesetService';
 
 interface UseTrackerProps {
   initialGameId: string;
@@ -22,6 +25,10 @@ interface UseTrackerReturn {
     isVisible: boolean;
   };
   scores: ScoreByTeam;
+  
+  // Phase 1: Ruleset & Automation Flags
+  ruleset: Ruleset | null;
+  automationFlags: AutomationFlags;
   
   // Rosters
   rosterA: RosterState;
@@ -80,6 +87,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     secondsRemaining: 24, // Default NBA shot clock
     isVisible: true // Can be disabled per tournament settings
   });
+  
+  // ✅ PHASE 1: Ruleset & Automation Flags
+  const [ruleset, setRuleset] = useState<Ruleset | null>(null);
+  const [automationFlags, setAutomationFlags] = useState<AutomationFlags>(DEFAULT_AUTOMATION_FLAGS);
   const [scores, setScores] = useState<ScoreByTeam>({
     [teamAId]: 0,
     [teamBId]: 0
@@ -193,6 +204,69 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
               teamA: game.team_a_timeouts_remaining || 7, 
               teamB: game.team_b_timeouts_remaining || 7 
             });
+          }
+          
+          // ✅ PHASE 1: Load ruleset and automation flags from tournament
+          try {
+            console.log('🎯 Phase 1: Loading ruleset and automation flags...');
+            
+            // Fetch tournament data to get ruleset and automation settings
+            const tournamentId = game.tournament_id;
+            if (tournamentId) {
+              const tournamentResponse = await fetch(
+                `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/tournaments?id=eq.${tournamentId}&select=ruleset,ruleset_config,automation_settings`,
+                {
+                  headers: {
+                    'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+                    'Content-Type': 'application/json'
+                  }
+                }
+              );
+              
+              if (tournamentResponse.ok) {
+                const tournaments = await tournamentResponse.json();
+                if (tournaments && tournaments.length > 0) {
+                  const tournament = tournaments[0];
+                  
+                  // Load ruleset
+                  const rulesetId = tournament.ruleset || 'NBA';
+                  let loadedRuleset = RulesetService.getRuleset(rulesetId);
+                  
+                  // Apply custom overrides if CUSTOM ruleset
+                  if (rulesetId === 'CUSTOM' && tournament.ruleset_config) {
+                    loadedRuleset = RulesetService.applyCustomOverrides(
+                      loadedRuleset,
+                      tournament.ruleset_config
+                    );
+                  }
+                  
+                  setRuleset(loadedRuleset);
+                  console.log('✅ Phase 1: Loaded ruleset:', rulesetId);
+                  
+                  // Load automation flags (defaults to all OFF)
+                  const flags = tournament.automation_settings || DEFAULT_AUTOMATION_FLAGS;
+                  setAutomationFlags(flags);
+                  console.log('✅ Phase 1: Loaded automation flags:', flags);
+                  
+                  // Log if any automation is enabled (should be OFF in Phase 1)
+                  const anyEnabled = Object.values(flags).some((category: any) => 
+                    category && typeof category === 'object' && category.enabled === true
+                  );
+                  if (anyEnabled) {
+                    console.warn('⚠️ Phase 1: Some automation flags are enabled!', flags);
+                  } else {
+                    console.log('✅ Phase 1: All automation flags are OFF (expected behavior)');
+                  }
+                }
+              }
+            } else {
+              console.warn('⚠️ Phase 1: No tournament_id found, using default NBA ruleset');
+              setRuleset(RulesetService.getRuleset('NBA'));
+            }
+          } catch (rulesetError) {
+            console.error('❌ Phase 1: Error loading ruleset:', rulesetError);
+            // Fallback to NBA ruleset
+            setRuleset(RulesetService.getRuleset('NBA'));
           }
         } else {
           console.warn('⚠️ Could not load game state from database');
@@ -856,6 +930,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     clock,
     shotClock, // NEW: Shot Clock State
     scores,
+    ruleset, // ✅ PHASE 1: Ruleset configuration
+    automationFlags, // ✅ PHASE 1: Automation flags (all OFF by default)
     rosterA,
     rosterB,
     recordStat,
