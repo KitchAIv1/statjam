@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.14.1] - 2025-10-28
+
+### 🎯 **Mobile UX Refinements & Critical Fixes**
+
+#### Fixed
+- **🐛 CRITICAL: Mobile Opponent Stat Recording**
+  - Fixed database constraint violation (`game_stats_player_required`) when recording opponent stats
+  - Mobile view now correctly passes user ID for opponent stats (matches expanded view behavior)
+  - Opponent stat tracking now works identically across mobile and desktop
+  - Root cause: Mobile component didn't have access to user context
+
+- **📱 Mobile Scoreboard Display**
+  - Fixed opponent score showing home team score in coach mode
+  - Mobile now correctly displays `tracker.scores.opponent` for opponent team
+  - Consistent score display logic between mobile and expanded views
+
+#### Changed
+- **🎨 Possession Indicator Integration (Mobile)**
+  - Moved possession indicator from standalone section to compact scoreboard center column
+  - Replaces old manual possession toggle button
+  - Cleaner, more compact mobile layout
+  - Consistent UX with possession indicator placement
+
+- **🎨 Possession Indicator Integration (Desktop)**
+  - Replaced "Last Action" header text with Possession Indicator
+  - Kept all last action details (player info, action text, undo/edit buttons)
+  - Removed duplicate possession indicator from top of page
+  - Space-efficient layout with possession integrated into action section
+
+- **🎨 Opponent Panel Mobile Optimization**
+  - Added `mobileMode` prop to `OpponentTeamPanel` component
+  - Mobile renders compact button (matches HOME team section height)
+  - Same fonts, sizing, and styling as player section
+  - Removed large 650px opponent panel on mobile
+
+- **📍 Stats Display Relocation (Mobile)**
+  - Moved team stats and aggregates from opponent section to separate section
+  - Placed below "End Game" button (only in coach mode)
+  - Cleaner separation of player selection and stats display
+  - Better scrolling UX with stats at bottom
+
+- **🔄 Opponent Component Unification**
+  - Replaced custom mobile opponent button with actual `OpponentTeamPanel` component
+  - Ensures consistent UX and tracking logic across mobile/desktop
+  - Uses same selection state and styling
+  - Proper integration with stats display
+
+#### Modified
+- `/src/components/tracker-v3/OpponentTeamPanel.tsx` - Added mobile mode with compact rendering
+- `/src/components/tracker-v3/mobile/MobileLayoutV3.tsx` - Fixed opponent stat recording, relocated stats display
+- `/src/components/tracker-v3/mobile/CompactScoreboardV3.tsx` - Integrated possession indicator
+- `/src/components/tracker-v3/mobile/DualTeamHorizontalRosterV3.tsx` - Use actual OpponentTeamPanel component
+- `/src/components/tracker-v3/DesktopStatGridV3.tsx` - Integrated possession into Last Action section
+- `/src/app/stat-tracker-v3/page.tsx` - Removed duplicate possession indicator, passed userId to mobile
+
+#### Technical Details
+- **Mobile Opponent Stat Fix**: Added `userId` prop to `MobileLayoutV3`, passed from parent component
+- **Possession Indicator**: Conditional rendering based on automation flags, mobile-aware sizing
+- **Opponent Panel**: Dual-mode component (mobile compact vs desktop full panel)
+- **Stats Display**: Conditional rendering only in coach mode, placed at bottom of mobile layout
+
+---
+
+## [0.14.0] - 2025-10-28
+
+### 🏀 **PHASE 3: Possession Tracking**
+
+[Previous Phase 3 content remains...]
+
+---
+
 ## [0.13.0] - 2025-10-22
 
 ### 👨‍🏫 **NEW FEATURE: Coach Team Card System**
