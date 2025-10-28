@@ -207,10 +207,42 @@ export function DualTeamHorizontalRosterV3({
       {/* Team A Row */}
       {renderPlayerRow(displayTeamA, 'A', teamAName)}
       
-      {/* Team B Row */}
-      {renderPlayerRow(displayTeamB, 'B', teamBName)}
-
-
+      {/* ✅ REFINEMENT 2: Team B Row OR Opponent Button (Coach Mode) */}
+      {isCoachMode ? (
+        // Coach Mode: Single Opponent Button
+        <div 
+          className="w-full rounded-lg p-2"
+          style={{ 
+            background: '#1f2937',
+            borderColor: '#374151',
+            borderWidth: '1px'
+          }}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1">
+              <Users className="w-3 h-3 text-red-400" />
+              <span className="text-xs font-semibold text-red-400">Opponent Team</span>
+            </div>
+          </div>
+          
+          <div className="flex justify-center">
+            <Button
+              onClick={() => onPlayerSelect('opponent-team')}
+              className={`h-14 w-20 flex flex-col items-center justify-center gap-1 rounded-lg transition-all ${
+                selectedPlayer === 'opponent-team'
+                  ? 'bg-red-500 text-white border-2 border-red-400 scale-105 shadow-lg'
+                  : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-red-500/20 hover:border-red-500'
+              }`}
+            >
+              <div className="text-2xl font-bold">VS</div>
+              <div className="text-[10px] font-medium">Opponent</div>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        // Regular Mode: Team B Player Roster
+        renderPlayerRow(displayTeamB, 'B', teamBName)
+      )}
     </div>
   );
 }

@@ -674,20 +674,7 @@ function StatTrackerV3Content() {
           onShotClockSetTime={tracker.setShotClockTime}
         />
 
-        {/* ✅ PHASE 3: Possession Indicator */}
-        {tracker.ruleset && tracker.automationFlags.possession?.enabled && (
-          <div className="flex justify-center mb-3">
-            <PossessionIndicator
-              currentTeamId={tracker.possession.currentTeamId}
-              teamAId={gameData.team_a_id}
-              teamBId={coachMode ? 'opponent-team' : gameData.team_b_id}
-              teamAName={gameData.team_a?.name || 'Team A'}
-              teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
-              possessionArrow={tracker.possession.possessionArrow}
-              isMobile={false}
-            />
-          </div>
-        )}
+        {/* ✅ REFINEMENT: Possession Indicator moved to Last Action section (saves space) */}
 
         {/* Main Content Grid - Responsive Layout: Mobile/Tablet/Desktop */}
         <div className={`grid gap-3 items-start flex-1 min-h-0 ${
@@ -726,6 +713,13 @@ function StatTrackerV3Content() {
                 onGameEnd={tracker.closeGame}
                 lastAction={tracker.lastAction}
                 lastActionPlayerId={tracker.lastActionPlayerId}
+                // ✅ REFINEMENT 1: Pass possession indicator props
+                possession={tracker.possession}
+                teamAId={gameData.team_a_id}
+                teamBId={coachMode ? 'opponent-team' : gameData.team_b_id}
+                teamAName={gameData.team_a?.name || 'Team A'}
+                teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
+                isCoachMode={coachMode}
               />
             </div>
           </div>

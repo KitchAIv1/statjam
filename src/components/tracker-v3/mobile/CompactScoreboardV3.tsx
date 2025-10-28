@@ -147,21 +147,9 @@ export function CompactScoreboardV3({
           </div>
         </div>
 
-        {/* Center - Team Selector */}
+        {/* ✅ REFINEMENT 3: Center - Removed old possession toggle (replaced by PossessionIndicator) */}
         <div className="col-span-1 flex items-center justify-center">
-          <Button
-            onClick={onPossessionToggle}
-            variant="ghost"
-            size="sm"
-            className="h-8 px-3 text-orange-500 hover:bg-orange-500/20 flex items-center justify-center text-[10px] font-bold"
-            style={{ color: 'var(--dashboard-primary)' }}
-          >
-            {possessionTeam === 'A' ? (
-              <>← {formatTeamName(teamAName)}</>
-            ) : (
-              <>{formatTeamName(teamBName)} →</>
-            )}
-          </Button>
+          {/* Possession indicator now shown separately in MobileLayoutV3 */}
         </div>
 
         {/* Right Container - Shot Clock Section + Buttons (beside T2) */}

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, RotateCcw, Clock, Undo, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { PossessionIndicator } from './PossessionIndicator';
 
 interface Player {
   id: string;
@@ -22,6 +23,16 @@ interface DesktopStatGridV3Props {
   onGameEnd: () => void;
   lastAction?: string | null;
   lastActionPlayerId?: string | null;
+  // ✅ NEW: Possession indicator props
+  possession?: {
+    currentTeamId: string;
+    possessionArrow: string;
+  };
+  teamAId?: string;
+  teamBId?: string;
+  teamAName?: string;
+  teamBName?: string;
+  isCoachMode?: boolean;
 }
 
 export function DesktopStatGridV3({
@@ -34,7 +45,14 @@ export function DesktopStatGridV3({
   onSubstitution,
   onGameEnd,
   lastAction,
-  lastActionPlayerId
+  lastActionPlayerId,
+  // ✅ NEW: Possession indicator props
+  possession,
+  teamAId,
+  teamBId,
+  teamAName,
+  teamBName,
+  isCoachMode = false
 }: DesktopStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
@@ -156,7 +174,7 @@ export function DesktopStatGridV3({
     >
 
 
-      {/* Last Action Container - Using Mobile Logic */}
+      {/* ✅ REFINEMENT 1: Last Action with Possession Indicator Header */}
       <div 
         className="w-full rounded-xl p-4 mb-6"
         style={{ 
@@ -166,9 +184,24 @@ export function DesktopStatGridV3({
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
         }}
       >
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Last Action</h3>
+        {/* Possession Indicator replaces "Last Action" text */}
+        {possession && teamAId && teamBId && teamAName && teamBName ? (
+          <div className="mb-4 flex justify-center">
+            <PossessionIndicator
+              currentTeamId={possession.currentTeamId}
+              teamAId={teamAId}
+              teamBId={teamBId}
+              teamAName={teamAName}
+              teamBName={teamBName}
+              possessionArrow={possession.possessionArrow}
+              isMobile={false}
+            />
+          </div>
+        ) : (
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Last Action</h3>
+        )}
         
-        {/* Last Action - Exact Mobile Logic */}
+        {/* Keep Last Action Details */}
         {lastAction && (
           (selectedPlayerData && lastActionPlayerId && selectedPlayer === lastActionPlayerId) || 
           (lastActionPlayerId === null && lastAction.includes('Opponent Team'))
