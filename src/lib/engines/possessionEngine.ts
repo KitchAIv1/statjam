@@ -64,8 +64,8 @@ export class PossessionEngine {
     ruleset: Ruleset,
     flags: PossessionAutomationFlags
   ): PossessionEngineResult {
-    // Return unchanged if automation disabled
-    if (!flags.enabled || !flags.autoFlip) {
+    // Return unchanged if automation disabled or flags undefined
+    if (!flags || !flags.enabled || !flags.autoFlip) {
       return {
         newState: currentState,
         shouldFlip: false,
