@@ -1,8 +1,8 @@
 # 👨‍🏫 Coach Team Card System - Implementation Guide
 
-**Version**: 1.1.0  
-**Date**: October 28, 2025  
-**Status**: ✅ Complete Implementation with Custom Players & Opponent Stats  
+**Version**: 1.2.0  
+**Date**: December 2025  
+**Status**: ✅ Complete Implementation with UI Optimizations & RLS Fixes  
 **Branch**: `feature/coach-team-card`
 
 ---
@@ -514,9 +514,39 @@ The Coach Team Card System is **fully implemented** and **production-ready**:
 
 ---
 
-## 🎉 Latest Updates (v1.1.0 - October 28, 2025)
+## 🎉 Latest Updates
 
-### Custom Players & Opponent Stats Support
+### v1.2.0 - December 2025: UI Optimizations & RLS Fixes
+
+**Critical Fixes**:
+- ✅ **RLS Authentication**: Fixed `TeamServiceV3` and `TeamStatsService` to use authenticated requests for coach teams
+- ✅ **Custom Player Fetching**: Resolved issue where custom players returned 0 records due to RLS policies
+- ✅ **Stats Display**: Fixed stats not showing (0 records) by implementing authenticated HTTP requests
+- ✅ **Plus/Minus Calculation**: Fixed "Game not found" error in coach mode
+- ✅ **Player Loading**: All 7 players (5 regular + 2 custom) now load correctly
+
+**UI Improvements**:
+- ✅ **Compact Player Stats**: Removed avatar icons, moved position inline as "Name (G)" format
+- ✅ **Reduced Row Height**: 60px → 48px (desktop), 56px → 44px (mobile)
+- ✅ **Compact Team Aggregates**: Fixed position at bottom, smaller fonts (10px labels, 9px stats)
+- ✅ **Removed Header**: Eliminated redundant "Team Statistics" header to save space
+- ✅ **Scrollability Indicators**: Enhanced scrollbar with hover feedback (appears on hover)
+- ✅ **Fixed Roster Display**: Only shows 5 on-court players, rest accessible via substitution modal
+
+**Roster Management**:
+- ✅ **On-Court Players**: Always displays only first 5 players in left roster
+- ✅ **Substitution Modal**: Bench players (6th, 7th, etc.) accessible via substitution
+- ✅ **Consistent Behavior**: Same logic for both desktop and mobile views
+
+**Technical Implementation**:
+- Added `makeAuthenticatedRequest()` method to `TeamServiceV3` and `TeamStatsService`
+- Updated 6 critical queries to use authenticated access for coach-specific data
+- Enhanced scrollbar CSS with transparent-to-visible hover transitions
+- Optimized component rendering with reduced padding and margins
+
+---
+
+### v1.1.0 - October 28, 2025: Custom Players & Opponent Stats Support
 
 **New Features**:
 - ✅ **Custom Player Stats**: Custom players can now record stats successfully
@@ -556,5 +586,5 @@ The Coach Team Card System is **fully implemented** and **production-ready**:
 
 ---
 
-**Last Updated**: October 28, 2025  
+**Last Updated**: December 2025  
 **Maintained By**: Development Team
