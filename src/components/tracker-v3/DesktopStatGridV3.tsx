@@ -294,16 +294,17 @@ export function DesktopStatGridV3({
             key={stat.id}
             onClick={() => handleStatClick(stat.statType)}
             disabled={isDisabled || isRecording === stat.statType}
-            className={`h-20 text-base font-bold transition-all duration-200 rounded-xl border-2 shadow-md ${
+            className={`h-20 text-base font-bold transition-colors duration-150 rounded-xl border-2 shadow-md ${
               isRecording === stat.statType
-                ? 'bg-blue-600 border-blue-400 text-white animate-pulse shadow-xl scale-105' 
+                ? 'bg-blue-600 border-blue-400 text-white shadow-xl' 
                 : isDisabled
                   ? 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400'
-                  : 'bg-blue-500 border-blue-400 hover:bg-blue-600 hover:border-blue-300 text-white hover:shadow-lg hover:scale-105 active:scale-95'
+                  : 'bg-blue-500 border-blue-400 hover:bg-blue-600 hover:border-blue-300 text-white hover:shadow-lg active:bg-blue-700'
             }`}
             style={{
               minHeight: '80px',
-              fontSize: '16px'
+              fontSize: '16px',
+              willChange: 'background-color, border-color'
             }}
           >
             <div className="font-black text-xl">{stat.label}</div>

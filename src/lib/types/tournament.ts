@@ -31,6 +31,7 @@ export interface TournamentCreateRequest {
   entryFee: number;
   prizePool: number;
   country: string;
+  ruleset?: 'NBA' | 'FIBA' | 'NCAA' | 'CUSTOM'; // ✅ PHASE 1: Ruleset selection
 }
 
 export interface TournamentUpdateRequest extends Partial<TournamentCreateRequest> {

@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { StatRecord, RosterState, ScoreByTeam } from '@/lib/types/tracker';
+import { Ruleset } from '@/lib/types/ruleset';
+import { AutomationFlags, DEFAULT_AUTOMATION_FLAGS, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation';
+import { RulesetService } from '@/lib/config/rulesetService';
 
 interface UseTrackerProps {
   initialGameId: string;
   teamAId: string;
   teamBId: string;
+  isCoachMode?: boolean; // ✅ NEW: Detect coach games for automation
 }
 
 interface UseTrackerReturn {
@@ -22,6 +26,10 @@ interface UseTrackerReturn {
     isVisible: boolean;
   };
   scores: ScoreByTeam;
+  
+  // Phase 1: Ruleset & Automation Flags
+  ruleset: Ruleset | null;
+  automationFlags: AutomationFlags;
   
   // Rosters
   rosterA: RosterState;
@@ -64,9 +72,17 @@ interface UseTrackerReturn {
   timeoutType: 'full' | '30_second';
   startTimeout: (teamId: string, type: 'full' | '30_second') => Promise<boolean>;
   resumeFromTimeout: () => void;
+  
+  // ✅ PHASE 3: Possession State
+  possession: {
+    currentTeamId: string;
+    possessionArrow: string;
+    lastChangeReason: string | null;
+    lastChangeTimestamp: string | null;
+  };
 }
 
-export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps): UseTrackerReturn => {
+export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = false }: UseTrackerProps): UseTrackerReturn => {
   // State
   const [gameId] = useState(initialGameId);
   const [quarter, setQuarterState] = useState(1);
@@ -80,6 +96,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     secondsRemaining: 24, // Default NBA shot clock
     isVisible: true // Can be disabled per tournament settings
   });
+  
+  // ✅ PHASE 1: Ruleset & Automation Flags
+  const [ruleset, setRuleset] = useState<Ruleset | null>(null);
+  const [automationFlags, setAutomationFlags] = useState<AutomationFlags>(DEFAULT_AUTOMATION_FLAGS);
   const [scores, setScores] = useState<ScoreByTeam>({
     [teamAId]: 0,
     [teamBId]: 0
@@ -110,6 +130,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [lastActionPlayerId, setLastActionPlayerId] = useState<string | null>(null);
   const [playerSeconds] = useState<Record<string, number>>({});
+  
+  // ✅ PHASE 3: Possession State
+  const [possession, setPossession] = useState({
+    currentTeamId: teamAId, // Default: Team A starts with possession
+    possessionArrow: teamAId, // Jump ball arrow (alternating possession)
+    lastChangeReason: null as string | null,
+    lastChangeTimestamp: null as string | null
+  });
 
   // Initialize and load existing game state from database
   useEffect(() => {
@@ -193,6 +221,106 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
               teamA: game.team_a_timeouts_remaining || 7, 
               teamB: game.team_b_timeouts_remaining || 7 
             });
+          }
+          
+          // ✅ PHASE 1: Load ruleset and automation flags from tournament
+          try {
+            console.log('🎯 Phase 1: Loading ruleset and automation flags...');
+            
+            // Fetch tournament data to get ruleset and automation settings
+            const tournamentId = game.tournament_id;
+            console.log('🔍 Phase 1 DEBUG: tournament_id =', tournamentId, 'type:', typeof tournamentId);
+            
+            if (tournamentId) {
+              console.log('✅ Phase 1: Tournament ID found, fetching tournament data...');
+              const tournamentResponse = await fetch(
+                `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/tournaments?id=eq.${tournamentId}&select=ruleset,ruleset_config,automation_settings`,
+                {
+                  headers: {
+                    'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+                    'Content-Type': 'application/json'
+                  }
+                }
+              );
+              
+              if (tournamentResponse.ok) {
+                const tournaments = await tournamentResponse.json();
+                console.log('🔍 Phase 1 DEBUG: Tournament response:', tournaments);
+                
+                if (tournaments && tournaments.length > 0) {
+                  const tournament = tournaments[0];
+                  console.log('🔍 Phase 1 DEBUG: Tournament data:', tournament);
+                  
+                  // Load ruleset
+                  const rulesetId = tournament.ruleset || 'NBA';
+                  let loadedRuleset = RulesetService.getRuleset(rulesetId);
+                  
+                  // Apply custom overrides if CUSTOM ruleset
+                  if (rulesetId === 'CUSTOM' && tournament.ruleset_config) {
+                    loadedRuleset = RulesetService.applyCustomOverrides(
+                      loadedRuleset,
+                      tournament.ruleset_config
+                    );
+                  }
+                  
+                  setRuleset(loadedRuleset);
+                  console.log('✅ Phase 1: Loaded ruleset:', rulesetId);
+                  
+                  // Load automation flags (defaults to all OFF)
+                  const flags = tournament.automation_settings || DEFAULT_AUTOMATION_FLAGS;
+                  setAutomationFlags(flags);
+                  console.log('✅ Phase 1: Loaded automation flags:', flags);
+                  
+                  // Log if any automation is enabled (should be OFF in Phase 1)
+                  const anyEnabled = Object.values(flags).some((category: any) => 
+                    category && typeof category === 'object' && category.enabled === true
+                  );
+                  if (anyEnabled) {
+                    console.warn('⚠️ Phase 1: Some automation flags are enabled!', flags);
+                  } else {
+                    console.log('✅ Phase 1: All automation flags are OFF (expected behavior)');
+                  }
+                } else {
+                  // Tournament ID exists but query returned empty (likely RLS issue or deleted tournament)
+                  console.warn('⚠️ Phase 1: Tournament ID exists but query returned empty');
+                  setRuleset(RulesetService.getRuleset('NBA'));
+                  
+                  if (isCoachMode) {
+                    console.log('✅ Phase 1: Coach mode detected, using COACH_AUTOMATION_FLAGS');
+                    setAutomationFlags(COACH_AUTOMATION_FLAGS);
+                    console.log('✅ Phase 1: Clock automation ENABLED for coach game');
+                  } else {
+                    console.log('✅ Phase 1: Using DEFAULT_AUTOMATION_FLAGS (all OFF)');
+                    setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
+                  }
+                }
+              }
+            } else {
+              // No tournament_id - use coach defaults if in coach mode
+              console.warn('⚠️ Phase 1: No tournament_id found');
+              setRuleset(RulesetService.getRuleset('NBA'));
+              
+              if (isCoachMode) {
+                console.log('✅ Phase 1: Coach mode detected, using COACH_AUTOMATION_FLAGS');
+                setAutomationFlags(COACH_AUTOMATION_FLAGS);
+                console.log('✅ Phase 1: Clock automation ENABLED for coach game');
+              } else {
+                console.log('✅ Phase 1: Using DEFAULT_AUTOMATION_FLAGS (all OFF)');
+                setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
+              }
+            }
+          } catch (rulesetError) {
+            console.error('❌ Phase 1: Error loading ruleset:', rulesetError);
+            // Fallback to NBA ruleset
+            setRuleset(RulesetService.getRuleset('NBA'));
+            
+            // Fallback automation flags
+            if (isCoachMode) {
+              console.log('✅ Phase 1 FALLBACK: Coach mode, using COACH_AUTOMATION_FLAGS');
+              setAutomationFlags(COACH_AUTOMATION_FLAGS);
+            } else {
+              setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
+            }
           }
         } else {
           console.warn('⚠️ Could not load game state from database');
@@ -442,14 +570,15 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     console.log('🏀 Shot clock stopped');
   }, []);
 
-  const resetShotClock = useCallback((seconds: number = 24) => {
+  const resetShotClock = useCallback((seconds?: number) => {
+    const resetValue = seconds ?? 24; // Default to 24 if undefined
     setShotClock(prev => ({ 
       ...prev, 
       isRunning: false, 
-      secondsRemaining: seconds 
+      secondsRemaining: resetValue 
     }));
-    setLastAction(`Shot clock reset to ${seconds}s`);
-    console.log(`🏀 Shot clock reset to ${seconds} seconds`);
+    setLastAction(`Shot clock reset to ${resetValue}s`);
+    console.log(`🏀 Shot clock reset to ${resetValue} seconds`);
   }, []);
 
   const setShotClockTime = useCallback((seconds: number) => {
@@ -577,23 +706,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
 
       console.log('🏀 Recording stat to database:', fullStat);
 
-      // Import validation and notification services
-      const { validateStatValue, validateQuarter } = await import('@/lib/validation/statValidation');
-      const { notify } = await import('@/lib/services/notificationService');
-
-      // Validate quarter
-      const quarterValidation = validateQuarter(quarter);
-      if (!quarterValidation.valid) {
-        notify.error('Invalid quarter', quarterValidation.error);
-        return;
-      }
-      if (quarterValidation.warning) {
-        notify.warning(quarterValidation.warning);
-      }
-
-      // Import GameServiceV3 (raw HTTP - never hangs, triggers still fire for real-time)
-      const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
-      
       // Map stat value for database (points for scoring stats, 1 for others)
       let statValue = 1;
       if (stat.statType === 'field_goal' && stat.modifier === 'made') {
@@ -609,16 +721,214 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         statValue = 1;
       }
 
+      // ✅ OPTIMIZATION 1: Batch all UI updates in a single setState
+      // This prevents multiple re-renders and provides instant feedback
+      const uiUpdates: {
+        scores?: Record<string, number>;
+        teamFouls?: Record<string, number>;
+        lastAction?: string;
+        lastActionPlayerId?: string | null;
+        clock?: { secondsRemaining: number; isRunning: boolean };
+        shotClock?: { secondsRemaining: number; isRunning: boolean; isVisible: boolean };
+      } = {};
+
+      // Prepare score update (optimistic UI)
+      if (stat.modifier === 'made' && statValue > 0) {
+        if (stat.isOpponentStat) {
+          uiUpdates.scores = { opponent: statValue };
+        } else {
+          uiUpdates.scores = { [stat.teamId]: statValue };
+        }
+      }
+
+      // Prepare foul update (optimistic UI)
+      if (stat.statType === 'foul') {
+        uiUpdates.teamFouls = { [stat.teamId]: 1 };
+      }
+
+      // Prepare last action message
+      if (stat.isOpponentStat) {
+        uiUpdates.lastAction = `Opponent Team: ${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
+        uiUpdates.lastActionPlayerId = null;
+      } else {
+        uiUpdates.lastAction = `${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
+        uiUpdates.lastActionPlayerId = stat.playerId;
+      }
+
+      // ✅ OPTIMIZATION 2: Apply ALL UI updates at once (single re-render)
+      if (uiUpdates.scores) {
+        setScores(prev => ({
+          ...prev,
+          ...(stat.isOpponentStat 
+            ? { opponent: (prev.opponent || 0) + uiUpdates.scores!.opponent }
+            : { [stat.teamId]: (prev[stat.teamId] || 0) + uiUpdates.scores![stat.teamId] }
+          )
+        }));
+      }
+      if (uiUpdates.teamFouls) {
+        setTeamFouls(prev => ({
+          ...prev,
+          [stat.teamId]: (prev[stat.teamId] || 0) + 1
+        }));
+      }
+      if (uiUpdates.lastAction) {
+        setLastAction(uiUpdates.lastAction);
+        setLastActionPlayerId(uiUpdates.lastActionPlayerId || null);
+      }
+
+      // ✅ OPTIMIZATION 3: Process clock automation BEFORE database write (non-blocking)
+      // This provides instant visual feedback while the network request is in flight
+      if (ruleset && automationFlags.clock.enabled) {
+        const { ClockEngine } = await import('@/lib/engines/clockEngine');
+        
+        // Map stat types to ClockEngine event types
+        let eventType: 'foul' | 'made_shot' | 'missed_shot' | 'turnover' | 'timeout' | 'free_throw' | 'substitution' | 'steal';
+        let reboundType: 'offensive' | 'defensive' | undefined = undefined;
+        
+        if (stat.statType === 'field_goal' || stat.statType === 'three_pointer') {
+          eventType = stat.modifier === 'made' ? 'made_shot' : 'missed_shot';
+        } else if (stat.statType === 'rebound') {
+          eventType = 'missed_shot';
+          reboundType = stat.modifier as 'offensive' | 'defensive';
+        } else if (stat.statType === 'steal') {
+          eventType = 'steal';
+        } else {
+          eventType = stat.statType as 'foul' | 'turnover' | 'timeout' | 'free_throw' | 'substitution';
+        }
+        
+        const clockEvent = {
+          type: eventType,
+          modifier: stat.modifier,
+          ballLocation: undefined as 'frontcourt' | 'backcourt' | undefined,
+          reboundType: reboundType
+        };
+        
+        const clockResult = ClockEngine.processEvent(
+          {
+            gameClockMinutes: Math.floor(clock.secondsRemaining / 60),
+            gameClockSeconds: clock.secondsRemaining % 60,
+            gameClockRunning: clock.isRunning,
+            shotClock: shotClock.secondsRemaining,
+            shotClockRunning: shotClock.isRunning,
+            shotClockDisabled: !shotClock.isVisible,
+            quarter: quarter
+          },
+          clockEvent,
+          ruleset,
+          automationFlags.clock
+        );
+        
+        // Apply clock state changes immediately
+        if (clockResult.actions.length > 0) {
+          console.log('🕐 Clock automation:', clockResult.actions);
+          
+          const newGameClockSeconds = (clockResult.newState.gameClockMinutes * 60) + clockResult.newState.gameClockSeconds;
+          
+          // ✅ OPTIMIZATION 4: Batch clock updates together
+          setClock(prev => ({
+            ...prev,
+            secondsRemaining: newGameClockSeconds,
+            isRunning: clockResult.newState.gameClockRunning
+          }));
+          
+          setShotClock(prev => ({
+            ...prev,
+            secondsRemaining: clockResult.newState.shotClock,
+            isRunning: clockResult.newState.shotClockRunning,
+            isVisible: !clockResult.newState.shotClockDisabled
+          }));
+        }
+      }
+
+      // ✅ PHASE 3: Process possession automation
+      if (ruleset && automationFlags.possession?.enabled) {
+        const { PossessionEngine } = await import('@/lib/engines/possessionEngine');
+        
+        // Map stat types to PossessionEngine event types
+        let possessionEventType: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball' | null = null;
+        
+        if ((stat.statType === 'field_goal' || stat.statType === 'three_pointer' || stat.statType === '3_pointer') && stat.modifier === 'made') {
+          possessionEventType = 'made_shot';
+        } else if (stat.statType === 'turnover') {
+          possessionEventType = 'turnover';
+        } else if (stat.statType === 'steal') {
+          possessionEventType = 'steal';
+        } else if (stat.statType === 'rebound') {
+          possessionEventType = stat.modifier === 'offensive' ? 'offensive_rebound' : 'defensive_rebound';
+        }
+        
+        // Only process if we have a valid possession event
+        if (possessionEventType) {
+          const opponentTeamId = stat.teamId === teamAId ? teamBId : teamAId;
+          
+          console.log('🏀 PHASE 3 DEBUG: Processing possession event', {
+            eventType: possessionEventType,
+            currentPossession: possession.currentTeamId,
+            flags: automationFlags.possession
+          });
+          
+          const possessionResult = PossessionEngine.processEvent(
+            {
+              currentPossession: possession.currentTeamId,
+              possessionArrow: possession.possessionArrow
+            },
+            {
+              type: possessionEventType,
+              teamId: stat.teamId,
+              opponentTeamId: opponentTeamId
+            },
+            ruleset,
+            automationFlags.possession
+          );
+          
+          // Apply possession state changes immediately
+          if (possessionResult.actions.length > 0) {
+            console.log('🏀 Possession automation:', possessionResult.actions);
+            
+            setPossession({
+              currentTeamId: possessionResult.newState.currentPossession,
+              possessionArrow: possessionResult.newState.possessionArrow,
+              lastChangeReason: possessionResult.newState.endReason || null,
+              lastChangeTimestamp: new Date().toISOString()
+            });
+            
+            // Store possession data for database persistence (if enabled)
+            if (possessionResult.newState.shouldPersist) {
+              // Will be persisted in database write section below
+              fullStat.possessionData = {
+                newPossession: possessionResult.newState.currentPossession,
+                endReason: possessionResult.newState.endReason
+              };
+            }
+          }
+        }
+      }
+
+      // ✅ OPTIMIZATION 5: Database write happens AFTER UI updates (non-blocking)
+      // Use Promise.all to load imports in parallel
+      const [
+        { GameServiceV3 },
+        { validateStatValue, validateQuarter },
+        { notify }
+      ] = await Promise.all([
+        import('@/lib/services/gameServiceV3'),
+        import('@/lib/validation/statValidation'),
+        import('@/lib/services/notificationService')
+      ]);
+
+      // Validate quarter
+      const quarterValidation = validateQuarter(quarter);
+      if (!quarterValidation.valid) {
+        notify.error('Invalid quarter', quarterValidation.error);
+        return;
+      }
+
       // Validate stat value (only for made stats)
       if (stat.modifier === 'made' || !stat.modifier) {
         const validation = validateStatValue(stat.statType, statValue);
         if (!validation.valid) {
           notify.error('Invalid stat value', validation.error);
           return;
-        }
-        if (validation.warning) {
-          // Show warning but allow the stat to be recorded
-          notify.warning('Unusual stat value', validation.warning);
         }
       }
 
@@ -631,57 +941,13 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         teamId: stat.teamId,
         statType: stat.statType,
         statValue: statValue,
-        modifier: stat.modifier || null, // ✅ FIXED: Use null instead of empty string
+        modifier: stat.modifier || null,
         quarter: quarter,
         gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
         gameTimeSeconds: clock.secondsRemaining % 60
       });
 
-      // V3 throws on error, so if we reach here, it succeeded
-      
       console.log('✅ Stat recorded successfully in database');
-        
-      // Update local scores for immediate UI feedback (only for scoring stats)
-      if (stat.modifier === 'made' && statValue > 0) {
-        // Handle opponent stats in coach mode
-        if (stat.isOpponentStat) {
-          // Opponent stat: update the opponent score
-          setScores(prev => ({
-            ...prev,
-            opponent: (prev.opponent || 0) + statValue
-          }));
-        } else {
-          // Regular stat: update the team score
-          setScores(prev => ({
-            ...prev,
-            [stat.teamId]: (prev[stat.teamId] || 0) + statValue
-          }));
-        }
-      }
-      
-      // Auto-increment team fouls locally (database trigger handles persistence)
-      if (stat.statType === 'foul') {
-        setTeamFouls(prev => ({
-          ...prev,
-          [stat.teamId]: (prev[stat.teamId] || 0) + 1
-        }));
-        console.log('📊 Team foul incremented locally for team:', stat.teamId);
-      }
-
-      // Create appropriate last action message
-      console.log('🎯 Setting last action for stat:', { isOpponentStat: stat.isOpponentStat, statType: stat.statType, modifier: stat.modifier });
-      
-      if (stat.isOpponentStat) {
-        const actionMessage = `Opponent Team: ${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
-        console.log('🎯 Opponent stat - setting last action:', actionMessage);
-        setLastAction(actionMessage);
-        setLastActionPlayerId(null); // No specific player for opponent
-      } else {
-        const actionMessage = `${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
-        console.log('🎯 Regular stat - setting last action:', actionMessage);
-        setLastAction(actionMessage);
-        setLastActionPlayerId(stat.playerId);
-      }
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);
@@ -856,6 +1122,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     clock,
     shotClock, // NEW: Shot Clock State
     scores,
+    ruleset, // ✅ PHASE 1: Ruleset configuration
+    automationFlags, // ✅ PHASE 1: Automation flags (all OFF by default)
     rosterA,
     rosterB,
     recordStat,
@@ -887,6 +1155,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     timeoutSecondsRemaining,
     timeoutType,
     startTimeout,
-    resumeFromTimeout
+    resumeFromTimeout,
+    possession // ✅ PHASE 3: Possession state
   };
 };

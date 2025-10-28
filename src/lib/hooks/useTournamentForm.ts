@@ -17,6 +17,7 @@ export function useTournamentForm() {
       entryFee: 0,
       prizePool: 0,
       country: 'US',
+      ruleset: 'NBA', // ✅ PHASE 1: Default to NBA ruleset
     },
     errors: {},
     loading: false,

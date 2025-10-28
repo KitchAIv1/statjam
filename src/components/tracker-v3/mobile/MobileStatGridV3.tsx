@@ -209,16 +209,17 @@ export function MobileStatGridV3({
             key={stat.id}
             onClick={() => handleStatClick(stat.statType)}
             disabled={isDisabled || isRecording === stat.statType}
-            className={`h-18 text-sm font-bold transition-all duration-200 rounded-xl border-2 shadow-sm ${
+            className={`h-18 text-sm font-bold transition-colors duration-150 rounded-xl border-2 shadow-sm ${
               isRecording === stat.statType
-                ? 'bg-blue-600 border-blue-400 text-white animate-pulse shadow-lg scale-105' 
+                ? 'bg-blue-600 border-blue-400 text-white shadow-lg' 
                 : isDisabled
                   ? 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400'
-                  : 'bg-blue-500 border-blue-400 hover:bg-blue-600 hover:border-blue-300 text-white hover:shadow-md hover:scale-105 active:scale-95'
+                  : 'bg-blue-500 border-blue-400 hover:bg-blue-600 hover:border-blue-300 text-white hover:shadow-md active:bg-blue-700'
             }`}
             style={{
               minHeight: '72px',
-              fontSize: '14px'
+              fontSize: '14px',
+              willChange: 'background-color, border-color'
             }}
           >
             <div className="font-black text-base">{stat.label}</div>

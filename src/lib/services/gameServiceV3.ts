@@ -526,4 +526,111 @@ export class GameServiceV3 {
       return false;
     }
   }
+
+  /**
+   * ✅ PHASE 3: Update current possession in games table
+   */
+  static async updateCurrentPossession(gameId: string, teamId: string): Promise<boolean> {
+    try {
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        console.error('❌ GameServiceV3: No access token for possession update');
+        return false;
+      }
+
+      if (!this.SUPABASE_URL || !this.SUPABASE_ANON_KEY) {
+        throw new Error('Missing Supabase configuration');
+      }
+
+      const url = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${gameId}`;
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          current_possession_team_id: teamId,
+          possession_changed_at: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ GameServiceV3: Failed to update possession - HTTP ${response.status}:`, errorText);
+        return false;
+      }
+
+      console.log('✅ GameServiceV3: Possession updated successfully');
+      return true;
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to update possession:', error);
+      return false;
+    }
+  }
+
+  /**
+   * ✅ PHASE 3: Record possession change in game_possessions table
+   */
+  static async recordPossessionChange(data: {
+    gameId: string;
+    teamId: string;
+    startQuarter: number;
+    startTimeMinutes: number;
+    startTimeSeconds: number;
+    endQuarter?: number;
+    endTimeMinutes?: number;
+    endTimeSeconds?: number;
+    endReason?: string;
+  }): Promise<boolean> {
+    try {
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        console.error('❌ GameServiceV3: No access token for possession record');
+        return false;
+      }
+
+      if (!this.SUPABASE_URL || !this.SUPABASE_ANON_KEY) {
+        throw new Error('Missing Supabase configuration');
+      }
+
+      const url = `${this.SUPABASE_URL}/rest/v1/game_possessions`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          game_id: data.gameId,
+          team_id: data.teamId,
+          start_quarter: data.startQuarter,
+          start_time_minutes: data.startTimeMinutes,
+          start_time_seconds: data.startTimeSeconds,
+          end_quarter: data.endQuarter,
+          end_time_minutes: data.endTimeMinutes,
+          end_time_seconds: data.endTimeSeconds,
+          end_reason: data.endReason
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ GameServiceV3: Failed to record possession - HTTP ${response.status}:`, errorText);
+        return false;
+      }
+
+      console.log('✅ GameServiceV3: Possession change recorded successfully');
+      return true;
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to record possession change:', error);
+      return false;
+    }
+  }
 }

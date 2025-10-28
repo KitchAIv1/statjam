@@ -20,6 +20,7 @@ import { OpponentTeamPanel } from '@/components/tracker-v3/OpponentTeamPanel';
 import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
 import { TimeoutModalV3 } from '@/components/tracker-v3/TimeoutModalV3';
+import { PossessionIndicator } from '@/components/tracker-v3/PossessionIndicator';
 
 interface GameData {
   id: string;
@@ -100,7 +101,8 @@ function StatTrackerV3Content() {
   const tracker = useTracker({
     initialGameId: gameIdParam || 'unknown',
     teamAId: gameData?.team_a_id || 'teamA',
-    teamBId: gameData?.team_b_id || 'teamB'
+    teamBId: gameData?.team_b_id || 'teamB',
+    isCoachMode: coachMode // ✅ Pass coach mode flag for automation
   });
 
   // Auth Check - Allow both stat_admin and coach roles
@@ -265,9 +267,10 @@ function StatTrackerV3Content() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [tracker.clock.isRunning, tracker]);
+  }, [tracker.clock.isRunning, tracker.tick, tracker.advanceIfNeeded, tracker.clock.secondsRemaining]);
 
   // NEW: Shot Clock Tick Effect
+  // ✅ PERFORMANCE FIX: Removed `tracker` dependency to prevent interval recreation on every shot clock update
   useEffect(() => {
     let shotClockInterval: NodeJS.Timeout;
     
@@ -288,7 +291,7 @@ function StatTrackerV3Content() {
     return () => {
       if (shotClockInterval) clearInterval(shotClockInterval);
     };
-  }, [tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker]);
+  }, [tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker.shotClockTick, tracker.stopShotClock, tracker.shotClock.secondsRemaining]);
 
   // NEW: Sync shot clock with game clock
   useEffect(() => {
@@ -300,7 +303,7 @@ function StatTrackerV3Content() {
     else if (tracker.clock.isRunning && !tracker.shotClock.isRunning && tracker.shotClock.isVisible && !shotClockViolation) {
       tracker.startShotClock();
     }
-  }, [tracker.clock.isRunning, tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker, shotClockViolation]);
+  }, [tracker.clock.isRunning, tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker.stopShotClock, tracker.startShotClock, shotClockViolation]);
 
   // Clear shot clock violation when manually reset
   useEffect(() => {
@@ -333,12 +336,19 @@ function StatTrackerV3Content() {
     let actualTeamId = gameData.team_a_id; // Default to coach team
     let isOpponentStat = false;
     
+    console.log('🔍 STAT RECORD DEBUG:', { 
+      coachMode, 
+      selectedPlayer, 
+      isOpponentTeamSelected: selectedPlayer === 'opponent-team',
+      willSetOpponentFlag: coachMode && selectedPlayer === 'opponent-team'
+    });
+    
     if (coachMode && selectedPlayer === 'opponent-team') {
       // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
       actualPlayerId = user?.id || null;
       actualTeamId = gameData.team_a_id; // Use coach's team ID (same as team_b_id in coach mode)
       isOpponentStat = true; // FLAG: This is an opponent stat
-      console.log('🏀 Recording opponent team stat (flagged as opponent), team_id:', actualTeamId);
+      console.log('✅ Recording opponent team stat (flagged as opponent), team_id:', actualTeamId, 'isOpponentStat:', isOpponentStat);
     } else {
       // Determine which team the selected player belongs to
       const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
@@ -382,10 +392,18 @@ function StatTrackerV3Content() {
     let actualTeamId = gameData.team_a_id;
     let isOpponentStat = false;
     
+    console.log('🔍 FOUL RECORD DEBUG:', { 
+      coachMode, 
+      selectedPlayer, 
+      isOpponentTeamSelected: selectedPlayer === 'opponent-team',
+      willSetOpponentFlag: coachMode && selectedPlayer === 'opponent-team'
+    });
+    
     if (coachMode && selectedPlayer === 'opponent-team') {
       actualPlayerId = user?.id || null;
       actualTeamId = gameData.team_a_id;
       isOpponentStat = true; // FLAG: This is an opponent stat
+      console.log('✅ Recording opponent foul (flagged as opponent), team_id:', actualTeamId, 'isOpponentStat:', isOpponentStat);
     } else {
       const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
       actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
@@ -655,6 +673,21 @@ function StatTrackerV3Content() {
           onShotClockReset={tracker.resetShotClock}
           onShotClockSetTime={tracker.setShotClockTime}
         />
+
+        {/* ✅ PHASE 3: Possession Indicator */}
+        {tracker.ruleset && tracker.automationFlags.possession?.enabled && (
+          <div className="flex justify-center mb-3">
+            <PossessionIndicator
+              currentTeamId={tracker.possession.currentTeamId}
+              teamAId={gameData.team_a_id}
+              teamBId={gameData.team_b_id}
+              teamAName={gameData.team_a?.name || 'Team A'}
+              teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
+              possessionArrow={tracker.possession.possessionArrow}
+              isMobile={false}
+            />
+          </div>
+        )}
 
         {/* Main Content Grid - Responsive Layout: Mobile/Tablet/Desktop */}
         <div className={`grid gap-3 items-start flex-1 min-h-0 ${
