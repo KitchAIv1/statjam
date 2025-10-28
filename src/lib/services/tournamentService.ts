@@ -893,11 +893,10 @@ export class TeamService {
       // Proceed with assignment if validation passed
       const { error } = await supabase
         .from('team_players')
-        .upsert({
+        .insert({
           team_id: teamId,
-          player_id: playerId
-        }, {
-          onConflict: 'team_id,player_id'
+          player_id: playerId,
+          custom_player_id: null  // ✅ Explicitly set to NULL for regular players
         });
 
       if (error) {
