@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.14.2] - 2025-10-28
+
+### 🎯 **Stat Tracker UI Refinements & Container Alignment**
+
+#### Fixed
+- **🎨 Container Height Alignment**
+  - Fixed tracker container height to match side containers (650px)
+  - All 3 columns (Left/Center/Right) now align perfectly at bottom edge
+  - Professional, consistent layout across expanded view
+  - Root cause: Tracker was 700px while side containers were 650px
+
+- **🔒 Prevented Button Shifting**
+  - Fixed Last Action container to 130px height (previously expanded 80px → 150px)
+  - Stat buttons no longer move when Last Action populates
+  - Users can rapid-fire clicks without re-aiming
+  - Maintains muscle memory for button positions
+
+#### Changed
+- **📏 Optimized Internal Spacing**
+  - Reduced main container padding: p-6 → p-4 (24px → 16px)
+  - Reduced Last Action padding: p-4 → p-3, mb-4 → mb-3
+  - Reduced stat grid gaps: gap-4 → gap-3, mb-6 → mb-4
+  - Reduced End Game button: py-4 → py-3, mt-4 → mt-3
+  - More efficient use of vertical space while maintaining readability
+
+- **📜 Scrollable Stat Grids**
+  - Made stat grid section scrollable while keeping Last Action and End Game fixed
+  - Custom scrollbar styling (thin, unobtrusive)
+  - Smooth scrolling experience for many stat buttons
+  - Maintains fixed container height
+
+#### Added
+- **💀 Skeleton Loading for Coach Tracker**
+  - Replaced "Loading stats..." text with structured skeleton UI
+  - 5 player row skeletons (avatar + name + stats)
+  - Team aggregate skeletons (coach + opponent stats)
+  - Pulse animation for smooth visual feedback
+  - Matches actual content structure for preview
+
+#### Modified
+- `/src/components/tracker-v3/DesktopStatGridV3.tsx` - Fixed container height, Last Action height, optimized spacing, scrollable stat grids
+- `/src/components/tracker-v3/OpponentStatsPanel.tsx` - Added skeleton loading UI
+- `/src/app/globals.css` - Added pulse animation and stat grid scrollbar styling
+
+#### Technical Details
+- **Container Height**: Fixed at 650px (matches TeamRosterV3 and OpponentTeamPanel)
+- **Last Action Height**: Fixed at 130px with overflow hidden
+- **Scrollable Section**: flex-1 + overflow-y-auto for stat grids
+- **Skeleton Animation**: CSS keyframes pulse (1.5s ease-in-out infinite)
+- **Layout Structure**: Fixed header → Scrollable content → Fixed footer
+
+---
+
 ## [0.14.1] - 2025-10-28
 
 ### 🎯 **Mobile UX Refinements & Critical Fixes**
