@@ -59,6 +59,26 @@
   }
 }
 
+/* ✅ STAT GRID SCROLL: Custom scrollbar for stat tracker center column */
+.stat-grid-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.stat-grid-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 3px;
+}
+
+.stat-grid-scroll::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.stat-grid-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
 /* Show scrollbar on hover to indicate scrollability */
 .opponent-stats-scroll::-webkit-scrollbar-thumb {
   background: transparent;

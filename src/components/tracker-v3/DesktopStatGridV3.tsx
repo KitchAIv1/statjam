@@ -169,14 +169,16 @@ export function DesktopStatGridV3({
         borderColor: '#e5e7eb',
         borderWidth: '1px',
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        minHeight: '650px'
+        minHeight: '650px',
+        maxHeight: '650px',
+        overflow: 'hidden'
       }}
     >
 
 
-      {/* ✅ REFINEMENT 1: Last Action with Possession Indicator Header */}
+      {/* ✅ FIXED: Last Action Section - Always Visible at Top */}
       <div 
-        className="w-full rounded-xl p-4 mb-6"
+        className="w-full rounded-xl p-4 mb-4 flex-shrink-0"
         style={{ 
           background: '#ffffff', 
           borderColor: '#e5e7eb',
@@ -271,6 +273,14 @@ export function DesktopStatGridV3({
         )}
       </div>
 
+      {/* ✅ FIXED: Scrollable Stat Grids Container */}
+      <div 
+        className="flex-1 overflow-y-auto overflow-x-hidden stat-grid-scroll"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#9ca3af #f3f4f6'
+        }}
+      >
       {/* Made Stats Row - Desktop Optimized */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {madeStats.map((stat) => {
@@ -410,11 +420,11 @@ export function DesktopStatGridV3({
         })}
       </div>
 
-      {/* Spacer to push End Game button to absolute bottom */}
-      <div className="flex-1 min-h-0"></div>
+      </div>
+      {/* ✅ END: Scrollable Stat Grids Container */}
 
-      {/* End Game Button - Positioned at Bottom for Perfect Alignment */}
-      <div className="mt-auto pt-4">
+      {/* ✅ FIXED: End Game Button - Always Visible at Bottom */}
+      <div className="mt-4 flex-shrink-0">
         <button
           className="w-full text-lg font-black py-4 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
           onClick={() => {
