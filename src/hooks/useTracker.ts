@@ -719,11 +719,34 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
       if (ruleset && automationFlags.clock.enabled) {
         const { ClockEngine } = await import('@/lib/engines/clockEngine');
         
+        // ✅ Map stat types to ClockEngine event types
+        let eventType: 'foul' | 'made_shot' | 'missed_shot' | 'turnover' | 'timeout' | 'free_throw' | 'substitution';
+        let reboundType: 'offensive' | 'defensive' | undefined = undefined;
+        
+        // Map scoring stats to made_shot/missed_shot
+        if (stat.statType === 'field_goal' || stat.statType === 'three_pointer') {
+          eventType = stat.modifier === 'made' ? 'made_shot' : 'missed_shot';
+        }
+        // Map rebounds as missed_shot with reboundType
+        // ClockEngine expects rebounds to be part of missed_shot event
+        else if (stat.statType === 'rebound') {
+          eventType = 'missed_shot';
+          reboundType = stat.modifier as 'offensive' | 'defensive';
+        }
+        // Map steals as turnovers (should reset shot clock)
+        else if (stat.statType === 'steal') {
+          eventType = 'turnover';
+        }
+        // Pass through other stats as-is
+        else {
+          eventType = stat.statType as 'foul' | 'turnover' | 'timeout' | 'free_throw' | 'substitution';
+        }
+        
         const clockEvent = {
-          type: stat.statType as 'foul' | 'made_shot' | 'missed_shot' | 'turnover' | 'timeout' | 'free_throw' | 'substitution',
+          type: eventType,
           modifier: stat.modifier,
           ballLocation: undefined as 'frontcourt' | 'backcourt' | undefined,
-          reboundType: undefined as 'offensive' | 'defensive' | undefined
+          reboundType: reboundType
         };
         
         const clockResult = ClockEngine.processEvent(
