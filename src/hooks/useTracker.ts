@@ -516,14 +516,15 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
     console.log('🏀 Shot clock stopped');
   }, []);
 
-  const resetShotClock = useCallback((seconds: number = 24) => {
+  const resetShotClock = useCallback((seconds?: number) => {
+    const resetValue = seconds ?? 24; // Default to 24 if undefined
     setShotClock(prev => ({ 
       ...prev, 
       isRunning: false, 
-      secondsRemaining: seconds 
+      secondsRemaining: resetValue 
     }));
-    setLastAction(`Shot clock reset to ${seconds}s`);
-    console.log(`🏀 Shot clock reset to ${seconds} seconds`);
+    setLastAction(`Shot clock reset to ${resetValue}s`);
+    console.log(`🏀 Shot clock reset to ${resetValue} seconds`);
   }, []);
 
   const setShotClockTime = useCallback((seconds: number) => {
