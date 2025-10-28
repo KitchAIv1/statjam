@@ -333,19 +333,26 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
 
   const handleCreateTournament = async () => {
     try {
+      // ✅ Validation - ALL required fields
+      if (!newTournament.name || !newTournament.format || !newTournament.maxTeams || 
+          !newTournament.startDate || !newTournament.endDate) {
+        console.error('Missing required fields');
+        return;
+      }
+
       const tournamentData = {
         name: newTournament.name,
         description: newTournament.description,
         startDate: newTournament.startDate,
         endDate: newTournament.endDate,
-        venue: "TBD", // Will be updated in the form
-        maxTeams: parseInt(newTournament.maxTeams),
-        tournamentType: newTournament.format.toLowerCase().replace(' ', '_') as any,
+        venue: "TBD",
+        maxTeams: parseInt(newTournament.maxTeams) || 8,
+        tournamentType: newTournament.format.toLowerCase().replace(/\s+/g, '_') as any,
         isPublic: true,
         entryFee: 0,
         prizePool: 0,
         country: "US",
-        ruleset: newTournament.ruleset as 'NBA' | 'FIBA' | 'NCAA' // ✅ PHASE 1: Include ruleset
+        ruleset: newTournament.ruleset as 'NBA' | 'FIBA' | 'NCAA'
       };
 
       const result = await createTournament(tournamentData);
@@ -357,7 +364,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           endDate: "",
           maxTeams: "",
           description: "",
-          ruleset: "NBA" // ✅ PHASE 1: Reset to default
+          ruleset: "NBA"
         });
         setIsCreateDialogOpen(false);
       }
@@ -537,16 +544,17 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Tournament Name</Label>
+                <Label htmlFor="name">Tournament Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="name"
                   value={newTournament.name}
                   onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
                   placeholder="Enter tournament name"
+                  required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="format">Format</Label>
+                <Label htmlFor="format">Format <span className="text-red-500">*</span></Label>
                 <Select value={newTournament.format} onValueChange={(value) => setNewTournament({ ...newTournament, format: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select tournament format" />
@@ -555,32 +563,33 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                     <SelectItem value="Single Elimination">Single Elimination</SelectItem>
                     <SelectItem value="Double Elimination">Double Elimination</SelectItem>
                     <SelectItem value="Round Robin">Round Robin</SelectItem>
-                    <SelectItem value="Swiss System">Swiss System</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="startDate">Start Date</Label>
+                  <Label htmlFor="startDate">Start Date <span className="text-red-500">*</span></Label>
                   <Input
                     id="startDate"
                     type="date"
                     value={newTournament.startDate}
                     onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="endDate">End Date</Label>
+                  <Label htmlFor="endDate">End Date <span className="text-red-500">*</span></Label>
                   <Input
                     id="endDate"
                     type="date"
                     value={newTournament.endDate}
                     onChange={(e) => setNewTournament({ ...newTournament, endDate: e.target.value })}
+                    required
                   />
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="maxTeams">Maximum Teams</Label>
+                <Label htmlFor="maxTeams">Maximum Teams <span className="text-red-500">*</span></Label>
                 <Select value={newTournament.maxTeams} onValueChange={(value) => setNewTournament({ ...newTournament, maxTeams: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select max teams" />
