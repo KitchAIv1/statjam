@@ -264,6 +264,19 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
                   } else {
                     console.log('✅ Phase 1: All automation flags are OFF (expected behavior)');
                   }
+                } else {
+                  // Tournament ID exists but query returned empty (likely RLS issue or deleted tournament)
+                  console.warn('⚠️ Phase 1: Tournament ID exists but query returned empty');
+                  setRuleset(RulesetService.getRuleset('NBA'));
+                  
+                  if (isCoachMode) {
+                    console.log('✅ Phase 1: Coach mode detected, using COACH_AUTOMATION_FLAGS');
+                    setAutomationFlags(COACH_AUTOMATION_FLAGS);
+                    console.log('✅ Phase 1: Clock automation ENABLED for coach game');
+                  } else {
+                    console.log('✅ Phase 1: Using DEFAULT_AUTOMATION_FLAGS (all OFF)');
+                    setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
+                  }
                 }
               }
             } else {
