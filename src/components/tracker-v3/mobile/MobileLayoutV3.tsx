@@ -74,6 +74,7 @@ interface MobileLayoutV3Props {
   onTeamPlayersUpdate?: (teamAPlayers: Player[], teamBPlayers: Player[]) => void; // Add callback to update main state
   onTimeOut: () => void; // Add timeout handler from main page
   isCoachMode?: boolean; // Add coach mode flag
+  userId?: string; // ✅ FIX: User ID for opponent stats
 }
 
 export function MobileLayoutV3({
@@ -88,7 +89,8 @@ export function MobileLayoutV3({
   onSubstitution,
   onTeamPlayersUpdate,
   onTimeOut,
-  isCoachMode = false
+  isCoachMode = false,
+  userId
 }: MobileLayoutV3Props) {
   const [possessionTeam, setPossessionTeam] = useState<'A' | 'B'>('A');
 
@@ -99,7 +101,22 @@ export function MobileLayoutV3({
   const handleStatRecord = async (statType: string, modifier?: string) => {
     if (!selectedPlayer) return;
 
-    // Determine which team the selected player belongs to
+    // ✅ FIX: Handle opponent team stats (same logic as expanded view)
+    if (isCoachMode && selectedPlayer === 'opponent-team') {
+      // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
+      await tracker.recordStat({
+        gameId: gameData.id,
+        playerId: userId || null, // ✅ FIX: Use actual user ID
+        customPlayerId: null,
+        teamId: gameData.team_a_id, // Coach's team UUID (required for DB)
+        statType,
+        modifier,
+        isOpponentStat: true // ✅ FLAG: This is an opponent stat
+      });
+      return;
+    }
+
+    // Regular player stats
     const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
     const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
 
@@ -116,7 +133,22 @@ export function MobileLayoutV3({
   const handleFoulRecord = async (foulType: 'personal' | 'technical') => {
     if (!selectedPlayer) return;
 
-    // Determine which team the selected player belongs to
+    // ✅ FIX: Handle opponent team fouls (same logic as expanded view)
+    if (isCoachMode && selectedPlayer === 'opponent-team') {
+      // OPPONENT TEAM FOULS: Use coach's user ID as proxy, mark as opponent stat
+      await tracker.recordStat({
+        gameId: gameData.id,
+        playerId: userId || null, // ✅ FIX: Use actual user ID
+        customPlayerId: null,
+        teamId: gameData.team_a_id, // Coach's team UUID (required for DB)
+        statType: 'foul',
+        modifier: foulType,
+        isOpponentStat: true // ✅ FLAG: This is an opponent stat
+      });
+      return;
+    }
+
+    // Regular player fouls
     const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
     const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
 

@@ -623,6 +623,7 @@ function StatTrackerV3Content() {
         }}
         onTimeOut={handleTimeoutClick}
         isCoachMode={coachMode}
+        userId={user?.id}
       />
     );
   }
