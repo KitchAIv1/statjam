@@ -89,7 +89,7 @@ WHERE id = 'YOUR_TOURNAMENT_ID';
    - ✅ Game clock should pause automatically
    - ✅ Console log: `🕐 Clock automation: [{ action: 'pause_game_clock', reason: 'foul' }]`
 
-### Test Case 2: Shot Clock Reset on Made Shot
+### Test Case 2: Shot Clock Reset on Made Shot ⚠️ **FIXED**
 **Expected Behavior**: Shot clock should reset to 24s (NBA) after made shot
 
 1. Record a made field goal (2PT or 3PT)
@@ -97,16 +97,20 @@ WHERE id = 'YOUR_TOURNAMENT_ID';
    - ✅ Shot clock resets to 24 seconds (NBA) or 30s (NCAA)
    - ✅ Console log: `🕐 Clock automation: [{ action: 'reset_shot_clock', value: 24 }]`
 
-### Test Case 3: Shot Clock Reset on Defensive Rebound
+**Note**: This was fixed in commit `df4e8f0` - event mapping now correctly converts `field_goal`/`three_pointer` → `made_shot`
+
+### Test Case 3: Shot Clock Reset on Defensive Rebound ⚠️ **FIXED**
 **Expected Behavior**: Shot clock should reset to full on defensive rebound
 
 1. Record a missed shot
 2. Record a defensive rebound
 3. **VERIFY**:
    - ✅ Shot clock resets to 24s (NBA) or 30s (NCAA)
-   - ✅ Console log shows reset action
+   - ✅ Console log shows reset action: `🕐 Clock automation: [{ action: 'reset_shot_clock', value: 24 }]`
 
-### Test Case 4: Shot Clock Reset to 14s on Offensive Rebound (NBA only)
+**Note**: This was fixed in commit `df4e8f0` - rebounds now correctly map to `missed_shot` with `reboundType: 'defensive'`
+
+### Test Case 4: Shot Clock Reset to 14s on Offensive Rebound (NBA only) ⚠️ **FIXED**
 **Expected Behavior**: Shot clock should reset to 14s on offensive rebound if < 14s remaining
 
 1. Let shot clock run down to < 14 seconds
@@ -115,6 +119,8 @@ WHERE id = 'YOUR_TOURNAMENT_ID';
 4. **VERIFY**:
    - ✅ Shot clock resets to 14 seconds (NBA rule)
    - ✅ Console log: `🕐 Clock automation: [{ action: 'reset_shot_clock', value: 14 }]`
+
+**Note**: This was fixed in commit `df4e8f0` - rebounds now correctly map to `missed_shot` with `reboundType: 'offensive'`
 
 ### Test Case 5: Auto-Pause on Timeout
 **Expected Behavior**: Both clocks should pause on timeout
@@ -132,6 +138,17 @@ WHERE id = 'YOUR_TOURNAMENT_ID';
 2. **VERIFY**:
    - ✅ Game clock pauses
    - ✅ Console log shows pause action
+
+### Test Case 7: Steal - Clock Reset and Pause ⚠️ **NEW**
+**Expected Behavior**: Steals should pause clocks and reset shot clock (change of possession)
+
+1. Record a steal
+2. **VERIFY**:
+   - ✅ Game clock pauses
+   - ✅ Shot clock resets to 24s (NBA)
+   - ✅ Console log: `🕐 Clock automation: [{ action: 'pause_game_clock' }, { action: 'reset_shot_clock', value: 24 }]`
+
+**Note**: This was added in commit `df4e8f0` - steals now correctly map to `turnover` events
 
 ---
 
@@ -271,13 +288,18 @@ WHERE id = 'YOUR_TOURNAMENT_ID';
 ## Success Criteria
 
 Phase 2 is working correctly if:
-- ✅ Clock auto-pauses on fouls, timeouts, violations
-- ✅ Shot clock resets correctly based on ruleset
-- ✅ Offensive rebound reset follows ruleset rules
+- ✅ Clock auto-pauses on fouls, timeouts, violations, steals
+- ✅ Shot clock resets on made shots (field goals, 3-pointers)
+- ✅ Shot clock resets correctly on defensive rebounds
+- ✅ Shot clock resets correctly on offensive rebounds (NBA: 14s if < 14s)
+- ✅ Shot clock resets on steals (change of possession)
+- ✅ All ruleset-specific behaviors work (NBA/FIBA/NCAA)
 - ✅ No errors in console
 - ✅ Stats continue to save correctly to database
 - ✅ Manual clock controls still work
 - ✅ Disabling automation returns to manual mode
+
+**Status**: ✅ All issues fixed in commit `df4e8f0` - ready for comprehensive testing
 
 ---
 
