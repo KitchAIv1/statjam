@@ -11,6 +11,7 @@ interface OpponentTeamPanelProps {
   gameId: string;
   teamId: string;
   teamName: string;
+  mobileMode?: boolean; // ✅ Mobile optimization flag
 }
 
 /**
@@ -30,12 +31,90 @@ export function OpponentTeamPanel({
   onPlayerSelect,
   gameId,
   teamId,
-  teamName
+  teamName,
+  mobileMode = false
 }: OpponentTeamPanelProps) {
   
   const OPPONENT_TEAM_ID = 'opponent-team';
   const isSelected = selectedPlayer === OPPONENT_TEAM_ID;
 
+  // ✅ MOBILE MODE: Compact button only (matches HOME team height)
+  if (mobileMode) {
+    return (
+      <div 
+        className="rounded-lg p-2 transition-all border-2"
+        style={{
+          borderColor: isSelected ? '#3b82f6' : '#93c5fd',
+          background: isSelected 
+            ? 'linear-gradient(to right, #dbeafe, #bfdbfe)' 
+            : 'linear-gradient(to right, #eff6ff, #dbeafe)',
+          boxShadow: isSelected ? '0 4px 6px -1px rgba(59, 130, 246, 0.3)' : 'none'
+        }}
+      >
+        {/* Team Header */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-teal-500"></div>
+            <span className="text-xs font-semibold text-blue-700">
+              {opponentName}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <Target className="w-3 h-3 text-blue-600" />
+            <span className="text-[10px] font-medium text-blue-600">
+              Opponent
+            </span>
+          </div>
+        </div>
+
+        {/* Opponent Button Row (matches player circles) */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          <button
+            onClick={() => onPlayerSelect(OPPONENT_TEAM_ID)}
+            className="flex-shrink-0 flex flex-col items-center gap-1 transition-all"
+            style={{
+              width: '56px'
+            }}
+          >
+            <div 
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all"
+              style={{
+                background: isSelected 
+                  ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                  : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                border: isSelected ? '2px solid #1d4ed8' : '2px solid #93c5fd',
+                boxShadow: isSelected 
+                  ? '0 4px 8px rgba(59, 130, 246, 0.4)'
+                  : '0 2px 4px rgba(59, 130, 246, 0.1)'
+              }}
+            >
+              <Users 
+                className="w-6 h-6"
+                style={{
+                  color: isSelected ? '#ffffff' : '#3b82f6'
+                }}
+              />
+            </div>
+            <span 
+              className="text-[10px] font-medium text-center"
+              style={{
+                color: isSelected ? '#1e40af' : '#60a5fa',
+                maxWidth: '56px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              VS
+            </span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ DESKTOP MODE: Full panel with stats
   return (
     <div 
       className="w-full h-full flex flex-col gap-3"

@@ -3,6 +3,7 @@
 import React from 'react';
 import { RefreshCw, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { OpponentTeamPanel } from '../OpponentTeamPanel';
 
 interface Player {
   id: string;
@@ -20,6 +21,10 @@ interface DualTeamHorizontalRosterV3Props {
   onPlayerSelect: (playerId: string) => void;
   onSubstitution?: (playerId: string) => void;
   isCoachMode?: boolean; // Add coach mode flag
+  // ✅ Coach mode props for OpponentTeamPanel
+  gameId?: string;
+  teamId?: string;
+  opponentName?: string;
 }
 
 export function DualTeamHorizontalRosterV3({
@@ -30,7 +35,10 @@ export function DualTeamHorizontalRosterV3({
   selectedPlayer,
   onPlayerSelect,
   onSubstitution,
-  isCoachMode = false
+  isCoachMode = false,
+  gameId,
+  teamId,
+  opponentName
 }: DualTeamHorizontalRosterV3Props) {
   
   // Get first 5 players for each team (tournament mode) or all players (coach mode)
@@ -207,38 +215,36 @@ export function DualTeamHorizontalRosterV3({
       {/* Team A Row */}
       {renderPlayerRow(displayTeamA, 'A', teamAName)}
       
-      {/* ✅ REFINEMENT 2: Team B Row OR Opponent Button (Coach Mode) */}
+      {/* ✅ REFINEMENT 2: Team B Row OR Opponent Panel (Coach Mode) */}
       {isCoachMode ? (
-        // Coach Mode: Single Opponent Button
-        <div 
-          className="w-full rounded-lg p-2"
-          style={{ 
-            background: '#1f2937',
-            borderColor: '#374151',
-            borderWidth: '1px'
-          }}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-1">
-              <Users className="w-3 h-3 text-red-400" />
-              <span className="text-xs font-semibold text-red-400">Opponent Team</span>
-            </div>
+        // Coach Mode: Full OpponentTeamPanel Component (matches expanded view)
+        gameId && teamId && opponentName ? (
+          <div className="w-full">
+            <OpponentTeamPanel
+              opponentName={opponentName}
+              selectedPlayer={selectedPlayer}
+              onPlayerSelect={onPlayerSelect}
+              gameId={gameId}
+              teamId={teamId}
+              teamName={teamAName}
+              mobileMode={true}
+            />
           </div>
-          
-          <div className="flex justify-center">
-            <Button
-              onClick={() => onPlayerSelect('opponent-team')}
-              className={`h-14 w-20 flex flex-col items-center justify-center gap-1 rounded-lg transition-all ${
-                selectedPlayer === 'opponent-team'
-                  ? 'bg-red-500 text-white border-2 border-red-400 scale-105 shadow-lg'
-                  : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-red-500/20 hover:border-red-500'
-              }`}
-            >
-              <div className="text-2xl font-bold">VS</div>
-              <div className="text-[10px] font-medium">Opponent</div>
-            </Button>
+        ) : (
+          // Fallback if props missing
+          <div 
+            className="w-full rounded-lg p-4 text-center"
+            style={{ 
+              background: '#fee2e2',
+              borderColor: '#fca5a5',
+              borderWidth: '1px'
+            }}
+          >
+            <span className="text-sm text-red-600">
+              Missing opponent data
+            </span>
           </div>
-        </div>
+        )
       ) : (
         // Regular Mode: Team B Player Roster
         renderPlayerRow(displayTeamB, 'B', teamBName)

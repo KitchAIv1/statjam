@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { CompactScoreboardV3 } from './CompactScoreboardV3';
 import { DualTeamHorizontalRosterV3 } from './DualTeamHorizontalRosterV3';
 import { MobileStatGridV3 } from './MobileStatGridV3';
+import { OpponentStatsPanel } from '../OpponentStatsPanel';
 
 interface Player {
   id: string;
@@ -182,6 +183,9 @@ export function MobileLayoutV3({
           onPlayerSelect={onPlayerSelect}
           onSubstitution={onSubstitution}
           isCoachMode={isCoachMode}
+          gameId={gameData.id}
+          teamId={gameData.team_a_id}
+          opponentName={isCoachMode ? 'Opponent Team' : undefined}
         />
 
         {/* Mobile Stat Grid */}
@@ -213,6 +217,22 @@ export function MobileLayoutV3({
             </div>
           </button>
         </div>
+
+        {/* ✅ ADJUSTMENT 2: Team Stats & Aggregates (Coach Mode Only) */}
+        {isCoachMode && (
+          <div className="px-2 pb-4">
+            <div className="rounded-xl overflow-hidden" style={{
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }}>
+              <OpponentStatsPanel
+                gameId={gameData.id}
+                teamId={gameData.team_a_id}
+                teamName={gameData.team_a?.name || 'Team A'}
+                opponentName="Opponent Team"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Modals now handled by main page */}
 
