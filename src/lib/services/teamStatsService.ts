@@ -71,6 +71,50 @@ export class TeamStatsService {
   }
 
   /**
+   * Make authenticated HTTP request to Supabase REST API (for coach-specific data)
+   */
+  private static async makeAuthenticatedRequest<T>(
+    table: string, 
+    params: Record<string, string> = {}
+  ): Promise<T[]> {
+    if (!this.SUPABASE_URL || !this.SUPABASE_ANON_KEY) {
+      throw new Error('Missing Supabase configuration');
+    }
+
+    const accessToken = this.getAccessToken();
+    if (!accessToken) {
+      // Fallback to public access if no token
+      return this.makeRequest<T>(table, params);
+    }
+
+    // Build query string
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${this.SUPABASE_URL}/rest/v1/${table}${queryString ? `?${queryString}` : ''}`;
+
+    console.log(`🔐 TeamStatsService: Authenticated HTTP request to ${table}`, { url, params });
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'apikey': this.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${accessToken}`, // ← AUTHENTICATED ACCESS
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ TeamStatsService: HTTP ${response.status}:`, errorText);
+      const userMessage = this.getUserFriendlyError(response.status, errorText);
+      throw new Error(userMessage);
+    }
+
+    const data = await response.json();
+    console.log(`✅ TeamStatsService: Successfully fetched ${data.length} records from ${table} (authenticated)`);
+    return data;
+  }
+
+  /**
    * Make public HTTP request to Supabase REST API (same pattern as Play by Play feed)
    */
   private static async makeRequest<T>(
@@ -118,8 +162,8 @@ export class TeamStatsService {
     try {
       console.log('🏀 TeamStatsService: Aggregating team stats for game:', gameId, 'team:', teamId);
 
-      // Fetch all game stats for this team
-      const gameStats = await this.makeRequest<any>('game_stats', {
+      // Fetch all game stats for this team (use authenticated for coach games)
+      const gameStats = await this.makeAuthenticatedRequest<any>('game_stats', {
         'select': 'stat_type,stat_value,modifier,quarter',
         'game_id': `eq.${gameId}`,
         'team_id': `eq.${teamId}`
@@ -249,8 +293,8 @@ export class TeamStatsService {
         console.log('📝 TeamStatsService: No substitutions found, calculating from game clock');
         
         try {
-          // Get current game state to determine how much time has elapsed
-          const gameData = await this.makeRequest<any>('games', {
+          // Get current game state to determine how much time has elapsed (use authenticated for coach games)
+          const gameData = await this.makeAuthenticatedRequest<any>('games', {
             'select': 'quarter,game_clock_minutes,game_clock_seconds',
             'id': `eq.${gameId}`
           });
@@ -398,8 +442,8 @@ export class TeamStatsService {
 
       console.log(`📊 TeamStatsService: Found ${allScoringStats.length} scoring events`);
 
-      // Step 3: Get opponent team ID
-      const game = await this.makeRequest<any>('games', {
+      // Step 3: Get opponent team ID (use authenticated for coach games)
+      const game = await this.makeAuthenticatedRequest<any>('games', {
         'select': 'team_a_id,team_b_id',
         'id': `eq.${gameId}`
       });
@@ -511,8 +555,8 @@ export class TeamStatsService {
         return [];
       }
 
-      // Fetch all game stats for this team's players (including custom players)
-      const gameStats = await this.makeRequest<any>('game_stats', {
+      // Fetch all game stats for this team's players (including custom players, use authenticated for coach games)
+      const gameStats = await this.makeAuthenticatedRequest<any>('game_stats', {
         'select': 'player_id,custom_player_id,stat_type,stat_value,modifier,quarter',
         'game_id': `eq.${gameId}`,
         'team_id': `eq.${teamId}`
@@ -529,7 +573,7 @@ export class TeamStatsService {
       // Fetch custom player names from custom_players table
       let customPlayersResponse: any[] = [];
       try {
-        customPlayersResponse = await this.makeRequest<any>('custom_players', {
+        customPlayersResponse = await this.makeAuthenticatedRequest<any>('custom_players', {
           'select': 'id,name,team_id',
           'team_id': `eq.${teamId}`
         });
