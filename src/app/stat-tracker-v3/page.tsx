@@ -20,6 +20,7 @@ import { OpponentTeamPanel } from '@/components/tracker-v3/OpponentTeamPanel';
 import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
 import { TimeoutModalV3 } from '@/components/tracker-v3/TimeoutModalV3';
+import { PossessionIndicator } from '@/components/tracker-v3/PossessionIndicator';
 
 interface GameData {
   id: string;
@@ -672,6 +673,21 @@ function StatTrackerV3Content() {
           onShotClockReset={tracker.resetShotClock}
           onShotClockSetTime={tracker.setShotClockTime}
         />
+
+        {/* ✅ PHASE 3: Possession Indicator */}
+        {tracker.ruleset && tracker.automationFlags.possession?.enabled && (
+          <div className="flex justify-center mb-3">
+            <PossessionIndicator
+              currentTeamId={tracker.possession.currentTeamId}
+              teamAId={gameData.team_a_id}
+              teamBId={gameData.team_b_id}
+              teamAName={gameData.team_a?.name || 'Team A'}
+              teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
+              possessionArrow={tracker.possession.possessionArrow}
+              isMobile={false}
+            />
+          </div>
+        )}
 
         {/* Main Content Grid - Responsive Layout: Mobile/Tablet/Desktop */}
         <div className={`grid gap-3 items-start flex-1 min-h-0 ${

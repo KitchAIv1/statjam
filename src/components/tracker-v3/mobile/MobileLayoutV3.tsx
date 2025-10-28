@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { CompactScoreboardV3 } from './CompactScoreboardV3';
 import { DualTeamHorizontalRosterV3 } from './DualTeamHorizontalRosterV3';
 import { MobileStatGridV3 } from './MobileStatGridV3';
+import { PossessionIndicator } from '../PossessionIndicator';
 
 interface Player {
   id: string;
@@ -49,6 +50,15 @@ interface TrackerData {
   closeGame: () => Promise<void>;
   recordStat: (stat: any) => Promise<void>;
   substitute: (sub: any) => Promise<boolean>;
+  // ✅ PHASE 3: Possession state
+  possession?: {
+    currentTeamId: string;
+    possessionArrow: string;
+    lastChangeReason: string | null;
+    lastChangeTimestamp: string | null;
+  };
+  ruleset?: any;
+  automationFlags?: any;
 }
 
 interface MobileLayoutV3Props {
@@ -154,6 +164,21 @@ export function MobileLayoutV3({
           onShotClockReset={tracker.resetShotClock}
           onShotClockSetTime={tracker.setShotClockTime}
         />
+
+        {/* ✅ PHASE 3: Possession Indicator (Mobile) */}
+        {tracker.ruleset && tracker.automationFlags?.possession?.enabled && tracker.possession && (
+          <div className="py-2">
+            <PossessionIndicator
+              currentTeamId={tracker.possession.currentTeamId}
+              teamAId={gameData.team_a_id}
+              teamBId={gameData.team_b_id}
+              teamAName={gameData.team_a?.name || 'Team A'}
+              teamBName={gameData.team_b?.name || 'Team B'}
+              possessionArrow={tracker.possession.possessionArrow}
+              isMobile={true}
+            />
+          </div>
+        )}
 
         {/* Dual Team Horizontal Roster */}
         <DualTeamHorizontalRosterV3

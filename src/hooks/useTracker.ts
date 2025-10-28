@@ -72,6 +72,14 @@ interface UseTrackerReturn {
   timeoutType: 'full' | '30_second';
   startTimeout: (teamId: string, type: 'full' | '30_second') => Promise<boolean>;
   resumeFromTimeout: () => void;
+  
+  // ✅ PHASE 3: Possession State
+  possession: {
+    currentTeamId: string;
+    possessionArrow: string;
+    lastChangeReason: string | null;
+    lastChangeTimestamp: string | null;
+  };
 }
 
 export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = false }: UseTrackerProps): UseTrackerReturn => {
@@ -122,6 +130,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [lastActionPlayerId, setLastActionPlayerId] = useState<string | null>(null);
   const [playerSeconds] = useState<Record<string, number>>({});
+  
+  // ✅ PHASE 3: Possession State
+  const [possession, setPossession] = useState({
+    currentTeamId: teamAId, // Default: Team A starts with possession
+    possessionArrow: teamAId, // Jump ball arrow (alternating possession)
+    lastChangeReason: null as string | null,
+    lastChangeTimestamp: null as string | null
+  });
 
   // Initialize and load existing game state from database
   useEffect(() => {
@@ -824,6 +840,66 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
       }
 
+      // ✅ PHASE 3: Process possession automation
+      if (ruleset && automationFlags.possession?.enabled) {
+        const { PossessionEngine } = await import('@/lib/engines/possessionEngine');
+        
+        // Map stat types to PossessionEngine event types
+        let possessionEventType: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball' | null = null;
+        
+        if ((stat.statType === 'field_goal' || stat.statType === 'three_pointer' || stat.statType === '3_pointer') && stat.modifier === 'made') {
+          possessionEventType = 'made_shot';
+        } else if (stat.statType === 'turnover') {
+          possessionEventType = 'turnover';
+        } else if (stat.statType === 'steal') {
+          possessionEventType = 'steal';
+        } else if (stat.statType === 'rebound') {
+          possessionEventType = stat.modifier === 'offensive' ? 'offensive_rebound' : 'defensive_rebound';
+        }
+        
+        // Only process if we have a valid possession event
+        if (possessionEventType) {
+          const opponentTeamId = stat.teamId === teamAId ? teamBId : teamAId;
+          
+          const possessionResult = PossessionEngine.processEvent(
+            {
+              currentPossession: possession.currentTeamId,
+              possessionArrow: possession.possessionArrow,
+              quarter: quarter,
+              gameClockSeconds: clock.secondsRemaining
+            },
+            {
+              type: possessionEventType,
+              teamId: stat.teamId,
+              playerId: stat.playerId || undefined,
+              opponentTeamId: opponentTeamId
+            },
+            automationFlags.possession
+          );
+          
+          // Apply possession state changes immediately
+          if (possessionResult.actions.length > 0) {
+            console.log('🏀 Possession automation:', possessionResult.actions);
+            
+            setPossession({
+              currentTeamId: possessionResult.newState.currentPossession,
+              possessionArrow: possessionResult.newState.possessionArrow,
+              lastChangeReason: possessionResult.newState.endReason || null,
+              lastChangeTimestamp: new Date().toISOString()
+            });
+            
+            // Store possession data for database persistence (if enabled)
+            if (possessionResult.newState.shouldPersist) {
+              // Will be persisted in database write section below
+              fullStat.possessionData = {
+                newPossession: possessionResult.newState.currentPossession,
+                endReason: possessionResult.newState.endReason
+              };
+            }
+          }
+        }
+      }
+
       // ✅ OPTIMIZATION 5: Database write happens AFTER UI updates (non-blocking)
       // Use Promise.all to load imports in parallel
       const [
@@ -1075,6 +1151,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     timeoutSecondsRemaining,
     timeoutType,
     startTimeout,
-    resumeFromTimeout
+    resumeFromTimeout,
+    possession // ✅ PHASE 3: Possession state
   };
 };
