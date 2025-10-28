@@ -714,6 +714,54 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
       // V3 throws on error, so if we reach here, it succeeded
       
       console.log('✅ Stat recorded successfully in database');
+      
+      // ✅ PHASE 2: Process clock automation
+      if (ruleset && automationFlags.clock.enabled) {
+        const { ClockEngine } = await import('@/lib/engines/clockEngine');
+        
+        const clockEvent = {
+          type: stat.statType as 'foul' | 'made_shot' | 'missed_shot' | 'turnover' | 'timeout' | 'free_throw' | 'substitution',
+          modifier: stat.modifier,
+          ballLocation: undefined as 'frontcourt' | 'backcourt' | undefined,
+          reboundType: undefined as 'offensive' | 'defensive' | undefined
+        };
+        
+        const clockResult = ClockEngine.processEvent(
+          {
+            gameClockMinutes: Math.floor(clock.secondsRemaining / 60),
+            gameClockSeconds: clock.secondsRemaining % 60,
+            gameClockRunning: clock.isRunning,
+            shotClock: shotClock.secondsRemaining,
+            shotClockRunning: shotClock.isRunning,
+            shotClockDisabled: !shotClock.isVisible,
+            quarter: quarter
+          },
+          clockEvent,
+          ruleset,
+          automationFlags.clock
+        );
+        
+        // Apply clock state changes
+        if (clockResult.actions.length > 0) {
+          console.log('🕐 Clock automation:', clockResult.actions);
+          
+          // Update game clock
+          const newGameClockSeconds = (clockResult.newState.gameClockMinutes * 60) + clockResult.newState.gameClockSeconds;
+          setClock(prev => ({
+            ...prev,
+            secondsRemaining: newGameClockSeconds,
+            isRunning: clockResult.newState.gameClockRunning
+          }));
+          
+          // Update shot clock
+          setShotClock(prev => ({
+            ...prev,
+            secondsRemaining: clockResult.newState.shotClock,
+            isRunning: clockResult.newState.shotClockRunning,
+            isVisible: !clockResult.newState.shotClockDisabled
+          }));
+        }
+      }
         
       // Update local scores for immediate UI feedback (only for scoring stats)
       if (stat.modifier === 'made' && statValue > 0) {

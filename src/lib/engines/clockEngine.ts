@@ -67,9 +67,7 @@ export class ClockEngine {
     ruleset: Ruleset,
     flags: ClockAutomationFlags
   ): ClockEngineResult {
-    // ✅ PHASE 1 STUB: Return current state unchanged
-    // This ensures no behavior changes when flags are OFF
-    
+    // Return unchanged if automation disabled
     if (!flags.enabled) {
       return {
         newState: currentState,
@@ -77,26 +75,75 @@ export class ClockEngine {
       };
     }
     
-    // ✅ PHASE 1: Even with flags ON, return no-op
-    // Phase 2 will implement actual logic here
+    const actions: string[] = [];
+    let newState = { ...currentState };
     
-    console.log('[ClockEngine] Phase 1 stub - no automation yet', {
-      event,
-      ruleset: ruleset.id,
-      flags
-    });
+    // ✅ PHASE 2: Auto-Pause Logic
+    if (flags.autoPause) {
+      const shouldPause = this.shouldPauseClocks(event);
+      if (shouldPause && (currentState.gameClockRunning || currentState.shotClockRunning)) {
+        newState.gameClockRunning = false;
+        newState.shotClockRunning = false;
+        actions.push(`Auto-paused clocks (${event.type})`);
+      }
+    }
+    
+    // ✅ PHASE 2: Shot Clock Reset Logic
+    if (flags.autoReset) {
+      const newShotClock = this.calculateShotClockReset(event, currentState.shotClock, ruleset);
+      if (newShotClock !== currentState.shotClock) {
+        newState.shotClock = newShotClock;
+        newState.shotClockRunning = true;
+        actions.push(`Shot clock reset to ${newShotClock}s`);
+      }
+    }
+    
+    // ✅ PHASE 2: Free Throw Mode
+    if (flags.ftMode) {
+      const shouldDisable = this.shouldDisableShotClock(event, flags);
+      if (shouldDisable && !currentState.shotClockDisabled) {
+        newState.shotClockDisabled = true;
+        newState.shotClockRunning = false;
+        actions.push('Shot clock disabled (FT mode)');
+      } else if (!shouldDisable && currentState.shotClockDisabled && event.type === 'made_shot') {
+        // Re-enable after last FT made
+        newState.shotClockDisabled = false;
+        newState.shotClockRunning = true;
+        actions.push('Shot clock re-enabled');
+      }
+    }
+    
+    // ✅ PHASE 2: Made Basket Stop (NBA Last 2 Min)
+    if (flags.madeBasketStop && event.type === 'made_shot') {
+      const shouldStop = this.shouldStopOnMadeBasket(currentState, ruleset);
+      if (shouldStop && currentState.gameClockRunning) {
+        newState.gameClockRunning = false;
+        newState.shotClockRunning = false;
+        actions.push('Clock stopped (made basket in last 2 min)');
+      }
+    }
     
     return {
-      newState: currentState,
-      actions: []
+      newState,
+      actions
     };
+  }
+  
+  /**
+   * Determine if clocks should pause for this event
+   * 
+   * @param event - Event that occurred
+   * @returns True if clocks should pause
+   */
+  private static shouldPauseClocks(event: ClockEvent): boolean {
+    const pauseEvents = ['foul', 'timeout', 'turnover'];
+    return pauseEvents.includes(event.type);
   }
   
   /**
    * Calculate shot clock reset value
    * 
-   * Phase 1: STUB - returns current shot clock
-   * Phase 2: Implements NBA/FIBA/NCAA reset rules
+   * Implements NBA/FIBA/NCAA reset rules
    * 
    * @param event - Event that occurred
    * @param currentShotClock - Current shot clock value
@@ -108,15 +155,56 @@ export class ClockEngine {
     currentShotClock: number,
     ruleset: Ruleset
   ): number {
-    // ✅ PHASE 1 STUB: Return current value
+    const rules = ruleset.shotClockRules;
+    
+    // Made basket → Full reset
+    if (event.type === 'made_shot') {
+      return rules.fullReset;
+    }
+    
+    // Missed shot with rebound
+    if (event.type === 'missed_shot' && event.reboundType) {
+      // Defensive rebound → Full reset
+      if (event.reboundType === 'defensive') {
+        return rules.fullReset;
+      }
+      
+      // Offensive rebound → Depends on ruleset
+      if (event.reboundType === 'offensive') {
+        if (rules.offensiveReboundReset === 'keep') {
+          // FIBA: Keep current shot clock
+          return currentShotClock;
+        } else {
+          // NBA: Reset to 14s, NCAA: Reset to 20s
+          return rules.offensiveReboundReset as number;
+        }
+      }
+    }
+    
+    // Foul → Depends on ball location
+    if (event.type === 'foul') {
+      if (event.ballLocation === 'frontcourt') {
+        // Frontcourt foul → 14s (NBA), 20s (NCAA), 24s (FIBA)
+        return rules.frontcourtFoulReset;
+      } else if (event.ballLocation === 'backcourt') {
+        // Backcourt foul → Full reset
+        return rules.backcourtFoulReset;
+      }
+    }
+    
+    // Turnover → Full reset (new possession)
+    if (event.type === 'turnover') {
+      return rules.fullReset;
+    }
+    
+    // No reset needed
     return currentShotClock;
   }
   
   /**
    * Check if clock should stop on made basket
    * 
-   * Phase 1: STUB - returns false
-   * Phase 2: Implements NBA last 2 min rule, NCAA last 1 min rule
+   * Implements NBA last 2 min rule, NCAA last 1 min rule
    * 
    * @param currentState - Current clock state
    * @param ruleset - Game ruleset
@@ -126,15 +214,29 @@ export class ClockEngine {
     currentState: ClockState,
     ruleset: Ruleset
   ): boolean {
-    // ✅ PHASE 1 STUB: Always return false (no auto-stop)
+    const clockRule = ruleset.clockRules.clockStopsOnMadeBasket;
+    
+    // FIBA: Clock never stops on made basket
+    if (clockRule === false) {
+      return false;
+    }
+    
+    // NBA/NCAA: Clock stops in last 2 minutes of Q4/OT
+    if (clockRule === 'last_2_minutes' || clockRule === true) {
+      const totalSeconds = (currentState.gameClockMinutes * 60) + currentState.gameClockSeconds;
+      const isQ4OrOT = currentState.quarter >= 4;
+      const isLast2Min = totalSeconds <= 120; // 2 minutes = 120 seconds
+      
+      return isQ4OrOT && isLast2Min;
+    }
+    
     return false;
   }
   
   /**
    * Check if shot clock should be disabled (FT mode)
    * 
-   * Phase 1: STUB - returns false
-   * Phase 2: Implements FT mode detection
+   * Implements FT mode detection
    * 
    * @param event - Event that occurred
    * @param flags - Automation flags
@@ -144,7 +246,16 @@ export class ClockEngine {
     event: ClockEvent,
     flags: ClockAutomationFlags
   ): boolean {
-    // ✅ PHASE 1 STUB: Always return false
+    // Free throw events should disable shot clock
+    if (event.type === 'free_throw') {
+      return true;
+    }
+    
+    // Shooting foul should disable shot clock (FT sequence coming)
+    if (event.type === 'foul' && event.modifier === 'shooting') {
+      return true;
+    }
+    
     return false;
   }
 }
