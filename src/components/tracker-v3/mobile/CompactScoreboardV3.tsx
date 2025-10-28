@@ -4,6 +4,7 @@ import React from 'react';
 import { ChevronRight, ChevronLeft, Play, Pause, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
+import { PossessionIndicator } from '../PossessionIndicator';
 
 interface CompactScoreboardV3Props {
   gameId?: string;
@@ -33,6 +34,13 @@ interface CompactScoreboardV3Props {
   shotClockIsVisible?: boolean;
   onShotClockReset?: (seconds?: number) => void;
   onShotClockSetTime?: (seconds: number) => void;
+  // ✅ REFINEMENT 4: Possession Indicator Props
+  showPossessionIndicator?: boolean;
+  currentPossessionTeamId?: string;
+  teamAId?: string;
+  teamBId?: string;
+  possessionArrow?: string;
+  isCoachMode?: boolean;
 }
 
 export function CompactScoreboardV3({
@@ -61,7 +69,13 @@ export function CompactScoreboardV3({
   shotClockIsRunning = false,
   shotClockIsVisible = true,
   onShotClockReset,
-  onShotClockSetTime
+  onShotClockSetTime,
+  showPossessionIndicator = false,
+  currentPossessionTeamId,
+  teamAId,
+  teamBId,
+  possessionArrow,
+  isCoachMode = false
 }: CompactScoreboardV3Props) {
   const formatTime = (min: number, sec: number) => {
     return `${min}:${sec.toString().padStart(2, '0')}`;
@@ -147,9 +161,19 @@ export function CompactScoreboardV3({
           </div>
         </div>
 
-        {/* ✅ REFINEMENT 3: Center - Removed old possession toggle (replaced by PossessionIndicator) */}
+        {/* ✅ REFINEMENT 4: Center - Possession Indicator (Moved from MobileLayoutV3) */}
         <div className="col-span-1 flex items-center justify-center">
-          {/* Possession indicator now shown separately in MobileLayoutV3 */}
+          {showPossessionIndicator && currentPossessionTeamId && teamAId && teamBId && possessionArrow !== undefined ? (
+            <PossessionIndicator
+              currentTeamId={currentPossessionTeamId}
+              teamAId={teamAId}
+              teamBId={teamBId}
+              teamAName={teamAName}
+              teamBName={teamBName}
+              possessionArrow={possessionArrow}
+              isMobile={true}
+            />
+          ) : null}
         </div>
 
         {/* Right Container - Shot Clock Section + Buttons (beside T2) */}

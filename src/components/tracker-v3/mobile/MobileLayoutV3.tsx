@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { CompactScoreboardV3 } from './CompactScoreboardV3';
 import { DualTeamHorizontalRosterV3 } from './DualTeamHorizontalRosterV3';
 import { MobileStatGridV3 } from './MobileStatGridV3';
-import { PossessionIndicator } from '../PossessionIndicator';
 
 interface Player {
   id: string;
@@ -141,9 +140,9 @@ export function MobileLayoutV3({
           tournamentName={gameData.tournament?.name || 'Demo Tournament'}
           gameDate={new Date().toLocaleDateString()}
           teamAName={gameData.team_a?.name || 'Team A'}
-          teamBName={gameData.team_b?.name || 'Team B'}
+          teamBName={isCoachMode ? 'Opponent' : (gameData.team_b?.name || 'Team B')}
           teamAScore={tracker.scores[gameData.team_a_id] || 0}
-          teamBScore={tracker.scores[gameData.team_b_id] || 0}
+          teamBScore={isCoachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)}
           teamAFouls={tracker.teamFouls?.[gameData.team_a_id] || 0}
           teamBFouls={tracker.teamFouls?.[gameData.team_b_id] || 0}
           quarter={tracker.quarter}
@@ -163,22 +162,15 @@ export function MobileLayoutV3({
           shotClockIsVisible={tracker.shotClock.isVisible}
           onShotClockReset={tracker.resetShotClock}
           onShotClockSetTime={tracker.setShotClockTime}
+          showPossessionIndicator={tracker.ruleset && tracker.automationFlags?.possession?.enabled && !!tracker.possession}
+          currentPossessionTeamId={tracker.possession?.currentTeamId}
+          teamAId={gameData.team_a_id}
+          teamBId={isCoachMode ? 'opponent-team' : gameData.team_b_id}
+          possessionArrow={tracker.possession?.possessionArrow}
+          isCoachMode={isCoachMode}
         />
 
-        {/* ✅ PHASE 3: Possession Indicator (Mobile) */}
-        {tracker.ruleset && tracker.automationFlags?.possession?.enabled && tracker.possession && (
-          <div className="py-2">
-            <PossessionIndicator
-              currentTeamId={tracker.possession.currentTeamId}
-              teamAId={gameData.team_a_id}
-              teamBId={isCoachMode ? 'opponent-team' : gameData.team_b_id}
-              teamAName={gameData.team_a?.name || 'Team A'}
-              teamBName={isCoachMode ? 'Opponent' : (gameData.team_b?.name || 'Team B')}
-              possessionArrow={tracker.possession.possessionArrow}
-              isMobile={true}
-            />
-          </div>
-        )}
+        {/* ✅ REFINEMENT 4: Possession Indicator moved to CompactScoreboardV3 center column */}
 
         {/* Dual Team Horizontal Roster */}
         <DualTeamHorizontalRosterV3
