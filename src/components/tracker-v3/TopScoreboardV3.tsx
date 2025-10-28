@@ -340,59 +340,110 @@ export function TopScoreboardV3({
                 {/* Shot Clock Display */}
                 <div className="flex flex-col items-center w-full">
                   <div className="text-sm font-semibold text-gray-600 mb-2 tracking-wide">SHOT CLOCK</div>
-                  <div 
-                    className={`text-3xl md:text-4xl lg:text-5xl font-mono font-black leading-none px-4 py-2 rounded-lg ${
-                      shotClockSeconds !== undefined && shotClockSeconds <= 5 ? 'text-red-500' : 
-                      shotClockSeconds !== undefined && shotClockSeconds <= 10 ? 'text-orange-500' : 
-                      shotClockIsRunning ? 'text-green-500' : 'text-gray-500'
-                    }`}
-                    style={{ 
-                      textShadow: shotClockSeconds !== undefined && shotClockSeconds <= 5 ? '0 0 8px rgba(239, 68, 68, 0.6)' : 'none'
-                    }}
-                  >
-                    {shotClockSeconds !== undefined ? shotClockSeconds.toString().padStart(2, '0') : '24'}
-                  </div>
+                  
+                  {isShotClockEditMode ? (
+                    // Edit Mode - Input field
+                    <Input
+                      type="number"
+                      min="0"
+                      max="35"
+                      value={editShotClockSeconds}
+                      onChange={(e) => setEditShotClockSeconds(Math.max(0, Math.min(35, parseInt(e.target.value) || 0)))}
+                      className="w-20 h-12 text-center text-2xl font-bold p-1"
+                      style={{ 
+                        background: 'var(--dashboard-card)',
+                        borderColor: 'var(--dashboard-border)',
+                        color: 'var(--dashboard-text-primary)'
+                      }}
+                    />
+                  ) : (
+                    // Normal Mode - Display
+                    <div 
+                      className={`text-3xl md:text-4xl lg:text-5xl font-mono font-black leading-none px-4 py-2 rounded-lg ${
+                        shotClockSeconds !== undefined && shotClockSeconds <= 5 ? 'text-red-500' : 
+                        shotClockSeconds !== undefined && shotClockSeconds <= 10 ? 'text-orange-500' : 
+                        shotClockIsRunning ? 'text-green-500' : 'text-gray-500'
+                      }`}
+                      style={{ 
+                        textShadow: shotClockSeconds !== undefined && shotClockSeconds <= 5 ? '0 0 8px rgba(239, 68, 68, 0.6)' : 'none'
+                      }}
+                    >
+                      {shotClockSeconds !== undefined ? shotClockSeconds.toString().padStart(2, '0') : '24'}
+                    </div>
+                  )}
                 </div>
 
                 {/* Shot Clock Buttons - 2x2 Grid */}
                 <div className="grid grid-cols-2 gap-3 w-full">
-                  <Button
-                    onClick={() => onShotClockSetTime?.(24)}
-                    variant="outline"
-                    className="h-10 px-4 text-sm font-bold border-2 border-orange-300 text-orange-600 hover:bg-orange-500 hover:text-white hover:border-orange-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
-                    disabled={!onShotClockSetTime}
-                  >
-                    24s
-                  </Button>
+                  {isShotClockEditMode ? (
+                    // Edit Mode Controls
+                    <>
+                      <Button
+                        onClick={() => {
+                          onShotClockSetTime?.(editShotClockSeconds);
+                          setIsShotClockEditMode(false);
+                        }}
+                        className="h-10 px-4 text-sm font-bold bg-green-500 hover:bg-green-600 text-white border-2 border-green-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                        disabled={!onShotClockSetTime}
+                      >
+                        <Check className="w-4 h-4 mr-1" />
+                        SET
+                      </Button>
 
-                  <Button
-                    onClick={() => onShotClockSetTime?.(14)}
-                    variant="outline"
-                    className="h-10 px-4 text-sm font-bold border-2 border-orange-300 text-orange-600 hover:bg-orange-500 hover:text-white hover:border-orange-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
-                    disabled={!onShotClockSetTime}
-                  >
-                    14s
-                  </Button>
+                      <Button
+                        onClick={() => {
+                          setEditShotClockSeconds(shotClockSeconds || 24);
+                          setIsShotClockEditMode(false);
+                        }}
+                        variant="outline"
+                        className="h-10 px-4 text-sm font-bold border-2 border-red-300 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        CANCEL
+                      </Button>
+                    </>
+                  ) : (
+                    // Normal Mode Controls
+                    <>
+                      <Button
+                        onClick={() => onShotClockSetTime?.(24)}
+                        variant="outline"
+                        className="h-10 px-4 text-sm font-bold border-2 border-orange-300 text-orange-600 hover:bg-orange-500 hover:text-white hover:border-orange-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                        disabled={!onShotClockSetTime}
+                      >
+                        24s
+                      </Button>
 
-                  <Button
-                    onClick={() => onShotClockReset?.()}
-                    variant="outline"
-                    className="h-10 px-4 text-sm font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-500 hover:text-white hover:border-gray-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
-                    disabled={!onShotClockReset}
-                  >
-                    <RotateCcw className="w-4 h-4 mr-1" />
-                    RESET
-                  </Button>
+                      <Button
+                        onClick={() => onShotClockSetTime?.(14)}
+                        variant="outline"
+                        className="h-10 px-4 text-sm font-bold border-2 border-orange-300 text-orange-600 hover:bg-orange-500 hover:text-white hover:border-orange-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                        disabled={!onShotClockSetTime}
+                      >
+                        14s
+                      </Button>
 
-                  <Button
-                    onClick={() => setIsShotClockEditMode(!isShotClockEditMode)}
-                    variant="outline"
-                    className="h-10 px-4 text-sm font-bold border-2 border-blue-300 text-blue-600 hover:bg-blue-500 hover:text-white hover:border-blue-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
-                    disabled={!onShotClockSetTime}
-                  >
-                    <Edit3 className="w-4 h-4 mr-1" />
-                    EDIT
-                  </Button>
+                      <Button
+                        onClick={() => onShotClockReset?.()}
+                        variant="outline"
+                        className="h-10 px-4 text-sm font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-500 hover:text-white hover:border-gray-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                        disabled={!onShotClockReset}
+                      >
+                        <RotateCcw className="w-4 h-4 mr-1" />
+                        RESET
+                      </Button>
+
+                      <Button
+                        onClick={() => setIsShotClockEditMode(true)}
+                        variant="outline"
+                        className="h-10 px-4 text-sm font-bold border-2 border-blue-300 text-blue-600 hover:bg-blue-500 hover:text-white hover:border-blue-400 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                        disabled={!onShotClockSetTime}
+                      >
+                        <Edit3 className="w-4 h-4 mr-1" />
+                        EDIT
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
