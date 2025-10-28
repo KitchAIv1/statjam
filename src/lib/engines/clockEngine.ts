@@ -186,12 +186,21 @@ export class ClockEngine {
     // Foul → Depends on ball location
     if (event.type === 'foul') {
       if (event.ballLocation === 'frontcourt') {
-        // Frontcourt foul → 14s (NBA), 20s (NCAA), 24s (FIBA)
-        return rules.frontcourtFoulReset;
+        // Frontcourt foul → Reset to 14s (NBA), 20s (NCAA), 24s (FIBA)
+        // BUT ONLY if current shot clock is LESS than the reset value
+        // NBA Rule: If shot clock is 18s and foul occurs, keep 18s (don't reset down)
+        return currentShotClock < rules.frontcourtFoulReset 
+          ? rules.frontcourtFoulReset 
+          : currentShotClock;
       } else if (event.ballLocation === 'backcourt') {
-        // Backcourt foul → Full reset
+        // Backcourt foul → Full reset (always)
         return rules.backcourtFoulReset;
       }
+      // If ballLocation is undefined, default to frontcourt behavior
+      // This is a simplification for now (most fouls are in frontcourt)
+      return currentShotClock < rules.frontcourtFoulReset 
+        ? rules.frontcourtFoulReset 
+        : currentShotClock;
     }
     
     // Turnover → Full reset (new possession)
