@@ -274,7 +274,8 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
     startDate: "",
     endDate: "",
     maxTeams: "",
-    description: ""
+    description: "",
+    ruleset: "NBA" // ✅ PHASE 1: Default to NBA ruleset
   });
 
   // Load stat admins when settings modal opens
@@ -343,7 +344,8 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
         isPublic: true,
         entryFee: 0,
         prizePool: 0,
-        country: "US"
+        country: "US",
+        ruleset: newTournament.ruleset as 'NBA' | 'FIBA' | 'NCAA' // ✅ PHASE 1: Include ruleset
       };
 
       const result = await createTournament(tournamentData);
@@ -354,7 +356,8 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           startDate: "",
           endDate: "",
           maxTeams: "",
-          description: ""
+          description: "",
+          ruleset: "NBA" // ✅ PHASE 1: Reset to default
         });
         setIsCreateDialogOpen(false);
       }
@@ -598,6 +601,23 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                   onChange={(e) => setNewTournament({ ...newTournament, description: e.target.value })}
                   placeholder="Brief description of the tournament"
                 />
+              </div>
+              {/* ✅ PHASE 1: Ruleset Selector */}
+              <div className="grid gap-2">
+                <Label htmlFor="ruleset">Game Rules</Label>
+                <Select value={newTournament.ruleset} onValueChange={(value) => setNewTournament({ ...newTournament, ruleset: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select ruleset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NBA">NBA (12 min quarters, 24s shot clock)</SelectItem>
+                    <SelectItem value="FIBA">FIBA (10 min quarters, 24s shot clock)</SelectItem>
+                    <SelectItem value="NCAA">NCAA (20 min halves, 30s shot clock)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  💡 All automation features are OFF by default
+                </p>
               </div>
             </div>
             <DialogFooter>
