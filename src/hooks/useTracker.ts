@@ -668,8 +668,20 @@ export const useTracker = ({ initialGameId, teamAId, teamBId }: UseTrackerProps)
         console.log('📊 Team foul incremented locally for team:', stat.teamId);
       }
 
-      setLastAction(`${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`);
-      setLastActionPlayerId(stat.playerId);
+      // Create appropriate last action message
+      console.log('🎯 Setting last action for stat:', { isOpponentStat: stat.isOpponentStat, statType: stat.statType, modifier: stat.modifier });
+      
+      if (stat.isOpponentStat) {
+        const actionMessage = `Opponent Team: ${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
+        console.log('🎯 Opponent stat - setting last action:', actionMessage);
+        setLastAction(actionMessage);
+        setLastActionPlayerId(null); // No specific player for opponent
+      } else {
+        const actionMessage = `${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
+        console.log('🎯 Regular stat - setting last action:', actionMessage);
+        setLastAction(actionMessage);
+        setLastActionPlayerId(stat.playerId);
+      }
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);
