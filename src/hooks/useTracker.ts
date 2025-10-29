@@ -80,6 +80,16 @@ interface UseTrackerReturn {
     lastChangeReason: string | null;
     lastChangeTimestamp: string | null;
   };
+  
+  // ✅ PHASE 4: Play Sequence Prompts
+  playPrompt: {
+    isOpen: boolean;
+    type: 'assist' | 'rebound' | 'block' | null;
+    sequenceId: string | null;
+    primaryEventId: string | null;
+    metadata: Record<string, any> | null;
+  };
+  clearPlayPrompt: () => void;
 }
 
 export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = false }: UseTrackerProps): UseTrackerReturn => {
@@ -137,6 +147,21 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     possessionArrow: teamAId, // Jump ball arrow (alternating possession)
     lastChangeReason: null as string | null,
     lastChangeTimestamp: null as string | null
+  });
+  
+  // ✅ PHASE 4: Play Sequence Prompts
+  const [playPrompt, setPlayPrompt] = useState<{
+    isOpen: boolean;
+    type: 'assist' | 'rebound' | 'block' | null;
+    sequenceId: string | null;
+    primaryEventId: string | null;
+    metadata: Record<string, any> | null;
+  }>({
+    isOpen: false,
+    type: null,
+    sequenceId: null,
+    primaryEventId: null,
+    metadata: null
   });
 
   // Initialize and load existing game state from database
@@ -798,7 +823,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         
         const clockEvent = {
           type: eventType,
-          modifier: stat.modifier,
+          modifier: stat.modifier || undefined,
           ballLocation: undefined as 'frontcourt' | 'backcourt' | undefined,
           reboundType: reboundType
         };
@@ -914,20 +939,56 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             
             setPossession({
               currentTeamId: possessionResult.newState.currentPossession,
-              possessionArrow: possessionResult.newState.possessionArrow,
-              lastChangeReason: possessionResult.newState.endReason || null,
+              possessionArrow: possessionResult.newState.possessionArrow || teamAId,
+              lastChangeReason: possessionResult.endReason || null,
               lastChangeTimestamp: new Date().toISOString()
             });
             
             // Store possession data for database persistence (if enabled)
-            if (possessionResult.newState.shouldPersist) {
+            if (possessionResult.shouldPersist) {
               // Will be persisted in database write section below
-              fullStat.possessionData = {
+              (fullStat as any).possessionData = {
                 newPossession: possessionResult.newState.currentPossession,
-                endReason: possessionResult.newState.endReason
+                endReason: possessionResult.endReason
               };
             }
           }
+        }
+      }
+
+      // ✅ PHASE 4: Process play sequence automation
+      if (ruleset && automationFlags.sequences?.enabled) {
+        const { PlayEngine } = await import('@/lib/engines/playEngine');
+        
+        const gameEvent = {
+          id: undefined, // Will be set after database insert
+          statType: stat.statType,
+          modifier: stat.modifier || undefined,
+          playerId: stat.playerId || '',
+          teamId: stat.teamId,
+          quarter: quarter,
+          gameTimeSeconds: clock.secondsRemaining,
+          statValue: statValue
+        };
+        
+        const playResult = PlayEngine.analyzeEvent(
+          gameEvent,
+          automationFlags.sequences
+        );
+        
+        // Show prompt if needed (only assist, rebound, block)
+        if (playResult.shouldPrompt && playResult.promptType && 
+            (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block')) {
+          console.log('🎯 Play sequence prompt:', playResult.actions);
+          
+          // Store prompt data to show modal after database write
+          setPlayPrompt({
+            isOpen: true,
+            type: playResult.promptType,
+            sequenceId: playResult.sequenceId || null,
+            primaryEventId: null, // Will be set after database insert
+            metadata: playResult.metadata || null
+          });
         }
       }
 
@@ -985,7 +1046,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       notify.error('Failed to record stat', errorMessage);
       
       setLastAction('Error recording stat');
-      setLastActionPlayerId(stat.playerId);
+      setLastActionPlayerId(stat.playerId || null);
     }
   }, [quarter, clock.secondsRemaining]);
 
@@ -1115,6 +1176,17 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     setLastAction('Play resumed');
     // Don't auto-start clocks - let admin start manually
   }, []);
+  
+  // ✅ PHASE 4: Clear play prompt
+  const clearPlayPrompt = useCallback(() => {
+    setPlayPrompt({
+      isOpen: false,
+      type: null,
+      sequenceId: null,
+      primaryEventId: null,
+      metadata: null
+    });
+  }, []);
 
   // Game Management
   const closeGame = useCallback(async () => {
@@ -1183,6 +1255,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     timeoutType,
     startTimeout,
     resumeFromTimeout,
-    possession // ✅ PHASE 3: Possession state
+    possession, // ✅ PHASE 3: Possession state
+    playPrompt, // ✅ PHASE 4: Play sequence prompts
+    clearPlayPrompt // ✅ PHASE 4: Clear play prompt
   };
 };
