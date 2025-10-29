@@ -41,6 +41,8 @@ interface CompactScoreboardV3Props {
   teamBId?: string;
   possessionArrow?: string;
   isCoachMode?: boolean;
+  // ✅ PHASE 6: Manual possession control
+  onPossessionChange?: (teamId: string) => void;
 }
 
 export function CompactScoreboardV3({
@@ -75,7 +77,8 @@ export function CompactScoreboardV3({
   teamAId,
   teamBId,
   possessionArrow,
-  isCoachMode = false
+  isCoachMode = false,
+  onPossessionChange
 }: CompactScoreboardV3Props) {
   const formatTime = (min: number, sec: number) => {
     return `${min}:${sec.toString().padStart(2, '0')}`;
@@ -172,6 +175,7 @@ export function CompactScoreboardV3({
               teamBName={teamBName}
               possessionArrow={possessionArrow}
               isMobile={true}
+              onPossessionChange={onPossessionChange}
             />
           ) : null}
         </div>

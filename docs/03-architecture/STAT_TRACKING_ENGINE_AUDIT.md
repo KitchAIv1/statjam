@@ -7,13 +7,15 @@
 
 ## 📋 EXECUTIVE SUMMARY
 
-StatJam currently uses a **manual-first, partially automated** stat tracking system with:
-- ✅ Basic clock management (game clock + shot clock)
+StatJam currently uses a **hybrid automated + manual** stat tracking system with:
+- ✅ Advanced clock management (game clock + shot clock with automation) - **Phase 2**
 - ✅ Manual stat recording with database persistence
-- ⚠️ **MANUAL possession control** (no auto-flip)
-- ⚠️ **MANUAL shot clock resets** (no event-triggered automation)
-- ⚠️ **NO assist-to-shot linking** (independent tap events)
-- ⚠️ **NO ruleset configuration** (hardcoded NBA-ish defaults)
+- ✅ **AUTOMATIC possession control** (auto-flip on all events) - **Phase 3 & 6**
+- ✅ **AUTOMATIC shot clock resets** (event-triggered automation) - **Phase 2**
+- ✅ **Play sequence linking** (assists, rebounds, blocks, turnovers, FTs) - **Phase 4 & 5**
+- ✅ **Foul flow with victim selection** (2-step foul process) - **Phase 5**
+- ✅ **Foul possession handling** (auto-flip + manual control) - **Phase 6**
+- ✅ **Ruleset configuration** (NBA/NCAA/FIBA/Custom with feature flags) - **Phase 1 & 2**
 - ⚠️ Limited edge-case automation (timeouts pause clocks, but no auto-resume)
 
 ---
@@ -165,32 +167,52 @@ Storage:
 
 ## 🔄 3. POSSESSION LOGIC
 
-**Implementation**: `CompactScoreboardV3.tsx` (lines 22-25, 143-146)
+**Implementation**: `PossessionEngine.ts` + `useTracker.ts` (✅ **PHASE 3 & 6 COMPLETE**)
 
 ```yaml
 PossessionFlip:
-  - MANUAL toggle only
-  - UI: Possession indicator button in scoreboard
-  - State: `possessionTeam: 'A' | 'B'`
-  - Handler: `onPossessionToggle={() => setPossessionTeam(prev => prev === 'A' ? 'B' : 'A')}`
+  - ✅ AUTOMATIC possession tracking (Phase 3)
+  - ✅ Manual control available (Phase 6)
+  - UI: Possession indicator in scoreboard
+  - State: `possession.currentTeamId` (team UUID)
+  - Engine: `PossessionEngine.processEvent()`
 
-AutoFlip:
-  - ❌ NO automatic flip on made shots
-  - ❌ NO automatic flip on turnovers
-  - ❌ NO automatic flip on steals
-  - ❌ NO automatic flip on rebounds
-  - ❌ NO automatic flip on shot clock violations
-  - ❌ NO automatic flip on out-of-bounds
+AutoFlip (✅ IMPLEMENTED):
+  - ✅ Automatic flip on made shots (Phase 3)
+  - ✅ Automatic flip on turnovers (Phase 3)
+  - ✅ Automatic flip on steals (Phase 3)
+  - ✅ Automatic flip on defensive rebounds (Phase 3)
+  - ✅ Retention on offensive rebounds (Phase 3)
+  - ✅ Automatic flip on violations (Phase 3)
+  - ✅ Jump ball arrow support (Phase 3)
+  - ✅ Automatic flip on fouls (Phase 6) ⬅️ NEW
+
+ManualControl (✅ PHASE 6):
+  - ✅ Manual override via `manualSetPossession(teamId, reason)`
+  - ✅ Persists to database if enabled
+  - ✅ Tracks reason for manual change
+  - ✅ Timestamps all changes
 
 Storage:
-  - Possession state is LOCAL only (not persisted to database)
-  - NOT included in game state sync
-  - Lost on page refresh
+  - ✅ Persisted to `game_possessions` table
+  - ✅ Included in game state sync
+  - ✅ Survives page refresh
+  - ✅ Full audit trail with reasons and timestamps
+
+FoulPossession (✅ PHASE 6A & 6B COMPLETE):
+  - ✅ Personal foul → Opponent gets ball
+  - ✅ Shooting foul → Opponent gets ball (after FTs)
+  - ✅ Offensive foul → Opponent gets ball
+  - ✅ 1-and-1/Bonus → Opponent gets ball (after FTs)
+  - ✅ Technical foul → Fouled team KEEPS ball (after FT)
+  - ✅ Flagrant foul → Fouled team KEEPS ball (after FTs)
 ```
 
 **Key Files**:
-- `src/components/tracker-v3/mobile/CompactScoreboardV3.tsx` (lines 22-25, 143-146)
-- `src/components/tracker-v3/mobile/MobileLayoutV3.tsx` (lines 143-146)
+- `src/lib/engines/possessionEngine.ts` (Pure possession logic)
+- `src/hooks/useTracker.ts` (Integration + manual control)
+- `src/lib/services/gameServiceV3.ts` (Database persistence)
+- `docs/02-development/PHASE6_POSSESSION_FOULS.md` (Full documentation)
 
 ---
 

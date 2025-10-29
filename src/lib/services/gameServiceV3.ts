@@ -388,6 +388,10 @@ export class GameServiceV3 {
     gameTimeMinutes: number;
     gameTimeSeconds: number;
     statValue?: number;
+    // ✅ PHASE 4: Event linking
+    sequenceId?: string; // Links related events (assist→shot, rebound→miss)
+    linkedEventId?: string; // Points to primary event (e.g., assist points to shot)
+    eventMetadata?: Record<string, any>; // Additional context
   }): Promise<any> {
     try {
       console.log('🚀 GameServiceV3: Recording stat via raw HTTP:', statData);
@@ -420,7 +424,11 @@ export class GameServiceV3 {
           quarter: statData.quarter,
           game_time_minutes: statData.gameTimeMinutes,
           game_time_seconds: statData.gameTimeSeconds,
-          stat_value: statData.statValue || 1
+          stat_value: statData.statValue || 1,
+          // ✅ PHASE 4: Event linking fields
+          sequence_id: statData.sequenceId || null,
+          linked_event_id: statData.linkedEventId || null,
+          event_metadata: statData.eventMetadata || null
         })
       });
 
@@ -630,6 +638,46 @@ export class GameServiceV3 {
 
     } catch (error: any) {
       console.error('❌ GameServiceV3: Failed to record possession change:', error);
+      return false;
+    }
+  }
+
+  /**
+   * ✅ PHASE 6: Update possession manually (for edge cases)
+   * Used when user manually overrides possession
+   */
+  static async updatePossession(
+    gameId: string,
+    teamId: string,
+    reason: string
+  ): Promise<boolean> {
+    try {
+      console.log(`🔄 GameServiceV3: Updating possession manually for game ${gameId} to team ${teamId}`);
+
+      const response = await makeAuthenticatedRequest(
+        `${this.SUPABASE_URL}/rest/v1/game_possessions`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            game_id: gameId,
+            team_id: teamId,
+            reason: reason,
+            timestamp: new Date().toISOString()
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ GameServiceV3: Failed to update possession - HTTP ${response.status}:`, errorText);
+        return false;
+      }
+
+      console.log('✅ GameServiceV3: Possession updated successfully');
+      return true;
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to update possession:', error);
       return false;
     }
   }

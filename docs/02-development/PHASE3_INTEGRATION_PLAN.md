@@ -212,7 +212,7 @@ Position:
 2. **Quarter Start**: Possession continues from previous quarter
 3. **Jump Ball**: Use alternating possession arrow
 4. **Timeout**: Possession doesn't change
-5. **Foul**: Possession may or may not change (depends on foul type)
+5. **Foul**: ✅ **PHASE 6 COMPLETE** - Possession changes on most fouls (personal, shooting, offensive, 1-and-1). Technical/Flagrant special handling in Phase 6B.
 6. **Coach Mode**: Handle opponent team possession correctly
 
 ---

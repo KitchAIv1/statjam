@@ -19,9 +19,11 @@ export interface PossessionState {
 }
 
 export interface PossessionEvent {
-  type: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball';
+  type: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball' | 'foul';
   teamId: string;
   opponentTeamId: string;
+  foulType?: 'personal' | 'shooting' | '1-and-1' | 'technical' | 'flagrant' | 'offensive'; // For foul possession handling
+  isTechnicalOrFlagrantFT?: boolean; // ✅ PHASE 6B: Flag for technical/flagrant FTs that retain possession
 }
 
 export interface PossessionEngineResult {
@@ -84,13 +86,23 @@ export class PossessionEngine {
     // Determine if possession should flip based on event type
     switch (event.type) {
       case 'made_shot':
-        // ✅ Made shot → Possession ALWAYS flips to opponent (unconditional)
-        // This ensures possession tracking works from game start, regardless of initial state
-        newState.currentPossession = event.opponentTeamId;
-        shouldFlip = true;
-        shouldPersist = flags.persistState;
-        endReason = 'made_shot';
-        actions.push(`Possession flipped to ${event.opponentTeamId} (made shot by ${event.teamId})`);
+        // ✅ PHASE 6B: Check if this is a technical/flagrant FT (retains possession)
+        if (event.isTechnicalOrFlagrantFT) {
+          // Technical/Flagrant FT: Shooting team KEEPS possession
+          newState.currentPossession = event.teamId;
+          shouldFlip = currentState.currentPossession !== event.teamId;
+          shouldPersist = flags.persistState;
+          endReason = 'technical_flagrant_ft_possession_retained';
+          actions.push(`Possession retained by ${event.teamId} (technical/flagrant FT made)`);
+        } else {
+          // Regular made shot → Possession ALWAYS flips to opponent (unconditional)
+          // This ensures possession tracking works from game start, regardless of initial state
+          newState.currentPossession = event.opponentTeamId;
+          shouldFlip = true;
+          shouldPersist = flags.persistState;
+          endReason = 'made_shot';
+          actions.push(`Possession flipped to ${event.opponentTeamId} (made shot by ${event.teamId})`);
+        }
         break;
         
       case 'turnover':
@@ -159,6 +171,28 @@ export class PossessionEngine {
           endReason = 'jump_ball';
           actions.push(`Possession awarded via jump ball arrow`);
           actions.push(`Arrow flipped to ${newState.possessionArrow}`);
+        }
+        break;
+        
+      case 'foul':
+        // ✅ PHASE 6A & 6B: Foul possession logic with technical/flagrant special handling
+        
+        // Check if this is a technical or flagrant foul (fouled team keeps possession)
+        if (event.foulType === 'technical' || event.foulType === 'flagrant') {
+          // Technical/Flagrant: Fouled team KEEPS possession after FTs
+          // The opponent team (who was fouled) retains possession
+          newState.currentPossession = event.opponentTeamId;
+          shouldFlip = currentState.currentPossession !== event.opponentTeamId;
+          shouldPersist = flags.persistState;
+          endReason = `${event.foulType}_foul_possession_retained`;
+          actions.push(`Possession retained by ${event.opponentTeamId} (${event.foulType} foul by ${event.teamId})`);
+        } else {
+          // Standard fouls (personal, shooting, offensive, 1-and-1): Opponent gets ball
+          newState.currentPossession = event.opponentTeamId;
+          shouldFlip = true;
+          shouldPersist = flags.persistState;
+          endReason = 'foul';
+          actions.push(`Possession flipped to ${event.opponentTeamId} (foul by ${event.teamId})`);
         }
         break;
         

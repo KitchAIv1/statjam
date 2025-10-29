@@ -158,7 +158,7 @@ export const DEFAULT_AUTOMATION_FLAGS: AutomationFlags = {
 /**
  * Coach-specific automation flags
  * Clock automation enabled by default for coach games
- * NBA rules with Phase 2 clock automation + Phase 3 possession tracking
+ * NBA rules with Phase 2 clock automation + Phase 3 possession tracking + Phase 4 play sequences
  */
 export const COACH_AUTOMATION_FLAGS: AutomationFlags = {
   clock: {
@@ -175,12 +175,12 @@ export const COACH_AUTOMATION_FLAGS: AutomationFlags = {
     jumpBallArrow: true     // ✅ Track alternating possession arrow
   },
   sequences: {
-    enabled: false,         // Phase 4 (not yet implemented)
-    promptAssists: false,
-    promptRebounds: false,
-    promptBlocks: false,
-    linkEvents: false,
-    freeThrowSequence: false
+    enabled: true,          // ✅ Phase 4: Play sequences ON
+    promptAssists: true,    // ✅ Prompt "Assist?" after made shots
+    promptRebounds: true,   // ✅ Prompt "Rebound?" after missed shots
+    promptBlocks: true,     // ✅ Prompt "Block?" after missed shots
+    linkEvents: true,       // ✅ Store sequence_id and linked_event_id
+    freeThrowSequence: true // ✅ Auto FT sequence after shooting foul
   },
   fouls: {
     enabled: false,         // Phase 5 (not yet implemented)

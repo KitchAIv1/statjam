@@ -80,6 +80,26 @@ interface UseTrackerReturn {
     lastChangeReason: string | null;
     lastChangeTimestamp: string | null;
   };
+  
+  // ✅ PHASE 6: Manual Possession Control
+  manualSetPossession: (teamId: string, reason?: string) => Promise<void>;
+  
+  // ✅ PHASE 4 & 5: Play Sequence Prompts
+  playPrompt: {
+    isOpen: boolean;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
+    sequenceId: string | null;
+    primaryEventId: string | null;
+    metadata: Record<string, any> | null;
+  };
+  clearPlayPrompt: () => void;
+  setPlayPrompt: (prompt: {
+    isOpen: boolean;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
+    sequenceId: string | null;
+    primaryEventId: string | null;
+    metadata: Record<string, any> | null;
+  }) => void;
 }
 
 export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = false }: UseTrackerProps): UseTrackerReturn => {
@@ -138,6 +158,28 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     lastChangeReason: null as string | null,
     lastChangeTimestamp: null as string | null
   });
+  
+  // ✅ PHASE 4 & 5: Play Sequence Prompts
+  const [playPrompt, setPlayPrompt] = useState<{
+    isOpen: boolean;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
+    sequenceId: string | null;
+    primaryEventId: string | null;
+    metadata: Record<string, any> | null;
+  }>({
+    isOpen: false,
+    type: null,
+    sequenceId: null,
+    primaryEventId: null,
+    metadata: null
+  });
+  
+  // ✅ SEQUENTIAL PROMPTS: Queue for multiple prompts (Block → Rebound)
+  const [promptQueue, setPromptQueue] = useState<Array<{
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw';
+    sequenceId: string;
+    metadata: Record<string, any>;
+  }>>([]);
 
   // Initialize and load existing game state from database
   useEffect(() => {
@@ -572,25 +614,29 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
 
   const resetShotClock = useCallback((seconds?: number) => {
     const resetValue = seconds ?? 24; // Default to 24 if undefined
+    
+    // ✅ SYNC WITH GAME CLOCK: Shot clock inherits game clock's running state
     setShotClock(prev => ({ 
       ...prev, 
-      isRunning: false, 
+      isRunning: clock.isRunning, // ✅ Sync with game clock (source of truth)
       secondsRemaining: resetValue 
     }));
     setLastAction(`Shot clock reset to ${resetValue}s`);
-    console.log(`🏀 Shot clock reset to ${resetValue} seconds`);
-  }, []);
+    console.log(`🏀 Shot clock reset to ${resetValue} seconds (synced with game clock: ${clock.isRunning ? 'RUNNING' : 'PAUSED'})`);
+  }, [clock.isRunning]);
 
   const setShotClockTime = useCallback((seconds: number) => {
     const validSeconds = Math.max(0, Math.min(35, Math.floor(seconds))); // 0-35 seconds max
+    
+    // ✅ SYNC WITH GAME CLOCK: Shot clock inherits game clock's running state
     setShotClock(prev => ({ 
       ...prev, 
-      isRunning: false, 
+      isRunning: clock.isRunning, // ✅ Sync with game clock (source of truth)
       secondsRemaining: validSeconds 
     }));
     setLastAction(`Shot clock set to ${validSeconds}s`);
-    console.log(`🏀 Shot clock set to ${validSeconds} seconds`);
-  }, []);
+    console.log(`🏀 Shot clock set to ${validSeconds} seconds (synced with game clock: ${clock.isRunning ? 'RUNNING' : 'PAUSED'})`);
+  }, [clock.isRunning]);
 
   const tick = useCallback((seconds: number) => {
     setClock(prev => ({
@@ -798,7 +844,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         
         const clockEvent = {
           type: eventType,
-          modifier: stat.modifier,
+          modifier: stat.modifier || undefined,
           ballLocation: undefined as 'frontcourt' | 'backcourt' | undefined,
           reboundType: reboundType
         };
@@ -845,9 +891,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         const { PossessionEngine } = await import('@/lib/engines/possessionEngine');
         
         // Map stat types to PossessionEngine event types
-        let possessionEventType: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball' | null = null;
+        let possessionEventType: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball' | 'foul' | null = null;
         
-        if ((stat.statType === 'field_goal' || stat.statType === 'three_pointer' || stat.statType === '3_pointer') && stat.modifier === 'made') {
+        if ((stat.statType === 'field_goal' || stat.statType === 'three_pointer' || stat.statType === 'free_throw') && stat.modifier === 'made') {
           possessionEventType = 'made_shot';
         } else if (stat.statType === 'turnover') {
           possessionEventType = 'turnover';
@@ -855,6 +901,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           possessionEventType = 'steal';
         } else if (stat.statType === 'rebound') {
           possessionEventType = stat.modifier === 'offensive' ? 'offensive_rebound' : 'defensive_rebound';
+        } else if (stat.statType === 'foul') {
+          // ✅ PHASE 6: Add foul possession mapping
+          possessionEventType = 'foul';
         }
         
         // Only process if we have a valid possession event
@@ -869,8 +918,22 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             ? (stat.isOpponentStat ? teamAId : 'opponent-team')
             : (stat.teamId === teamAId ? teamBId : teamAId);
           
+          // ✅ PHASE 6B: Map modifier to foulType for technical/flagrant handling (BEFORE logging!)
+          let foulType: 'personal' | 'shooting' | '1-and-1' | 'technical' | 'flagrant' | 'offensive' | undefined = undefined;
+          if (possessionEventType === 'foul' && stat.modifier) {
+            // Map modifier to foulType
+            if (stat.modifier === 'technical') foulType = 'technical';
+            else if (stat.modifier === 'flagrant') foulType = 'flagrant';
+            else if (stat.modifier === 'offensive') foulType = 'offensive';
+            else if (stat.modifier === 'shooting') foulType = 'shooting';
+            else if (stat.modifier === '1-and-1') foulType = '1-and-1';
+            else if (stat.modifier === 'personal') foulType = 'personal';
+          }
+          
           console.log('🏀 PHASE 3 DEBUG: Processing possession event', {
             eventType: possessionEventType,
+            foulType: foulType, // ✅ PHASE 6B: Log foul type
+            modifier: stat.modifier, // ✅ Log raw modifier too
             possessionTeamId: possessionTeamId,
             statTeamId: stat.teamId,
             opponentTeamId: opponentTeamId,
@@ -880,6 +943,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           });
           console.log('🏀 PHASE 3 DEBUG (EXPANDED):', JSON.stringify({
             eventType: possessionEventType,
+            foulType: foulType, // ✅ PHASE 6B: Log foul type
+            modifier: stat.modifier, // ✅ Log raw modifier too
             possessionTeamId: possessionTeamId,
             statTeamId: stat.teamId,
             opponentTeamId: opponentTeamId,
@@ -887,6 +952,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             isCoachMode: isCoachMode,
             isOpponentStat: stat.isOpponentStat
           }, null, 2));
+          
+          // ✅ PHASE 6B: Check if this is a technical/flagrant FT (from metadata)
+          const isTechnicalOrFlagrantFT = stat.metadata?.isTechnicalOrFlagrantFT === true;
           
           const possessionResult = PossessionEngine.processEvent(
             {
@@ -896,7 +964,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             {
               type: possessionEventType,
               teamId: possessionTeamId,  // ✅ Use possessionTeamId for logic
-              opponentTeamId: opponentTeamId
+              opponentTeamId: opponentTeamId,
+              foulType: foulType,  // ✅ PHASE 6B: Pass foul type for special handling
+              isTechnicalOrFlagrantFT: isTechnicalOrFlagrantFT  // ✅ PHASE 6B: Flag for possession retention
             },
             ruleset,
             automationFlags.possession
@@ -914,19 +984,137 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             
             setPossession({
               currentTeamId: possessionResult.newState.currentPossession,
-              possessionArrow: possessionResult.newState.possessionArrow,
-              lastChangeReason: possessionResult.newState.endReason || null,
+              possessionArrow: possessionResult.newState.possessionArrow || teamAId,
+              lastChangeReason: possessionResult.endReason || null,
               lastChangeTimestamp: new Date().toISOString()
             });
             
             // Store possession data for database persistence (if enabled)
-            if (possessionResult.newState.shouldPersist) {
+            if (possessionResult.shouldPersist) {
               // Will be persisted in database write section below
-              fullStat.possessionData = {
+              (fullStat as any).possessionData = {
                 newPossession: possessionResult.newState.currentPossession,
-                endReason: possessionResult.newState.endReason
+                endReason: possessionResult.endReason
               };
             }
+          }
+        }
+      }
+
+      // ✅ PHASE 4: Process play sequence automation
+      if (ruleset && automationFlags.sequences?.enabled) {
+        const { PlayEngine } = await import('@/lib/engines/playEngine');
+        
+        const gameEvent = {
+          id: undefined, // Will be set after database insert
+          statType: stat.statType,
+          modifier: stat.modifier || undefined,
+          playerId: stat.playerId || '',
+          teamId: stat.teamId,
+          quarter: quarter,
+          gameTimeSeconds: clock.secondsRemaining,
+          statValue: statValue
+        };
+        
+        const playResult = PlayEngine.analyzeEvent(
+          gameEvent,
+          automationFlags.sequences
+        );
+        
+        // ✅ SEQUENTIAL PROMPTS: Handle prompt queue (Block → Rebound) + Free Throws
+        if (playResult.shouldPrompt && playResult.promptType && 
+            (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block' || playResult.promptType === 'free_throw')) {
+          
+          // ✅ COACH MODE FIX: Don't show prompts for opponent actions
+          if (isCoachMode && stat.isOpponentStat) {
+            console.log('⏭️ Skipping prompt for opponent action in coach mode (no individual players)');
+            // Don't show modal - opponent has no individual players to select
+          } else {
+            console.log('🎯 Play sequence prompt:', playResult.actions);
+            
+            // Check if we have a queue (multiple prompts)
+            if (playResult.promptQueue && playResult.promptQueue.length > 0) {
+              console.log('📋 Sequential prompts detected:', playResult.promptQueue.map(p => p.type).join(' → '));
+              
+              // Store the full queue
+              setPromptQueue(playResult.promptQueue);
+              
+              // Show first prompt in queue
+              const firstPrompt = playResult.promptQueue[0];
+              setPlayPrompt({
+                isOpen: true,
+                type: firstPrompt.type,
+                sequenceId: firstPrompt.sequenceId,
+                primaryEventId: null, // Will be set after database insert
+                metadata: firstPrompt.metadata
+              });
+            } else {
+              // Single prompt (legacy behavior)
+              setPromptQueue([]);
+              setPlayPrompt({
+                isOpen: true,
+                type: playResult.promptType,
+                sequenceId: playResult.sequenceId || null,
+                primaryEventId: null, // Will be set after database insert
+                metadata: playResult.metadata || null
+              });
+            }
+          }
+        }
+        
+        // ✅ AUTO-GENERATE TURNOVER FOR STEAL
+        if (playResult.metadata?.shouldGenerateTurnover && stat.statType === 'steal') {
+          console.log('🔄 Processing steal-to-turnover logic');
+          
+          // ✅ COACH MODE: Show turnover prompt for opponent steals
+          if (isCoachMode) {
+            if (stat.isOpponentStat) {
+              // Opponent stole from home team
+              // → Show turnover prompt to select which home player lost possession
+              console.log('🎯 Showing turnover prompt for opponent steal');
+              
+              setPlayPrompt({
+                isOpen: true,
+                type: 'turnover',
+                sequenceId: playResult.sequenceId || null,
+                primaryEventId: null,
+                metadata: {
+                  stealerId: stat.playerId,
+                  stealerName: 'Opponent Team',
+                  stealerTeamId: stat.teamId,
+                  homeTeamId: teamAId
+                }
+              });
+            } else {
+              // Home team stole from opponent
+              // → Skip turnover generation (opponent has no individual players)
+              // → Steal is enough to track the defensive play
+              console.log('⏭️ Skipping turnover auto-generation (home steal from opponent)');
+              console.log('💡 Opponent turnover implied by steal (no individual player to attribute)');
+            }
+          } else {
+            // ✅ REGULAR MODE: Full auto-generation
+            const opponentTeamId = stat.teamId === teamAId ? teamBId : teamAId;
+            
+            // Generate turnover event
+            const turnoverEvent = PlayEngine.generateTurnoverForSteal(
+              gameEvent,
+              opponentTeamId
+            );
+            
+            // Record turnover immediately (no prompt needed)
+            // This will be executed after the steal is recorded in the database
+            setTimeout(async () => {
+              await recordStat({
+                gameId: stat.gameId,
+                playerId: turnoverEvent.playerId,
+                teamId: turnoverEvent.teamId,
+                statType: 'turnover',
+                modifier: null, // ✅ FIX: Turnovers don't use modifiers
+                sequenceId: playResult.sequenceId,
+                linkedEventId: undefined // Will link to steal after it's recorded
+              });
+            }, 100); // Small delay to ensure steal is recorded first
           }
         }
       }
@@ -985,7 +1173,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       notify.error('Failed to record stat', errorMessage);
       
       setLastAction('Error recording stat');
-      setLastActionPlayerId(stat.playerId);
+      setLastActionPlayerId(stat.playerId || null);
     }
   }, [quarter, clock.secondsRemaining]);
 
@@ -1115,6 +1303,41 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     setLastAction('Play resumed');
     // Don't auto-start clocks - let admin start manually
   }, []);
+  
+  // ✅ PHASE 4: Clear play prompt (with queue support)
+  const clearPlayPrompt = useCallback(() => {
+    console.log('🔄 clearPlayPrompt called, checking queue...');
+    console.log('📋 Current queue:', promptQueue);
+    
+    // Check if there are more prompts in the queue
+    if (promptQueue.length > 1) {
+      // Remove first prompt and show next
+      const nextQueue = promptQueue.slice(1);
+      const nextPrompt = nextQueue[0];
+      
+      console.log('➡️ Advancing to next prompt in queue:', nextPrompt.type);
+      
+      setPromptQueue(nextQueue);
+      setPlayPrompt({
+        isOpen: true,
+        type: nextPrompt.type,
+        sequenceId: nextPrompt.sequenceId,
+        primaryEventId: null,
+        metadata: nextPrompt.metadata
+      });
+    } else {
+      // No more prompts, clear everything
+      console.log('✅ Queue empty, closing all prompts');
+      setPromptQueue([]);
+      setPlayPrompt({
+        isOpen: false,
+        type: null,
+        sequenceId: null,
+        primaryEventId: null,
+        metadata: null
+      });
+    }
+  }, [promptQueue]);
 
   // Game Management
   const closeGame = useCallback(async () => {
@@ -1141,6 +1364,31 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       setLastAction('Error closing game');
     }
   }, [gameId]);
+
+  // ✅ PHASE 6: Manual possession control for edge cases
+  const manualSetPossession = useCallback(async (teamId: string, reason: string = 'manual_override') => {
+    console.log(`🔄 Manual possession set to ${teamId}, reason: ${reason}`);
+    
+    setPossession(prev => ({
+      ...prev,
+      currentTeamId: teamId,
+      lastChangeReason: reason,
+      lastChangeTimestamp: new Date().toISOString()
+    }));
+    
+    // Persist to database if enabled
+    if (automationFlags.possession?.persistState) {
+      try {
+        const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
+        await GameServiceV3.updatePossession(gameId, teamId, reason);
+        console.log('✅ Manual possession persisted to database');
+      } catch (error) {
+        console.error('❌ Failed to persist manual possession:', error);
+      }
+    }
+    
+    setLastAction(`Possession manually set to ${teamId}`);
+  }, [gameId, automationFlags.possession, setLastAction]);
 
 
   return {
@@ -1183,6 +1431,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     timeoutType,
     startTimeout,
     resumeFromTimeout,
-    possession // ✅ PHASE 3: Possession state
+    possession, // ✅ PHASE 3: Possession state
+    manualSetPossession, // ✅ PHASE 6: Manual possession control
+    playPrompt, // ✅ PHASE 4: Play sequence prompts
+    clearPlayPrompt, // ✅ PHASE 4: Clear play prompt
+    setPlayPrompt // ✅ PHASE 5: Manually set play prompt (for foul flow)
   };
 };

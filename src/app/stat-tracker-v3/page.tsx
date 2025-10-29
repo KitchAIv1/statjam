@@ -21,6 +21,14 @@ import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
 import { TimeoutModalV3 } from '@/components/tracker-v3/TimeoutModalV3';
 import { PossessionIndicator } from '@/components/tracker-v3/PossessionIndicator';
+// ✅ PHASE 4 & 5: Play Sequence Modals
+import { AssistPromptModal } from '@/components/tracker-v3/modals/AssistPromptModal';
+import { ReboundPromptModal } from '@/components/tracker-v3/modals/ReboundPromptModal';
+import { BlockPromptModal } from '@/components/tracker-v3/modals/BlockPromptModal';
+import { TurnoverPromptModal } from '@/components/tracker-v3/modals/TurnoverPromptModal';
+import { FreeThrowSequenceModal } from '@/components/tracker-v3/modals/FreeThrowSequenceModal';
+import { FoulTypeSelectionModal, FoulType } from '@/components/tracker-v3/modals/FoulTypeSelectionModal';
+import { VictimPlayerSelectionModal } from '@/components/tracker-v3/modals/VictimPlayerSelectionModal';
 
 interface GameData {
   id: string;
@@ -43,6 +51,7 @@ interface Player {
   id: string;
   name: string;
   jerseyNumber?: number;  // FIXED: Match official Player interface
+  is_custom_player?: boolean; // ✅ PHASE 5: Support custom players
 }
 
 function StatTrackerV3Content() {
@@ -90,6 +99,13 @@ function StatTrackerV3Content() {
   const [shotClockViolation, setShotClockViolation] = useState(false);
   const [rosterRefreshKey, setRosterRefreshKey] = useState<string | number>(0);
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+  
+  // ✅ PHASE 5: Foul Flow State
+  const [showFoulTypeModal, setShowFoulTypeModal] = useState(false);
+  const [showVictimSelectionModal, setShowVictimSelectionModal] = useState(false);
+  const [selectedFoulType, setSelectedFoulType] = useState<string | null>(null);
+  const [foulerPlayerId, setFoulerPlayerId] = useState<string | null>(null);
+  const [foulerPlayerName, setFoulerPlayerName] = useState<string>('');
 
   // Roster/Bench State (lifted from MobileLayoutV3 for unified substitution logic)
   const [currentRosterA, setCurrentRosterA] = useState<Player[]>([]);
@@ -251,15 +267,28 @@ function StatTrackerV3Content() {
     }
   }, [gameIdParam, user, loading]);
 
-  // Clock Tick Effect
+  // ✅ UNIFIED CLOCK TICK: Single interval for both game clock and shot clock
+  // This ensures they tick at the EXACT same moment (synchronized)
+  // ✅ PERFORMANCE: Interval only recreates when running state changes, NOT on every tick
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (tracker.clock.isRunning) {
+    // Start interval if EITHER clock is running
+    if (tracker.clock.isRunning || tracker.shotClock.isRunning) {
       interval = setInterval(() => {
-        tracker.tick(1);
-        if (tracker.clock.secondsRemaining <= 1) {
-          tracker.advanceIfNeeded();
+        // ✅ Use functional updates to avoid stale closure issues
+        // This ensures we always have the latest state without recreating the interval
+        
+        // Tick game clock if running
+        if (tracker.clock.isRunning) {
+          tracker.tick(1);
+          // Check for quarter advancement (will be handled by tick function's internal state)
+        }
+        
+        // Tick shot clock if running AND visible
+        if (tracker.shotClock.isRunning && tracker.shotClock.isVisible) {
+          tracker.shotClockTick(1);
+          // Shot clock violation check will be handled by the tick function
         }
       }, 1000);
     }
@@ -267,31 +296,36 @@ function StatTrackerV3Content() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [tracker.clock.isRunning, tracker.tick, tracker.advanceIfNeeded, tracker.clock.secondsRemaining]);
+  }, [
+    // ✅ ONLY depend on running state, NOT time values
+    // This prevents interval recreation on every tick or reset
+    tracker.clock.isRunning, 
+    tracker.shotClock.isRunning, 
+    tracker.shotClock.isVisible,
+    // Functions are stable from useCallback
+    tracker.tick, 
+    tracker.shotClockTick
+    // ❌ REMOVED: tracker.advanceIfNeeded (not needed in interval)
+    // ❌ REMOVED: tracker.stopShotClock (not needed in interval)
+    // ❌ REMOVED: tracker.clock.secondsRemaining (causes unnecessary recreation)
+    // ❌ REMOVED: tracker.shotClock.secondsRemaining (causes unnecessary recreation)
+  ]);
 
-  // NEW: Shot Clock Tick Effect
-  // ✅ PERFORMANCE FIX: Removed `tracker` dependency to prevent interval recreation on every shot clock update
+  // ✅ SEPARATE EFFECT: Handle quarter advancement (doesn't interfere with interval)
   useEffect(() => {
-    let shotClockInterval: NodeJS.Timeout;
-    
-    if (tracker.shotClock.isRunning && tracker.shotClock.isVisible) {
-      shotClockInterval = setInterval(() => {
-        tracker.shotClockTick(1);
-        
-        // Shot clock violation at 0 seconds
-        if (tracker.shotClock.secondsRemaining <= 1) {
-          console.log('🚨 Shot clock violation!');
-          tracker.stopShotClock();
-          setShotClockViolation(true);
-          // TODO: Add shot clock violation handling (buzzer, turnover, etc.)
-        }
-      }, 1000);
+    if (tracker.clock.isRunning && tracker.clock.secondsRemaining <= 0) {
+      tracker.advanceIfNeeded();
     }
+  }, [tracker.clock.secondsRemaining, tracker.clock.isRunning, tracker.advanceIfNeeded]);
 
-    return () => {
-      if (shotClockInterval) clearInterval(shotClockInterval);
-    };
-  }, [tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker.shotClockTick, tracker.stopShotClock, tracker.shotClock.secondsRemaining]);
+  // ✅ SEPARATE EFFECT: Handle shot clock violation (doesn't interfere with interval)
+  useEffect(() => {
+    if (tracker.shotClock.isRunning && tracker.shotClock.secondsRemaining <= 0) {
+      console.log('🚨 Shot clock violation!');
+      tracker.stopShotClock();
+      setShotClockViolation(true);
+    }
+  }, [tracker.shotClock.secondsRemaining, tracker.shotClock.isRunning, tracker.stopShotClock]);
 
   // NEW: Sync shot clock with game clock
   useEffect(() => {
@@ -331,8 +365,8 @@ function StatTrackerV3Content() {
     if (!selectedPlayer || !gameData) return;
     
     // Handle different player types in coach mode
-    let actualPlayerId = null;
-    let actualCustomPlayerId = null;
+    let actualPlayerId: string | undefined = undefined;
+    let actualCustomPlayerId: string | undefined = undefined;
     let actualTeamId = gameData.team_a_id; // Default to coach team
     let isOpponentStat = false;
     
@@ -345,7 +379,7 @@ function StatTrackerV3Content() {
     
     if (coachMode && selectedPlayer === 'opponent-team') {
       // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
-      actualPlayerId = user?.id || null;
+      actualPlayerId = user?.id || undefined;
       actualTeamId = gameData.team_a_id; // ✅ Use coach's team ID for database (UUID required)
       isOpponentStat = true; // FLAG: This is an opponent stat
       console.log('✅ Recording opponent team stat (flagged as opponent), team_id:', actualTeamId, 'isOpponentStat:', isOpponentStat);
@@ -361,12 +395,12 @@ function StatTrackerV3Content() {
       if (isCustomPlayer) {
         // CUSTOM PLAYER STATS: Use the actual custom player ID
         actualCustomPlayerId = selectedPlayer; // This is the custom_players.id
-        actualPlayerId = null; // Don't set player_id for custom players
+        actualPlayerId = undefined; // Don't set player_id for custom players
         console.log('🏀 Recording custom player stat for:', selectedPlayerData?.name, 'ID:', selectedPlayer);
       } else {
         // REGULAR PLAYER STATS: Use the user ID
         actualPlayerId = selectedPlayer; // This is the users.id
-        actualCustomPlayerId = null; // Don't set custom_player_id for regular players
+        actualCustomPlayerId = undefined; // Don't set custom_player_id for regular players
         console.log('🏀 Recording regular player stat for ID:', selectedPlayer);
       }
     }
@@ -382,44 +416,70 @@ function StatTrackerV3Content() {
     });
   };
 
-  // Handle foul recording
+  // ✅ PHASE 5: Handle foul recording with new flow
   const handleFoulRecord = async (foulType: 'personal' | 'technical') => {
     if (!selectedPlayer || !gameData) return;
-
-    // Use the same logic as handleStatRecord for player type handling
-    let actualPlayerId = null;
-    let actualCustomPlayerId = null;
+    
+    // Get fouler player name
+    const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+    const foulerName = foulerData?.name || 'Player';
+    
+    // Store fouler info and show foul type modal
+    setFoulerPlayerId(selectedPlayer);
+    setFoulerPlayerName(foulerName);
+    setShowFoulTypeModal(true);
+  };
+  
+  // ✅ PHASE 5: Handle foul type selection
+  const handleFoulTypeSelection = async (foulType: FoulType) => {
+    setShowFoulTypeModal(false);
+    setSelectedFoulType(foulType);
+    
+    // Determine if we need victim selection
+    const needsVictimSelection = ['shooting_2pt', 'shooting_3pt', 'bonus', 'technical', 'flagrant'].includes(foulType);
+    
+    if (needsVictimSelection) {
+      // Show victim selection modal
+      setShowVictimSelectionModal(true);
+    } else {
+      // Personal or Offensive foul - record immediately
+      await recordFoulWithoutVictim(foulType);
+    }
+  };
+  
+  // ✅ PHASE 5: Record foul without victim (Personal, Offensive)
+  const recordFoulWithoutVictim = async (foulType: FoulType) => {
+    if (!foulerPlayerId || !gameData) return;
+    
+    // Determine player type and team
+    let actualPlayerId: string | undefined = undefined;
+    let actualCustomPlayerId: string | undefined = undefined;
     let actualTeamId = gameData.team_a_id;
     let isOpponentStat = false;
     
-    console.log('🔍 FOUL RECORD DEBUG:', { 
-      coachMode, 
-      selectedPlayer, 
-      isOpponentTeamSelected: selectedPlayer === 'opponent-team',
-      willSetOpponentFlag: coachMode && selectedPlayer === 'opponent-team'
-    });
-    
-    if (coachMode && selectedPlayer === 'opponent-team') {
-      actualPlayerId = user?.id || null;
+    if (coachMode && foulerPlayerId === 'opponent-team') {
+      actualPlayerId = user?.id || undefined;
       actualTeamId = gameData.team_a_id;
-      isOpponentStat = true; // FLAG: This is an opponent stat
-      console.log('✅ Recording opponent foul (flagged as opponent), team_id:', actualTeamId, 'isOpponentStat:', isOpponentStat);
+      isOpponentStat = true;
     } else {
-      const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+      const isTeamAPlayer = teamAPlayers.some(p => p.id === foulerPlayerId);
       actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
       
-      const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-      const isCustomPlayer = selectedPlayerData && selectedPlayerData.is_custom_player === true;
+      const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === foulerPlayerId);
+      const isCustomPlayer = foulerData && foulerData.is_custom_player === true;
       
       if (isCustomPlayer) {
-        actualCustomPlayerId = selectedPlayer;
-        actualPlayerId = null;
+        actualCustomPlayerId = foulerPlayerId;
+        actualPlayerId = undefined;
       } else {
-        actualPlayerId = selectedPlayer;
-        actualCustomPlayerId = null;
+        actualPlayerId = foulerPlayerId;
+        actualCustomPlayerId = undefined;
       }
     }
-
+    
+    // Map foul type to modifier
+    const modifier = foulType === 'offensive' ? 'offensive' : 'personal';
+    
     await tracker.recordStat({
       gameId: gameData.id,
       teamId: actualTeamId,
@@ -427,8 +487,130 @@ function StatTrackerV3Content() {
       customPlayerId: actualCustomPlayerId,
       isOpponentStat: isOpponentStat,
       statType: 'foul',
-      modifier: foulType
+      modifier: modifier
     });
+    
+    // If offensive foul, also record turnover
+    if (foulType === 'offensive') {
+      await tracker.recordStat({
+        gameId: gameData.id,
+        teamId: actualTeamId,
+        playerId: actualPlayerId,
+        customPlayerId: actualCustomPlayerId,
+        isOpponentStat: isOpponentStat,
+        statType: 'turnover',
+        modifier: 'offensive_foul'
+      });
+    }
+    
+    // Reset state
+    setFoulerPlayerId(null);
+    setFoulerPlayerName('');
+    setSelectedFoulType(null);
+  };
+  
+  // ✅ PHASE 5: Handle victim player selection
+  const handleVictimSelection = async (victimId: string, victimName: string) => {
+    setShowVictimSelectionModal(false);
+    
+    if (!foulerPlayerId || !selectedFoulType || !gameData) return;
+    
+    // Determine fouler details
+    let foulerActualPlayerId: string | undefined = undefined;
+    let foulerCustomPlayerId: string | undefined = undefined;
+    let foulerTeamId = gameData.team_a_id;
+    let foulerIsOpponentStat = false;
+    
+    if (coachMode && foulerPlayerId === 'opponent-team') {
+      foulerActualPlayerId = user?.id || undefined;
+      foulerTeamId = gameData.team_a_id;
+      foulerIsOpponentStat = true;
+    } else {
+      const isTeamAPlayer = teamAPlayers.some(p => p.id === foulerPlayerId);
+      foulerTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+      
+      const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === foulerPlayerId);
+      const isCustomPlayer = foulerData && foulerData.is_custom_player === true;
+      
+      if (isCustomPlayer) {
+        foulerCustomPlayerId = foulerPlayerId;
+      } else {
+        foulerActualPlayerId = foulerPlayerId;
+      }
+    }
+    
+    // Determine victim team (opposite of fouler)
+    const victimTeamId = foulerTeamId === gameData.team_a_id ? gameData.team_b_id : gameData.team_a_id;
+    
+    // Map foul type to modifier and FT count
+    let modifier = 'shooting';
+    let ftCount = 2;
+    let ftType: '1-and-1' | 'shooting' | 'technical' | 'flagrant' = 'shooting';
+    
+    switch (selectedFoulType) {
+      case 'shooting_2pt':
+        modifier = 'shooting';
+        ftCount = 2;
+        ftType = 'shooting';
+        break;
+      case 'shooting_3pt':
+        modifier = 'shooting';
+        ftCount = 3;
+        ftType = 'shooting';
+        break;
+      case 'bonus':
+        modifier = '1-and-1';
+        ftCount = 2;
+        ftType = '1-and-1';
+        break;
+      case 'technical':
+        modifier = 'technical';
+        ftCount = 1;
+        ftType = 'technical';
+        break;
+      case 'flagrant':
+        modifier = 'flagrant';
+        ftCount = 2;
+        ftType = 'flagrant';
+        break;
+    }
+    
+    // ✅ Generate sequence_id to link foul and FTs
+    const { v4: uuidv4 } = await import('uuid');
+    const sequenceId = uuidv4();
+    
+    // Record the foul with sequence_id for linking
+    await tracker.recordStat({
+      gameId: gameData.id,
+      teamId: foulerTeamId,
+      playerId: foulerActualPlayerId,
+      customPlayerId: foulerCustomPlayerId,
+      isOpponentStat: foulerIsOpponentStat,
+      statType: 'foul',
+      modifier: modifier,
+      sequenceId: sequenceId // ✅ Link foul to FTs
+    });
+    
+    // Trigger FT modal with same sequence_id
+    tracker.setPlayPrompt({
+      isOpen: true,
+      type: 'free_throw',
+      sequenceId: sequenceId, // ✅ Use same sequence_id
+      primaryEventId: null,
+      metadata: {
+        shooterId: victimId,
+        shooterName: victimName,
+        shooterTeamId: victimTeamId,
+        foulType: ftType,
+        totalShots: ftCount,
+        foulerId: foulerPlayerId
+      }
+    });
+    
+    // Reset state
+    setFoulerPlayerId(null);
+    setFoulerPlayerName('');
+    setSelectedFoulType(null);
   };
 
   // Handle timeout with enhanced modal
@@ -624,6 +806,7 @@ function StatTrackerV3Content() {
         onTimeOut={handleTimeoutClick}
         isCoachMode={coachMode}
         userId={user?.id}
+        onPossessionChange={tracker.manualSetPossession}
       />
     );
   }
@@ -721,6 +904,7 @@ function StatTrackerV3Content() {
                 teamAName={gameData.team_a?.name || 'Team A'}
                 teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
                 isCoachMode={coachMode}
+                onPossessionChange={tracker.manualSetPossession}
               />
             </div>
           </div>
@@ -787,6 +971,187 @@ function StatTrackerV3Content() {
           timeoutActive={tracker.timeoutActive}
           timeoutSecondsRemaining={tracker.timeoutSecondsRemaining}
           timeoutTeamId={tracker.timeoutTeamId}
+        />
+
+        {/* ✅ PHASE 4: Play Sequence Modals */}
+        
+        {/* Assist Prompt Modal - After made shots */}
+        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'assist' && (
+          <AssistPromptModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onSelectPlayer={async (playerId) => {
+              // Record assist stat linked to the shot
+              // ✅ PHASE 5 FIX: Assists must have modifier IS NULL per database constraint
+              await tracker.recordStat({
+                gameId: gameIdParam,
+                playerId: playerId,
+                teamId: tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id,
+                statType: 'assist'
+                // No modifier for assists - database constraint requires NULL
+              });
+              tracker.clearPlayPrompt();
+            }}
+            onSkip={tracker.clearPlayPrompt}
+            players={teamAPlayers.filter(p => 
+              p.id !== tracker.playPrompt.metadata?.shooterId
+            )}
+            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
+            shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
+            shotValue={tracker.playPrompt.metadata?.shotValue || 2}
+          />
+        )}
+
+        {/* Rebound Prompt Modal - After missed shots */}
+        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'rebound' && (
+          <ReboundPromptModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onSelectPlayer={async (playerId, reboundType) => {
+              // Record rebound stat linked to the miss
+              await tracker.recordStat({
+                gameId: gameIdParam,
+                playerId: playerId,
+                teamId: teamAPlayers.find(p => p.id === playerId)?.id ? gameData.team_a_id : gameData.team_b_id,
+                statType: 'rebound',
+                modifier: reboundType
+              });
+              tracker.clearPlayPrompt();
+            }}
+            onSkip={tracker.clearPlayPrompt}
+            teamAPlayers={teamAPlayers.map(p => ({ ...p, teamId: gameData.team_a_id }))}
+            teamBPlayers={teamBPlayers.map(p => ({ ...p, teamId: gameData.team_b_id }))}
+            shooterTeamId={tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id}
+            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
+            shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
+          />
+        )}
+
+        {/* Block Prompt Modal - After missed shots */}
+        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'block' && (
+          <BlockPromptModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onSelectPlayer={async (playerId) => {
+              // Record block stat linked to the miss
+              await tracker.recordStat({
+                gameId: gameIdParam,
+                playerId: playerId,
+                teamId: teamAPlayers.find(p => p.id === playerId)?.id ? gameData.team_a_id : gameData.team_b_id,
+                statType: 'block',
+                modifier: 'made'
+              });
+              tracker.clearPlayPrompt();
+            }}
+            onSkip={tracker.clearPlayPrompt}
+            defensivePlayers={[...teamAPlayers, ...teamBPlayers].filter(p => 
+              p.id !== tracker.playPrompt.metadata?.shooterId
+            ).map(p => ({ ...p, teamId: teamAPlayers.find(tp => tp.id === p.id) ? gameData.team_a_id : gameData.team_b_id }))}
+            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
+            shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
+          />
+        )}
+
+        {/* Turnover Prompt Modal - After opponent steal in coach mode */}
+        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'turnover' && (
+          <TurnoverPromptModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onSelectPlayer={async (playerId) => {
+              // Record turnover for selected home player
+              await tracker.recordStat({
+                gameId: gameIdParam,
+                playerId: playerId,
+                teamId: tracker.playPrompt.metadata?.homeTeamId || gameData.team_a_id,
+                statType: 'turnover',
+                modifier: null,
+                sequenceId: tracker.playPrompt.sequenceId || undefined
+              });
+              tracker.clearPlayPrompt();
+            }}
+            onSkip={tracker.clearPlayPrompt}
+            homePlayers={teamAPlayers.map(p => ({ ...p, teamId: gameData.team_a_id }))}
+            stealerName={tracker.playPrompt.metadata?.stealerName || 'Opponent Team'}
+          />
+        )}
+
+        {/* ✅ PHASE 5: Free Throw Sequence Modal - After shooting foul */}
+        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'free_throw' && (
+          <FreeThrowSequenceModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onComplete={async (results) => {
+              console.log('🏀 Free throw sequence complete:', results);
+              
+              // Record each free throw
+              for (let i = 0; i < results.length; i++) {
+                const result = results[i];
+                const isLastShot = i === results.length - 1;
+                
+                // ✅ PHASE 6B: Check if this is a technical/flagrant FT
+                const foulType = tracker.playPrompt.metadata?.foulType;
+                const isTechnicalOrFlagrant = foulType === 'technical' || foulType === 'flagrant';
+                
+                await tracker.recordStat({
+                  gameId: gameIdParam,
+                  playerId: tracker.playPrompt.metadata?.shooterId,
+                  teamId: tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id,
+                  statType: 'free_throw',
+                  modifier: result.made ? 'made' : 'missed',
+                  sequenceId: tracker.playPrompt.sequenceId || undefined,
+                  metadata: isTechnicalOrFlagrant ? { isTechnicalOrFlagrantFT: true } : undefined // ✅ PHASE 6B: Flag for possession retention
+                });
+                
+                // If last shot was missed, prompt for rebound
+                if (isLastShot && result.shouldRebound) {
+                  console.log('🎯 Last FT missed, prompting for rebound');
+                  // Rebound prompt will be triggered by PlayEngine
+                }
+              }
+              
+              tracker.clearPlayPrompt();
+            }}
+            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
+            totalShots={tracker.playPrompt.metadata?.totalShots || 2}
+            foulType={tracker.playPrompt.metadata?.foulType || 'shooting'}
+          />
+        )}
+
+        {/* ✅ PHASE 5: Foul Type Selection Modal - First step of foul flow */}
+        <FoulTypeSelectionModal
+          isOpen={showFoulTypeModal}
+          onClose={() => setShowFoulTypeModal(false)}
+          onSelectFoulType={handleFoulTypeSelection}
+          foulerName={foulerPlayerName}
+        />
+
+        {/* ✅ PHASE 5: Victim Player Selection Modal - Second step for shooting fouls */}
+        <VictimPlayerSelectionModal
+          isOpen={showVictimSelectionModal}
+          onClose={() => setShowVictimSelectionModal(false)}
+          onSelectPlayer={handleVictimSelection}
+          players={
+            // Get opposing team players based on fouler's team
+            foulerPlayerId && gameData
+              ? (teamAPlayers.some(p => p.id === foulerPlayerId)
+                  ? teamBPlayers
+                  : teamAPlayers
+                ).map(p => ({
+                  id: p.id,
+                  name: p.name,
+                  teamId: teamAPlayers.some(tp => tp.id === p.id) ? gameData.team_a_id : gameData.team_b_id
+                }))
+              : []
+          }
+          teamName={
+            foulerPlayerId && gameData
+              ? (teamAPlayers.some(p => p.id === foulerPlayerId)
+                  ? (coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B'))
+                  : (gameData.team_a?.name || 'Team A')
+                )
+              : 'Team'
+          }
+          foulType={selectedFoulType || ''}
         />
 
         {/* Dimmed Overlay During Timeout - Prevents Stat Entry */}

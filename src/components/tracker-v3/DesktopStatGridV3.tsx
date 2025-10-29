@@ -33,6 +33,8 @@ interface DesktopStatGridV3Props {
   teamAName?: string;
   teamBName?: string;
   isCoachMode?: boolean;
+  // ✅ PHASE 6: Manual possession control
+  onPossessionChange?: (teamId: string) => void;
 }
 
 export function DesktopStatGridV3({
@@ -52,7 +54,8 @@ export function DesktopStatGridV3({
   teamBId,
   teamAName,
   teamBName,
-  isCoachMode = false
+  isCoachMode = false,
+  onPossessionChange
 }: DesktopStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
@@ -116,12 +119,12 @@ export function DesktopStatGridV3({
     { id: 'reb-defensive', label: 'REB', statType: 'rebound', modifier: 'defensive' }
   ];
 
-  // Other single-button stats (✅ FIXED: Add 'made' modifier to match database pattern)
+  // Other single-button stats (✅ PHASE 5 FIX: No modifiers - database constraint requires NULL)
   const singleStats = [
-    { id: 'ast', label: 'AST', statType: 'assist', modifier: 'made' },
-    { id: 'stl', label: 'STL', statType: 'steal', modifier: 'made' },
-    { id: 'blk', label: 'BLK', statType: 'block', modifier: 'made' },
-    { id: 'tov', label: 'TOV', statType: 'turnover', modifier: 'made' }
+    { id: 'ast', label: 'AST', statType: 'assist', modifier: undefined },
+    { id: 'stl', label: 'STL', statType: 'steal', modifier: undefined },
+    { id: 'blk', label: 'BLK', statType: 'block', modifier: undefined },
+    { id: 'tov', label: 'TOV', statType: 'turnover', modifier: undefined }
   ];
 
   // Secondary actions - FOUL, TF, TIME OUT, SUB
@@ -201,6 +204,7 @@ export function DesktopStatGridV3({
               teamBName={teamBName}
               possessionArrow={possession.possessionArrow}
               isMobile={false}
+              onPossessionChange={onPossessionChange}
             />
           </div>
         ) : (

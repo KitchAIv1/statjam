@@ -59,6 +59,12 @@ export interface StatRecord {
   createdAt?: string; // ISO
   quarter?: QuarterNumber;
   gameTimeSeconds?: number; // 0..quarterLengthSeconds
+  // ✅ PHASE 4: Event linking
+  sequenceId?: string; // Links related events (assist→shot, rebound→miss, turnover→steal)
+  linkedEventId?: string; // Points to primary event
+  eventMetadata?: Record<string, any>; // Additional context
+  // ✅ PHASE 6B: Possession metadata
+  metadata?: Record<string, any>; // For technical/flagrant FT possession retention
 }
 
 export interface SubstitutionInput {
