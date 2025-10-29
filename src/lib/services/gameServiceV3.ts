@@ -641,4 +641,44 @@ export class GameServiceV3 {
       return false;
     }
   }
+
+  /**
+   * ✅ PHASE 6: Update possession manually (for edge cases)
+   * Used when user manually overrides possession
+   */
+  static async updatePossession(
+    gameId: string,
+    teamId: string,
+    reason: string
+  ): Promise<boolean> {
+    try {
+      console.log(`🔄 GameServiceV3: Updating possession manually for game ${gameId} to team ${teamId}`);
+
+      const response = await makeAuthenticatedRequest(
+        `${this.SUPABASE_URL}/rest/v1/game_possessions`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            game_id: gameId,
+            team_id: teamId,
+            reason: reason,
+            timestamp: new Date().toISOString()
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ GameServiceV3: Failed to update possession - HTTP ${response.status}:`, errorText);
+        return false;
+      }
+
+      console.log('✅ GameServiceV3: Possession updated successfully');
+      return true;
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to update possession:', error);
+      return false;
+    }
+  }
 }

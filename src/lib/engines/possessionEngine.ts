@@ -19,9 +19,10 @@ export interface PossessionState {
 }
 
 export interface PossessionEvent {
-  type: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball';
+  type: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball' | 'foul';
   teamId: string;
   opponentTeamId: string;
+  foulType?: 'personal' | 'shooting' | '1-and-1' | 'technical' | 'flagrant' | 'offensive'; // For future technical/flagrant handling
 }
 
 export interface PossessionEngineResult {
@@ -160,6 +161,20 @@ export class PossessionEngine {
           actions.push(`Possession awarded via jump ball arrow`);
           actions.push(`Arrow flipped to ${newState.possessionArrow}`);
         }
+        break;
+        
+      case 'foul':
+        // ✅ PHASE 6: Foul possession logic
+        // Most fouls → opponent gets ball
+        // Technical/Flagrant → fouled team keeps possession (handled after FTs in Phase 6B)
+        
+        // For now, implement standard foul behavior (opponent gets ball)
+        // Technical/Flagrant special handling will be added in Phase 6B
+        newState.currentPossession = event.opponentTeamId;
+        shouldFlip = true;
+        shouldPersist = flags.persistState;
+        endReason = 'foul';
+        actions.push(`Possession flipped to ${event.opponentTeamId} (foul by ${event.teamId})`);
         break;
         
       default:

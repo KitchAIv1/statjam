@@ -81,6 +81,9 @@ interface UseTrackerReturn {
     lastChangeTimestamp: string | null;
   };
   
+  // ✅ PHASE 6: Manual Possession Control
+  manualSetPossession: (teamId: string, reason?: string) => Promise<void>;
+  
   // ✅ PHASE 4 & 5: Play Sequence Prompts
   playPrompt: {
     isOpen: boolean;
@@ -888,7 +891,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         const { PossessionEngine } = await import('@/lib/engines/possessionEngine');
         
         // Map stat types to PossessionEngine event types
-        let possessionEventType: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball' | null = null;
+        let possessionEventType: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball' | 'foul' | null = null;
         
         if ((stat.statType === 'field_goal' || stat.statType === 'three_pointer' || stat.statType === 'free_throw') && stat.modifier === 'made') {
           possessionEventType = 'made_shot';
@@ -898,6 +901,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           possessionEventType = 'steal';
         } else if (stat.statType === 'rebound') {
           possessionEventType = stat.modifier === 'offensive' ? 'offensive_rebound' : 'defensive_rebound';
+        } else if (stat.statType === 'foul') {
+          // ✅ PHASE 6: Add foul possession mapping
+          possessionEventType = 'foul';
         }
         
         // Only process if we have a valid possession event
@@ -1338,6 +1344,31 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     }
   }, [gameId]);
 
+  // ✅ PHASE 6: Manual possession control for edge cases
+  const manualSetPossession = useCallback(async (teamId: string, reason: string = 'manual_override') => {
+    console.log(`🔄 Manual possession set to ${teamId}, reason: ${reason}`);
+    
+    setPossession(prev => ({
+      ...prev,
+      currentTeamId: teamId,
+      lastChangeReason: reason,
+      lastChangeTimestamp: new Date().toISOString()
+    }));
+    
+    // Persist to database if enabled
+    if (automationFlags.possession?.persistState) {
+      try {
+        const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
+        await GameServiceV3.updatePossession(gameId, teamId, reason);
+        console.log('✅ Manual possession persisted to database');
+      } catch (error) {
+        console.error('❌ Failed to persist manual possession:', error);
+      }
+    }
+    
+    setLastAction(`Possession manually set to ${teamId}`);
+  }, [gameId, automationFlags.possession, setLastAction]);
+
 
   return {
     gameId,
@@ -1380,6 +1411,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     startTimeout,
     resumeFromTimeout,
     possession, // ✅ PHASE 3: Possession state
+    manualSetPossession, // ✅ PHASE 6: Manual possession control
     playPrompt, // ✅ PHASE 4: Play sequence prompts
     clearPlayPrompt, // ✅ PHASE 4: Clear play prompt
     setPlayPrompt // ✅ PHASE 5: Manually set play prompt (for foul flow)
