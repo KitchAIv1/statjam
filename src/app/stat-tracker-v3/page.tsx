@@ -1034,12 +1034,13 @@ function StatTrackerV3Content() {
             onClose={tracker.clearPlayPrompt}
             onSelectPlayer={async (playerId) => {
               // Record block stat linked to the miss
+              // ✅ PHASE 5 FIX: Blocks must have modifier IS NULL per database constraint
               await tracker.recordStat({
                 gameId: gameIdParam,
                 playerId: playerId,
                 teamId: teamAPlayers.find(p => p.id === playerId)?.id ? gameData.team_a_id : gameData.team_b_id,
-                statType: 'block',
-                modifier: 'made'
+                statType: 'block'
+                // No modifier for blocks - database constraint requires NULL
               });
               tracker.clearPlayPrompt();
             }}
