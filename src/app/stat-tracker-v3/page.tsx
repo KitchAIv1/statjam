@@ -256,15 +256,33 @@ function StatTrackerV3Content() {
     }
   }, [gameIdParam, user, loading]);
 
-  // Clock Tick Effect
+  // ✅ UNIFIED CLOCK TICK: Single interval for both game clock and shot clock
+  // This ensures they tick at the EXACT same moment (synchronized)
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (tracker.clock.isRunning) {
+    // Start interval if EITHER clock is running
+    if (tracker.clock.isRunning || tracker.shotClock.isRunning) {
       interval = setInterval(() => {
-        tracker.tick(1);
-        if (tracker.clock.secondsRemaining <= 1) {
-          tracker.advanceIfNeeded();
+        // Tick game clock if running
+        if (tracker.clock.isRunning) {
+          tracker.tick(1);
+          if (tracker.clock.secondsRemaining <= 1) {
+            tracker.advanceIfNeeded();
+          }
+        }
+        
+        // Tick shot clock if running AND visible
+        if (tracker.shotClock.isRunning && tracker.shotClock.isVisible) {
+          tracker.shotClockTick(1);
+          
+          // Shot clock violation at 0 seconds
+          if (tracker.shotClock.secondsRemaining <= 1) {
+            console.log('🚨 Shot clock violation!');
+            tracker.stopShotClock();
+            setShotClockViolation(true);
+            // TODO: Add shot clock violation handling (buzzer, turnover, etc.)
+          }
         }
       }, 1000);
     }
@@ -272,31 +290,17 @@ function StatTrackerV3Content() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [tracker.clock.isRunning, tracker.tick, tracker.advanceIfNeeded, tracker.clock.secondsRemaining]);
-
-  // NEW: Shot Clock Tick Effect
-  // ✅ PERFORMANCE FIX: Removed `tracker` dependency to prevent interval recreation on every shot clock update
-  useEffect(() => {
-    let shotClockInterval: NodeJS.Timeout;
-    
-    if (tracker.shotClock.isRunning && tracker.shotClock.isVisible) {
-      shotClockInterval = setInterval(() => {
-        tracker.shotClockTick(1);
-        
-        // Shot clock violation at 0 seconds
-        if (tracker.shotClock.secondsRemaining <= 1) {
-          console.log('🚨 Shot clock violation!');
-          tracker.stopShotClock();
-          setShotClockViolation(true);
-          // TODO: Add shot clock violation handling (buzzer, turnover, etc.)
-        }
-      }, 1000);
-    }
-
-    return () => {
-      if (shotClockInterval) clearInterval(shotClockInterval);
-    };
-  }, [tracker.shotClock.isRunning, tracker.shotClock.isVisible, tracker.shotClockTick, tracker.stopShotClock, tracker.shotClock.secondsRemaining]);
+  }, [
+    tracker.clock.isRunning, 
+    tracker.shotClock.isRunning, 
+    tracker.shotClock.isVisible,
+    tracker.tick, 
+    tracker.shotClockTick,
+    tracker.advanceIfNeeded, 
+    tracker.stopShotClock,
+    tracker.clock.secondsRemaining,
+    tracker.shotClock.secondsRemaining
+  ]);
 
   // NEW: Sync shot clock with game clock
   useEffect(() => {

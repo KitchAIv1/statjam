@@ -604,25 +604,29 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
 
   const resetShotClock = useCallback((seconds?: number) => {
     const resetValue = seconds ?? 24; // Default to 24 if undefined
+    
+    // ✅ SYNC WITH GAME CLOCK: Shot clock inherits game clock's running state
     setShotClock(prev => ({ 
       ...prev, 
-      isRunning: false, 
+      isRunning: clock.isRunning, // ✅ Sync with game clock (source of truth)
       secondsRemaining: resetValue 
     }));
     setLastAction(`Shot clock reset to ${resetValue}s`);
-    console.log(`🏀 Shot clock reset to ${resetValue} seconds`);
-  }, []);
+    console.log(`🏀 Shot clock reset to ${resetValue} seconds (synced with game clock: ${clock.isRunning ? 'RUNNING' : 'PAUSED'})`);
+  }, [clock.isRunning]);
 
   const setShotClockTime = useCallback((seconds: number) => {
     const validSeconds = Math.max(0, Math.min(35, Math.floor(seconds))); // 0-35 seconds max
+    
+    // ✅ SYNC WITH GAME CLOCK: Shot clock inherits game clock's running state
     setShotClock(prev => ({ 
       ...prev, 
-      isRunning: false, 
+      isRunning: clock.isRunning, // ✅ Sync with game clock (source of truth)
       secondsRemaining: validSeconds 
     }));
     setLastAction(`Shot clock set to ${validSeconds}s`);
-    console.log(`🏀 Shot clock set to ${validSeconds} seconds`);
-  }, []);
+    console.log(`🏀 Shot clock set to ${validSeconds} seconds (synced with game clock: ${clock.isRunning ? 'RUNNING' : 'PAUSED'})`);
+  }, [clock.isRunning]);
 
   const tick = useCallback((seconds: number) => {
     setClock(prev => ({
