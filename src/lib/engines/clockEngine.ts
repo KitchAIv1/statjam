@@ -132,12 +132,48 @@ export class ClockEngine {
   /**
    * Determine if clocks should pause for this event
    * 
+   * NBA Rules:
+   * - PAUSE: foul, timeout, dead ball turnover (traveling, violation)
+   * - CONTINUE: steal, made shot, live ball turnover (bad pass, lost ball)
+   * 
    * @param event - Event that occurred
    * @returns True if clocks should pause
    */
   private static shouldPauseClocks(event: ClockEvent): boolean {
-    const pauseEvents = ['foul', 'timeout', 'turnover'];
-    return pauseEvents.includes(event.type);
+    // ✅ FIX: Steals are live ball events - clock should CONTINUE running
+    // ✅ FIX: Only dead ball turnovers should pause
+    
+    // Always pause for fouls and timeouts
+    if (event.type === 'foul' || event.type === 'timeout') {
+      console.log(`🕐 ClockEngine: Pausing clocks for ${event.type}`);
+      return true;
+    }
+    
+    // Turnover: Distinguish live ball vs dead ball
+    if (event.type === 'turnover') {
+      // Live ball turnovers (clock continues)
+      const liveBallModifiers = ['steal', 'bad_pass', 'lost_ball'];
+      const isLiveBall = event.modifier && liveBallModifiers.includes(event.modifier);
+      
+      if (isLiveBall) {
+        console.log(`🕐 ClockEngine: Live ball turnover (${event.modifier}) - clock CONTINUES`);
+        return false;
+      }
+      
+      // Dead ball turnovers (clock pauses)
+      console.log(`🕐 ClockEngine: Dead ball turnover (${event.modifier || 'unspecified'}) - clock PAUSES`);
+      return true;
+    }
+    
+    // Steal: Always live ball - clock continues
+    if (event.type === 'steal') {
+      console.log(`🕐 ClockEngine: Steal detected - clock CONTINUES (live ball)`);
+      return false;
+    }
+    
+    // All other events: clock continues
+    console.log(`🕐 ClockEngine: Event ${event.type} - clock CONTINUES`);
+    return false;
   }
   
   /**
@@ -183,24 +219,19 @@ export class ClockEngine {
       }
     }
     
-    // Foul → Depends on ball location
+    // Foul → Reset shot clock (simplified: always reset to 14s for frontcourt, 24s for backcourt)
     if (event.type === 'foul') {
       if (event.ballLocation === 'frontcourt') {
         // Frontcourt foul → Reset to 14s (NBA), 20s (NCAA), 24s (FIBA)
-        // BUT ONLY if current shot clock is LESS than the reset value
-        // NBA Rule: If shot clock is 18s and foul occurs, keep 18s (don't reset down)
-        return currentShotClock < rules.frontcourtFoulReset 
-          ? rules.frontcourtFoulReset 
-          : currentShotClock;
+        // ✅ FIX: Always reset (user request - simplified rule)
+        return rules.frontcourtFoulReset;
       } else if (event.ballLocation === 'backcourt') {
         // Backcourt foul → Full reset (always)
         return rules.backcourtFoulReset;
       }
       // If ballLocation is undefined, default to frontcourt behavior
-      // This is a simplification for now (most fouls are in frontcourt)
-      return currentShotClock < rules.frontcourtFoulReset 
-        ? rules.frontcourtFoulReset 
-        : currentShotClock;
+      // ✅ FIX: Always reset to 14s (simplified rule)
+      return rules.frontcourtFoulReset;
     }
     
     // Turnover → Full reset (new possession)

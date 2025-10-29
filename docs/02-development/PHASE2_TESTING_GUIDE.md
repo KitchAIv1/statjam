@@ -139,16 +139,17 @@ WHERE id = 'YOUR_TOURNAMENT_ID';
    - ✅ Game clock pauses
    - ✅ Console log shows pause action
 
-### Test Case 7: Steal - Clock Reset and Pause ⚠️ **NEW**
-**Expected Behavior**: Steals should pause clocks and reset shot clock (change of possession)
+### Test Case 7: Steal - Clock Continues, Shot Clock Resets ✅ **CORRECTED**
+**Expected Behavior**: Steals are live ball events - clock continues, shot clock resets (change of possession)
 
 1. Record a steal
 2. **VERIFY**:
-   - ✅ Game clock pauses
+   - ✅ Game clock **CONTINUES RUNNING** (live ball event)
    - ✅ Shot clock resets to 24s (NBA)
-   - ✅ Console log: `🕐 Clock automation: [{ action: 'pause_game_clock' }, { action: 'reset_shot_clock', value: 24 }]`
+   - ✅ Console log: `🕐 ClockEngine: Steal detected - clock CONTINUES (live ball)`
+   - ✅ Console log: `🕐 Clock automation: ['Shot clock reset to 24s']`
 
-**Note**: This was added in commit `df4e8f0` - steals now correctly map to `turnover` events
+**Note**: Fixed October 29, 2025 - steals are now correctly treated as live ball events (clock continues)
 
 ---
 

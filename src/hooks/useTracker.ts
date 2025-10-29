@@ -793,13 +793,24 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       }
 
       // Prepare last action message
+      // ✅ Format stat type and modifier properly (no extra spaces for stats without modifiers)
+      const statTypeFormatted = stat.statType.replace('_', ' ').toUpperCase();
+      const modifierFormatted = stat.modifier ? ` (${stat.modifier})` : '';
+      
       if (stat.isOpponentStat) {
-        uiUpdates.lastAction = `Opponent Team: ${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
+        uiUpdates.lastAction = `Opponent Team: ${statTypeFormatted}${modifierFormatted}`;
         uiUpdates.lastActionPlayerId = null;
       } else {
-        uiUpdates.lastAction = `${stat.statType.replace('_', ' ')} ${stat.modifier || ''} recorded`;
-        uiUpdates.lastActionPlayerId = stat.playerId;
+        uiUpdates.lastAction = `${statTypeFormatted}${modifierFormatted}`;
+        uiUpdates.lastActionPlayerId = stat.playerId || stat.customPlayerId || null;
       }
+      
+      console.log('📝 Last action prepared:', {
+        statType: stat.statType,
+        modifier: stat.modifier,
+        lastAction: uiUpdates.lastAction,
+        lastActionPlayerId: uiUpdates.lastActionPlayerId
+      });
 
       // ✅ OPTIMIZATION 2: Apply ALL UI updates at once (single re-render)
       if (uiUpdates.scores) {
@@ -1110,7 +1121,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
                 playerId: turnoverEvent.playerId,
                 teamId: turnoverEvent.teamId,
                 statType: 'turnover',
-                modifier: null, // ✅ FIX: Turnovers don't use modifiers
+                modifier: 'steal', // ✅ FIX: Mark as 'steal' so clock continues (live ball)
                 sequenceId: playResult.sequenceId,
                 linkedEventId: undefined // Will link to steal after it's recorded
               });

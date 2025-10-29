@@ -65,17 +65,18 @@ const clockEvent = {
 
 | Stat Type | Modifier | ClockEngine Event | Rebound Type | Expected Behavior |
 |-----------|----------|-------------------|--------------|-------------------|
-| `field_goal` | `made` | `made_shot` | - | Reset shot clock to 24s (NBA) |
+| `field_goal` | `made` | `made_shot` | - | Clock continues, reset shot clock to 24s |
 | `field_goal` | `missed` | `missed_shot` | - | No action (wait for rebound) |
-| `three_pointer` | `made` | `made_shot` | - | Reset shot clock to 24s (NBA) |
+| `three_pointer` | `made` | `made_shot` | - | Clock continues, reset shot clock to 24s |
 | `three_pointer` | `missed` | `missed_shot` | - | No action (wait for rebound) |
 | `free_throw` | `made` | `free_throw` | - | No action (FT mode) |
 | `rebound` | `offensive` | `missed_shot` | `offensive` | Reset to 14s (NBA) if < 14s |
 | `rebound` | `defensive` | `missed_shot` | `defensive` | Reset to 24s (NBA) |
-| `steal` | - | `turnover` | - | Pause clocks, reset shot clock |
-| `foul` | any | `foul` | - | Pause clocks |
+| `steal` | - | `steal` | - | **Clock continues** (live ball), reset shot clock ✅ |
+| `foul` | any | `foul` | - | Pause clocks **immediately** ✅ |
 | `timeout` | any | `timeout` | - | Pause clocks |
-| `turnover` | any | `turnover` | - | Pause clocks |
+| `turnover` | `steal`/`bad_pass`/`lost_ball` | `turnover` | - | **Clock continues** (live ball), reset shot clock ✅ |
+| `turnover` | `traveling`/violation | `turnover` | - | **Pause clocks** (dead ball), reset shot clock ✅ |
 
 ---
 
@@ -96,10 +97,11 @@ const clockEvent = {
    - ✅ Otherwise keeps current value
    - Console: `🕐 Clock automation: [{ action: 'reset_shot_clock', value: 14 }]`
 
-4. **Steal**
-   - ✅ Clocks pause
+4. **Steal** ✅ **CORRECTED**
+   - ✅ Clock **CONTINUES** (live ball event)
    - ✅ Shot clock resets to 24s
-   - Console: `🕐 Clock automation: [{ action: 'pause_game_clock' }, { action: 'reset_shot_clock', value: 24 }]`
+   - Console: `🕐 ClockEngine: Steal detected - clock CONTINUES (live ball)`
+   - Console: `🕐 Clock automation: ['Shot clock reset to 24s']`
 
 ### ✅ Already Working:
 

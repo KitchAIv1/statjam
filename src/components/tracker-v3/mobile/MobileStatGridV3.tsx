@@ -101,7 +101,7 @@ export function MobileStatGridV3({
     { id: 'ast', label: 'AST', statType: 'assist', modifier: undefined },
     { id: 'stl', label: 'STL', statType: 'steal', modifier: undefined },
     { id: 'blk', label: 'BLK', statType: 'block', modifier: undefined },
-    { id: 'tov', label: 'TOV', statType: 'turnover', modifier: undefined }
+    { id: 'tov', label: 'TOV', statType: 'turnover', modifier: 'traveling' } // ✅ FIX: Default to traveling (dead ball - clock pauses)
   ];
 
   // Secondary actions - FOUL, TF, TIME OUT, SUB
@@ -294,22 +294,49 @@ export function MobileStatGridV3({
         })}
       </div>
 
-      {/* Last Action - Minimal Horizontal Layout (Only for player who performed action) */}
-      {lastAction && selectedPlayerData && lastActionPlayerId && selectedPlayer === lastActionPlayerId && (
+      {/* Last Action - ✅ OPTION A: Show for ALL stats regardless of selected player */}
+      {lastAction && (
         <div 
           className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 mt-4"
           style={{ 
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
           }}
         >
-          {/* Left: Player Details */}
+          {/* Left: Player/Team Indicator */}
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
-              {selectedPlayerData.jerseyNumber || '?'}
-            </div>
-            <span className="text-sm font-medium text-gray-700">
-              {selectedPlayerData.name}
-            </span>
+            {lastActionPlayerId === null && lastAction.includes('Opponent Team') ? (
+              // Opponent Team
+              <>
+                <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                  VS
+                </div>
+                <span className="text-sm font-medium text-gray-700">
+                  Opponent
+                </span>
+              </>
+            ) : lastActionPlayerId && selectedPlayerData && selectedPlayer === lastActionPlayerId ? (
+              // Currently Selected Player
+              <>
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                  {selectedPlayerData.jerseyNumber || '?'}
+                </div>
+                <span className="text-sm font-medium text-gray-700">
+                  {selectedPlayerData.name}
+                </span>
+              </>
+            ) : (
+              // Different Player
+              <>
+                <div className="w-6 h-6 bg-gray-500 rounded-full flex items-center justify-center text-white">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium text-gray-700">
+                  Last Action
+                </span>
+              </>
+            )}
           </div>
           
           {/* Center: Action Text */}

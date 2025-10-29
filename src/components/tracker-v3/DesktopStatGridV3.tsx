@@ -124,7 +124,7 @@ export function DesktopStatGridV3({
     { id: 'ast', label: 'AST', statType: 'assist', modifier: undefined },
     { id: 'stl', label: 'STL', statType: 'steal', modifier: undefined },
     { id: 'blk', label: 'BLK', statType: 'block', modifier: undefined },
-    { id: 'tov', label: 'TOV', statType: 'turnover', modifier: undefined }
+    { id: 'tov', label: 'TOV', statType: 'turnover', modifier: 'traveling' } // ✅ FIX: Default to traveling (dead ball - clock pauses)
   ];
 
   // Secondary actions - FOUL, TF, TIME OUT, SUB
@@ -211,11 +211,8 @@ export function DesktopStatGridV3({
           <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Last Action</h3>
         )}
         
-        {/* Keep Last Action Details */}
-        {lastAction && (
-          (selectedPlayerData && lastActionPlayerId && selectedPlayer === lastActionPlayerId) || 
-          (lastActionPlayerId === null && lastAction.includes('Opponent Team'))
-        ) ? (
+        {/* Keep Last Action Details - ✅ OPTION A: Show for ALL stats regardless of selected player */}
+        {lastAction ? (
           <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50">
             {/* Left: Player Details */}
             <div className="flex items-center gap-3">
@@ -229,14 +226,26 @@ export function DesktopStatGridV3({
                     Opponent Team
                   </span>
                 </>
-              ) : (
-                // Regular Player Display
+              ) : lastActionPlayerId && selectedPlayerData && selectedPlayer === lastActionPlayerId ? (
+                // Currently Selected Player (show their details)
                 <>
                   <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
                     #{selectedPlayerData?.jerseyNumber || '?'}
                   </div>
                   <span className="text-base font-medium text-gray-700">
                     {selectedPlayerData?.name}
+                  </span>
+                </>
+              ) : (
+                // Different Player (show generic indicator)
+                <>
+                  <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span className="text-base font-medium text-gray-700">
+                    Last Action
                   </span>
                 </>
               )}

@@ -29,6 +29,8 @@ import { TurnoverPromptModal } from '@/components/tracker-v3/modals/TurnoverProm
 import { FreeThrowSequenceModal } from '@/components/tracker-v3/modals/FreeThrowSequenceModal';
 import { FoulTypeSelectionModal, FoulType } from '@/components/tracker-v3/modals/FoulTypeSelectionModal';
 import { VictimPlayerSelectionModal } from '@/components/tracker-v3/modals/VictimPlayerSelectionModal';
+import { ShotClockViolationModal } from '@/components/tracker-v3/modals/ShotClockViolationModal';
+import { useShotClockViolation } from '@/hooks/useShotClockViolation';
 
 interface GameData {
   id: string;
@@ -119,6 +121,24 @@ function StatTrackerV3Content() {
     teamAId: gameData?.team_a_id || 'teamA',
     teamBId: gameData?.team_b_id || 'teamB',
     isCoachMode: coachMode // ✅ Pass coach mode flag for automation
+  });
+
+  // ✅ Shot Clock Violation Detection
+  const {
+    showViolationModal,
+    setShowViolationModal,
+    violationTeamId
+  } = useShotClockViolation({
+    shotClockSeconds: tracker.shotClock.secondsRemaining,
+    shotClockRunning: tracker.shotClock.isRunning,
+    shotClockVisible: tracker.shotClock.isVisible,
+    possessionTeamId: tracker.possession.currentTeamId,
+    onViolationDetected: () => {
+      // Auto-pause game clock when violation detected
+      console.log('🚨 Auto-pausing game clock due to shot clock violation');
+      tracker.stopClock();
+      tracker.stopShotClock();
+    }
   });
 
   // Auth Check - Allow both stat_admin and coach roles
@@ -419,6 +439,13 @@ function StatTrackerV3Content() {
   // ✅ PHASE 5: Handle foul recording with new flow
   const handleFoulRecord = async (foulType: 'personal' | 'technical') => {
     if (!selectedPlayer || !gameData) return;
+    
+    // ✅ FIX: Pause clock IMMEDIATELY when foul button is clicked (NBA rule)
+    // Clock should stop the moment the whistle blows, not after the sequence
+    if (tracker.clock.isRunning) {
+      console.log('🕐 FOUL: Pausing clock immediately (before modals)');
+      tracker.stopClock();
+    }
     
     // Get fouler player name
     const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
@@ -1045,9 +1072,23 @@ function StatTrackerV3Content() {
               tracker.clearPlayPrompt();
             }}
             onSkip={tracker.clearPlayPrompt}
-            defensivePlayers={[...teamAPlayers, ...teamBPlayers].filter(p => 
-              p.id !== tracker.playPrompt.metadata?.shooterId
-            ).map(p => ({ ...p, teamId: teamAPlayers.find(tp => tp.id === p.id) ? gameData.team_a_id : gameData.team_b_id }))}
+            defensivePlayers={
+              // ✅ Only show opposing team players (defenders)
+              (() => {
+                const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
+                const opposingPlayers = shooterTeamId === gameData.team_a_id ? teamBPlayers : teamAPlayers;
+                const opposingTeamId = shooterTeamId === gameData.team_a_id ? gameData.team_b_id : gameData.team_a_id;
+                console.log('🏀 BLOCK MODAL DEBUG:', {
+                  shooterTeamId,
+                  teamAId: gameData.team_a_id,
+                  teamBId: gameData.team_b_id,
+                  opposingTeamId,
+                  opposingPlayersCount: opposingPlayers.length,
+                  opposingPlayerNames: opposingPlayers.map(p => p.name)
+                });
+                return opposingPlayers.map(p => ({ ...p, teamId: opposingTeamId }));
+              })()
+            }
             shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
             shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
           />
@@ -1154,6 +1195,79 @@ function StatTrackerV3Content() {
           }
           foulType={selectedFoulType || ''}
         />
+
+        {/* ✅ Shot Clock Violation Modal */}
+        {showViolationModal && violationTeamId && gameData && (
+          <ShotClockViolationModal
+            isOpen={showViolationModal}
+            onClose={() => setShowViolationModal(false)}
+            onRecordViolation={async (placeholderTeamId) => {
+              console.log('🚨 Recording shot clock violation for placeholder team:', placeholderTeamId);
+              
+              // ✅ MAP PLACEHOLDER TO ACTUAL UUID
+              // violationTeamId can be "teamA", "teamB", or actual UUID
+              // We need to convert placeholder strings to real UUIDs
+              let actualTeamId: string;
+              let teamName: string;
+              
+              if (placeholderTeamId === 'teamA' || placeholderTeamId === gameData.team_a_id) {
+                actualTeamId = gameData.team_a_id;
+                teamName = gameData.team_a?.name || gameData.team_a_name || 'Team A';
+              } else if (placeholderTeamId === 'teamB' || placeholderTeamId === gameData.team_b_id) {
+                actualTeamId = gameData.team_b_id;
+                teamName = coachMode 
+                  ? (opponentNameParam || 'Opponent Team')
+                  : (gameData.team_b?.name || gameData.team_b_name || 'Team B');
+              } else {
+                console.error('❌ Unknown team ID:', placeholderTeamId);
+                return;
+              }
+              
+              console.log('✅ Mapped to actual UUID:', actualTeamId, 'Team:', teamName);
+              
+              // ⚠️ WORKAROUND: DB constraint requires player_id OR custom_player_id
+              // For team turnovers (unattributed), use user ID as proxy (same pattern as opponent stats)
+              // TODO: Backend needs to:
+              //   1. Support 'shot_clock_violation' modifier
+              //   2. Allow team-level turnovers without player attribution
+              
+              // Determine if this is an opponent stat (coach mode only)
+              const isOpponentStat = coachMode && actualTeamId !== gameData.team_a_id;
+              
+              await tracker.recordStat({
+                gameId: gameIdParam,
+                playerId: user?.id || undefined, // ⚠️ Use user ID as proxy (DB constraint workaround)
+                customPlayerId: undefined,
+                teamId: actualTeamId, // ✅ Use actual UUID, not placeholder
+                statType: 'turnover',
+                modifier: undefined, // ⚠️ NULL for now (DB constraint requires this)
+                isOpponentStat: isOpponentStat,
+                // ✅ Store violation type in metadata for future migration
+                metadata: {
+                  violationType: 'shot_clock_violation',
+                  autoRecorded: true,
+                  isTeamTurnover: true, // Flag: Not attributed to specific player
+                  proxyPlayerId: user?.id, // Track proxy for future cleanup
+                  timestamp: new Date().toISOString()
+                }
+              });
+              
+              // Reset shot clock to 24s for opponent
+              tracker.resetShotClock(24);
+              
+              console.log('✅ Shot clock violation recorded as generic turnover (metadata preserved for future migration)');
+            }}
+            teamWithPossession={violationTeamId}
+            teamName={
+              violationTeamId === 'teamA' || violationTeamId === gameData.team_a_id
+                ? (gameData.team_a?.name || gameData.team_a_name || 'Team A')
+                : coachMode
+                  ? (opponentNameParam || 'Opponent Team')
+                  : (gameData.team_b?.name || gameData.team_b_name || 'Team B')
+            }
+            autoDismissSeconds={10}
+          />
+        )}
 
         {/* Dimmed Overlay During Timeout - Prevents Stat Entry */}
         {tracker.timeoutActive && (

@@ -70,14 +70,14 @@ export interface FreeThrowSequence {
 
 export interface PlayEngineResult {
   shouldPrompt: boolean;
-  promptType: 'assist' | 'rebound' | 'block' | 'free_throw' | null;
+  promptType: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
   sequenceId?: string;
   linkedEventId?: string;
   metadata?: Record<string, any>;
   actions: string[];
   // ✅ SEQUENTIAL PROMPTS: Support multiple prompts for one event
   promptQueue?: Array<{
-    type: 'assist' | 'rebound' | 'block' | 'turnover';
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw';
     sequenceId: string;
     metadata: Record<string, any>;
   }>;
@@ -145,7 +145,8 @@ export class PlayEngine {
           metadata: {
             shotType: event.statType,
             shooterId: event.playerId,
-            shooterName: event.playerId // Will be populated by UI
+            shooterName: event.playerId, // Will be populated by UI
+            shooterTeamId: event.teamId // ✅ FIX: Add shooterTeamId for opposing team logic
           }
         });
         result.actions.push(`Prompt block for missed ${event.statType}`);
