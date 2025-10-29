@@ -90,6 +90,13 @@ interface UseTrackerReturn {
     metadata: Record<string, any> | null;
   };
   clearPlayPrompt: () => void;
+  setPlayPrompt: (prompt: {
+    isOpen: boolean;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
+    sequenceId: string | null;
+    primaryEventId: string | null;
+    metadata: Record<string, any> | null;
+  }) => void;
 }
 
 export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = false }: UseTrackerProps): UseTrackerReturn => {
@@ -883,7 +890,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         // Map stat types to PossessionEngine event types
         let possessionEventType: 'made_shot' | 'turnover' | 'steal' | 'defensive_rebound' | 'offensive_rebound' | 'violation' | 'jump_ball' | null = null;
         
-        if ((stat.statType === 'field_goal' || stat.statType === 'three_pointer' || stat.statType === '3_pointer') && stat.modifier === 'made') {
+        if ((stat.statType === 'field_goal' || stat.statType === 'three_pointer' || stat.statType === 'free_throw') && stat.modifier === 'made') {
           possessionEventType = 'made_shot';
         } else if (stat.statType === 'turnover') {
           possessionEventType = 'turnover';
@@ -1374,6 +1381,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     resumeFromTimeout,
     possession, // ✅ PHASE 3: Possession state
     playPrompt, // ✅ PHASE 4: Play sequence prompts
-    clearPlayPrompt // ✅ PHASE 4: Clear play prompt
+    clearPlayPrompt, // ✅ PHASE 4: Clear play prompt
+    setPlayPrompt // ✅ PHASE 5: Manually set play prompt (for foul flow)
   };
 };

@@ -27,6 +27,8 @@ import { ReboundPromptModal } from '@/components/tracker-v3/modals/ReboundPrompt
 import { BlockPromptModal } from '@/components/tracker-v3/modals/BlockPromptModal';
 import { TurnoverPromptModal } from '@/components/tracker-v3/modals/TurnoverPromptModal';
 import { FreeThrowSequenceModal } from '@/components/tracker-v3/modals/FreeThrowSequenceModal';
+import { FoulTypeSelectionModal, FoulType } from '@/components/tracker-v3/modals/FoulTypeSelectionModal';
+import { VictimPlayerSelectionModal } from '@/components/tracker-v3/modals/VictimPlayerSelectionModal';
 
 interface GameData {
   id: string;
@@ -49,6 +51,7 @@ interface Player {
   id: string;
   name: string;
   jerseyNumber?: number;  // FIXED: Match official Player interface
+  is_custom_player?: boolean; // ✅ PHASE 5: Support custom players
 }
 
 function StatTrackerV3Content() {
@@ -96,6 +99,13 @@ function StatTrackerV3Content() {
   const [shotClockViolation, setShotClockViolation] = useState(false);
   const [rosterRefreshKey, setRosterRefreshKey] = useState<string | number>(0);
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+  
+  // ✅ PHASE 5: Foul Flow State
+  const [showFoulTypeModal, setShowFoulTypeModal] = useState(false);
+  const [showVictimSelectionModal, setShowVictimSelectionModal] = useState(false);
+  const [selectedFoulType, setSelectedFoulType] = useState<string | null>(null);
+  const [foulerPlayerId, setFoulerPlayerId] = useState<string | null>(null);
+  const [foulerPlayerName, setFoulerPlayerName] = useState<string>('');
 
   // Roster/Bench State (lifted from MobileLayoutV3 for unified substitution logic)
   const [currentRosterA, setCurrentRosterA] = useState<Player[]>([]);
@@ -355,8 +365,8 @@ function StatTrackerV3Content() {
     if (!selectedPlayer || !gameData) return;
     
     // Handle different player types in coach mode
-    let actualPlayerId = null;
-    let actualCustomPlayerId = null;
+    let actualPlayerId: string | undefined = undefined;
+    let actualCustomPlayerId: string | undefined = undefined;
     let actualTeamId = gameData.team_a_id; // Default to coach team
     let isOpponentStat = false;
     
@@ -369,7 +379,7 @@ function StatTrackerV3Content() {
     
     if (coachMode && selectedPlayer === 'opponent-team') {
       // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
-      actualPlayerId = user?.id || null;
+      actualPlayerId = user?.id || undefined;
       actualTeamId = gameData.team_a_id; // ✅ Use coach's team ID for database (UUID required)
       isOpponentStat = true; // FLAG: This is an opponent stat
       console.log('✅ Recording opponent team stat (flagged as opponent), team_id:', actualTeamId, 'isOpponentStat:', isOpponentStat);
@@ -385,12 +395,12 @@ function StatTrackerV3Content() {
       if (isCustomPlayer) {
         // CUSTOM PLAYER STATS: Use the actual custom player ID
         actualCustomPlayerId = selectedPlayer; // This is the custom_players.id
-        actualPlayerId = null; // Don't set player_id for custom players
+        actualPlayerId = undefined; // Don't set player_id for custom players
         console.log('🏀 Recording custom player stat for:', selectedPlayerData?.name, 'ID:', selectedPlayer);
       } else {
         // REGULAR PLAYER STATS: Use the user ID
         actualPlayerId = selectedPlayer; // This is the users.id
-        actualCustomPlayerId = null; // Don't set custom_player_id for regular players
+        actualCustomPlayerId = undefined; // Don't set custom_player_id for regular players
         console.log('🏀 Recording regular player stat for ID:', selectedPlayer);
       }
     }
@@ -406,44 +416,70 @@ function StatTrackerV3Content() {
     });
   };
 
-  // Handle foul recording
+  // ✅ PHASE 5: Handle foul recording with new flow
   const handleFoulRecord = async (foulType: 'personal' | 'technical') => {
     if (!selectedPlayer || !gameData) return;
-
-    // Use the same logic as handleStatRecord for player type handling
-    let actualPlayerId = null;
-    let actualCustomPlayerId = null;
+    
+    // Get fouler player name
+    const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+    const foulerName = foulerData?.name || 'Player';
+    
+    // Store fouler info and show foul type modal
+    setFoulerPlayerId(selectedPlayer);
+    setFoulerPlayerName(foulerName);
+    setShowFoulTypeModal(true);
+  };
+  
+  // ✅ PHASE 5: Handle foul type selection
+  const handleFoulTypeSelection = async (foulType: FoulType) => {
+    setShowFoulTypeModal(false);
+    setSelectedFoulType(foulType);
+    
+    // Determine if we need victim selection
+    const needsVictimSelection = ['shooting_2pt', 'shooting_3pt', 'bonus', 'technical', 'flagrant'].includes(foulType);
+    
+    if (needsVictimSelection) {
+      // Show victim selection modal
+      setShowVictimSelectionModal(true);
+    } else {
+      // Personal or Offensive foul - record immediately
+      await recordFoulWithoutVictim(foulType);
+    }
+  };
+  
+  // ✅ PHASE 5: Record foul without victim (Personal, Offensive)
+  const recordFoulWithoutVictim = async (foulType: FoulType) => {
+    if (!foulerPlayerId || !gameData) return;
+    
+    // Determine player type and team
+    let actualPlayerId: string | undefined = undefined;
+    let actualCustomPlayerId: string | undefined = undefined;
     let actualTeamId = gameData.team_a_id;
     let isOpponentStat = false;
     
-    console.log('🔍 FOUL RECORD DEBUG:', { 
-      coachMode, 
-      selectedPlayer, 
-      isOpponentTeamSelected: selectedPlayer === 'opponent-team',
-      willSetOpponentFlag: coachMode && selectedPlayer === 'opponent-team'
-    });
-    
-    if (coachMode && selectedPlayer === 'opponent-team') {
-      actualPlayerId = user?.id || null;
+    if (coachMode && foulerPlayerId === 'opponent-team') {
+      actualPlayerId = user?.id || undefined;
       actualTeamId = gameData.team_a_id;
-      isOpponentStat = true; // FLAG: This is an opponent stat
-      console.log('✅ Recording opponent foul (flagged as opponent), team_id:', actualTeamId, 'isOpponentStat:', isOpponentStat);
+      isOpponentStat = true;
     } else {
-      const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+      const isTeamAPlayer = teamAPlayers.some(p => p.id === foulerPlayerId);
       actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
       
-      const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-      const isCustomPlayer = selectedPlayerData && selectedPlayerData.is_custom_player === true;
+      const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === foulerPlayerId);
+      const isCustomPlayer = foulerData && foulerData.is_custom_player === true;
       
       if (isCustomPlayer) {
-        actualCustomPlayerId = selectedPlayer;
-        actualPlayerId = null;
+        actualCustomPlayerId = foulerPlayerId;
+        actualPlayerId = undefined;
       } else {
-        actualPlayerId = selectedPlayer;
-        actualCustomPlayerId = null;
+        actualPlayerId = foulerPlayerId;
+        actualCustomPlayerId = undefined;
       }
     }
-
+    
+    // Map foul type to modifier
+    const modifier = foulType === 'offensive' ? 'offensive' : 'personal';
+    
     await tracker.recordStat({
       gameId: gameData.id,
       teamId: actualTeamId,
@@ -451,8 +487,126 @@ function StatTrackerV3Content() {
       customPlayerId: actualCustomPlayerId,
       isOpponentStat: isOpponentStat,
       statType: 'foul',
-      modifier: foulType
+      modifier: modifier
     });
+    
+    // If offensive foul, also record turnover
+    if (foulType === 'offensive') {
+      await tracker.recordStat({
+        gameId: gameData.id,
+        teamId: actualTeamId,
+        playerId: actualPlayerId,
+        customPlayerId: actualCustomPlayerId,
+        isOpponentStat: isOpponentStat,
+        statType: 'turnover',
+        modifier: 'offensive_foul'
+      });
+    }
+    
+    // Reset state
+    setFoulerPlayerId(null);
+    setFoulerPlayerName('');
+    setSelectedFoulType(null);
+  };
+  
+  // ✅ PHASE 5: Handle victim player selection
+  const handleVictimSelection = async (victimId: string, victimName: string) => {
+    setShowVictimSelectionModal(false);
+    
+    if (!foulerPlayerId || !selectedFoulType || !gameData) return;
+    
+    // Determine fouler details
+    let foulerActualPlayerId: string | undefined = undefined;
+    let foulerCustomPlayerId: string | undefined = undefined;
+    let foulerTeamId = gameData.team_a_id;
+    let foulerIsOpponentStat = false;
+    
+    if (coachMode && foulerPlayerId === 'opponent-team') {
+      foulerActualPlayerId = user?.id || undefined;
+      foulerTeamId = gameData.team_a_id;
+      foulerIsOpponentStat = true;
+    } else {
+      const isTeamAPlayer = teamAPlayers.some(p => p.id === foulerPlayerId);
+      foulerTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+      
+      const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === foulerPlayerId);
+      const isCustomPlayer = foulerData && foulerData.is_custom_player === true;
+      
+      if (isCustomPlayer) {
+        foulerCustomPlayerId = foulerPlayerId;
+      } else {
+        foulerActualPlayerId = foulerPlayerId;
+      }
+    }
+    
+    // Determine victim team (opposite of fouler)
+    const victimTeamId = foulerTeamId === gameData.team_a_id ? gameData.team_b_id : gameData.team_a_id;
+    
+    // Map foul type to modifier and FT count
+    let modifier = 'shooting';
+    let ftCount = 2;
+    let ftType: '1-and-1' | 'shooting' | 'technical' | 'flagrant' = 'shooting';
+    
+    switch (selectedFoulType) {
+      case 'shooting_2pt':
+        modifier = 'shooting';
+        ftCount = 2;
+        ftType = 'shooting';
+        break;
+      case 'shooting_3pt':
+        modifier = 'shooting';
+        ftCount = 3;
+        ftType = 'shooting';
+        break;
+      case 'bonus':
+        modifier = '1-and-1';
+        ftCount = 2;
+        ftType = '1-and-1';
+        break;
+      case 'technical':
+        modifier = 'technical';
+        ftCount = 1;
+        ftType = 'technical';
+        break;
+      case 'flagrant':
+        modifier = 'flagrant';
+        ftCount = 2;
+        ftType = 'flagrant';
+        break;
+    }
+    
+    // Record the foul with metadata
+    await tracker.recordStat({
+      gameId: gameData.id,
+      teamId: foulerTeamId,
+      playerId: foulerActualPlayerId,
+      customPlayerId: foulerCustomPlayerId,
+      isOpponentStat: foulerIsOpponentStat,
+      statType: 'foul',
+      modifier: modifier
+    });
+    
+    // Trigger FT modal via PlayEngine by recording a pseudo-event
+    // Actually, we should manually trigger the FT modal here
+    tracker.setPlayPrompt({
+      isOpen: true,
+      type: 'free_throw',
+      sequenceId: null,
+      primaryEventId: null,
+      metadata: {
+        shooterId: victimId,
+        shooterName: victimName,
+        shooterTeamId: victimTeamId,
+        foulType: ftType,
+        totalShots: ftCount,
+        foulerId: foulerPlayerId
+      }
+    });
+    
+    // Reset state
+    setFoulerPlayerId(null);
+    setFoulerPlayerName('');
+    setSelectedFoulType(null);
   };
 
   // Handle timeout with enhanced modal
@@ -950,6 +1104,43 @@ function StatTrackerV3Content() {
             foulType={tracker.playPrompt.metadata?.foulType || 'shooting'}
           />
         )}
+
+        {/* ✅ PHASE 5: Foul Type Selection Modal - First step of foul flow */}
+        <FoulTypeSelectionModal
+          isOpen={showFoulTypeModal}
+          onClose={() => setShowFoulTypeModal(false)}
+          onSelectFoulType={handleFoulTypeSelection}
+          foulerName={foulerPlayerName}
+        />
+
+        {/* ✅ PHASE 5: Victim Player Selection Modal - Second step for shooting fouls */}
+        <VictimPlayerSelectionModal
+          isOpen={showVictimSelectionModal}
+          onClose={() => setShowVictimSelectionModal(false)}
+          onSelectPlayer={handleVictimSelection}
+          players={
+            // Get opposing team players based on fouler's team
+            foulerPlayerId && gameData
+              ? (teamAPlayers.some(p => p.id === foulerPlayerId)
+                  ? teamBPlayers
+                  : teamAPlayers
+                ).map(p => ({
+                  id: p.id,
+                  name: p.name,
+                  teamId: teamAPlayers.some(tp => tp.id === p.id) ? gameData.team_a_id : gameData.team_b_id
+                }))
+              : []
+          }
+          teamName={
+            foulerPlayerId && gameData
+              ? (teamAPlayers.some(p => p.id === foulerPlayerId)
+                  ? (coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B'))
+                  : (gameData.team_a?.name || 'Team A')
+                )
+              : 'Team'
+          }
+          foulType={selectedFoulType || ''}
+        />
 
         {/* Dimmed Overlay During Timeout - Prevents Stat Entry */}
         {tracker.timeoutActive && (
