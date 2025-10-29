@@ -75,6 +75,12 @@ export interface PlayEngineResult {
   linkedEventId?: string;
   metadata?: Record<string, any>;
   actions: string[];
+  // ✅ SEQUENTIAL PROMPTS: Support multiple prompts for one event
+  promptQueue?: Array<{
+    type: 'assist' | 'rebound' | 'block' | 'turnover';
+    sequenceId: string;
+    metadata: Record<string, any>;
+  }>;
 }
 
 // ============================================================================
@@ -120,28 +126,53 @@ export class PlayEngine {
       result.actions.push(`Prompt assist for made ${event.statType}`);
     }
 
-    // Check for rebound prompt (after missed shots)
-    if (flags.promptRebounds && this.shouldPromptRebound(event)) {
-      result.shouldPrompt = true;
-      result.promptType = 'rebound';
-      result.sequenceId = uuidv4();
-      result.metadata = {
-        shotType: event.statType,
-        shooterId: event.playerId
-      };
-      result.actions.push(`Prompt rebound for missed ${event.statType}`);
-    }
-
-    // Check for block prompt (after missed shots)
-    if (flags.promptBlocks && this.shouldPromptBlock(event)) {
-      result.shouldPrompt = true;
-      result.promptType = 'block';
-      result.sequenceId = uuidv4();
-      result.metadata = {
-        shotType: event.statType,
-        shooterId: event.playerId
-      };
-      result.actions.push(`Prompt block for missed ${event.statType}`);
+    // ✅ NBA SEQUENCE: Block → Rebound (sequential prompts for missed shots)
+    const isMissedShot = this.shouldPromptRebound(event) || this.shouldPromptBlock(event);
+    
+    if (isMissedShot) {
+      const sequenceId = uuidv4();
+      const promptQueue: Array<{
+        type: 'assist' | 'rebound' | 'block' | 'turnover';
+        sequenceId: string;
+        metadata: Record<string, any>;
+      }> = [];
+      
+      // Step 1: Block prompt (optional, appears first)
+      if (flags.promptBlocks && this.shouldPromptBlock(event)) {
+        promptQueue.push({
+          type: 'block',
+          sequenceId: sequenceId,
+          metadata: {
+            shotType: event.statType,
+            shooterId: event.playerId,
+            shooterName: event.playerId // Will be populated by UI
+          }
+        });
+        result.actions.push(`Prompt block for missed ${event.statType}`);
+      }
+      
+      // Step 2: Rebound prompt (required, appears second)
+      if (flags.promptRebounds && this.shouldPromptRebound(event)) {
+        promptQueue.push({
+          type: 'rebound',
+          sequenceId: sequenceId,
+          metadata: {
+            shotType: event.statType,
+            shooterId: event.playerId,
+            shooterTeamId: event.teamId
+          }
+        });
+        result.actions.push(`Prompt rebound for missed ${event.statType}`);
+      }
+      
+      // Set result with queue
+      if (promptQueue.length > 0) {
+        result.shouldPrompt = true;
+        result.promptType = promptQueue[0].type; // First prompt in queue
+        result.sequenceId = sequenceId;
+        result.metadata = promptQueue[0].metadata;
+        result.promptQueue = promptQueue;
+      }
     }
 
     // ✅ AUTO-GENERATE TURNOVER FOR STEAL

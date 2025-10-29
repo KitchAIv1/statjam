@@ -163,6 +163,13 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     primaryEventId: null,
     metadata: null
   });
+  
+  // ✅ SEQUENTIAL PROMPTS: Queue for multiple prompts (Block → Rebound)
+  const [promptQueue, setPromptQueue] = useState<Array<{
+    type: 'assist' | 'rebound' | 'block' | 'turnover';
+    sequenceId: string;
+    metadata: Record<string, any>;
+  }>>([]);
 
   // Initialize and load existing game state from database
   useEffect(() => {
@@ -976,7 +983,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           automationFlags.sequences
         );
         
-        // Show prompt if needed (only assist, rebound, block)
+        // ✅ SEQUENTIAL PROMPTS: Handle prompt queue (Block → Rebound)
         if (playResult.shouldPrompt && playResult.promptType && 
             (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block')) {
           
@@ -987,14 +994,33 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           } else {
             console.log('🎯 Play sequence prompt:', playResult.actions);
             
-            // Store prompt data to show modal after database write
-            setPlayPrompt({
-              isOpen: true,
-              type: playResult.promptType,
-              sequenceId: playResult.sequenceId || null,
-              primaryEventId: null, // Will be set after database insert
-              metadata: playResult.metadata || null
-            });
+            // Check if we have a queue (multiple prompts)
+            if (playResult.promptQueue && playResult.promptQueue.length > 0) {
+              console.log('📋 Sequential prompts detected:', playResult.promptQueue.map(p => p.type).join(' → '));
+              
+              // Store the full queue
+              setPromptQueue(playResult.promptQueue);
+              
+              // Show first prompt in queue
+              const firstPrompt = playResult.promptQueue[0];
+              setPlayPrompt({
+                isOpen: true,
+                type: firstPrompt.type,
+                sequenceId: firstPrompt.sequenceId,
+                primaryEventId: null, // Will be set after database insert
+                metadata: firstPrompt.metadata
+              });
+            } else {
+              // Single prompt (legacy behavior)
+              setPromptQueue([]);
+              setPlayPrompt({
+                isOpen: true,
+                type: playResult.promptType,
+                sequenceId: playResult.sequenceId || null,
+                primaryEventId: null, // Will be set after database insert
+                metadata: playResult.metadata || null
+              });
+            }
           }
         }
         
@@ -1240,16 +1266,40 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     // Don't auto-start clocks - let admin start manually
   }, []);
   
-  // ✅ PHASE 4: Clear play prompt
+  // ✅ PHASE 4: Clear play prompt (with queue support)
   const clearPlayPrompt = useCallback(() => {
-    setPlayPrompt({
-      isOpen: false,
-      type: null,
-      sequenceId: null,
-      primaryEventId: null,
-      metadata: null
-    });
-  }, []);
+    console.log('🔄 clearPlayPrompt called, checking queue...');
+    console.log('📋 Current queue:', promptQueue);
+    
+    // Check if there are more prompts in the queue
+    if (promptQueue.length > 1) {
+      // Remove first prompt and show next
+      const nextQueue = promptQueue.slice(1);
+      const nextPrompt = nextQueue[0];
+      
+      console.log('➡️ Advancing to next prompt in queue:', nextPrompt.type);
+      
+      setPromptQueue(nextQueue);
+      setPlayPrompt({
+        isOpen: true,
+        type: nextPrompt.type,
+        sequenceId: nextPrompt.sequenceId,
+        primaryEventId: null,
+        metadata: nextPrompt.metadata
+      });
+    } else {
+      // No more prompts, clear everything
+      console.log('✅ Queue empty, closing all prompts');
+      setPromptQueue([]);
+      setPlayPrompt({
+        isOpen: false,
+        type: null,
+        sequenceId: null,
+        primaryEventId: null,
+        metadata: null
+      });
+    }
+  }, [promptQueue]);
 
   // Game Management
   const closeGame = useCallback(async () => {
