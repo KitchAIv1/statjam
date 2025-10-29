@@ -982,12 +982,13 @@ function StatTrackerV3Content() {
             onClose={tracker.clearPlayPrompt}
             onSelectPlayer={async (playerId) => {
               // Record assist stat linked to the shot
+              // ✅ PHASE 5 FIX: Assists must have modifier IS NULL per database constraint
               await tracker.recordStat({
                 gameId: gameIdParam,
                 playerId: playerId,
                 teamId: tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id,
-                statType: 'assist',
-                modifier: 'made'
+                statType: 'assist'
+                // No modifier for assists - database constraint requires NULL
               });
               tracker.clearPlayPrompt();
             }}

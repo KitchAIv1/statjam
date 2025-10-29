@@ -96,12 +96,12 @@ export function MobileStatGridV3({
     { id: 'reb-defensive', label: 'REB', statType: 'rebound', modifier: 'defensive' } // FIXED: Defensive rebound in second layer
   ];
 
-  // Other single-button stats (✅ FIXED: Add 'made' modifier to match database pattern)
+  // Other single-button stats (✅ PHASE 5 FIX: No modifiers - database constraint requires NULL)
   const singleStats = [
-    { id: 'ast', label: 'AST', statType: 'assist', modifier: 'made' },
-    { id: 'stl', label: 'STL', statType: 'steal', modifier: 'made' },
-    { id: 'blk', label: 'BLK', statType: 'block', modifier: 'made' },
-    { id: 'tov', label: 'TOV', statType: 'turnover', modifier: 'made' }
+    { id: 'ast', label: 'AST', statType: 'assist', modifier: undefined },
+    { id: 'stl', label: 'STL', statType: 'steal', modifier: undefined },
+    { id: 'blk', label: 'BLK', statType: 'block', modifier: undefined },
+    { id: 'tov', label: 'TOV', statType: 'turnover', modifier: undefined }
   ];
 
   // Secondary actions - FOUL, TF, TIME OUT, SUB
