@@ -188,7 +188,16 @@ export class PlayEngine {
     }
     
     // ✅ PHASE 5: FREE THROW SEQUENCE DETECTION
-    // When a shooting foul is recorded, trigger free throw sequence
+    // NOTE: FT sequences are now triggered manually in the foul flow (handleVictimSelection)
+    // This automatic detection is DISABLED to prevent duplicate FT modals
+    // 
+    // The foul flow is:
+    // 1. User selects foul type
+    // 2. User selects victim (for shooting fouls)
+    // 3. handleVictimSelection manually triggers FT modal via tracker.setPlayPrompt()
+    //
+    // We keep this code commented for reference but it should NOT run:
+    /*
     if (event.statType === 'foul' && flags.freeThrowSequence) {
       const foulType = this.determineFoulType(event);
       const totalShots = this.determineFreeThrowCount(event, foulType);
@@ -198,16 +207,17 @@ export class PlayEngine {
         result.promptType = 'free_throw';
         result.sequenceId = uuidv4();
         result.metadata = {
-          shooterId: event.playerId, // Player who was fouled
-          shooterName: event.playerId, // Will be resolved to name in UI
+          shooterId: event.playerId,
+          shooterName: event.playerId,
           foulType: foulType,
           totalShots: totalShots,
-          foulerId: event.metadata?.foulerId, // Player who committed foul (if tracked)
-          shooterTeamId: event.teamId // Team of the fouled player
+          foulerId: event.metadata?.foulerId,
+          shooterTeamId: event.teamId
         };
         result.actions.push(`Prompt free throw sequence: ${totalShots} shots (${foulType})`);
       }
     }
+    */
 
     return result;
   }

@@ -575,7 +575,11 @@ function StatTrackerV3Content() {
         break;
     }
     
-    // Record the foul with metadata
+    // ✅ Generate sequence_id to link foul and FTs
+    const { v4: uuidv4 } = await import('uuid');
+    const sequenceId = uuidv4();
+    
+    // Record the foul with sequence_id for linking
     await tracker.recordStat({
       gameId: gameData.id,
       teamId: foulerTeamId,
@@ -583,15 +587,15 @@ function StatTrackerV3Content() {
       customPlayerId: foulerCustomPlayerId,
       isOpponentStat: foulerIsOpponentStat,
       statType: 'foul',
-      modifier: modifier
+      modifier: modifier,
+      sequenceId: sequenceId // ✅ Link foul to FTs
     });
     
-    // Trigger FT modal via PlayEngine by recording a pseudo-event
-    // Actually, we should manually trigger the FT modal here
+    // Trigger FT modal with same sequence_id
     tracker.setPlayPrompt({
       isOpen: true,
       type: 'free_throw',
-      sequenceId: null,
+      sequenceId: sequenceId, // ✅ Use same sequence_id
       primaryEventId: null,
       metadata: {
         shooterId: victimId,
