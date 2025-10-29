@@ -979,26 +979,50 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         // Show prompt if needed (only assist, rebound, block)
         if (playResult.shouldPrompt && playResult.promptType && 
             (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block')) {
-          console.log('🎯 Play sequence prompt:', playResult.actions);
           
-          // Store prompt data to show modal after database write
-          setPlayPrompt({
-            isOpen: true,
-            type: playResult.promptType,
-            sequenceId: playResult.sequenceId || null,
-            primaryEventId: null, // Will be set after database insert
-            metadata: playResult.metadata || null
-          });
+          // ✅ COACH MODE FIX: Don't show prompts for opponent actions
+          if (isCoachMode && stat.isOpponentStat) {
+            console.log('⏭️ Skipping prompt for opponent action in coach mode (no individual players)');
+            // Don't show modal - opponent has no individual players to select
+          } else {
+            console.log('🎯 Play sequence prompt:', playResult.actions);
+            
+            // Store prompt data to show modal after database write
+            setPlayPrompt({
+              isOpen: true,
+              type: playResult.promptType,
+              sequenceId: playResult.sequenceId || null,
+              primaryEventId: null, // Will be set after database insert
+              metadata: playResult.metadata || null
+            });
+          }
         }
         
         // ✅ AUTO-GENERATE TURNOVER FOR STEAL
         if (playResult.metadata?.shouldGenerateTurnover && stat.statType === 'steal') {
           console.log('🔄 Auto-generating turnover for steal');
           
-          // Determine opponent team
-          const opponentTeamId = isCoachMode 
-            ? (stat.isOpponentStat ? teamAId : 'opponent-team')
-            : (stat.teamId === teamAId ? teamBId : teamAId);
+          // Determine opponent team and handle coach mode
+          let opponentTeamId: string;
+          let isOpponentTurnover = false;
+          
+          if (isCoachMode) {
+            // Coach mode: Steal by home team → Turnover to opponent (no player)
+            //             Steal by opponent → Turnover to home team player
+            if (stat.isOpponentStat) {
+              // Opponent stole from home team → Turnover to home team
+              opponentTeamId = teamAId;
+              isOpponentTurnover = false;
+            } else {
+              // Home team stole from opponent → Turnover to opponent (generic)
+              opponentTeamId = teamAId; // Use home team ID for database
+              isOpponentTurnover = true; // Flag as opponent stat
+            }
+          } else {
+            // Regular mode: Normal team-to-team
+            opponentTeamId = stat.teamId === teamAId ? teamBId : teamAId;
+            isOpponentTurnover = false;
+          }
           
           // Generate turnover event
           const turnoverEvent = PlayEngine.generateTurnoverForSteal(
@@ -1011,10 +1035,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           setTimeout(async () => {
             await recordStat({
               gameId: stat.gameId,
-              playerId: turnoverEvent.playerId,
+              playerId: isOpponentTurnover ? undefined : turnoverEvent.playerId,
               teamId: turnoverEvent.teamId,
               statType: 'turnover',
-              modifier: 'steal',
+              modifier: null, // ✅ FIX: Turnovers don't use modifiers
+              isOpponentStat: isOpponentTurnover,
               sequenceId: playResult.sequenceId,
               linkedEventId: undefined // Will link to steal after it's recorded
             });
