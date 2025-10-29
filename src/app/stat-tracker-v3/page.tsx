@@ -21,6 +21,10 @@ import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
 import { TimeoutModalV3 } from '@/components/tracker-v3/TimeoutModalV3';
 import { PossessionIndicator } from '@/components/tracker-v3/PossessionIndicator';
+// ✅ PHASE 4: Play Sequence Modals
+import { AssistPromptModal } from '@/components/tracker-v3/modals/AssistPromptModal';
+import { ReboundPromptModal } from '@/components/tracker-v3/modals/ReboundPromptModal';
+import { BlockPromptModal } from '@/components/tracker-v3/modals/BlockPromptModal';
 
 interface GameData {
   id: string;
@@ -788,6 +792,84 @@ function StatTrackerV3Content() {
           timeoutSecondsRemaining={tracker.timeoutSecondsRemaining}
           timeoutTeamId={tracker.timeoutTeamId}
         />
+
+        {/* ✅ PHASE 4: Play Sequence Modals */}
+        
+        {/* Assist Prompt Modal - After made shots */}
+        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'assist' && (
+          <AssistPromptModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onSelectPlayer={async (playerId) => {
+              // Record assist stat linked to the shot
+              await tracker.recordStat({
+                gameId: gameIdParam,
+                playerId: playerId,
+                teamId: tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id,
+                statType: 'assist',
+                modifier: 'made'
+              });
+              tracker.clearPlayPrompt();
+            }}
+            onSkip={tracker.clearPlayPrompt}
+            players={teamAPlayers.filter(p => 
+              p.id !== tracker.playPrompt.metadata?.shooterId
+            )}
+            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
+            shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
+            shotValue={tracker.playPrompt.metadata?.shotValue || 2}
+          />
+        )}
+
+        {/* Rebound Prompt Modal - After missed shots */}
+        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'rebound' && (
+          <ReboundPromptModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onSelectPlayer={async (playerId, reboundType) => {
+              // Record rebound stat linked to the miss
+              await tracker.recordStat({
+                gameId: gameIdParam,
+                playerId: playerId,
+                teamId: teamAPlayers.find(p => p.id === playerId)?.id ? gameData.team_a_id : gameData.team_b_id,
+                statType: 'rebound',
+                modifier: reboundType
+              });
+              tracker.clearPlayPrompt();
+            }}
+            onSkip={tracker.clearPlayPrompt}
+            teamAPlayers={teamAPlayers.map(p => ({ ...p, teamId: gameData.team_a_id }))}
+            teamBPlayers={teamBPlayers.map(p => ({ ...p, teamId: gameData.team_b_id }))}
+            shooterTeamId={tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id}
+            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
+            shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
+          />
+        )}
+
+        {/* Block Prompt Modal - After missed shots */}
+        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'block' && (
+          <BlockPromptModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onSelectPlayer={async (playerId) => {
+              // Record block stat linked to the miss
+              await tracker.recordStat({
+                gameId: gameIdParam,
+                playerId: playerId,
+                teamId: teamAPlayers.find(p => p.id === playerId)?.id ? gameData.team_a_id : gameData.team_b_id,
+                statType: 'block',
+                modifier: 'made'
+              });
+              tracker.clearPlayPrompt();
+            }}
+            onSkip={tracker.clearPlayPrompt}
+            defensivePlayers={[...teamAPlayers, ...teamBPlayers].filter(p => 
+              p.id !== tracker.playPrompt.metadata?.shooterId
+            ).map(p => ({ ...p, teamId: teamAPlayers.find(tp => tp.id === p.id) ? gameData.team_a_id : gameData.team_b_id }))}
+            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
+            shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
+          />
+        )}
 
         {/* Dimmed Overlay During Timeout - Prevents Stat Entry */}
         {tracker.timeoutActive && (

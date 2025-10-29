@@ -388,6 +388,10 @@ export class GameServiceV3 {
     gameTimeMinutes: number;
     gameTimeSeconds: number;
     statValue?: number;
+    // ✅ PHASE 4: Event linking
+    sequenceId?: string; // Links related events (assist→shot, rebound→miss)
+    linkedEventId?: string; // Points to primary event (e.g., assist points to shot)
+    eventMetadata?: Record<string, any>; // Additional context
   }): Promise<any> {
     try {
       console.log('🚀 GameServiceV3: Recording stat via raw HTTP:', statData);
@@ -420,7 +424,11 @@ export class GameServiceV3 {
           quarter: statData.quarter,
           game_time_minutes: statData.gameTimeMinutes,
           game_time_seconds: statData.gameTimeSeconds,
-          stat_value: statData.statValue || 1
+          stat_value: statData.statValue || 1,
+          // ✅ PHASE 4: Event linking fields
+          sequence_id: statData.sequenceId || null,
+          linked_event_id: statData.linkedEventId || null,
+          event_metadata: statData.eventMetadata || null
         })
       });
 
