@@ -374,6 +374,52 @@ export class GameServiceV3 {
   }
 
   /**
+   * ✅ PRE-FLIGHT CHECK: Update game automation settings
+   * Used by Pre-Flight Check Modal to save per-game automation configuration
+   */
+  static async updateGameAutomation(
+    gameId: string,
+    settings: any // AutomationFlags type
+  ): Promise<boolean> {
+    try {
+      console.log('⚙️ GameServiceV3: Updating game automation settings via raw HTTP:', { gameId, settings });
+
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('No access token found - user not authenticated');
+      }
+
+      const url = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${gameId}`;
+      
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          automation_settings: settings
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ GameServiceV3: Failed to update automation settings - HTTP ${response.status}:`, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      console.log('✅ GameServiceV3: Game automation settings updated successfully');
+      return true;
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to update game automation settings:', error);
+      return false;
+    }
+  }
+
+  /**
    * Record a stat using raw HTTP requests
    */
   static async recordStat(statData: {

@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar } from 'lucide-react';
+import { PreFlightCheckModal } from '@/components/tracker-v3/modals/PreFlightCheckModal';
+import { AutomationFlags } from '@/lib/types/automation';
 
 const StatAdminDashboard = () => {
   const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
@@ -25,6 +27,10 @@ const StatAdminDashboard = () => {
   const [gamesLoading, setGamesLoading] = useState(true); // Start as true to prevent flash
   const [gamesError, setGamesError] = useState<string | null>(null);
   const [launchingTracker, setLaunchingTracker] = useState<string | null>(null);
+  
+  // ✅ PRE-FLIGHT CHECK: Modal state
+  const [showPreFlight, setShowPreFlight] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<any>(null);
 
   // Calculate flat games array and stats from grouped data (only when data is loaded)
   const flatGames = gamesLoading ? [] : assignedGames.flatMap(organizerGroup => organizerGroup.games || []);
@@ -566,11 +572,9 @@ const StatAdminDashboard = () => {
                         <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
                           <button
                             onClick={async () => {
-                              setLaunchingTracker(game.id);
-                              // Small delay for visual feedback, then navigate
-                              setTimeout(() => {
-                                router.push(`/stat-tracker-v3?gameId=${game.id}&teamAId=${game.teamAId}&teamBId=${game.teamBId}`);
-                              }, 100);
+                              // ✅ PRE-FLIGHT CHECK: Show modal instead of direct launch
+                              setSelectedGame(game);
+                              setShowPreFlight(true);
                             }}
                             disabled={launchingTracker === game.id}
                             style={{
@@ -622,6 +626,49 @@ const StatAdminDashboard = () => {
         </div>
         </main>
       </ErrorBoundary>
+      
+      {/* ✅ PRE-FLIGHT CHECK MODAL */}
+      {showPreFlight && selectedGame && (
+        <PreFlightCheckModal
+          isOpen={showPreFlight}
+          onClose={() => {
+            setShowPreFlight(false);
+            setSelectedGame(null);
+          }}
+          onStartTracking={async (settings: AutomationFlags) => {
+            setLaunchingTracker(selectedGame.id);
+            
+            // Save settings to database
+            try {
+              await GameServiceV3.updateGameAutomation(selectedGame.id, settings);
+              console.log('✅ Game automation settings saved:', settings);
+            } catch (error) {
+              console.error('❌ Failed to save automation settings:', error);
+            }
+            
+            // Close modal
+            setShowPreFlight(false);
+            
+            // Navigate to tracker
+            setTimeout(() => {
+              router.push(
+                `/stat-tracker-v3?gameId=${selectedGame.id}&teamAId=${selectedGame.teamAId}&teamBId=${selectedGame.teamBId}`
+              );
+            }, 100);
+          }}
+          gameId={selectedGame.id}
+          gameName={`${selectedGame.teamA} vs ${selectedGame.teamB}`}
+          tournamentName={selectedGame.tournamentName}
+          tournamentDefaults={selectedGame.tournament?.automation_flags || {
+            clock: { enabled: true, autoPause: true, autoReset: true, ftMode: true, madeBasketStop: false },
+            possession: { enabled: true, autoFlip: true, persistState: true, jumpBallArrow: false },
+            sequences: { enabled: true, promptAssists: true, promptRebounds: true, promptBlocks: true, linkEvents: true, freeThrowSequence: true },
+            fouls: { enabled: false, bonusFreeThrows: false, foulOutEnforcement: false, technicalEjection: false },
+            undo: { enabled: false, maxHistorySize: 50 }
+          }}
+          userRole="stat_admin"
+        />
+      )}
     </div>
   );
 };
