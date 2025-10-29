@@ -144,6 +144,18 @@ export class PlayEngine {
       result.actions.push(`Prompt block for missed ${event.statType}`);
     }
 
+    // ✅ AUTO-GENERATE TURNOVER FOR STEAL
+    // When a steal is recorded, automatically create a turnover for the opponent
+    if (event.statType === 'steal') {
+      result.sequenceId = uuidv4();
+      result.metadata = {
+        stealerId: event.playerId,
+        stealerTeamId: event.teamId,
+        shouldGenerateTurnover: true
+      };
+      result.actions.push(`Auto-generate turnover for steal by player ${event.playerId}`);
+    }
+
     return result;
   }
 

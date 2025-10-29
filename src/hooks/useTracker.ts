@@ -990,6 +990,36 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             metadata: playResult.metadata || null
           });
         }
+        
+        // ✅ AUTO-GENERATE TURNOVER FOR STEAL
+        if (playResult.metadata?.shouldGenerateTurnover && stat.statType === 'steal') {
+          console.log('🔄 Auto-generating turnover for steal');
+          
+          // Determine opponent team
+          const opponentTeamId = isCoachMode 
+            ? (stat.isOpponentStat ? teamAId : 'opponent-team')
+            : (stat.teamId === teamAId ? teamBId : teamAId);
+          
+          // Generate turnover event
+          const turnoverEvent = PlayEngine.generateTurnoverForSteal(
+            gameEvent,
+            opponentTeamId
+          );
+          
+          // Record turnover immediately (no prompt needed)
+          // This will be executed after the steal is recorded in the database
+          setTimeout(async () => {
+            await recordStat({
+              gameId: stat.gameId,
+              playerId: turnoverEvent.playerId,
+              teamId: turnoverEvent.teamId,
+              statType: 'turnover',
+              modifier: 'steal',
+              sequenceId: playResult.sequenceId,
+              linkedEventId: undefined // Will link to steal after it's recorded
+            });
+          }, 100); // Small delay to ensure steal is recorded first
+        }
       }
 
       // ✅ OPTIMIZATION 5: Database write happens AFTER UI updates (non-blocking)

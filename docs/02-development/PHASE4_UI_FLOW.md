@@ -69,7 +69,40 @@ PlayEngine.analyzeEvent(madeShot, flags)
 
 ---
 
-### **Scenario 2: Missed Shot → Rebound Prompt**
+### **Scenario 2: Steal → Auto-Generated Turnover**
+
+**Step 1: User Records Steal**
+```
+User clicks: "STEAL" button
+Player: Mike Smith (#12)
+```
+
+**Step 2: Instant UI Updates**
+- ✅ Steal stat recorded
+- ✅ Last Action shows: "steal recorded"
+- ✅ Possession flips to stealing team (Phase 3)
+
+**Step 3: Play Engine Auto-Generates Turnover** (Phase 4 NEW)
+```typescript
+PlayEngine.analyzeEvent(stealEvent, flags)
+→ shouldGenerateTurnover: true
+→ sequenceId: 'uuid-456'
+```
+
+**Step 4: Turnover Automatically Created**
+- Turnover charged to opponent team
+- Linked to steal via `sequence_id`
+- No user prompt needed (fully automatic)
+- Last Action updates: "turnover (steal) recorded"
+
+**Result:**
+- Play-by-play shows: "Mike Smith steal → Opponent turnover"
+- Both events linked in database
+- Possession correctly assigned to stealing team
+
+---
+
+### **Scenario 3: Missed Shot → Rebound Prompt**
 
 **Step 1: User Records Missed Shot**
 ```
@@ -114,7 +147,7 @@ Player: John Doe (#23)
 
 ---
 
-### **Scenario 3: Missed Shot → Block Prompt**
+### **Scenario 4: Missed Shot → Block Prompt**
 
 **Step 1: User Records Missed Shot**
 ```
