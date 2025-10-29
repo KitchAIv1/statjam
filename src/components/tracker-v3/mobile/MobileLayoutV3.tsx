@@ -76,6 +76,7 @@ interface MobileLayoutV3Props {
   isCoachMode?: boolean; // Add coach mode flag
   userId?: string; // ✅ FIX: User ID for opponent stats
   onPossessionChange?: (teamId: string) => void; // ✅ PHASE 6: Manual possession control
+  gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'; // ✅ Game status
 }
 
 export function MobileLayoutV3({
@@ -92,7 +93,8 @@ export function MobileLayoutV3({
   onTimeOut,
   isCoachMode = false,
   userId,
-  onPossessionChange
+  onPossessionChange,
+  gameStatus = 'in_progress' // ✅ Game status
 }: MobileLayoutV3Props) {
   const [possessionTeam, setPossessionTeam] = useState<'A' | 'B'>('A');
 
@@ -236,21 +238,32 @@ export function MobileLayoutV3({
           lastActionPlayerId={tracker.lastActionPlayerId}
         />
 
-        {/* End Game Button - Clean Design */}
+        {/* End Game Button / Status - Clean Design */}
         <div className="px-4 pb-4 mt-8">
-          <button
-            className="w-full text-base font-black py-4 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
-            onClick={() => {
-              if (confirm('End Game?\n\nThis will mark the game as completed and save all statistics. This action cannot be undone.')) {
-                tracker.closeGame();
-              }
-            }}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-xl">🏁</span>
-              <span>END GAME</span>
+          {gameStatus === 'completed' || gameStatus === 'cancelled' ? (
+            <div
+              className="w-full text-base font-black py-4 rounded-xl border-2 border-gray-400 bg-gray-500 text-white cursor-not-allowed opacity-50"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-xl">🏁</span>
+                <span>{gameStatus === 'completed' ? 'GAME ENDED' : 'GAME CANCELLED'}</span>
+              </div>
             </div>
-          </button>
+          ) : (
+            <button
+              className="w-full text-base font-black py-4 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
+              onClick={() => {
+                if (confirm('End Game?\n\nThis will mark the game as completed and save all statistics. This action cannot be undone.')) {
+                  tracker.closeGame();
+                }
+              }}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-xl">🏁</span>
+                <span>END GAME</span>
+              </div>
+            </button>
+          )}
         </div>
 
         {/* ✅ ADJUSTMENT 2: Team Stats & Aggregates (Coach Mode Only) */}

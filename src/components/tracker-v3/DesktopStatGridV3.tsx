@@ -35,6 +35,8 @@ interface DesktopStatGridV3Props {
   isCoachMode?: boolean;
   // ✅ PHASE 6: Manual possession control
   onPossessionChange?: (teamId: string) => void;
+  // ✅ Game Status
+  gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime';
 }
 
 export function DesktopStatGridV3({
@@ -55,7 +57,9 @@ export function DesktopStatGridV3({
   teamAName,
   teamBName,
   isCoachMode = false,
-  onPossessionChange
+  onPossessionChange,
+  // ✅ Game Status
+  gameStatus = 'in_progress'
 }: DesktopStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
@@ -440,21 +444,32 @@ export function DesktopStatGridV3({
       </div>
       {/* ✅ END: Scrollable Stat Grids Container */}
 
-      {/* ✅ FIXED: End Game Button - Always Visible at Bottom */}
+      {/* ✅ End Game Button / Status - Always Visible at Bottom */}
       <div className="mt-3 flex-shrink-0">
-        <button
-          className="w-full text-lg font-black py-3 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
-          onClick={() => {
-            if (confirm('End Game?\n\nThis will mark the game as completed and save all statistics. This action cannot be undone.')) {
-              onGameEnd();
-            }
-          }}
-        >
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-2xl">🏁</span>
-            <span>END GAME</span>
+        {gameStatus === 'completed' || gameStatus === 'cancelled' ? (
+          <div
+            className="w-full text-lg font-black py-3 rounded-xl border-2 border-gray-400 bg-gray-500 text-white cursor-not-allowed opacity-50"
+          >
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-2xl">🏁</span>
+              <span>{gameStatus === 'completed' ? 'GAME ENDED' : 'GAME CANCELLED'}</span>
+            </div>
           </div>
-        </button>
+        ) : (
+          <button
+            className="w-full text-lg font-black py-3 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
+            onClick={() => {
+              if (confirm('End Game?\n\nThis will mark the game as completed and save all statistics. This action cannot be undone.')) {
+                onGameEnd();
+              }
+            }}
+          >
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-2xl">🏁</span>
+              <span>END GAME</span>
+            </div>
+          </button>
+        )}
       </div>
     </div>
   );

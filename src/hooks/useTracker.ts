@@ -62,6 +62,7 @@ interface UseTrackerReturn {
   lastAction: string | null;
   lastActionPlayerId: string | null;
   playerSeconds: Record<string, number>;
+  gameStatus: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'; // ✅ Game status tracking
   
   // Team Fouls & Timeouts
   teamFouls: { [teamId: string]: number };
@@ -150,6 +151,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [lastActionPlayerId, setLastActionPlayerId] = useState<string | null>(null);
   const [playerSeconds] = useState<Record<string, number>>({});
+  const [gameStatus, setGameStatus] = useState<'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'>('scheduled'); // ✅ Game status state
   
   // ✅ PHASE 3: Possession State
   const [possession, setPossession] = useState({
@@ -196,14 +198,31 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         const gameError = !game;
         
         if (!gameError && game) {
+          // ✅ Load game status from database
+          const normalizedStatus = String(game.status || 'scheduled').toLowerCase();
+          let status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime' = 'scheduled';
+          
+          if (normalizedStatus === 'completed' || normalizedStatus === 'ended') {
+            status = 'completed';
+          } else if (normalizedStatus === 'cancelled') {
+            status = 'cancelled';
+          } else if (normalizedStatus === 'overtime') {
+            status = 'overtime';
+          } else if (normalizedStatus === 'in_progress' || normalizedStatus === 'live') {
+            status = 'in_progress';
+          }
+          
+          setGameStatus(status);
+          console.log('🔁 Initialized game status from database:', status);
+          
           // If the stat admin has entered the tracker and the game is still scheduled,
           // mark it as live to ensure live cards remain visible even when the clock is paused.
           try {
-            const normalizedStatus = String(game.status || '').toLowerCase();
             if (normalizedStatus === 'scheduled') {
               console.log('🔄 useTracker: Game status is scheduled, updating to in_progress');
               try {
                 await GameServiceV3.updateGameStatus(gameId, 'in_progress');
+                setGameStatus('in_progress'); // ✅ Update local state
                 console.log('✅ useTracker: Game status updated to in_progress');
               } catch (statusError) {
                 console.warn('⚠️ useTracker: Failed to update game status:', statusError);
@@ -255,13 +274,15 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           }
           
           if (game.team_a_timeouts_remaining !== undefined || game.team_b_timeouts_remaining !== undefined) {
+            // ✅ FIX: Use nullish coalescing (??) instead of || to preserve 0 values
+            // || treats 0 as falsy, causing timeouts to reset to 7 when all are used
             setTeamTimeouts({
-              [teamAId]: game.team_a_timeouts_remaining || 7,
-              [teamBId]: game.team_b_timeouts_remaining || 7
+              [teamAId]: game.team_a_timeouts_remaining ?? 7,
+              [teamBId]: game.team_b_timeouts_remaining ?? 7
             });
             console.log('🔁 Initialized timeouts from database:', { 
-              teamA: game.team_a_timeouts_remaining || 7, 
-              teamB: game.team_b_timeouts_remaining || 7 
+              teamA: game.team_a_timeouts_remaining ?? 7, 
+              teamB: game.team_b_timeouts_remaining ?? 7 
             });
           }
           
@@ -742,6 +763,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
 
   // Stat Recording
   const recordStat = useCallback(async (stat: Omit<StatRecord, 'createdAt' | 'quarter' | 'gameTimeSeconds'>) => {
+    // ✅ BLOCK: Don't allow stat recording if game is ended
+    if (gameStatus === 'completed' || gameStatus === 'cancelled') {
+      const { notify } = await import('@/lib/services/notificationService');
+      notify.warning('Game Ended', 'This game has ended. No more stats can be recorded.');
+      console.warn('⚠️ Attempted to record stat after game ended:', gameStatus);
+      return;
+    }
+    
     try {
       const fullStat: StatRecord = {
         ...stat,
@@ -1186,10 +1215,17 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       setLastAction('Error recording stat');
       setLastActionPlayerId(stat.playerId || null);
     }
-  }, [quarter, clock.secondsRemaining]);
+  }, [quarter, clock.secondsRemaining, gameStatus]);
 
   // Substitution
   const substitute = useCallback(async (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number }): Promise<boolean> => {
+    // ✅ BLOCK: Don't allow substitutions if game is ended
+    if (gameStatus === 'completed' || gameStatus === 'cancelled') {
+      const { notify } = await import('@/lib/services/notificationService');
+      notify.warning('Game Ended', 'This game has ended. No more substitutions can be made.');
+      return false;
+    }
+    
     try {
       console.log('🔄 Recording substitution to database:', sub);
 
@@ -1239,10 +1275,17 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       setLastAction('Error recording substitution');
       return false;
     }
-  }, [teamAId, teamBId, setRosterA, setRosterB]);
+  }, [teamAId, teamBId, setRosterA, setRosterB, gameStatus]);
 
   // Enhanced Timeout Management
   const startTimeout = useCallback(async (teamId: string, type: 'full' | '30_second'): Promise<boolean> => {
+    // ✅ BLOCK: Don't allow timeouts if game is ended
+    if (gameStatus === 'completed' || gameStatus === 'cancelled') {
+      const { notify } = await import('@/lib/services/notificationService');
+      notify.warning('Game Ended', 'This game has ended. No more timeouts can be called.');
+      return false;
+    }
+    
     try {
       const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
       const { notify } = await import('@/lib/services/notificationService');
@@ -1304,7 +1347,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       setTimeoutTeamId(null);
       return false;
     }
-  }, [gameId, teamTimeouts, quarter, clock.secondsRemaining, stopClock, stopShotClock]);
+  }, [gameId, teamTimeouts, quarter, clock.secondsRemaining, stopClock, stopShotClock, gameStatus]);
 
   const resumeFromTimeout = useCallback(() => {
     console.log('▶️ Resuming play from timeout');
@@ -1360,10 +1403,12 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       
       // Stop the clock and update game status to completed
       setClock(prev => ({ ...prev, isRunning: false }));
+      stopShotClock(); // ✅ Also stop shot clock
       
       const success = await GameService.updateGameStatus(gameId, 'completed');
       
       if (success) {
+        setGameStatus('completed'); // ✅ Update local state
         console.log('✅ Game closed successfully');
         setLastAction('Game ended');
       } else {
@@ -1374,7 +1419,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       console.error('❌ Error closing game:', error);
       setLastAction('Error closing game');
     }
-  }, [gameId]);
+  }, [gameId, stopShotClock]);
 
   // ✅ PHASE 6: Manual possession control for edge cases
   const manualSetPossession = useCallback(async (teamId: string, reason: string = 'manual_override') => {
@@ -1434,6 +1479,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     lastAction,
     lastActionPlayerId,
     playerSeconds,
+    gameStatus, // ✅ Game status
     teamFouls,
     teamTimeouts,
     timeoutActive,

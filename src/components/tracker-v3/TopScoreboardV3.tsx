@@ -34,6 +34,8 @@ interface TopScoreboardV3Props {
   onShotClockSetTime?: (seconds: number) => void;
   // Navigation Props
   onBack?: () => void;
+  // ✅ Game Status
+  gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime';
 }
 
 export function TopScoreboardV3({
@@ -62,7 +64,9 @@ export function TopScoreboardV3({
   onShotClockReset,
   onShotClockSetTime,
   // Navigation Props
-  onBack
+  onBack,
+  // ✅ Game Status
+  gameStatus = 'in_progress'
 }: TopScoreboardV3Props) {
 
   // NEW: Edit mode state
@@ -134,19 +138,37 @@ export function TopScoreboardV3({
           </Button>
         )}
         
-        {/* LIVE Indicator - Top Right */}
+        {/* LIVE/ENDED Indicator - Top Right */}
         <div className="flex items-center gap-2 pointer-events-auto">
-          <Badge 
-            variant="outline"
-            className="text-orange-500 border-orange-500 bg-orange-500/10 text-xs"
-          >
-            Live
-          </Badge>
-          
-          <div 
-            className="w-2 h-2 rounded-full bg-green-500 animate-pulse"
-            title="Connected"
-          />
+          {gameStatus === 'completed' || gameStatus === 'cancelled' ? (
+            <>
+              <Badge 
+                variant="destructive"
+                className="text-white border-red-500 bg-red-500 text-xs font-bold"
+              >
+                {gameStatus === 'completed' ? 'ENDED' : 'CANCELLED'}
+              </Badge>
+              
+              <div 
+                className="w-2 h-2 rounded-full bg-red-500"
+                title="Game Ended"
+              />
+            </>
+          ) : (
+            <>
+              <Badge 
+                variant="outline"
+                className="text-orange-500 border-orange-500 bg-orange-500/10 text-xs"
+              >
+                Live
+              </Badge>
+              
+              <div 
+                className="w-2 h-2 rounded-full bg-green-500 animate-pulse"
+                title="Connected"
+              />
+            </>
+          )}
         </div>
       </div>
 

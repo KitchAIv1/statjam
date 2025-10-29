@@ -834,6 +834,7 @@ function StatTrackerV3Content() {
         isCoachMode={coachMode}
         userId={user?.id}
         onPossessionChange={tracker.manualSetPossession}
+        gameStatus={tracker.gameStatus}
       />
     );
   }
@@ -873,8 +874,8 @@ function StatTrackerV3Content() {
           // NBA Standard: Team fouls and timeouts (placeholder values for now)
           teamAFouls={tracker.teamFouls[gameData.team_a_id] || 0}
           teamBFouls={tracker.teamFouls[gameData.team_b_id] || 0}
-          teamATimeouts={tracker.teamTimeouts[gameData.team_a_id] || 7}
-          teamBTimeouts={tracker.teamTimeouts[gameData.team_b_id] || 7}
+          teamATimeouts={tracker.teamTimeouts[gameData.team_a_id] ?? 7}
+          teamBTimeouts={tracker.teamTimeouts[gameData.team_b_id] ?? 7}
           // Shot Clock Props
           shotClockSeconds={tracker.shotClock.secondsRemaining}
           shotClockIsRunning={tracker.shotClock.isRunning}
@@ -883,6 +884,7 @@ function StatTrackerV3Content() {
           onShotClockStop={tracker.stopShotClock}
           onShotClockReset={tracker.resetShotClock}
           onShotClockSetTime={tracker.setShotClockTime}
+          gameStatus={tracker.gameStatus}
         />
 
         {/* ✅ REFINEMENT: Possession Indicator moved to Last Action section (saves space) */}
@@ -932,6 +934,7 @@ function StatTrackerV3Content() {
                 teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
                 isCoachMode={coachMode}
                 onPossessionChange={tracker.manualSetPossession}
+                gameStatus={tracker.gameStatus}
               />
             </div>
           </div>
@@ -1267,6 +1270,27 @@ function StatTrackerV3Content() {
             }
             autoDismissSeconds={10}
           />
+        )}
+
+        {/* ✅ Game Ended Overlay - Blocks all interactions */}
+        {(tracker.gameStatus === 'completed' || tracker.gameStatus === 'cancelled') && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl border-4 border-red-500">
+              <div className="text-6xl mb-4">🏁</div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                {tracker.gameStatus === 'completed' ? 'Game Ended' : 'Game Cancelled'}
+              </h2>
+              <p className="text-lg text-gray-600 mb-6">
+                This game has ended. No more stats can be recorded.
+              </p>
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors"
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Dimmed Overlay During Timeout - Prevents Stat Entry */}
