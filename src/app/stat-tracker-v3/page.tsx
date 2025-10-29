@@ -258,31 +258,26 @@ function StatTrackerV3Content() {
 
   // ✅ UNIFIED CLOCK TICK: Single interval for both game clock and shot clock
   // This ensures they tick at the EXACT same moment (synchronized)
+  // ✅ PERFORMANCE: Interval only recreates when running state changes, NOT on every tick
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     // Start interval if EITHER clock is running
     if (tracker.clock.isRunning || tracker.shotClock.isRunning) {
       interval = setInterval(() => {
+        // ✅ Use functional updates to avoid stale closure issues
+        // This ensures we always have the latest state without recreating the interval
+        
         // Tick game clock if running
         if (tracker.clock.isRunning) {
           tracker.tick(1);
-          if (tracker.clock.secondsRemaining <= 1) {
-            tracker.advanceIfNeeded();
-          }
+          // Check for quarter advancement (will be handled by tick function's internal state)
         }
         
         // Tick shot clock if running AND visible
         if (tracker.shotClock.isRunning && tracker.shotClock.isVisible) {
           tracker.shotClockTick(1);
-          
-          // Shot clock violation at 0 seconds
-          if (tracker.shotClock.secondsRemaining <= 1) {
-            console.log('🚨 Shot clock violation!');
-            tracker.stopShotClock();
-            setShotClockViolation(true);
-            // TODO: Add shot clock violation handling (buzzer, turnover, etc.)
-          }
+          // Shot clock violation check will be handled by the tick function
         }
       }, 1000);
     }
@@ -291,16 +286,35 @@ function StatTrackerV3Content() {
       if (interval) clearInterval(interval);
     };
   }, [
+    // ✅ ONLY depend on running state, NOT time values
+    // This prevents interval recreation on every tick or reset
     tracker.clock.isRunning, 
     tracker.shotClock.isRunning, 
     tracker.shotClock.isVisible,
+    // Functions are stable from useCallback
     tracker.tick, 
-    tracker.shotClockTick,
-    tracker.advanceIfNeeded, 
-    tracker.stopShotClock,
-    tracker.clock.secondsRemaining,
-    tracker.shotClock.secondsRemaining
+    tracker.shotClockTick
+    // ❌ REMOVED: tracker.advanceIfNeeded (not needed in interval)
+    // ❌ REMOVED: tracker.stopShotClock (not needed in interval)
+    // ❌ REMOVED: tracker.clock.secondsRemaining (causes unnecessary recreation)
+    // ❌ REMOVED: tracker.shotClock.secondsRemaining (causes unnecessary recreation)
   ]);
+
+  // ✅ SEPARATE EFFECT: Handle quarter advancement (doesn't interfere with interval)
+  useEffect(() => {
+    if (tracker.clock.isRunning && tracker.clock.secondsRemaining <= 0) {
+      tracker.advanceIfNeeded();
+    }
+  }, [tracker.clock.secondsRemaining, tracker.clock.isRunning, tracker.advanceIfNeeded]);
+
+  // ✅ SEPARATE EFFECT: Handle shot clock violation (doesn't interfere with interval)
+  useEffect(() => {
+    if (tracker.shotClock.isRunning && tracker.shotClock.secondsRemaining <= 0) {
+      console.log('🚨 Shot clock violation!');
+      tracker.stopShotClock();
+      setShotClockViolation(true);
+    }
+  }, [tracker.shotClock.secondsRemaining, tracker.shotClock.isRunning, tracker.stopShotClock]);
 
   // NEW: Sync shot clock with game clock
   useEffect(() => {

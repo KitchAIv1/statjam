@@ -191,6 +191,65 @@ useEffect(() => {
 
 ---
 
+### **Fix 3: Smooth Reset (No Stutter)**
+
+#### **The Problem:**
+When resetting the shot clock, the `useEffect` dependency array included `tracker.clock.secondsRemaining` and `tracker.shotClock.secondsRemaining`. This caused the interval to **recreate** every second, and especially when resetting, causing a brief freeze in the game clock.
+
+#### **Before Fix (Issue 3):**
+```typescript
+useEffect(() => {
+  // ... interval logic ...
+}, [
+  tracker.clock.isRunning,
+  tracker.shotClock.isRunning,
+  tracker.clock.secondsRemaining,      // ❌ Recreates interval every second!
+  tracker.shotClock.secondsRemaining   // ❌ Recreates interval on reset!
+]);
+```
+
+**Issue:**
+- Interval recreated every second (destroy + create)
+- Interval recreated on shot clock reset
+- Brief freeze in game clock during recreation
+- Poor performance (unnecessary work)
+
+#### **After Fix:**
+```typescript
+useEffect(() => {
+  // ... interval logic ...
+}, [
+  tracker.clock.isRunning,     // ✅ Only recreate when state changes
+  tracker.shotClock.isRunning, // ✅ Only recreate when state changes
+  tracker.tick,                // ✅ Stable function
+  tracker.shotClockTick        // ✅ Stable function
+  // ❌ REMOVED: secondsRemaining (no longer causes recreation)
+]);
+
+// ✅ Separate effects for edge cases (don't interfere with interval)
+useEffect(() => {
+  if (tracker.clock.secondsRemaining <= 0) tracker.advanceIfNeeded();
+}, [tracker.clock.secondsRemaining]);
+
+useEffect(() => {
+  if (tracker.shotClock.secondsRemaining <= 0) tracker.stopShotClock();
+}, [tracker.shotClock.secondsRemaining]);
+```
+
+**Key Changes:**
+1. ✅ **Removed `secondsRemaining` from interval dependencies**
+2. ✅ Interval only recreates when **running state** changes
+3. ✅ Separate effects handle edge cases (quarter end, violations)
+4. ✅ **No freeze** when resetting shot clock
+5. ✅ Game clock **never affected** by shot clock operations
+
+**Result:**
+- Game clock: Smooth, continuous countdown
+- Shot clock reset: Instant, no freeze
+- Better performance: Interval persists across ticks
+
+---
+
 ## 🎮 **User Experience:**
 
 ### **Scenario 1: Reset During Live Play**
