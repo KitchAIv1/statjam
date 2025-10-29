@@ -21,11 +21,12 @@ import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
 import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
 import { TimeoutModalV3 } from '@/components/tracker-v3/TimeoutModalV3';
 import { PossessionIndicator } from '@/components/tracker-v3/PossessionIndicator';
-// ✅ PHASE 4: Play Sequence Modals
+// ✅ PHASE 4 & 5: Play Sequence Modals
 import { AssistPromptModal } from '@/components/tracker-v3/modals/AssistPromptModal';
 import { ReboundPromptModal } from '@/components/tracker-v3/modals/ReboundPromptModal';
 import { BlockPromptModal } from '@/components/tracker-v3/modals/BlockPromptModal';
 import { TurnoverPromptModal } from '@/components/tracker-v3/modals/TurnoverPromptModal';
+import { FreeThrowSequenceModal } from '@/components/tracker-v3/modals/FreeThrowSequenceModal';
 
 interface GameData {
   id: string;
@@ -910,6 +911,43 @@ function StatTrackerV3Content() {
             onSkip={tracker.clearPlayPrompt}
             homePlayers={teamAPlayers.map(p => ({ ...p, teamId: gameData.team_a_id }))}
             stealerName={tracker.playPrompt.metadata?.stealerName || 'Opponent Team'}
+          />
+        )}
+
+        {/* ✅ PHASE 5: Free Throw Sequence Modal - After shooting foul */}
+        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'free_throw' && (
+          <FreeThrowSequenceModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onComplete={async (results) => {
+              console.log('🏀 Free throw sequence complete:', results);
+              
+              // Record each free throw
+              for (let i = 0; i < results.length; i++) {
+                const result = results[i];
+                const isLastShot = i === results.length - 1;
+                
+                await tracker.recordStat({
+                  gameId: gameIdParam,
+                  playerId: tracker.playPrompt.metadata?.shooterId,
+                  teamId: tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id,
+                  statType: 'free_throw',
+                  modifier: result.made ? 'made' : 'missed',
+                  sequenceId: tracker.playPrompt.sequenceId || undefined
+                });
+                
+                // If last shot was missed, prompt for rebound
+                if (isLastShot && result.shouldRebound) {
+                  console.log('🎯 Last FT missed, prompting for rebound');
+                  // Rebound prompt will be triggered by PlayEngine
+                }
+              }
+              
+              tracker.clearPlayPrompt();
+            }}
+            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
+            totalShots={tracker.playPrompt.metadata?.totalShots || 2}
+            foulType={tracker.playPrompt.metadata?.foulType || 'shooting'}
           />
         )}
 

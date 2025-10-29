@@ -186,8 +186,72 @@ export class PlayEngine {
       };
       result.actions.push(`Auto-generate turnover for steal by player ${event.playerId}`);
     }
+    
+    // ✅ PHASE 5: FREE THROW SEQUENCE DETECTION
+    // When a shooting foul is recorded, trigger free throw sequence
+    if (event.statType === 'foul' && flags.freeThrowSequence) {
+      const foulType = this.determineFoulType(event);
+      const totalShots = this.determineFreeThrowCount(event, foulType);
+      
+      if (totalShots > 0) {
+        result.shouldPrompt = true;
+        result.promptType = 'free_throw';
+        result.sequenceId = uuidv4();
+        result.metadata = {
+          shooterId: event.playerId, // Player who was fouled
+          shooterName: event.playerId, // Will be resolved to name in UI
+          foulType: foulType,
+          totalShots: totalShots,
+          foulerId: event.metadata?.foulerId, // Player who committed foul (if tracked)
+          shooterTeamId: event.teamId // Team of the fouled player
+        };
+        result.actions.push(`Prompt free throw sequence: ${totalShots} shots (${foulType})`);
+      }
+    }
 
     return result;
+  }
+  
+  /**
+   * Determine the type of foul for free throw purposes
+   */
+  static determineFoulType(event: GameEvent): '1-and-1' | 'shooting' | 'technical' | 'flagrant' {
+    const modifier = event.modifier?.toLowerCase() || '';
+    
+    if (modifier.includes('technical')) return 'technical';
+    if (modifier.includes('flagrant')) return 'flagrant';
+    if (modifier.includes('1-and-1') || modifier.includes('bonus')) return '1-and-1';
+    if (modifier.includes('shooting')) return 'shooting';
+    
+    // Default to shooting foul
+    return 'shooting';
+  }
+  
+  /**
+   * Determine how many free throws should be awarded
+   */
+  static determineFreeThrowCount(event: GameEvent, foulType: string): number {
+    const modifier = event.modifier?.toLowerCase() || '';
+    
+    // Technical fouls: 1 shot
+    if (foulType === 'technical') return 1;
+    
+    // Flagrant fouls: 2 shots
+    if (foulType === 'flagrant') return 2;
+    
+    // 1-and-1: Up to 2 shots (but handled specially in modal)
+    if (foulType === '1-and-1') return 2;
+    
+    // Shooting fouls: Check shot type from metadata
+    if (foulType === 'shooting') {
+      // Check if it was a 3-point attempt
+      if (modifier.includes('3') || modifier.includes('three')) return 3;
+      // Default to 2 shots for shooting fouls
+      return 2;
+    }
+    
+    // Default: no free throws
+    return 0;
   }
 
   /**

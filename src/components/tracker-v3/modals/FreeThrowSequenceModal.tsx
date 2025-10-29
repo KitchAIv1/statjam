@@ -1,179 +1,209 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Target, Check } from 'lucide-react';
+import { X, Target, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-
-/**
- * FreeThrowSequenceModal - Manage free throw sequence
- * 
- * PURPOSE:
- * - Appears after shooting foul
- * - Tracks multiple free throw attempts
- * - Shows current attempt (1 of 2, 2 of 2, etc.)
- * - Records made/missed for each attempt
- * - Links all FTs in sequence via sequence_id
- * 
- * PHASE 4: Play Sequences & Event Linking
- */
+import { Card } from '@/components/ui/card';
 
 interface FreeThrowSequenceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRecordFreeThrow: (made: boolean) => void;
+  onComplete: (results: { made: boolean; shouldRebound: boolean }[]) => void;
   shooterName: string;
-  currentAttempt: number;
-  totalAttempts: number;
-  foulType: 'shooting' | 'technical' | 'flagrant' | 'bonus';
+  totalShots: number; // 1, 2, or 3
+  foulType: '1-and-1' | 'shooting' | 'technical' | 'flagrant';
 }
 
 export function FreeThrowSequenceModal({
   isOpen,
   onClose,
-  onRecordFreeThrow,
+  onComplete,
   shooterName,
-  currentAttempt,
-  totalAttempts,
+  totalShots,
   foulType
 }: FreeThrowSequenceModalProps) {
-  const [isRecording, setIsRecording] = useState(false);
+  const [currentShot, setCurrentShot] = useState(1);
+  const [results, setResults] = useState<{ made: boolean; shouldRebound: boolean }[]>([]);
 
   if (!isOpen) return null;
 
-  const handleMade = async () => {
-    setIsRecording(true);
-    await onRecordFreeThrow(true);
-    setIsRecording(false);
+  const handleShotResult = (made: boolean) => {
+    const newResults = [...results, { made, shouldRebound: !made }];
+    setResults(newResults);
+
+    // Check if sequence should continue
+    if (foulType === '1-and-1') {
+      // 1-and-1: Stop if first shot is missed
+      if (currentShot === 1 && !made) {
+        onComplete(newResults);
+        resetModal();
+        return;
+      }
+      // 1-and-1: Continue to second shot if first is made
+      if (currentShot === 1 && made) {
+        setCurrentShot(2);
+        return;
+      }
+      // 1-and-1: Complete after second shot
+      if (currentShot === 2) {
+        onComplete(newResults);
+        resetModal();
+        return;
+      }
+    } else {
+      // Regular shooting fouls: All shots must be taken
+      if (currentShot < totalShots) {
+        setCurrentShot(currentShot + 1);
+        return;
+      } else {
+        // Sequence complete
+        onComplete(newResults);
+        resetModal();
+        return;
+      }
+    }
   };
 
-  const handleMissed = async () => {
-    setIsRecording(true);
-    await onRecordFreeThrow(false);
-    setIsRecording(false);
+  const resetModal = () => {
+    setCurrentShot(1);
+    setResults([]);
   };
 
-  const getFoulTypeLabel = () => {
+  const handleClose = () => {
+    resetModal();
+    onClose();
+  };
+
+  const getFoulTypeDisplay = () => {
     switch (foulType) {
+      case '1-and-1':
+        return '1-and-1 Free Throws';
       case 'shooting':
-        return 'Shooting Foul';
+        return `${totalShots} Free Throws`;
       case 'technical':
-        return 'Technical Foul';
+        return 'Technical Free Throw';
       case 'flagrant':
-        return 'Flagrant Foul';
-      case 'bonus':
-        return 'Bonus Free Throws';
+        return `Flagrant Foul - ${totalShots} Free Throws`;
       default:
         return 'Free Throws';
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div 
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4"
-        style={{
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
-              <Target className="w-5 h-5 text-white" />
-            </div>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-md bg-slate-800 border-slate-700 shadow-2xl">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Free Throw</h2>
-              <p className="text-sm text-gray-600">
-                {getFoulTypeLabel()}
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Target className="w-6 h-6 text-orange-500" />
+                {getFoulTypeDisplay()}
+              </h3>
+              <p className="text-sm text-gray-400 mt-1">
+                Shooter: <span className="text-white font-medium">{shooterName}</span>
               </p>
             </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-            disabled={isRecording}
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          {/* Shooter Info */}
-          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-green-50 to-teal-50 border border-green-200">
-            <p className="text-sm text-gray-600 mb-1">Shooter</p>
-            <p className="text-lg font-bold text-gray-900">{shooterName}</p>
+            <button
+              onClick={handleClose}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
 
-          {/* Attempt Counter */}
-          <div className="mb-6 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100">
-              <span className="text-sm font-medium text-gray-600">Attempt</span>
-              <span className="text-2xl font-bold text-gray-900">
-                {currentAttempt}
+          {/* Shot Progress */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-400">Progress</span>
+              <span className="text-sm text-white font-medium">
+                Shot {currentShot} of {foulType === '1-and-1' ? '2 (max)' : totalShots}
               </span>
-              <span className="text-sm font-medium text-gray-600">of</span>
-              <span className="text-2xl font-bold text-gray-900">
-                {totalAttempts}
-              </span>
+            </div>
+            <div className="flex gap-2">
+              {Array.from({ length: totalShots }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`h-2 flex-1 rounded-full transition-all ${
+                    idx < results.length
+                      ? results[idx].made
+                        ? 'bg-green-500'
+                        : 'bg-red-500'
+                      : idx === currentShot - 1
+                      ? 'bg-orange-500'
+                      : 'bg-gray-700'
+                  }`}
+                />
+              ))}
             </div>
           </div>
 
-          {/* Progress Dots */}
-          <div className="flex justify-center gap-2 mb-6">
-            {[...Array(totalAttempts)].map((_, index) => (
-              <div
-                key={index}
-                className={`w-3 h-3 rounded-full ${
-                  index < currentAttempt - 1
-                    ? 'bg-green-500'
-                    : index === currentAttempt - 1
-                    ? 'bg-blue-500 animate-pulse'
-                    : 'bg-gray-300'
-                }`}
-              />
-            ))}
-          </div>
+          {/* Previous Results */}
+          {results.length > 0 && (
+            <div className="mb-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+              <p className="text-xs text-gray-400 mb-2">Previous Shots:</p>
+              <div className="flex gap-2">
+                {results.map((result, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                      result.made
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    }`}
+                  >
+                    {result.made ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <XCircle className="w-4 h-4" />
+                    )}
+                    Shot {idx + 1}: {result.made ? 'Made' : 'Missed'}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-          {/* Instructions */}
-          <p className="text-center text-sm text-gray-600 mb-6">
-            Did {shooterName} make the free throw?
-          </p>
+          {/* Current Shot Question */}
+          <div className="mb-6 text-center">
+            <p className="text-lg text-white font-medium mb-2">
+              Did {shooterName} make Free Throw #{currentShot}?
+            </p>
+            {foulType === '1-and-1' && currentShot === 1 && (
+              <p className="text-sm text-gray-400">
+                (If missed, sequence ends)
+              </p>
+            )}
+          </div>
 
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-4">
             <Button
-              onClick={handleMissed}
-              disabled={isRecording}
-              className="h-24 flex flex-col items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white border-2 border-red-400 rounded-xl shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
+              onClick={() => handleShotResult(true)}
+              className="h-20 bg-green-600 hover:bg-green-700 text-white font-bold text-lg flex flex-col items-center justify-center gap-2"
             >
-              <X className="w-8 h-8" />
-              <span className="text-lg font-bold">MISSED</span>
+              <CheckCircle2 className="w-8 h-8" />
+              Made
             </Button>
-
             <Button
-              onClick={handleMade}
-              disabled={isRecording}
-              className="h-24 flex flex-col items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white border-2 border-green-400 rounded-xl shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
+              onClick={() => handleShotResult(false)}
+              className="h-20 bg-red-600 hover:bg-red-700 text-white font-bold text-lg flex flex-col items-center justify-center gap-2"
             >
-              <Check className="w-8 h-8" />
-              <span className="text-lg font-bold">MADE</span>
+              <XCircle className="w-8 h-8" />
+              Missed
             </Button>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="p-6 pt-0">
-          <p className="text-xs text-center text-gray-500">
-            {currentAttempt === totalAttempts 
-              ? 'Last free throw in sequence' 
-              : `${totalAttempts - currentAttempt} more attempt${totalAttempts - currentAttempt > 1 ? 's' : ''} remaining`
-            }
-          </p>
+          {/* Info Text */}
+          <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+            <p className="text-xs text-blue-300 text-center">
+              {foulType === '1-and-1'
+                ? 'First shot must be made to attempt second shot'
+                : 'All free throws must be recorded'}
+            </p>
+          </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
-

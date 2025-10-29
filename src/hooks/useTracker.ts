@@ -81,10 +81,10 @@ interface UseTrackerReturn {
     lastChangeTimestamp: string | null;
   };
   
-  // ✅ PHASE 4: Play Sequence Prompts
+  // ✅ PHASE 4 & 5: Play Sequence Prompts
   playPrompt: {
     isOpen: boolean;
-    type: 'assist' | 'rebound' | 'block' | 'turnover' | null;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
     sequenceId: string | null;
     primaryEventId: string | null;
     metadata: Record<string, any> | null;
@@ -149,10 +149,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     lastChangeTimestamp: null as string | null
   });
   
-  // ✅ PHASE 4: Play Sequence Prompts
+  // ✅ PHASE 4 & 5: Play Sequence Prompts
   const [playPrompt, setPlayPrompt] = useState<{
     isOpen: boolean;
-    type: 'assist' | 'rebound' | 'block' | 'turnover' | null;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
     sequenceId: string | null;
     primaryEventId: string | null;
     metadata: Record<string, any> | null;
@@ -166,7 +166,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   
   // ✅ SEQUENTIAL PROMPTS: Queue for multiple prompts (Block → Rebound)
   const [promptQueue, setPromptQueue] = useState<Array<{
-    type: 'assist' | 'rebound' | 'block' | 'turnover';
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw';
     sequenceId: string;
     metadata: Record<string, any>;
   }>>([]);
@@ -987,9 +987,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           automationFlags.sequences
         );
         
-        // ✅ SEQUENTIAL PROMPTS: Handle prompt queue (Block → Rebound)
+        // ✅ SEQUENTIAL PROMPTS: Handle prompt queue (Block → Rebound) + Free Throws
         if (playResult.shouldPrompt && playResult.promptType && 
-            (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block')) {
+            (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block' || playResult.promptType === 'free_throw')) {
           
           // ✅ COACH MODE FIX: Don't show prompts for opponent actions
           if (isCoachMode && stat.isOpponentStat) {
