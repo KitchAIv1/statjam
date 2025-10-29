@@ -25,6 +25,7 @@ import { PossessionIndicator } from '@/components/tracker-v3/PossessionIndicator
 import { AssistPromptModal } from '@/components/tracker-v3/modals/AssistPromptModal';
 import { ReboundPromptModal } from '@/components/tracker-v3/modals/ReboundPromptModal';
 import { BlockPromptModal } from '@/components/tracker-v3/modals/BlockPromptModal';
+import { TurnoverPromptModal } from '@/components/tracker-v3/modals/TurnoverPromptModal';
 
 interface GameData {
   id: string;
@@ -868,6 +869,29 @@ function StatTrackerV3Content() {
             ).map(p => ({ ...p, teamId: teamAPlayers.find(tp => tp.id === p.id) ? gameData.team_a_id : gameData.team_b_id }))}
             shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
             shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
+          />
+        )}
+
+        {/* Turnover Prompt Modal - After opponent steal in coach mode */}
+        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'turnover' && (
+          <TurnoverPromptModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onSelectPlayer={async (playerId) => {
+              // Record turnover for selected home player
+              await tracker.recordStat({
+                gameId: gameIdParam,
+                playerId: playerId,
+                teamId: tracker.playPrompt.metadata?.homeTeamId || gameData.team_a_id,
+                statType: 'turnover',
+                modifier: null,
+                sequenceId: tracker.playPrompt.sequenceId || undefined
+              });
+              tracker.clearPlayPrompt();
+            }}
+            onSkip={tracker.clearPlayPrompt}
+            homePlayers={teamAPlayers.map(p => ({ ...p, teamId: gameData.team_a_id }))}
+            stealerName={tracker.playPrompt.metadata?.stealerName || 'Opponent Team'}
           />
         )}
 

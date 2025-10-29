@@ -84,7 +84,7 @@ interface UseTrackerReturn {
   // ✅ PHASE 4: Play Sequence Prompts
   playPrompt: {
     isOpen: boolean;
-    type: 'assist' | 'rebound' | 'block' | null;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | null;
     sequenceId: string | null;
     primaryEventId: string | null;
     metadata: Record<string, any> | null;
@@ -152,7 +152,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   // ✅ PHASE 4: Play Sequence Prompts
   const [playPrompt, setPlayPrompt] = useState<{
     isOpen: boolean;
-    type: 'assist' | 'rebound' | 'block' | null;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | null;
     sequenceId: string | null;
     primaryEventId: string | null;
     metadata: Record<string, any> | null;
@@ -1000,50 +1000,58 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         
         // ✅ AUTO-GENERATE TURNOVER FOR STEAL
         if (playResult.metadata?.shouldGenerateTurnover && stat.statType === 'steal') {
-          console.log('🔄 Auto-generating turnover for steal');
+          console.log('🔄 Processing steal-to-turnover logic');
           
-          // Determine opponent team and handle coach mode
-          let opponentTeamId: string;
-          let isOpponentTurnover = false;
-          
+          // ✅ COACH MODE: Show turnover prompt for opponent steals
           if (isCoachMode) {
-            // Coach mode: Steal by home team → Turnover to opponent (no player)
-            //             Steal by opponent → Turnover to home team player
             if (stat.isOpponentStat) {
-              // Opponent stole from home team → Turnover to home team
-              opponentTeamId = teamAId;
-              isOpponentTurnover = false;
+              // Opponent stole from home team
+              // → Show turnover prompt to select which home player lost possession
+              console.log('🎯 Showing turnover prompt for opponent steal');
+              
+              setPlayPrompt({
+                isOpen: true,
+                type: 'turnover',
+                sequenceId: playResult.sequenceId || null,
+                primaryEventId: null,
+                metadata: {
+                  stealerId: stat.playerId,
+                  stealerName: 'Opponent Team',
+                  stealerTeamId: stat.teamId,
+                  homeTeamId: teamAId
+                }
+              });
             } else {
-              // Home team stole from opponent → Turnover to opponent (generic)
-              opponentTeamId = teamAId; // Use home team ID for database
-              isOpponentTurnover = true; // Flag as opponent stat
+              // Home team stole from opponent
+              // → Skip turnover generation (opponent has no individual players)
+              // → Steal is enough to track the defensive play
+              console.log('⏭️ Skipping turnover auto-generation (home steal from opponent)');
+              console.log('💡 Opponent turnover implied by steal (no individual player to attribute)');
             }
           } else {
-            // Regular mode: Normal team-to-team
-            opponentTeamId = stat.teamId === teamAId ? teamBId : teamAId;
-            isOpponentTurnover = false;
+            // ✅ REGULAR MODE: Full auto-generation
+            const opponentTeamId = stat.teamId === teamAId ? teamBId : teamAId;
+            
+            // Generate turnover event
+            const turnoverEvent = PlayEngine.generateTurnoverForSteal(
+              gameEvent,
+              opponentTeamId
+            );
+            
+            // Record turnover immediately (no prompt needed)
+            // This will be executed after the steal is recorded in the database
+            setTimeout(async () => {
+              await recordStat({
+                gameId: stat.gameId,
+                playerId: turnoverEvent.playerId,
+                teamId: turnoverEvent.teamId,
+                statType: 'turnover',
+                modifier: null, // ✅ FIX: Turnovers don't use modifiers
+                sequenceId: playResult.sequenceId,
+                linkedEventId: undefined // Will link to steal after it's recorded
+              });
+            }, 100); // Small delay to ensure steal is recorded first
           }
-          
-          // Generate turnover event
-          const turnoverEvent = PlayEngine.generateTurnoverForSteal(
-            gameEvent,
-            opponentTeamId
-          );
-          
-          // Record turnover immediately (no prompt needed)
-          // This will be executed after the steal is recorded in the database
-          setTimeout(async () => {
-            await recordStat({
-              gameId: stat.gameId,
-              playerId: isOpponentTurnover ? undefined : turnoverEvent.playerId,
-              teamId: turnoverEvent.teamId,
-              statType: 'turnover',
-              modifier: null, // ✅ FIX: Turnovers don't use modifiers
-              isOpponentStat: isOpponentTurnover,
-              sequenceId: playResult.sequenceId,
-              linkedEventId: undefined // Will link to steal after it's recorded
-            });
-          }, 100); // Small delay to ensure steal is recorded first
         }
       }
 
