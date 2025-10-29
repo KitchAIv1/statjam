@@ -164,17 +164,25 @@ export class PossessionEngine {
         break;
         
       case 'foul':
-        // ✅ PHASE 6: Foul possession logic
-        // Most fouls → opponent gets ball
-        // Technical/Flagrant → fouled team keeps possession (handled after FTs in Phase 6B)
+        // ✅ PHASE 6A & 6B: Foul possession logic with technical/flagrant special handling
         
-        // For now, implement standard foul behavior (opponent gets ball)
-        // Technical/Flagrant special handling will be added in Phase 6B
-        newState.currentPossession = event.opponentTeamId;
-        shouldFlip = true;
-        shouldPersist = flags.persistState;
-        endReason = 'foul';
-        actions.push(`Possession flipped to ${event.opponentTeamId} (foul by ${event.teamId})`);
+        // Check if this is a technical or flagrant foul (fouled team keeps possession)
+        if (event.foulType === 'technical' || event.foulType === 'flagrant') {
+          // Technical/Flagrant: Fouled team KEEPS possession after FTs
+          // The opponent team (who was fouled) retains possession
+          newState.currentPossession = event.opponentTeamId;
+          shouldFlip = currentState.currentPossession !== event.opponentTeamId;
+          shouldPersist = flags.persistState;
+          endReason = `${event.foulType}_foul_possession_retained`;
+          actions.push(`Possession retained by ${event.opponentTeamId} (${event.foulType} foul by ${event.teamId})`);
+        } else {
+          // Standard fouls (personal, shooting, offensive, 1-and-1): Opponent gets ball
+          newState.currentPossession = event.opponentTeamId;
+          shouldFlip = true;
+          shouldPersist = flags.persistState;
+          endReason = 'foul';
+          actions.push(`Possession flipped to ${event.opponentTeamId} (foul by ${event.teamId})`);
+        }
         break;
         
       default:

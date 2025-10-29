@@ -217,13 +217,8 @@ static async updatePossession(
 | **Shooting Foul** | **Opponent (after FTs)** | ✅ **NEW (Phase 6)** |
 | **Offensive Foul** | **Opponent** | ✅ **NEW (Phase 6)** |
 | **1-and-1 / Bonus** | **Opponent (after FTs)** | ✅ **NEW (Phase 6)** |
-
-### **Future Implementation (Phase 6B)**
-
-| Foul Type | Possession After | Status |
-|-----------|------------------|--------|
-| Technical | **Same Team (after FT)** | ⏳ Phase 6B |
-| Flagrant | **Same Team (after FTs)** | ⏳ Phase 6B |
+| **Technical** | **Fouled Team KEEPS** | ✅ **NEW (Phase 6B)** |
+| **Flagrant** | **Fouled Team KEEPS** | ✅ **NEW (Phase 6B)** |
 
 ---
 
@@ -380,8 +375,9 @@ case 'foul':
 
 ## 🎉 Status
 
-**Phase 6A**: ✅ **COMPLETE**  
-**Phase 6B**: ⏳ **FUTURE** (Technical/Flagrant special handling)
+**Phase 6A**: ✅ **COMPLETE** (Standard foul possession)  
+**Phase 6B**: ✅ **COMPLETE** (Technical/Flagrant special handling)  
+**Phase 6 (Full)**: ✅ **COMPLETE**
 
 All foul types now correctly update possession! The system is ready for testing.
 

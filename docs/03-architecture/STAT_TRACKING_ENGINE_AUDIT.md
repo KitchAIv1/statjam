@@ -199,13 +199,13 @@ Storage:
   - ✅ Survives page refresh
   - ✅ Full audit trail with reasons and timestamps
 
-FoulPossession (✅ PHASE 6):
+FoulPossession (✅ PHASE 6A & 6B COMPLETE):
   - ✅ Personal foul → Opponent gets ball
   - ✅ Shooting foul → Opponent gets ball (after FTs)
   - ✅ Offensive foul → Opponent gets ball
   - ✅ 1-and-1/Bonus → Opponent gets ball (after FTs)
-  - ⏳ Technical foul → Same team keeps ball (Phase 6B)
-  - ⏳ Flagrant foul → Same team keeps ball (Phase 6B)
+  - ✅ Technical foul → Fouled team KEEPS ball (after FT)
+  - ✅ Flagrant foul → Fouled team KEEPS ball (after FTs)
 ```
 
 **Key Files**:

@@ -937,6 +937,18 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             isOpponentStat: stat.isOpponentStat
           }, null, 2));
           
+          // ✅ PHASE 6B: Map modifier to foulType for technical/flagrant handling
+          let foulType: 'personal' | 'shooting' | '1-and-1' | 'technical' | 'flagrant' | 'offensive' | undefined = undefined;
+          if (possessionEventType === 'foul' && stat.modifier) {
+            // Map modifier to foulType
+            if (stat.modifier === 'technical') foulType = 'technical';
+            else if (stat.modifier === 'flagrant') foulType = 'flagrant';
+            else if (stat.modifier === 'offensive') foulType = 'offensive';
+            else if (stat.modifier === 'shooting') foulType = 'shooting';
+            else if (stat.modifier === '1-and-1') foulType = '1-and-1';
+            else if (stat.modifier === 'personal') foulType = 'personal';
+          }
+          
           const possessionResult = PossessionEngine.processEvent(
             {
               currentPossession: possession.currentTeamId,
@@ -945,7 +957,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             {
               type: possessionEventType,
               teamId: possessionTeamId,  // ✅ Use possessionTeamId for logic
-              opponentTeamId: opponentTeamId
+              opponentTeamId: opponentTeamId,
+              foulType: foulType  // ✅ PHASE 6B: Pass foul type for special handling
             },
             ruleset,
             automationFlags.possession
