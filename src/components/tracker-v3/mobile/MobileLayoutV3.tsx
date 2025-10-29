@@ -75,6 +75,7 @@ interface MobileLayoutV3Props {
   onTimeOut: () => void; // Add timeout handler from main page
   isCoachMode?: boolean; // Add coach mode flag
   userId?: string; // ✅ FIX: User ID for opponent stats
+  onPossessionChange?: (teamId: string) => void; // ✅ PHASE 6: Manual possession control
 }
 
 export function MobileLayoutV3({
@@ -90,7 +91,8 @@ export function MobileLayoutV3({
   onTeamPlayersUpdate,
   onTimeOut,
   isCoachMode = false,
-  userId
+  userId,
+  onPossessionChange
 }: MobileLayoutV3Props) {
   const [possessionTeam, setPossessionTeam] = useState<'A' | 'B'>('A');
 
@@ -201,6 +203,7 @@ export function MobileLayoutV3({
           teamBId={isCoachMode ? 'opponent-team' : gameData.team_b_id}
           possessionArrow={tracker.possession?.possessionArrow}
           isCoachMode={isCoachMode}
+          onPossessionChange={onPossessionChange}
         />
 
         {/* ✅ REFINEMENT 4: Possession Indicator moved to CompactScoreboardV3 center column */}

@@ -918,26 +918,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             ? (stat.isOpponentStat ? teamAId : 'opponent-team')
             : (stat.teamId === teamAId ? teamBId : teamAId);
           
-          console.log('🏀 PHASE 3 DEBUG: Processing possession event', {
-            eventType: possessionEventType,
-            possessionTeamId: possessionTeamId,
-            statTeamId: stat.teamId,
-            opponentTeamId: opponentTeamId,
-            currentPossession: possession.currentTeamId,
-            isCoachMode: isCoachMode,
-            isOpponentStat: stat.isOpponentStat
-          });
-          console.log('🏀 PHASE 3 DEBUG (EXPANDED):', JSON.stringify({
-            eventType: possessionEventType,
-            possessionTeamId: possessionTeamId,
-            statTeamId: stat.teamId,
-            opponentTeamId: opponentTeamId,
-            currentPossession: possession.currentTeamId,
-            isCoachMode: isCoachMode,
-            isOpponentStat: stat.isOpponentStat
-          }, null, 2));
-          
-          // ✅ PHASE 6B: Map modifier to foulType for technical/flagrant handling
+          // ✅ PHASE 6B: Map modifier to foulType for technical/flagrant handling (BEFORE logging!)
           let foulType: 'personal' | 'shooting' | '1-and-1' | 'technical' | 'flagrant' | 'offensive' | undefined = undefined;
           if (possessionEventType === 'foul' && stat.modifier) {
             // Map modifier to foulType
@@ -949,6 +930,32 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             else if (stat.modifier === 'personal') foulType = 'personal';
           }
           
+          console.log('🏀 PHASE 3 DEBUG: Processing possession event', {
+            eventType: possessionEventType,
+            foulType: foulType, // ✅ PHASE 6B: Log foul type
+            modifier: stat.modifier, // ✅ Log raw modifier too
+            possessionTeamId: possessionTeamId,
+            statTeamId: stat.teamId,
+            opponentTeamId: opponentTeamId,
+            currentPossession: possession.currentTeamId,
+            isCoachMode: isCoachMode,
+            isOpponentStat: stat.isOpponentStat
+          });
+          console.log('🏀 PHASE 3 DEBUG (EXPANDED):', JSON.stringify({
+            eventType: possessionEventType,
+            foulType: foulType, // ✅ PHASE 6B: Log foul type
+            modifier: stat.modifier, // ✅ Log raw modifier too
+            possessionTeamId: possessionTeamId,
+            statTeamId: stat.teamId,
+            opponentTeamId: opponentTeamId,
+            currentPossession: possession.currentTeamId,
+            isCoachMode: isCoachMode,
+            isOpponentStat: stat.isOpponentStat
+          }, null, 2));
+          
+          // ✅ PHASE 6B: Check if this is a technical/flagrant FT (from metadata)
+          const isTechnicalOrFlagrantFT = stat.metadata?.isTechnicalOrFlagrantFT === true;
+          
           const possessionResult = PossessionEngine.processEvent(
             {
               currentPossession: possession.currentTeamId,
@@ -958,7 +965,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               type: possessionEventType,
               teamId: possessionTeamId,  // ✅ Use possessionTeamId for logic
               opponentTeamId: opponentTeamId,
-              foulType: foulType  // ✅ PHASE 6B: Pass foul type for special handling
+              foulType: foulType,  // ✅ PHASE 6B: Pass foul type for special handling
+              isTechnicalOrFlagrantFT: isTechnicalOrFlagrantFT  // ✅ PHASE 6B: Flag for possession retention
             },
             ruleset,
             automationFlags.possession

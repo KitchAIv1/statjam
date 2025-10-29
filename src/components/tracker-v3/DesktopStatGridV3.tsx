@@ -33,6 +33,8 @@ interface DesktopStatGridV3Props {
   teamAName?: string;
   teamBName?: string;
   isCoachMode?: boolean;
+  // ✅ PHASE 6: Manual possession control
+  onPossessionChange?: (teamId: string) => void;
 }
 
 export function DesktopStatGridV3({
@@ -52,7 +54,8 @@ export function DesktopStatGridV3({
   teamBId,
   teamAName,
   teamBName,
-  isCoachMode = false
+  isCoachMode = false,
+  onPossessionChange
 }: DesktopStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
@@ -201,6 +204,7 @@ export function DesktopStatGridV3({
               teamBName={teamBName}
               possessionArrow={possession.possessionArrow}
               isMobile={false}
+              onPossessionChange={onPossessionChange}
             />
           </div>
         ) : (

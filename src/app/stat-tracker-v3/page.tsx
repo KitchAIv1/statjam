@@ -806,6 +806,7 @@ function StatTrackerV3Content() {
         onTimeOut={handleTimeoutClick}
         isCoachMode={coachMode}
         userId={user?.id}
+        onPossessionChange={tracker.manualSetPossession}
       />
     );
   }
@@ -903,6 +904,7 @@ function StatTrackerV3Content() {
                 teamAName={gameData.team_a?.name || 'Team A'}
                 teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
                 isCoachMode={coachMode}
+                onPossessionChange={tracker.manualSetPossession}
               />
             </div>
           </div>
@@ -1085,13 +1087,18 @@ function StatTrackerV3Content() {
                 const result = results[i];
                 const isLastShot = i === results.length - 1;
                 
+                // ✅ PHASE 6B: Check if this is a technical/flagrant FT
+                const foulType = tracker.playPrompt.metadata?.foulType;
+                const isTechnicalOrFlagrant = foulType === 'technical' || foulType === 'flagrant';
+                
                 await tracker.recordStat({
                   gameId: gameIdParam,
                   playerId: tracker.playPrompt.metadata?.shooterId,
                   teamId: tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id,
                   statType: 'free_throw',
                   modifier: result.made ? 'made' : 'missed',
-                  sequenceId: tracker.playPrompt.sequenceId || undefined
+                  sequenceId: tracker.playPrompt.sequenceId || undefined,
+                  metadata: isTechnicalOrFlagrant ? { isTechnicalOrFlagrantFT: true } : undefined // ✅ PHASE 6B: Flag for possession retention
                 });
                 
                 // If last shot was missed, prompt for rebound

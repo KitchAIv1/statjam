@@ -10,6 +10,7 @@ interface PossessionIndicatorProps {
   teamBName: string;
   possessionArrow: string;
   isMobile?: boolean;
+  onPossessionChange?: (teamId: string) => void; // ✅ PHASE 6: Manual control
 }
 
 /**
@@ -28,7 +29,8 @@ export const PossessionIndicator: React.FC<PossessionIndicatorProps> = ({
   teamAName,
   teamBName,
   possessionArrow,
-  isMobile = false
+  isMobile = false,
+  onPossessionChange
 }) => {
   const isTeamAPossession = currentTeamId === teamAId;
   const isTeamBPossession = currentTeamId === teamBId;
@@ -39,18 +41,28 @@ export const PossessionIndicator: React.FC<PossessionIndicatorProps> = ({
   // Show arrow if possession arrow differs from current possession (jump ball situation)
   const showArrow = possessionArrow !== currentTeamId;
 
+  // ✅ PHASE 6: Handle manual possession change
+  const handleTeamClick = (teamId: string) => {
+    if (onPossessionChange && teamId !== currentTeamId) {
+      onPossessionChange(teamId);
+    }
+  };
+
   return (
     <div className={`flex items-center gap-2 ${isMobile ? 'justify-center' : ''}`}>
       {/* Team A Indicator */}
       <div
+        onClick={() => handleTeamClick(teamAId)}
         className={`
           ${isMobile ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'}
           rounded-md font-medium transition-all duration-300
+          ${onPossessionChange ? 'cursor-pointer hover:opacity-80' : ''}
           ${isTeamAPossession 
             ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg animate-pulse' 
             : 'bg-gray-700 text-gray-400'
           }
         `}
+        title={onPossessionChange ? `Click to give possession to ${teamAName}` : undefined}
       >
         {isMobile ? 'A' : teamAName}
       </div>
@@ -83,14 +95,17 @@ export const PossessionIndicator: React.FC<PossessionIndicatorProps> = ({
 
       {/* Team B Indicator */}
       <div
+        onClick={() => handleTeamClick(teamBId)}
         className={`
           ${isMobile ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'}
           rounded-md font-medium transition-all duration-300
+          ${onPossessionChange ? 'cursor-pointer hover:opacity-80' : ''}
           ${isTeamBPossession 
             ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg animate-pulse' 
             : 'bg-gray-700 text-gray-400'
           }
         `}
+        title={onPossessionChange ? `Click to give possession to ${teamBName}` : undefined}
       >
         {isMobile ? 'B' : teamBName}
       </div>
