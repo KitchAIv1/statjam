@@ -329,10 +329,27 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
                   setRuleset(loadedRuleset);
                   console.log('✅ Phase 1: Loaded ruleset:', rulesetId);
                   
-                  // Load automation flags (defaults to all OFF)
-                  const flags = tournament.automation_settings || DEFAULT_AUTOMATION_FLAGS;
+                  // ✅ PRE-FLIGHT CHECK: Load automation flags with priority hierarchy
+                  // 1. Game-specific settings (from Pre-Flight Check Modal)
+                  // 2. Tournament defaults
+                  // 3. System defaults
+                  let flags;
+                  if (game.automation_settings) {
+                    // Use game-specific settings (saved by Pre-Flight Check)
+                    flags = game.automation_settings;
+                    console.log('✅ Phase 1: Using GAME-SPECIFIC automation settings (from Pre-Flight Check):', flags);
+                  } else if (tournament.automation_settings) {
+                    // Fall back to tournament defaults
+                    flags = tournament.automation_settings;
+                    console.log('✅ Phase 1: Using TOURNAMENT automation settings:', flags);
+                  } else {
+                    // Fall back to system defaults
+                    flags = DEFAULT_AUTOMATION_FLAGS;
+                    console.log('✅ Phase 1: Using DEFAULT automation settings:', flags);
+                  }
+                  
                   setAutomationFlags(flags);
-                  console.log('✅ Phase 1: Loaded automation flags:', flags);
+                  console.log('✅ Phase 1: Final automation flags loaded:', flags);
                   
                   // Log if any automation is enabled (should be OFF in Phase 1)
                   const anyEnabled = Object.values(flags).some((category: any) => 

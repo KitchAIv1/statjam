@@ -6,8 +6,8 @@
 
 -- Step 2: Enable clock automation for this tournament
 UPDATE tournaments
-SET automation_flags = jsonb_set(
-  COALESCE(automation_flags, '{}'::jsonb),
+SET automation_settings = jsonb_set(
+  COALESCE(automation_settings, '{}'::jsonb),
   '{clock,enabled}',
   'true'::jsonb
 )
@@ -17,17 +17,18 @@ WHERE id = '5171021b-0925-49dc-af62-5ddfbe56726e';
 SELECT 
   id,
   name,
-  automation_flags
+  automation_settings
 FROM tournaments
 WHERE id = '5171021b-0925-49dc-af62-5ddfbe56726e';
 
 -- ✅ EXPECTED RESULT:
--- automation_flags should show:
+-- automation_settings should show:
 -- {
 --   "clock": {
 --     "enabled": true,
---     "autoStart": true,
---     "autoPause": true
+--     "autoPause": true,
+--     "autoReset": true,
+--     "ftMode": true
 --   },
 --   "possession": {
 --     "enabled": true,
@@ -45,11 +46,11 @@ WHERE id = '5171021b-0925-49dc-af62-5ddfbe56726e';
 -- ===================================================================
 
 -- UPDATE tournaments
--- SET automation_flags = jsonb_set(
---   COALESCE(automation_flags, '{}'::jsonb),
+-- SET automation_settings = jsonb_set(
+--   COALESCE(automation_settings, '{}'::jsonb),
 --   '{clock,enabled}',
 --   'true'::jsonb
 -- )
--- WHERE automation_flags IS NOT NULL 
---    OR automation_flags->>'clock' IS NOT NULL;
+-- WHERE automation_settings IS NOT NULL 
+--    OR automation_settings->>'clock' IS NOT NULL;
 
