@@ -46,6 +46,9 @@ export function PlayerManagementModal({
   onUpdate,
   minPlayers = 5
 }: PlayerManagementModalProps) {
+  // 🔍 DEBUG: Verify new modal is loading
+  console.log('✅ NEW PlayerManagementModal loaded for team:', team.name);
+  
   // State
   const [currentPlayers, setCurrentPlayers] = useState<GenericPlayer[]>([]);
   const [loading, setLoading] = useState(true);
