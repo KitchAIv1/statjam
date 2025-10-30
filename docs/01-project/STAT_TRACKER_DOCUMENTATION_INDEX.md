@@ -6,7 +6,9 @@
 
 ## 📚 Documentation Overview
 
-This index provides a comprehensive guide to all documentation for the Stat Admin Tracker. The documentation is organized into four major categories:
+This index provides a comprehensive guide to all documentation for the Stat Admin Tracker. The documentation is organized into four major categories with 18 total files covering every aspect of the system.
+
+**Total Documentation**: 18 files, 4,500+ lines of comprehensive documentation
 
 1. **Architecture & Design** - System design and component structure
 2. **Implementation Guides** - Feature-specific implementation details
@@ -18,6 +20,29 @@ This index provides a comprehensive guide to all documentation for the Stat Admi
 ## 🏗️ Architecture & Design
 
 ### Primary Documentation
+
+#### 0. [PRD_CURRENT.md](./PRD_CURRENT.md)
+**Size**: 500+ lines  
+**Purpose**: Current Product Requirements Document  
+**Audience**: Product Managers, Stakeholders, Developers
+
+**Contents**:
+- Complete feature overview (v0.15.0+)
+- User roles and permissions
+- Core platform features
+- Technical architecture
+- Development phases
+- Success metrics
+- Future roadmap
+- Production readiness status
+
+**When to Use**:
+- Understanding product requirements
+- Feature planning and prioritization
+- Stakeholder communication
+- Development planning
+
+---
 
 #### 1. [STAT_ADMIN_TRACKER_COMPLETE_MAP.md](./STAT_ADMIN_TRACKER_COMPLETE_MAP.md)
 **Size**: 2015 lines  
