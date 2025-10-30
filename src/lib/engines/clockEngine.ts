@@ -298,10 +298,12 @@ export class ClockEngine {
       return true;
     }
     
-    // Shooting foul should disable shot clock (FT sequence coming)
-    if (event.type === 'foul' && event.modifier === 'shooting') {
-      return true;
-    }
+    // ❌ REMOVED: Don't disable shot clock on shooting fouls
+    // The FT modal will handle shot clock visibility when it opens
+    // Disabling here causes shot clock to disappear during victim selection
+    // if (event.type === 'foul' && event.modifier === 'shooting') {
+    //   return true;
+    // }
     
     return false;
   }

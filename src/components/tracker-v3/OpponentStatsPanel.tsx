@@ -38,22 +38,6 @@ export function OpponentStatsPanel({
 
   // Combine all players (on-court + bench)
   const allPlayers = [...onCourtPlayers, ...benchPlayers];
-  
-  // Debug logging
-  console.log('🎯 OpponentStatsPanel: Data loaded', {
-    gameId,
-    teamId,
-    teamName,
-    loading,
-    error,
-    onCourtPlayers: onCourtPlayers.length,
-    benchPlayers: benchPlayers.length,
-    allPlayers: allPlayers.length,
-    onCourtPlayersData: onCourtPlayers,
-    benchPlayersData: benchPlayers,
-    teamStats: !!teamStats,
-    opponentTeamStats: !!opponentTeamStats
-  });
 
   if (loading) {
     return (

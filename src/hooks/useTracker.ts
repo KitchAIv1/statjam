@@ -938,7 +938,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             ...prev,
             secondsRemaining: clockResult.newState.shotClock,
             isRunning: clockResult.newState.shotClockRunning,
-            isVisible: !clockResult.newState.shotClockDisabled
+            isVisible: clockResult.newState.shotClockDisabled !== undefined 
+              ? !clockResult.newState.shotClockDisabled 
+              : prev.isVisible // ✅ PRESERVE isVisible if not explicitly set
           }));
         }
       }
