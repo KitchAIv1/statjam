@@ -691,6 +691,9 @@ export class GameServiceV3 {
   /**
    * ✅ PHASE 6: Update possession manually (for edge cases)
    * Used when user manually overrides possession
+   * 
+   * NOTE: This updates the games table directly, not game_possessions
+   * The game_possessions table is for historical tracking only
    */
   static async updatePossession(
     gameId: string,
@@ -700,18 +703,29 @@ export class GameServiceV3 {
     try {
       console.log(`🔄 GameServiceV3: Updating possession manually for game ${gameId} to team ${teamId}`);
 
-      const response = await makeAuthenticatedRequest(
-        `${this.SUPABASE_URL}/rest/v1/game_possessions`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            game_id: gameId,
-            team_id: teamId,
-            reason: reason,
-            timestamp: new Date().toISOString()
-          })
-        }
-      );
+      if (!this.SUPABASE_URL || !this.SUPABASE_ANON_KEY) {
+        throw new Error('Missing Supabase configuration');
+      }
+
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('Not authenticated');
+      }
+
+      // Update the games table with current possession
+      const response = await fetch(`${this.SUPABASE_URL}/rest/v1/games?id=eq.${gameId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          current_possession_team_id: teamId,
+          updated_at: new Date().toISOString()
+        })
+      });
 
       if (!response.ok) {
         const errorText = await response.text();

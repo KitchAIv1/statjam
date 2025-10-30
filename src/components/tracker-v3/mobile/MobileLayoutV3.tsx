@@ -194,9 +194,9 @@ export function MobileLayoutV3({
           onStopClock={tracker.stopClock}
           onResetClock={tracker.resetClock}
           onSetCustomTime={tracker.setCustomTime} // NEW: Manual clock editing
-          shotClockSeconds={tracker.shotClock.secondsRemaining}
-          shotClockIsRunning={tracker.shotClock.isRunning}
-          shotClockIsVisible={tracker.shotClock.isVisible}
+          shotClockSeconds={tracker.shotClock.secondsRemaining ?? 24}
+          shotClockIsRunning={tracker.shotClock.isRunning ?? false}
+          shotClockIsVisible={tracker.shotClock.isVisible ?? true}
           onShotClockReset={tracker.resetShotClock}
           onShotClockSetTime={tracker.setShotClockTime}
           showPossessionIndicator={tracker.ruleset && tracker.automationFlags?.possession?.enabled && !!tracker.possession}

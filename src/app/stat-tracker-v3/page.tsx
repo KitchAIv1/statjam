@@ -850,18 +850,7 @@ function StatTrackerV3Content() {
           key={`scoreboard-${JSON.stringify(tracker.scores)}`} // ✅ FORCE RE-RENDER
           teamAName={gameData.team_a?.name || 'Team A'}
           teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
-          teamAScore={(() => {
-            const score = tracker.scores[gameData.team_a_id] || 0;
-            console.log('🔍 SCOREBOARD DEBUG:', {
-              coachMode,
-              team_a_id: gameData.team_a_id,
-              team_b_id: gameData.team_b_id,
-              tracker_scores: tracker.scores,
-              teamAScore: score,
-              teamBScore: coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)
-            });
-            return score;
-          })()}
+          teamAScore={tracker.scores[gameData.team_a_id] || 0}
           teamBScore={coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)}
           quarter={tracker.quarter}
           minutes={Math.floor(tracker.clock.secondsRemaining / 60)}
@@ -877,7 +866,7 @@ function StatTrackerV3Content() {
           teamATimeouts={tracker.teamTimeouts[gameData.team_a_id] ?? 7}
           teamBTimeouts={tracker.teamTimeouts[gameData.team_b_id] ?? 7}
           // Shot Clock Props
-          shotClockSeconds={tracker.shotClock.secondsRemaining}
+          shotClockSeconds={tracker.shotClock.secondsRemaining ?? 24}
           shotClockIsRunning={tracker.shotClock.isRunning}
           shotClockIsVisible={tracker.shotClock.isVisible}
           onShotClockStart={tracker.startShotClock}
@@ -1062,7 +1051,11 @@ function StatTrackerV3Content() {
             }}
             onSkip={tracker.clearPlayPrompt}
             teamAPlayers={teamAPlayers.map(p => ({ ...p, teamId: gameData.team_a_id }))}
-            teamBPlayers={teamBPlayers.map(p => ({ ...p, teamId: gameData.team_b_id }))}
+            teamBPlayers={
+              // ✅ COACH MODE FIX: Don't show opponent team in rebound modal
+              // Opponent has no individual players, so only show home team
+              coachMode ? [] : teamBPlayers.map(p => ({ ...p, teamId: gameData.team_b_id }))
+            }
             shooterTeamId={tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id}
             shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
             shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
