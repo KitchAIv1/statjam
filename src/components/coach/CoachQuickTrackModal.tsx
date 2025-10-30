@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, PlayCircle, ArrowRight, ArrowLeft, AlertCircle, Users, Settings, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, PlayCircle, ArrowRight, ArrowLeft, AlertCircle, Users, Settings, Zap } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,6 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
   // ✅ NEW: Automation settings state
   const [automationSettings, setAutomationSettings] = useState<AutomationFlags>(COACH_AUTOMATION_FLAGS);
   const [selectedPreset, setSelectedPreset] = useState<'minimal' | 'balanced' | 'full'>('full');
-  const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Player validation state
   const [playerValidation, setPlayerValidation] = useState<{
@@ -406,55 +405,7 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
               </div>
             </div>
 
-            {/* Advanced Settings (Collapsible) */}
-            <div>
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '8px',
-                  color: '#e5e7eb',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  marginBottom: showAdvanced ? '12px' : '0'
-                }}
-              >
-                <span>Advanced Settings (Optional)</span>
-                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-
-              {showAdvanced && (
-                <div style={{
-                  padding: '16px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '8px',
-                  fontSize: '0.875rem'
-                }}>
-                  <div style={{ color: '#a1a1aa', marginBottom: '12px' }}>
-                    <strong style={{ color: '#ffffff' }}>Clock:</strong> {automationSettings.clock.enabled ? 'Enabled' : 'Disabled'}
-                  </div>
-                  <div style={{ color: '#a1a1aa', marginBottom: '12px' }}>
-                    <strong style={{ color: '#ffffff' }}>Possession:</strong> {automationSettings.possession.enabled ? 'Auto-flip' : 'Manual'}
-                  </div>
-                  <div style={{ color: '#a1a1aa', marginBottom: '12px' }}>
-                    <strong style={{ color: '#ffffff' }}>Sequences:</strong> {automationSettings.sequences.enabled ? 'Prompts enabled' : 'Disabled'}
-                  </div>
-                  <div style={{ color: '#a1a1aa' }}>
-                    <strong style={{ color: '#ffffff' }}>Fouls:</strong> {automationSettings.fouls.enabled ? 'Auto-increment' : 'Manual'}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Skip Button Hint */}
+            {/* Preset Descriptions */}
             <div style={{
               marginTop: '16px',
               padding: '12px',
@@ -462,10 +413,20 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
               border: '1px solid rgba(59, 130, 246, 0.3)',
               borderRadius: '8px',
               fontSize: '0.75rem',
-              color: '#93c5fd',
-              textAlign: 'center'
+              color: '#93c5fd'
             }}>
-              💡 Tip: You can skip this step to use Full Automation (recommended for coaches)
+              <div style={{ fontWeight: '600', marginBottom: '8px', color: '#60a5fa' }}>
+                What does each preset do?
+              </div>
+              <div style={{ marginBottom: '6px' }}>
+                <strong>Minimal:</strong> Manual control - you manage everything
+              </div>
+              <div style={{ marginBottom: '6px' }}>
+                <strong>Balanced:</strong> Clock + possession + play prompts (recommended)
+              </div>
+              <div>
+                <strong>Full Auto:</strong> Maximum automation for busy coaches
+              </div>
             </div>
           </div>
         );
@@ -544,11 +505,8 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
               <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
-            <Button variant="ghost" onClick={() => setStep('confirm')} className="gap-2">
-              Skip (Use Full Auto)
-            </Button>
             <Button onClick={() => setStep('confirm')} className="gap-2">
-              Continue
+              Next
               <ArrowRight className="w-4 h-4" />
             </Button>
           </>
