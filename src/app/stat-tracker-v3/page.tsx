@@ -1013,9 +1013,15 @@ function StatTrackerV3Content() {
             onSelectPlayer={async (playerId) => {
               // Record assist stat linked to the shot
               // ✅ PHASE 5 FIX: Assists must have modifier IS NULL per database constraint
+              
+              // ✅ COACH MODE FIX: Check if assisting player is custom player
+              const assistingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+              const isCustomPlayer = assistingPlayer && assistingPlayer.is_custom_player === true;
+              
               await tracker.recordStat({
                 gameId: gameIdParam,
-                playerId: playerId,
+                playerId: isCustomPlayer ? undefined : playerId,
+                customPlayerId: isCustomPlayer ? playerId : undefined,
                 teamId: tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id,
                 statType: 'assist'
                 // No modifier for assists - database constraint requires NULL
@@ -1039,9 +1045,15 @@ function StatTrackerV3Content() {
             onClose={tracker.clearPlayPrompt}
             onSelectPlayer={async (playerId, reboundType) => {
               // Record rebound stat linked to the miss
+              
+              // ✅ COACH MODE FIX: Check if rebounding player is custom player
+              const reboundingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+              const isCustomPlayer = reboundingPlayer && reboundingPlayer.is_custom_player === true;
+              
               await tracker.recordStat({
                 gameId: gameIdParam,
-                playerId: playerId,
+                playerId: isCustomPlayer ? undefined : playerId,
+                customPlayerId: isCustomPlayer ? playerId : undefined,
                 teamId: teamAPlayers.find(p => p.id === playerId)?.id ? gameData.team_a_id : gameData.team_b_id,
                 statType: 'rebound',
                 modifier: reboundType
@@ -1065,9 +1077,15 @@ function StatTrackerV3Content() {
             onSelectPlayer={async (playerId) => {
               // Record block stat linked to the miss
               // ✅ PHASE 5 FIX: Blocks must have modifier IS NULL per database constraint
+              
+              // ✅ COACH MODE FIX: Check if blocking player is custom player
+              const blockingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+              const isCustomPlayer = blockingPlayer && blockingPlayer.is_custom_player === true;
+              
               await tracker.recordStat({
                 gameId: gameIdParam,
-                playerId: playerId,
+                playerId: isCustomPlayer ? undefined : playerId,
+                customPlayerId: isCustomPlayer ? playerId : undefined,
                 teamId: teamAPlayers.find(p => p.id === playerId)?.id ? gameData.team_a_id : gameData.team_b_id,
                 statType: 'block'
                 // No modifier for blocks - database constraint requires NULL
@@ -1104,9 +1122,15 @@ function StatTrackerV3Content() {
             onClose={tracker.clearPlayPrompt}
             onSelectPlayer={async (playerId) => {
               // Record turnover for selected home player
+              
+              // ✅ COACH MODE FIX: Check if turnover player is custom player
+              const turnoverPlayer = teamAPlayers.find(p => p.id === playerId);
+              const isCustomPlayer = turnoverPlayer && turnoverPlayer.is_custom_player === true;
+              
               await tracker.recordStat({
                 gameId: gameIdParam,
-                playerId: playerId,
+                playerId: isCustomPlayer ? undefined : playerId,
+                customPlayerId: isCustomPlayer ? playerId : undefined,
                 teamId: tracker.playPrompt.metadata?.homeTeamId || gameData.team_a_id,
                 statType: 'turnover',
                 modifier: null,
@@ -1128,6 +1152,11 @@ function StatTrackerV3Content() {
             onComplete={async (results) => {
               console.log('🏀 Free throw sequence complete:', results);
               
+              // ✅ COACH MODE FIX: Check if FT shooter is custom player
+              const shooterId = tracker.playPrompt.metadata?.shooterId;
+              const ftShooter = [...teamAPlayers, ...teamBPlayers].find(p => p.id === shooterId);
+              const isCustomPlayer = ftShooter && ftShooter.is_custom_player === true;
+              
               // Record each free throw
               for (let i = 0; i < results.length; i++) {
                 const result = results[i];
@@ -1139,7 +1168,8 @@ function StatTrackerV3Content() {
                 
                 await tracker.recordStat({
                   gameId: gameIdParam,
-                  playerId: tracker.playPrompt.metadata?.shooterId,
+                  playerId: isCustomPlayer ? undefined : shooterId,
+                  customPlayerId: isCustomPlayer ? shooterId : undefined,
                   teamId: tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id,
                   statType: 'free_throw',
                   modifier: result.made ? 'made' : 'missed',
