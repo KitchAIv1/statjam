@@ -847,7 +847,6 @@ function StatTrackerV3Content() {
         {/* Top Scoreboard & Clock with Integrated Shot Clock */}
         <TopScoreboardV3
           onBack={() => router.push('/dashboard')}
-          key={`scoreboard-${JSON.stringify(tracker.scores)}`} // ✅ FORCE RE-RENDER
           teamAName={gameData.team_a?.name || 'Team A'}
           teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
           teamAScore={tracker.scores[gameData.team_a_id] || 0}
@@ -1200,15 +1199,20 @@ function StatTrackerV3Content() {
           onSelectPlayer={handleVictimSelection}
           players={
             // Get opposing team players based on fouler's team
-            foulerPlayerId && gameData
+            // ✅ PERFORMANCE FIX: Only calculate when modal is open
+            showVictimSelectionModal && foulerPlayerId && gameData
               ? (teamAPlayers.some(p => p.id === foulerPlayerId)
-                  ? teamBPlayers
-                  : teamAPlayers
-                ).map(p => ({
-                  id: p.id,
-                  name: p.name,
-                  teamId: teamAPlayers.some(tp => tp.id === p.id) ? gameData.team_a_id : gameData.team_b_id
-                }))
+                  ? teamBPlayers.map(p => ({
+                      id: p.id,
+                      name: p.name,
+                      teamId: gameData.team_b_id
+                    }))
+                  : teamAPlayers.map(p => ({
+                      id: p.id,
+                      name: p.name,
+                      teamId: gameData.team_a_id
+                    }))
+                )
               : []
           }
           teamName={
