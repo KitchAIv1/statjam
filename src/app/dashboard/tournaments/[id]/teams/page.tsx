@@ -22,6 +22,7 @@ import {
   Star
 } from 'lucide-react';
 import { PlayerManagementModal } from '@/components/shared/PlayerManagementModal';
+import { TeamCreationModal } from '@/components/shared/TeamCreationModal';
 import { OrganizerPlayerManagementService } from '@/lib/services/organizerPlayerManagementService';
 
 interface TeamManagementPageProps {
@@ -42,8 +43,6 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'full' | 'open'>('all');
-  const [creatingTeam, setCreatingTeam] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showFullRoster, setShowFullRoster] = useState(false);
   const [selectedTeamForRoster, setSelectedTeamForRoster] = useState<Team | null>(null);
   
@@ -94,26 +93,7 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleCreateTeam = async (teamData: any) => {
-    setCreatingTeam(true);
-    setError(null);
-    
-    try {
-      const newTeam = await TeamService.createTeam({
-        name: teamData.name,
-        coach: teamData.coach,
-        tournamentId: tournamentId,
-      });
-      setTeams(prev => [...prev, newTeam]);
-      setShowCreateTeam(false);
-    } catch (error) {
-      console.error('Failed to create team:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create team');
-    } finally {
-      setCreatingTeam(false);
-    }
-  };
-
+  // handleCreateTeam removed - now handled by TeamCreationModal + OrganizerPlayerManagementService
   // handleAddPlayer removed - now handled by PlayerManagementModal + OrganizerPlayerManagementService
 
   if (loading || loadingData) {
@@ -649,11 +629,16 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
 
       {/* Create Team Modal */}
       {showCreateTeam && (
-        <CreateTeamModal
+        <TeamCreationModal
+          tournamentId={tournamentId}
+          service={new OrganizerPlayerManagementService()}
           onClose={() => setShowCreateTeam(false)}
-          onSave={handleCreateTeam}
-          creatingTeam={creatingTeam}
-          error={error}
+          onTeamCreated={async (team) => {
+            // Reload teams data to reflect new team
+            const teamsData = await TeamService.getTeamsByTournament(tournamentId);
+            setTeams(teamsData);
+            setShowCreateTeam(false);
+          }}
         />
       )}
 
@@ -684,160 +669,6 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
     </div>
   );
 };
-
-// Create Team Modal Component
-function CreateTeamModal({ onClose, onSave, creatingTeam, error }: { 
-  onClose: () => void; 
-  onSave: (data: any) => void;
-  creatingTeam: boolean;
-  error: string | null;
-}) {
-  const [formData, setFormData] = useState({
-    name: '',
-    coach: '',
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
-  const styles = {
-    overlay: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0, 0, 0, 0.8)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-    },
-    modal: {
-      background: 'rgba(30, 30, 30, 0.95)',
-      backdropFilter: 'blur(20px)',
-      borderRadius: '20px',
-      padding: '32px',
-      maxWidth: '500px',
-      width: '90%',
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.2)',
-    },
-    title: {
-      fontSize: '24px',
-      fontWeight: '700',
-      color: '#FFD700',
-      marginBottom: '24px',
-      textAlign: 'center' as const,
-    },
-    form: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '20px',
-    },
-    input: {
-      background: 'rgba(255, 255, 255, 0.05)',
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'rgba(255, 215, 0, 0.2)',
-      borderRadius: '12px',
-      padding: '16px',
-      color: '#ffffff',
-      fontSize: '16px',
-      outline: 'none',
-    },
-    buttons: {
-      display: 'flex',
-      gap: '12px',
-      marginTop: '24px',
-    },
-    button: {
-      flex: 1,
-      padding: '12px 24px',
-      borderRadius: '12px',
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      border: 'none',
-      transition: 'all 0.2s ease',
-    },
-    cancelButton: {
-      background: 'transparent',
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'rgba(255, 255, 255, 0.2)',
-      color: '#ffffff',
-    },
-    saveButton: {
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-      color: '#1a1a1a',
-    },
-  };
-
-  return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h2 style={styles.title}>Create New Team</h2>
-        <form style={styles.form} onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Team Name"
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            style={styles.input}
-            required
-          />
-          <input
-            type="text"
-            placeholder="Coach Name (Optional)"
-            value={formData.coach}
-            onChange={(e) => setFormData(prev => ({ ...prev, coach: e.target.value }))}
-            style={styles.input}
-          />
-          
-          {error && (
-            <div style={{
-              background: 'rgba(255, 0, 0, 0.1)',
-              border: '1px solid rgba(255, 0, 0, 0.3)',
-              borderRadius: '8px',
-              padding: '12px',
-              color: '#ff6b6b',
-              fontSize: '14px',
-            }}>
-              {error}
-            </div>
-          )}
-          
-          <div style={styles.buttons}>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={creatingTeam}
-              style={{ ...styles.button, ...styles.cancelButton }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={creatingTeam}
-              style={{ 
-                ...styles.button, 
-                ...styles.saveButton,
-                opacity: creatingTeam ? 0.6 : 1,
-                cursor: creatingTeam ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {creatingTeam ? 'Creating...' : 'Create Team'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 // Full Roster Modal Component
 function FullRosterModal({ team, onClose }: { team: Team; onClose: () => void }) {
