@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, PlayCircle, ArrowRight, ArrowLeft, AlertCircle, Users } from 'lucide-react';
+import { X, PlayCircle, ArrowRight, ArrowLeft, AlertCircle, Users, Settings, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CoachTeam, QuickTrackGameRequest } from '@/lib/types/coach';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
+import { AutomationFlags, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation';
+import { GameServiceV3 } from '@/lib/services/gameServiceV3';
 
 interface CoachQuickTrackModalProps {
   team: CoachTeam;
@@ -19,18 +21,24 @@ interface CoachQuickTrackModalProps {
  * CoachQuickTrackModal - Modal for setting up quick track games
  * 
  * Features:
- * - Multi-step form (opponent -> settings -> confirm)
+ * - Multi-step form (opponent -> settings -> automation -> confirm)
  * - Game configuration options
+ * - Automation settings with presets
  * - Launch stat tracker integration
  * - Offline sync preparation
  * 
  * Follows .cursorrules: <200 lines, single responsibility
  */
 export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuickTrackModalProps) {
-  // Form state
-  const [step, setStep] = useState<'opponent' | 'settings' | 'confirm'>('opponent');
+  // Form state - ✅ EXTENDED: Added 'automation' step
+  const [step, setStep] = useState<'opponent' | 'settings' | 'automation' | 'confirm'>('opponent');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // ✅ NEW: Automation settings state
+  const [automationSettings, setAutomationSettings] = useState<AutomationFlags>(COACH_AUTOMATION_FLAGS);
+  const [selectedPreset, setSelectedPreset] = useState<'minimal' | 'balanced' | 'full'>('full');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Player validation state
   const [playerValidation, setPlayerValidation] = useState<{
@@ -49,7 +57,7 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
         setPlayerValidation(validation);
         
         if (!validation.isValid) {
-          setError(validation.message);
+          setError(validation.message || 'Validation failed');
         }
       } catch (error) {
         console.error('❌ Error validating players:', error);
@@ -87,7 +95,36 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
     }));
   };
 
-  // Handle game creation and tracker launch
+  // ✅ NEW: Handle preset selection
+  const handlePresetSelect = (preset: 'minimal' | 'balanced' | 'full') => {
+    setSelectedPreset(preset);
+    
+    switch (preset) {
+      case 'minimal':
+        setAutomationSettings({
+          clock: { enabled: false, autoPause: false, autoReset: false, ftMode: false, madeBasketStop: false },
+          possession: { enabled: false, autoFlip: false, persistState: false, jumpBallArrow: false },
+          sequences: { enabled: false, promptAssists: false, promptRebounds: false, promptBlocks: false, linkEvents: false, freeThrowSequence: false },
+          fouls: { enabled: false, bonusFreeThrows: false, foulOutEnforcement: false, technicalEjection: false },
+          undo: { enabled: true, maxHistorySize: 10 }
+        });
+        break;
+      case 'balanced':
+        setAutomationSettings({
+          clock: { enabled: true, autoPause: true, autoReset: true, ftMode: true, madeBasketStop: false },
+          possession: { enabled: true, autoFlip: true, persistState: true, jumpBallArrow: true },
+          sequences: { enabled: true, promptAssists: true, promptRebounds: true, promptBlocks: false, linkEvents: true, freeThrowSequence: true },
+          fouls: { enabled: true, bonusFreeThrows: true, foulOutEnforcement: false, technicalEjection: false },
+          undo: { enabled: true, maxHistorySize: 10 }
+        });
+        break;
+      case 'full':
+        setAutomationSettings(COACH_AUTOMATION_FLAGS);
+        break;
+    }
+  };
+
+  // Handle game creation and tracker launch - ✅ EXTENDED: Save automation settings
   const handleCreateAndLaunch = async () => {
     try {
       setLoading(true);
@@ -111,6 +148,11 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
       
       // Create the coach game
       const game = await CoachGameService.createQuickTrackGame(formData);
+      
+      // ✅ NEW: Save automation settings to game
+      console.log('💾 Saving automation settings for coach game:', game.id);
+      await GameServiceV3.updateGameAutomation(game.id, automationSettings);
+      console.log('✅ Automation settings saved successfully');
       
       // Launch the EXISTING stat-tracker-v3 in coach mode
       const trackerUrl = `/stat-tracker-v3?gameId=${game.id}&coachMode=true&coachTeamId=${team.id}&opponentName=${encodeURIComponent(formData.opponent_name)}`;
@@ -285,6 +327,149 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
           </div>
         );
       
+      // ✅ NEW: Automation step
+      case 'automation':
+        return (
+          <div>
+            {/* Header */}
+            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+              <Settings style={{ width: '32px', height: '32px', color: '#f97316', margin: '0 auto 8px' }} />
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#ffffff', marginBottom: '4px' }}>
+                Automation Settings
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: '#a1a1aa' }}>
+                Choose how much automation you want during the game
+              </p>
+            </div>
+
+            {/* Quick Presets */}
+            <div style={{ marginBottom: '24px' }}>
+              <Label style={{ ...styles.label, marginBottom: '12px' }}>Quick Presets</Label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                {/* Minimal */}
+                <button
+                  onClick={() => handlePresetSelect('minimal')}
+                  style={{
+                    padding: '16px 12px',
+                    backgroundColor: selectedPreset === 'minimal' ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    border: `2px solid ${selectedPreset === 'minimal' ? '#f97316' : 'rgba(255, 255, 255, 0.1)'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    textAlign: 'center'
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#a1a1aa', marginBottom: '4px' }}>
+                    MINIMAL
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#ffffff' }}>Manual</div>
+                </button>
+
+                {/* Balanced */}
+                <button
+                  onClick={() => handlePresetSelect('balanced')}
+                  style={{
+                    padding: '16px 12px',
+                    backgroundColor: selectedPreset === 'balanced' ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    border: `2px solid ${selectedPreset === 'balanced' ? '#f97316' : 'rgba(255, 255, 255, 0.1)'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    textAlign: 'center'
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#a1a1aa', marginBottom: '4px' }}>
+                    BALANCED
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#ffffff' }}>Recommended</div>
+                </button>
+
+                {/* Full Auto */}
+                <button
+                  onClick={() => handlePresetSelect('full')}
+                  style={{
+                    padding: '16px 12px',
+                    backgroundColor: selectedPreset === 'full' ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    border: `2px solid ${selectedPreset === 'full' ? '#f97316' : 'rgba(255, 255, 255, 0.1)'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    textAlign: 'center'
+                  }}
+                >
+                  <Zap style={{ width: '16px', height: '16px', color: '#f97316', margin: '0 auto 4px' }} />
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#a1a1aa', marginBottom: '4px' }}>
+                    FULL AUTO
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#ffffff' }}>Everything</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Advanced Settings (Collapsible) */}
+            <div>
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  color: '#e5e7eb',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  marginBottom: showAdvanced ? '12px' : '0'
+                }}
+              >
+                <span>Advanced Settings (Optional)</span>
+                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showAdvanced && (
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem'
+                }}>
+                  <div style={{ color: '#a1a1aa', marginBottom: '12px' }}>
+                    <strong style={{ color: '#ffffff' }}>Clock:</strong> {automationSettings.clock.enabled ? 'Enabled' : 'Disabled'}
+                  </div>
+                  <div style={{ color: '#a1a1aa', marginBottom: '12px' }}>
+                    <strong style={{ color: '#ffffff' }}>Possession:</strong> {automationSettings.possession.enabled ? 'Auto-flip' : 'Manual'}
+                  </div>
+                  <div style={{ color: '#a1a1aa', marginBottom: '12px' }}>
+                    <strong style={{ color: '#ffffff' }}>Sequences:</strong> {automationSettings.sequences.enabled ? 'Prompts enabled' : 'Disabled'}
+                  </div>
+                  <div style={{ color: '#a1a1aa' }}>
+                    <strong style={{ color: '#ffffff' }}>Fouls:</strong> {automationSettings.fouls.enabled ? 'Auto-increment' : 'Manual'}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Skip Button Hint */}
+            <div style={{
+              marginTop: '16px',
+              padding: '12px',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '8px',
+              fontSize: '0.75rem',
+              color: '#93c5fd',
+              textAlign: 'center'
+            }}>
+              💡 Tip: You can skip this step to use Full Automation (recommended for coaches)
+            </div>
+          </div>
+        );
+      
       case 'confirm':
         return (
           <div>
@@ -317,7 +502,7 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
     }
   };
 
-  // Render action buttons
+  // Render action buttons - ✅ EXTENDED: Added automation step navigation
   const renderActions = () => {
     switch (step) {
       case 'opponent':
@@ -344,8 +529,26 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
               <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
-            <Button onClick={() => setStep('confirm')} className="gap-2">
+            <Button onClick={() => setStep('automation')} className="gap-2">
               Next
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </>
+        );
+      
+      // ✅ NEW: Automation step actions
+      case 'automation':
+        return (
+          <>
+            <Button variant="outline" onClick={() => setStep('settings')} className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <Button variant="ghost" onClick={() => setStep('confirm')} className="gap-2">
+              Skip (Use Full Auto)
+            </Button>
+            <Button onClick={() => setStep('confirm')} className="gap-2">
+              Continue
               <ArrowRight className="w-4 h-4" />
             </Button>
           </>
@@ -355,7 +558,7 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
         const canStart = playerValidation?.isValid && !loading && !validationLoading;
         return (
           <>
-            <Button variant="outline" onClick={() => setStep('settings')} className="gap-2">
+            <Button variant="outline" onClick={() => setStep('automation')} className="gap-2">
               <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
@@ -398,15 +601,15 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
           </Button>
         </div>
 
-        {/* Step Indicator */}
+        {/* Step Indicator - ✅ EXTENDED: Added automation step */}
         <div style={styles.stepIndicator}>
-          {['opponent', 'settings', 'confirm'].map((stepName, index) => (
+          {['opponent', 'settings', 'automation', 'confirm'].map((stepName, index) => (
             <div
               key={stepName}
               style={{
                 ...styles.stepDot,
                 ...(step === stepName || 
-                   (['opponent', 'settings', 'confirm'].indexOf(step) > index) ? styles.stepDotActive : {})
+                   (['opponent', 'settings', 'automation', 'confirm'].indexOf(step) > index) ? styles.stepDotActive : {})
               }}
             />
           ))}
