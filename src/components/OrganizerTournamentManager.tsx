@@ -21,6 +21,9 @@ import { useTournamentGameStatus } from "@/hooks/useTournamentGameStatus";
 import { TournamentTableRow } from "@/components/TournamentTableRow";
 import { Tournament } from "@/lib/types/tournament";
 import { PlayerManager } from "@/components/PlayerManager";
+import { PlayerManagementModal } from "@/components/shared/PlayerManagementModal";
+import { TeamCreationModal } from "@/components/shared/TeamCreationModal";
+import { OrganizerPlayerManagementService } from "@/lib/services/organizerPlayerManagementService";
 import { TeamService, TournamentService } from "@/lib/services/tournamentService";
 import { useRouter } from 'next/navigation';
 import { notify } from '@/lib/services/notificationService';
@@ -1200,68 +1203,33 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
       </Dialog>
 
       {/* Player Manager Modal */}
-      <PlayerManager
-        team={selectedTeamForPlayers}
-        isOpen={isPlayerManagerOpen}
-        onClose={handlePlayerManagerClose}
-        onUpdateTeam={handlePlayerManagerClose}
-      />
+      {isPlayerManagerOpen && selectedTeamForPlayers && (
+        <PlayerManagementModal
+          team={selectedTeamForPlayers}
+          service={new OrganizerPlayerManagementService()}
+          onClose={handlePlayerManagerClose}
+          onUpdate={async () => {
+            // Refresh team data
+            await teamManagement?.refetch();
+          }}
+        />
+      )}
 
 
 
       {/* Create Team Modal */}
-      <Dialog open={isCreateTeamDialogOpen} onOpenChange={setIsCreateTeamDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Team</DialogTitle>
-            <DialogDescription>
-              Create a new team for {selectedTournament?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="newTeamName">Team Name</Label>
-              <Input
-                id="newTeamName"
-                placeholder="Enter team name"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="newCoachName">Coach Name</Label>
-              <Input
-                id="newCoachName"
-                placeholder="Enter coach name (optional)"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateTeamDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={async () => {
-              const teamNameInput = document.getElementById('newTeamName') as HTMLInputElement;
-              const coachNameInput = document.getElementById('newCoachName') as HTMLInputElement;
-              
-              if (teamNameInput.value.trim() && selectedTournament) {
-                try {
-                  await teamManagement?.createTeam({
-                    name: teamNameInput.value.trim(),
-                    coach: coachNameInput.value.trim() || undefined
-                  });
-                  setIsCreateTeamDialogOpen(false);
-                  // Clear inputs
-                  teamNameInput.value = '';
-                  coachNameInput.value = '';
-                } catch (error) {
-                  console.error('Error creating team:', error);
-                }
-              }
-            }}>
-              Create Team
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {isCreateTeamDialogOpen && selectedTournament && (
+        <TeamCreationModal
+          tournamentId={selectedTournament.id}
+          service={new OrganizerPlayerManagementService()}
+          onClose={() => setIsCreateTeamDialogOpen(false)}
+          onTeamCreated={async () => {
+            setIsCreateTeamDialogOpen(false);
+            // Refresh team data
+            await teamManagement?.refetch();
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
