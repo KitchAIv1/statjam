@@ -605,11 +605,13 @@ export class TeamStatsService {
         finalPlayerIds.add(p.id);
       });
       
-      // Also add any players who have stats but might not be in roster
-      gameStats.forEach((stat: any) => {
-        if (stat.player_id) finalPlayerIds.add(stat.player_id);
-        if (stat.custom_player_id) finalPlayerIds.add(stat.custom_player_id);
-      });
+      // ❌ REMOVED: Don't blindly add all players from stats
+      // This was including coach user IDs used as proxies for opponent stats
+      // Only the roster playerIds and custom players should be shown
+      // gameStats.forEach((stat: any) => {
+      //   if (stat.player_id) finalPlayerIds.add(stat.player_id);
+      //   if (stat.custom_player_id) finalPlayerIds.add(stat.custom_player_id);
+      // });
 
       const finalPlayerIdsArray = Array.from(finalPlayerIds);
       console.log(`📊 TeamStatsService: Processing ${finalPlayerIdsArray.length} total players (roster: ${playerIds.length}, custom: ${customPlayersResponse.length}, from stats: ${gameStats.length > 0 ? 'yes' : 'no'})`);
