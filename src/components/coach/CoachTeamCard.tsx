@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { CoachTeam } from '@/lib/types/coach';
 import { CoachQuickTrackModal } from './CoachQuickTrackModal';
 import { CoachTournamentSearchModal } from './CoachTournamentSearchModal';
-import { CoachPlayerManagementModal } from './CoachPlayerManagementModal';
+import { PlayerManagementModal } from '@/components/shared/PlayerManagementModal';
+import { CoachPlayerManagementService } from '@/lib/services/coachPlayerManagementService';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 
 interface CoachTeamCardProps {
@@ -304,8 +305,9 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
       )}
 
       {showPlayerManagement && (
-        <CoachPlayerManagementModal
+        <PlayerManagementModal
           team={team}
+          service={new CoachPlayerManagementService()}
           onClose={() => setShowPlayerManagement(false)}
           onUpdate={handlePlayerUpdate}
         />
