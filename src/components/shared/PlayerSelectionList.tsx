@@ -26,6 +26,7 @@ interface PlayerSelectionListProps {
   className?: string;
   showCustomPlayerOption?: boolean; // Optional: hide for Organizer
   deferPersistence?: boolean; // If true, don't call service - just track locally (for team creation)
+  initialSelectedPlayers?: GenericPlayer[]; // Pre-selected players (for team creation when going back)
 }
 
 /**
@@ -47,7 +48,8 @@ export function PlayerSelectionList({
   onPlayerRemove, 
   className = '',
   showCustomPlayerOption = true,
-  deferPersistence = false
+  deferPersistence = false,
+  initialSelectedPlayers = []
 }: PlayerSelectionListProps) {
   // Mode state
   const [mode, setMode] = useState<'search' | 'create'>('search');
@@ -71,14 +73,23 @@ export function PlayerSelectionList({
         limit: 50
       });
       
-      setPlayers(results);
+      // Mark initially selected players as is_on_team
+      const resultsWithSelection = results.map(player => {
+        const isSelected = initialSelectedPlayers.some(sp => sp.id === player.id);
+        return {
+          ...player,
+          is_on_team: isSelected
+        };
+      });
+      
+      setPlayers(resultsWithSelection);
     } catch (error) {
       console.error('❌ Error searching players:', error);
       setError('Failed to search players');
     } finally {
       setLoading(false);
     }
-  }, [teamId, service]);
+  }, [teamId, service, initialSelectedPlayers]);
 
   // Search effect with debouncing
   useEffect(() => {
