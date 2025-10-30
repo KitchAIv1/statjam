@@ -10,6 +10,7 @@
 **Current State:**
 - ✅ Console logs removed from render functions (TopScoreboardV3, OpponentStatsPanel)
 - ✅ Dynamic keys removed (scoreboard key issue fixed)
+- ✅ **UI Smoothing fixes implemented** (PlayerSelectionList blinking eliminated)
 - ❌ **NO React.memo usage** across any tracker components
 - ❌ **NO useCallback/useMemo** in tracker components
 - ⚠️ Multiple expensive operations in render functions
@@ -41,7 +42,13 @@
    - Removed `key={`scoreboard-${JSON.stringify(tracker.scores)}`}` from TopScoreboardV3
    - No more forced unmount/remount on score changes
 
-3. **Clean Code**
+3. **UI Smoothing Implemented**
+   - `PlayerSelectionList` - Fixed blinking/flickering on add/remove players
+   - Removed `initialSelectedPlayers` from `searchPlayers` dependency array
+   - Split into separate useEffects for initial load vs search updates
+   - Eliminated unnecessary API re-fetches on every state change
+
+4. **Clean Code**
    - No console logs in `/components/tracker-v3/`
    - No console logs in `/hooks/useTracker.ts`
    - No console logs in `/app/stat-tracker-v3/page.tsx`
