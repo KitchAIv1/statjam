@@ -62,7 +62,7 @@ export function PlayerSelectionList({
   const [processingPlayer, setProcessingPlayer] = useState<string | null>(null);
 
   // Debounced search
-  const searchPlayers = useCallback(async (query: string) => {
+  const searchPlayers = useCallback(async (query: string, selectedPlayerIds: string[] = []) => {
     try {
       setLoading(true);
       setError(null);
@@ -75,7 +75,7 @@ export function PlayerSelectionList({
       
       // Mark initially selected players as is_on_team
       const resultsWithSelection = results.map(player => {
-        const isSelected = initialSelectedPlayers.some(sp => sp.id === player.id);
+        const isSelected = selectedPlayerIds.includes(player.id);
         return {
           ...player,
           is_on_team: isSelected
@@ -89,12 +89,26 @@ export function PlayerSelectionList({
     } finally {
       setLoading(false);
     }
-  }, [teamId, service, initialSelectedPlayers]);
+  }, [teamId, service]);
 
-  // Search effect with debouncing
+  // Initial load with selected players
   useEffect(() => {
+    const selectedIds = initialSelectedPlayers.map(p => p.id);
+    searchPlayers('', selectedIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
+  // Search effect with debouncing (for search query changes)
+  useEffect(() => {
+    if (searchQuery === '') return; // Skip empty search (handled by initial load)
+    
     const timeoutId = setTimeout(() => {
-      searchPlayers(searchQuery);
+      // Get current selections without triggering re-render
+      setPlayers(currentPlayers => {
+        const currentSelectedIds = currentPlayers.filter(p => p.is_on_team).map(p => p.id);
+        searchPlayers(searchQuery, currentSelectedIds);
+        return currentPlayers; // Return unchanged to avoid re-render
+      });
     }, 300); // Debounce 300ms
 
     return () => clearTimeout(timeoutId);
