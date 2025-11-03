@@ -121,9 +121,38 @@ StatTrackerV3 (page.tsx)
 │               └── Last Action Display
 │                   └── Recent stat feedback
 │
-└── [MODALS] (Conditional rendering)
+└── [SHARED COMPONENTS] (Reusable across Coach/Organizer)
     │
-    ├── PreFlightCheckModal
+    ├── PlayerManagementModal
+    │   ├── Team info header
+    │   ├── PlayerRosterList
+    │   │   ├── Current players
+    │   │   └── Remove player buttons
+    │   ├── PlayerSelectionList
+    │   │   ├── Search input
+    │   │   ├── PlayerSearchResults
+    │   │   │   └── PlayerListItem (for each player)
+    │   │   └── Add player buttons
+    │   └── CustomPlayerForm
+    │       ├── Name input
+    │       ├── Jersey number
+    │       └── Position selector
+    │
+    ├── TeamCreationModal
+    │   ├── StepIndicator
+    │   ├── TeamInfoStep
+    │   │   ├── Team name input
+    │   │   └── Coach name input
+    │   ├── AddPlayersStep
+    │   │   └── PlayerSelectionList (deferPersistence=true)
+    │   └── ConfirmStep
+    │       ├── Team summary
+    │       ├── Selected players list
+    │       └── Action buttons
+    │
+    └── [MODALS] (Conditional rendering)
+        │
+        ├── PreFlightCheckModal
     │   ├── Game info
     │   ├── Preset selection
     │   │   ├── Minimal
@@ -496,6 +525,16 @@ Small Components (<200 lines)
 ├── ReboundPromptModal.tsx (~180 lines)
 ├── PossessionIndicator.tsx (115 lines)
 └── useShotClockViolation.ts (102 lines)
+
+Shared Components (Modular, <200 lines each)
+├── PlayerManagementModal.tsx (178 lines)
+├── PlayerSelectionList.tsx (254 lines)
+├── TeamCreationModal.tsx (218 lines)
+├── TeamCreationSteps.tsx (185 lines)
+├── CustomPlayerForm.tsx (193 lines)
+├── PlayerRosterList.tsx (119 lines)
+├── PlayerSearchResults.tsx (98 lines)
+└── PlayerListItem.tsx (100 lines)
 ```
 
 ---

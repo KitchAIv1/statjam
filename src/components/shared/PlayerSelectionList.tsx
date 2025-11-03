@@ -25,6 +25,8 @@ interface PlayerSelectionListProps {
   onPlayerRemove: (player: GenericPlayer) => void;
   className?: string;
   showCustomPlayerOption?: boolean; // Optional: hide for Organizer
+  deferPersistence?: boolean; // If true, don't call service - just track locally (for team creation)
+  initialSelectedPlayers?: GenericPlayer[]; // Pre-selected players (for team creation when going back)
 }
 
 /**
@@ -45,7 +47,9 @@ export function PlayerSelectionList({
   onPlayerAdd, 
   onPlayerRemove, 
   className = '',
-  showCustomPlayerOption = true
+  showCustomPlayerOption = true,
+  deferPersistence = false,
+  initialSelectedPlayers = []
 }: PlayerSelectionListProps) {
   // Mode state
   const [mode, setMode] = useState<'search' | 'create'>('search');
@@ -58,7 +62,7 @@ export function PlayerSelectionList({
   const [processingPlayer, setProcessingPlayer] = useState<string | null>(null);
 
   // Debounced search
-  const searchPlayers = useCallback(async (query: string) => {
+  const searchPlayers = useCallback(async (query: string, selectedPlayerIds: string[] = []) => {
     try {
       setLoading(true);
       setError(null);
@@ -69,7 +73,16 @@ export function PlayerSelectionList({
         limit: 50
       });
       
-      setPlayers(results);
+      // Mark initially selected players as is_on_team
+      const resultsWithSelection = results.map(player => {
+        const isSelected = selectedPlayerIds.includes(player.id);
+        return {
+          ...player,
+          is_on_team: isSelected
+        };
+      });
+      
+      setPlayers(resultsWithSelection);
     } catch (error) {
       console.error('❌ Error searching players:', error);
       setError('Failed to search players');
@@ -78,10 +91,24 @@ export function PlayerSelectionList({
     }
   }, [teamId, service]);
 
-  // Search effect with debouncing
+  // Initial load with selected players
   useEffect(() => {
+    const selectedIds = initialSelectedPlayers.map(p => p.id);
+    searchPlayers('', selectedIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
+  // Search effect with debouncing (for search query changes)
+  useEffect(() => {
+    if (searchQuery === '') return; // Skip empty search (handled by initial load)
+    
     const timeoutId = setTimeout(() => {
-      searchPlayers(searchQuery);
+      // Get current selections without triggering re-render
+      setPlayers(currentPlayers => {
+        const currentSelectedIds = currentPlayers.filter(p => p.is_on_team).map(p => p.id);
+        searchPlayers(searchQuery, currentSelectedIds);
+        return currentPlayers; // Return unchanged to avoid re-render
+      });
     }, 300); // Debounce 300ms
 
     return () => clearTimeout(timeoutId);
@@ -92,35 +119,53 @@ export function PlayerSelectionList({
     try {
       setProcessingPlayer(player.id);
 
-      if (player.is_on_team && player.team_player_id) {
-        // Remove player
-        const response = await service.removePlayerFromTeam({
-          team_id: teamId,
-          team_player_id: player.team_player_id
-        });
-
-        if (response.success) {
+      if (deferPersistence) {
+        // Team creation mode: just track locally, don't persist yet
+        if (player.is_on_team) {
+          // Remove from local selection
           setPlayers(prev => prev.map(p => 
-            p.id === player.id ? { ...p, is_on_team: false, team_player_id: undefined } : p
+            p.id === player.id ? { ...p, is_on_team: false } : p
           ));
           onPlayerRemove(player);
         } else {
-          setError(response.message || response.error || 'Failed to remove player');
-        }
-      } else {
-        // Add player
-        const response = await service.addPlayerToTeam({
-          team_id: teamId,
-          player_id: player.id
-        });
-
-        if (response.success) {
+          // Add to local selection
           setPlayers(prev => prev.map(p => 
             p.id === player.id ? { ...p, is_on_team: true } : p
           ));
           onPlayerAdd(player);
+        }
+      } else {
+        // Normal mode: persist to database immediately
+        if (player.is_on_team && player.team_player_id) {
+          // Remove player
+          const response = await service.removePlayerFromTeam({
+            team_id: teamId,
+            team_player_id: player.team_player_id
+          });
+
+          if (response.success) {
+            setPlayers(prev => prev.map(p => 
+              p.id === player.id ? { ...p, is_on_team: false, team_player_id: undefined } : p
+            ));
+            onPlayerRemove(player);
+          } else {
+            setError(response.message || response.error || 'Failed to remove player');
+          }
         } else {
-          setError(response.message || response.error || 'Failed to add player');
+          // Add player
+          const response = await service.addPlayerToTeam({
+            team_id: teamId,
+            player_id: player.id
+          });
+
+          if (response.success) {
+            setPlayers(prev => prev.map(p => 
+              p.id === player.id ? { ...p, is_on_team: true } : p
+            ));
+            onPlayerAdd(player);
+          } else {
+            setError(response.message || response.error || 'Failed to add player');
+          }
         }
       }
     } catch (error) {

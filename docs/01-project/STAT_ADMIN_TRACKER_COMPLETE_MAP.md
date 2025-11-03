@@ -17,7 +17,8 @@
 7. [Modal System](#modal-system)
 8. [Data Flow](#data-flow)
 9. [Database Schema](#database-schema)
-10. [Feature Matrix](#feature-matrix)
+10. [Shared Components Architecture](#shared-components-architecture)
+11. [Feature Matrix](#feature-matrix)
 
 ---
 
@@ -37,6 +38,8 @@ The Stat Admin Tracker is a real-time basketball game statistics tracking system
 - **Responsive design** (mobile + desktop)
 - **Coach mode support** for opponent tracking
 - **Game state persistence** (completed/cancelled states)
+- **Modular shared components** (Coach/Organizer reuse)
+- **Service abstraction layer** for role-based functionality
 
 ---
 
@@ -1050,6 +1053,116 @@ automation_settings: jsonb (AutomationFlags)
 created_at: timestamp
 updated_at: timestamp
 ```
+
+---
+
+## Shared Components Architecture
+
+### Overview
+The system now includes a comprehensive set of shared components that enable code reuse between Coach and Organizer dashboards. This modular architecture follows the `.cursorrules` principles of single responsibility and component size limits.
+
+### Component Hierarchy
+
+```
+src/components/shared/
+├── PlayerManagementModal.tsx            # Main player management interface
+│   ├── PlayerRosterList.tsx             # Current team players
+│   ├── PlayerSelectionList.tsx          # Search & add players
+│   │   ├── PlayerSearchResults.tsx      # Search results display
+│   │   └── PlayerListItem.tsx           # Individual player row
+│   └── CustomPlayerForm.tsx             # Create custom players
+│
+└── TeamCreationModal.tsx                # Multi-step team creation
+    └── TeamCreationSteps.tsx            # Step components
+        ├── StepIndicator                 # Progress indicator
+        ├── TeamInfoStep                 # Team name & coach
+        ├── AddPlayersStep               # Player selection
+        └── ConfirmStep                  # Review & create
+```
+
+### Service Abstraction Pattern
+
+```typescript
+// Generic interface for player management
+interface IPlayerManagementService {
+  getPlayersForTeam(teamId: string): Promise<Player[]>;
+  searchAvailablePlayers(query: string, teamId: string): Promise<Player[]>;
+  addPlayerToTeam(request: AddPlayerToTeamRequest): Promise<Response>;
+  removePlayerFromTeam(request: RemovePlayerFromTeamRequest): Promise<Response>;
+  createCustomPlayer(request: CreateCustomPlayerRequest): Promise<Player>;
+}
+
+// Coach implementation
+class CoachPlayerManagementService implements IPlayerManagementService {
+  // Uses CoachPlayerService internally
+}
+
+// Organizer implementation  
+class OrganizerPlayerManagementService implements IPlayerManagementService {
+  // Uses TeamService internally
+}
+```
+
+### Component Specifications
+
+| Component | Lines | Purpose | Reusability |
+|-----------|-------|---------|-------------|
+| `PlayerManagementModal` | 178 | Main player management UI | ✅ Coach + Organizer |
+| `PlayerSelectionList` | 254 | Search & select players | ✅ Coach + Organizer |
+| `TeamCreationModal` | 218 | Multi-step team creation | ✅ Organizer only |
+| `PlayerRosterList` | 119 | Display current players | ✅ Coach + Organizer |
+| `PlayerSearchResults` | 98 | Search results display | ✅ Coach + Organizer |
+| `PlayerListItem` | 100 | Individual player row | ✅ Coach + Organizer |
+| `CustomPlayerForm` | 193 | Create custom players | ✅ Coach + Organizer |
+| `TeamCreationSteps` | 185 | Team creation steps | ✅ Organizer only |
+
+### Design Principles
+
+1. **Single Responsibility**: Each component has one clear purpose
+2. **Size Limits**: All components <200 lines (`.cursorrules` compliant)
+3. **Service Injection**: Components accept service interfaces, not concrete implementations
+4. **Props-Driven**: No hard-coded dependencies or assumptions
+5. **Type Safety**: Full TypeScript coverage with generic interfaces
+6. **Performance**: Optimized with debouncing, memoization, and optimistic updates
+
+### Usage Patterns
+
+#### Coach Dashboard
+```typescript
+<PlayerManagementModal
+  team={team}
+  service={new CoachPlayerManagementService()}
+  onClose={() => setShowPlayerManagement(false)}
+  onUpdate={handlePlayerUpdate}
+/>
+```
+
+#### Organizer Dashboard
+```typescript
+<PlayerManagementModal
+  team={team}
+  service={new OrganizerPlayerManagementService()}
+  onClose={() => setShowPlayerManagement(false)}
+  onUpdate={handlePlayerUpdate}
+/>
+```
+
+### Performance Optimizations
+
+1. **Debounced Search**: 300ms delay on search input
+2. **Optimistic Updates**: UI updates immediately, API calls in background
+3. **State Preservation**: Player selections maintained during navigation
+4. **Efficient Re-renders**: Eliminated blinking/flickering on add/remove
+5. **Lazy Loading**: Components only load when needed
+
+### Benefits
+
+- **Code Reuse**: 6 shared components eliminate duplication
+- **Consistency**: Unified UI/UX across Coach and Organizer
+- **Maintainability**: Single source of truth for player management
+- **Performance**: Optimized for smooth user experience
+- **Scalability**: Easy to add new roles or features
+- **Type Safety**: Compile-time error prevention
 
 ---
 

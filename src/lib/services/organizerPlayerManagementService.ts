@@ -26,7 +26,7 @@ import {
  */
 export class OrganizerPlayerManagementService implements IPlayerManagementService {
   async searchAvailablePlayers(request: PlayerSearchRequest): Promise<GenericPlayer[]> {
-    const { default: TeamService } = await import('./tournamentService');
+    const { TeamService } = await import('./tournamentService');
     
     // Get all players (Organizer uses getAllPlayers, then filters client-side)
     const allPlayers = await TeamService.getAllPlayers();
@@ -73,7 +73,7 @@ export class OrganizerPlayerManagementService implements IPlayerManagementServic
   
   async addPlayerToTeam(request: AddPlayerToTeamRequest): Promise<ServiceResponse> {
     try {
-      const { default: TeamService } = await import('./tournamentService');
+      const { TeamService } = await import('./tournamentService');
       
       await TeamService.addPlayerToTeam(
         request.team_id,

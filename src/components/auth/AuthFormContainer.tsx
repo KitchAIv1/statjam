@@ -54,8 +54,8 @@ export const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
   return (
     <>
       <style jsx>{authPageCSSStyles}</style>
-      <div style={authPageStyles.container} className="auth-container">
-        <div style={authPageStyles.formContainer} className="auth-form">
+      <div style={authPageStyles.container} className="auth-container animate-fadeIn">
+        <div style={authPageStyles.formContainer} className="auth-form animate-fadeInUp">
           <div style={authPageStyles.header} className="auth-header">
             <h1 style={authPageStyles.title} className="auth-title">StatJam</h1>
             <p style={authPageStyles.subtitle} className="auth-subtitle">

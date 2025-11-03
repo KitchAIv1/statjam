@@ -58,6 +58,37 @@ src/components/tracker-v3/modals/
   └── FreeThrowSequenceModal.tsx           # FT recording
 ```
 
+### Shared Components (Coach/Organizer)
+```
+src/components/shared/
+  ├── PlayerManagementModal.tsx            # Generic player management
+  ├── PlayerSelectionList.tsx              # Player search & selection
+  ├── PlayerRosterList.tsx                 # Current team roster
+  ├── PlayerSearchResults.tsx              # Search results display
+  ├── PlayerListItem.tsx                   # Individual player row
+  ├── CustomPlayerForm.tsx                 # Create custom player
+  ├── TeamCreationModal.tsx                # Multi-step team creation
+  └── TeamCreationSteps.tsx                # Team creation step components
+```
+
+### Service Layer
+```
+src/lib/services/
+  ├── gameServiceV3.ts                     # Primary API layer
+  ├── teamServiceV3.ts                     # Team/player data
+  ├── statsService.ts                      # Stats aggregation
+  ├── coachPlayerManagementService.ts      # Coach player management
+  └── organizerPlayerManagementService.ts  # Organizer player management
+```
+
+### Types
+```
+src/lib/types/
+  ├── automation.ts                        # Automation flags
+  ├── tracker.ts                           # Core tracker types
+  └── playerManagement.ts                  # Player management interfaces
+```
+
 ---
 
 ## Common Tasks

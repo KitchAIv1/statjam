@@ -11,7 +11,7 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
   const router = useRouter();
 
   const handleGetStarted = () => {
-    router.push('/auth');
+    router.push('/auth?mode=signup');
   };
   return (
     <section className="relative min-h-screen flex flex-col overflow-hidden">

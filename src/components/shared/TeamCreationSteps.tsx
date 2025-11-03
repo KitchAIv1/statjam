@@ -136,6 +136,8 @@ export function AddPlayersStep({
         onPlayerAdd={onPlayerAdd}
         onPlayerRemove={onPlayerRemove}
         showCustomPlayerOption={false}
+        deferPersistence={true}
+        initialSelectedPlayers={selectedPlayers}
       />
     </div>
   );

@@ -31,27 +31,27 @@
 ### **Section 1: Game Setup & Navigation** (5 tests)
 
 #### Test 1.1: Access Stat Tracker
-- [ ] Navigate to game from organizer dashboard
-- [ ] Stat tracker page loads without errors
-- [ ] Game header shows correct team names
-- [ ] Quarter shows "Q1"
-- [ ] Clock shows "12:00" (or configured quarter length)
-- [ ] Shot clock shows "24"
+- [X] Navigate to game from organizer dashboard
+- [X] Stat tracker page loads without errors
+- [X] Game header shows correct team names
+- [X] Quarter shows "Q1"
+- [X] Clock shows "12:00" (or configured quarter length)
+- [X] Shot clock shows "24"
 
 #### Test 1.2: Initial UI State
-- [ ] Both team rosters visible (5 players each)
-- [ ] All player names display correctly
-- [ ] Jersey numbers visible (if set)
-- [ ] Score shows "0 - 0"
-- [ ] Possession indicator shows (either team or neutral)
-- [ ] "Back to Dashboard" button visible
+- [X] Both team rosters visible (5 players each)
+- [X] All player names display correctly
+- [X] Jersey numbers visible (if set)
+- [X] Score shows "0 - 0"
+- [X] Possession indicator shows (either team or neutral)
+- [X] "Back to Dashboard" button visible
 
 #### Test 1.3: Responsive Layout
-- [ ] Desktop view: 3-column layout (Team A | Tracker | Team B)
-- [ ] Mobile view: Compact scoreboard at top
-- [ ] Mobile view: Dual roster section visible
-- [ ] All buttons accessible on mobile
-- [ ] No horizontal scrolling on mobile
+- [X] Desktop view: 3-column layout (Team A | Tracker | Team B)
+- [X] Mobile view: Compact scoreboard at top
+- [X] Mobile view: Dual roster section visible
+- [X] All buttons accessible on mobile
+- [X] No horizontal scrolling on mobile
 
 #### Test 1.4: Player Selection
 - [ ] Click on Team A player → Player highlights
@@ -71,182 +71,182 @@
 ### **Section 2: Basic Stat Recording** (10 tests)
 
 #### Test 2.1: Field Goal Made
-- [ ] Select player
-- [ ] Click "2PT" (made)
-- [ ] Score increases by 2 points
-- [ ] Stat recorded in database
-- [ ] Last action shows "Player Name - 2PT Made"
-- [ ] **AUTOMATION**: Assist prompt appears
-- [ ] **AUTOMATION**: Possession flips to opponent
+- [X] Select player
+- [X] Click "2PT" (made)
+- [X] Score increases by 2 points
+- [X] Stat recorded in database
+- [X] Last action shows "Player Name - 2PT Made"
+- [X] **AUTOMATION**: Assist prompt appears
+- [X] **AUTOMATION**: Possession flips to opponent
 
 #### Test 2.2: Field Goal Missed
-- [ ] Select player
-- [ ] Click "2PT" (missed)
-- [ ] Score does NOT increase
-- [ ] Stat recorded in database
-- [ ] **AUTOMATION**: Block prompt appears (optional)
-- [ ] **AUTOMATION**: Rebound prompt appears (required)
-- [ ] **AUTOMATION**: Possession does NOT flip yet
+- [X] Select player
+- [X] Click "2PT" (missed)
+- [X] Score does NOT increase
+- [X] Stat recorded in database
+- [X] **AUTOMATION**: Block prompt appears (optional)
+- [X] **AUTOMATION**: Rebound prompt appears (required)
+- [X] **AUTOMATION**: Possession does NOT flip yet
 
 #### Test 2.3: Three-Pointer Made
-- [ ] Select player
-- [ ] Click "3PT" (made)
-- [ ] Score increases by 3 points
-- [ ] Stat recorded in database
-- [ ] **AUTOMATION**: Assist prompt appears
-- [ ] **AUTOMATION**: Possession flips to opponent
+- [X] Select player
+- [X] Click "3PT" (made)
+- [X] Score increases by 3 points
+- [X] Stat recorded in database
+- [X] **AUTOMATION**: Assist prompt appears
+- [X] **AUTOMATION**: Possession flips to opponent
 
 #### Test 2.4: Three-Pointer Missed
-- [ ] Select player
-- [ ] Click "3PT" (missed)
-- [ ] Score does NOT increase
-- [ ] **AUTOMATION**: Block prompt appears (optional)
-- [ ] **AUTOMATION**: Rebound prompt appears (required)
+- [X] Select player
+- [X] Click "3PT" (missed)
+- [X] Score does NOT increase
+- [X] **AUTOMATION**: Block prompt appears (optional)
+- [X] **AUTOMATION**: Rebound prompt appears (required)
 
 #### Test 2.5: Free Throw Made
-- [ ] Select player
-- [ ] Click "FT" (made)
-- [ ] Score increases by 1 point
-- [ ] Stat recorded in database
-- [ ] **AUTOMATION**: Assist prompt does NOT appear
-- [ ] **AUTOMATION**: Possession flips to opponent
+- [X] Select player
+- [X] Click "FT" (made)
+- [X] Score increases by 1 point
+- [X] Stat recorded in database
+- [X] **AUTOMATION**: Assist prompt does NOT appear
+- [X] **AUTOMATION**: Possession flips to opponent
 
 #### Test 2.6: Free Throw Missed
-- [ ] Select player
-- [ ] Click "FT" (missed)
-- [ ] Score does NOT increase
-- [ ] **AUTOMATION**: Rebound prompt appears
+- [X] Select player
+- [X] Click "FT" (missed)
+- [X] Score does NOT increase
+- [X] **AUTOMATION**: Rebound prompt appears
 
 #### Test 2.7: Assist
-- [ ] Record made shot (2PT or 3PT)
-- [ ] Assist prompt modal appears
-- [ ] Select assisting player from list
-- [ ] Assist recorded in database
-- [ ] Modal closes automatically
-- [ ] Can skip assist (click "Skip" or close)
+- [x] Record made shot (2PT or 3PT)
+- [x] Assist prompt modal appears
+- [x] Select assisting player from list
+- [x] Assist recorded in database
+- [x] Modal closes automatically
+- [x] Can skip assist (click "Skip" or close)
 
 #### Test 2.8: Rebound (Defensive)
-- [ ] Record missed shot
-- [ ] Rebound prompt modal appears
-- [ ] Select "Defensive Rebound"
-- [ ] Select rebounding player (opposing team)
-- [ ] Rebound recorded in database
-- [ ] **AUTOMATION**: Possession flips to rebounding team
+- [x] Record missed shot
+- [x] Rebound prompt modal appears
+- [x] Select "Defensive Rebound"
+- [x] Select rebounding player (opposing team)
+- [x] Rebound recorded in database
+- [x] **AUTOMATION**: Possession flips to rebounding team
 
 #### Test 2.9: Rebound (Offensive)
-- [ ] Record missed shot
-- [ ] Rebound prompt modal appears
-- [ ] Select "Offensive Rebound"
-- [ ] Select rebounding player (same team)
-- [ ] Rebound recorded in database
-- [ ] **AUTOMATION**: Possession stays with same team
-- [ ] **AUTOMATION**: Shot clock resets to 14s (if > 14s remaining)
+- [x] Record missed shot
+- [x] Rebound prompt modal appears
+- [x] Select "Offensive Rebound"
+- [x] Select rebounding player (same team)
+- [x] Rebound recorded in database
+- [x] **AUTOMATION**: Possession stays with same team
+- [x] **AUTOMATION**: Shot clock resets to 14s (if > 14s remaining)
 
 #### Test 2.10: Block
-- [ ] Record missed shot
-- [ ] Block prompt modal appears
-- [ ] Select blocking player
-- [ ] Block recorded in database
-- [ ] Rebound prompt appears next
-- [ ] Both block and rebound linked via `sequence_id`
+- [x] Record missed shot
+- [x] Block prompt modal appears
+- [x] Select blocking player
+- [error] Block recorded in database
+- [x] Rebound prompt appears next
+- [error] Both block and rebound linked via `sequence_id`
 
 ---
 
 ### **Section 3: Advanced Stats** (8 tests)
 
 #### Test 3.1: Steal
-- [ ] Select player
-- [ ] Click "STL"
-- [ ] Steal recorded in database
-- [ ] **AUTOMATION**: Turnover auto-generated for opponent
-- [ ] **AUTOMATION**: Possession flips to stealing team
+- [x] Select player
+- [X] Click "STL"
+- [X] Steal recorded in database
+- [NOT DISPLAYED AT LASTA ACTION] **AUTOMATION**: Turnover auto-generated for opponent
+- [X] **AUTOMATION**: Possession flips to stealing team
 - [ ] Last action shows "Player Name - Steal"
 
 #### Test 3.2: Turnover
-- [ ] Select player
-- [ ] Click "TOV"
-- [ ] Turnover recorded in database
-- [ ] **AUTOMATION**: Possession flips to opponent
-- [ ] Last action shows "Player Name - Turnover"
+- [x] Select player
+- [x] Click "TOV"
+- [x] Turnover recorded in database
+- [x] **AUTOMATION**: Possession flips to opponent
+- [x] Last action shows "Player Name - Turnover"
 
 #### Test 3.3: Personal Foul
-- [ ] Select player (fouler)
-- [ ] Click "FOUL"
-- [ ] Foul type modal appears
-- [ ] Select "Personal Foul"
-- [ ] Foul recorded immediately
-- [ ] No free throw modal
-- [ ] **AUTOMATION**: Possession flips to opponent
-- [ ] **AUTOMATION**: Clock pauses
+- [x] Select player (fouler)
+- [x] Click "FOUL"
+- [x] Foul type modal appears
+- [x] Select "Personal Foul"
+- [x] Foul recorded immediately
+- [x] No free throw modal
+- [x] **AUTOMATION**: Possession flips to opponent
+- [but not immediately] **AUTOMATION**: Clock pauses
 
 #### Test 3.4: Offensive Foul
-- [ ] Select player (fouler)
-- [ ] Click "FOUL"
-- [ ] Select "Offensive Foul"
-- [ ] Foul recorded
-- [ ] Turnover auto-generated
-- [ ] No free throw modal
-- [ ] **AUTOMATION**: Possession flips to opponent
+- [x] Select player (fouler)
+- [x] Click "FOUL"
+- [x] Select "Offensive Foul"
+- [x] Foul recorded
+- [no] Turnover auto-generated
+- [x] No free throw modal
+- [x] **AUTOMATION**: Possession flips to opponent
 
 #### Test 3.5: Shooting Foul (2PT)
-- [ ] Select player (fouler)
-- [ ] Click "FOUL"
-- [ ] Select "Shooting Foul - 2PT"
-- [ ] Victim selection modal appears
-- [ ] Select victim player (opposing team)
-- [ ] Free throw modal appears with 2 shots
-- [ ] Record both FTs (made/missed)
-- [ ] Foul and FTs linked via `sequence_id`
-- [ ] **AUTOMATION**: Possession flips after FTs
+- [x] Select player (fouler)
+- [x] Click "FOUL"
+- [x] Select "Shooting Foul - 2PT"
+- [x] Victim selection modal appears
+- [x] Select victim player (opposing team)
+- [x] Free throw modal appears with 2 shots
+- [x] Record both FTs (made/missed)
+- [] Foul and FTs linked via `sequence_id`
+- [X] **AUTOMATION**: Possession flips after FTs
 
 #### Test 3.6: Shooting Foul (3PT)
-- [ ] Select player (fouler)
-- [ ] Click "FOUL"
-- [ ] Select "Shooting Foul - 3PT"
-- [ ] Select victim player
-- [ ] Free throw modal appears with 3 shots
-- [ ] Record all 3 FTs
-- [ ] All events linked
+- [X] Select player (fouler)
+- [X] Click "FOUL"
+- [X] Select "Shooting Foul - 3PT"
+- [X] Select victim player
+- [X] Free throw modal appears with 3 shots
+- [X] Record all 3 FTs
+- [X] All events linked
 
 #### Test 3.7: Technical Foul
-- [ ] Select player (fouler)
-- [ ] Click "FOUL"
-- [ ] Select "Technical Foul"
-- [ ] Select victim player (opposing team)
-- [ ] Free throw modal appears with 1 shot
-- [ ] Record FT
-- [ ] **AUTOMATION**: Possession RETAINED by fouled team after FT
-- [ ] Verify possession does NOT flip
+- [X] Select player (fouler)
+- [X] Click "FOUL"
+- [X] Select "Technical Foul"
+- [X] Select victim player (opposing team)
+- [X] Free throw modal appears with 1 shot
+- [X] Record FT
+- [X] **AUTOMATION**: Possession RETAINED by fouled team after FT
+- [X] Verify possession does NOT flip
 
 #### Test 3.8: Flagrant Foul
-- [ ] Select player (fouler)
-- [ ] Click "FOUL"
-- [ ] Select "Flagrant Foul"
-- [ ] Select victim player
-- [ ] Free throw modal appears with 2 shots
-- [ ] Record both FTs
-- [ ] **AUTOMATION**: Possession RETAINED by fouled team after FTs
+- [X] Select player (fouler)
+- [X] Click "FOUL"
+- [X] Select "Flagrant Foul"
+- [X] Select victim player
+- [X] Free throw modal appears with 2 shots
+- [X] Record both FTs
+- [X] **AUTOMATION**: Possession RETAINED by fouled team after FTs
 
 ---
 
 ### **Section 4: Clock Automation** (10 tests)
 
 #### Test 4.1: Game Clock Start/Stop
-- [ ] Click "Start" → Clock counts down
-- [ ] Click "Stop" → Clock pauses
-- [ ] Time displayed correctly (MM:SS)
-- [ ] Clock continues from paused time when restarted
+- [X] Click "Start" → Clock counts down
+- [X] Click "Stop" → Clock pauses
+- [X] Time displayed correctly (MM:SS)
+- [X] Clock continues from paused time when restarted
 
 #### Test 4.2: Shot Clock Start/Stop
-- [ ] Game clock running → Shot clock counts down
-- [ ] Shot clock syncs with game clock (no desync)
-- [ ] Shot clock reaches 0 → Violation warning (if implemented)
+- [X] Game clock running → Shot clock counts down
+- [X] Shot clock syncs with game clock (no desync)
+- [] Shot clock reaches 0 → Violation warning (if implemented)
 
 #### Test 4.3: Auto-Pause on Foul
-- [ ] Start game clock
-- [ ] Record a foul (any type)
-- [ ] **AUTOMATION**: Clock auto-pauses
-- [ ] Shot clock also pauses
+- [X] Start game clock
+- [X] Record a foul (any type)
+- [X] **AUTOMATION**: Clock auto-pauses
+- [X] Shot clock also pauses
 
 #### Test 4.4: Auto-Pause on Timeout
 - [ ] Start game clock
@@ -333,68 +333,68 @@
 ### **Section 6: Possession Tracking** (8 tests)
 
 #### Test 6.1: Initial Possession
-- [ ] Start game
-- [ ] Possession indicator shows one team (or neutral)
-- [ ] Record first stat
-- [ ] Possession updates correctly
+- [X] Start game
+- [X] Possession indicator shows one team (or neutral)
+- [X] Record first stat
+- [X] Possession updates correctly
 
 #### Test 6.2: Made Shot Possession Flip
-- [ ] Record made shot (any type)
-- [ ] **AUTOMATION**: Possession flips to opponent
-- [ ] Possession indicator updates
-- [ ] Last change reason: "made_shot"
+- [X] Record made shot (any type)
+- [X] **AUTOMATION**: Possession flips to opponent
+- [X] Possession indicator updates
+- [X] Last change reason: "made_shot"
 
 #### Test 6.3: Turnover Possession Flip
-- [ ] Record turnover
-- [ ] **AUTOMATION**: Possession flips to opponent
-- [ ] Possession indicator updates
+- [X] Record turnover
+- [X] **AUTOMATION**: Possession flips to opponent
+- [X] Possession indicator updates
 
 #### Test 6.4: Steal Possession Flip
-- [ ] Record steal
-- [ ] **AUTOMATION**: Possession flips to stealing team
-- [ ] Possession indicator updates
+- [X] Record steal
+- [X] **AUTOMATION**: Possession flips to stealing team
+- [X] Possession indicator updates
 
 #### Test 6.5: Defensive Rebound Possession Flip
-- [ ] Record missed shot
-- [ ] Select defensive rebound (opposing team)
-- [ ] **AUTOMATION**: Possession flips to rebounding team
+- [X] Record missed shot
+- [X] Select defensive rebound (opposing team)
+- [X] **AUTOMATION**: Possession flips to rebounding team
 
 #### Test 6.6: Offensive Rebound Possession Retention
-- [ ] Record missed shot
-- [ ] Select offensive rebound (same team)
-- [ ] **AUTOMATION**: Possession stays with same team
+- [X] Record missed shot
+- [X] Select offensive rebound (same team)
+- [X] **AUTOMATION**: Possession stays with same team
 
 #### Test 6.7: Manual Possession Control
-- [ ] Click on possession indicator (team badge)
-- [ ] Possession manually changes
-- [ ] Change persists on refresh
-- [ ] Recorded in `game_possessions` table
+- [X] Click on possession indicator (team badge)
+- [X] Possession manually changes
+- [X] Change persists on refresh
+- [X] Recorded in `game_possessions` table
 
 #### Test 6.8: Foul Possession Logic
-- [ ] Record standard foul (personal/offensive)
-- [ ] **AUTOMATION**: Possession flips to opponent
-- [ ] Record technical/flagrant foul + FTs
-- [ ] **AUTOMATION**: Possession RETAINED after FTs
+- [X] Record standard foul (personal/offensive)
+- [X] **AUTOMATION**: Possession flips to opponent
+- [X] Record technical/flagrant foul + FTs
+- [X] **AUTOMATION**: Possession RETAINED after FTs
 
 ---
 
 ### **Section 7: Timeouts & Team Fouls** (5 tests)
 
 #### Test 7.1: Full Timeout
-- [ ] Click "TIME OUT"
-- [ ] Timeout modal appears
-- [ ] Select "Full Timeout"
-- [ ] Select team
-- [ ] Timeout recorded
-- [ ] Team timeout count decreases
-- [ ] **AUTOMATION**: Clock pauses
+- [X] Click "TIME OUT"
+- [X] Timeout modal appears
+- [X] Select "Full Timeout"
+- [X] Select team
+- [X] Timeout recorded
+- [X] Team timeout count decreases
+- [X] **AUTOMATION**: Clock pauses
 
 #### Test 7.2: 30-Second Timeout
-- [ ] Click "TIME OUT"
-- [ ] Select "30-Second Timeout"
-- [ ] Select team
-- [ ] Timeout recorded
-- [ ] Countdown timer shows (if implemented)
+- [X] Click "TIME OUT"
+- [X] Select "30-Second Timeout"
+- [X] Select team
+- [X] Timeout recorded
+- [X] Countdown timer shows (if implemented)
 
 #### Test 7.3: Team Foul Tracking
 - [ ] Record multiple fouls for Team A
@@ -403,43 +403,43 @@
 - [ ] Verify auto-increment working
 
 #### Test 7.4: Bonus Indicator
-- [ ] Record 5+ fouls for one team in a quarter
-- [ ] Bonus indicator appears (if implemented)
-- [ ] Shooting fouls now trigger 1-and-1 or 2 FTs
+- [X] Record 5+ fouls for one team in a quarter
+- [X] Bonus indicator appears (if implemented)
+- [X] Shooting fouls now trigger 1-and-1 or 2 FTs
 
 #### Test 7.5: Timeout Validation
-- [ ] Use all timeouts for a team
-- [ ] Try to call another timeout
-- [ ] Should show error or prevent action
+- [X] Use all timeouts for a team
+- [X] Try to call another timeout
+- [X] Should show error or prevent action
 
 ---
 
 ### **Section 8: Live Viewer Integration** (5 tests)
 
 #### Test 8.1: Real-Time Score Updates
-- [ ] Open game in Live Viewer (separate tab/device)
-- [ ] Record stats in Stat Tracker
-- [ ] Verify score updates in Live Viewer (within 15s)
-- [ ] No page refresh needed
+- [X] Open game in Live Viewer (separate tab/device)
+- [X] Record stats in Stat Tracker
+- [X] Verify score updates in Live Viewer (within 15s)
+- [X] No page refresh needed
 
 #### Test 8.2: Play-by-Play Feed
-- [ ] Record various stats (shots, fouls, subs)
-- [ ] Check Live Viewer play-by-play
-- [ ] All events appear in feed
-- [ ] Events in correct chronological order
-- [ ] Player names and stat types correct
+- [X] Record various stats (shots, fouls, subs)
+- [X] Check Live Viewer play-by-play
+- [X] All events appear in feed
+- [X] Events in correct chronological order
+- [X] Player names and stat types correct
 
 #### Test 8.3: Team Stats Tab
-- [ ] Open Team Stats tab in Live Viewer
-- [ ] Verify team aggregate stats (FG%, 3P%, FT%, etc.)
-- [ ] Verify player stats (PTS, REB, AST, etc.)
-- [ ] Stats update in real-time
-- [ ] Player minutes calculated correctly
+- [X] Open Team Stats tab in Live Viewer
+- [X] Verify team aggregate stats (FG%, 3P%, FT%, etc.)
+- [X] Verify player stats (PTS, REB, AST, etc.)
+- [X] Stats update in real-time
+- [X] Player minutes calculated correctly
 
 #### Test 8.4: Live Status Indicator
-- [ ] Game in progress → Shows "LIVE" badge
-- [ ] Game ended → Shows "FINAL" badge
-- [ ] Scheduled game → Shows date/time
+- [X] Game in progress → Shows "LIVE" badge
+- [X] Game ended → Shows "FINAL" badge
+- [] Scheduled game → Shows date/time
 
 #### Test 8.5: Mobile Responsiveness (Live Viewer)
 - [ ] Open Live Viewer on mobile

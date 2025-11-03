@@ -22,7 +22,11 @@ import { useAuthPageSetup } from '@/hooks/useAuthPageSetup';
 import { AuthFormContainer } from './AuthFormContainer';
 import { type UserRole } from './RoleSelector';
 
-const AuthPageV2 = () => {
+interface AuthPageV2Props {
+  initialMode?: 'signin' | 'signup';
+}
+
+const AuthPageV2 = ({ initialMode = 'signin' }: AuthPageV2Props) => {
   // State management
   const [userType, setUserType] = useState<UserRole>('player');
   
@@ -30,6 +34,13 @@ const AuthPageV2 = () => {
   const { handleInputChange, validateForm, getSignUpData, getSignInData, setCallbacks } = useAuthForm();
   const { authFlowState, loading, handleSignIn, handleSignUp, handleBackToSignIn, setIsLogin } = useAuthFlow();
   const { error, setError, clearError, sanitizedError } = useAuthError();
+  
+  // ✅ Set initial mode from URL parameter
+  React.useEffect(() => {
+    if (initialMode === 'signup') {
+      setIsLogin(false);
+    }
+  }, [initialMode, setIsLogin]);
   
   // Tier 2 hooks
   const { passwordStrength, updatePasswordStrength } = usePasswordStrength();

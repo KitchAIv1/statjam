@@ -24,11 +24,11 @@ export function NavigationHeader() {
   const currentSection = searchParams.get('section') || 'overview';
 
   const handleSignIn = () => {
-    router.push('/auth');
+    router.push('/auth?mode=signin');
   };
 
   const handleSignUp = () => {
-    router.push('/auth');
+    router.push('/auth?mode=signup');
   };
 
   const handleHome = () => {
