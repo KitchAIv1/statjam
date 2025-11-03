@@ -2,39 +2,41 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, Eye, Filter, Trophy } from "lucide-react";
 import { GameService } from '@/lib/services/gameService';
-import { TournamentService } from '@/lib/services/tournamentService';
+import { useTournaments } from '@/lib/hooks/useTournaments';
 import { Game } from '@/lib/types/game';
-import { Tournament } from '@/lib/types/tournament';
 
 interface GameWithTournament extends Game {
   tournament_name?: string;
 }
 
-export function OrganizerGameScheduler() {
+interface OrganizerGameSchedulerProps {
+  user: { id: string } | null;
+}
+
+export function OrganizerGameScheduler({ user }: OrganizerGameSchedulerProps) {
   const router = useRouter();
+  const { tournaments, loading: tournamentsLoading } = useTournaments(user);
   const [games, setGames] = useState<GameWithTournament[]>([]);
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingGames, setLoadingGames] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'live' | 'completed'>('all');
 
   useEffect(() => {
-    loadGamesAndTournaments();
-  }, []);
+    if (tournaments.length > 0) {
+      loadGames();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournaments.length]); // Only re-run when tournament count changes, not array reference
 
-  const loadGamesAndTournaments = async () => {
+  const loadGames = async () => {
     try {
-      setLoading(true);
-      // Get all tournaments for the organizer
-      const tournamentsData = await TournamentService.getAllTournaments();
-      setTournaments(tournamentsData);
-
+      setLoadingGames(true);
       // Get all games from all tournaments
       const allGames: GameWithTournament[] = [];
-      for (const tournament of tournamentsData) {
+      for (const tournament of tournaments) {
         const tournamentGames = await GameService.getGamesByTournament(tournament.id);
         // Add tournament name to each game
         const gamesWithTournament = tournamentGames.map(game => ({
@@ -50,7 +52,7 @@ export function OrganizerGameScheduler() {
     } catch (error) {
       console.error('Failed to load games:', error);
     } finally {
-      setLoading(false);
+      setLoadingGames(false);
     }
   };
 
@@ -80,6 +82,8 @@ export function OrganizerGameScheduler() {
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.scheduled;
     return <Badge className={config.class}>{config.label}</Badge>;
   };
+
+  const loading = tournamentsLoading || loadingGames;
 
   return (
     <div className="space-y-6">
