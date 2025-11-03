@@ -21,7 +21,6 @@ import {
   Shield,
   Star
 } from 'lucide-react';
-import { PlayerManagementModal } from '@/components/shared/PlayerManagementModal';
 import { TeamCreationModal } from '@/components/shared/TeamCreationModal';
 import { OrganizerPlayerManagementService } from '@/lib/services/organizerPlayerManagementService';
 
@@ -39,8 +38,6 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
-  const [showAddPlayer, setShowAddPlayer] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'full' | 'open'>('all');
   const [showFullRoster, setShowFullRoster] = useState(false);
@@ -509,13 +506,10 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                       style={styles.actionButton}
                       onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.actionButtonHover)}
                       onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.actionButton)}
-                      onClick={() => {
-                        setSelectedTeam(team);
-                        setShowAddPlayer(true);
-                      }}
+                      onClick={() => router.push(`/dashboard/tournaments/${tournamentId}/teams/${team.id}`)}
                     >
                       <UserPlus style={{ width: '14px', height: '14px' }} />
-                      Add Player
+                      Manage Players
                     </button>
                     <button
                       style={styles.actionButton}
@@ -638,23 +632,6 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
             const teamsData = await TeamService.getTeamsByTournament(tournamentId);
             setTeams(teamsData);
             setShowCreateTeam(false);
-          }}
-        />
-      )}
-
-      {/* Add Player Modal */}
-      {showAddPlayer && selectedTeam && (
-        <PlayerManagementModal
-          team={selectedTeam}
-          service={new OrganizerPlayerManagementService()}
-          onClose={() => {
-            setShowAddPlayer(false);
-            setSelectedTeam(null);
-          }}
-          onUpdate={async () => {
-            // Reload teams data to reflect changes
-            const teamsData = await TeamService.getTeamsByTournament(tournamentId);
-            setTeams(teamsData);
           }}
         />
       )}
