@@ -558,7 +558,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
   );
 };
 
-// Create Game Modal Component
+// Create Game Modal Component - Modern Design
 function CreateGameModal({ 
   tournament, 
   teams, 
@@ -604,10 +604,11 @@ function CreateGameModal({
   console.log('   End Date:', tournament.endDate);
   console.log('   Min constraint (formatted):', minDate);
   console.log('   Max constraint (formatted):', maxDate);
+  
   const [formData, setFormData] = useState({
     teamAId: game?.team_a_id || '',
     teamBId: game?.team_b_id || '',
-    startTime: game?.start_time?.slice(0, 16) || minDate, // Default to tournament start if new game
+    startTime: game?.start_time?.slice(0, 16) || minDate,
     venue: tournament.venue || '',
     statAdminId: game?.stat_admin_id || '',
   });
@@ -628,161 +629,115 @@ function CreateGameModal({
     onSave(formData);
   };
 
-  const styles = {
-    overlay: {
-      position: 'fixed' as const,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0, 0, 0, 0.8)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-    },
-    modal: {
-      background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
-      borderRadius: '16px',
-      padding: '32px',
-      width: '90%',
-      maxWidth: '500px',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-    },
-    title: {
-      fontSize: '24px',
-      fontWeight: '700',
-      color: '#ffffff',
-      marginBottom: '24px',
-      textAlign: 'center' as const,
-    },
-    form: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '20px',
-    },
-    formGroup: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '8px',
-    },
-    label: {
-      fontSize: '14px',
-      fontWeight: '500',
-      color: '#ffffff',
-    },
-    select: {
-      background: 'rgba(255, 255, 255, 0.1)',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      borderRadius: '8px',
-      padding: '12px',
-      color: '#ffffff',
-      fontSize: '14px',
-      outline: 'none',
-    },
-    input: {
-      background: 'rgba(255, 255, 255, 0.1)',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      borderRadius: '8px',
-      padding: '12px',
-      color: '#ffffff',
-      fontSize: '14px',
-      outline: 'none',
-    },
-    buttonGroup: {
-      display: 'flex',
-      gap: '12px',
-      marginTop: '24px',
-    },
-    cancelButton: {
-      flex: 1,
-      background: 'rgba(255, 255, 255, 0.1)',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      borderRadius: '12px',
-      padding: '12px 24px',
-      color: '#ffffff',
-      fontSize: '14px',
-      fontWeight: '500',
-      cursor: 'pointer',
-    },
-    saveButton: {
-      flex: 1,
-      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-      border: 'none',
-      borderRadius: '12px',
-      padding: '12px 24px',
-      color: '#1a1a1a',
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-    },
-  };
+  const isFormValid = formData.teamAId && formData.teamBId && formData.startTime && formData.venue;
 
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h2 style={styles.title}>
-          {game ? 'Edit Game' : 'Schedule New Game'}
-        </h2>
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fadeInUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-gradient-to-r from-orange-600 to-red-600 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">
+              {game ? 'Edit Game' : 'Schedule New Game'}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg hover:bg-white/20 flex items-center justify-center transition-colors text-white"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
         
-        <form style={styles.form} onSubmit={handleSubmit}>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Team A ({teams.length} teams available)</label>
-            <select
-              style={styles.select}
-              value={formData.teamAId}
-              onChange={(e) => setFormData(prev => ({ ...prev, teamAId: e.target.value }))}
-              required
-            >
-              <option value="">Select Team A</option>
-              {teams.map(team => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Team Selection Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Team A */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Users className="w-4 h-4 text-orange-600" />
+                Team A
+                <span className="text-xs text-muted-foreground">({teams.length} available)</span>
+              </label>
+              <select
+                className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                value={formData.teamAId}
+                onChange={(e) => setFormData(prev => ({ ...prev, teamAId: e.target.value }))}
+                required
+              >
+                <option value="">Select Team A</option>
+                {teams.map(team => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Team B */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Users className="w-4 h-4 text-red-600" />
+                Team B
+                <span className="text-xs text-muted-foreground">
+                  ({teams.filter(team => team.id !== formData.teamAId).length} available)
+                </span>
+              </label>
+              <select
+                className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                value={formData.teamBId}
+                onChange={(e) => setFormData(prev => ({ ...prev, teamBId: e.target.value }))}
+                required
+              >
+                <option value="">Select Team B</option>
+                {teams.filter(team => team.id !== formData.teamAId).map(team => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Team B ({teams.filter(team => team.id !== formData.teamAId).length} teams available)</label>
-            <select
-              style={styles.select}
-              value={formData.teamBId}
-              onChange={(e) => setFormData(prev => ({ ...prev, teamBId: e.target.value }))}
-              required
-            >
-              <option value="">Select Team B</option>
-              {teams.filter(team => team.id !== formData.teamAId).map(team => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={styles.formGroup}>
-            <label style={styles.label}>
-              Date & Time 
-              <span style={{ fontSize: '12px', color: '#FFD700', fontWeight: 'normal' }}>
-                (Only {tournament.startDate.split('T')[0]} to {tournament.endDate.split('T')[0]} allowed)
+          {/* Date & Time */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Clock className="w-4 h-4 text-orange-600" />
+              Date & Time
+              <span className="text-xs text-orange-600 font-normal">
+                ({tournament.startDate.split('T')[0]} to {tournament.endDate.split('T')[0]})
               </span>
             </label>
             <input
               type="datetime-local"
-              style={styles.input}
+              className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
               value={formData.startTime}
               onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
-              min={minDate} // Tournament start date (properly formatted)
-              max={maxDate} // Tournament end date (properly formatted)
+              min={minDate}
+              max={maxDate}
               required
             />
           </div>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Venue</label>
+          {/* Venue */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <MapPin className="w-4 h-4 text-orange-600" />
+              Venue
+            </label>
             <input
               type="text"
-              style={styles.input}
+              className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
               value={formData.venue}
               onChange={(e) => setFormData(prev => ({ ...prev, venue: e.target.value }))}
               placeholder="Enter venue location"
@@ -790,10 +745,15 @@ function CreateGameModal({
             />
           </div>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Stat Admin (Optional)</label>
+          {/* Stat Admin */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <User className="w-4 h-4 text-orange-600" />
+              Stat Admin
+              <span className="text-xs text-muted-foreground">(Optional)</span>
+            </label>
             <select
-              style={styles.select}
+              className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
               value={formData.statAdminId}
               onChange={(e) => setFormData(prev => ({ ...prev, statAdminId: e.target.value }))}
             >
@@ -806,49 +766,39 @@ function CreateGameModal({
             </select>
           </div>
 
-          {/* Show validation status */}
-          {(!formData.teamAId || !formData.teamBId || !formData.startTime) && (
-            <div style={{
-              background: 'rgba(255, 107, 107, 0.1)',
-              border: '1px solid rgba(255, 107, 107, 0.3)',
-              borderRadius: '8px',
-              padding: '12px',
-              fontSize: '14px',
-              color: '#ff6b6b',
-              marginBottom: '16px'
-            }}>
-              <strong>Required fields:</strong>
-              {!formData.teamAId && <div>• Select Team A</div>}
-              {!formData.teamBId && <div>• Select Team B</div>}
-              {!formData.startTime && <div>• Select Date & Time</div>}
+          {/* Validation Warning */}
+          {!isFormValid && (
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <p className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">Required fields missing:</p>
+              <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+                {!formData.teamAId && <li>• Select Team A</li>}
+                {!formData.teamBId && <li>• Select Team B</li>}
+                {!formData.startTime && <li>• Select Date & Time</li>}
+                {!formData.venue && <li>• Enter Venue</li>}
+              </ul>
             </div>
           )}
 
-          <div style={styles.buttonGroup}>
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4 border-t border-border">
             <button
               type="button"
-              style={styles.cancelButton}
               onClick={onClose}
+              className="flex-1 px-6 py-3 border border-border rounded-lg font-medium hover:bg-muted transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              style={{
-                ...styles.saveButton,
-                opacity: (!formData.teamAId || !formData.teamBId || !formData.startTime) ? 0.5 : 1,
-                cursor: (!formData.teamAId || !formData.teamBId || !formData.startTime) ? 'not-allowed' : 'pointer',
-              }}
-              disabled={!formData.teamAId || !formData.teamBId || !formData.startTime}
+              disabled={!isFormValid}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => {
                 console.log('🔍 Schedule Game button validation:', {
                   teamAId: formData.teamAId,
                   teamBId: formData.teamBId, 
                   startTime: formData.startTime,
-                  hasTeamA: !!formData.teamAId,
-                  hasTeamB: !!formData.teamBId,
-                  hasStartTime: !!formData.startTime,
-                  isDisabled: !formData.teamAId || !formData.teamBId || !formData.startTime
+                  venue: formData.venue,
+                  isValid: isFormValid
                 });
               }}
             >
