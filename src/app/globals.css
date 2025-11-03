@@ -59,6 +59,35 @@
   }
 }
 
+/* ✅ PAGE TRANSITION: Smooth fade-in for page loads */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 300ms ease-in forwards;
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 400ms ease-out forwards;
+}
+
 /* ✅ STAT GRID SCROLL: Custom scrollbar for stat tracker center column */
 .stat-grid-scroll::-webkit-scrollbar {
   width: 6px;
