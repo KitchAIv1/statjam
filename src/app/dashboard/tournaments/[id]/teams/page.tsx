@@ -179,10 +179,10 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
           <h2 className="text-2xl font-bold mb-4">Tournament Not Found</h2>
           <p className="text-muted-foreground mb-6">The tournament you're looking for doesn't exist.</p>
           <button
-            onClick={() => router.push(`/dashboard/tournaments/${tournamentId}`)}
+            onClick={() => router.push('/dashboard')}
             className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-semibold hover:opacity-90 transition-opacity"
           >
-            Back to Tournament
+            Back to Dashboard
           </button>
         </div>
       </div>
@@ -195,11 +195,11 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => router.push(`/dashboard/tournaments/${tournamentId}`)}
+            onClick={() => router.push('/dashboard')}
             className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Tournament
+            Back to Dashboard
           </button>
 
           <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">

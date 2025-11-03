@@ -67,9 +67,10 @@ interface TournamentCardProps {
   onManageSchedule: (tournament: Tournament) => void;
   onOpenSettings: (tournament: Tournament) => void;
   onDeleteTournament: (tournament: Tournament) => void;
+  onViewTournament: (tournament: Tournament) => void;
 }
 
-function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSettings, onDeleteTournament }: TournamentCardProps) {
+function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSettings, onDeleteTournament, onViewTournament }: TournamentCardProps) {
   const { currentTeams, maxTeams, loading: teamCountLoading } = useTournamentTeamCount(tournament.id, {
     maxTeams: tournament.maxTeams
   });
@@ -77,9 +78,12 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
   const { hasGames, gameCount, loading: gameStatusLoading } = useTournamentGameStatus(tournament.id);
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden">
+    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden cursor-pointer">
       <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-accent to-orange-500"></div>
-      <CardHeader className="relative bg-gradient-to-br from-muted/30 to-transparent">
+      <CardHeader 
+        className="relative bg-gradient-to-br from-muted/30 to-transparent"
+        onClick={() => onViewTournament(tournament)}
+      >
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
@@ -108,7 +112,10 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div 
+          className="grid grid-cols-2 gap-4"
+          onClick={() => onViewTournament(tournament)}
+        >
           <div className="space-y-3">
             <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
               <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md flex items-center justify-center">
@@ -168,7 +175,10 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
                   size="sm" 
                   variant="outline" 
                   className="gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                  onClick={() => onManageTeams(tournament)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onManageTeams(tournament);
+                  }}
                 >
                   <UserPlus className="w-3 h-3" />
                   <span className="hidden sm:inline">Teams</span>
@@ -190,7 +200,10 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
                     ? "bg-green-600 hover:bg-green-700 text-white border-green-600"
                     : "hover:bg-orange/10 hover:text-orange-600 hover:border-orange/30"
                 }`}
-                onClick={() => onManageSchedule(tournament)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onManageSchedule(tournament);
+                }}
                 disabled={gameStatusLoading}
               >
                 <CalendarDays className="w-3 h-3" />
@@ -213,7 +226,10 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
             size="sm" 
             variant="outline" 
             className="gap-1 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
-            onClick={() => onOpenSettings(tournament)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenSettings(tournament);
+            }}
           >
             <Settings className="w-3 h-3" />
             <span className="hidden sm:inline">Settings</span>
@@ -225,7 +241,10 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
                 size="sm" 
                 variant="outline"
                 className="gap-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-950"
-                onClick={() => onDeleteTournament(tournament)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteTournament(tournament);
+                }}
               >
                 <Trash2 className="w-3 h-3" />
                 <span className="hidden sm:inline">Delete</span>
@@ -397,6 +416,12 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   const handleManageSchedule = (tournament: Tournament) => {
     console.log('🔍 Navigating to schedule for tournament:', tournament.name);
     router.push(`/dashboard/tournaments/${tournament.id}/schedule`);
+  };
+
+  // Handle tournament overview navigation
+  const handleViewTournament = (tournament: Tournament) => {
+    console.log('🔍 Navigating to tournament overview:', tournament.name);
+    router.push(`/dashboard/tournaments/${tournament.id}`);
   };
 
   const handlePlayerManagerClose = () => {
@@ -654,6 +679,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
             onManageSchedule={handleManageSchedule}
             onOpenSettings={handleOpenSettings}
             onDeleteTournament={handleDeleteTournament}
+            onViewTournament={handleViewTournament}
           />
         ))}
       </div>
