@@ -11,7 +11,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { IPlayerManagementService, GenericPlayer } from '@/lib/types/playerManagement';
@@ -191,14 +190,6 @@ export function TeamCreationModal({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Team</DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="absolute right-4 top-4"
-          >
-            <X className="w-4 h-4" />
-          </Button>
         </DialogHeader>
 
         <StepIndicator currentStep={step} />

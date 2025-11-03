@@ -252,33 +252,34 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
               return (
                 <div key={team.id} className="bg-white border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   {/* Team Header (Always Visible) */}
-                  <div className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
-                          <Shield className="w-7 h-7 text-white" />
+                  <div className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shrink-0">
+                          <Shield className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                         </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-foreground">{team.name}</h3>
-                          <div className="flex items-center gap-4 mt-1">
-                            <span className="text-sm text-muted-foreground">{team.players.length} players</span>
-                            <span className="text-sm text-muted-foreground">•</span>
-                            <span className="text-sm text-muted-foreground">{team.wins}W - {team.losses}L</span>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg sm:text-xl font-bold text-foreground truncate">{team.name}</h3>
+                          <div className="flex items-center gap-3 sm:gap-4 mt-1 text-xs sm:text-sm">
+                            <span className="text-muted-foreground">{team.players.length} players</span>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-muted-foreground">{team.wins}W - {team.losses}L</span>
                           </div>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
                         <button
                           onClick={() => handleSelectTeam(team)}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-600 rounded-lg font-medium hover:bg-orange-100 transition-colors"
+                          className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-orange-50 text-orange-600 rounded-lg font-medium hover:bg-orange-100 transition-colors text-sm"
                         >
                           <UserPlus className="w-4 h-4" />
-                          Manage Players
+                          <span className="hidden xs:inline">Manage Players</span>
+                          <span className="xs:hidden">Manage</span>
                           {isSelected ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
                         <button className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors">
-                          <Edit className="w-5 h-5" />
+                          <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                       </div>
                     </div>
@@ -286,12 +287,12 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
 
                   {/* ✅ INLINE Player Management (Expandable) */}
                   {isSelected && (
-                    <div className="border-t border-border bg-gradient-to-br from-orange-50/30 to-red-50/30 p-6">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="border-t border-border bg-gradient-to-br from-orange-50/30 to-red-50/30 p-4 sm:p-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
                         {/* Current Roster */}
-                        <div className="bg-white rounded-xl p-6 border border-border">
+                        <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
                           <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-lg font-semibold flex items-center gap-2">
+                            <h4 className="text-base sm:text-lg font-semibold flex items-center gap-2">
                               <Users className="w-5 h-5 text-orange-600" />
                               Current Roster
                             </h4>
@@ -311,9 +312,9 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                         </div>
 
                         {/* Add Players */}
-                        <div className="bg-white rounded-xl p-6 border border-border">
-                          <h4 className="text-lg font-semibold flex items-center gap-2 mb-4">
-                            <Users className="w-5 h-5 text-orange-600" />
+                        <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
+                          <h4 className="text-base sm:text-lg font-semibold flex items-center gap-2 mb-4">
+                            <UserPlus className="w-5 h-5 text-orange-600" />
                             Add Players
                           </h4>
                           

@@ -186,48 +186,12 @@ export function PlayerSelectionList({
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Header with Mode Toggle */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {mode === 'search' ? (
-              <Search className="w-5 h-5 text-muted-foreground" />
-            ) : (
-              <UserPlus className="w-5 h-5 text-muted-foreground" />
-            )}
-            <h3 className="text-lg font-semibold">
-              {mode === 'search' ? 'Add Players' : 'Create Custom Player'}
-            </h3>
-          </div>
-          
-          {/* Mode Toggle - Only show if custom players supported */}
-          {showCustomPlayerOption && (
-            <div className="flex gap-1 bg-muted rounded-lg p-1">
-              <Button
-                size="sm"
-                variant={mode === 'search' ? 'default' : 'ghost'}
-                onClick={() => setMode('search')}
-                className="gap-2 h-8"
-              >
-                <Users className="w-4 h-4" />
-                Search Users
-              </Button>
-              <Button
-                size="sm"
-                variant={mode === 'create' ? 'default' : 'ghost'}
-                onClick={() => setMode('create')}
-                className="gap-2 h-8"
-              >
-                <UserPlus className="w-4 h-4" />
-                Create Custom
-              </Button>
-            </div>
-          )}
-        </div>
-        
+    <div className={`space-y-3 ${className}`}>
+      {/* Search Input & Mode Toggle */}
+      <div className="flex items-center gap-3">
+        {/* Search Field */}
         {mode === 'search' && (
-          <div className="relative">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search players by name or email..."
@@ -235,6 +199,30 @@ export function PlayerSelectionList({
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
+          </div>
+        )}
+        
+        {/* Mode Toggle - Only show if custom players supported */}
+        {showCustomPlayerOption && (
+          <div className="flex gap-1 bg-muted rounded-lg p-1 shrink-0">
+            <Button
+              size="sm"
+              variant={mode === 'search' ? 'default' : 'ghost'}
+              onClick={() => setMode('search')}
+              className="gap-2 h-9"
+            >
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Search</span>
+            </Button>
+            <Button
+              size="sm"
+              variant={mode === 'create' ? 'default' : 'ghost'}
+              onClick={() => setMode('create')}
+              className="gap-2 h-9"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">Create</span>
+            </Button>
           </div>
         )}
       </div>
@@ -248,7 +236,7 @@ export function PlayerSelectionList({
 
       {/* Content Area */}
       {mode === 'search' ? (
-        <div className="space-y-2 max-h-96 overflow-y-auto pr-2 game-viewer-scroll border rounded-lg p-2">
+        <div className="space-y-2 min-h-[320px] max-h-[400px] overflow-y-auto pr-2 game-viewer-scroll border rounded-lg p-3">
           <PlayerSearchResults
             players={players}
             loading={loading}

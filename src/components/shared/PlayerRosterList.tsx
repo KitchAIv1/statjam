@@ -71,7 +71,7 @@ export function PlayerRosterList({
 
   // Current players list
   return (
-    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 game-viewer-scroll border rounded-lg p-2">
+    <div className="space-y-2 min-h-[320px] max-h-[400px] overflow-y-auto pr-2 game-viewer-scroll border rounded-lg p-3">
       {players.map((player) => (
         <div 
           key={player.id}
