@@ -20,9 +20,7 @@ import {
   Trash2,
   ArrowLeft,
   Trophy,
-  Crown,
   Shield,
-  X,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';

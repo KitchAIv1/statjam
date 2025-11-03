@@ -20,8 +20,6 @@ import { useTournamentTeamCount } from "@/hooks/useTournamentTeamCount";
 import { useTournamentGameStatus } from "@/hooks/useTournamentGameStatus";
 import { TournamentTableRow } from "@/components/TournamentTableRow";
 import { Tournament } from "@/lib/types/tournament";
-import { PlayerManager } from "@/components/PlayerManager";
-import { PlayerManagementModal } from "@/components/shared/PlayerManagementModal";
 import { TeamCreationModal } from "@/components/shared/TeamCreationModal";
 import { OrganizerPlayerManagementService } from "@/lib/services/organizerPlayerManagementService";
 import { TeamService, TournamentService } from "@/lib/services/tournamentService";
@@ -275,8 +273,6 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   const [isTeamManagerOpen, setIsTeamManagerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tournamentToEdit, setTournamentToEdit] = useState<Tournament | null>(null);
-  const [isPlayerManagerOpen, setIsPlayerManagerOpen] = useState(false);
-  const [selectedTeamForPlayers, setSelectedTeamForPlayers] = useState<any>(null);
   const [isCreateTeamDialogOpen, setIsCreateTeamDialogOpen] = useState(false);
   
   // Delete confirmation states
@@ -407,11 +403,6 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
     setIsSettingsOpen(true);
   };
 
-  const handleManagePlayers = (team: any) => {
-    setSelectedTeamForPlayers(team);
-    setIsPlayerManagerOpen(true);
-  };
-
   // Handle schedule management navigation
   const handleManageSchedule = (tournament: Tournament) => {
     console.log('🔍 Navigating to schedule for tournament:', tournament.name);
@@ -424,12 +415,6 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
     router.push(`/dashboard/tournaments/${tournament.id}`);
   };
 
-  const handlePlayerManagerClose = () => {
-    setIsPlayerManagerOpen(false);
-    setSelectedTeamForPlayers(null);
-    // Refresh team data
-    teamManagement?.refetch();
-  };
 
   // Delete tournament handlers
   const handleDeleteTournament = (tournament: Tournament) => {
@@ -862,15 +847,6 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                                 </div>
                                 <div className="flex gap-1">
                                   <Button 
-                                    size="sm" 
-                                    variant="ghost" 
-                                    className="hover:bg-primary/10 hover:text-primary"
-                                    onClick={() => handleManagePlayers(team)}
-                                    title="Edit Team & Manage Players"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
-                                  <Button 
                                      size="sm" 
                                      variant="ghost" 
                                      className="hover:bg-destructive/10 hover:text-destructive"
@@ -1227,21 +1203,6 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Player Manager Modal */}
-      {isPlayerManagerOpen && selectedTeamForPlayers && (
-        <PlayerManagementModal
-          team={selectedTeamForPlayers}
-          service={new OrganizerPlayerManagementService()}
-          onClose={handlePlayerManagerClose}
-          onUpdate={async () => {
-            // Refresh team data
-            await teamManagement?.refetch();
-          }}
-        />
-      )}
-
-
 
       {/* Create Team Modal */}
       {isCreateTeamDialogOpen && selectedTournament && (
