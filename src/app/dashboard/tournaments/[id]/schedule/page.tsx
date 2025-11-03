@@ -20,7 +20,8 @@ import {
   Trash2,
   Play,
   CheckCircle,
-  X
+  X,
+  Eye
 } from 'lucide-react';
 
 interface GameSchedulePageProps {
@@ -613,6 +614,7 @@ function GameCard({
   onEdit: () => void; 
   onDelete: () => void; 
 }) {
+  const router = useRouter();
   const teamA = teams.find(t => t.id === game.team_a_id);
   const teamB = teams.find(t => t.id === game.team_b_id);
   
@@ -771,17 +773,29 @@ function GameCard({
 
       <div style={styles.actions}>
         <button
+          style={{ 
+            ...styles.actionButton, 
+            background: '#dbeafe', 
+            borderColor: '#3b82f6', 
+            color: '#1e40af' 
+          }}
+          onClick={() => router.push(`/game-viewer/${game.id}`)}
+        >
+          <Eye style={{ width: '14px', height: '14px', marginRight: '4px' }} />
+          View
+        </button>
+        <button
           style={{ ...styles.actionButton, ...styles.editButton }}
           onClick={onEdit}
         >
-          <Edit style={{ width: '14px', height: '14px' }} />
+          <Edit style={{ width: '14px', height: '14px', marginRight: '4px' }} />
           Edit
         </button>
         <button
           style={{ ...styles.actionButton, ...styles.deleteButton }}
           onClick={onDelete}
         >
-          <Trash2 style={{ width: '14px', height: '14px' }} />
+          <Trash2 style={{ width: '14px', height: '14px', marginRight: '4px' }} />
           Delete
         </button>
       </div>

@@ -103,13 +103,19 @@ export function OrganizerGuidePanel() {
             <div>
               <h4 className="font-medium mb-2">3. Manage Players</h4>
               <p className="text-sm text-muted-foreground mb-2">
-                Add players to each team roster for accurate stat tracking.
+                Player rosters are built from created player profiles in the system. Ensure all players are added to their respective teams.
               </p>
               <ul className="text-sm text-muted-foreground ml-4 space-y-1">
-                <li>• Click the "Edit" button on any team card</li>
-                <li>• Add player names and jersey numbers</li>
-                <li>• Players can also join teams with invitation codes</li>
+                <li>• Click "Manage Players" on any team card</li>
+                <li>• Search and add players from existing profiles</li>
+                <li>• Ensure each team has at least 5 players</li>
+                <li>• <strong className="text-orange-600">Coming soon:</strong> Manual player creation</li>
               </ul>
+              <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mt-2">
+                <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                  ⚠️ Important: Assign a Stat Admin to each game before it starts!
+                </p>
+              </div>
             </div>
           </div>
         </div>
