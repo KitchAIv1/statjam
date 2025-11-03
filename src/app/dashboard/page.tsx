@@ -1,20 +1,23 @@
 'use client';
 
 import React, { useEffect, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { OrganizerTournamentManager } from '@/components/OrganizerTournamentManager';
+import { OrganizerDashboard } from '@/components/OrganizerDashboard';
+import { OrganizerGuidePanel } from '@/components/guide';
+import { OrganizerGuideProvider } from '@/contexts/OrganizerGuideContext';
 
 /**
  * Organizer Dashboard - CURRENT BRANDING (Orange/Red)
  * 
- * Simplified dashboard showing tournaments directly
- * NO section-based navigation - removed old UI architecture
+ * Shows overview page with stats cards by default
+ * Section-based navigation: ?section=overview|tournaments|teams|games
  */
 const OrganizerDashboardContent = () => {
   const { user, loading } = useAuthContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const userRole = user?.role;
 
   // Handle auth and role redirects
@@ -38,7 +41,12 @@ const OrganizerDashboardContent = () => {
         router.push('/dashboard/coach');
       }
     }
-  }, [loading, user, userRole, router]);
+
+    // ✅ Default to overview section if no section specified
+    if (!loading && user && userRole === 'organizer' && !searchParams.get('section')) {
+      router.replace('/dashboard?section=overview');
+    }
+  }, [loading, user, userRole, router, searchParams]);
 
   // Loading state
   if (loading || !user || !userRole) {
@@ -53,27 +61,11 @@ const OrganizerDashboardContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30">
+    <OrganizerGuideProvider>
       <NavigationHeader />
-      
-      {/* Main Content */}
-      <main className="pt-20 pb-12 px-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
-              Organizer Dashboard
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Manage your tournaments, teams, and schedules
-            </p>
-          </div>
-
-          {/* Tournament Manager (Direct) */}
-          <OrganizerTournamentManager user={user} />
-        </div>
-      </main>
-    </div>
+      <OrganizerDashboard user={user} />
+      {userRole === 'organizer' && <OrganizerGuidePanel />}
+    </OrganizerGuideProvider>
   );
 };
 
