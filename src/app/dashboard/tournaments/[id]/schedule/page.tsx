@@ -105,260 +105,56 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
 
   if (loading || loadingData) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#ffffff',
-        color: '#1f2937'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          fontSize: '18px',
-          fontWeight: '500'
-        }}>
-          <div style={{
-            width: '24px',
-            height: '24px',
-            borderWidth: '2px',
-            borderStyle: 'solid',
-            borderColor: '#f97316',
-            borderTopColor: 'transparent',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }} />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 animate-fadeIn">
+        <div className="flex items-center gap-4 text-lg font-medium">
+          <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
           Loading Schedule...
         </div>
-        <style jsx>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     );
   }
 
   if (!tournament) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ffffff' }}>
-        <div style={{ color: '#1f2937', fontSize: '18px' }}>Tournament not found</div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/50 via-background to-red-50/30">
+        <div className="text-lg">Tournament not found</div>
       </div>
     );
   }
 
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      background: '#ffffff',
-      paddingTop: '100px',
-      paddingBottom: '40px',
-    },
-    content: {
-      maxWidth: '1400px',
-      margin: '0 auto',
-      padding: '0 24px',
-    },
-    header: {
-      marginBottom: '32px',
-    },
-    backButton: {
-      background: '#f97316',
-      border: 'none',
-      borderRadius: '12px',
-      padding: '12px 20px',
-      color: '#ffffff',
-      fontSize: '14px',
-      fontWeight: '500',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      marginBottom: '24px',
-      transition: 'all 0.2s ease',
-    },
-    backButtonHover: {
-      background: '#ea580c',
-      transform: 'translateY(-1px)',
-    },
-    titleSection: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      gap: '24px',
-      flexWrap: 'wrap' as const,
-    },
-    titleGroup: {
-      flex: 1,
-      minWidth: '300px',
-    },
-    title: {
-      fontSize: '36px',
-      fontWeight: '700',
-      color: '#1f2937',
-      marginBottom: '8px',
-      fontFamily: "'Anton', system-ui, sans-serif",
-    },
-    subtitle: {
-      fontSize: '16px',
-      color: '#6b7280',
-      marginBottom: '16px',
-    },
-    actionButtons: {
-      display: 'flex',
-      gap: '12px',
-      alignItems: 'center',
-    },
-    primaryButton: {
-      background: '#dc2626',
-      border: 'none',
-      borderRadius: '12px',
-      padding: '12px 24px',
-      color: '#ffffff',
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      transition: 'all 0.2s ease',
-    },
-    primaryButtonHover: {
-      background: '#b91c1c',
-      transform: 'translateY(-1px)',
-    },
-    filtersContainer: {
-      background: '#f9fafb',
-      borderRadius: '16px',
-      padding: '24px',
-      marginBottom: '24px',
-      border: '1px solid #e5e7eb',
-    },
-    filtersGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-      gap: '16px',
-      alignItems: 'end',
-    },
-    filterGroup: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '8px',
-    },
-    filterLabel: {
-      fontSize: '14px',
-      fontWeight: '500',
-      color: '#374151',
-    },
-    filterSelect: {
-      background: '#ffffff',
-      border: '1px solid #d1d5db',
-      borderRadius: '8px',
-      padding: '10px 12px',
-      color: '#1f2937',
-      fontSize: '14px',
-      outline: 'none',
-    },
-    filterInput: {
-      background: '#ffffff',
-      border: '1px solid #d1d5db',
-      borderRadius: '8px',
-      padding: '10px 12px',
-      color: '#1f2937',
-      fontSize: '14px',
-      outline: 'none',
-    },
-    gamesContainer: {
-      background: '#ffffff',
-      borderRadius: '16px',
-      padding: '24px',
-      border: '1px solid #e5e7eb',
-      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-    },
-    gamesHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '24px',
-    },
-    gamesTitle: {
-      fontSize: '20px',
-      fontWeight: '600',
-      color: '#1f2937',
-    },
-    emptyState: {
-      textAlign: 'center' as const,
-      padding: '60px 20px',
-      color: '#6b7280',
-    },
-    emptyIcon: {
-      width: '64px',
-      height: '64px',
-      margin: '0 auto 16px',
-      color: '#9ca3af',
-    },
-    emptyTitle: {
-      fontSize: '18px',
-      fontWeight: '500',
-      marginBottom: '8px',
-      color: '#1f2937',
-    },
-    emptyDescription: {
-      fontSize: '14px',
-      color: '#6b7280',
-      marginBottom: '24px',
-    },
-  };
-
   return (
-    <div style={styles.container}>
-      <div style={styles.content}>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 pt-24 pb-12 px-6 animate-fadeIn">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div style={styles.header}>
-        <button
-          onClick={() => router.push('/dashboard?section=tournaments')}
-          className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Tournaments
-        </button>
+        <div className="mb-8">
+          <button
+            onClick={() => router.push('/dashboard?section=tournaments')}
+            className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Tournaments
+          </button>
 
-          <div style={styles.titleSection}>
-            <div style={styles.titleGroup}>
-              <h1 style={styles.title}>Game Schedule</h1>
-              <p style={styles.subtitle}>{tournament.name} - Manage tournament fixtures</p>
+          <div className="flex justify-between items-start gap-6 flex-wrap mb-6">
+            <div className="flex-1 min-w-[300px]">
+              <h1 className="text-4xl font-bold mb-2">Game Schedule</h1>
+              <p className="text-lg text-muted-foreground">{tournament.name} - Manage tournament fixtures</p>
             </div>
 
-            <div style={styles.actionButtons}>
+            <div className="flex gap-3 items-center">
               <button
-                style={styles.primaryButton}
-                onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.primaryButtonHover)}
-                onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.primaryButton)}
                 onClick={handleCreateGame}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
               >
-                <Plus style={{ width: '16px', height: '16px' }} />
+                <Plus className="w-4 h-4" />
                 Schedule Game
               </button>
               
               <button
-                style={{
-                  ...styles.primaryButton,
-                  background: 'linear-gradient(135deg, #9D4EDD, #7B2CBF)',
-                }}
-                onMouseEnter={(e) => Object.assign(e.currentTarget.style, {
-                  ...styles.primaryButtonHover,
-                  background: 'linear-gradient(135deg, #7B2CBF, #5A189A)',
-                })}
-                onMouseLeave={(e) => Object.assign(e.currentTarget.style, {
-                  ...styles.primaryButton,
-                  background: 'linear-gradient(135deg, #9D4EDD, #7B2CBF)',
-                })}
                 onClick={() => setShowBracketBuilder(true)}
+                className="flex items-center gap-2 px-6 py-3 border border-orange-300 text-orange-600 rounded-lg font-semibold hover:bg-orange-50 transition-colors"
               >
-                <Calendar style={{ width: '16px', height: '16px' }} />
+                <Calendar className="w-4 h-4" />
                 Generate Bracket
               </button>
             </div>
@@ -366,12 +162,12 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
         </div>
 
         {/* Filters */}
-        <div style={styles.filtersContainer}>
-          <div style={styles.filtersGrid}>
-            <div style={styles.filterGroup}>
-              <label style={styles.filterLabel}>Status</label>
+        <div className="bg-muted/50 rounded-2xl p-6 mb-6 border border-border">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
               <select
-                style={styles.filterSelect}
+                className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
               >
@@ -382,22 +178,22 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
               </select>
             </div>
             
-            <div style={styles.filterGroup}>
-              <label style={styles.filterLabel}>Date</label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date</label>
               <input
                 type="date"
-                style={styles.filterInput}
+                className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
               />
             </div>
 
-            <div style={styles.filterGroup}>
-              <label style={styles.filterLabel}>Teams</label>
-              <div style={{ color: '#888', fontSize: '14px', padding: '10px 0' }}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Teams</label>
+              <div className="text-sm text-muted-foreground py-2.5">
                 {teams.length} teams available
                 {teams.length > 0 && (
-                  <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  <div className="text-xs mt-1">
                     {teams.slice(0, 3).map(team => team.name).join(', ')}
                     {teams.length > 3 && ` +${teams.length - 3} more`}
                   </div>
