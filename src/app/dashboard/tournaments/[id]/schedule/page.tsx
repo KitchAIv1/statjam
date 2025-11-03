@@ -319,12 +319,10 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
         {/* Header */}
         <div style={styles.header}>
           <button
-            style={styles.backButton}
-            onClick={() => router.push('/dashboard?section=overview')}
-            onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.backButtonHover)}
-            onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.backButton)}
+            onClick={() => router.push('/dashboard')}
+            className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
           >
-            <ArrowLeft style={{ width: '16px', height: '16px' }} />
+            <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </button>
 

@@ -1,32 +1,34 @@
 'use client';
 
 import React, { useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { OrganizerDashboard } from '@/components/OrganizerDashboard';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import { OrganizerGuidePanel } from '@/components/guide';
-import { OrganizerGuideProvider } from '@/contexts/OrganizerGuideContext';
+import { OrganizerTournamentManager } from '@/components/OrganizerTournamentManager';
 
+/**
+ * Organizer Dashboard - CURRENT BRANDING (Orange/Red)
+ * 
+ * Simplified dashboard showing tournaments directly
+ * NO section-based navigation - removed old UI architecture
+ */
 const OrganizerDashboardContent = () => {
-  const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
+  const { user, loading } = useAuthContext();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const userRole = user?.role;
 
-  // Handle redirects in useEffect - wait for auth to fully initialize
+  // Handle auth and role redirects
   useEffect(() => {
-    // ✅ Clear redirect flag when dashboard loads successfully
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('auth-redirecting');
     }
     
-    // Only redirect after auth is fully initialized
     if (!loading && !user) {
       router.push('/auth');
       return;
     }
     
+    // Role-based redirects
     if (!loading && user && userRole && userRole !== 'organizer') {
       if (userRole === 'player') {
         router.push('/dashboard/player');
@@ -34,23 +36,16 @@ const OrganizerDashboardContent = () => {
         router.push('/dashboard/stat-admin');
       } else if (userRole === 'coach') {
         router.push('/dashboard/coach');
-      } else if (userRole === 'admin') {
-        router.push('/dashboard'); // Admin templates temporarily disabled
       }
     }
+  }, [loading, user, userRole, router]);
 
-    // If no section is specified, default to overview
-    if (!loading && user && userRole === 'organizer' && !searchParams.get('section')) {
-      router.replace('/dashboard?section=overview');
-    }
-  }, [loading, user, userRole, router, searchParams]);
-
-  // Show loading screen only while auth is initializing
+  // Loading state
   if (loading || !user || !userRole) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/50 via-background to-red-50/30">
         <div className="flex items-center gap-4 text-lg font-medium">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
           Loading Organizer Dashboard...
         </div>
       </div>
@@ -58,20 +53,36 @@ const OrganizerDashboardContent = () => {
   }
 
   return (
-    <OrganizerGuideProvider>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30">
       <NavigationHeader />
-      <OrganizerDashboard user={user} />
-      {userRole === 'organizer' && <OrganizerGuidePanel />}
-    </OrganizerGuideProvider>
+      
+      {/* Main Content */}
+      <main className="pt-20 pb-12 px-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+              Organizer Dashboard
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Manage your tournaments, teams, and schedules
+            </p>
+          </div>
+
+          {/* Tournament Manager (Direct) */}
+          <OrganizerTournamentManager user={user} />
+        </div>
+      </main>
+    </div>
   );
 };
 
 const OrganizerDashboardPage = () => {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/50 via-background to-red-50/30">
         <div className="flex items-center gap-4 text-lg font-medium">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
           Loading Dashboard...
         </div>
       </div>
