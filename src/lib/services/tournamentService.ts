@@ -904,6 +904,11 @@ export class TeamService {
         throw new Error(`Failed to add player to team: ${error.message}`);
       }
 
+      // ✅ FIX: Invalidate cache so current roster updates immediately
+      const cacheKey = CacheKeys.teamPlayers(teamId);
+      cache.delete(cacheKey);
+      console.log('🔄 Invalidated team players cache for team:', teamId);
+
       console.log('✅ Player successfully added to team in database (optimized)');
     } catch (error) {
       console.error('Error adding player to team:', error);
@@ -925,6 +930,11 @@ export class TeamService {
         console.error('❌ Supabase error removing player from team:', error);
         throw new Error(`Failed to remove player from team: ${error.message}`);
       }
+
+      // ✅ FIX: Invalidate cache so current roster updates immediately
+      const cacheKey = CacheKeys.teamPlayers(teamId);
+      cache.delete(cacheKey);
+      console.log('🔄 Invalidated team players cache for team:', teamId);
 
       console.log('✅ Player successfully removed from team in database');
     } catch (error) {

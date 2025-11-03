@@ -27,9 +27,50 @@ import {
 export class OrganizerPlayerManagementService implements IPlayerManagementService {
   async searchAvailablePlayers(request: PlayerSearchRequest): Promise<GenericPlayer[]> {
     const { TeamService } = await import('./tournamentService');
+    const { supabase } = await import('@/lib/supabase');
     
-    // Get all players (Organizer uses getAllPlayers, then filters client-side)
+    // Get all players
     const allPlayers = await TeamService.getAllPlayers();
+    
+    // ✅ FIX #1: Get ALL players already assigned to teams in this tournament
+    let assignedPlayerIds: Set<string> = new Set();
+    
+    if (request.team_id) {
+      try {
+        // Get the tournament ID for this team
+        const { data: teamData } = await supabase
+          .from('teams')
+          .select('tournament_id')
+          .eq('id', request.team_id)
+          .single();
+        
+        if (teamData?.tournament_id) {
+          // Get all teams in this tournament
+          const { data: tournamentTeams } = await supabase
+            .from('teams')
+            .select('id')
+            .eq('tournament_id', teamData.tournament_id);
+          
+          if (tournamentTeams && tournamentTeams.length > 0) {
+            const teamIds = tournamentTeams.map(t => t.id);
+            
+            // Get all players assigned to ANY team in this tournament
+            const { data: teamPlayers } = await supabase
+              .from('team_players')
+              .select('player_id')
+              .in('team_id', teamIds)
+              .not('player_id', 'is', null);
+            
+            if (teamPlayers) {
+              assignedPlayerIds = new Set(teamPlayers.map(tp => tp.player_id));
+              console.log(`✅ Found ${assignedPlayerIds.size} players already assigned to teams in tournament`);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error checking assigned players:', error);
+      }
+    }
     
     // Filter by query if provided
     let filteredPlayers = allPlayers;
@@ -46,24 +87,57 @@ export class OrganizerPlayerManagementService implements IPlayerManagementServic
       filteredPlayers = filteredPlayers.slice(0, request.limit);
     }
     
-    // Map to GenericPlayer
+    // Map to GenericPlayer with is_on_team flag
     return filteredPlayers.map(p => ({
       id: p.id,
       name: p.name,
       email: p.email,
       jersey_number: p.jerseyNumber,
       position: p.position,
-      is_custom_player: false, // Organizer players are all StatJam users
+      is_custom_player: false,
       premium_status: p.isPremium,
-      created_at: p.createdAt
+      created_at: p.createdAt,
+      is_on_team: assignedPlayerIds.has(p.id) // ✅ FIX: Set flag if player is on any team
     }));
   }
   
   async getTeamPlayers(teamId: string): Promise<GenericPlayer[]> {
-    // Note: This requires tournament context which we don't have here
-    // For now, return empty array - will be implemented when integrating
-    console.warn('⚠️ OrganizerPlayerManagementService.getTeamPlayers not fully implemented yet');
-    return [];
+    // ✅ FIX #2: Implement getTeamPlayers using existing TeamService method
+    const { TeamService } = await import('./tournamentService');
+    const { supabase } = await import('@/lib/supabase');
+    
+    try {
+      // Get players from TeamService
+      const players = await TeamService.getTeamPlayers(teamId);
+      
+      // Get team_player IDs for the relationship mapping
+      const { data: teamPlayerRelations } = await supabase
+        .from('team_players')
+        .select('id, player_id')
+        .eq('team_id', teamId);
+      
+      // Create a map of player_id -> team_player_id
+      const teamPlayerMap = new Map(
+        (teamPlayerRelations || []).map(tp => [tp.player_id, tp.id])
+      );
+      
+      // Map to GenericPlayer format with team_player_id
+      return players.map(p => ({
+        id: p.id,
+        name: p.name,
+        email: p.email,
+        jersey_number: p.jerseyNumber,
+        position: p.position,
+        is_custom_player: false,
+        premium_status: p.isPremium,
+        created_at: p.createdAt,
+        is_on_team: true,
+        team_player_id: teamPlayerMap.get(p.id) // ✅ Include team_player_id for removal
+      }));
+    } catch (error) {
+      console.error('❌ Error getting team players:', error);
+      return [];
+    }
   }
   
   async getTeamPlayerCount(teamId: string): Promise<number> {
@@ -95,12 +169,36 @@ export class OrganizerPlayerManagementService implements IPlayerManagementServic
   }
   
   async removePlayerFromTeam(request: RemovePlayerFromTeamRequest): Promise<ServiceResponse> {
-    // Note: TeamService doesn't have removePlayerFromTeam yet
-    // Will be implemented in Phase 3
-    return {
-      success: false,
-      error: 'Remove player not implemented for Organizer yet'
-    };
+    // ✅ FIX #2B: Implement removePlayerFromTeam using existing TeamService method
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      
+      // Remove from team_players table using team_player_id
+      const { error } = await supabase
+        .from('team_players')
+        .delete()
+        .eq('id', request.team_player_id);
+      
+      if (error) {
+        console.error('❌ Error removing player from team:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to remove player from team'
+        };
+      }
+      
+      console.log('✅ Successfully removed player from team');
+      return {
+        success: true,
+        message: 'Player removed successfully'
+      };
+    } catch (error) {
+      console.error('❌ Error in removePlayerFromTeam:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to remove player'
+      };
+    }
   }
   
   async createCustomPlayer(request: CreateCustomPlayerRequest): Promise<ServiceResponse<GenericPlayer>> {

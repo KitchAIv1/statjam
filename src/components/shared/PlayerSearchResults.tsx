@@ -59,11 +59,14 @@ export function PlayerSearchResults({
     );
   }
 
-  if (players.length > 0) {
-    // Players list
+  // ✅ FIX: Filter out players already on team from the add players list
+  const availablePlayers = players.filter(p => !p.is_on_team);
+  
+  if (availablePlayers.length > 0) {
+    // Players list (only showing available players, not those already on team)
     return (
       <>
-        {players.map((player) => (
+        {availablePlayers.map((player) => (
           <PlayerListItem
             key={player.id}
             player={player}

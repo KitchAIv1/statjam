@@ -39,6 +39,7 @@ export interface GenericTeam {
  */
 export interface PlayerSearchRequest {
   query?: string;
+  team_id?: string; // ✅ FIX: Added to support filtering players already in tournament
   exclude_team_id?: string;
   limit?: number;
 }

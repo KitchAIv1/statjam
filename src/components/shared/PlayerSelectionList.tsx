@@ -69,18 +69,21 @@ export function PlayerSelectionList({
 
       const results = await service.searchAvailablePlayers({
         query: query.trim() || undefined,
-        exclude_team_id: teamId,
+        team_id: teamId, // ✅ FIX: Pass team_id to filter out players already in tournament
         limit: 50
       });
       
-      // Mark initially selected players as is_on_team
-      const resultsWithSelection = results.map(player => {
-        const isSelected = selectedPlayerIds.includes(player.id);
-        return {
-          ...player,
-          is_on_team: isSelected
-        };
-      });
+      // ✅ FIX: Only override is_on_team for deferred persistence mode (team creation)
+      // For normal mode, preserve the service's is_on_team flag (tournament-wide check)
+      const resultsWithSelection = deferPersistence 
+        ? results.map(player => {
+            const isSelected = selectedPlayerIds.includes(player.id);
+            return {
+              ...player,
+              is_on_team: isSelected // Override only for local team creation
+            };
+          })
+        : results; // Preserve service's is_on_team flag for existing teams
       
       setPlayers(resultsWithSelection);
     } catch (error) {
@@ -89,7 +92,7 @@ export function PlayerSelectionList({
     } finally {
       setLoading(false);
     }
-  }, [teamId, service]);
+  }, [teamId, service, deferPersistence]);
 
   // Initial load with selected players
   useEffect(() => {
@@ -245,7 +248,7 @@ export function PlayerSelectionList({
 
       {/* Content Area */}
       {mode === 'search' ? (
-        <div className="space-y-2 max-h-96 overflow-y-auto">
+        <div className="space-y-2 max-h-96 overflow-y-auto pr-2 game-viewer-scroll border rounded-lg p-2">
           <PlayerSearchResults
             players={players}
             loading={loading}

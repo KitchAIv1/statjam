@@ -379,8 +379,8 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
 
 
   const handleManageTeams = (tournament: Tournament) => {
-    setSelectedTournament(tournament);
-    setIsTeamManagerOpen(true);
+    // ✅ Navigate to dedicated teams page instead of opening modal
+    router.push(`/dashboard/tournaments/${tournament.id}/teams`);
   };
 
   const handleOpenSettings = (tournament: Tournament) => {

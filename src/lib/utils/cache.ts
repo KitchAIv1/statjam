@@ -51,6 +51,13 @@ class SimpleCache {
   }
 
   /**
+   * Delete a specific cache entry
+   */
+  delete(key: string): boolean {
+    return this.cache.delete(key);
+  }
+
+  /**
    * Clear expired entries
    */
   cleanup(): void {

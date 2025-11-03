@@ -148,10 +148,12 @@ export function PlayerManagementModal({
           {/* Add Players Section */}
           <div className="border-t pt-4">
             <PlayerSelectionList
+              key={currentPlayers.map(p => p.id).join(',')}
               teamId={team.id}
               service={service}
               onPlayerAdd={handlePlayerAdd}
               onPlayerRemove={handlePlayerRemove}
+              showCustomPlayerOption={false}
             />
           </div>
         </div>
