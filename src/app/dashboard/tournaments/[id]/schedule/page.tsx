@@ -204,49 +204,43 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
         </div>
 
         {/* Games List */}
-        <div style={styles.gamesContainer}>
-          <div style={styles.gamesHeader}>
-            <h2 style={styles.gamesTitle}>
+        <div className="bg-card rounded-2xl p-6 border border-border shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">
               Scheduled Games ({filteredGames.length})
             </h2>
           </div>
 
           {filteredGames.length === 0 ? (
-            <div style={styles.emptyState}>
-              <Calendar style={styles.emptyIcon} />
-              <h3 style={styles.emptyTitle}>No games scheduled yet</h3>
-              <p style={styles.emptyDescription}>
+            <div className="text-center py-16">
+              <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-medium mb-2">No games scheduled yet</h3>
+              <p className="text-muted-foreground mb-6">
                 Start by scheduling your first game. You'll need at least 2 teams to create a match.
               </p>
               {teams.length >= 2 ? (
                 <button
-                  style={styles.primaryButton}
-                  onMouseEnter={(e) => Object.assign(e.currentTarget.style, styles.primaryButtonHover)}
-                  onMouseLeave={(e) => Object.assign(e.currentTarget.style, styles.primaryButton)}
                   onClick={handleCreateGame}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
                 >
-                  <Plus style={{ width: '16px', height: '16px' }} />
+                  <Plus className="w-4 h-4" />
                   Schedule First Game
                 </button>
               ) : (
-                <div style={{ color: '#888', fontSize: '14px' }}>
-                  <p>You need at least 2 teams to schedule games.</p>
+                <div className="text-sm text-muted-foreground">
+                  <p className="mb-4">You need at least 2 teams to schedule games.</p>
                   <button
-                    style={{
-                      ...styles.primaryButton,
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: '#ffffff',
-                    }}
                     onClick={() => router.push(`/dashboard/tournaments/${tournamentId}/teams`)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-muted text-foreground rounded-lg font-semibold hover:bg-muted/80 transition-colors"
                   >
-                    <Users style={{ width: '16px', height: '16px' }} />
+                    <Users className="w-4 h-4" />
                     Manage Teams
                   </button>
                 </div>
               )}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="flex flex-col gap-4">
               {filteredGames.map((game) => (
                 <GameCard
                   key={game.id}
