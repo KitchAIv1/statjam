@@ -414,18 +414,12 @@ export function useGameViewerV2(gameId: string): GameViewerData {
 
       const phase3Time = performance.now() - phase3Start;
       console.log(`⚡ Phase 3 (players): ${phase3Time.toFixed(0)}ms`);
-      console.log('🔍 DEBUG Phase 3: playersMap size:', playersMap.size);
-      console.log('🔍 DEBUG Phase 3: playersMap contents:', Array.from(playersMap.entries()));
-      console.log('🔍 DEBUG Phase 3: statsPlayerIds:', statsPlayerIds);
-      console.log('🔍 DEBUG Phase 3: statsCustomPlayerIds:', statsCustomPlayerIds);
-      console.log('🔍 DEBUG Phase 3: allPlayerIds:', allPlayerIds);
 
       // Enrich stats with player names (check both player_id and custom_player_id)
       gameStats = gameStats.map(stat => {
         const statWithCustomId = stat as any;
         const playerId = stat.player_id || statWithCustomId.custom_player_id;
         const playerName = playersMap.get(playerId) || `Player ${playerId?.substring(0, 8)}`;
-        console.log('🔍 DEBUG: Enriching stat - playerId:', playerId, 'playerName:', playerName);
         return {
           ...stat,
           player_name: playerName
@@ -460,14 +454,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         gameSubstitutions,
         gameTimeouts
       );
-
-      console.log('🔍 DEBUG: playByPlayEntries generated:', playByPlayEntries.length);
-      console.log('🔍 DEBUG: First 3 plays:', playByPlayEntries.slice(0, 3).map(p => ({
-        id: p.id,
-        playerId: p.playerId,
-        playerName: p.playerName,
-        description: p.description
-      })));
 
       const totalTime = performance.now() - perfStart;
       console.log(`⚡ TOTAL FETCH TIME: ${totalTime.toFixed(0)}ms (Phase1: ${phase1Time.toFixed(0)}ms | Phase2: ${phase2Time.toFixed(0)}ms | Phase3: ${phase3Time.toFixed(0)}ms)`);
@@ -510,8 +496,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       });
 
       setPlays(prevPlays => {
-        console.log('🔍 DEBUG setPlays: prevPlays.length:', prevPlays.length, 'newPlays.length:', playByPlayEntries.length);
-        
         if (prevPlays.length === playByPlayEntries.length) {
           let hasChanges = false;
           for (let i = 0; i < playByPlayEntries.length; i++) {
@@ -525,13 +509,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             return prevPlays;
           }
         }
-        
         console.log('🔄 useGameViewerV2: Plays changed, updating');
-        console.log('🔍 DEBUG: Updating with plays:', playByPlayEntries.slice(0, 3).map(p => ({
-          id: p.id,
-          playerName: p.playerName,
-          description: p.description
-        })));
         return playByPlayEntries;
       });
 
