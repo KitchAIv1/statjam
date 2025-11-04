@@ -64,16 +64,6 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
 
   const isDark = theme === 'dark';
 
-  // 🔍 CRITICAL DEBUG: What is PlayByPlayFeed actually receiving?
-  console.log('🔍 CRITICAL PlayByPlayFeed: Total plays:', playByPlay.length);
-  console.log('🔍 CRITICAL PlayByPlayFeed: First play FULL:', JSON.stringify(playByPlay[0], null, 2));
-  console.log('🔍 CRITICAL PlayByPlayFeed: First 3 summary:', playByPlay.slice(0, 3).map(p => ({
-    id: p.id,
-    playerId: p.playerId,
-    playerName: p.playerName,
-    description: p.description
-  })));
-
   // Empty state
   if (playByPlay.length === 0) {
     return (

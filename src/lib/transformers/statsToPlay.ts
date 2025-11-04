@@ -76,26 +76,6 @@ export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { pla
                       s.users?.name || // Fallback: Then regular users nested object
                       (s.users?.email ? s.users.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : null) ||
                       `Player ${String(s.player_id || (s as any).custom_player_id || '').substring(0, 8)}`;
-    
-    // Reduced logging for performance
-    if (process.env.NODE_ENV !== 'production' && Math.random() < 0.1) {
-      console.log('🔍 Player name extraction sample:', {
-        playerId: s.player_id,
-        finalName: playerName
-      });
-    }
-
-    // 🔍 DEBUG: Check what IDs we have
-    const extractedPlayerId = s.player_id || (s as any).custom_player_id;
-    console.log('🔍 TRANSFORM DEBUG:', {
-      stat_id: s.id,
-      has_player_id: !!s.player_id,
-      player_id_value: s.player_id,
-      has_custom_player_id: !!(s as any).custom_player_id,
-      custom_player_id_value: (s as any).custom_player_id,
-      extracted_playerId: extractedPlayerId,
-      playerName: playerName
-    });
 
     return {
       id: s.id,

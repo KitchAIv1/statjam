@@ -193,7 +193,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
         
         // Load game data to initialize quarter, clock, and other state
-        console.log('🚀 useTracker: Loading game state via GameServiceV3 for:', gameId);
         const game = await GameServiceV3.getGame(gameId);
         const gameError = !game;
         
@@ -213,17 +212,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           }
           
           setGameStatus(status);
-          console.log('🔁 Initialized game status from database:', status);
           
           // If the stat admin has entered the tracker and the game is still scheduled,
           // mark it as live to ensure live cards remain visible even when the clock is paused.
           try {
             if (normalizedStatus === 'scheduled') {
-              console.log('🔄 useTracker: Game status is scheduled, updating to in_progress');
               try {
                 await GameServiceV3.updateGameStatus(gameId, 'in_progress');
                 setGameStatus('in_progress'); // ✅ Update local state
-                console.log('✅ useTracker: Game status updated to in_progress');
               } catch (statusError) {
                 console.warn('⚠️ useTracker: Failed to update game status:', statusError);
                 // Non-blocking - game will still work with clock running
@@ -236,7 +232,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           // Initialize quarter from DB (like V1 pattern)
           if (typeof game.quarter === 'number' && game.quarter > 0) {
             setQuarterState(game.quarter);
-            console.log('🔁 Initialized quarter from database:', game.quarter);
           }
           
           // Initialize clock from DB
@@ -246,10 +241,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               ...prev,
               secondsRemaining: totalSeconds
             }));
-            console.log('🔁 Initialized clock from database:', { 
-              minutes: game.game_clock_minutes, 
-              seconds: game.game_clock_seconds 
-            });
           }
           
           // Initialize clock running state
@@ -258,7 +249,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               ...prev,
               isRunning: game.is_clock_running
             }));
-            console.log('🔁 Initialized clock running state from database:', game.is_clock_running);
           }
           
           // Load team fouls and timeouts from game data
@@ -266,10 +256,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             setTeamFouls({
               [teamAId]: game.team_a_fouls || 0,
               [teamBId]: game.team_b_fouls || 0
-            });
-            console.log('🔁 Initialized team fouls from database:', { 
-              teamA: game.team_a_fouls || 0, 
-              teamB: game.team_b_fouls || 0 
             });
           }
           
@@ -280,22 +266,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               [teamAId]: game.team_a_timeouts_remaining ?? 7,
               [teamBId]: game.team_b_timeouts_remaining ?? 7
             });
-            console.log('🔁 Initialized timeouts from database:', { 
-              teamA: game.team_a_timeouts_remaining ?? 7, 
-              teamB: game.team_b_timeouts_remaining ?? 7 
-            });
           }
           
           // ✅ PHASE 1: Load ruleset and automation flags from tournament
           try {
-            console.log('🎯 Phase 1: Loading ruleset and automation flags...');
-            
             // Fetch tournament data to get ruleset and automation settings
             const tournamentId = game.tournament_id;
-            console.log('🔍 Phase 1 DEBUG: tournament_id =', tournamentId, 'type:', typeof tournamentId);
             
             if (tournamentId) {
-              console.log('✅ Phase 1: Tournament ID found, fetching tournament data...');
               const tournamentResponse = await fetch(
                 `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/tournaments?id=eq.${tournamentId}&select=ruleset,ruleset_config,automation_settings`,
                 {
@@ -308,11 +286,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               
               if (tournamentResponse.ok) {
                 const tournaments = await tournamentResponse.json();
-                console.log('🔍 Phase 1 DEBUG: Tournament response:', tournaments);
                 
                 if (tournaments && tournaments.length > 0) {
                   const tournament = tournaments[0];
-                  console.log('🔍 Phase 1 DEBUG: Tournament data:', tournament);
                   
                   // Load ruleset
                   const rulesetId = tournament.ruleset || 'NBA';
@@ -327,7 +303,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
                   }
                   
                   setRuleset(loadedRuleset);
-                  console.log('✅ Phase 1: Loaded ruleset:', rulesetId);
                   
                   // ✅ PRE-FLIGHT CHECK: Load automation flags with priority hierarchy
                   // 1. Game-specific settings (from Pre-Flight Check Modal)
@@ -335,30 +310,21 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
                   // 3. System defaults
                   let flags;
                   if (game.automation_settings) {
-                    // Use game-specific settings (saved by Pre-Flight Check)
                     flags = game.automation_settings;
-                    console.log('✅ Phase 1: Using GAME-SPECIFIC automation settings (from Pre-Flight Check):', flags);
                   } else if (tournament.automation_settings) {
-                    // Fall back to tournament defaults
                     flags = tournament.automation_settings;
-                    console.log('✅ Phase 1: Using TOURNAMENT automation settings:', flags);
                   } else {
-                    // Fall back to system defaults
                     flags = DEFAULT_AUTOMATION_FLAGS;
-                    console.log('✅ Phase 1: Using DEFAULT automation settings:', flags);
                   }
                   
                   setAutomationFlags(flags);
-                  console.log('✅ Phase 1: Final automation flags loaded:', flags);
                   
-                  // Log if any automation is enabled (should be OFF in Phase 1)
+                  // Warn if any automation is enabled unexpectedly
                   const anyEnabled = Object.values(flags).some((category: any) => 
                     category && typeof category === 'object' && category.enabled === true
                   );
                   if (anyEnabled) {
                     console.warn('⚠️ Phase 1: Some automation flags are enabled!', flags);
-                  } else {
-                    console.log('✅ Phase 1: All automation flags are OFF (expected behavior)');
                   }
                 } else {
                   // Tournament ID exists but query returned empty (likely RLS issue or deleted tournament)
@@ -366,11 +332,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
                   setRuleset(RulesetService.getRuleset('NBA'));
                   
                   if (isCoachMode) {
-                    console.log('✅ Phase 1: Coach mode detected, using COACH_AUTOMATION_FLAGS');
                     setAutomationFlags(COACH_AUTOMATION_FLAGS);
-                    console.log('✅ Phase 1: Clock automation ENABLED for coach game');
                   } else {
-                    console.log('✅ Phase 1: Using DEFAULT_AUTOMATION_FLAGS (all OFF)');
                     setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
                   }
                 }
@@ -381,11 +344,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               setRuleset(RulesetService.getRuleset('NBA'));
               
               if (isCoachMode) {
-                console.log('✅ Phase 1: Coach mode detected, using COACH_AUTOMATION_FLAGS');
                 setAutomationFlags(COACH_AUTOMATION_FLAGS);
-                console.log('✅ Phase 1: Clock automation ENABLED for coach game');
               } else {
-                console.log('✅ Phase 1: Using DEFAULT_AUTOMATION_FLAGS (all OFF)');
                 setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
               }
             }
@@ -396,7 +356,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             
             // Fallback automation flags
             if (isCoachMode) {
-              console.log('✅ Phase 1 FALLBACK: Coach mode, using COACH_AUTOMATION_FLAGS');
               setAutomationFlags(COACH_AUTOMATION_FLAGS);
             } else {
               setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
@@ -407,14 +366,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
         
         // FIXED: Load existing stats to calculate current scores (for refresh persistence)
-        console.log('🔍 Loading existing stats for score calculation...');
         const stats = await GameServiceV3.getGameStats(gameId);
         
         if (stats && stats.length > 0) {
           let teamAScore = 0;
           let teamBScore = 0;
-          
-          console.log('🔍 Found', stats.length, 'existing stats for score calculation');
           
           for (const stat of stats) {
             // FIXED: Use stat_value directly and only count made shots
@@ -425,10 +381,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             
             if (stat.team_id === teamAId) {
               teamAScore += points;
-              console.log('🔍 Added', points, 'points to Team A:', stat.stat_type);
             } else if (stat.team_id === teamBId) {
               teamBScore += points;
-              console.log('🔍 Added', points, 'points to Team B:', stat.stat_type);
             }
           }
           
@@ -437,16 +391,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             [teamAId]: teamAScore,
             [teamBId]: teamBScore
           });
-          
-          console.log('✅ STAT INTERFACE: Initialized scores from database:', { 
-            teamA: teamAScore, 
-            teamB: teamBScore,
-            totalStats: stats.length,
-            teamAId: teamAId,
-            teamBId: teamBId
-          });
         } else {
-          console.log('🔍 No existing stats found, initializing scores to 0');
           // Ensure scores start at 0 if no stats found
           setScores({
             [teamAId]: 0,
@@ -471,7 +416,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   // ✅ NEW: Function to refresh scores from database (matches viewer logic exactly)
   const refreshScoresFromDatabase = useCallback(async () => {
     try {
-      console.log('🔄 useTracker: Refreshing scores from database...');
       const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
       const stats = await GameServiceV3.getGameStats(gameId);
       
@@ -523,13 +467,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     
     // Initial refresh after 5 seconds (for immediate testing)
     const initialRefresh = setTimeout(() => {
-      console.log('🔄 useTracker: Initial score refresh (5s delay)...');
       refreshScoresFromDatabase();
     }, 5000);
     
     // Then refresh every 15 seconds to stay in sync with viewer
     const scoreRefreshInterval = setInterval(() => {
-      console.log('⏰ useTracker: Periodic score refresh (15s interval)...');
       refreshScoresFromDatabase();
     }, 15000); // 15 seconds
     
@@ -641,13 +583,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   const startShotClock = useCallback(() => {
     setShotClock(prev => ({ ...prev, isRunning: true }));
     setLastAction('Shot clock started');
-    console.log('🏀 Shot clock started');
   }, []);
 
   const stopShotClock = useCallback(() => {
     setShotClock(prev => ({ ...prev, isRunning: false }));
     setLastAction('Shot clock stopped');
-    console.log('🏀 Shot clock stopped');
   }, []);
 
   const resetShotClock = useCallback((seconds?: number) => {
@@ -796,8 +736,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         createdAt: new Date().toISOString()
       };
 
-      console.log('🏀 Recording stat to database:', fullStat);
-
       // Map stat value for database (points for scoring stats, 1 for others)
       let statValue = 1;
       if (stat.statType === 'field_goal' && stat.modifier === 'made') {
@@ -850,13 +788,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         uiUpdates.lastAction = `${statTypeFormatted}${modifierFormatted}`;
         uiUpdates.lastActionPlayerId = stat.playerId || stat.customPlayerId || null;
       }
-      
-      console.log('📝 Last action prepared:', {
-        statType: stat.statType,
-        modifier: stat.modifier,
-        lastAction: uiUpdates.lastAction,
-        lastActionPlayerId: uiUpdates.lastActionPlayerId
-      });
 
       // ✅ OPTIMIZATION 2: Apply ALL UI updates at once (single re-render)
       if (uiUpdates.scores) {
@@ -923,8 +854,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         
         // Apply clock state changes immediately
         if (clockResult.actions.length > 0) {
-          console.log('🕐 Clock automation:', clockResult.actions);
-          
           const newGameClockSeconds = (clockResult.newState.gameClockMinutes * 60) + clockResult.newState.gameClockSeconds;
           
           // ✅ OPTIMIZATION 4: Batch clock updates together
@@ -989,29 +918,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             else if (stat.modifier === 'personal') foulType = 'personal';
           }
           
-          console.log('🏀 PHASE 3 DEBUG: Processing possession event', {
-            eventType: possessionEventType,
-            foulType: foulType, // ✅ PHASE 6B: Log foul type
-            modifier: stat.modifier, // ✅ Log raw modifier too
-            possessionTeamId: possessionTeamId,
-            statTeamId: stat.teamId,
-            opponentTeamId: opponentTeamId,
-            currentPossession: possession.currentTeamId,
-            isCoachMode: isCoachMode,
-            isOpponentStat: stat.isOpponentStat
-          });
-          console.log('🏀 PHASE 3 DEBUG (EXPANDED):', JSON.stringify({
-            eventType: possessionEventType,
-            foulType: foulType, // ✅ PHASE 6B: Log foul type
-            modifier: stat.modifier, // ✅ Log raw modifier too
-            possessionTeamId: possessionTeamId,
-            statTeamId: stat.teamId,
-            opponentTeamId: opponentTeamId,
-            currentPossession: possession.currentTeamId,
-            isCoachMode: isCoachMode,
-            isOpponentStat: stat.isOpponentStat
-          }, null, 2));
-          
           // ✅ PHASE 6B: Check if this is a technical/flagrant FT (from metadata)
           const isTechnicalOrFlagrantFT = stat.metadata?.isTechnicalOrFlagrantFT === true;
           
@@ -1033,14 +939,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           
           // Apply possession state changes immediately
           if (possessionResult.actions.length > 0) {
-            console.log('🏀 Possession automation:', possessionResult.actions);
-            console.log('🏀 POSSESSION RESULT (EXPANDED):', JSON.stringify({
-              newPossession: possessionResult.newState.currentPossession,
-              oldPossession: possession.currentTeamId,
-              shouldFlip: possessionResult.shouldFlip,
-              actions: possessionResult.actions
-            }, null, 2));
-            
             setPossession({
               currentTeamId: possessionResult.newState.currentPossession,
               possessionArrow: possessionResult.newState.possessionArrow || teamAId,
@@ -1090,12 +988,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             console.log('⏭️ Skipping prompt for opponent action in coach mode (no individual players)');
             // Don't show modal - opponent has no individual players to select
           } else {
-            console.log('🎯 Play sequence prompt:', playResult.actions);
-            
             // Check if we have a queue (multiple prompts)
             if (playResult.promptQueue && playResult.promptQueue.length > 0) {
-              console.log('📋 Sequential prompts detected:', playResult.promptQueue.map(p => p.type).join(' → '));
-              
               // Store the full queue
               setPromptQueue(playResult.promptQueue);
               
@@ -1124,15 +1018,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         
         // ✅ AUTO-GENERATE TURNOVER FOR STEAL
         if (playResult.metadata?.shouldGenerateTurnover && stat.statType === 'steal') {
-          console.log('🔄 Processing steal-to-turnover logic');
-          
           // ✅ COACH MODE: Show turnover prompt for opponent steals
           if (isCoachMode) {
             if (stat.isOpponentStat) {
               // Opponent stole from home team
               // → Show turnover prompt to select which home player lost possession
-              console.log('🎯 Showing turnover prompt for opponent steal');
-              
               setPlayPrompt({
                 isOpen: true,
                 type: 'turnover',
@@ -1220,9 +1110,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         quarter: quarter,
         gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
         gameTimeSeconds: clock.secondsRemaining % 60
-      });
-
-      console.log('✅ Stat recorded successfully in database');
+        });
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);
@@ -1245,11 +1133,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       notify.warning('Game Ended', 'This game has ended. No more substitutions can be made.');
       return false;
     }
-    
-    try {
-      console.log('🔄 Recording substitution to database:', sub);
-
-      // Import GameService dynamically to avoid circular dependencies
+      
+      try {
+        // Import GameService dynamically to avoid circular dependencies
       const { GameService } = await import('@/lib/services/gameService');
       
       // Record substitution in database
@@ -1314,11 +1200,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       if (teamTimeouts[teamId] <= 0) {
         notify.warning('No timeouts remaining', 'This team has used all timeouts.');
         return false;
-      }
-      
-      console.log('⏰ Starting timeout for team:', teamId, 'Type:', type);
-      
-      // Stop all clocks immediately
+        }
+        
+        // Stop all clocks immediately
       stopClock();
       stopShotClock();
       
@@ -1368,10 +1252,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       return false;
     }
   }, [gameId, teamTimeouts, quarter, clock.secondsRemaining, stopClock, stopShotClock, gameStatus]);
-
-  const resumeFromTimeout = useCallback(() => {
-    console.log('▶️ Resuming play from timeout');
-    setTimeoutActive(false);
+  
+    const resumeFromTimeout = useCallback(() => {
+      setTimeoutActive(false);
     setTimeoutTeamId(null);
     setTimeoutSecondsRemaining(60);
     setLastAction('Play resumed');
@@ -1380,9 +1263,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   
   // ✅ PHASE 4: Clear play prompt (with queue support)
   const clearPlayPrompt = useCallback(() => {
-    console.log('🔄 clearPlayPrompt called, checking queue...');
-    console.log('📋 Current queue:', promptQueue);
-    
     // Check if there are more prompts in the queue
     if (promptQueue.length > 1) {
       // Remove first prompt and show next
@@ -1416,8 +1296,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   // Game Management
   const closeGame = useCallback(async () => {
     try {
-      console.log('🏁 Closing game:', gameId);
-      
       // Import GameService dynamically to avoid circular dependencies
       const { GameService } = await import('@/lib/services/gameService');
       

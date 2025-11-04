@@ -276,11 +276,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         'Content-Type': 'application/json'
       };
 
-      // ⚡ PERFORMANCE: Start timing
-      const perfStart = performance.now();
-
       // ⚡ PHASE 1: Fetch game data (needed for IDs)
-      const phase1Start = performance.now();
       const gameResponse = await fetch(
         `${supabaseUrl}/rest/v1/games?select=*&id=eq.${gameId}`,
         { headers }
@@ -296,11 +292,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       }
 
       const gameInfo = gameData[0];
-      const phase1Time = performance.now() - phase1Start;
-      console.log(`⚡ Phase 1 (game): ${phase1Time.toFixed(0)}ms`);
 
       // ⚡ PHASE 2: Parallel fetch all related data
-      const phase2Start = performance.now();
       const teamIds = [gameInfo.team_a_id, gameInfo.team_b_id].filter(Boolean);
       
       const [
@@ -326,9 +319,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         fetch(`${supabaseUrl}/rest/v1/game_timeouts?select=*&game_id=eq.${gameId}&order=created_at.desc`, { headers })
       ]);
 
-      const phase2Time = performance.now() - phase2Start;
-      console.log(`⚡ Phase 2 (parallel 5 queries): ${phase2Time.toFixed(0)}ms`);
-
       // Parse teams
       let teamsMap = new Map<string, string>();
       if (teamsResponse && teamsResponse.ok) {
@@ -349,7 +339,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       let gameStats: GameStats[] = [];
       if (statsResponse.ok) {
         gameStats = await statsResponse.json();
-        console.log('🏀 useGameViewerV2: Fetched', gameStats.length, 'game_stats rows');
       } else {
         console.error('❌ useGameViewerV2: Failed to fetch game_stats:', statsResponse.status);
       }
@@ -358,7 +347,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       let gameSubstitutions: any[] = [];
       if (subsResponse.ok) {
         gameSubstitutions = await subsResponse.json();
-        console.log('🔄 useGameViewerV2: Fetched', gameSubstitutions.length, 'substitutions');
       } else {
         console.error('❌ useGameViewerV2: Failed to fetch substitutions:', subsResponse.status);
       }
@@ -367,13 +355,11 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       let gameTimeouts: any[] = [];
       if (timeoutsResponse.ok) {
         gameTimeouts = await timeoutsResponse.json();
-        console.log('⏰ useGameViewerV2: Fetched', gameTimeouts.length, 'timeouts');
       } else {
         console.error('❌ useGameViewerV2: Failed to fetch timeouts:', timeoutsResponse.status);
       }
 
       // ⚡ PHASE 3: Fetch ALL player names in parallel (for stats + subs, including custom players)
-      const phase3Start = performance.now();
       const statsPlayerIds = [...new Set(gameStats.map(s => s.player_id).filter(Boolean))];
       const statsCustomPlayerIds = [...new Set((gameStats as any).map((s: any) => s.custom_player_id).filter(Boolean))];
       const subPlayerIds = [...new Set([
@@ -413,12 +399,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         });
       }
 
-      const phase3Time = performance.now() - phase3Start;
-      console.log(`⚡ Phase 3 (players): ${phase3Time.toFixed(0)}ms`);
-
-      // 🔍 DEBUG: Check if custom_player_id is present in raw stats
-      console.log('🔍 CRITICAL: First raw stat BEFORE enrichment:', JSON.stringify(gameStats[0], null, 2));
-
       // Enrich stats with player names (check both player_id and custom_player_id)
       gameStats = gameStats.map(stat => {
         const statWithCustomId = stat as any;
@@ -438,7 +418,29 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         player_out_name: playersMap.get(sub.player_out_id) || `Player ${sub.player_out_id?.substring(0, 8)}`
       }));
 
-      // 7. Enrich game data
+      // 7. Calculate real-time scores from game_stats (fallback if DB scores are 0)
+      const calculateScoresFromStats = (stats: GameStats[], teamAId: string, teamBId: string) => {
+        let homeScore = 0;
+        let awayScore = 0;
+        
+        stats.forEach(stat => {
+          if (stat.modifier === 'made') {
+            const points = stat.stat_value || 0;
+            
+            if (stat.team_id === teamAId) {
+              homeScore += points;
+            } else if (stat.team_id === teamBId) {
+              awayScore += points;
+            }
+          }
+        });
+        
+        return { homeScore, awayScore };
+      };
+      
+      const calculatedScores = calculateScoresFromStats(gameStats, gameInfo.team_a_id, gameInfo.team_b_id);
+
+      // 8. Enrich game data
       const teamAName = teamsMap.get(gameInfo.team_a_id) || 'Team A';
       const teamBName = teamsMap.get(gameInfo.team_b_id) || 'Team B';
       
@@ -446,13 +448,13 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         ...gameInfo,
         team_a_name: teamAName,
         team_b_name: teamBName,
-        tournament_name: tournamentName
+        tournament_name: tournamentName,
+        // ✅ FIX: Use calculated scores if DB scores are 0 (real-time score tracking)
+        home_score: gameInfo.home_score || calculatedScores.homeScore,
+        away_score: gameInfo.away_score || calculatedScores.awayScore
       };
 
-      // 🔍 DEBUG: Check first stat AFTER enrichment
-      console.log('🔍 CRITICAL: First enriched stat AFTER adding player_name:', JSON.stringify(gameStats[0], null, 2));
-
-      // 8. Transform stats, substitutions, AND timeouts into play-by-play entries
+      // 9. Transform stats, substitutions, AND timeouts into play-by-play entries
       const playByPlayEntries = transformStatsToPlays(
         gameStats,
         gameInfo.team_a_id,
@@ -462,21 +464,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         gameSubstitutions,
         gameTimeouts
       );
-
-      // 🔍 CRITICAL DEBUG: Expand the first play to see ALL fields
-      console.log('🔍 CRITICAL: First play FULL OBJECT:', JSON.stringify(playByPlayEntries[0], null, 2));
-      console.log('🔍 CRITICAL: First 3 plays summary:', playByPlayEntries.slice(0, 3).map(p => ({
-        id: p.id,
-        playerId: p.playerId,
-        playerName: p.playerName,
-        description: p.description,
-        quarter: p.quarter,
-        teamName: p.teamName
-      })));
-
-      const totalTime = performance.now() - perfStart;
-      console.log(`⚡ TOTAL FETCH TIME: ${totalTime.toFixed(0)}ms (Phase1: ${phase1Time.toFixed(0)}ms | Phase2: ${phase2Time.toFixed(0)}ms | Phase3: ${phase3Time.toFixed(0)}ms)`);
-      console.log('🏀 useGameViewerV2: Fetched', gameStats.length, 'stats, transformed into', playByPlayEntries.length, 'plays');
 
       // ✅ ANTI-FLICKER: Only update if data actually changed
       setGame(prevGame => {
@@ -488,10 +475,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             prevGame.quarter === enrichedGame.quarter &&
             prevGame.game_clock_minutes === enrichedGame.game_clock_minutes &&
             prevGame.game_clock_seconds === enrichedGame.game_clock_seconds) {
-          console.log('🔇 useGameViewerV2: Game data unchanged, skipping update');
           return prevGame;
         }
-        console.log('🔄 useGameViewerV2: Game data changed, updating');
         return enrichedGame;
       });
 
@@ -506,11 +491,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             }
           }
           if (!hasChanges) {
-            console.log('🔇 useGameViewerV2: Stats unchanged, skipping update');
             return prevStats;
           }
         }
-        console.log('🔄 useGameViewerV2: Stats changed, updating');
         return gameStats;
       });
 
@@ -524,11 +507,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             }
           }
           if (!hasChanges) {
-            console.log('🔇 useGameViewerV2: Plays unchanged, skipping update');
             return prevPlays;
           }
         }
-        console.log('🔄 useGameViewerV2: Plays changed, updating');
         return playByPlayEntries;
       });
 

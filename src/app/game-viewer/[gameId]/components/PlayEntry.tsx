@@ -59,15 +59,6 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   playerPoints
 }) => {
 
-  // 🔍 CRITICAL DEBUG: Is PlayEntry rendering with correct data?
-  console.log('🔍 CRITICAL PlayEntry rendering:', {
-    playId: play.id,
-    playerId: play.playerId,
-    playerName: play.playerName,
-    description: play.description,
-    statType: play.statType
-  });
-
   const isDark = theme === 'dark';
   const scoringInfo = getScoringInfo(play.statType, play.modifier);
   const teamName = play.teamName || 'Unknown Team';
