@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { CoachTeam } from '@/lib/types/coach';
 import { CoachTeamCard } from './CoachTeamCard';
+import { CoachTournamentsSection } from './CoachTournamentsSection';
 
 interface CoachDashboardOverviewProps {
   user: any;
@@ -182,43 +183,8 @@ export function CoachDashboardOverview({
         </CardContent>
       </Card>
 
-      {/* Available Tournaments Section */}
-      <Card className="hover:shadow-lg transition-shadow">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-primary" />
-            Available Tournaments
-          </CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            Browse and join tournaments with your teams
-          </p>
-        </CardHeader>
-        <CardContent>
-          {/* Coming Soon State */}
-          <div className="text-center py-12 border-2 border-dashed border-border rounded-xl">
-            <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Trophy className="w-8 h-8 text-orange-600" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Tournament Discovery Coming Soon</h3>
-            <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-              Browse public tournaments, connect your teams, and manage tournament participation all in one place.
-            </p>
-            <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
-              Feature in Development
-            </Badge>
-            <div className="mt-6">
-              <Button
-                onClick={() => window.location.href = '/dashboard/coach/tournaments'}
-                variant="outline"
-                className="gap-2"
-              >
-                <Trophy className="w-4 h-4" />
-                View Tournaments
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* My Tournaments Section */}
+      <CoachTournamentsSection userId={user?.id} />
     </div>
   );
 }

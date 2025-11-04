@@ -261,7 +261,7 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
             <CardDescription>Next scheduled matches</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-6">
-            {upcomingGames.map((game, index) => (
+            {upcomingGames.length > 0 ? upcomingGames.map((game, index) => (
               <div key={index} className="group p-4 border rounded-xl hover:border-accent/30 hover:bg-muted/30 transition-all duration-300">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex-1">
@@ -281,7 +281,19 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
                   <Badge variant="outline" className="shrink-0">{game.court}</Badge>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-muted-foreground mb-4">No upcoming games scheduled</p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => router.push('/dashboard?section=games')}
+                >
+                  Schedule a Game
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

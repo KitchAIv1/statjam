@@ -114,6 +114,7 @@ export class OrganizerDashboardService {
 
   /**
    * Get upcoming games for dashboard
+   * Shows scheduled and in_progress games
    */
   static async getUpcomingGames(organizerId: string): Promise<UpcomingGame[]> {
     try {
@@ -128,7 +129,7 @@ export class OrganizerDashboardService {
         return [];
       }
 
-      // Fetch upcoming games from tournaments owned by this organizer
+      // Fetch scheduled and in_progress games from tournaments
       const { data: games, error } = await supabase
         .from('games')
         .select(`
@@ -138,27 +139,31 @@ export class OrganizerDashboardService {
           tournaments:tournament_id(name, venue)
         `)
         .in('tournament_id', tournamentIds)
-        .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true })
-        .limit(5);
+        .order('start_time', { ascending: true });
 
       if (error) {
         console.error('❌ OrganizerDashboard: Error fetching games:', error);
         return [];
       }
 
+      // Filter for scheduled and in_progress games (case-insensitive)
+      const filteredGames = games?.filter(g => {
+        const status = String(g.status || '').toLowerCase();
+        return status === 'scheduled' || status === 'in_progress' || status === 'live';
+      }).slice(0, 5);
+
       // Transform to UpcomingGame format
-      const upcomingGames: UpcomingGame[] = (games || []).map(game => ({
+      const upcomingGames: UpcomingGame[] = (filteredGames || []).map(game => ({
         id: game.id,
         team1: game.team_a?.name || 'Team A',
         team2: game.team_b?.name || 'Team B',
-        time: new Date(game.start_time).toLocaleString('en-US', {
+        time: game.start_time ? new Date(game.start_time).toLocaleString('en-US', {
           weekday: 'short',
           month: 'short',
           day: 'numeric',
           hour: 'numeric',
           minute: '2-digit'
-        }),
+        }) : 'TBD',
         court: 'Court 1', // Default court
         tournament: game.tournaments?.name || 'Tournament',
         importance: game.status === 'scheduled' ? 'Regular Season' : 'Important'
