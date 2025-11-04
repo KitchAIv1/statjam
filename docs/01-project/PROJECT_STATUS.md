@@ -1,9 +1,10 @@
 # 🎯 StatJam MVP: Current Status
 
 **Date**: October 29, 2025  
-**Status**: ✅ MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) - PRODUCTION READY  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6)  
 **Version**: 0.15.0 (Automation Suite Complete)  
-**Branch**: `main` (commit: `1510d1a`)
+**Branch**: `main` (commit: `1510d1a`)  
+**Live Site**: [www.statjam.net](https://www.statjam.net) ✅
 
 ---
 

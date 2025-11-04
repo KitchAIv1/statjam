@@ -11,7 +11,7 @@
 
 StatJam is a professional-grade sports tournament management platform built for real-time stat tracking, tournament organizing, and team/player performance management. The platform targets basketball tournaments initially and provides NBA-level statistical tracking with intelligent automation, comprehensive tournament management, and real-time fan engagement.
 
-**Current Status**: ✅ **PRODUCTION READY** - Complete MVP with advanced automation suite, coach system, and enterprise-grade architecture.
+**Current Status**: ✅ **MVP1 LIVE** - Complete MVP with advanced automation suite, coach system, and enterprise-grade architecture. **Now live in production at [www.statjam.net](https://www.statjam.net)**
 
 ---
 
@@ -399,6 +399,8 @@ StatJam is a professional-grade sports tournament management platform built for 
 ## 🚀 Deployment & Operations
 
 ### **Production Environment**
+- **MVP1 Status**: ✅ **LIVE IN PRODUCTION**
+- **Live Site**: [www.statjam.net](https://www.statjam.net)
 - **Hosting**: Vercel (Next.js optimized)
 - **Database**: Supabase (PostgreSQL)
 - **CDN**: Global edge caching

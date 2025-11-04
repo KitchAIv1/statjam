@@ -2,12 +2,16 @@
 
 Professional-grade sports tournament app for real-time stat tracking and tournament management.
 
-## 🎯 **Current Status: 🚀 PRODUCTION READY (v0.15.0+)** 
+## 🌐 **Live Site**
 
-**Phase**: Production-Ready Platform with Advanced Automation  
+**MVP1 is now live at**: **[www.statjam.net](https://www.statjam.net)** ✅
+
+## 🎯 **Current Status: 🚀 MVP1 LIVE IN PRODUCTION (v0.15.0+)** 
+
+**Phase**: MVP1 Live - Production-Ready Platform with Advanced Automation  
 **Version**: 0.15.0+  
 **Last Updated**: October 30, 2025
-**Status**: ✅ **PRODUCTION READY** - Complete MVP with NBA-level automation
+**Status**: ✅ **MVP1 LIVE** - Complete MVP with NBA-level automation now in production
 
 **Authentication**: ✅ Centralized Auth Context with JWT Auto-Refresh  
 **Live Tracking**: ✅ NBA-Grade V3 Engine with Real-time Sync  

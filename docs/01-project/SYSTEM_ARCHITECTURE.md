@@ -2,7 +2,8 @@
 
 **Version**: 0.9.9  
 **Date**: October 20, 2025  
-**Status**: Production Ready with Refactored Modular Architecture + Tier 2 Enhancements  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - Production Ready with Refactored Modular Architecture + Tier 2 Enhancements  
+**Live Site**: [www.statjam.net](https://www.statjam.net) ✅  
 **Major Update**: Frontend Modularity Guardrails Established
 
 ---
@@ -639,6 +640,7 @@ src/
 └─────────────────────────────────────────────────────────────┘
 
 Frontend (Vercel)
+├─► Live Site: www.statjam.net ✅
 ├─► Next.js app deployed to Vercel
 ├─► Automatic deployments from main branch
 ├─► Environment variables configured
@@ -652,8 +654,9 @@ Backend (Supabase)
 └─► Automatic backups
 
 DNS & SSL
-├─► Custom domain support
-└─► Automatic SSL certificates
+├─► Live Domain: www.statjam.net ✅
+├─► Custom domain support (Namecheap)
+└─► Automatic SSL certificates (Vercel)
 
 Monitoring
 ├─► Vercel Analytics
