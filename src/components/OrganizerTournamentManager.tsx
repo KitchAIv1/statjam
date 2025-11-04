@@ -295,6 +295,9 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
     description: "",
     ruleset: "NBA" // ✅ PHASE 1: Default to NBA ruleset
   });
+  
+  // Validation errors state
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Load stat admins when settings modal opens
   const loadStatAdmins = async () => {
@@ -351,10 +354,38 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
 
   const handleCreateTournament = async () => {
     try {
-      // ✅ Validation - ALL required fields
-      if (!newTournament.name || !newTournament.format || !newTournament.maxTeams || 
-          !newTournament.startDate || !newTournament.endDate) {
-        console.error('Missing required fields');
+      // Clear previous errors
+      setValidationErrors([]);
+      
+      // ✅ Validation - Collect all missing required fields
+      const errors: string[] = [];
+      
+      if (!newTournament.name.trim()) {
+        errors.push('Tournament name is required');
+      }
+      if (!newTournament.format) {
+        errors.push('Tournament format is required');
+      }
+      if (!newTournament.maxTeams) {
+        errors.push('Maximum teams is required');
+      }
+      if (!newTournament.startDate) {
+        errors.push('Start date is required');
+      }
+      if (!newTournament.endDate) {
+        errors.push('End date is required');
+      }
+      
+      // Additional validation: End date should be after start date
+      if (newTournament.startDate && newTournament.endDate) {
+        if (new Date(newTournament.endDate) < new Date(newTournament.startDate)) {
+          errors.push('End date must be after start date');
+        }
+      }
+      
+      // If there are errors, display them and stop
+      if (errors.length > 0) {
+        setValidationErrors(errors);
         return;
       }
 
@@ -384,10 +415,12 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           description: "",
           ruleset: "NBA"
         });
+        setValidationErrors([]);
         setIsCreateDialogOpen(false);
       }
     } catch (error) {
       console.error('Error creating tournament:', error);
+      setValidationErrors(['Failed to create tournament. Please try again.']);
     }
   };
 
@@ -541,7 +574,13 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           <h2 className="text-2xl font-bold">Tournament Management</h2>
           <p className="text-muted-foreground">Create and manage your basketball tournaments</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+          setIsCreateDialogOpen(open);
+          if (!open) {
+            // Clear validation errors when closing dialog
+            setValidationErrors([]);
+          }
+        }}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="w-4 h-4" />
@@ -609,8 +648,17 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="4">4 Teams</SelectItem>
+                    <SelectItem value="5">5 Teams</SelectItem>
+                    <SelectItem value="6">6 Teams</SelectItem>
+                    <SelectItem value="7">7 Teams</SelectItem>
                     <SelectItem value="8">8 Teams</SelectItem>
+                    <SelectItem value="9">9 Teams</SelectItem>
+                    <SelectItem value="10">10 Teams</SelectItem>
+                    <SelectItem value="11">11 Teams</SelectItem>
+                    <SelectItem value="12">12 Teams</SelectItem>
                     <SelectItem value="16">16 Teams</SelectItem>
+                    <SelectItem value="18">18 Teams</SelectItem>
+                    <SelectItem value="24">24 Teams</SelectItem>
                     <SelectItem value="32">32 Teams</SelectItem>
                   </SelectContent>
                 </Select>
@@ -641,6 +689,29 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                   💡 All automation features are OFF by default
                 </p>
               </div>
+              
+              {/* Error Display */}
+              {validationErrors.length > 0 && (
+                <div className="rounded-lg border-2 border-red-500 bg-red-100 dark:bg-red-900/50 dark:border-red-400 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-700 dark:text-red-300" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-red-900 dark:text-red-100">
+                        Please fix the following errors:
+                      </h3>
+                      <ul className="mt-2 text-sm text-red-800 dark:text-red-200 space-y-1 list-disc list-inside font-medium">
+                        {validationErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>

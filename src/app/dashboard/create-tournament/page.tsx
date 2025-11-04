@@ -503,7 +503,7 @@ const CreateTournamentV2 = () => {
                     ...(errors.maxTeams ? styles.inputError : {})
                   }}
                 >
-                  {[4, 8, 16, 24, 32, 64].map(num => (
+                  {[4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 18, 24, 32].map(num => (
                     <option key={num} value={num}>{num} Teams</option>
                   ))}
                 </select>
