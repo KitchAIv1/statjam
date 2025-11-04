@@ -70,9 +70,10 @@ export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { pla
       }
     })();
 
-    // ✅ FIX: Extract player name from either users OR custom_players
-    const playerName = (s as any).custom_players?.name || // Check custom_players first
-                      s.users?.name || // Then regular users
+    // ✅ FIX: Extract player name - prioritize pre-enriched player_name field
+    const playerName = (s as any).player_name || // Use pre-enriched field from useGameViewerV2
+                      (s as any).custom_players?.name || // Fallback: Check custom_players nested object
+                      s.users?.name || // Fallback: Then regular users nested object
                       (s.users?.email ? s.users.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : null) ||
                       `Player ${String(s.player_id || (s as any).custom_player_id || '').substring(0, 8)}`;
     
