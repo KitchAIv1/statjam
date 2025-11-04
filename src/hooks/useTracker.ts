@@ -286,11 +286,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               
               if (tournamentResponse.ok) {
                 const tournaments = await tournamentResponse.json();
-                console.log('🔍 Phase 1 DEBUG: Tournament response:', tournaments);
                 
                 if (tournaments && tournaments.length > 0) {
                   const tournament = tournaments[0];
-                  console.log('🔍 Phase 1 DEBUG: Tournament data:', tournament);
                   
                   // Load ruleset
                   const rulesetId = tournament.ruleset || 'NBA';
@@ -305,7 +303,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
                   }
                   
                   setRuleset(loadedRuleset);
-                  console.log('✅ Phase 1: Loaded ruleset:', rulesetId);
                   
                   // ✅ PRE-FLIGHT CHECK: Load automation flags with priority hierarchy
                   // 1. Game-specific settings (from Pre-Flight Check Modal)
@@ -313,30 +310,21 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
                   // 3. System defaults
                   let flags;
                   if (game.automation_settings) {
-                    // Use game-specific settings (saved by Pre-Flight Check)
                     flags = game.automation_settings;
-                    console.log('✅ Phase 1: Using GAME-SPECIFIC automation settings (from Pre-Flight Check):', flags);
                   } else if (tournament.automation_settings) {
-                    // Fall back to tournament defaults
                     flags = tournament.automation_settings;
-                    console.log('✅ Phase 1: Using TOURNAMENT automation settings:', flags);
                   } else {
-                    // Fall back to system defaults
                     flags = DEFAULT_AUTOMATION_FLAGS;
-                    console.log('✅ Phase 1: Using DEFAULT automation settings:', flags);
                   }
                   
                   setAutomationFlags(flags);
-                  console.log('✅ Phase 1: Final automation flags loaded:', flags);
                   
-                  // Log if any automation is enabled (should be OFF in Phase 1)
+                  // Warn if any automation is enabled unexpectedly
                   const anyEnabled = Object.values(flags).some((category: any) => 
                     category && typeof category === 'object' && category.enabled === true
                   );
                   if (anyEnabled) {
                     console.warn('⚠️ Phase 1: Some automation flags are enabled!', flags);
-                  } else {
-                    console.log('✅ Phase 1: All automation flags are OFF (expected behavior)');
                   }
                 } else {
                   // Tournament ID exists but query returned empty (likely RLS issue or deleted tournament)
@@ -344,11 +332,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
                   setRuleset(RulesetService.getRuleset('NBA'));
                   
                   if (isCoachMode) {
-                    console.log('✅ Phase 1: Coach mode detected, using COACH_AUTOMATION_FLAGS');
                     setAutomationFlags(COACH_AUTOMATION_FLAGS);
-                    console.log('✅ Phase 1: Clock automation ENABLED for coach game');
                   } else {
-                    console.log('✅ Phase 1: Using DEFAULT_AUTOMATION_FLAGS (all OFF)');
                     setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
                   }
                 }
@@ -359,11 +344,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               setRuleset(RulesetService.getRuleset('NBA'));
               
               if (isCoachMode) {
-                console.log('✅ Phase 1: Coach mode detected, using COACH_AUTOMATION_FLAGS');
                 setAutomationFlags(COACH_AUTOMATION_FLAGS);
-                console.log('✅ Phase 1: Clock automation ENABLED for coach game');
               } else {
-                console.log('✅ Phase 1: Using DEFAULT_AUTOMATION_FLAGS (all OFF)');
                 setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
               }
             }
@@ -374,7 +356,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             
             // Fallback automation flags
             if (isCoachMode) {
-              console.log('✅ Phase 1 FALLBACK: Coach mode, using COACH_AUTOMATION_FLAGS');
               setAutomationFlags(COACH_AUTOMATION_FLAGS);
             } else {
               setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);
