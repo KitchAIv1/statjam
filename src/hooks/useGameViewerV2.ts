@@ -41,6 +41,7 @@ interface GameStats {
   id: string;
   game_id: string;
   player_id: string;
+  custom_player_id?: string; // ✅ FIX: Support custom players
   stat_type: string;
   stat_value: number; // ✅ CORRECT: Database uses stat_value, not value
   quarter: number;
@@ -469,7 +470,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         playerId: p.playerId,
         playerName: p.playerName,
         description: p.description,
-        time: p.time,
         quarter: p.quarter,
         teamName: p.teamName
       })));

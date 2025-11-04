@@ -85,6 +85,18 @@ export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { pla
       });
     }
 
+    // 🔍 DEBUG: Check what IDs we have
+    const extractedPlayerId = s.player_id || (s as any).custom_player_id;
+    console.log('🔍 TRANSFORM DEBUG:', {
+      stat_id: s.id,
+      has_player_id: !!s.player_id,
+      player_id_value: s.player_id,
+      has_custom_player_id: !!(s as any).custom_player_id,
+      custom_player_id_value: (s as any).custom_player_id,
+      extracted_playerId: extractedPlayerId,
+      playerName: playerName
+    });
+
     return {
       id: s.id,
       gameId: s.game_id,
@@ -95,7 +107,7 @@ export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { pla
       playType: 'stat_recorded',
       teamId: s.team_id,
       teamName,
-      playerId: s.player_id || (s as any).custom_player_id, // Use whichever ID is present
+      playerId: extractedPlayerId, // Use whichever ID is present
       playerName: playerName,
       statType: s.stat_type,
       statValue: s.stat_value ?? 0,
