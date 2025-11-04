@@ -1069,6 +1069,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           statType: stat.statType,
           modifier: stat.modifier || undefined,
           playerId: stat.playerId || '',
+          customPlayerId: stat.customPlayerId, // ✅ FIX: Pass custom player ID for automation
           teamId: stat.teamId,
           quarter: quarter,
           gameTimeSeconds: clock.secondsRemaining,

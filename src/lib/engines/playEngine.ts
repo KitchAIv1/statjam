@@ -38,6 +38,7 @@ export interface GameEvent {
   statType: string;
   modifier?: string;
   playerId: string;
+  customPlayerId?: string; // ✅ FIX: Support custom players in automation
   teamId: string;
   quarter: number;
   gameTimeSeconds: number;
@@ -90,6 +91,14 @@ export interface PlayEngineResult {
 export class PlayEngine {
   
   /**
+   * Get the actual player ID (either regular or custom)
+   * ✅ FIX: Helper to support both regular and custom players in automation
+   */
+  private static getPlayerIdentifier(event: GameEvent): string {
+    return event.playerId || event.customPlayerId || '';
+  }
+
+  /**
    * Analyze an event and determine if a follow-up prompt is needed
    */
   static analyzeEvent(
@@ -121,7 +130,7 @@ export class PlayEngine {
       result.metadata = {
         shotType: event.statType,
         shotValue: event.statValue,
-        shooterId: event.playerId
+        shooterId: this.getPlayerIdentifier(event) // ✅ FIX: Support custom players
       };
       result.actions.push(`Prompt assist for made ${event.statType}`);
     }
@@ -144,8 +153,8 @@ export class PlayEngine {
           sequenceId: sequenceId,
           metadata: {
             shotType: event.statType,
-            shooterId: event.playerId,
-            shooterName: event.playerId, // Will be populated by UI
+            shooterId: this.getPlayerIdentifier(event), // ✅ FIX: Support custom players
+            shooterName: this.getPlayerIdentifier(event), // Will be populated by UI
             shooterTeamId: event.teamId // ✅ FIX: Add shooterTeamId for opposing team logic
           }
         });
@@ -159,7 +168,7 @@ export class PlayEngine {
           sequenceId: sequenceId,
           metadata: {
             shotType: event.statType,
-            shooterId: event.playerId,
+            shooterId: this.getPlayerIdentifier(event), // ✅ FIX: Support custom players
             shooterTeamId: event.teamId
           }
         });
@@ -181,11 +190,11 @@ export class PlayEngine {
     if (event.statType === 'steal') {
       result.sequenceId = uuidv4();
       result.metadata = {
-        stealerId: event.playerId,
+        stealerId: this.getPlayerIdentifier(event), // ✅ FIX: Support custom players
         stealerTeamId: event.teamId,
         shouldGenerateTurnover: true
       };
-      result.actions.push(`Auto-generate turnover for steal by player ${event.playerId}`);
+      result.actions.push(`Auto-generate turnover for steal by player ${this.getPlayerIdentifier(event)}`);
     }
     
     // ✅ PHASE 5: FREE THROW SEQUENCE DETECTION
