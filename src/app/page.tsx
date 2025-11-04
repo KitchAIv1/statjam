@@ -1,18 +1,21 @@
 'use client';
 
 import { useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { HeroSection } from '@/components/HeroSection';
-import { PlayerPremiumSection } from '@/components/PlayerPremiumSection';
-import { LiveTournamentSection } from '@/components/LiveTournamentSection';
 import { Differentiators } from '@/components/marketing/Differentiators';
-import { AudienceGrid } from '@/components/marketing/AudienceGrid';
-import { ProofTrust } from '@/components/marketing/ProofTrust';
-import { RoadmapSection } from '@/components/marketing/RoadmapSection';
-import { FinalCta } from '@/components/marketing/FinalCta';
+import { LiveTournamentSection } from '@/components/LiveTournamentSection';
 import { Footer } from '@/components/Footer';
-import { TournamentViewer } from '@/components/TournamentViewer';
-import { TournamentPage } from '@/components/TournamentPage';
+
+// Lazy load below-the-fold components
+const AudienceGrid = dynamic(() => import('@/components/marketing/AudienceGrid').then(mod => ({ default: mod.AudienceGrid })), { ssr: true });
+const PlayerPremiumSection = dynamic(() => import('@/components/PlayerPremiumSection').then(mod => ({ default: mod.PlayerPremiumSection })), { ssr: true });
+const ProofTrust = dynamic(() => import('@/components/marketing/ProofTrust').then(mod => ({ default: mod.ProofTrust })), { ssr: true });
+const RoadmapSection = dynamic(() => import('@/components/marketing/RoadmapSection').then(mod => ({ default: mod.RoadmapSection })), { ssr: true });
+const FinalCta = dynamic(() => import('@/components/marketing/FinalCta').then(mod => ({ default: mod.FinalCta })), { ssr: true });
+const TournamentViewer = dynamic(() => import('@/components/TournamentViewer').then(mod => ({ default: mod.TournamentViewer })), { ssr: false });
+const TournamentPage = dynamic(() => import('@/components/TournamentPage').then(mod => ({ default: mod.TournamentPage })), { ssr: false });
 
 export default function HomePage() {
   const [currentView, setCurrentView] = useState<'landing' | 'tournament' | 'tournamentPage'>('landing');

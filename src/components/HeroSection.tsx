@@ -18,9 +18,11 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <ImageWithFallback
-          src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2190&auto=format&fit=crop"
+          src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2190&auto=format&fit=crop&fm=webp"
           alt="Basketball game action"
           className="w-full h-full object-cover"
+          fetchPriority="high"
+          loading="eager"
         />
         <div className="absolute inset-0 bg-black/60"></div>
       </div>

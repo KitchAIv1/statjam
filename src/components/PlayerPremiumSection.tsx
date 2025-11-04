@@ -13,9 +13,10 @@ export function PlayerPremiumSection() {
           <div className="relative">
             <div className="relative">
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=1740&auto=format&fit=crop"
+                src="https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=1740&auto=format&fit=crop&fm=webp"
                 alt="Amateur basketball player in action"
                 className="w-full h-[600px] object-cover rounded-2xl shadow-2xl"
+                loading="lazy"
               />
               
               {/* Overlay stats UI */}
