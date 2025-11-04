@@ -193,7 +193,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
         
         // Load game data to initialize quarter, clock, and other state
-        console.log('🚀 useTracker: Loading game state via GameServiceV3 for:', gameId);
         const game = await GameServiceV3.getGame(gameId);
         const gameError = !game;
         
@@ -213,17 +212,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           }
           
           setGameStatus(status);
-          console.log('🔁 Initialized game status from database:', status);
           
           // If the stat admin has entered the tracker and the game is still scheduled,
           // mark it as live to ensure live cards remain visible even when the clock is paused.
           try {
             if (normalizedStatus === 'scheduled') {
-              console.log('🔄 useTracker: Game status is scheduled, updating to in_progress');
               try {
                 await GameServiceV3.updateGameStatus(gameId, 'in_progress');
                 setGameStatus('in_progress'); // ✅ Update local state
-                console.log('✅ useTracker: Game status updated to in_progress');
               } catch (statusError) {
                 console.warn('⚠️ useTracker: Failed to update game status:', statusError);
                 // Non-blocking - game will still work with clock running
@@ -236,7 +232,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           // Initialize quarter from DB (like V1 pattern)
           if (typeof game.quarter === 'number' && game.quarter > 0) {
             setQuarterState(game.quarter);
-            console.log('🔁 Initialized quarter from database:', game.quarter);
           }
           
           // Initialize clock from DB
@@ -246,10 +241,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               ...prev,
               secondsRemaining: totalSeconds
             }));
-            console.log('🔁 Initialized clock from database:', { 
-              minutes: game.game_clock_minutes, 
-              seconds: game.game_clock_seconds 
-            });
           }
           
           // Initialize clock running state
@@ -258,7 +249,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               ...prev,
               isRunning: game.is_clock_running
             }));
-            console.log('🔁 Initialized clock running state from database:', game.is_clock_running);
           }
           
           // Load team fouls and timeouts from game data
@@ -266,10 +256,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             setTeamFouls({
               [teamAId]: game.team_a_fouls || 0,
               [teamBId]: game.team_b_fouls || 0
-            });
-            console.log('🔁 Initialized team fouls from database:', { 
-              teamA: game.team_a_fouls || 0, 
-              teamB: game.team_b_fouls || 0 
             });
           }
           
@@ -280,22 +266,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               [teamAId]: game.team_a_timeouts_remaining ?? 7,
               [teamBId]: game.team_b_timeouts_remaining ?? 7
             });
-            console.log('🔁 Initialized timeouts from database:', { 
-              teamA: game.team_a_timeouts_remaining ?? 7, 
-              teamB: game.team_b_timeouts_remaining ?? 7 
-            });
           }
           
           // ✅ PHASE 1: Load ruleset and automation flags from tournament
           try {
-            console.log('🎯 Phase 1: Loading ruleset and automation flags...');
-            
             // Fetch tournament data to get ruleset and automation settings
             const tournamentId = game.tournament_id;
-            console.log('🔍 Phase 1 DEBUG: tournament_id =', tournamentId, 'type:', typeof tournamentId);
             
             if (tournamentId) {
-              console.log('✅ Phase 1: Tournament ID found, fetching tournament data...');
               const tournamentResponse = await fetch(
                 `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/tournaments?id=eq.${tournamentId}&select=ruleset,ruleset_config,automation_settings`,
                 {
