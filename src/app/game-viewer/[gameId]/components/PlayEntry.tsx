@@ -59,6 +59,15 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   playerPoints
 }) => {
 
+  // 🔍 CRITICAL DEBUG: Is PlayEntry rendering with correct data?
+  console.log('🔍 CRITICAL PlayEntry rendering:', {
+    playId: play.id,
+    playerId: play.playerId,
+    playerName: play.playerName,
+    description: play.description,
+    statType: play.statType
+  });
+
   const isDark = theme === 'dark';
   const scoringInfo = getScoringInfo(play.statType, play.modifier);
   const teamName = play.teamName || 'Unknown Team';
@@ -91,10 +100,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+    <div
       key={`${play.id}-${theme}`}
       className={`
         relative p-4 rounded-lg transition-all duration-300 border-b
@@ -207,7 +213,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
           </span>
         </motion.div>
       )}
-    </motion.div>
+    </div>
   );
 };
 

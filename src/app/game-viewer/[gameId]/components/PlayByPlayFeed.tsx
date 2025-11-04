@@ -131,32 +131,15 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
         <div className={`flex-1 h-px ${isDark ? 'bg-gradient-to-r from-transparent via-slate-600 to-transparent' : 'bg-gradient-to-r from-transparent via-orange-300 to-transparent'}`} />
       </div>
 
-      {/* Play Entries with Stagger Animation */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={{
-          visible: {
-            transition: {
-              staggerChildren: 0.05
-            }
-          }
-        }}
-        className="space-y-0"
-      >
+      {/* Play Entries - No stagger animation to prevent invisible cards */}
+      <div className="space-y-0">
         {playByPlay.map((play, index) => {
           const isLatest = index === 0;
           const playerStats = calculatePlayerStats?.(index, play.playerId);
           const playerPoints = calculatePlayerPoints?.(index, play.playerId);
           
           return (
-            <motion.div
-              key={play.id || `play-${index}`}
-              variants={{
-                hidden: { opacity: 0, y: 20 },
-                visible: { opacity: 1, y: 0 }
-              }}
-            >
+            <div key={play.id || `play-${index}`}>
               <PlayEntry
                 play={play}
                 isLatest={isLatest}
@@ -166,10 +149,10 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
                 playerStats={playerStats}
                 playerPoints={playerPoints}
               />
-            </motion.div>
+            </div>
           );
         })}
-      </motion.div>
+      </div>
     </div>
   );
 };
