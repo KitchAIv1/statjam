@@ -9,8 +9,8 @@ export function FinalCta({ onWatchLive, onStartTracking }: { onWatchLive?: () =>
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Start Tracking Like the Pros</h2>
         <p className="text-lg text-white/90 mb-8">Run pro‑grade tournaments with real‑time stats and automation that thinks ahead.</p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Button onClick={onStartTracking} className="bg-white text-gray-900 hover:bg-white/90 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg">Launch the Stat Tracker</Button>
-          <Button onClick={onWatchLive} variant="outline" className="border-white text-white hover:bg-white/10 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg">Watch Live Games</Button>
+          <Button onClick={onStartTracking} className="bg-white text-gray-900 hover:bg-white/90 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold">Launch the Stat Tracker</Button>
+          <Button onClick={onWatchLive} className="border-2 border-white bg-transparent text-white hover:bg-white hover:text-orange-600 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold transition-all duration-200">Watch Live Games</Button>
         </div>
       </div>
     </section>

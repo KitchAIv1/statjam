@@ -59,8 +59,7 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
                 </Button>
                 <Button 
                   onClick={onWatchLive}
-                  variant="outline"
-                  className="border-2 border-white/80 text-white hover:bg-white/20 px-8 py-5 text-lg backdrop-blur-sm transition-all duration-200"
+                  className="border-2 border-white bg-transparent text-white hover:bg-white hover:text-gray-900 px-8 py-5 text-lg font-semibold backdrop-blur-sm transition-all duration-200"
                 >
                   Watch Live Games
                 </Button>
