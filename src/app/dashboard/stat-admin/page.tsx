@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { GameService } from '@/lib/services/gameService';
 import { GameServiceV3 } from '@/lib/services/gameServiceV3';
+import { StatAdminDashboardService } from '@/lib/services/statAdminDashboardService';
 import { TeamService } from '@/lib/services/tournamentService';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +19,6 @@ const StatAdminDashboard = () => {
   const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
   const router = useRouter();
   const userRole = user?.role;
-  
-  // Feature flag for V2 optimization (default: enabled)
-  const useV2Optimization = process.env.NEXT_PUBLIC_STAT_ADMIN_V2 !== '0';
   
   // Real assigned games data
   const [assignedGames, setAssignedGames] = useState<any[]>([]);
@@ -42,7 +40,7 @@ const StatAdminDashboard = () => {
   // Debug logging for stats calculation (development only)
   if (process.env.NODE_ENV !== 'production' && !gamesLoading && assignedGames.length > 0) {
     console.log('📊 StatAdmin Dashboard Stats:', {
-      version: useV2Optimization ? 'V2 (Optimized)' : 'V1 (Legacy)',
+      version: 'Optimized (Cached + Parallel)',
       totalGames,
       completedGames,
       pendingGames,
@@ -72,10 +70,8 @@ const StatAdminDashboard = () => {
         setGamesLoading(true);
         setGamesError(null);
         
-        // Use V2 optimization if enabled, fallback to V1
-        const games = useV2Optimization 
-          ? await GameServiceV3.getAssignedGames(user.id)
-          : await GameService.getAssignedGames(user.id);
+        // ✅ OPTIMIZED: Use new StatAdminDashboardService with caching + parallel fetching
+        const games = await StatAdminDashboardService.getAssignedGamesOptimized(user.id);
         setAssignedGames(games);
       } catch (error) {
         console.error('❌ Error loading assigned games:', error);
@@ -493,10 +489,8 @@ const StatAdminDashboard = () => {
                     if (user) {
                       setGamesLoading(true);
                       setGamesError(null);
-                      // Use V2 optimization if enabled, fallback to V1
-                      (useV2Optimization 
-                        ? GameServiceV3.getAssignedGames(user.id)
-                        : GameService.getAssignedGames(user.id))
+                      // ✅ OPTIMIZED: Use StatAdminDashboardService with caching
+                      StatAdminDashboardService.getAssignedGamesOptimized(user.id)
                         .then(setAssignedGames)
                         .catch((error) => setGamesError(error.message))
                         .finally(() => setGamesLoading(false));
