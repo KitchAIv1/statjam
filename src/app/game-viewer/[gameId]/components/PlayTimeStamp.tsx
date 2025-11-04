@@ -57,7 +57,7 @@ export const PlayTimeStamp: React.FC<PlayTimeStampProps> = ({
       className="flex items-center gap-3 mb-2"
     >
       {/* Quarter Badge */}
-      <div className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-md text-xs font-bold tracking-wider">
+      <div className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded-md text-xs font-bold tracking-wider">
         {formatQuarter(quarter)}
       </div>
       

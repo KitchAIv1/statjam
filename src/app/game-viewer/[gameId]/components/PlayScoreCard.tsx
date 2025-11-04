@@ -78,7 +78,7 @@ export const PlayScoreCard: React.FC<PlayScoreCardProps> = ({
 
       {/* Lead Indicator */}
       {!isTied && (
-        <div className="flex items-center gap-1 text-xs font-bold text-blue-400">
+        <div className="flex items-center gap-1 text-xs font-bold text-orange-400">
           <TrendingUp className="w-3 h-3" />
           +{leadAmount} {leadingTeamAbbr}
         </div>

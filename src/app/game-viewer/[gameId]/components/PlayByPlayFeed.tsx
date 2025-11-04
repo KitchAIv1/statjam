@@ -13,6 +13,7 @@
 import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
+import { GameViewerTheme } from '../hooks/useGameViewerTheme';
 import PlayEntry from './PlayEntry';
 import { ListVideo, Radio } from 'lucide-react';
 
@@ -34,6 +35,7 @@ interface PlayByPlayFeedProps {
     awayScore: number;
   };
   isLive: boolean;
+  theme: GameViewerTheme;
   isMobile?: boolean;
   calculatePlayerStats?: (currentPlayIndex: number, playerId?: string) => PlayerStats | undefined;
   calculatePlayerPoints?: (currentPlayIndex: number, playerId?: string) => number | undefined;
@@ -54,10 +56,13 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
   playByPlay, 
   game, 
   isLive,
+  theme,
   isMobile = false,
   calculatePlayerStats,
   calculatePlayerPoints
 }) => {
+
+  const isDark = theme === 'dark';
 
   // Empty state
   if (playByPlay.length === 0) {
@@ -67,13 +72,13 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
         animate={{ opacity: 1 }}
         className="flex flex-col items-center justify-center py-16 px-6 text-center"
       >
-        <div className="w-20 h-20 mb-6 bg-slate-800 rounded-full flex items-center justify-center">
+        <div className={`w-20 h-20 mb-6 rounded-full flex items-center justify-center ${isDark ? 'bg-slate-800' : 'bg-orange-100'}`}>
           <span className="text-4xl">🏀</span>
         </div>
-        <h3 className="text-xl font-bold text-foreground mb-2">
+        <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-foreground' : 'text-gray-900'}`}>
           {isLive ? 'Game Starting Soon' : 'No Game Activity Yet'}
         </h3>
-        <p className="text-sm text-muted-foreground max-w-md">
+        <p className={`text-sm max-w-md ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>
           {isLive 
             ? 'Play-by-play will appear here once the game begins'
             : 'Stats and plays will be shown here during the game'}
@@ -83,15 +88,15 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
   }
 
   return (
-    <div className="space-y-0 bg-slate-900">
+    <div className={`space-y-0 transition-colors duration-300 ${isDark ? 'bg-slate-900' : 'bg-gradient-to-br from-orange-50/30 to-background'}`}>
       {/* Feed Header */}
-      <div className="sticky top-0 z-50 bg-slate-900 border-b border-slate-700 px-6 py-4">
+      <div className={`sticky top-0 z-50 border-b px-6 py-4 transition-colors duration-300 ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-orange-200'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <ListVideo className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-bold text-foreground">Play-by-Play</h2>
+            <ListVideo className="w-5 h-5 text-orange-400" />
+            <h2 className="text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">Play-by-Play</h2>
           </div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className={`flex items-center gap-3 text-sm ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>
             <span>{playByPlay.length} {playByPlay.length === 1 ? 'play' : 'plays'}</span>
             {isLive && (
               <motion.div
@@ -108,12 +113,12 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
       </div>
 
       {/* Score Separator */}
-      <div className="flex items-center gap-4 px-6 py-3 bg-slate-800/50">
-        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent" />
-        <div className="text-sm font-semibold text-muted-foreground">
+      <div className={`flex items-center gap-4 px-6 py-3 transition-colors duration-300 ${isDark ? 'bg-slate-800/50' : 'bg-orange-50'}`}>
+        <div className={`flex-1 h-px ${isDark ? 'bg-gradient-to-r from-transparent via-slate-600 to-transparent' : 'bg-gradient-to-r from-transparent via-orange-300 to-transparent'}`} />
+        <div className={`text-sm font-semibold ${isDark ? 'text-muted-foreground' : 'text-gray-700'}`}>
           {game.teamAName} {game.homeScore} - {game.awayScore} {game.teamBName}
         </div>
-        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent" />
+        <div className={`flex-1 h-px ${isDark ? 'bg-gradient-to-r from-transparent via-slate-600 to-transparent' : 'bg-gradient-to-r from-transparent via-orange-300 to-transparent'}`} />
       </div>
 
       {/* Play Entries with Stagger Animation */}
@@ -147,6 +152,7 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
                 isLatest={isLatest}
                 teamAName={game.teamAName}
                 teamBName={game.teamBName}
+                theme={theme}
                 playerStats={playerStats}
                 playerPoints={playerPoints}
               />
@@ -166,6 +172,7 @@ export default memo(PlayByPlayFeed, (prevProps, nextProps) => {
     prevProps.playByPlay.length === nextProps.playByPlay.length &&
     prevProps.game.homeScore === nextProps.game.homeScore &&
     prevProps.game.awayScore === nextProps.game.awayScore &&
-    prevProps.isLive === nextProps.isLive
+    prevProps.isLive === nextProps.isLive &&
+    prevProps.theme === nextProps.theme // ✅ FIX: Check theme changes
   );
 });

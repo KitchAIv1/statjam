@@ -13,6 +13,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
+import { GameViewerTheme } from '../hooks/useGameViewerTheme';
 import { getEnhancedPlayDescription, getScoringInfo } from '@/lib/utils/gameViewerUtils';
 import { ActionIcon } from './ActionIcon';
 import { PlayTimeStamp } from './PlayTimeStamp';
@@ -34,6 +35,7 @@ interface PlayEntryProps {
   isLatest: boolean;
   teamAName: string;
   teamBName: string;
+  theme: GameViewerTheme;
   playerStats?: PlayerStats;
   playerPoints?: number;
 }
@@ -52,22 +54,40 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   isLatest, 
   teamAName, 
   teamBName,
+  theme,
   playerStats,
   playerPoints
 }) => {
 
+  const isDark = theme === 'dark';
   const scoringInfo = getScoringInfo(play.statType, play.modifier);
   const teamName = play.teamName || 'Unknown Team';
   const isSubstitution = play.statType === 'substitution';
   const isTimeout = play.statType === 'timeout';
   const isScoring = scoringInfo !== null;
 
-  // Determine card styling based on play type
+  // Determine card styling based on play type and theme
   const getCardClasses = () => {
-    if (isLatest) return 'bg-blue-500/10 border-l-4 border-l-blue-500';
-    if (isSubstitution) return 'bg-indigo-500/10 border-l-4 border-l-indigo-500';
-    if (isTimeout) return 'bg-yellow-500/10 border-l-4 border-l-yellow-500';
-    return 'bg-slate-800/50 border-l border-l-slate-700';
+    const darkClasses = {
+      latest: 'bg-orange-500/10 border-l-4 border-l-orange-500 hover:bg-orange-500/15',
+      substitution: 'bg-indigo-500/10 border-l-4 border-l-indigo-500 hover:bg-indigo-500/15',
+      timeout: 'bg-yellow-500/10 border-l-4 border-l-yellow-500 hover:bg-yellow-500/15',
+      default: 'bg-slate-800/50 border-l border-l-slate-700 hover:bg-slate-800/70'
+    };
+    
+    const lightClasses = {
+      latest: 'bg-orange-100 border-l-4 border-l-orange-500 hover:bg-orange-200',
+      substitution: 'bg-indigo-100 border-l-4 border-l-indigo-500 hover:bg-indigo-200',
+      timeout: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
+      default: 'bg-white border-l-2 border-l-orange-300 hover:bg-orange-50 shadow-sm'
+    };
+    
+    const classes = isDark ? darkClasses : lightClasses;
+    
+    if (isLatest) return classes.latest;
+    if (isSubstitution) return classes.substitution;
+    if (isTimeout) return classes.timeout;
+    return classes.default;
   };
 
   return (
@@ -75,11 +95,11 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      key={`${play.id}-${theme}`}
       className={`
-        relative p-4 rounded-lg
+        relative p-4 rounded-lg transition-all duration-300 border-b
         ${getCardClasses()}
-        hover:bg-slate-800/70 transition-all
-        border-b border-slate-700/50
+        ${isDark ? 'border-slate-700/50' : 'border-orange-200/50'}
       `}
     >
       {/* Time Stamp */}
@@ -105,15 +125,15 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
           <div className="flex items-start gap-3">
             <ActionIcon type={play.statType} size="md" animate={false} />
             <div className="flex-1">
-              <p className="text-base font-bold text-foreground leading-tight">
+              <p className={`text-base font-bold leading-tight ${isDark ? 'text-foreground' : 'text-gray-900'}`}>
                 {getEnhancedPlayDescription(play.description, play.statType, play.modifier, playerStats)}
                 {typeof playerPoints === 'number' && scoringInfo && (
-                  <span className="ml-2 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-sm font-bold">
+                  <span className="ml-2 px-2 py-0.5 bg-orange-500/20 text-orange-600 rounded text-sm font-bold">
                     ({playerPoints} PTS)
                   </span>
                 )}
                 {isTimeout && play.modifier && (
-                  <span className="ml-2 text-xs text-yellow-400 opacity-80">
+                  <span className="ml-2 text-xs text-yellow-600 opacity-80">
                     ({play.modifier === 'full' ? '60s' : '30s'})
                   </span>
                 )}
@@ -121,9 +141,9 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
               
               {/* Player & Team Info */}
               <div className="flex items-center gap-3 mt-1 text-sm">
-                <span className="font-semibold text-blue-400">{play.playerName || 'Unknown Player'}</span>
-                <span className="text-muted-foreground">•</span>
-                <span className="text-muted-foreground">{teamName}</span>
+                <span className={`font-semibold ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>{play.playerName || 'Unknown Player'}</span>
+                <span className={isDark ? 'text-muted-foreground' : 'text-gray-500'}>•</span>
+                <span className={isDark ? 'text-muted-foreground' : 'text-gray-600'}>{teamName}</span>
               </div>
             </div>
           </div>
@@ -140,7 +160,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
                 SUBSTITUTION
               </span>
             ) : (
-              <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-md text-xs font-semibold uppercase tracking-wide">
+              <span className={`px-2 py-1 rounded-md text-xs font-semibold uppercase tracking-wide ${isDark ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-700'}`}>
                 {play.statType?.replace(/_/g, ' ')}
               </span>
             )}
@@ -156,14 +176,14 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
           </div>
 
           {/* Reactions Row */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <button className="flex items-center gap-1 hover:text-red-400 transition-colors">
+          <div className={`flex items-center gap-4 text-xs ${isDark ? 'text-muted-foreground' : 'text-gray-500'}`}>
+            <button className="flex items-center gap-1 hover:text-red-500 transition-colors">
               <Heart className="w-3.5 h-3.5" /> 0
             </button>
-            <button className="flex items-center gap-1 hover:text-blue-400 transition-colors">
+            <button className="flex items-center gap-1 hover:text-orange-600 transition-colors">
               <MessageCircle className="w-3.5 h-3.5" /> 0
             </button>
-            <button className="flex items-center gap-1 hover:text-green-400 transition-colors">
+            <button className="flex items-center gap-1 hover:text-orange-600 transition-colors">
               <Share2 className="w-3.5 h-3.5" /> Share
             </button>
           </div>
@@ -180,9 +200,9 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
           <motion.div
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ repeat: Infinity, duration: 2 }}
-            className="w-2 h-2 bg-blue-500 rounded-full"
+            className="w-2 h-2 bg-orange-500 rounded-full"
           />
-          <span className="text-xs font-bold text-blue-400 uppercase tracking-wide">
+          <span className={`text-xs font-bold uppercase tracking-wide ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>
             Latest
           </span>
         </motion.div>

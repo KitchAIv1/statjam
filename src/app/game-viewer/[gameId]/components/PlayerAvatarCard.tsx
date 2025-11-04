@@ -68,10 +68,10 @@ export const PlayerAvatarCard: React.FC<PlayerAvatarCardProps> = ({
       <div className={`
         ${sizeClasses[size]}
         rounded-full
-        bg-gradient-to-br from-purple-500 to-blue-500
+        bg-gradient-to-br from-orange-500 to-red-500
         flex items-center justify-center
         font-bold text-white
-        shadow-lg
+        shadow-lg shadow-orange-500/20
         ring-2 ring-white/20
       `}>
         {initial === '?' ? <User className="w-1/2 h-1/2" /> : initial}

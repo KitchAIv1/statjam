@@ -146,13 +146,13 @@ function getStatusConfig(status: string, isLive: boolean) {
     };
   }
   
-  // Default: Scheduled
+  // Default: Scheduled (StatJam Orange)
   return {
     Icon: Calendar,
     label: 'SCHEDULED',
-    bgClass: 'bg-blue-500/90',
+    bgClass: 'bg-orange-500/90',
     textClass: 'text-white',
-    borderClass: 'border-blue-400'
+    borderClass: 'border-orange-400'
   };
 }
 
