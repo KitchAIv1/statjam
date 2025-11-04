@@ -60,10 +60,10 @@ export const authPageStyles: AuthPageStylesType = {
     border: `1px solid rgba(255, 255, 255, 0.4)`,
     borderTop: `1px solid rgba(255, 255, 255, 0.6)`,
     borderLeft: `1px solid rgba(255, 255, 255, 0.6)`,
-    // Advanced glass shadows
+    // Lighter glass shadows
     boxShadow: `
-      0 8px 32px rgba(0, 0, 0, 0.12),
-      0 2px 6px rgba(0, 0, 0, 0.08),
+      0 8px 32px rgba(0, 0, 0, 0.06),
+      0 2px 6px rgba(0, 0, 0, 0.04),
       inset 0 1px 0 rgba(255, 255, 255, 0.6),
       inset 0 -1px 0 rgba(255, 255, 255, 0.1)
     `,
@@ -139,9 +139,9 @@ export const authPageStyles: AuthPageStylesType = {
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     outline: 'none',
     boxSizing: 'border-box' as const,
-    // Enhanced glass input shadows
+    // Lighter glass input shadows
     boxShadow: `
-      0 4px 6px rgba(0, 0, 0, 0.08),
+      0 4px 6px rgba(0, 0, 0, 0.04),
       inset 0 1px 0 rgba(255, 255, 255, 0.5),
       0 0 0 1px rgba(255, 255, 255, 0.1)
     `,
@@ -183,9 +183,9 @@ export const authPageStyles: AuthPageStylesType = {
     cursor: 'pointer',
     marginBottom: '16px',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    // Clean shadows without glow
+    // Lighter clean shadows
     boxShadow: `
-      0 4px 12px rgba(0, 0, 0, 0.15),
+      0 4px 12px rgba(0, 0, 0, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.3)
     `,
     minHeight: '52px',
@@ -291,19 +291,19 @@ export const authPageCSSStyles = `
   .auth-form:hover {
     transform: translateY(-2px) scale(1.01);
     box-shadow: 
-      0 12px 40px rgba(0, 0, 0, 0.15),
-      0 4px 8px rgba(0, 0, 0, 0.1),
+      0 12px 40px rgba(0, 0, 0, 0.08),
+      0 4px 8px rgba(0, 0, 0, 0.05),
       inset 0 1px 0 rgba(255, 255, 255, 0.7),
       inset 0 -1px 0 rgba(255, 255, 255, 0.15) !important;
   }
   
-  /* Enhanced Glass Input Focus Effects */
+  /* Lighter Glass Input Focus Effects */
   .auth-input:focus {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.3) 100%) !important;
     border: 1px solid #ea580c !important;
     box-shadow: 
       0 0 0 3px rgba(234, 88, 12, 0.25),
-      0 8px 16px rgba(0, 0, 0, 0.12),
+      0 8px 16px rgba(0, 0, 0, 0.06),
       inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
     transform: translateY(-2px);
     color: #111827 !important;
@@ -334,12 +334,12 @@ export const authPageCSSStyles = `
     opacity: 1 !important;
   }
   
-  /* Clean Button Hover Effects - No Glow */
+  /* Lighter Button Hover Effects */
   .auth-button:hover {
     background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%) !important;
     transform: translateY(-2px) scale(1.02) !important;
     box-shadow: 
-      0 6px 20px rgba(0, 0, 0, 0.25),
+      0 6px 20px rgba(0, 0, 0, 0.12),
       inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
   }
   
@@ -348,14 +348,14 @@ export const authPageCSSStyles = `
     background: linear-gradient(135deg, #b91c1c 0%, #991b1b 50%, #7f1d1d 100%) !important;
   }
   
-  /* Clean Role Selection - No Glassmorphism */
+  /* Lighter Role Selection Shadows */
   .role-button-selected {
     background: #dc2626 !important; /* Solid red background */
     border: 2px solid #dc2626 !important;
     color: white !important;
     font-weight: 700 !important;
     text-shadow: none !important; /* Remove text shadow */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important; /* Simple shadow */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important; /* Lighter shadow */
     transform: none; /* No scaling */
   }
   
@@ -365,7 +365,7 @@ export const authPageCSSStyles = `
     color: #374151 !important; /* Dark text */
     font-weight: 600 !important;
     text-shadow: none !important; /* Remove text shadow */
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important; /* Subtle shadow */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important; /* Lighter shadow */
   }
   
   .role-button-unselected:hover {
@@ -373,7 +373,7 @@ export const authPageCSSStyles = `
     border: 2px solid #dc2626 !important; /* Red border on hover */
     color: #dc2626 !important; /* Red text on hover */
     transform: none; /* No transform animations */
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
   }
 
   /* Responsive Background Positioning */
