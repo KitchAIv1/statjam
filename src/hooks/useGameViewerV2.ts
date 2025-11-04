@@ -495,18 +495,24 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       });
 
       setPlays(prevPlays => {
-        // ✅ FIX: Filter out incomplete plays (missing player names) to prevent empty cards
-        const validPlays = playByPlayEntries.filter(play => {
-          // Allow plays without players (timeouts, etc.)
-          if (!play.playerId) return true;
-          // Require player name for player-based plays
-          return play.playerName && play.playerName !== 'Unknown Player';
+        // ✅ FIX: Only update plays if all have valid player names (prevents empty cards during fetch)
+        const hasIncompletePlays = playByPlayEntries.some(play => {
+          // Skip validation for plays without playerIds (timeouts, etc.)
+          if (!play.playerId) return false;
+          // Check if player-based play is missing name
+          return !play.playerName || play.playerName === 'Unknown Player';
         });
 
-        if (prevPlays.length === validPlays.length) {
+        if (hasIncompletePlays) {
+          console.log('⏳ useGameViewerV2: Waiting for player names to load before updating plays...');
+          // Keep previous plays visible, don't update yet
+          return prevPlays;
+        }
+
+        if (prevPlays.length === playByPlayEntries.length) {
           let hasChanges = false;
-          for (let i = 0; i < validPlays.length; i++) {
-            if (prevPlays[i]?.id !== validPlays[i]?.id) {
+          for (let i = 0; i < playByPlayEntries.length; i++) {
+            if (prevPlays[i]?.id !== playByPlayEntries[i]?.id) {
               hasChanges = true;
               break;
             }
@@ -516,15 +522,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             return prevPlays;
           }
         }
-        
-        // Log if we filtered out any plays
-        const filteredCount = playByPlayEntries.length - validPlays.length;
-        if (filteredCount > 0) {
-          console.log(`⏳ useGameViewerV2: Filtered ${filteredCount} incomplete plays, waiting for player names...`);
-        }
-        
         console.log('🔄 useGameViewerV2: Plays changed, updating');
-        return validPlays;
+        return playByPlayEntries;
       });
 
     } catch (e: any) {
