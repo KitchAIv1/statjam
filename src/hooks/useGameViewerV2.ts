@@ -435,7 +435,29 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         player_out_name: playersMap.get(sub.player_out_id) || `Player ${sub.player_out_id?.substring(0, 8)}`
       }));
 
-      // 7. Enrich game data
+      // 7. Calculate real-time scores from game_stats (fallback if DB scores are 0)
+      const calculateScoresFromStats = (stats: GameStats[], teamAId: string, teamBId: string) => {
+        let homeScore = 0;
+        let awayScore = 0;
+        
+        stats.forEach(stat => {
+          if (stat.modifier === 'made') {
+            const points = stat.stat_value || 0;
+            
+            if (stat.team_id === teamAId) {
+              homeScore += points;
+            } else if (stat.team_id === teamBId) {
+              awayScore += points;
+            }
+          }
+        });
+        
+        return { homeScore, awayScore };
+      };
+      
+      const calculatedScores = calculateScoresFromStats(gameStats, gameInfo.team_a_id, gameInfo.team_b_id);
+
+      // 8. Enrich game data
       const teamAName = teamsMap.get(gameInfo.team_a_id) || 'Team A';
       const teamBName = teamsMap.get(gameInfo.team_b_id) || 'Team B';
       
@@ -443,10 +465,13 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         ...gameInfo,
         team_a_name: teamAName,
         team_b_name: teamBName,
-        tournament_name: tournamentName
+        tournament_name: tournamentName,
+        // ✅ FIX: Use calculated scores if DB scores are 0 (real-time score tracking)
+        home_score: gameInfo.home_score || calculatedScores.homeScore,
+        away_score: gameInfo.away_score || calculatedScores.awayScore
       };
 
-      // 8. Transform stats, substitutions, AND timeouts into play-by-play entries
+      // 9. Transform stats, substitutions, AND timeouts into play-by-play entries
       const playByPlayEntries = transformStatsToPlays(
         gameStats,
         gameInfo.team_a_id,
