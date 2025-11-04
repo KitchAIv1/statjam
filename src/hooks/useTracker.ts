@@ -48,6 +48,8 @@ interface UseTrackerReturn {
   resetShotClock: (seconds?: number) => void;
   setShotClockTime: (seconds: number) => void;
   shotClockTick: (seconds: number) => void;
+  shotClockJustReset: boolean; // ✅ NBA Sync Fix
+  setShotClockJustReset: (value: boolean) => void; // ✅ NBA Sync Fix
   setQuarter: (quarter: number) => void;
   advanceIfNeeded: () => void;
   substitute: (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number }) => Promise<boolean>;
@@ -117,6 +119,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     secondsRemaining: 24, // Default NBA shot clock
     isVisible: true // Can be disabled per tournament settings
   });
+  
+  // ✅ Shot Clock Sync Fix: Prevents immediate tick after reset (aligns with game clock)
+  const [shotClockJustReset, setShotClockJustReset] = useState(false);
   
   // ✅ PHASE 1: Ruleset & Automation Flags
   const [ruleset, setRuleset] = useState<Ruleset | null>(null);
@@ -599,6 +604,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       isRunning: clock.isRunning, // ✅ Sync with game clock (source of truth)
       secondsRemaining: resetValue 
     }));
+    
+    // ✅ NBA SYNC FIX: Delay first tick to align with game clock (prevents 23s flash)
+    setShotClockJustReset(true);
+    
     setLastAction(`Shot clock reset to ${resetValue}s`);
     console.log(`🏀 Shot clock reset to ${resetValue} seconds (synced with game clock: ${clock.isRunning ? 'RUNNING' : 'PAUSED'})`);
   }, [clock.isRunning]);
@@ -612,6 +621,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       isRunning: clock.isRunning, // ✅ Sync with game clock (source of truth)
       secondsRemaining: validSeconds 
     }));
+    
+    // ✅ NBA SYNC FIX: Delay first tick to align with game clock (prevents 23s flash)
+    setShotClockJustReset(true);
+    
     setLastAction(`Shot clock set to ${validSeconds}s`);
     console.log(`🏀 Shot clock set to ${validSeconds} seconds (synced with game clock: ${clock.isRunning ? 'RUNNING' : 'PAUSED'})`);
   }, [clock.isRunning]);
@@ -1367,6 +1380,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     resetShotClock,
     setShotClockTime,
     shotClockTick,
+    shotClockJustReset, // ✅ NBA Sync Fix: Flag for delayed tick
+    setShotClockJustReset, // ✅ NBA Sync Fix: Clear flag after skip
     setQuarter,
     advanceIfNeeded,
     substitute,

@@ -290,6 +290,7 @@ function StatTrackerV3Content() {
   // ✅ UNIFIED CLOCK TICK: Single interval for both game clock and shot clock
   // This ensures they tick at the EXACT same moment (synchronized)
   // ✅ PERFORMANCE: Interval only recreates when running state changes, NOT on every tick
+  // ✅ NBA SYNC FIX: Shot clock waits 1 full second after reset before ticking (prevents 23s flash)
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
@@ -305,10 +306,16 @@ function StatTrackerV3Content() {
           // Check for quarter advancement (will be handled by tick function's internal state)
         }
         
-        // Tick shot clock if running AND visible
+        // ✅ NBA SYNC FIX: Skip shot clock tick if just reset (aligns with game clock boundary)
         if (tracker.shotClock.isRunning && tracker.shotClock.isVisible) {
-          tracker.shotClockTick(1);
-          // Shot clock violation check will be handled by the tick function
+          if (!tracker.shotClockJustReset) {
+            tracker.shotClockTick(1);
+            // Shot clock violation check will be handled by the tick function
+          } else {
+            // Clear the flag after skipping one tick (shot clock will start next interval)
+            tracker.setShotClockJustReset(false);
+            console.log('⏱️ Shot clock sync: Skipped first tick after reset (NBA alignment)');
+          }
         }
       }, 1000);
     }
@@ -322,9 +329,11 @@ function StatTrackerV3Content() {
     tracker.clock.isRunning, 
     tracker.shotClock.isRunning, 
     tracker.shotClock.isVisible,
+    tracker.shotClockJustReset, // ✅ NBA Sync Fix dependency
     // Functions are stable from useCallback
     tracker.tick, 
-    tracker.shotClockTick
+    tracker.shotClockTick,
+    tracker.setShotClockJustReset // ✅ NBA Sync Fix setter
     // ❌ REMOVED: tracker.advanceIfNeeded (not needed in interval)
     // ❌ REMOVED: tracker.stopShotClock (not needed in interval)
     // ❌ REMOVED: tracker.clock.secondsRemaining (causes unnecessary recreation)
