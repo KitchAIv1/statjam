@@ -1,9 +1,20 @@
+/**
+ * PlayByPlayFeed Component (MODERNIZED)
+ * 
+ * Live play-by-play feed display
+ * Single responsibility: List all plays
+ * Follows .cursorrules: <200 lines
+ * 
+ * @module PlayByPlayFeed
+ */
+
 'use client';
 
 import React, { memo } from 'react';
+import { motion } from 'framer-motion';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
 import PlayEntry from './PlayEntry';
-import { figmaColors, figmaTypography, figmaSpacing, figmaRadius } from '@/lib/design/figmaTokens';
+import { ListVideo, Radio } from 'lucide-react';
 
 interface PlayerStats {
   fieldGoalMade: number;
@@ -29,12 +40,15 @@ interface PlayByPlayFeedProps {
 }
 
 /**
- * NBA-Style Play-by-Play Feed Component
+ * PlayByPlayFeed - Live game feed
  * 
- * Live feed showing real-time game actions.
- * Matches NBA.com play-by-play design with premium styling.
+ * Features:
+ * - Stagger animations
+ * - Empty state
+ * - Live indicator
+ * - Responsive
  * 
- * Optimized with React.memo to prevent unnecessary re-renders
+ * Optimized with React.memo
  */
 const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({ 
   playByPlay, 
@@ -45,206 +59,113 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
   calculatePlayerPoints
 }) => {
 
-  // Minimal logging for performance (only on score changes)
-  const currentScore = `${game.homeScore}-${game.awayScore}`;
-  if (process.env.NODE_ENV !== 'production' && Math.random() < 0.2) {
-    console.log('🎮 PlayByPlayFeed: Scores updated to', currentScore);
-  }
-
-
-
+  // Empty state
   if (playByPlay.length === 0) {
     return (
-      <div style={styles.container}>
-        <div style={styles.emptyState}>
-          <div style={styles.emptyIcon}>🏀</div>
-          <div style={styles.emptyTitle}>
-            {isLive ? 'Game Starting Soon' : 'No Game Activity Yet'}
-          </div>
-          <div style={styles.emptySubtitle}>
-            {isLive 
-              ? 'Play-by-play will appear here once the game begins'
-              : 'Stats and plays will be shown here during the game'
-            }
-          </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex flex-col items-center justify-center py-16 px-6 text-center"
+      >
+        <div className="w-20 h-20 mb-6 bg-slate-800 rounded-full flex items-center justify-center">
+          <span className="text-4xl">🏀</span>
         </div>
-      </div>
+        <h3 className="text-xl font-bold text-foreground mb-2">
+          {isLive ? 'Game Starting Soon' : 'No Game Activity Yet'}
+        </h3>
+        <p className="text-sm text-muted-foreground max-w-md">
+          {isLive 
+            ? 'Play-by-play will appear here once the game begins'
+            : 'Stats and plays will be shown here during the game'}
+        </p>
+      </motion.div>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <div className="space-y-0 bg-slate-900">
       {/* Feed Header */}
-      <div style={styles.feedHeader}>
-        <div style={styles.feedTitle}>Play-by-Play</div>
-        <div style={styles.feedSubtitle}>
-          {playByPlay.length} {playByPlay.length === 1 ? 'play' : 'plays'}
-          {isLive && (
-            <span style={styles.liveIndicator}>
-              <span style={styles.liveDot} />
-              LIVE
-            </span>
-          )}
+      <div className="sticky top-0 z-50 bg-slate-900 border-b border-slate-700 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <ListVideo className="w-5 h-5 text-blue-400" />
+            <h2 className="text-lg font-bold text-foreground">Play-by-Play</h2>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span>{playByPlay.length} {playByPlay.length === 1 ? 'play' : 'plays'}</span>
+            {isLive && (
+              <motion.div
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+                className="flex items-center gap-1.5 px-2 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-bold uppercase tracking-wider"
+              >
+                <Radio className="w-3 h-3 animate-pulse" />
+                LIVE
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Quarter Separator */}
-      <div style={styles.quarterSeparator}>
-        <div style={styles.quarterLine} />
-        <div style={styles.quarterLabel}>
-          Current Score: {game.teamAName} {game.homeScore} - {game.awayScore} {game.teamBName}
+      {/* Score Separator */}
+      <div className="flex items-center gap-4 px-6 py-3 bg-slate-800/50">
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent" />
+        <div className="text-sm font-semibold text-muted-foreground">
+          {game.teamAName} {game.homeScore} - {game.awayScore} {game.teamBName}
         </div>
-        <div style={styles.quarterLine} />
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent" />
       </div>
 
-      {/* Play Entries */}
-      <div style={styles.feedContainer}>
+      {/* Play Entries with Stagger Animation */}
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{
+          visible: {
+            transition: {
+              staggerChildren: 0.05
+            }
+          }
+        }}
+        className="space-y-0"
+      >
         {playByPlay.map((play, index) => {
-          // Calculate player stats up to this point in the game (if function provided)
-          const playerStats = calculatePlayerStats ? calculatePlayerStats(index, play.playerId) : undefined;
-          const playerPoints = calculatePlayerPoints ? calculatePlayerPoints(index, play.playerId) : undefined;
+          const isLatest = index === 0;
+          const playerStats = calculatePlayerStats?.(index, play.playerId);
+          const playerPoints = calculatePlayerPoints?.(index, play.playerId);
           
           return (
-            <PlayEntry
-              key={play.id}
-              play={play}
-              isLatest={index === 0}
-              teamAName={game.teamAName}
-              teamBName={game.teamBName}
-              playerStats={playerStats}
-              playerPoints={playerPoints}
-            />
+            <motion.div
+              key={play.id || `play-${index}`}
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0 }
+              }}
+            >
+              <PlayEntry
+                play={play}
+                isLatest={isLatest}
+                teamAName={game.teamAName}
+                teamBName={game.teamBName}
+                playerStats={playerStats}
+                playerPoints={playerPoints}
+              />
+            </motion.div>
           );
         })}
-      </div>
-
-      {/* Load More Placeholder */}
-      {playByPlay.length > 10 && (
-        <div style={styles.loadMore}>
-          <button style={styles.loadMoreButton}>
-            Load Earlier Plays
-          </button>
-        </div>
-      )}
+      </motion.div>
     </div>
   );
 };
 
-const styles = {
-  container: {
-    backgroundColor: figmaColors.primary,
-    color: figmaColors.text.primary,
-    fontFamily: figmaTypography.fontFamily.primary,
-  },
-  emptyState: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: `${figmaSpacing[8]} ${figmaSpacing[4]}`,
-    textAlign: 'center' as const
-  },
-  emptyIcon: {
-    fontSize: '48px',
-    marginBottom: figmaSpacing[3],
-    opacity: 0.5
-  },
-  emptyTitle: {
-    fontSize: figmaTypography.fontSize.xl,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.text.primary,
-    marginBottom: figmaSpacing[2]
-  },
-  emptySubtitle: {
-    fontSize: figmaTypography.fontSize.sm,
-    color: figmaColors.text.muted,
-    lineHeight: figmaTypography.lineHeight.relaxed,
-    maxWidth: '420px'
-  },
-  feedHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: `${figmaSpacing[5]} ${figmaSpacing[4]} ${figmaSpacing[3]}`,
-    borderBottom: `1px solid ${figmaColors.border.primary}`,
-    backgroundColor: figmaColors.secondary
-  },
-  feedTitle: {
-    fontSize: figmaTypography.fontSize.lg,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.text.primary
-  },
-  feedSubtitle: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[3],
-    fontSize: figmaTypography.fontSize.sm,
-    color: figmaColors.text.muted
-  },
-  liveIndicator: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[1],
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.status.live
-  },
-  liveDot: {
-    width: '6px',
-    height: '6px',
-    backgroundColor: figmaColors.status.live,
-    borderRadius: figmaRadius.full,
-    animation: 'pulse 2s infinite'
-  },
-  quarterSeparator: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: `${figmaSpacing[4]} ${figmaSpacing[4]}`,
-    gap: figmaSpacing[4],
-    backgroundColor: 'rgba(96, 165, 250, 0.08)'
-  },
-  quarterLine: {
-    flex: 1,
-    height: '1px',
-    backgroundColor: figmaColors.accent.blue,
-    opacity: 0.3
-  },
-  quarterLabel: {
-    fontSize: figmaTypography.fontSize.sm,
-    fontWeight: figmaTypography.fontWeight.semibold,
-    color: figmaColors.accent.blueLight,
-    whiteSpace: 'nowrap' as const
-  },
-  feedContainer: {
-    display: 'flex',
-    flexDirection: 'column' as const
-  },
-  loadMore: {
-    padding: `${figmaSpacing[5]} ${figmaSpacing[4]}`,
-    textAlign: 'center' as const
-  },
-  loadMoreButton: {
-    backgroundColor: 'transparent',
-    border: `1px solid ${figmaColors.accent.blue}`,
-    color: figmaColors.accent.blue,
-    padding: `${figmaSpacing[3]} ${figmaSpacing[4]}`,
-    borderRadius: figmaRadius.md,
-    fontSize: figmaTypography.fontSize.sm,
-    fontWeight: figmaTypography.fontWeight.semibold,
-    cursor: 'pointer',
-    transition: 'all 0.2s ease'
-  }
-};
-
-// 🏀 NBA-LEVEL: Memoize for zero unnecessary re-renders
+/**
+ * Memoization: Only re-render if props change
+ */
 export default memo(PlayByPlayFeed, (prevProps, nextProps) => {
   return (
     prevProps.playByPlay.length === nextProps.playByPlay.length &&
     prevProps.game.homeScore === nextProps.game.homeScore &&
     prevProps.game.awayScore === nextProps.game.awayScore &&
-    prevProps.isLive === nextProps.isLive &&
-    prevProps.playByPlay.every((play, index) => 
-      play.id === nextProps.playByPlay[index]?.id
-    )
+    prevProps.isLive === nextProps.isLive
   );
 });

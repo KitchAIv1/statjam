@@ -1,16 +1,24 @@
+/**
+ * PlayEntry Component (MODERNIZED)
+ * 
+ * Individual play-by-play entry
+ * Single responsibility: Display one play
+ * Follows .cursorrules: <200 lines, uses reusable sub-components
+ * 
+ * @module PlayEntry
+ */
+
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
-import { 
-  formatGameTime, 
-  formatQuarter, 
-  getRelativeTime,
-  getEnhancedPlayDescription,
-  getScoringInfo,
-  getPlayIcon 
-} from '@/lib/utils/gameViewerUtils';
-import { figmaColors, figmaTypography, figmaSpacing, figmaRadius } from '@/lib/design/figmaTokens';
+import { getEnhancedPlayDescription, getScoringInfo } from '@/lib/utils/gameViewerUtils';
+import { ActionIcon } from './ActionIcon';
+import { PlayTimeStamp } from './PlayTimeStamp';
+import { PlayerAvatarCard } from './PlayerAvatarCard';
+import { PlayScoreCard } from './PlayScoreCard';
+import { Heart, MessageCircle, Share2 } from 'lucide-react';
 
 interface PlayerStats {
   fieldGoalMade: number;
@@ -26,15 +34,18 @@ interface PlayEntryProps {
   isLatest: boolean;
   teamAName: string;
   teamBName: string;
-  playerStats?: PlayerStats; // Optional player stats for the current play
-  playerPoints?: number; // Player points up to this play
+  playerStats?: PlayerStats;
+  playerPoints?: number;
 }
 
 /**
- * NBA-Style Individual Play Entry Component
+ * PlayEntry - NBA-style play display
  * 
- * Single play entry matching NBA.com feed design.
- * Shows player info, play description, timing, and score impact.
+ * Features:
+ * - Reusable sub-components
+ * - Tailwind styling
+ * - Framer Motion animations
+ * - Latest play indicator
  */
 const PlayEntry: React.FC<PlayEntryProps> = ({ 
   play, 
@@ -45,392 +56,139 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   playerPoints
 }) => {
 
-
-
-  /**
-   * Get team name from play data
-   */
-  const getTeamName = (): string => {
-    // Use the teamName from the play data (already resolved)
-    return play.teamName || 'Unknown Team';
-  };
-
-
-
-  /**
-   * Get field goal statistics for the player (made/attempts)
-   */
-  const getFieldGoalStats = (): string | null => {
-    if (!playerStats) return null;
-    
-    switch (play.statType) {
-      case 'field_goal':
-        return `${playerStats.fieldGoalMade}/${playerStats.fieldGoalAttempts}`;
-      case 'three_pointer':
-        return `${playerStats.threePointerMade}/${playerStats.threePointerAttempts}`;
-      case 'free_throw':
-        return `${playerStats.freeThrowMade}/${playerStats.freeThrowAttempts}`;
-      default:
-        return null;
-    }
-  };
-
-
-
   const scoringInfo = getScoringInfo(play.statType, play.modifier);
-  const teamName = getTeamName();
+  const teamName = play.teamName || 'Unknown Team';
   const isSubstitution = play.statType === 'substitution';
   const isTimeout = play.statType === 'timeout';
+  const isScoring = scoringInfo !== null;
+
+  // Determine card styling based on play type
+  const getCardClasses = () => {
+    if (isLatest) return 'bg-blue-500/10 border-l-4 border-l-blue-500';
+    if (isSubstitution) return 'bg-indigo-500/10 border-l-4 border-l-indigo-500';
+    if (isTimeout) return 'bg-yellow-500/10 border-l-4 border-l-yellow-500';
+    return 'bg-slate-800/50 border-l border-l-slate-700';
+  };
 
   return (
-    <div style={{
-      ...styles.container,
-      ...(isLatest ? styles.latestPlay : {}),
-      ...(isSubstitution ? styles.substitutionPlay : {}),
-      ...(isTimeout ? styles.timeoutPlay : {})
-    }}>
-      {/* Time and Quarter Info */}
-        <div style={styles.timeSection}>
-        <div style={styles.quarter}>
-          {formatQuarter(play.quarter)}
-        </div>
-        <div style={styles.gameTime}>
-          {formatGameTime(play.gameTimeMinutes, play.gameTimeSeconds)}
-        </div>
-        <div style={styles.relativeTime}>
-          {getRelativeTime(play.timestamp)}
-        </div>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={`
+        relative p-4 rounded-lg
+        ${getCardClasses()}
+        hover:bg-slate-800/70 transition-all
+        border-b border-slate-700/50
+      `}
+    >
+      {/* Time Stamp */}
+      <PlayTimeStamp
+        quarter={play.quarter}
+        gameTimeMinutes={play.gameTimeMinutes}
+        gameTimeSeconds={play.gameTimeSeconds}
+        timestamp={play.timestamp}
+      />
 
-      {/* Main Play Content */}
-      <div style={styles.playContent}>
+      {/* Main Content */}
+      <div className="flex items-start gap-4">
         {/* Player Avatar */}
-        <div style={styles.playerAvatar}>
-          <div style={styles.avatarCircle}>
-            {play.playerName ? play.playerName.charAt(0).toUpperCase() : '?'}
-          </div>
-          <div style={styles.teamIndicator}>
-            {teamName.substring(0, 3).toUpperCase()}
-          </div>
-        </div>
+        <PlayerAvatarCard
+          playerName={play.playerName || 'Unknown Player'}
+          teamName={teamName}
+          size="md"
+        />
 
         {/* Play Details */}
-        <div style={styles.playDetails}>
-                  <div style={{
-            ...styles.playDescription,
-            ...(isSubstitution ? styles.substitutionText : {}),
-            ...(isTimeout ? styles.timeoutText : {})
-          }}>
-          <span style={styles.playIcon}>{getPlayIcon(play.statType)}</span>
-          {getEnhancedPlayDescription(play.description, play.statType, play.modifier, playerStats)}
-          {/* NBA-Style Player Points Display */}
-          {typeof playerPoints === 'number' && scoringInfo && (
-            <span style={styles.playerPointsBadge}>({playerPoints} PTS)</span>
-          )}
-          {/* Timeout Duration Display */}
-          {isTimeout && play.modifier && (
-            <span style={{ fontSize: '12px', marginLeft: '8px', opacity: 0.8, color: '#fbbf24' }}>
-              ({play.modifier === 'full' ? '60s' : '30s'})
-            </span>
-          )}
-        </div>
-          
-          {/* Player and Team Info */}
-          <div style={styles.playerInfo}>
-            <span style={styles.playerName}>
-              {play.playerName || 'Unknown Player'}
-            </span>
-            <span style={styles.teamName}>
-              {teamName}
-            </span>
+        <div className="flex-1 space-y-2">
+          {/* Play Description with Icon */}
+          <div className="flex items-start gap-3">
+            <ActionIcon type={play.statType} size="md" animate={false} />
+            <div className="flex-1">
+              <p className="text-base font-bold text-foreground leading-tight">
+                {getEnhancedPlayDescription(play.description, play.statType, play.modifier, playerStats)}
+                {typeof playerPoints === 'number' && scoringInfo && (
+                  <span className="ml-2 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-sm font-bold">
+                    ({playerPoints} PTS)
+                  </span>
+                )}
+                {isTimeout && play.modifier && (
+                  <span className="ml-2 text-xs text-yellow-400 opacity-80">
+                    ({play.modifier === 'full' ? '60s' : '30s'})
+                  </span>
+                )}
+              </p>
+              
+              {/* Player & Team Info */}
+              <div className="flex items-center gap-3 mt-1 text-sm">
+                <span className="font-semibold text-blue-400">{play.playerName || 'Unknown Player'}</span>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-muted-foreground">{teamName}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Scoring or Non-scoring Badge */}
-          <div style={styles.badgeRow}>
+          {/* Scoring/Type Badge & Score */}
+          <div className="flex items-center justify-between gap-3">
+            {/* Badge */}
             {scoringInfo ? (
-              <span style={styles.scoringTextLarge}>{scoringInfo.description}</span>
+              <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-md text-sm font-bold uppercase tracking-wide">
+                {scoringInfo.description}
+              </span>
             ) : isSubstitution ? (
-              <span style={styles.substitutionText}>SUBSTITUTION</span>
+              <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-md text-xs font-bold uppercase tracking-wide">
+                SUBSTITUTION
+              </span>
             ) : (
-              <span style={styles.nonScoringText}>{play.statType?.toUpperCase()}</span>
+              <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-md text-xs font-semibold uppercase tracking-wide">
+                {play.statType?.replace(/_/g, ' ')}
+              </span>
             )}
-            <span style={styles.scoreAtPlay}>
-              {teamAName} {play.scoreAfter.home}, {teamBName} {play.scoreAfter.away}
-              {play.scoreAfter.home !== play.scoreAfter.away && (
-                <span style={styles.leadIndicator}>
-                  {' • '}
-                  {play.scoreAfter.home > play.scoreAfter.away 
-                    ? `+${play.scoreAfter.home - play.scoreAfter.away} ${teamAName.substring(0, 3).toUpperCase()}`
-                    : `+${play.scoreAfter.away - play.scoreAfter.home} ${teamBName.substring(0, 3).toUpperCase()}`
-                  }
-                </span>
-              )}
-            </span>
+            
+            {/* Score Card */}
+            <PlayScoreCard
+              teamAName={teamAName}
+              teamBName={teamBName}
+              scoreAfter={play.scoreAfter}
+              isScoring={isScoring}
+              animate={false}
+            />
           </div>
 
-          {/* Social Reactions Placeholder */}
-          <div style={styles.reactionsRow}>
-            <span style={styles.reactionItem}>❤️ 0</span>
-            <span style={styles.reactionItem}>💬 0</span>
-            <span style={styles.reactionItem}>↗️ Share</span>
+          {/* Reactions Row */}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <button className="flex items-center gap-1 hover:text-red-400 transition-colors">
+              <Heart className="w-3.5 h-3.5" /> 0
+            </button>
+            <button className="flex items-center gap-1 hover:text-blue-400 transition-colors">
+              <MessageCircle className="w-3.5 h-3.5" /> 0
+            </button>
+            <button className="flex items-center gap-1 hover:text-green-400 transition-colors">
+              <Share2 className="w-3.5 h-3.5" /> Share
+            </button>
           </div>
         </div>
-
-        {/* Score and Stats (removed bottom score display to avoid duplication) */}
       </div>
 
       {/* Latest Play Indicator */}
       {isLatest && (
-        <div style={styles.latestIndicator}>
-          <div style={styles.latestDot} />
-          <span style={styles.latestText}>Latest</span>
-        </div>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="absolute top-3 right-3 flex items-center gap-1.5"
+        >
+          <motion.div
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="w-2 h-2 bg-blue-500 rounded-full"
+          />
+          <span className="text-xs font-bold text-blue-400 uppercase tracking-wide">
+            Latest
+          </span>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
-};
-
-const styles = {
-  container: {
-    backgroundColor: figmaColors.secondary,
-    borderBottom: `1px solid ${figmaColors.border.primary}`,
-    padding: `${figmaSpacing[4]} ${figmaSpacing[4]}`,
-    transition: 'all 0.2s ease',
-    position: 'relative' as const
-  },
-  latestPlay: {
-    backgroundColor: 'rgba(96, 165, 250, 0.08)',
-    borderLeft: `4px solid ${figmaColors.accent.blue}`
-  },
-  timeSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[3],
-    marginBottom: figmaSpacing[3]
-  },
-  quarter: {
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.accent.blueLight,
-    backgroundColor: 'rgba(96, 165, 250, 0.12)',
-    padding: `${figmaSpacing[1]} ${figmaSpacing[2]}`,
-    borderRadius: figmaRadius.base,
-    letterSpacing: '0.05em'
-  },
-  gameTime: {
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.semibold,
-    color: figmaColors.text.primary
-  },
-  relativeTime: {
-    fontSize: figmaTypography.fontSize.xs,
-    color: figmaColors.text.muted,
-    marginLeft: 'auto'
-  },
-  playContent: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: figmaSpacing[4]
-  },
-  playerAvatar: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: figmaSpacing[1]
-  },
-  avatarCircle: {
-    width: '40px',
-    height: '40px',
-    borderRadius: figmaRadius.full,
-    backgroundColor: figmaColors.accent.purple,
-    color: figmaColors.text.primary,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: figmaTypography.fontSize.base,
-    fontWeight: figmaTypography.fontWeight.bold
-  },
-  teamIndicator: {
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.semibold,
-    color: figmaColors.text.muted
-  },
-  playDetails: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: figmaSpacing[2]
-  },
-  playDescription: {
-    fontSize: figmaTypography.fontSize.lg,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.text.primary,
-    lineHeight: '1.4',
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[2]
-  },
-  playIcon: {
-    fontSize: '18px'
-  },
-  playerInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[3]
-  },
-  playerName: {
-    fontSize: figmaTypography.fontSize.sm,
-    fontWeight: figmaTypography.fontWeight.semibold,
-    color: figmaColors.accent.blueLight
-  },
-  teamName: {
-    fontSize: figmaTypography.fontSize.xs,
-    color: figmaColors.text.muted
-  },
-  scoringImpact: {
-    display: 'flex',
-    alignItems: 'center'
-  },
-  badgeRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[2]
-  },
-  scoringText: {
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.semibold,
-    color: figmaColors.status.success,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    padding: `${figmaSpacing[0.5]} ${figmaSpacing[2]}`,
-    borderRadius: figmaRadius.base
-  },
-  scoringTextLarge: {
-    fontSize: figmaTypography.fontSize.lg,
-    fontWeight: figmaTypography.fontWeight.extrabold,
-    color: figmaColors.status.success,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    padding: `${figmaSpacing[1]} ${figmaSpacing[3]}`,
-    borderRadius: figmaRadius.base
-  },
-  nonScoringText: {
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.semibold,
-    color: figmaColors.accent.blueLight,
-    backgroundColor: 'rgba(96, 165, 250, 0.12)',
-    padding: `${figmaSpacing[0.5]} ${figmaSpacing[2]}`,
-    borderRadius: figmaRadius.base
-  },
-  scoreAtPlay: {
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.semibold,
-    color: figmaColors.text.muted
-  },
-  leadIndicator: {
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.accent.blueLight
-  },
-  playerPointsBadge: {
-    fontSize: figmaTypography.fontSize.sm,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.accent.blueLight,
-    backgroundColor: 'rgba(96, 165, 250, 0.15)',
-    padding: `${figmaSpacing[0.5]} ${figmaSpacing[2]}`,
-    borderRadius: figmaRadius.base,
-    marginLeft: figmaSpacing[2],
-    letterSpacing: '0.05em'
-  },
-  playerPointsContainer: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'flex-end',
-    marginLeft: 'auto'
-  },
-  playerPointsValue: {
-    fontSize: '1.75rem', // ~x3 of base size visually
-    lineHeight: '1',
-    fontWeight: figmaTypography.fontWeight.extrabold,
-    color: figmaColors.text.primary,
-  },
-  playerPointsLabel: {
-    marginTop: '2px',
-    fontSize: figmaTypography.fontSize.xs,
-    letterSpacing: '0.06em',
-    color: figmaColors.text.muted,
-  },
-  statsSection: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'flex-end',
-    gap: figmaSpacing[1]
-  },
-  currentScore: {
-    fontSize: figmaTypography.fontSize.base,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.text.primary
-  },
-  pointsAdded: {
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.status.success
-  },
-  latestIndicator: {
-    position: 'absolute' as const,
-    top: '8px',
-    right: '20px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[1]
-  },
-  latestDot: {
-    width: '6px',
-    height: '6px',
-    backgroundColor: figmaColors.accent.blue,
-    borderRadius: figmaRadius.full,
-    animation: 'pulse 2s infinite'
-  },
-  latestText: {
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.accent.blue
-  },
-  reactionsRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[4],
-    marginTop: figmaSpacing[2],
-    color: figmaColors.text.muted
-  },
-  reactionItem: {
-    fontSize: figmaTypography.fontSize.xs,
-    cursor: 'pointer'
-  },
-  substitutionPlay: {
-    backgroundColor: 'rgba(99, 102, 241, 0.08)', // Indigo tint for substitutions
-    borderLeft: `3px solid ${figmaColors.accent.blue}`
-  },
-  timeoutPlay: {
-    backgroundColor: 'rgba(251, 191, 36, 0.1)', // Amber tint for timeouts
-    borderLeft: '4px solid #fbbf24'
-  },
-  substitutionText: {
-    fontSize: figmaTypography.fontSize.sm,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.accent.blue,
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
-    padding: `${figmaSpacing[1]} ${figmaSpacing[2]}`,
-    borderRadius: figmaRadius.base,
-    letterSpacing: '0.05em'
-  },
-  timeoutText: {
-    fontSize: figmaTypography.fontSize.sm,
-    fontWeight: '600' as const,
-    color: '#fbbf24', // Amber text for timeouts
-    backgroundColor: 'rgba(251, 191, 36, 0.12)',
-    padding: `${figmaSpacing[1]} ${figmaSpacing[2]}`,
-    borderRadius: figmaRadius.base,
-    letterSpacing: '0.05em'
-  }
 };
 
 export default PlayEntry;

@@ -1,13 +1,20 @@
+/**
+ * GameHeader Component (MODERNIZED)
+ * 
+ * NBA-style game header with scores and status
+ * Single responsibility: Display game overview
+ * Follows .cursorrules: <200 lines, reusable components
+ * 
+ * @module GameHeader
+ */
+
 'use client';
 
 import React from 'react';
-import { 
-  formatGameTime, 
-  formatGameDate, 
-  getGameStatusText, 
-  getStatusColor 
-} from '@/lib/utils/gameViewerUtils';
-import { figmaColors, figmaTypography, figmaSpacing, figmaRadius } from '@/lib/design/figmaTokens';
+import { motion } from 'framer-motion';
+import { formatGameDate } from '@/lib/utils/gameViewerUtils';
+import { StatusBadge } from './StatusBadge';
+import { Shield, Clock, AlertCircle } from 'lucide-react';
 
 interface GameHeaderProps {
   game?: {
@@ -33,237 +40,153 @@ interface GameHeaderProps {
 }
 
 /**
- * NBA-Style Game Header Component
+ * GameHeader - Game overview with scores
  * 
- * Premium header showing live scores, team info, and game status.
- * Inspired by NBA.com game headers with clean, professional design.
+ * Features:
+ * - Live status badge
+ * - Team scores
+ * - Game stats bar
+ * - Responsive layout
  */
-const GameHeader: React.FC<GameHeaderProps> = ({ game, isLive, lastUpdated, isMobile = false }) => {
-  // Safety check to prevent render errors
-  if (!game) {
-    return null;
-  }
+const GameHeader: React.FC<GameHeaderProps> = ({ game, isLive, isMobile = false }) => {
+  
+  if (!game) return null;
 
   return (
-    <div style={styles.container}>
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="sticky top-0 z-100 bg-slate-900 border-b border-slate-700 shadow-xl"
+    >
       {/* Status Bar */}
-      <div style={styles.statusBar}>
-        <div style={{...styles.statusIndicator, backgroundColor: getStatusColor(isLive, game.status)}} />
-        <span style={styles.statusText}>
-          {isLive ? 'LIVE' : getGameStatusText(game.status, game.quarter, game.startTime)}
-        </span>
-        <span style={styles.gameDate}>
+      <div className="flex items-center justify-between px-6 py-3 bg-slate-800 border-b border-slate-700">
+        <StatusBadge
+          status={game.status}
+          isLive={isLive}
+          size="md"
+        />
+        <span className="text-xs text-muted-foreground">
           {formatGameDate(game.startTime)}
         </span>
       </div>
 
-      {/* Main Header */}
-      <div style={styles.header}>
+      {/* Main Header - Scores */}
+      <div className="flex items-center justify-between px-4 sm:px-8 py-6 max-w-7xl mx-auto">
         {/* Away Team */}
-        <div style={{...styles.teamContainer, justifyContent: 'flex-end'}}>
-          <div style={styles.teamInfo}>
-            <div style={styles.teamDetails}>
-              <div style={styles.teamScore}>{game.awayScore}</div>
-              <div style={styles.teamName}>{game.teamBName}</div>
-            </div>
-            <div style={styles.teamLogo}>
-              {game.teamBName.charAt(0).toUpperCase()}
-            </div>
-          </div>
-        </div>
+        <TeamDisplay
+          teamName={game.teamBName}
+          score={game.awayScore}
+          isLeading={game.awayScore > game.homeScore}
+          side="right"
+        />
 
-        {/* Center - Status Only (No Time Clock) */}
-        <div style={styles.centerSection}>
-          <div style={styles.gameStatus}>{getGameStatusText(game.status, game.quarter, game.startTime)}</div>
+        {/* Center - Quarter & Status */}
+        <div className="flex flex-col items-center gap-2 min-w-[120px] text-center">
+          <div className="text-xl font-bold text-blue-400">
+            {game.quarter <= 4 ? `Q${game.quarter}` : `OT${game.quarter - 4}`}
+          </div>
           {game.status === 'completed' && (
-            <div style={styles.finalStatus}>FINAL</div>
+            <div className="text-2xl font-extrabold text-green-500">
+              FINAL
+            </div>
           )}
         </div>
 
         {/* Home Team */}
-        <div style={{...styles.teamContainer, justifyContent: 'flex-start'}}>
-          <div style={styles.teamInfo}>
-            <div style={styles.teamLogo}>
-              {game.teamAName.charAt(0).toUpperCase()}
-            </div>
-            <div style={styles.teamDetails}>
-              <div style={styles.teamScore}>{game.homeScore}</div>
-              <div style={styles.teamName}>{game.teamAName}</div>
-            </div>
-          </div>
-        </div>
+        <TeamDisplay
+          teamName={game.teamAName}
+          score={game.homeScore}
+          isLeading={game.homeScore > game.awayScore}
+          side="left"
+        />
       </div>
 
       {/* Stats Bar */}
-      <div style={styles.statsBar}>
-        <div style={styles.statItem}>
-          <span style={styles.statLabel}>Quarter:</span>
-          <span style={styles.statValue}>
-            {game.quarter <= 4 ? `Q${game.quarter}` : `OT${game.quarter - 4}`}
-          </span>
-        </div>
+      <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 px-5 py-4 bg-slate-800 border-t border-slate-700">
+        <StatItem
+          icon={Clock}
+          label="Clock"
+          value={game.isClockRunning ? 'RUNNING' : 'STOPPED'}
+          color={game.isClockRunning ? 'text-green-400' : 'text-gray-400'}
+        />
+        <StatItem
+          icon={AlertCircle}
+          label="Fouls"
+          value={`${game.teamAFouls || 0} - ${game.teamBFouls || 0}`}
+        />
+        <StatItem
+          icon={Clock}
+          label="Timeouts"
+          value={`${game.teamATimeouts || 7} - ${game.teamBTimeouts || 7}`}
+        />
+      </div>
+    </motion.div>
+  );
+};
 
-        <div style={styles.statItem}>
-          <span style={styles.statLabel}>Status:</span>
-          <span style={styles.statValue}>
-            {game.isClockRunning ? 'RUNNING' : 'STOPPED'}
-          </span>
+/**
+ * TeamDisplay - Individual team score display
+ * Reusable sub-component
+ */
+function TeamDisplay({ 
+  teamName, 
+  score, 
+  isLeading, 
+  side 
+}: { 
+  teamName: string; 
+  score: number; 
+  isLeading: boolean; 
+  side: 'left' | 'right';
+}) {
+  const flexDirection = side === 'left' ? 'flex-row' : 'flex-row-reverse';
+  
+  return (
+    <div className={`flex ${flexDirection} items-center gap-4 min-w-[160px]`}>
+      {/* Team Logo */}
+      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xl font-bold shadow-lg">
+        {teamName.charAt(0).toUpperCase()}
+      </div>
+      
+      {/* Team Info */}
+      <div className={`flex flex-col ${side === 'right' ? 'items-end' : 'items-start'}`}>
+        <div className={`text-3xl font-extrabold ${isLeading ? 'text-foreground' : 'text-muted-foreground'}`}>
+          {score}
         </div>
-
-        <div style={styles.statItem}>
-          <span style={styles.statLabel}>Team Fouls:</span>
-          <span style={styles.statValue}>
-            {game.teamAFouls || 0} - {game.teamBFouls || 0}
-          </span>
-        </div>
-
-        <div style={styles.statItem}>
-          <span style={styles.statLabel}>Timeouts:</span>
-          <span style={styles.statValue}>
-            {game.teamATimeouts || 7} - {game.teamBTimeouts || 7}
-          </span>
+        <div className="text-lg font-bold text-foreground">
+          {teamName}
         </div>
       </div>
     </div>
   );
-};
+}
 
-const styles = {
-  container: {
-    backgroundColor: figmaColors.secondary,
-    borderBottom: `1px solid ${figmaColors.border.primary}`,
-    position: 'sticky' as const,
-    top: 0,
-    zIndex: 100,
-    fontFamily: figmaTypography.fontFamily.primary
-  },
-  statusBar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[3],
-    padding: `${figmaSpacing[3]} ${figmaSpacing[5]}`,
-    borderBottom: `1px solid ${figmaColors.border.primary}`,
-    backgroundColor: figmaColors.primary
-  },
-  statusIndicator: {
-    width: '8px',
-    height: '8px',
-    borderRadius: figmaRadius.full,
-    animation: 'pulse 2s infinite'
-  },
-  statusText: {
-    fontSize: figmaTypography.fontSize.xs,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.text.primary,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em'
-  },
-  gameDate: {
-    fontSize: figmaTypography.fontSize.xs,
-    color: figmaColors.text.muted,
-    marginLeft: 'auto'
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: `${figmaSpacing[6]} ${figmaSpacing[4]}`,
-    maxWidth: '64rem',
-    margin: '0 auto',
-    backgroundColor: figmaColors.secondary
-  },
-  teamContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[4],
-    minWidth: '160px'
-  },
-  teamInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[4]
-  },
-  teamLogo: {
-    width: '48px',
-    height: '48px',
-    borderRadius: figmaRadius.lg,
-    backgroundColor: figmaColors.accent.purple,
-    color: figmaColors.text.primary,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: figmaTypography.fontSize.xl,
-    fontWeight: figmaTypography.fontWeight.bold,
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-  },
-  teamDetails: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: figmaSpacing[1]
-  },
-  teamName: {
-    fontSize: figmaTypography.fontSize.lg,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.text.primary
-  },
-  teamRecord: {
-    fontSize: figmaTypography.fontSize.xs,
-    color: figmaColors.text.muted
-  },
-  teamScore: {
-    fontSize: figmaTypography.fontSize['2xl'],
-    fontWeight: figmaTypography.fontWeight.extrabold,
-    color: figmaColors.text.primary,
-    minWidth: '60px',
-    textAlign: 'center' as const
-  },
-  centerSection: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: figmaSpacing[2],
-    minWidth: '120px',
-    textAlign: 'center' as const
-  },
-  gameStatus: {
-    fontSize: figmaTypography.fontSize.xl,
-    fontWeight: figmaTypography.fontWeight.bold,
-    color: figmaColors.accent.blueLight
-  },
-  gameTime: {
-    fontSize: figmaTypography.fontSize.sm,
-    fontWeight: figmaTypography.fontWeight.semibold,
-    color: figmaColors.text.secondary
-  },
-  finalStatus: {
-    fontSize: figmaTypography.fontSize['2xl'],
-    fontWeight: figmaTypography.fontWeight.extrabold,
-    color: figmaColors.status.success
-  },
-  statsBar: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: figmaSpacing[8],
-    padding: `${figmaSpacing[4]} ${figmaSpacing[5]}`,
-    backgroundColor: figmaColors.primary,
-    borderTop: `1px solid ${figmaColors.border.primary}`
-  },
-  statItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: figmaSpacing[2]
-  },
-  statLabel: {
-    fontSize: figmaTypography.fontSize.xs,
-    color: figmaColors.text.muted,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em'
-  },
-  statValue: {
-    fontSize: figmaTypography.fontSize.sm,
-    fontWeight: figmaTypography.fontWeight.semibold,
-    color: figmaColors.text.primary
-  }
-};
+/**
+ * StatItem - Individual stat display
+ * Reusable sub-component
+ */
+function StatItem({ 
+  icon: Icon, 
+  label, 
+  value, 
+  color = 'text-foreground' 
+}: { 
+  icon: React.ElementType; 
+  label: string; 
+  value: string; 
+  color?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="w-4 h-4 text-muted-foreground" />
+      <span className="text-xs uppercase tracking-wide text-muted-foreground">
+        {label}:
+      </span>
+      <span className={`text-sm font-semibold ${color}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
 
 export default GameHeader;

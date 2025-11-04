@@ -1,0 +1,94 @@
+/**
+ * PlayerAvatarCard Component
+ * 
+ * Displays player avatar with team indicator
+ * Single responsibility: Show player visual identity
+ * Follows .cursorrules: <200 lines, single purpose
+ * 
+ * @module PlayerAvatarCard
+ */
+
+'use client';
+
+import React from 'react';
+import { motion } from 'framer-motion';
+import { User } from 'lucide-react';
+
+interface PlayerAvatarCardProps {
+  playerName: string;
+  teamName: string;
+  size?: 'sm' | 'md' | 'lg';
+  animate?: boolean;
+}
+
+/**
+ * PlayerAvatarCard - Player avatar display
+ * 
+ * Features:
+ * - Circular avatar with initial
+ * - Team badge
+ * - Responsive sizing
+ * - Optional animation
+ */
+export const PlayerAvatarCard: React.FC<PlayerAvatarCardProps> = ({ 
+  playerName,
+  teamName,
+  size = 'md',
+  animate = true
+}) => {
+  
+  const initial = playerName ? playerName.charAt(0).toUpperCase() : '?';
+  const teamInitial = teamName.substring(0, 3).toUpperCase();
+  
+  const sizeClasses = {
+    sm: 'w-8 h-8 text-sm',
+    md: 'w-10 h-10 text-base',
+    lg: 'w-12 h-12 text-lg'
+  };
+
+  const badgeSizes = {
+    sm: 'text-[10px] px-1',
+    md: 'text-xs px-1.5',
+    lg: 'text-xs px-2'
+  };
+
+  const Component = animate ? motion.div : 'div';
+  const animationProps = animate ? {
+    initial: { scale: 0, rotate: -180 },
+    animate: { scale: 1, rotate: 0 },
+    transition: { type: 'spring', stiffness: 260, damping: 20 }
+  } : {};
+
+  return (
+    <Component
+      {...animationProps}
+      className="flex flex-col items-center gap-1"
+    >
+      {/* Avatar Circle */}
+      <div className={`
+        ${sizeClasses[size]}
+        rounded-full
+        bg-gradient-to-br from-purple-500 to-blue-500
+        flex items-center justify-center
+        font-bold text-white
+        shadow-lg
+        ring-2 ring-white/20
+      `}>
+        {initial === '?' ? <User className="w-1/2 h-1/2" /> : initial}
+      </div>
+      
+      {/* Team Badge */}
+      <div className={`
+        ${badgeSizes[size]}
+        bg-slate-700/80 backdrop-blur-sm
+        text-slate-300
+        rounded
+        font-semibold
+        tracking-tight
+      `}>
+        {teamInitial}
+      </div>
+    </Component>
+  );
+};
+
