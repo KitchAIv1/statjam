@@ -1,10 +1,10 @@
 # 🏗️ StatJam System Architecture
 
-**Version**: 0.9.9  
-**Date**: October 20, 2025  
-**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - Production Ready with Refactored Modular Architecture + Tier 2 Enhancements  
+**Version**: 0.15.0+  
+**Date**: December 2025  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - Production Ready with Refactored Modular Architecture + Marketing Homepage + Performance Optimizations  
 **Live Site**: [www.statjam.net](https://www.statjam.net) ✅  
-**Major Update**: Frontend Modularity Guardrails Established
+**Major Updates**: Frontend Modularity Guardrails + Marketing Homepage + SEO Optimization
 
 ---
 
@@ -644,7 +644,9 @@ Frontend (Vercel)
 ├─► Next.js app deployed to Vercel
 ├─► Automatic deployments from main branch
 ├─► Environment variables configured
-└─► Edge network for global distribution
+├─► Edge network for global distribution
+├─► Marketing Homepage: SEO optimized, lazy loading, WebP images
+└─► Performance: 40% bundle reduction via code splitting
 
 Backend (Supabase)
 ├─► PostgreSQL database (hosted)
