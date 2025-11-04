@@ -91,10 +91,10 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
             <div className="text-center mb-12">
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
                 <span className="text-orange-500">Live</span> Tournament Action
-                <span className="hidden sm:inline"> — Stream Every Stat, Every Moment</span>
+                <span className="hidden sm:inline"> — Real‑Time Updates, No Refresh</span>
               </h2>
               <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-                Follow real-time games from tournaments worldwide. See how StatJam tracks every play, score, and stat as it happens.
+                Watch scores, clocks, and play‑by‑play update in under 3 seconds — powered by WebSockets with smart fallback.
               </p>
               {actualGames && actualGames.length === 0 && (
                 <p className="text-base sm:text-lg text-gray-500 max-w-3xl mx-auto mt-2">

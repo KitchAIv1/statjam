@@ -36,13 +36,13 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
                   StatJam
                 </h1>
                 <div className="text-lg sm:text-xl lg:text-2xl opacity-90 leading-relaxed">
-                  Your Courtside Command Center
+                  NBA‑Level Stats. Real‑Time. Zero Friction.
                 </div>
                 <div className="text-base sm:text-lg lg:text-xl opacity-80 leading-relaxed mt-2">
-                  Track every point, rebound, and clutch moment — live, anywhere.
+                  Automation handles clock, possession, and sequences — you focus on the game.
                 </div>
                 <div className="text-sm sm:text-base lg:text-lg opacity-70 leading-relaxed mt-1">
-                  For organizers, players, and fans who want real stats that feel pro.
+                  Built for organizers, stat admins, coaches, players, and fans.
                 </div>
               </div>
             </div>
@@ -55,7 +55,7 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
                   onClick={handleGetStarted}
                   className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 text-lg font-semibold flex-1"
                 >
-                  Get Started
+                  Start Tracking Like the Pros
                 </Button>
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
@@ -69,7 +69,7 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
                   onClick={onViewTournament}
                   className="border-2 border-orange-400 bg-transparent text-orange-400 hover:bg-orange-400 hover:text-white px-8 py-4 text-lg font-semibold transition-all duration-300 flex-1 h-auto rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
                 >
-                  Explore Tournaments
+                  Build Your Player Profile
                 </Button>
               </div>
             </div>
