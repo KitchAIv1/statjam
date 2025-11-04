@@ -415,6 +415,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       const phase3Time = performance.now() - phase3Start;
       console.log(`⚡ Phase 3 (players): ${phase3Time.toFixed(0)}ms`);
 
+      // 🔍 DEBUG: Check if custom_player_id is present in raw stats
+      console.log('🔍 CRITICAL: First raw stat BEFORE enrichment:', JSON.stringify(gameStats[0], null, 2));
+
       // Enrich stats with player names (check both player_id and custom_player_id)
       gameStats = gameStats.map(stat => {
         const statWithCustomId = stat as any;
@@ -422,6 +425,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         const playerName = playersMap.get(playerId) || `Player ${playerId?.substring(0, 8)}`;
         return {
           ...stat,
+          custom_player_id: statWithCustomId.custom_player_id, // ✅ FIX: Explicitly preserve custom_player_id
           player_name: playerName
         };
       });
@@ -444,6 +448,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         tournament_name: tournamentName
       };
 
+      // 🔍 DEBUG: Check first stat AFTER enrichment
+      console.log('🔍 CRITICAL: First enriched stat AFTER adding player_name:', JSON.stringify(gameStats[0], null, 2));
+
       // 8. Transform stats, substitutions, AND timeouts into play-by-play entries
       const playByPlayEntries = transformStatsToPlays(
         gameStats,
@@ -454,6 +461,18 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         gameSubstitutions,
         gameTimeouts
       );
+
+      // 🔍 CRITICAL DEBUG: Expand the first play to see ALL fields
+      console.log('🔍 CRITICAL: First play FULL OBJECT:', JSON.stringify(playByPlayEntries[0], null, 2));
+      console.log('🔍 CRITICAL: First 3 plays summary:', playByPlayEntries.slice(0, 3).map(p => ({
+        id: p.id,
+        playerId: p.playerId,
+        playerName: p.playerName,
+        description: p.description,
+        time: p.time,
+        quarter: p.quarter,
+        teamName: p.teamName
+      })));
 
       const totalTime = performance.now() - perfStart;
       console.log(`⚡ TOTAL FETCH TIME: ${totalTime.toFixed(0)}ms (Phase1: ${phase1Time.toFixed(0)}ms | Phase2: ${phase2Time.toFixed(0)}ms | Phase3: ${phase3Time.toFixed(0)}ms)`);
