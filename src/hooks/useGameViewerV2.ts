@@ -165,7 +165,7 @@ function transformStatsToPlays(
       gameTimeSeconds: stat.game_time_seconds || 0, // ✅ Required by PlayEntry
       description,
       statType: stat.stat_type,
-      playerId: stat.player_id,
+      playerId: stat.player_id || stat.custom_player_id || '', // ✅ FIX: Support custom players
       playerName,
       teamId: stat.team_id || '',
       teamName,
