@@ -85,15 +85,15 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
   ];
 
   return (
-    <section id="live-games" className="py-20 bg-white">
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">
+    <section id="live-games" className="py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
       {/* Header */}
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
                 <span className="text-orange-500">Live</span> Tournament Action
                 <span className="hidden sm:inline"> — Real‑Time Updates, No Refresh</span>
               </h2>
-              <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
                 Watch scores, clocks, and play‑by‑play update in under 3 seconds — powered by WebSockets with smart fallback.
               </p>
               {actualGames && actualGames.length === 0 && (

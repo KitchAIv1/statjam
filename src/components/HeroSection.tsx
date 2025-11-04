@@ -31,17 +31,17 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left side - Logo and tagline */}
             <div className="text-white">
-              <div className="mb-8">
-                <h1 className="text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
+              <div className="mb-10">
+                <h1 className="text-6xl lg:text-7xl font-bold mb-8 bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
                   StatJam
                 </h1>
-                <div className="text-lg sm:text-xl lg:text-2xl opacity-90 leading-relaxed">
+                <div className="text-2xl sm:text-3xl lg:text-4xl opacity-95 leading-tight mb-4">
                   NBA‑Level Stats. Real‑Time. Zero Friction.
                 </div>
-                <div className="text-base sm:text-lg lg:text-xl opacity-80 leading-relaxed mt-2">
+                <div className="text-lg sm:text-xl lg:text-2xl opacity-85 leading-relaxed mb-3">
                   Automation handles clock, possession, and sequences — you focus on the game.
                 </div>
-                <div className="text-sm sm:text-base lg:text-lg opacity-70 leading-relaxed mt-1">
+                <div className="text-base sm:text-lg lg:text-xl opacity-75 leading-relaxed">
                   Built for organizers, stat admins, coaches, players, and fans.
                 </div>
               </div>
@@ -53,23 +53,16 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
                 <Button 
                   size="lg" 
                   onClick={handleGetStarted}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 text-lg font-semibold flex-1"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-10 py-5 text-xl font-bold shadow-2xl shadow-orange-500/30 hover:shadow-orange-600/40 transform hover:scale-105 transition-all duration-200"
                 >
                   Start Tracking Like the Pros
                 </Button>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
                   onClick={onWatchLive}
-                  className="border-2 border-white bg-transparent text-white hover:bg-white hover:text-gray-900 px-8 py-4 text-lg font-semibold transition-all duration-300 flex-1 h-auto rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
+                  variant="outline"
+                  className="border-2 border-white/80 text-white hover:bg-white/20 px-8 py-5 text-lg backdrop-blur-sm transition-all duration-200"
                 >
-                  Watch Live
-                </Button>
-                <Button 
-                  onClick={onViewTournament}
-                  className="border-2 border-orange-400 bg-transparent text-orange-400 hover:bg-orange-400 hover:text-white px-8 py-4 text-lg font-semibold transition-all duration-300 flex-1 h-auto rounded-md inline-flex items-center justify-center gap-2 whitespace-nowrap disabled:pointer-events-none disabled:opacity-50"
-                >
-                  Build Your Player Profile
+                  Watch Live Games
                 </Button>
               </div>
             </div>
@@ -80,10 +73,9 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
       {/* Bottom Tagline - Separated section */}
       <div className="relative z-10 px-6 lg:px-8 pb-16">
         <div className="max-w-4xl mx-auto text-center text-white">
-          <p className="text-lg lg:text-xl leading-relaxed">
-            <span className="font-semibold text-orange-300">StatJam doesn't just keep score — it builds your basketball legacy.</span>
-            <br className="hidden sm:block" />
-            <span className="hidden sm:inline"> </span>
+          <p className="text-lg sm:text-xl lg:text-2xl leading-relaxed">
+            <span className="font-bold text-orange-300">StatJam doesn't just keep score — it builds your basketball legacy.</span>
+            {" "}
             Every shot, assist, and highlight becomes part of your permanent record.
           </p>
         </div>

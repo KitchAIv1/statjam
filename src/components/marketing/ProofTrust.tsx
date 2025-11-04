@@ -8,14 +8,17 @@ export function ProofTrust() {
   ];
 
   return (
-    <section className="py-10 bg-white">
+    <section className="py-16 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-center gap-4">
+        <div className="text-center mb-8">
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Trusted Technology</h3>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-6">
           {badges.map((b, idx) => (
-            <div key={idx} className="px-4 py-2 rounded-full border border-gray-200 bg-gray-50 text-gray-800">
-              <span className="font-semibold">{b.label}</span>
-              <span className="mx-2 text-gray-400">•</span>
-              <span className="text-gray-600">{b.desc}</span>
+            <div key={idx} className="px-6 py-3 rounded-full border-2 border-orange-200 bg-white text-gray-900 shadow-md hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <span className="font-bold text-base">{b.label}</span>
+              <span className="mx-2 text-orange-400">•</span>
+              <span className="text-gray-700">{b.desc}</span>
             </div>
           ))}
         </div>
