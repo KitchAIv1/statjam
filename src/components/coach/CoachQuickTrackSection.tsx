@@ -54,7 +54,7 @@ export function CoachQuickTrackSection({ teams, loading, error }: CoachQuickTrac
     title: {
       fontSize: '1.5rem',
       fontWeight: '600',
-      color: '#ffffff',
+      color: '#18181b', // Dark text for light background
       marginBottom: '8px'
     },
     subtitle: {
@@ -69,8 +69,8 @@ export function CoachQuickTrackSection({ teams, loading, error }: CoachQuickTrac
       gap: '20px'
     },
     teamCard: {
-      background: 'rgba(255, 255, 255, 0.05)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      background: 'rgba(255, 255, 255, 0.8)', // More opaque white background
+      border: '1px solid rgba(0, 0, 0, 0.1)', // Darker border for contrast
       borderRadius: '12px',
       padding: '20px',
       backdropFilter: 'blur(10px)',
@@ -85,7 +85,7 @@ export function CoachQuickTrackSection({ teams, loading, error }: CoachQuickTrac
     teamName: {
       fontSize: '1.125rem',
       fontWeight: '600',
-      color: '#ffffff',
+      color: '#18181b', // Dark text for light background
       marginBottom: '8px'
     },
     teamMeta: {
@@ -111,8 +111,8 @@ export function CoachQuickTrackSection({ teams, loading, error }: CoachQuickTrac
     emptyState: {
       textAlign: 'center' as const,
       padding: '60px 20px',
-      background: 'rgba(255, 255, 255, 0.05)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      background: 'rgba(255, 255, 255, 0.8)', // More opaque white background
+      border: '1px solid rgba(0, 0, 0, 0.1)', // Darker border for contrast
       borderRadius: '12px',
       backdropFilter: 'blur(10px)'
     },
@@ -125,7 +125,7 @@ export function CoachQuickTrackSection({ teams, loading, error }: CoachQuickTrac
     emptyTitle: {
       fontSize: '1.25rem',
       fontWeight: '600',
-      color: '#ffffff',
+      color: '#18181b', // Dark text for light background
       marginBottom: '8px'
     },
     emptyDesc: {

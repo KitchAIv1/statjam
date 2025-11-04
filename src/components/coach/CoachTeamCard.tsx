@@ -194,10 +194,22 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
             </Badge>
             
             {team.tournament_id ? (
-              <Badge variant="outline" className="gap-1">
-                <Trophy className="w-3 h-3" />
-                Tournament Linked
-              </Badge>
+              team.approval_status === 'pending' ? (
+                <Badge variant="outline" className="gap-1 bg-orange-50 text-orange-700 border-orange-200">
+                  <Trophy className="w-3 h-3" />
+                  Pending Approval
+                </Badge>
+              ) : team.approval_status === 'rejected' ? (
+                <Badge variant="outline" className="gap-1 bg-red-50 text-red-700 border-red-200">
+                  <Trophy className="w-3 h-3" />
+                  Request Denied
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="gap-1 bg-green-50 text-green-700 border-green-200">
+                  <Trophy className="w-3 h-3" />
+                  Tournament Linked
+                </Badge>
+              )
             ) : (
               <Badge variant="secondary" className="gap-1">
                 Independent Team

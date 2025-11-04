@@ -317,8 +317,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         gameInfo.tournament_id
           ? fetch(`${supabaseUrl}/rest/v1/tournaments?select=name&id=eq.${gameInfo.tournament_id}`, { headers })
           : Promise.resolve(null),
-        // Stats
-        fetch(`${supabaseUrl}/rest/v1/game_stats?select=id,game_id,player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at&game_id=eq.${gameId}&order=created_at.desc`, { headers }),
+        // Stats (include custom_player_id for custom players)
+        fetch(`${supabaseUrl}/rest/v1/game_stats?select=id,game_id,player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at&game_id=eq.${gameId}&order=created_at.desc`, { headers }),
         // Substitutions
         fetch(`${supabaseUrl}/rest/v1/game_substitutions?select=*&game_id=eq.${gameId}&order=created_at.asc`, { headers }),
         // Timeouts
@@ -371,41 +371,59 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         console.error('❌ useGameViewerV2: Failed to fetch timeouts:', timeoutsResponse.status);
       }
 
-      // ⚡ PHASE 3: Fetch ALL player names in parallel (for stats + subs)
+      // ⚡ PHASE 3: Fetch ALL player names in parallel (for stats + subs, including custom players)
       const phase3Start = performance.now();
       const statsPlayerIds = [...new Set(gameStats.map(s => s.player_id).filter(Boolean))];
+      const statsCustomPlayerIds = [...new Set((gameStats as any).map((s: any) => s.custom_player_id).filter(Boolean))];
       const subPlayerIds = [...new Set([
         ...gameSubstitutions.map(s => s.player_in_id).filter(Boolean),
         ...gameSubstitutions.map(s => s.player_out_id).filter(Boolean)
       ])];
       const allPlayerIds = [...new Set([...statsPlayerIds, ...subPlayerIds])];
 
-      let playersMap = new Map<string, string>();
-      if (allPlayerIds.length > 0) {
-        const playersResponse = await fetch(
-          `${supabaseUrl}/rest/v1/users?select=id,name,email&id=in.(${allPlayerIds.join(',')})`,
-          { headers }
-        );
+      // ✅ FIX: Query both users AND custom_players tables in parallel
+      const [regularPlayersResponse, customPlayersResponse] = await Promise.all([
+        // Regular players from users table
+        allPlayerIds.length > 0 
+          ? fetch(`${supabaseUrl}/rest/v1/users?select=id,name,email&id=in.(${allPlayerIds.join(',')})`, { headers })
+          : Promise.resolve(null),
+        // Custom players from custom_players table
+        statsCustomPlayerIds.length > 0
+          ? fetch(`${supabaseUrl}/rest/v1/custom_players?select=id,name&id=in.(${statsCustomPlayerIds.join(',')})`, { headers })
+          : Promise.resolve(null)
+      ]);
 
-        if (playersResponse.ok) {
-          const playersData = await playersResponse.json();
-          playersMap = new Map(
-            playersData.map((p: any) => [
-              p.id,
-              p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`
-            ])
-          );
-        }
+      // Build combined players map
+      let playersMap = new Map<string, string>();
+      
+      // Add regular players
+      if (regularPlayersResponse && regularPlayersResponse.ok) {
+        const playersData = await regularPlayersResponse.json();
+        playersData.forEach((p: any) => {
+          playersMap.set(p.id, p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`);
+        });
+      }
+
+      // Add custom players
+      if (customPlayersResponse && customPlayersResponse.ok) {
+        const customPlayersData = await customPlayersResponse.json();
+        customPlayersData.forEach((p: any) => {
+          playersMap.set(p.id, p.name || `Custom Player ${p.id.substring(0, 8)}`);
+        });
       }
 
       const phase3Time = performance.now() - phase3Start;
       console.log(`⚡ Phase 3 (players): ${phase3Time.toFixed(0)}ms`);
 
-      // Enrich stats with player names
-      gameStats = gameStats.map(stat => ({
-        ...stat,
-        player_name: playersMap.get(stat.player_id) || `Player ${stat.player_id?.substring(0, 8)}`
-      }));
+      // Enrich stats with player names (check both player_id and custom_player_id)
+      gameStats = gameStats.map(stat => {
+        const statWithCustomId = stat as any;
+        const playerId = stat.player_id || statWithCustomId.custom_player_id;
+        return {
+          ...stat,
+          player_name: playersMap.get(playerId) || `Player ${playerId?.substring(0, 8)}`
+        };
+      });
 
       // Enrich substitutions with player names
       gameSubstitutions = gameSubstitutions.map(sub => ({

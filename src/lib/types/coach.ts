@@ -16,6 +16,7 @@ export interface CoachTeam {
   name: string;
   coach_id: string;
   tournament_id?: string; // Optional - null for independent teams
+  approval_status?: 'pending' | 'approved' | 'rejected'; // Tournament join approval status
   visibility: 'private' | 'public';
   level?: string; // e.g., "High School", "College", "Youth"
   location?: {

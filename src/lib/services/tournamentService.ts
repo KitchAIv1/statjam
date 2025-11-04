@@ -538,9 +538,11 @@ export class TeamService {
   static async createTeam(data: { name: string; coach?: string; tournamentId: string }): Promise<Team> {
     try {
       // Only include fields that exist in the database schema
+      // Organizer-created teams are auto-approved (no join request needed)
       const teamData = {
         name: data.name,
         tournament_id: data.tournamentId,
+        approval_status: 'approved' as const,
       };
 
       const { data: team, error } = await supabase
@@ -576,6 +578,7 @@ export class TeamService {
         wins: 0, // Default value since not in DB
         losses: 0, // Default value since not in DB
         tournamentId: team.tournament_id,
+        approval_status: team.approval_status || 'approved', // Include approval status
         createdAt: new Date().toISOString(), // Default since created_at doesn't exist in teams table
       };
     } catch (error) {
@@ -658,19 +661,60 @@ export class TeamService {
     }
   }
 
+  /**
+   * Approve a team's join request
+   */
+  static async approveTeam(teamId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('teams')
+        .update({ approval_status: 'approved' })
+        .eq('id', teamId);
+
+      if (error) throw error;
+      console.log('✅ Team approved successfully');
+    } catch (error) {
+      console.error('❌ Error approving team:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reject a team's join request
+   */
+  static async rejectTeam(teamId: string): Promise<void> {
+    try {
+      // Only update approval_status, don't modify tournament_id
+      // Coach-owned teams have RLS that prevents organizers from modifying tournament_id
+      const { error } = await supabase
+        .from('teams')
+        .update({ approval_status: 'rejected' })
+        .eq('id', teamId);
+
+      if (error) throw error;
+      console.log('✅ Team rejected successfully');
+    } catch (error) {
+      console.error('❌ Error rejecting team:', error);
+      throw error;
+    }
+  }
+
   static async getTeamsByTournament(tournamentId: string): Promise<Team[]> {
     try {
       console.log('🔍 TeamService: Fetching teams for tournament:', tournamentId);
       
-      // Query with name column if it exists
+      // Query with name column if it exists - includes both regular and custom players
       const { data: teams, error } = await supabase
         .from('teams')
         .select(`
           id,
           name,
           tournament_id,
+          approval_status,
+          coach_id,
           team_players (
             player_id,
+            custom_player_id,
             users!player_id (
               id,
               email,
@@ -678,6 +722,12 @@ export class TeamService {
               country,
               created_at,
               name
+            ),
+            custom_players!custom_player_id (
+              id,
+              name,
+              jersey_number,
+              position
             )
           )
         `)
@@ -711,39 +761,58 @@ export class TeamService {
           createdAt: new Date().toISOString(),
         };
 
-        // Process players from the join data (handle null/empty team_players)
+        // Process players from the join data (handle both regular and custom players)
         if (team.team_players && Array.isArray(team.team_players) && team.team_players.length > 0) {
-          const validTeamPlayers = team.team_players.filter(tp => {
-            // Handle both array and object responses from Supabase
-            return tp && tp.users && (
+          // Process regular players (from users table)
+          const regularPlayers = team.team_players
+            .filter(tp => tp && tp.users && (
               (Array.isArray(tp.users) && tp.users.length > 0 && tp.users[0]) ||
               (!Array.isArray(tp.users) && (tp.users as any).id)
-            );
-          });
+            ))
+            .map((tp, index) => {
+              const user = Array.isArray(tp.users) ? tp.users[0] : tp.users;
+              const playerName = user.name || 
+                (user.email ? 
+                  (user.email.includes('@') ? 
+                    user.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : 
+                    user.email) : 
+                  `Player ${index + 1}`);
+              
+              return {
+                id: user.id,
+                name: playerName,
+                email: user.email,
+                position: 'PG' as Player['position'],
+                jerseyNumber: index + 1,
+                isPremium: user.premium_status || false,
+                country: user.country || 'US',
+                createdAt: user.created_at || new Date().toISOString(),
+              };
+            });
 
-          teamPlayers = validTeamPlayers.map((tp, index) => {
-            // Handle both array and object responses from Supabase
-            const user = Array.isArray(tp.users) ? tp.users[0] : tp.users;
-            
-            // Generate player name using actual name column if available, otherwise use email
-            const playerName = user.name || 
-              (user.email ? 
-                (user.email.includes('@') ? 
-                  user.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : 
-                  user.email) : 
-                `Player ${index + 1}`);
-            
-            return {
-              id: user.id,
-              name: playerName,
-              email: user.email,
-              position: 'PG' as Player['position'], // Default position (columns don't exist in DB yet)
-              jerseyNumber: index + 1, // Sequential jersey numbers (column doesn't exist in DB yet)
-              isPremium: user.premium_status || false,
-              country: user.country || 'US',
-              createdAt: user.created_at || new Date().toISOString(),
-            };
-          });
+          // Process custom players (from custom_players table)
+          const customPlayers = team.team_players
+            .filter(tp => tp && tp.custom_players && (
+              (Array.isArray(tp.custom_players) && tp.custom_players.length > 0 && tp.custom_players[0]) ||
+              (!Array.isArray(tp.custom_players) && (tp.custom_players as any).id)
+            ))
+            .map((tp, index) => {
+              const customPlayer = Array.isArray(tp.custom_players) ? tp.custom_players[0] : tp.custom_players;
+              
+              return {
+                id: customPlayer.id,
+                name: customPlayer.name || `Custom Player ${index + 1}`,
+                email: '',
+                position: (customPlayer.position || 'PG') as Player['position'],
+                jerseyNumber: customPlayer.jersey_number || (regularPlayers.length + index + 1),
+                isPremium: false,
+                country: 'US',
+                createdAt: new Date().toISOString(),
+              };
+            });
+
+          // Combine both types of players
+          teamPlayers = [...regularPlayers, ...customPlayers];
 
           // Set captain as first player
           captain = teamPlayers[0] || captain;
@@ -756,9 +825,11 @@ export class TeamService {
           players: teamPlayers,
           captain: captain,
           coach: '', // Default empty coach since column doesn't exist
+          coach_id: team.coach_id || undefined, // Include coach ownership
           wins: 0, // Default value since not in DB schema yet
           losses: 0, // Default value since not in DB schema yet
           tournamentId: team.tournament_id,
+          approval_status: team.approval_status, // Include approval status
           createdAt: new Date().toISOString(), // Default since created_at doesn't exist in teams table
         };
       });
@@ -961,10 +1032,10 @@ export class TeamService {
         return cachedPlayers;
       }
       
-      // Step 1: Get player IDs (simple query, no JOINs)
+      // Step 1: Get both regular and custom player IDs
       const { data: teamPlayers, error } = await supabase
         .from('team_players')
-        .select('player_id')
+        .select('player_id, custom_player_id')
         .eq('team_id', teamId);
 
       if (error) {
@@ -977,58 +1048,91 @@ export class TeamService {
         return [];
       }
 
-      // Step 2: Get player IDs and fetch user data separately
-      const playerIds = teamPlayers.map(tp => tp.player_id);
-      console.log('🔍 TeamService: Found player IDs:', playerIds.length);
+      // Step 2: Separate regular players and custom players
+      const regularPlayerIds = teamPlayers
+        .filter(tp => tp.player_id)
+        .map(tp => tp.player_id);
+      const customPlayerIds = teamPlayers
+        .filter(tp => tp.custom_player_id)
+        .map(tp => tp.custom_player_id);
 
-      // Limit to prevent database overload (max 20 players per team)
-      if (playerIds.length > 20) {
-        console.warn('⚠️ TeamService: Too many players, limiting to first 20');
-        playerIds.splice(20);
-      }
+      console.log('🔍 TeamService: Found player IDs:', regularPlayerIds.length, 'regular,', customPlayerIds.length, 'custom');
 
-      // Step 3: Fetch user data with timeout protection
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, email, premium_status, country, created_at, name')
-        .in('id', playerIds);
+      const allPlayers: Player[] = [];
 
-      if (usersError) {
-        console.error('❌ Supabase error getting user data:', usersError);
-        throw new Error(`Failed to get user data: ${usersError.message}`);
-      }
-
-      console.log('🔍 TeamService: Found users:', users?.length || 0);
-
-      // Step 4: Map user data to Player interface
-      const players: Player[] = (users || []).map((user, index) => {
-        // Generate player name using actual name column if available, otherwise use email
-        const playerName = user.name || 
-          (user.email ? 
-            (user.email.includes('@') ? 
-              user.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : 
-              user.email) : 
-            `Player ${index + 1}`);
+      // Step 3: Fetch regular user data if any exist
+      if (regularPlayerIds.length > 0) {
+        // Limit to prevent database overload (max 20 players per team)
+        const limitedPlayerIds = regularPlayerIds.slice(0, 20);
         
-        return {
-          id: user.id,
-          name: playerName,
-          email: user.email,
-          position: 'PG' as Player['position'], // Default position
-          jerseyNumber: index + 1, // Sequential jersey numbers
-          isPremium: user.premium_status || false,
-          country: user.country || 'US',
-          createdAt: user.created_at || new Date().toISOString(),
-        };
-      });
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('id, email, premium_status, country, created_at, name')
+          .in('id', limitedPlayerIds);
 
-      console.log('🔍 TeamService: Mapped team players:', players.map(p => ({ name: p.name, position: p.position, jersey: p.jerseyNumber })));
+        if (usersError) {
+          console.error('❌ Supabase error getting user data:', usersError);
+        } else if (users && users.length > 0) {
+          // Map regular users to Player interface
+          const regularPlayers: Player[] = users.map((user, index) => {
+            const playerName = user.name || 
+              (user.email ? 
+                (user.email.includes('@') ? 
+                  user.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : 
+                  user.email) : 
+                `Player ${index + 1}`);
+            
+            return {
+              id: user.id,
+              name: playerName,
+              email: user.email,
+              position: 'PG' as Player['position'],
+              jerseyNumber: index + 1,
+              isPremium: user.premium_status || false,
+              country: user.country || 'US',
+              createdAt: user.created_at || new Date().toISOString(),
+            };
+          });
+          allPlayers.push(...regularPlayers);
+        }
+      }
+
+      // Step 4: Fetch custom player data if any exist
+      if (customPlayerIds.length > 0) {
+        const limitedCustomIds = customPlayerIds.slice(0, 20);
+        
+        const { data: customPlayers, error: customError } = await supabase
+          .from('custom_players')
+          .select('id, name, jersey_number, position')
+          .in('id', limitedCustomIds);
+
+        if (customError) {
+          console.error('❌ Supabase error getting custom players:', customError);
+        } else if (customPlayers && customPlayers.length > 0) {
+          console.log('🔍 TeamService: Found custom players:', customPlayers.length);
+          
+          // Map custom players to Player interface
+          const mappedCustomPlayers: Player[] = customPlayers.map((cp, index) => ({
+            id: cp.id,
+            name: cp.name || `Custom Player ${index + 1}`,
+            email: '',
+            position: (cp.position || 'PG') as Player['position'],
+            jerseyNumber: cp.jersey_number || (allPlayers.length + index + 1),
+            isPremium: false,
+            country: 'US',
+            createdAt: new Date().toISOString(),
+          }));
+          allPlayers.push(...mappedCustomPlayers);
+        }
+      }
+
+      console.log('🔍 TeamService: Total mapped players:', allPlayers.length, '(' + regularPlayerIds.length + ' regular +', customPlayerIds.length, 'custom)');
       
       // Cache the result for future requests
-      cache.set(cacheKey, players, CacheTTL.PLAYER_DATA);
+      cache.set(cacheKey, allPlayers, CacheTTL.PLAYER_DATA);
       console.log('💾 TeamService: Cached players for team:', teamId);
       
-      return players;
+      return allPlayers;
     } catch (error) {
       console.error('Error getting team players:', error);
       throw error instanceof Error ? error : new Error('Failed to get team players');
@@ -1060,14 +1164,17 @@ export class TeamService {
   }
 
   // EMERGENCY FIX: Simple team count query to avoid timeouts
+  // Only counts approved teams (excludes pending and rejected)
   static async getTeamCountByTournament(tournamentId: string): Promise<number> {
     try {
       console.log('🔍 TeamService: Getting team count for tournament:', tournamentId);
       
+      // Count only approved teams (or teams with no approval_status for backwards compatibility)
       const { count, error } = await supabase
         .from('teams')
         .select('*', { count: 'exact', head: true })
-        .eq('tournament_id', tournamentId);
+        .eq('tournament_id', tournamentId)
+        .or('approval_status.is.null,approval_status.eq.approved');
 
       if (error) {
         console.error('❌ Error getting team count:', error);
@@ -1075,7 +1182,7 @@ export class TeamService {
       }
 
       const teamCount = count || 0;
-      console.log('✅ TeamService: Team count:', teamCount);
+      console.log('✅ TeamService: Team count (approved only):', teamCount);
       return teamCount;
     } catch (error) {
       console.error('❌ Error in getTeamCountByTournament:', error);

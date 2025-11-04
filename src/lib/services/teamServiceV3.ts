@@ -205,7 +205,7 @@ export class TeamServiceV3 {
           email: player.email || '',
           jerseyNumber: player.jersey_number || 0,
           position: player.position || 'Player',
-          isCustomPlayer: false
+          is_custom_player: false // ✅ FIX: Use snake_case to match database convention
         };
       });
 
@@ -217,7 +217,7 @@ export class TeamServiceV3 {
           email: '',
           jerseyNumber: player.jersey_number || 0,
           position: player.position || 'Player',
-          isCustomPlayer: true
+          is_custom_player: true // ✅ FIX: Use snake_case to match database convention
         };
       });
 

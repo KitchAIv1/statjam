@@ -47,6 +47,7 @@ export interface Player {
   isPremium: boolean;
   country: string;
   createdAt: string;
+  is_custom_player?: boolean; // ✅ FIX: Flag to distinguish custom players from regular players
 }
 
 export interface Team {
@@ -56,10 +57,12 @@ export interface Team {
   players: Player[];
   captain: Player;
   coach?: string;
+  coach_id?: string; // ID of coach who owns this team (null for organizer-created teams)
   wins: number;
   losses: number;
   tournamentId: string;
   createdAt: string;
+  approval_status?: 'pending' | 'approved' | 'rejected'; // Team join approval status
 }
 
 export interface TeamCreateRequest {

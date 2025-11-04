@@ -38,6 +38,7 @@ export class CoachTeamService {
           name,
           coach_id,
           tournament_id,
+          approval_status,
           visibility,
           created_at,
           updated_at
@@ -60,6 +61,7 @@ export class CoachTeamService {
             name: team.name,
             coach_id: team.coach_id,
             tournament_id: team.tournament_id,
+            approval_status: team.approval_status,
             visibility: team.visibility,
             created_at: team.created_at,
             updated_at: team.updated_at,
@@ -252,16 +254,18 @@ export class CoachTeamService {
   static async attachToTournament(request: TournamentAttachmentRequest): Promise<void> {
     try {
       if (request.attachment_type === 'existing' && request.tournament_id) {
-        // Attach to existing tournament
+        // Attach to existing tournament with pending approval status
         const { error } = await supabase
           .from('teams')
-          .update({ tournament_id: request.tournament_id })
+          .update({ 
+            tournament_id: request.tournament_id,
+            approval_status: 'pending' // Requires organizer approval
+          })
           .eq('id', request.coach_team_id);
 
         if (error) throw error;
 
-        // TODO: Send join request to organizer
-        console.log('✅ Team attached to tournament, join request sent');
+        console.log('✅ Team attached to tournament, awaiting organizer approval');
       } else if (request.attachment_type === 'stub' && request.tournament_stub) {
         // Create tournament stub
         // TODO: Implement tournament stub creation

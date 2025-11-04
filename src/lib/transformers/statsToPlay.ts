@@ -43,8 +43,9 @@ export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { pla
 
     if (isHome) home += pts; else if (isAway) away += pts;
 
-    // Player tallies
-    const t = (tallies[s.player_id] = tallies[s.player_id] || { points: 0, fgm: 0, fga: 0 });
+    // Player tallies (use player_id or custom_player_id)
+    const playerId = s.player_id || (s as any).custom_player_id;
+    const t = (tallies[playerId] = tallies[playerId] || { points: 0, fgm: 0, fga: 0 });
     if (s.stat_type === 'three_pointer' || s.stat_type === 'field_goal' || s.stat_type === 'free_throw') {
       t.fga += 1;
       if (s.modifier === 'made') t.fgm += 1;
@@ -69,10 +70,11 @@ export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { pla
       }
     })();
 
-    // FIXED: Extract proper player name from users data
-    const playerName = s.users?.name || 
+    // ✅ FIX: Extract player name from either users OR custom_players
+    const playerName = (s as any).custom_players?.name || // Check custom_players first
+                      s.users?.name || // Then regular users
                       (s.users?.email ? s.users.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim() : null) ||
-                      `Player ${String(s.player_id || '').substring(0, 8)}`;
+                      `Player ${String(s.player_id || (s as any).custom_player_id || '').substring(0, 8)}`;
     
     // Reduced logging for performance
     if (process.env.NODE_ENV !== 'production' && Math.random() < 0.1) {
@@ -92,7 +94,7 @@ export function transformStatsToPlay(stats: StatRow[], team: TeamMapping): { pla
       playType: 'stat_recorded',
       teamId: s.team_id,
       teamName,
-      playerId: s.player_id,
+      playerId: s.player_id || (s as any).custom_player_id, // Use whichever ID is present
       playerName: playerName,
       statType: s.stat_type,
       statValue: s.stat_value ?? 0,
