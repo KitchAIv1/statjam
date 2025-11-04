@@ -495,10 +495,18 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       });
 
       setPlays(prevPlays => {
-        if (prevPlays.length === playByPlayEntries.length) {
+        // ✅ FIX: Filter out incomplete plays (missing player names) to prevent empty cards
+        const validPlays = playByPlayEntries.filter(play => {
+          // Allow plays without players (timeouts, etc.)
+          if (!play.playerId) return true;
+          // Require player name for player-based plays
+          return play.playerName && play.playerName !== 'Unknown Player';
+        });
+
+        if (prevPlays.length === validPlays.length) {
           let hasChanges = false;
-          for (let i = 0; i < playByPlayEntries.length; i++) {
-            if (prevPlays[i]?.id !== playByPlayEntries[i]?.id) {
+          for (let i = 0; i < validPlays.length; i++) {
+            if (prevPlays[i]?.id !== validPlays[i]?.id) {
               hasChanges = true;
               break;
             }
@@ -508,8 +516,15 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             return prevPlays;
           }
         }
+        
+        // Log if we filtered out any plays
+        const filteredCount = playByPlayEntries.length - validPlays.length;
+        if (filteredCount > 0) {
+          console.log(`⏳ useGameViewerV2: Filtered ${filteredCount} incomplete plays, waiting for player names...`);
+        }
+        
         console.log('🔄 useGameViewerV2: Plays changed, updating');
-        return playByPlayEntries;
+        return validPlays;
       });
 
     } catch (e: any) {
