@@ -495,20 +495,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       });
 
       setPlays(prevPlays => {
-        // ✅ FIX: Only update plays if all have valid player names (prevents empty cards during fetch)
-        const hasIncompletePlays = playByPlayEntries.some(play => {
-          // Skip validation for plays without playerIds (timeouts, etc.)
-          if (!play.playerId) return false;
-          // Check if player-based play is missing name
-          return !play.playerName || play.playerName === 'Unknown Player';
-        });
-
-        if (hasIncompletePlays) {
-          console.log('⏳ useGameViewerV2: Waiting for player names to load before updating plays...');
-          // Keep previous plays visible, don't update yet
-          return prevPlays;
-        }
-
         if (prevPlays.length === playByPlayEntries.length) {
           let hasChanges = false;
           for (let i = 0; i < playByPlayEntries.length; i++) {
