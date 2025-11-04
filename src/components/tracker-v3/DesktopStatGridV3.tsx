@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { AlertTriangle, RotateCcw, Clock, Undo, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { PossessionIndicator } from './PossessionIndicator';
+import { StatEditModal } from './modals/StatEditModal';
 
 interface Player {
   id: string;
@@ -37,6 +38,10 @@ interface DesktopStatGridV3Props {
   onPossessionChange?: (teamId: string) => void;
   // ✅ Game Status
   gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime';
+  // ✅ Stat Edit Modal
+  gameId?: string;
+  teamAPlayers?: Player[];
+  teamBPlayers?: Player[];
 }
 
 export function DesktopStatGridV3({
@@ -59,10 +64,15 @@ export function DesktopStatGridV3({
   isCoachMode = false,
   onPossessionChange,
   // ✅ Game Status
-  gameStatus = 'in_progress'
+  gameStatus = 'in_progress',
+  // ✅ Stat Edit Modal
+  gameId,
+  teamAPlayers = [],
+  teamBPlayers = []
 }: DesktopStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
+  const [showStatEditModal, setShowStatEditModal] = useState(false);
 
   const handleStatClick = async (statType: string, modifier?: string) => {
     if (!selectedPlayer) {
@@ -274,12 +284,9 @@ export function DesktopStatGridV3({
               </button>
               
               <button
-                onClick={() => {
-                  // TODO: Implement edit functionality
-                  console.log('✏️ Edit last action:', lastAction);
-                  alert('Edit functionality will be implemented');
-                }}
+                onClick={() => setShowStatEditModal(true)}
                 className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 hover:scale-110 active:scale-95 transition-all duration-200"
+                title="Edit Game Stats"
               >
                 <Edit className="w-5 h-5" />
               </button>
@@ -471,6 +478,17 @@ export function DesktopStatGridV3({
           </button>
         )}
       </div>
+
+      {/* Stat Edit Modal */}
+      {showStatEditModal && gameId && (
+        <StatEditModal
+          isOpen={showStatEditModal}
+          onClose={() => setShowStatEditModal(false)}
+          gameId={gameId}
+          teamAPlayers={teamAPlayers}
+          teamBPlayers={teamBPlayers}
+        />
+      )}
     </div>
   );
 }

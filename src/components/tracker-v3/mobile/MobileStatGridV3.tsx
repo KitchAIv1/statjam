@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, MoreHorizontal, RotateCcw, Clock, Undo, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { StatEditModal } from '../modals/StatEditModal';
 
 interface Player {
   id: string;
@@ -21,6 +22,10 @@ interface MobileStatGridV3Props {
   onSubstitution?: () => void;
   lastAction?: string | null;
   lastActionPlayerId?: string | null;
+  // ✅ Stat Edit Modal
+  gameId?: string;
+  teamAPlayers?: Player[];
+  teamBPlayers?: Player[];
 }
 
 export function MobileStatGridV3({
@@ -32,10 +37,15 @@ export function MobileStatGridV3({
   onTimeOut,
   onSubstitution,
   lastAction,
-  lastActionPlayerId
+  lastActionPlayerId,
+  // ✅ Stat Edit Modal
+  gameId,
+  teamAPlayers = [],
+  teamBPlayers = []
 }: MobileStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
+  const [showStatEditModal, setShowStatEditModal] = useState(false);
 
   const handleStatClick = async (statType: string, modifier?: string) => {
     if (!selectedPlayer) {
@@ -358,12 +368,9 @@ export function MobileStatGridV3({
             </button>
             
             <button
-              onClick={() => {
-                // TODO: Implement edit functionality
-                console.log('✏️ Edit last action:', lastAction);
-                alert('Edit functionality will be implemented');
-              }}
+              onClick={() => setShowStatEditModal(true)}
               className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 hover:scale-110 active:scale-95 transition-all duration-200"
+              title="Edit Game Stats"
             >
               <Edit className="w-4 h-4" />
             </button>
@@ -371,6 +378,16 @@ export function MobileStatGridV3({
         </div>
       )}
 
+      {/* Stat Edit Modal */}
+      {showStatEditModal && gameId && (
+        <StatEditModal
+          isOpen={showStatEditModal}
+          onClose={() => setShowStatEditModal(false)}
+          gameId={gameId}
+          teamAPlayers={teamAPlayers}
+          teamBPlayers={teamBPlayers}
+        />
+      )}
     </div>
   );
 }
