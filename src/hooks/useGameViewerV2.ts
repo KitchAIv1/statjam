@@ -276,11 +276,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         'Content-Type': 'application/json'
       };
 
-      // ⚡ PERFORMANCE: Start timing
-      const perfStart = performance.now();
-
       // ⚡ PHASE 1: Fetch game data (needed for IDs)
-      const phase1Start = performance.now();
       const gameResponse = await fetch(
         `${supabaseUrl}/rest/v1/games?select=*&id=eq.${gameId}`,
         { headers }
@@ -296,11 +292,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       }
 
       const gameInfo = gameData[0];
-      const phase1Time = performance.now() - phase1Start;
-      console.log(`⚡ Phase 1 (game): ${phase1Time.toFixed(0)}ms`);
 
       // ⚡ PHASE 2: Parallel fetch all related data
-      const phase2Start = performance.now();
       const teamIds = [gameInfo.team_a_id, gameInfo.team_b_id].filter(Boolean);
       
       const [
@@ -326,9 +319,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         fetch(`${supabaseUrl}/rest/v1/game_timeouts?select=*&game_id=eq.${gameId}&order=created_at.desc`, { headers })
       ]);
 
-      const phase2Time = performance.now() - phase2Start;
-      console.log(`⚡ Phase 2 (parallel 5 queries): ${phase2Time.toFixed(0)}ms`);
-
       // Parse teams
       let teamsMap = new Map<string, string>();
       if (teamsResponse && teamsResponse.ok) {
@@ -349,7 +339,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       let gameStats: GameStats[] = [];
       if (statsResponse.ok) {
         gameStats = await statsResponse.json();
-        console.log('🏀 useGameViewerV2: Fetched', gameStats.length, 'game_stats rows');
       } else {
         console.error('❌ useGameViewerV2: Failed to fetch game_stats:', statsResponse.status);
       }
@@ -358,7 +347,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       let gameSubstitutions: any[] = [];
       if (subsResponse.ok) {
         gameSubstitutions = await subsResponse.json();
-        console.log('🔄 useGameViewerV2: Fetched', gameSubstitutions.length, 'substitutions');
       } else {
         console.error('❌ useGameViewerV2: Failed to fetch substitutions:', subsResponse.status);
       }
@@ -367,13 +355,11 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       let gameTimeouts: any[] = [];
       if (timeoutsResponse.ok) {
         gameTimeouts = await timeoutsResponse.json();
-        console.log('⏰ useGameViewerV2: Fetched', gameTimeouts.length, 'timeouts');
       } else {
         console.error('❌ useGameViewerV2: Failed to fetch timeouts:', timeoutsResponse.status);
       }
 
       // ⚡ PHASE 3: Fetch ALL player names in parallel (for stats + subs, including custom players)
-      const phase3Start = performance.now();
       const statsPlayerIds = [...new Set(gameStats.map(s => s.player_id).filter(Boolean))];
       const statsCustomPlayerIds = [...new Set((gameStats as any).map((s: any) => s.custom_player_id).filter(Boolean))];
       const subPlayerIds = [...new Set([
@@ -412,9 +398,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
           playersMap.set(p.id, p.name || `Custom Player ${p.id.substring(0, 8)}`);
         });
       }
-
-      const phase3Time = performance.now() - phase3Start;
-      console.log(`⚡ Phase 3 (players): ${phase3Time.toFixed(0)}ms`);
 
       // Enrich stats with player names (check both player_id and custom_player_id)
       gameStats = gameStats.map(stat => {
@@ -482,10 +465,6 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         gameTimeouts
       );
 
-      const totalTime = performance.now() - perfStart;
-      console.log(`⚡ TOTAL FETCH TIME: ${totalTime.toFixed(0)}ms (Phase1: ${phase1Time.toFixed(0)}ms | Phase2: ${phase2Time.toFixed(0)}ms | Phase3: ${phase3Time.toFixed(0)}ms)`);
-      console.log('🏀 useGameViewerV2: Fetched', gameStats.length, 'stats, transformed into', playByPlayEntries.length, 'plays');
-
       // ✅ ANTI-FLICKER: Only update if data actually changed
       setGame(prevGame => {
         if (prevGame && 
@@ -496,10 +475,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             prevGame.quarter === enrichedGame.quarter &&
             prevGame.game_clock_minutes === enrichedGame.game_clock_minutes &&
             prevGame.game_clock_seconds === enrichedGame.game_clock_seconds) {
-          console.log('🔇 useGameViewerV2: Game data unchanged, skipping update');
           return prevGame;
         }
-        console.log('🔄 useGameViewerV2: Game data changed, updating');
         return enrichedGame;
       });
 
@@ -514,11 +491,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             }
           }
           if (!hasChanges) {
-            console.log('🔇 useGameViewerV2: Stats unchanged, skipping update');
             return prevStats;
           }
         }
-        console.log('🔄 useGameViewerV2: Stats changed, updating');
         return gameStats;
       });
 
@@ -532,11 +507,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             }
           }
           if (!hasChanges) {
-            console.log('🔇 useGameViewerV2: Plays unchanged, skipping update');
             return prevPlays;
           }
         }
-        console.log('🔄 useGameViewerV2: Plays changed, updating');
         return playByPlayEntries;
       });
 
