@@ -34,20 +34,35 @@ export function OrganizerGameScheduler({ user }: OrganizerGameSchedulerProps) {
   const loadGames = async () => {
     try {
       setLoadingGames(true);
-      // Get all games from all tournaments
-      const allGames: GameWithTournament[] = [];
-      for (const tournament of tournaments) {
-        const tournamentGames = await GameService.getGamesByTournament(tournament.id);
-        // Add tournament name to each game
-        const gamesWithTournament = tournamentGames.map(game => ({
-          ...game,
-          tournament_name: tournament.name
-        }));
-        allGames.push(...gamesWithTournament);
-      }
+      
+      // ⚡ PERFORMANCE: Start timing
+      const perfStart = performance.now();
+      console.log(`⚡ Loading games for ${tournaments.length} tournaments in parallel...`);
+      
+      // ⚡ OPTIMIZED: Fetch all tournament games in parallel using Promise.all
+      const tournamentGamesPromises = tournaments.map(tournament => 
+        GameService.getGamesByTournament(tournament.id)
+          .then(games => games.map(game => ({
+            ...game,
+            tournament_name: tournament.name
+          })))
+          .catch(error => {
+            console.error(`Failed to load games for tournament ${tournament.name}:`, error);
+            return []; // Return empty array on error, don't block other tournaments
+          })
+      );
+
+      const tournamentGamesArrays = await Promise.all(tournamentGamesPromises);
+      
+      // Flatten all games into single array
+      const allGames: GameWithTournament[] = tournamentGamesArrays.flat();
 
       // Sort by start time (most recent first)
       allGames.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+      
+      const totalTime = performance.now() - perfStart;
+      console.log(`⚡ Loaded ${allGames.length} games in ${totalTime.toFixed(0)}ms (avg ${(totalTime / tournaments.length).toFixed(0)}ms per tournament)`);
+      
       setGames(allGames);
     } catch (error) {
       console.error('Failed to load games:', error);

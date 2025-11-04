@@ -275,7 +275,11 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         'Content-Type': 'application/json'
       };
 
-      // 1. Fetch game data
+      // ⚡ PERFORMANCE: Start timing
+      const perfStart = performance.now();
+
+      // ⚡ PHASE 1: Fetch game data (needed for IDs)
+      const phase1Start = performance.now();
       const gameResponse = await fetch(
         `${supabaseUrl}/rest/v1/games?select=*&id=eq.${gameId}`,
         { headers }
@@ -291,136 +295,74 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       }
 
       const gameInfo = gameData[0];
+      const phase1Time = performance.now() - phase1Start;
+      console.log(`⚡ Phase 1 (game): ${phase1Time.toFixed(0)}ms`);
 
-      // 2. Fetch team names
+      // ⚡ PHASE 2: Parallel fetch all related data
+      const phase2Start = performance.now();
       const teamIds = [gameInfo.team_a_id, gameInfo.team_b_id].filter(Boolean);
-      let teamsMap = new Map<string, string>();
-
-      if (teamIds.length > 0) {
-        const teamsResponse = await fetch(
-          `${supabaseUrl}/rest/v1/teams?select=id,name&id=in.(${teamIds.join(',')})`,
-          { headers }
-        );
-
-        if (teamsResponse.ok) {
-          const teamsData = await teamsResponse.json();
-          teamsMap = new Map(teamsData.map((t: any) => [t.id, t.name]));
-        }
-      }
-
-      // 3. Fetch tournament name
-      let tournamentName = 'Unknown Tournament';
-      if (gameInfo.tournament_id) {
-        const tournamentResponse = await fetch(
-          `${supabaseUrl}/rest/v1/tournaments?select=name&id=eq.${gameInfo.tournament_id}`,
-          { headers }
-        );
-
-        if (tournamentResponse.ok) {
-          const tournamentData = await tournamentResponse.json();
-          if (tournamentData.length > 0) {
-            tournamentName = tournamentData[0].name;
-          }
-        }
-      }
-
-      // 4. Fetch game stats with CORRECT column names
-      const statsResponse = await fetch(
-        `${supabaseUrl}/rest/v1/game_stats?select=id,game_id,player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at&game_id=eq.${gameId}&order=created_at.desc`,
-        { headers }
-      );
-
-      // Shared playersMap for both stats and substitutions
-      let playersMap = new Map<string, string>();
-      let gameStats: GameStats[] = [];
       
+      const [
+        teamsResponse,
+        tournamentResponse,
+        statsResponse,
+        subsResponse,
+        timeoutsResponse
+      ] = await Promise.all([
+        // Teams
+        teamIds.length > 0 
+          ? fetch(`${supabaseUrl}/rest/v1/teams?select=id,name&id=in.(${teamIds.join(',')})`, { headers })
+          : Promise.resolve(null),
+        // Tournament
+        gameInfo.tournament_id
+          ? fetch(`${supabaseUrl}/rest/v1/tournaments?select=name&id=eq.${gameInfo.tournament_id}`, { headers })
+          : Promise.resolve(null),
+        // Stats
+        fetch(`${supabaseUrl}/rest/v1/game_stats?select=id,game_id,player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at&game_id=eq.${gameId}&order=created_at.desc`, { headers }),
+        // Substitutions
+        fetch(`${supabaseUrl}/rest/v1/game_substitutions?select=*&game_id=eq.${gameId}&order=created_at.asc`, { headers }),
+        // Timeouts
+        fetch(`${supabaseUrl}/rest/v1/game_timeouts?select=*&game_id=eq.${gameId}&order=created_at.desc`, { headers })
+      ]);
+
+      const phase2Time = performance.now() - phase2Start;
+      console.log(`⚡ Phase 2 (parallel 5 queries): ${phase2Time.toFixed(0)}ms`);
+
+      // Parse teams
+      let teamsMap = new Map<string, string>();
+      if (teamsResponse && teamsResponse.ok) {
+        const teamsData = await teamsResponse.json();
+        teamsMap = new Map(teamsData.map((t: any) => [t.id, t.name]));
+      }
+
+      // Parse tournament
+      let tournamentName = 'Unknown Tournament';
+      if (tournamentResponse && tournamentResponse.ok) {
+        const tournamentData = await tournamentResponse.json();
+        if (tournamentData.length > 0) {
+          tournamentName = tournamentData[0].name;
+        }
+      }
+
+      // Parse stats
+      let gameStats: GameStats[] = [];
       if (statsResponse.ok) {
         gameStats = await statsResponse.json();
         console.log('🏀 useGameViewerV2: Fetched', gameStats.length, 'game_stats rows');
-        
-        // 4b. Fetch player names for the stats
-        const playerIds = [...new Set(gameStats.map(s => s.player_id).filter(Boolean))];
-        
-        if (playerIds.length > 0) {
-          const playersResponse = await fetch(
-            `${supabaseUrl}/rest/v1/users?select=id,name,email&id=in.(${playerIds.join(',')})`,
-            { headers }
-          );
-          
-          if (playersResponse.ok) {
-            const playersData = await playersResponse.json();
-            playersMap = new Map(
-              playersData.map((p: any) => [
-                p.id,
-                p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`
-              ])
-            );
-          }
-        }
-        
-        // Enrich stats with player names
-        gameStats = gameStats.map(stat => ({
-          ...stat,
-          player_name: playersMap.get(stat.player_id) || `Player ${stat.player_id?.substring(0, 8)}`
-        }));
-        
       } else {
-        console.error('❌ useGameViewerV2: Failed to fetch game_stats:', statsResponse.status, await statsResponse.text());
+        console.error('❌ useGameViewerV2: Failed to fetch game_stats:', statsResponse.status);
       }
 
-      // 5. Fetch game substitutions
-      const subsResponse = await fetch(
-        `${supabaseUrl}/rest/v1/game_substitutions?select=*&game_id=eq.${gameId}&order=created_at.asc`,
-        { headers }
-      );
-
+      // Parse substitutions
       let gameSubstitutions: any[] = [];
       if (subsResponse.ok) {
         gameSubstitutions = await subsResponse.json();
         console.log('🔄 useGameViewerV2: Fetched', gameSubstitutions.length, 'substitutions');
-        
-        // Enrich substitutions with player names
-        const subPlayerIds = [...new Set([
-          ...gameSubstitutions.map(s => s.player_in_id).filter(Boolean),
-          ...gameSubstitutions.map(s => s.player_out_id).filter(Boolean)
-        ])];
-        
-        // Fetch player names for substitutions (if not already in playersMap)
-        const newPlayerIds = subPlayerIds.filter(id => !playersMap.has(id));
-        if (newPlayerIds.length > 0) {
-          const subPlayersResponse = await fetch(
-            `${supabaseUrl}/rest/v1/users?select=id,name,email&id=in.(${newPlayerIds.join(',')})`,
-            { headers }
-          );
-          
-          if (subPlayersResponse.ok) {
-            const subPlayersData = await subPlayersResponse.json();
-            subPlayersData.forEach((p: any) => {
-              playersMap.set(
-                p.id,
-                p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`
-              );
-            });
-          }
-        }
-        
-        // Enrich substitutions with player names
-        gameSubstitutions = gameSubstitutions.map(sub => ({
-          ...sub,
-          player_in_name: playersMap.get(sub.player_in_id) || `Player ${sub.player_in_id?.substring(0, 8)}`,
-          player_out_name: playersMap.get(sub.player_out_id) || `Player ${sub.player_out_id?.substring(0, 8)}`
-        }));
-        
       } else {
-        console.error('❌ useGameViewerV2: Failed to fetch substitutions:', subsResponse.status, await subsResponse.text());
+        console.error('❌ useGameViewerV2: Failed to fetch substitutions:', subsResponse.status);
       }
 
-      // 6. Fetch game timeouts
-      const timeoutsResponse = await fetch(
-        `${supabaseUrl}/rest/v1/game_timeouts?select=*&game_id=eq.${gameId}&order=created_at.desc`,
-        { headers }
-      );
-
+      // Parse timeouts
       let gameTimeouts: any[] = [];
       if (timeoutsResponse.ok) {
         gameTimeouts = await timeoutsResponse.json();
@@ -428,6 +370,49 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       } else {
         console.error('❌ useGameViewerV2: Failed to fetch timeouts:', timeoutsResponse.status);
       }
+
+      // ⚡ PHASE 3: Fetch ALL player names in parallel (for stats + subs)
+      const phase3Start = performance.now();
+      const statsPlayerIds = [...new Set(gameStats.map(s => s.player_id).filter(Boolean))];
+      const subPlayerIds = [...new Set([
+        ...gameSubstitutions.map(s => s.player_in_id).filter(Boolean),
+        ...gameSubstitutions.map(s => s.player_out_id).filter(Boolean)
+      ])];
+      const allPlayerIds = [...new Set([...statsPlayerIds, ...subPlayerIds])];
+
+      let playersMap = new Map<string, string>();
+      if (allPlayerIds.length > 0) {
+        const playersResponse = await fetch(
+          `${supabaseUrl}/rest/v1/users?select=id,name,email&id=in.(${allPlayerIds.join(',')})`,
+          { headers }
+        );
+
+        if (playersResponse.ok) {
+          const playersData = await playersResponse.json();
+          playersMap = new Map(
+            playersData.map((p: any) => [
+              p.id,
+              p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`
+            ])
+          );
+        }
+      }
+
+      const phase3Time = performance.now() - phase3Start;
+      console.log(`⚡ Phase 3 (players): ${phase3Time.toFixed(0)}ms`);
+
+      // Enrich stats with player names
+      gameStats = gameStats.map(stat => ({
+        ...stat,
+        player_name: playersMap.get(stat.player_id) || `Player ${stat.player_id?.substring(0, 8)}`
+      }));
+
+      // Enrich substitutions with player names
+      gameSubstitutions = gameSubstitutions.map(sub => ({
+        ...sub,
+        player_in_name: playersMap.get(sub.player_in_id) || `Player ${sub.player_in_id?.substring(0, 8)}`,
+        player_out_name: playersMap.get(sub.player_out_id) || `Player ${sub.player_out_id?.substring(0, 8)}`
+      }));
 
       // 7. Enrich game data
       const teamAName = teamsMap.get(gameInfo.team_a_id) || 'Team A';
@@ -451,6 +436,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         gameTimeouts
       );
 
+      const totalTime = performance.now() - perfStart;
+      console.log(`⚡ TOTAL FETCH TIME: ${totalTime.toFixed(0)}ms (Phase1: ${phase1Time.toFixed(0)}ms | Phase2: ${phase2Time.toFixed(0)}ms | Phase3: ${phase3Time.toFixed(0)}ms)`);
       console.log('🏀 useGameViewerV2: Fetched', gameStats.length, 'stats, transformed into', playByPlayEntries.length, 'plays');
 
       // ✅ ANTI-FLICKER: Only update if data actually changed
