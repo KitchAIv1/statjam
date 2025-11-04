@@ -923,6 +923,10 @@ function StatTrackerV3Content() {
                 isCoachMode={coachMode}
                 onPossessionChange={tracker.manualSetPossession}
                 gameStatus={tracker.gameStatus}
+                // ✅ Stat Edit Modal Props
+                gameId={gameData.id}
+                teamAPlayers={teamAPlayers}
+                teamBPlayers={teamBPlayers}
               />
             </div>
           </div>

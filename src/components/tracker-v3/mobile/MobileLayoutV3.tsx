@@ -236,6 +236,9 @@ export function MobileLayoutV3({
           onSubstitution={() => selectedPlayer && onSubstitution(selectedPlayer)}
           lastAction={tracker.lastAction}
           lastActionPlayerId={tracker.lastActionPlayerId}
+          gameId={gameData.id}
+          teamAPlayers={teamAPlayers}
+          teamBPlayers={teamBPlayers}
         />
 
         {/* End Game Button / Status - Clean Design */}
