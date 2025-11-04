@@ -366,14 +366,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
         
         // FIXED: Load existing stats to calculate current scores (for refresh persistence)
-        console.log('🔍 Loading existing stats for score calculation...');
         const stats = await GameServiceV3.getGameStats(gameId);
         
         if (stats && stats.length > 0) {
           let teamAScore = 0;
           let teamBScore = 0;
-          
-          console.log('🔍 Found', stats.length, 'existing stats for score calculation');
           
           for (const stat of stats) {
             // FIXED: Use stat_value directly and only count made shots
@@ -384,10 +381,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             
             if (stat.team_id === teamAId) {
               teamAScore += points;
-              console.log('🔍 Added', points, 'points to Team A:', stat.stat_type);
             } else if (stat.team_id === teamBId) {
               teamBScore += points;
-              console.log('🔍 Added', points, 'points to Team B:', stat.stat_type);
             }
           }
           
@@ -396,16 +391,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             [teamAId]: teamAScore,
             [teamBId]: teamBScore
           });
-          
-          console.log('✅ STAT INTERFACE: Initialized scores from database:', { 
-            teamA: teamAScore, 
-            teamB: teamBScore,
-            totalStats: stats.length,
-            teamAId: teamAId,
-            teamBId: teamBId
-          });
         } else {
-          console.log('🔍 No existing stats found, initializing scores to 0');
           // Ensure scores start at 0 if no stats found
           setScores({
             [teamAId]: 0,
@@ -430,7 +416,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   // ✅ NEW: Function to refresh scores from database (matches viewer logic exactly)
   const refreshScoresFromDatabase = useCallback(async () => {
     try {
-      console.log('🔄 useTracker: Refreshing scores from database...');
       const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
       const stats = await GameServiceV3.getGameStats(gameId);
       
@@ -482,13 +467,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     
     // Initial refresh after 5 seconds (for immediate testing)
     const initialRefresh = setTimeout(() => {
-      console.log('🔄 useTracker: Initial score refresh (5s delay)...');
       refreshScoresFromDatabase();
     }, 5000);
     
     // Then refresh every 15 seconds to stay in sync with viewer
     const scoreRefreshInterval = setInterval(() => {
-      console.log('⏰ useTracker: Periodic score refresh (15s interval)...');
       refreshScoresFromDatabase();
     }, 15000); // 15 seconds
     
@@ -600,13 +583,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   const startShotClock = useCallback(() => {
     setShotClock(prev => ({ ...prev, isRunning: true }));
     setLastAction('Shot clock started');
-    console.log('🏀 Shot clock started');
   }, []);
 
   const stopShotClock = useCallback(() => {
     setShotClock(prev => ({ ...prev, isRunning: false }));
     setLastAction('Shot clock stopped');
-    console.log('🏀 Shot clock stopped');
   }, []);
 
   const resetShotClock = useCallback((seconds?: number) => {
@@ -809,13 +790,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         uiUpdates.lastAction = `${statTypeFormatted}${modifierFormatted}`;
         uiUpdates.lastActionPlayerId = stat.playerId || stat.customPlayerId || null;
       }
-      
-      console.log('📝 Last action prepared:', {
-        statType: stat.statType,
-        modifier: stat.modifier,
-        lastAction: uiUpdates.lastAction,
-        lastActionPlayerId: uiUpdates.lastActionPlayerId
-      });
 
       // ✅ OPTIMIZATION 2: Apply ALL UI updates at once (single re-render)
       if (uiUpdates.scores) {
