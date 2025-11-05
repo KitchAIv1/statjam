@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase';
+import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 
 // Types for game stats aggregation
 export interface GameStatsSummary {
@@ -62,15 +63,29 @@ interface GameInfo {
 export class PlayerGameStatsService {
   /**
    * Fetch all game stats for a player and aggregate by game
+   * 
+   * ⚡ PERFORMANCE OPTIMIZATION:
+   * - Caches results for 5 minutes to avoid duplicate queries
+   * - Limits to last 50 games for faster queries
+   * - Uses efficient query ordering
    */
   static async getPlayerGameStats(userId: string): Promise<GameStatsSummary[]> {
     try {
+      // ⚡ Check cache first (5 min TTL)
+      const cacheKey = CacheKeys.playerGameStats(userId);
+      const cached = cache.get<GameStatsSummary[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       // Step 1: Get all raw stats for this player from game_stats table
+      // ⚡ OPTIMIZATION: Limit to last 50 games for faster queries
       const { data: rawStats, error: statsError } = await supabase
         .from('game_stats')
         .select('game_id, stat_type, stat_value, modifier, quarter')
         .eq('player_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(2000); // ⚡ Limit: ~40 stats per game × 50 games
 
       if (statsError) {
         console.error('❌ Error fetching player game stats:', statsError);
@@ -84,25 +99,37 @@ export class PlayerGameStatsService {
       // Step 2: Get unique game IDs
       const gameIds = [...new Set(rawStats.map(s => s.game_id))];
 
-      // Step 3: Fetch game info for all games
-      // NBA STANDARD: Only include completed games (excludes in_progress, scheduled, Coach Games)
-      const { data: games, error: gamesError } = await supabase
-        .from('games')
-        .select(`
-          id,
-          created_at,
-          team_a_id,
-          team_b_id,
-          home_score,
-          away_score,
-          tournament_id,
-          status,
-          tournaments (name),
-          team_a:teams!team_a_id (id, name),
-          team_b:teams!team_b_id (id, name)
-        `)
-        .in('id', gameIds)
-        .eq('status', 'completed'); // ✅ NBA STANDARD: Only completed games
+      // ⚡ OPTIMIZATION: Parallel queries (Step 3 & 4 run simultaneously)
+      const [gamesResult, teamPlayersResult] = await Promise.all([
+        // Step 3: Fetch game info for all games
+        // NBA STANDARD: Only include completed games (excludes in_progress, scheduled, Coach Games)
+        supabase
+          .from('games')
+          .select(`
+            id,
+            created_at,
+            team_a_id,
+            team_b_id,
+            home_score,
+            away_score,
+            tournament_id,
+            status,
+            tournaments (name),
+            team_a:teams!team_a_id (id, name),
+            team_b:teams!team_b_id (id, name)
+          `)
+          .in('id', gameIds)
+          .eq('status', 'completed'), // ✅ NBA STANDARD: Only completed games
+        
+        // Step 4: Get player's team assignments to determine home/away
+        supabase
+          .from('team_players')
+          .select('team_id')
+          .eq('player_id', userId)
+      ]);
+
+      const { data: games, error: gamesError } = gamesResult;
+      const { data: teamPlayers, error: teamError } = teamPlayersResult;
 
       if (gamesError) {
         console.error('❌ Error fetching game info:', gamesError);
@@ -112,12 +139,6 @@ export class PlayerGameStatsService {
       if (!games || games.length === 0) {
         return [];
       }
-
-      // Step 4: Get player's team assignments to determine home/away
-      const { data: teamPlayers, error: teamError } = await supabase
-        .from('team_players')
-        .select('team_id')
-        .eq('player_id', userId);
 
       if (teamError) {
         console.error('❌ Error fetching player teams:', teamError);
@@ -164,6 +185,9 @@ export class PlayerGameStatsService {
           ...stats
         } as GameStatsSummary;
       }).filter(Boolean) as GameStatsSummary[];
+
+      // ⚡ Cache results for 5 minutes
+      cache.set(cacheKey, gameStatsSummaries, CacheTTL.playerGameStats);
 
       return gameStatsSummaries;
 

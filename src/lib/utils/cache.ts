@@ -102,6 +102,7 @@ export const CacheKeys = {
   tournament: (tournamentId: string) => `tournament:${tournamentId}`,
   gameBasic: (gameId: string) => `game_basic:${gameId}`,
   playerDashboard: (userId: string) => `player_dashboard:${userId}`,
+  playerGameStats: (userId: string) => `player_game_stats:${userId}`, // ⚡ NEW
 } as const;
 
 // Cache TTL constants (in minutes)
@@ -112,4 +113,6 @@ export const CacheTTL = {
   TOURNAMENT_DATA: 30,  // Tournament info is mostly static
   GAME_BASIC: 2,        // Game basic info can change during games
   DASHBOARD_DATA: 3,    // Dashboard data should be relatively fresh
+  playerDashboard: 3,   // ⚡ Player dashboard (aligned with DASHBOARD_DATA)
+  playerGameStats: 5,   // ⚡ Player game stats (changes after each game)
 } as const;
