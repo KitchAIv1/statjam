@@ -188,10 +188,43 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
 
   if (loading || loadingData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/50 via-background to-red-50/30">
-        <div className="flex items-center gap-4 text-lg font-medium">
-          <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-          Loading Team Management...
+      <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 pt-24 pb-12 px-6">
+        <div className="max-w-7xl mx-auto animate-pulse">
+          {/* Header Skeleton */}
+          <div className="mb-8">
+            <div className="h-9 bg-muted rounded w-40 mb-6"></div>
+            <div className="h-10 bg-muted rounded w-80 mb-2"></div>
+            <div className="h-6 bg-muted rounded w-96"></div>
+          </div>
+
+          {/* Controls Skeleton */}
+          <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
+            <div className="flex items-center gap-3 flex-1 max-w-md">
+              <div className="flex-1 h-10 bg-muted rounded-lg"></div>
+              <div className="h-10 bg-muted rounded-lg w-40"></div>
+            </div>
+            <div className="h-10 bg-muted rounded-lg w-32"></div>
+          </div>
+
+          {/* Teams Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white border rounded-xl p-6 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-12 h-12 bg-muted rounded-full"></div>
+                    <div className="flex-1">
+                      <div className="h-5 bg-muted rounded w-32 mb-2"></div>
+                      <div className="h-4 bg-muted rounded w-24"></div>
+                    </div>
+                  </div>
+                  <div className="h-6 bg-muted rounded w-16"></div>
+                </div>
+                <div className="h-4 bg-muted rounded w-40"></div>
+                <div className="h-10 bg-muted rounded w-full"></div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

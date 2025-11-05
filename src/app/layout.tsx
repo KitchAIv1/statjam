@@ -6,7 +6,7 @@ import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'StatJam — NBA-Level Stats, Real-Time, Zero Friction',
-  description: 'Professional basketball tournament platform with NBA-level automation, real-time stat tracking, and live game streaming. Built for organizers, stat admins, coaches, players, and fans.',
+  description: 'Professional basketball tournament platform with NBA-level automation, real-time stat tracking, and live game streaming. Built for tournaments, teams, and coaches who demand pro-level precision — anywhere, anytime.',
   keywords: ['basketball stats', 'tournament management', 'real-time scoring', 'stat tracking', 'basketball tournament', 'live sports stats', 'NBA stats', 'basketball analytics'],
   authors: [{ name: 'StatJam' }],
   creator: 'StatJam',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://www.statjam.net',
     title: 'StatJam — NBA-Level Stats, Real-Time, Zero Friction',
-    description: 'Professional basketball tournament platform with NBA-level automation, real-time stat tracking, and live game streaming.',
+    description: 'Professional basketball tournament platform with NBA-level automation, real-time stat tracking, and live game streaming. Built for tournaments, teams, and coaches who demand pro-level precision.',
     siteName: 'StatJam',
     images: [
       {

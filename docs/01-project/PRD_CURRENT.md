@@ -109,7 +109,8 @@ StatJam is a professional-grade sports tournament management platform built for 
 
 #### **Hero Section**
 - **Value Proposition**: "NBA-Level Stats. Real-Time. Zero Friction"
-- **Clear Messaging**: Automation-focused headline and description
+- **Sub-Headline**: "Automation handles clock, possession, and shot sequences — you just tap and track."
+- **Audience Focus**: "Built for tournaments, teams, and coaches who demand pro-level precision — anywhere, anytime."
 - **Optimized CTAs**: Primary "Start Tracking Like the Pros" + Secondary "Watch Live Games"
 - **Visual Impact**: Full-screen hero image with gradient overlay
 - **Performance**: High-priority image loading with WebP format

@@ -121,12 +121,16 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 
 **Marketing Homepage** (MVP1 Live):
 - ✅ **Hero Section**: NBA-level messaging with clear value proposition
+  - Main headline: "NBA-Level Stats. Real-Time. Zero Friction"
+  - Sub-headline: "Automation handles clock, possession, and shot sequences — you just tap and track."
+  - Audience: "Built for tournaments, teams, and coaches who demand pro-level precision — anywhere, anytime."
 - ✅ **Differentiators**: 4 key features (Smart Automation, Real-Time Reliability, Pro-Grade Stats, Built for Everyone)
 - ✅ **Live Tournament Action**: Real-time game updates with connection status
 - ✅ **Audience Grid**: Role-based value propositions (Organizers, Stat Admins, Coaches, Players, Fans)
 - ✅ **Roadmap Section**: Coming Soon features (Live Streaming, NBA Card Generation)
 - ✅ **Performance Optimized**: Lazy loading, dynamic imports, WebP images, SEO meta tags
 - ✅ **Social Sharing**: Open Graph and Twitter Card support
+- ✅ **Company Branding**: Footer includes "© 2025 StatJam by Stratpremier. All Rights Reserved."
 
 **Performance Metrics**:
 - 40% reduction in initial bundle size (lazy loading)

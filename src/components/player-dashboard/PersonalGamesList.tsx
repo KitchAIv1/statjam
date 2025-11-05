@@ -92,8 +92,8 @@ export function PersonalGamesList({
           onClick={onRefresh}
           disabled={loading}
         >
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw className="w-4 h-4 mr-2" />
+          {loading ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
 
@@ -116,25 +116,9 @@ export function PersonalGamesList({
             onClick={onLoadMore}
             disabled={loading}
           >
-            {loading ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Loading...
-              </>
-            ) : (
-              <>
-                <MoreHorizontal className="w-4 h-4 mr-2" />
-                Load More Games
-              </>
-            )}
+            <MoreHorizontal className="w-4 h-4 mr-2" />
+            {loading ? 'Loading...' : 'Load More Games'}
           </Button>
-        </div>
-      )}
-
-      {/* Loading indicator for load more */}
-      {loading && games.length > 0 && (
-        <div className="text-center py-4">
-          <RefreshCw className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
         </div>
       )}
     </div>

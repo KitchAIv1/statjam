@@ -106,10 +106,61 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
 
   if (loading || loadingData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 animate-fadeIn">
-        <div className="flex items-center gap-4 text-lg font-medium">
-          <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-          Loading Schedule...
+      <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 pt-24 pb-12 px-6">
+        <div className="max-w-7xl mx-auto animate-pulse">
+          {/* Header Skeleton */}
+          <div className="mb-8">
+            <div className="h-9 bg-muted rounded w-40 mb-6"></div>
+            <div className="flex justify-between items-start gap-6 flex-wrap mb-6">
+              <div className="flex-1 min-w-[300px]">
+                <div className="h-10 bg-muted rounded w-80 mb-2"></div>
+                <div className="h-6 bg-muted rounded w-96"></div>
+              </div>
+              <div className="flex gap-3">
+                <div className="h-12 bg-muted rounded w-36"></div>
+                <div className="h-12 bg-muted rounded w-40"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters Skeleton */}
+          <div className="bg-muted/50 rounded-2xl p-6 mb-6 border border-border">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-20"></div>
+                  <div className="h-10 bg-muted rounded w-full"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Games List Skeleton */}
+          <div className="bg-card rounded-2xl p-6 border border-border shadow-sm">
+            <div className="h-6 bg-muted rounded w-48 mb-6"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between p-6 border rounded-xl">
+                  <div className="flex-1 space-y-3">
+                    <div className="h-5 bg-muted rounded w-40"></div>
+                    <div className="flex items-center gap-4">
+                      <div className="h-6 bg-muted rounded w-32"></div>
+                      <div className="h-4 bg-muted rounded w-8"></div>
+                      <div className="h-6 bg-muted rounded w-32"></div>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="h-4 bg-muted rounded w-32"></div>
+                      <div className="h-4 bg-muted rounded w-28"></div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-9 bg-muted rounded w-9"></div>
+                    <div className="h-9 bg-muted rounded w-9"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );

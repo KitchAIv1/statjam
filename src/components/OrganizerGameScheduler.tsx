@@ -133,12 +133,38 @@ export function OrganizerGameScheduler({ user }: OrganizerGameSchedulerProps) {
       {/* Games List */}
       <div className="space-y-4">
         {loading ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-muted-foreground">Loading games...</p>
-            </CardContent>
-          </Card>
+          <>
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                      {/* Tournament badge skeleton */}
+                      <div className="h-4 bg-muted rounded w-40"></div>
+                      {/* Teams skeleton */}
+                      <div className="flex items-center gap-3">
+                        <div className="h-6 bg-muted rounded w-32"></div>
+                        <div className="h-4 bg-muted rounded w-8"></div>
+                        <div className="h-6 bg-muted rounded w-32"></div>
+                        <div className="h-6 bg-muted rounded w-20"></div>
+                      </div>
+                      {/* Details skeleton */}
+                      <div className="flex gap-4">
+                        <div className="h-4 bg-muted rounded w-32"></div>
+                        <div className="h-4 bg-muted rounded w-24"></div>
+                        <div className="h-4 bg-muted rounded w-28"></div>
+                      </div>
+                    </div>
+                    {/* Actions skeleton */}
+                    <div className="flex gap-2">
+                      <div className="h-9 bg-muted rounded w-20"></div>
+                      <div className="h-9 bg-muted rounded w-9"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </>
         ) : filteredGames.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">

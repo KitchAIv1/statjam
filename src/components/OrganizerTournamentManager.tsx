@@ -788,11 +788,33 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           <div className="overflow-y-auto flex-1 px-6 py-4 min-h-0">
             {selectedTournament && (
               <div className="space-y-6 pb-6">
-                {/* Loading State */}
+                {/* Loading State - Skeleton Cards */}
                 {teamManagement?.loading && (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading teams...</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[1, 2, 3].map((i) => (
+                      <Card key={i} className="overflow-hidden animate-pulse">
+                        <div className="h-1 bg-muted"></div>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-muted rounded-full"></div>
+                              <div>
+                                <div className="h-4 bg-muted rounded w-32 mb-2"></div>
+                                <div className="h-3 bg-muted rounded w-24"></div>
+                              </div>
+                            </div>
+                            <div className="h-6 bg-muted rounded w-16"></div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="h-4 bg-muted rounded w-40"></div>
+                          <div className="flex justify-between items-center pt-3 border-t">
+                            <div className="h-8 bg-muted rounded w-20"></div>
+                            <div className="h-8 bg-muted rounded w-8"></div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 )}
 
@@ -1162,9 +1184,17 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                       </CardHeader>
                       <CardContent className="space-y-4">
                         {loadingStatAdmins ? (
-                          <div className="flex items-center justify-center py-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
-                            <span className="text-muted-foreground">Loading stat admins...</span>
+                          <div className="space-y-3 py-4">
+                            {[1, 2, 3].map((i) => (
+                              <div key={i} className="flex items-center gap-3 p-3 border rounded-lg animate-pulse">
+                                <div className="w-8 h-8 bg-muted rounded-full"></div>
+                                <div className="flex-1">
+                                  <div className="h-3 bg-muted rounded w-32 mb-2"></div>
+                                  <div className="h-3 bg-muted rounded w-24"></div>
+                                </div>
+                                <div className="h-8 bg-muted rounded w-16"></div>
+                              </div>
+                            ))}
                           </div>
                         ) : statAdmins.length === 0 ? (
                           <div className="text-center py-8">
@@ -1321,23 +1351,14 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={loading}
               className="gap-2"
             >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4" />
-                  Delete Tournament
-                </>
-              )}
+              <Trash2 className="w-4 h-4" />
+              {loading ? 'Deleting...' : 'Delete Tournament'}
             </Button>
           </DialogFooter>
         </DialogContent>
