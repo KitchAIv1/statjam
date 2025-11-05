@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { HeroSection } from '@/components/HeroSection';
 import { Differentiators } from '@/components/marketing/Differentiators';
+import { SmartSequencesCarousel } from '@/components/marketing/SmartSequencesCarousel';
 import { LiveTournamentSection } from '@/components/LiveTournamentSection';
 import { Footer } from '@/components/Footer';
 
@@ -39,6 +40,28 @@ export default function HomePage() {
     }
   };
 
+  // Analytics handlers for SmartSequencesCarousel
+  const handleSequencesView = () => {
+    // Fire analytics event when section enters viewport
+    if (typeof window !== 'undefined' && (window as any).plausible) {
+      (window as any).plausible('carousel_view', { 
+        props: { section: 'sequences' } 
+      });
+    }
+  };
+
+  const handleSequencesSlideChange = (index: number) => {
+    // Fire analytics event when slide changes
+    if (typeof window !== 'undefined' && (window as any).plausible) {
+      (window as any).plausible('carousel_slide_change', { 
+        props: { 
+          index: index, 
+          name: 'shooting_foul_sequence' 
+        } 
+      });
+    }
+  };
+
   if (currentView === 'tournament') {
     return <TournamentViewer onBack={navigateToLanding} />;
   }
@@ -57,6 +80,10 @@ export default function HomePage() {
         onViewTournament={navigateToTournamentPage}
       />
       <Differentiators />
+      <SmartSequencesCarousel 
+        onSlideChange={handleSequencesSlideChange}
+        onSectionView={handleSequencesView}
+      />
       <LiveTournamentSection 
         onWatchLive={navigateToTournament} 
         onViewTournament={navigateToTournamentPage}

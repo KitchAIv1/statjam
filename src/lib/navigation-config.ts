@@ -48,6 +48,12 @@ export const navigationConfig: Record<string, NavigationConfig> = {
         description: 'Explore our features'
       },
       {
+        label: 'Sequences',
+        href: '#sequences',
+        icon: PlayCircle,
+        description: 'Smart automation sequences'
+      },
+      {
         label: 'Pricing',
         href: '#pricing',
         icon: Trophy,
