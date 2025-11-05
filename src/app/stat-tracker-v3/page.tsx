@@ -31,6 +31,7 @@ import { FoulTypeSelectionModal, FoulType } from '@/components/tracker-v3/modals
 import { VictimPlayerSelectionModal } from '@/components/tracker-v3/modals/VictimPlayerSelectionModal';
 import { ShotClockViolationModal } from '@/components/tracker-v3/modals/ShotClockViolationModal';
 import { useShotClockViolation } from '@/hooks/useShotClockViolation';
+import { notify } from '@/lib/services/notificationService';
 
 interface GameData {
   id: string;
@@ -393,57 +394,65 @@ function StatTrackerV3Content() {
   const handleStatRecord = async (statType: string, modifier?: string) => {
     if (!selectedPlayer || !gameData) return;
     
-    // Handle different player types in coach mode
-    let actualPlayerId: string | undefined = undefined;
-    let actualCustomPlayerId: string | undefined = undefined;
-    let actualTeamId = gameData.team_a_id; // Default to coach team
-    let isOpponentStat = false;
-    
-    console.log('🔍 STAT RECORD DEBUG:', { 
-      coachMode, 
-      selectedPlayer, 
-      isOpponentTeamSelected: selectedPlayer === 'opponent-team',
-      willSetOpponentFlag: coachMode && selectedPlayer === 'opponent-team'
-    });
-    
-    if (coachMode && selectedPlayer === 'opponent-team') {
-      // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
-      actualPlayerId = user?.id || undefined;
-      actualTeamId = gameData.team_a_id; // ✅ Use coach's team ID for database (UUID required)
-      isOpponentStat = true; // FLAG: This is an opponent stat
-      console.log('✅ Recording opponent team stat (flagged as opponent), team_id:', actualTeamId, 'isOpponentStat:', isOpponentStat);
-    } else {
-      // Determine which team the selected player belongs to
-      const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
-      actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+    try {
+      // Handle different player types in coach mode
+      let actualPlayerId: string | undefined = undefined;
+      let actualCustomPlayerId: string | undefined = undefined;
+      let actualTeamId = gameData.team_a_id; // Default to coach team
+      let isOpponentStat = false;
       
-      // Check if this is a custom player (TWO CHECKS: ID prefix OR flag)
-      const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-      const isCustomPlayer = selectedPlayer.startsWith('custom-') || 
-                            (selectedPlayerData && selectedPlayerData.is_custom_player === true);
+      console.log('🔍 STAT RECORD DEBUG:', { 
+        coachMode, 
+        selectedPlayer, 
+        isOpponentTeamSelected: selectedPlayer === 'opponent-team',
+        willSetOpponentFlag: coachMode && selectedPlayer === 'opponent-team'
+      });
       
-      if (isCustomPlayer) {
-        // CUSTOM PLAYER STATS: Use the actual custom player ID
-        actualCustomPlayerId = selectedPlayer; // This is the custom_players.id
-        actualPlayerId = undefined; // Don't set player_id for custom players
-        console.log('🏀 Recording custom player stat for:', selectedPlayerData?.name, 'ID:', selectedPlayer);
+      if (coachMode && selectedPlayer === 'opponent-team') {
+        // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
+        actualPlayerId = user?.id || undefined;
+        actualTeamId = gameData.team_a_id; // ✅ Use coach's team ID for database (UUID required)
+        isOpponentStat = true; // FLAG: This is an opponent stat
+        console.log('✅ Recording opponent team stat (flagged as opponent), team_id:', actualTeamId, 'isOpponentStat:', isOpponentStat);
       } else {
-        // REGULAR PLAYER STATS: Use the user ID
-        actualPlayerId = selectedPlayer; // This is the users.id
-        actualCustomPlayerId = undefined; // Don't set custom_player_id for regular players
-        console.log('🏀 Recording regular player stat for ID:', selectedPlayer);
+        // Determine which team the selected player belongs to
+        const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+        actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+        
+        // Check if this is a custom player (TWO CHECKS: ID prefix OR flag)
+        const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+        const isCustomPlayer = selectedPlayer.startsWith('custom-') || 
+                              (selectedPlayerData && selectedPlayerData.is_custom_player === true);
+        
+        if (isCustomPlayer) {
+          // CUSTOM PLAYER STATS: Use the actual custom player ID
+          actualCustomPlayerId = selectedPlayer; // This is the custom_players.id
+          actualPlayerId = undefined; // Don't set player_id for custom players
+          console.log('🏀 Recording custom player stat for:', selectedPlayerData?.name, 'ID:', selectedPlayer);
+        } else {
+          // REGULAR PLAYER STATS: Use the user ID
+          actualPlayerId = selectedPlayer; // This is the users.id
+          actualCustomPlayerId = undefined; // Don't set custom_player_id for regular players
+          console.log('🏀 Recording regular player stat for ID:', selectedPlayer);
+        }
       }
+      
+      await tracker.recordStat({
+        gameId: gameData.id,
+        teamId: actualTeamId,
+        playerId: actualPlayerId,
+        customPlayerId: actualCustomPlayerId,
+        isOpponentStat: isOpponentStat,
+        statType: statType as 'field_goal' | 'three_pointer' | 'free_throw' | 'assist' | 'rebound' | 'steal' | 'block' | 'turnover' | 'foul',
+        modifier: modifier as 'made' | 'missed' | 'offensive' | 'defensive' | 'shooting' | 'personal' | 'technical' | 'flagrant' | undefined
+      });
+    } catch (error) {
+      console.error('❌ Error recording stat:', error);
+      notify.error(
+        'Failed to record stat',
+        error instanceof Error ? error.message : 'Please try again'
+      );
     }
-    
-    await tracker.recordStat({
-      gameId: gameData.id,
-      teamId: actualTeamId,
-      playerId: actualPlayerId,
-      customPlayerId: actualCustomPlayerId,
-      isOpponentStat: isOpponentStat,
-      statType: statType as 'field_goal' | 'three_pointer' | 'free_throw' | 'assist' | 'rebound' | 'steal' | 'block' | 'turnover' | 'foul',
-      modifier: modifier as 'made' | 'missed' | 'offensive' | 'defensive' | 'shooting' | 'personal' | 'technical' | 'flagrant' | undefined
-    });
   };
 
   // ✅ PHASE 5: Handle foul recording with new flow
@@ -488,64 +497,76 @@ function StatTrackerV3Content() {
   const recordFoulWithoutVictim = async (foulType: FoulType) => {
     if (!foulerPlayerId || !gameData) return;
     
-    // Determine player type and team
-    let actualPlayerId: string | undefined = undefined;
-    let actualCustomPlayerId: string | undefined = undefined;
-    let actualTeamId = gameData.team_a_id;
-    let isOpponentStat = false;
-    
-    if (coachMode && foulerPlayerId === 'opponent-team') {
-      actualPlayerId = user?.id || undefined;
-      actualTeamId = gameData.team_a_id;
-      isOpponentStat = true;
-    } else {
-      const isTeamAPlayer = teamAPlayers.some(p => p.id === foulerPlayerId);
-      actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+    try {
+      // Determine player type and team
+      let actualPlayerId: string | undefined = undefined;
+      let actualCustomPlayerId: string | undefined = undefined;
+      let actualTeamId = gameData.team_a_id;
+      let isOpponentStat = false;
       
-      // ✅ FIX: Check if fouler is custom player (TWO CHECKS)
-      const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === foulerPlayerId);
-      const isCustomPlayer = foulerPlayerId.startsWith('custom-') || 
-                            (foulerData && foulerData.is_custom_player === true);
-      
-      if (isCustomPlayer) {
-        actualCustomPlayerId = foulerPlayerId;
-        actualPlayerId = undefined;
+      if (coachMode && foulerPlayerId === 'opponent-team') {
+        actualPlayerId = user?.id || undefined;
+        actualTeamId = gameData.team_a_id;
+        isOpponentStat = true;
       } else {
-        actualPlayerId = foulerPlayerId;
-        actualCustomPlayerId = undefined;
+        const isTeamAPlayer = teamAPlayers.some(p => p.id === foulerPlayerId);
+        actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+        
+        // ✅ FIX: Check if fouler is custom player (TWO CHECKS)
+        const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === foulerPlayerId);
+        const isCustomPlayer = foulerPlayerId.startsWith('custom-') || 
+                              (foulerData && foulerData.is_custom_player === true);
+        
+        if (isCustomPlayer) {
+          actualCustomPlayerId = foulerPlayerId;
+          actualPlayerId = undefined;
+        } else {
+          actualPlayerId = foulerPlayerId;
+          actualCustomPlayerId = undefined;
+        }
       }
-    }
-    
-    // Map foul type to modifier
-    const modifier = foulType === 'offensive' ? 'offensive' : 'personal';
-    
-    await tracker.recordStat({
-      gameId: gameData.id,
-      teamId: actualTeamId,
-      playerId: actualPlayerId,
-      customPlayerId: actualCustomPlayerId,
-      isOpponentStat: isOpponentStat,
-      statType: 'foul',
-      modifier: modifier
-    });
-    
-    // If offensive foul, also record turnover
-    if (foulType === 'offensive') {
+      
+      // Map foul type to modifier
+      const modifier = foulType === 'offensive' ? 'offensive' : 'personal';
+      
       await tracker.recordStat({
         gameId: gameData.id,
         teamId: actualTeamId,
         playerId: actualPlayerId,
         customPlayerId: actualCustomPlayerId,
         isOpponentStat: isOpponentStat,
-        statType: 'turnover',
-        modifier: 'offensive_foul'
+        statType: 'foul',
+        modifier: modifier
       });
+      
+      // If offensive foul, also record turnover
+      if (foulType === 'offensive') {
+        await tracker.recordStat({
+          gameId: gameData.id,
+          teamId: actualTeamId,
+          playerId: actualPlayerId,
+          customPlayerId: actualCustomPlayerId,
+          isOpponentStat: isOpponentStat,
+          statType: 'turnover',
+          modifier: 'offensive_foul'
+        });
+      }
+      
+      // Reset state
+      setFoulerPlayerId(null);
+      setFoulerPlayerName('');
+      setSelectedFoulType(null);
+    } catch (error) {
+      console.error('❌ Error recording foul:', error);
+      notify.error(
+        'Failed to record foul',
+        error instanceof Error ? error.message : 'Please try again'
+      );
+      // Reset state even on error
+      setFoulerPlayerId(null);
+      setFoulerPlayerName('');
+      setSelectedFoulType(null);
     }
-    
-    // Reset state
-    setFoulerPlayerId(null);
-    setFoulerPlayerName('');
-    setSelectedFoulType(null);
   };
   
   // ✅ PHASE 5: Handle victim player selection
@@ -554,104 +575,116 @@ function StatTrackerV3Content() {
     
     if (!foulerPlayerId || !selectedFoulType || !gameData) return;
     
-    // Determine fouler details
-    let foulerActualPlayerId: string | undefined = undefined;
-    let foulerCustomPlayerId: string | undefined = undefined;
-    let foulerTeamId = gameData.team_a_id;
-    let foulerIsOpponentStat = false;
-    
-    if (coachMode && foulerPlayerId === 'opponent-team') {
-      foulerActualPlayerId = user?.id || undefined;
-      foulerTeamId = gameData.team_a_id;
-      foulerIsOpponentStat = true;
-    } else {
-      const isTeamAPlayer = teamAPlayers.some(p => p.id === foulerPlayerId);
-      foulerTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+    try {
+      // Determine fouler details
+      let foulerActualPlayerId: string | undefined = undefined;
+      let foulerCustomPlayerId: string | undefined = undefined;
+      let foulerTeamId = gameData.team_a_id;
+      let foulerIsOpponentStat = false;
       
-      // ✅ FIX: Check if fouler is custom player (TWO CHECKS)
-      const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === foulerPlayerId);
-      const isCustomPlayer = foulerPlayerId.startsWith('custom-') || 
-                            (foulerData && foulerData.is_custom_player === true);
-      
-      if (isCustomPlayer) {
-        foulerCustomPlayerId = foulerPlayerId;
+      if (coachMode && foulerPlayerId === 'opponent-team') {
+        foulerActualPlayerId = user?.id || undefined;
+        foulerTeamId = gameData.team_a_id;
+        foulerIsOpponentStat = true;
       } else {
-        foulerActualPlayerId = foulerPlayerId;
+        const isTeamAPlayer = teamAPlayers.some(p => p.id === foulerPlayerId);
+        foulerTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+        
+        // ✅ FIX: Check if fouler is custom player (TWO CHECKS)
+        const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === foulerPlayerId);
+        const isCustomPlayer = foulerPlayerId.startsWith('custom-') || 
+                              (foulerData && foulerData.is_custom_player === true);
+        
+        if (isCustomPlayer) {
+          foulerCustomPlayerId = foulerPlayerId;
+        } else {
+          foulerActualPlayerId = foulerPlayerId;
+        }
       }
-    }
-    
-    // Determine victim team (opposite of fouler)
-    const victimTeamId = foulerTeamId === gameData.team_a_id ? gameData.team_b_id : gameData.team_a_id;
-    
-    // Map foul type to modifier and FT count
-    let modifier = 'shooting';
-    let ftCount = 2;
-    let ftType: '1-and-1' | 'shooting' | 'technical' | 'flagrant' = 'shooting';
-    
-    switch (selectedFoulType) {
-      case 'shooting_2pt':
-        modifier = 'shooting';
-        ftCount = 2;
-        ftType = 'shooting';
-        break;
-      case 'shooting_3pt':
-        modifier = 'shooting';
-        ftCount = 3;
-        ftType = 'shooting';
-        break;
-      case 'bonus':
-        modifier = '1-and-1';
-        ftCount = 2;
-        ftType = '1-and-1';
-        break;
-      case 'technical':
-        modifier = 'technical';
-        ftCount = 1;
-        ftType = 'technical';
-        break;
-      case 'flagrant':
-        modifier = 'flagrant';
-        ftCount = 2;
-        ftType = 'flagrant';
-        break;
-    }
-    
-    // ✅ Generate sequence_id to link foul and FTs
-    const { v4: uuidv4 } = await import('uuid');
-    const sequenceId = uuidv4();
-    
-    // Record the foul with sequence_id for linking
-    await tracker.recordStat({
-      gameId: gameData.id,
-      teamId: foulerTeamId,
-      playerId: foulerActualPlayerId,
-      customPlayerId: foulerCustomPlayerId,
-      isOpponentStat: foulerIsOpponentStat,
-      statType: 'foul',
-      modifier: modifier,
-      sequenceId: sequenceId // ✅ Link foul to FTs
-    });
-    
-    // Trigger FT modal with same sequence_id
-    tracker.setPlayPrompt({
-      isOpen: true,
-      type: 'free_throw',
-      sequenceId: sequenceId, // ✅ Use same sequence_id
-      primaryEventId: null,
-      metadata: {
-        shooterId: victimId,
-        shooterName: victimName,
-        shooterTeamId: victimTeamId,
-        foulType: ftType,
-        totalShots: ftCount,
-        foulerId: foulerPlayerId
+      
+      // Determine victim team (opposite of fouler)
+      const victimTeamId = foulerTeamId === gameData.team_a_id ? gameData.team_b_id : gameData.team_a_id;
+      
+      // Map foul type to modifier and FT count
+      let modifier = 'shooting';
+      let ftCount = 2;
+      let ftType: '1-and-1' | 'shooting' | 'technical' | 'flagrant' = 'shooting';
+      
+      switch (selectedFoulType) {
+        case 'shooting_2pt':
+          modifier = 'shooting';
+          ftCount = 2;
+          ftType = 'shooting';
+          break;
+        case 'shooting_3pt':
+          modifier = 'shooting';
+          ftCount = 3;
+          ftType = 'shooting';
+          break;
+        case 'bonus':
+          modifier = '1-and-1';
+          ftCount = 2;
+          ftType = '1-and-1';
+          break;
+        case 'technical':
+          modifier = 'technical';
+          ftCount = 1;
+          ftType = 'technical';
+          break;
+        case 'flagrant':
+          modifier = 'flagrant';
+          ftCount = 2;
+          ftType = 'flagrant';
+          break;
       }
-    });
-    
-    // Reset state
-    setFoulerPlayerId(null);
-    setFoulerPlayerName('');
-    setSelectedFoulType(null);
+      
+      // ✅ Generate sequence_id to link foul and FTs
+      const { v4: uuidv4 } = await import('uuid');
+      const sequenceId = uuidv4();
+      
+      // Record the foul with sequence_id for linking
+      await tracker.recordStat({
+        gameId: gameData.id,
+        teamId: foulerTeamId,
+        playerId: foulerActualPlayerId,
+        customPlayerId: foulerCustomPlayerId,
+        isOpponentStat: foulerIsOpponentStat,
+        statType: 'foul',
+        modifier: modifier,
+        sequenceId: sequenceId // ✅ Link foul to FTs
+      });
+      
+      // Trigger FT modal with same sequence_id
+      tracker.setPlayPrompt({
+        isOpen: true,
+        type: 'free_throw',
+        sequenceId: sequenceId, // ✅ Use same sequence_id
+        primaryEventId: null,
+        metadata: {
+          shooterId: victimId,
+          shooterName: victimName,
+          shooterTeamId: victimTeamId,
+          foulType: ftType,
+          totalShots: ftCount,
+          foulerId: foulerPlayerId
+        }
+      });
+      
+      // Reset state
+      setFoulerPlayerId(null);
+      setFoulerPlayerName('');
+      setSelectedFoulType(null);
+    } catch (error) {
+      console.error('❌ Error recording shooting foul:', error);
+      notify.error(
+        'Failed to record shooting foul',
+        error instanceof Error ? error.message : 'Please try again'
+      );
+      // Reset state even on error
+      setFoulerPlayerId(null);
+      setFoulerPlayerName('');
+      setSelectedFoulType(null);
+    }
   };
 
   // Handle timeout with enhanced modal
@@ -870,29 +903,38 @@ function StatTrackerV3Content() {
           isOpen={true}
           onClose={tracker.clearPlayPrompt}
           onSelectPlayer={async (playerId) => {
-            // Record assist stat linked to the shot
-            // ✅ PHASE 5 FIX: Assists must have modifier IS NULL per database constraint
-            
-            // ✅ FIX: Check if assisting player is custom player (TWO CHECKS)
-            const assistingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
-            const isCustomPlayer = playerId.startsWith('custom-') || 
-                                  (assistingPlayer && assistingPlayer.is_custom_player === true);
-            const primaryEventId = tracker.playPrompt.primaryEventId;
-            
-            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
-            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-            
-            await tracker.recordStat({
-              gameId: gameData.id,
-              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
-              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
-              teamId,
-              statType: 'assist',
-              modifier: null, // ✅ NULL modifier for assists
-              metadata: primaryEventId ? { primaryEventId } : undefined
-            });
-            
-            tracker.clearPlayPrompt();
+            try {
+              // Record assist stat linked to the shot
+              // ✅ PHASE 5 FIX: Assists must have modifier IS NULL per database constraint
+              
+              // ✅ FIX: Check if assisting player is custom player (TWO CHECKS)
+              const assistingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+              const isCustomPlayer = playerId.startsWith('custom-') || 
+                                    (assistingPlayer && assistingPlayer.is_custom_player === true);
+              const primaryEventId = tracker.playPrompt.primaryEventId;
+              
+              const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+              const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+              
+              await tracker.recordStat({
+                gameId: gameData.id,
+                playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+                customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+                teamId,
+                statType: 'assist',
+                modifier: null, // ✅ NULL modifier for assists
+                metadata: primaryEventId ? { primaryEventId } : undefined
+              });
+              
+              tracker.clearPlayPrompt();
+            } catch (error) {
+              console.error('❌ Error recording assist:', error);
+              notify.error(
+                'Failed to record assist',
+                error instanceof Error ? error.message : 'Please try again'
+              );
+              tracker.clearPlayPrompt();
+            }
           }}
           onSkip={() => {
             console.log('⏭️ Skipping assist prompt');
@@ -919,27 +961,36 @@ function StatTrackerV3Content() {
           isOpen={true}
           onClose={tracker.clearPlayPrompt}
           onSelectPlayer={async (playerId, reboundType) => {
-            // ✅ FIX: Handle custom players properly
-            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
-            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-            const primaryEventId = tracker.playPrompt.primaryEventId;
-            
-            // Check if rebounder is a custom player
-            const rebounderData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
-            const isCustomPlayer = playerId.startsWith('custom-') || 
-                                  (rebounderData && rebounderData.is_custom_player === true);
-            
-            await tracker.recordStat({
-              gameId: gameData.id,
-              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
-              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
-              teamId,
-              statType: 'rebound',
-              modifier: reboundType,
-              metadata: primaryEventId ? { primaryEventId } : undefined
-            });
-            
-            tracker.clearPlayPrompt();
+            try {
+              // ✅ FIX: Handle custom players properly
+              const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+              const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+              const primaryEventId = tracker.playPrompt.primaryEventId;
+              
+              // Check if rebounder is a custom player
+              const rebounderData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+              const isCustomPlayer = playerId.startsWith('custom-') || 
+                                    (rebounderData && rebounderData.is_custom_player === true);
+              
+              await tracker.recordStat({
+                gameId: gameData.id,
+                playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+                customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+                teamId,
+                statType: 'rebound',
+                modifier: reboundType,
+                metadata: primaryEventId ? { primaryEventId } : undefined
+              });
+              
+              tracker.clearPlayPrompt();
+            } catch (error) {
+              console.error('❌ Error recording rebound:', error);
+              notify.error(
+                'Failed to record rebound',
+                error instanceof Error ? error.message : 'Please try again'
+              );
+              tracker.clearPlayPrompt();
+            }
           }}
           onSkip={() => {
             console.log('⏭️ Skipping rebound prompt');
@@ -959,27 +1010,36 @@ function StatTrackerV3Content() {
           isOpen={true}
           onClose={tracker.clearPlayPrompt}
           onSelectPlayer={async (playerId) => {
-            // ✅ FIX: Handle custom players properly
-            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
-            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-            const primaryEventId = tracker.playPrompt.primaryEventId;
-            
-            // Check if blocker is a custom player
-            const blockerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
-            const isCustomPlayer = playerId.startsWith('custom-') || 
-                                  (blockerData && blockerData.is_custom_player === true);
-            
-            await tracker.recordStat({
-              gameId: gameData.id,
-              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
-              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
-              teamId,
-              statType: 'block',
-              modifier: null,
-              metadata: primaryEventId ? { primaryEventId } : undefined
-            });
-            
-            tracker.clearPlayPrompt();
+            try {
+              // ✅ FIX: Handle custom players properly
+              const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+              const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+              const primaryEventId = tracker.playPrompt.primaryEventId;
+              
+              // Check if blocker is a custom player
+              const blockerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+              const isCustomPlayer = playerId.startsWith('custom-') || 
+                                    (blockerData && blockerData.is_custom_player === true);
+              
+              await tracker.recordStat({
+                gameId: gameData.id,
+                playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+                customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+                teamId,
+                statType: 'block',
+                modifier: null,
+                metadata: primaryEventId ? { primaryEventId } : undefined
+              });
+              
+              tracker.clearPlayPrompt();
+            } catch (error) {
+              console.error('❌ Error recording block:', error);
+              notify.error(
+                'Failed to record block',
+                error instanceof Error ? error.message : 'Please try again'
+              );
+              tracker.clearPlayPrompt();
+            }
           }}
           onSkip={() => {
             console.log('⏭️ Skipping block prompt');
@@ -1005,27 +1065,36 @@ function StatTrackerV3Content() {
           isOpen={true}
           onClose={tracker.clearPlayPrompt}
           onSelectPlayer={async (playerId) => {
-            // Record turnover stat linked to the steal
-            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
-            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-            const primaryEventId = tracker.playPrompt.primaryEventId;
-            
-            // ✅ FIX: Check if player is a custom player (TWO CHECKS)
-            const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
-            const isCustomPlayer = playerId.startsWith('custom-') || 
-                                  (playerData && playerData.is_custom_player === true);
-            
-            await tracker.recordStat({
-              gameId: gameData.id,
-              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
-              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
-              teamId,
-              statType: 'turnover',
-              modifier: 'steal',
-              metadata: primaryEventId ? { primaryEventId } : undefined
-            });
-            
-            tracker.clearPlayPrompt();
+            try {
+              // Record turnover stat linked to the steal
+              const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+              const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+              const primaryEventId = tracker.playPrompt.primaryEventId;
+              
+              // ✅ FIX: Check if player is a custom player (TWO CHECKS)
+              const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+              const isCustomPlayer = playerId.startsWith('custom-') || 
+                                    (playerData && playerData.is_custom_player === true);
+              
+              await tracker.recordStat({
+                gameId: gameData.id,
+                playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+                customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+                teamId,
+                statType: 'turnover',
+                modifier: 'steal',
+                metadata: primaryEventId ? { primaryEventId } : undefined
+              });
+              
+              tracker.clearPlayPrompt();
+            } catch (error) {
+              console.error('❌ Error recording turnover:', error);
+              notify.error(
+                'Failed to record turnover',
+                error instanceof Error ? error.message : 'Please try again'
+              );
+              tracker.clearPlayPrompt();
+            }
           }}
           onSkip={() => {
             console.log('⏭️ Skipping turnover prompt');
@@ -1127,28 +1196,37 @@ function StatTrackerV3Content() {
           isOpen={true}
           onClose={tracker.clearPlayPrompt}
           onComplete={async (results) => {
-            // Record all FT results
-            const victimPlayerId = tracker.playPrompt.metadata?.victimPlayerId;
-            const isTeamAPlayer = teamAPlayers.some(p => p.id === victimPlayerId);
-            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-            
-            // ✅ FIX: Check if victim is a custom player (TWO CHECKS)
-            const victimData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === victimPlayerId);
-            const isCustomPlayer = victimPlayerId?.startsWith('custom-') || 
-                                  (victimData && victimData.is_custom_player === true);
-            
-            for (const result of results) {
-              await tracker.recordStat({
-                gameId: gameData.id,
-                playerId: isCustomPlayer ? undefined : victimPlayerId, // ✅ Only for real players
-                customPlayerId: isCustomPlayer ? victimPlayerId : undefined, // ✅ Only for custom players
-                teamId,
-                statType: 'free_throw',
-                modifier: result.made ? 'made' : 'missed'
-              });
+            try {
+              // Record all FT results
+              const victimPlayerId = tracker.playPrompt.metadata?.victimPlayerId;
+              const isTeamAPlayer = teamAPlayers.some(p => p.id === victimPlayerId);
+              const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+              
+              // ✅ FIX: Check if victim is a custom player (TWO CHECKS)
+              const victimData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === victimPlayerId);
+              const isCustomPlayer = victimPlayerId?.startsWith('custom-') || 
+                                    (victimData && victimData.is_custom_player === true);
+              
+              for (const result of results) {
+                await tracker.recordStat({
+                  gameId: gameData.id,
+                  playerId: isCustomPlayer ? undefined : victimPlayerId, // ✅ Only for real players
+                  customPlayerId: isCustomPlayer ? victimPlayerId : undefined, // ✅ Only for custom players
+                  teamId,
+                  statType: 'free_throw',
+                  modifier: result.made ? 'made' : 'missed'
+                });
+              }
+              
+              tracker.clearPlayPrompt();
+            } catch (error) {
+              console.error('❌ Error recording free throws:', error);
+              notify.error(
+                'Failed to record free throws',
+                error instanceof Error ? error.message : 'Please try again'
+              );
+              tracker.clearPlayPrompt();
             }
-            
-            tracker.clearPlayPrompt();
           }}
           playerName={tracker.playPrompt.metadata?.victimName || 'Unknown'}
           shotCount={tracker.playPrompt.metadata?.shotCount || 2}
@@ -1175,23 +1253,32 @@ function StatTrackerV3Content() {
               <div className="flex gap-3">
                 <button
                   onClick={async () => {
-                    // Record shot clock violation as turnover
-                    if (selectedPlayer && violationTeamId) {
-                      // ✅ FIX: Check if player is a custom player (TWO CHECKS)
-                      const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-                      const isCustomPlayer = selectedPlayer.startsWith('custom-') || 
-                                            (playerData && playerData.is_custom_player === true);
-                      
-                      await tracker.recordStat({
-                        gameId: gameData.id,
-                        playerId: isCustomPlayer ? undefined : selectedPlayer, // ✅ Only for real players
-                        customPlayerId: isCustomPlayer ? selectedPlayer : undefined, // ✅ Only for custom players
-                        teamId: violationTeamId,
-                        statType: 'turnover',
-                        modifier: 'shot_clock_violation'
-                      });
+                    try {
+                      // Record shot clock violation as turnover
+                      if (selectedPlayer && violationTeamId) {
+                        // ✅ FIX: Check if player is a custom player (TWO CHECKS)
+                        const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+                        const isCustomPlayer = selectedPlayer.startsWith('custom-') || 
+                                              (playerData && playerData.is_custom_player === true);
+                        
+                        await tracker.recordStat({
+                          gameId: gameData.id,
+                          playerId: isCustomPlayer ? undefined : selectedPlayer, // ✅ Only for real players
+                          customPlayerId: isCustomPlayer ? selectedPlayer : undefined, // ✅ Only for custom players
+                          teamId: violationTeamId,
+                          statType: 'turnover',
+                          modifier: 'shot_clock_violation'
+                        });
+                      }
+                      setShowViolationModal(false);
+                    } catch (error) {
+                      console.error('❌ Error recording shot clock violation:', error);
+                      notify.error(
+                        'Failed to record violation',
+                        error instanceof Error ? error.message : 'Please try again'
+                      );
+                      setShowViolationModal(false);
                     }
-                    setShowViolationModal(false);
                   }}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
                 >

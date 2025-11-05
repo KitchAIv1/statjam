@@ -106,88 +106,100 @@ export function MobileLayoutV3({
   // ✅ USE DESKTOP LOGIC (passed as prop) or fallback to old logic for safety
   const handleStatRecord = async (statType: string, modifier?: string) => {
     if (onStatRecord) {
-      // ✅ DESKTOP LOGIC - Single source of truth
+      // ✅ DESKTOP LOGIC - Single source of truth (already has error handling)
       console.log('🖥️ MOBILE: Using desktop handleStatRecord logic');
       await onStatRecord(statType, modifier);
       return;
     }
 
     // ⚠️ FALLBACK: Old mobile logic (keep for safety during testing)
-    console.warn('⚠️ MOBILE: Using old mobile logic (fallback)');
-    if (!selectedPlayer) return;
+    try {
+      console.warn('⚠️ MOBILE: Using old mobile logic (fallback)');
+      if (!selectedPlayer) return;
 
-    // ✅ FIX: Handle opponent team stats (same logic as expanded view)
-    if (isCoachMode && selectedPlayer === 'opponent-team') {
-      // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
+      // ✅ FIX: Handle opponent team stats (same logic as expanded view)
+      if (isCoachMode && selectedPlayer === 'opponent-team') {
+        // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
+        await tracker.recordStat({
+          gameId: gameData.id,
+          playerId: userId || null, // ✅ FIX: Use actual user ID
+          customPlayerId: null,
+          teamId: gameData.team_a_id, // Coach's team UUID (required for DB)
+          statType,
+          modifier,
+          isOpponentStat: true // ✅ FLAG: This is an opponent stat
+        });
+        return;
+      }
+
+      // ✅ FIX: Check if player is custom player (custom players use customPlayerId field)
+      const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+      const isCustomPlayer = selectedPlayer.startsWith('custom-');
+      const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+      const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+
       await tracker.recordStat({
         gameId: gameData.id,
-        playerId: userId || null, // ✅ FIX: Use actual user ID
-        customPlayerId: null,
-        teamId: gameData.team_a_id, // Coach's team UUID (required for DB)
+        playerId: isCustomPlayer ? undefined : selectedPlayer, // ✅ Only for real players
+        customPlayerId: isCustomPlayer ? selectedPlayer : undefined, // ✅ Only for custom players
+        teamId,
         statType,
-        modifier,
-        isOpponentStat: true // ✅ FLAG: This is an opponent stat
+        modifier
       });
-      return;
+    } catch (error) {
+      console.error('❌ MOBILE FALLBACK: Error recording stat:', error);
+      // Note: Desktop logic (onStatRecord) already shows toast notification
+      // Fallback just logs the error
     }
-
-    // ✅ FIX: Check if player is custom player (custom players use customPlayerId field)
-    const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-    const isCustomPlayer = selectedPlayer.startsWith('custom-');
-    const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
-    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-
-    await tracker.recordStat({
-      gameId: gameData.id,
-      playerId: isCustomPlayer ? undefined : selectedPlayer, // ✅ Only for real players
-      customPlayerId: isCustomPlayer ? selectedPlayer : undefined, // ✅ Only for custom players
-      teamId,
-      statType,
-      modifier
-    });
   };
 
   // ✅ USE DESKTOP LOGIC (passed as prop) or fallback to old logic for safety
   const handleFoulRecord = async (foulType: 'personal' | 'technical') => {
     if (onFoulRecord) {
-      // ✅ DESKTOP LOGIC - Single source of truth
+      // ✅ DESKTOP LOGIC - Single source of truth (already has error handling)
       console.log('🖥️ MOBILE: Using desktop handleFoulRecord logic');
       await onFoulRecord(foulType);
       return;
     }
 
     // ⚠️ FALLBACK: Old mobile logic (keep for safety during testing)
-    console.warn('⚠️ MOBILE: Using old mobile foul logic (fallback)');
-    if (!selectedPlayer) return;
+    try {
+      console.warn('⚠️ MOBILE: Using old mobile foul logic (fallback)');
+      if (!selectedPlayer) return;
 
-    // ✅ FIX: Handle opponent team fouls (same logic as expanded view)
-    if (isCoachMode && selectedPlayer === 'opponent-team') {
-      // OPPONENT TEAM FOULS: Use coach's user ID as proxy, mark as opponent stat
+      // ✅ FIX: Handle opponent team fouls (same logic as expanded view)
+      if (isCoachMode && selectedPlayer === 'opponent-team') {
+        // OPPONENT TEAM FOULS: Use coach's user ID as proxy, mark as opponent stat
+        await tracker.recordStat({
+          gameId: gameData.id,
+          playerId: userId || null, // ✅ FIX: Use actual user ID
+          customPlayerId: null,
+          teamId: gameData.team_a_id, // Coach's team UUID (required for DB)
+          statType: 'foul',
+          modifier: foulType,
+          isOpponentStat: true // ✅ FLAG: This is an opponent stat
+        });
+        return;
+      }
+
+      // ✅ FIX: Check if player is custom player (custom players use customPlayerId field)
+      const isCustomPlayer = selectedPlayer.startsWith('custom-');
+      const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+      const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+
       await tracker.recordStat({
         gameId: gameData.id,
-        playerId: userId || null, // ✅ FIX: Use actual user ID
-        customPlayerId: null,
-        teamId: gameData.team_a_id, // Coach's team UUID (required for DB)
+        playerId: isCustomPlayer ? undefined : selectedPlayer, // ✅ Only for real players
+        customPlayerId: isCustomPlayer ? selectedPlayer : undefined, // ✅ Only for custom players
+        teamId,
         statType: 'foul',
-        modifier: foulType,
-        isOpponentStat: true // ✅ FLAG: This is an opponent stat
+        modifier: foulType
       });
-      return;
+    } catch (error) {
+      console.error('❌ MOBILE FALLBACK: Error recording foul:', error);
+      // Note: Desktop logic (onFoulRecord) already shows toast notification
+      // Fallback just logs the error
     }
-
-    // ✅ FIX: Check if player is custom player (custom players use customPlayerId field)
-    const isCustomPlayer = selectedPlayer.startsWith('custom-');
-    const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
-    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-
-    await tracker.recordStat({
-      gameId: gameData.id,
-      playerId: isCustomPlayer ? undefined : selectedPlayer, // ✅ Only for real players
-      customPlayerId: isCustomPlayer ? selectedPlayer : undefined, // ✅ Only for custom players
-      teamId,
-      statType: 'foul',
-      modifier: foulType
-    });
   };
 
   // Substitution now handled by main page - just use the prop
