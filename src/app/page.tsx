@@ -7,6 +7,7 @@ import { HeroSection } from '@/components/HeroSection';
 import { Differentiators } from '@/components/marketing/Differentiators';
 import { SmartSequencesCarousel } from '@/components/marketing/SmartSequencesCarousel';
 import { LiveTournamentSection } from '@/components/LiveTournamentSection';
+import { MobileAdvantageSection } from '@/components/marketing/MobileAdvantageSection';
 import { Footer } from '@/components/Footer';
 
 // Lazy load below-the-fold components
@@ -62,6 +63,28 @@ export default function HomePage() {
     }
   };
 
+  // Analytics handlers for MobileAdvantageSection
+  const handleMobileAdvantageView = () => {
+    // Fire analytics event when section enters viewport
+    if (typeof window !== 'undefined' && (window as any).plausible) {
+      (window as any).plausible('section_view', { 
+        props: { section: 'mobile_advantage' } 
+      });
+    }
+  };
+
+  const handleMobileAdvantageCtaClick = () => {
+    // Fire analytics event when CTA is clicked
+    if (typeof window !== 'undefined' && (window as any).plausible) {
+      (window as any).plausible('cta_click', {
+        props: { 
+          section: 'mobile_advantage',
+          cta: 'start_tracking_now'
+        }
+      });
+    }
+  };
+
   if (currentView === 'tournament') {
     return <TournamentViewer onBack={navigateToLanding} />;
   }
@@ -87,6 +110,10 @@ export default function HomePage() {
       <LiveTournamentSection 
         onWatchLive={navigateToTournament} 
         onViewTournament={navigateToTournamentPage}
+      />
+      <MobileAdvantageSection 
+        onSectionView={handleMobileAdvantageView}
+        onCtaClick={handleMobileAdvantageCtaClick}
       />
       <AudienceGrid />
       <PlayerPremiumSection />
