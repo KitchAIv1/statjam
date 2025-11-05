@@ -127,7 +127,7 @@ export function HorizontalRosterV3({
               <Button
                 onClick={() => !isEmpty && onPlayerSelect(player.id)}
                 disabled={isEmpty}
-                className={`w-20 h-20 rounded-full p-0 flex items-center justify-center text-lg font-bold transition-all ${
+                className={`w-20 h-20 rounded-lg p-0 flex items-center justify-center text-lg font-bold transition-all ${
                   isEmpty 
                     ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed border-2 border-dashed border-gray-300 dark:border-gray-600'
                     : isSelected
@@ -145,7 +145,7 @@ export function HorizontalRosterV3({
                   <img 
                     src={player.photo_url} 
                     alt={player.name}
-                    className="w-full h-full rounded-full object-cover"
+                    className="w-full h-full rounded-lg object-cover"
                   />
                 ) : (
                   getPlayerInitials(player.name)

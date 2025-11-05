@@ -21,6 +21,7 @@ import { usePlayerDashboardData } from "@/hooks/usePlayerDashboardData";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3 } from "lucide-react";
+import { Skeleton, SkeletonStat } from "@/components/ui/skeleton";
 
 const defaultPlayerData = {
   name: "",
@@ -56,11 +57,6 @@ export function PlayerDashboard() {
   const [currentTab, setCurrentTab] = useState("dashboard");
   const [showCardGeneration, setShowCardGeneration] = useState(false);
 
-  // Minimal logging for production
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🎯 PlayerDashboard: Loading state:', loading);
-  }
-
   const handlePremiumFeatureClick = (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -76,11 +72,8 @@ export function PlayerDashboard() {
   };
 
   const handleSubscriptionClose = () => {
-    console.log('🎯 PlayerDashboard: handleSubscriptionClose called');
     setIsSubscriptionModalOpen(false);
     // If user upgraded, redirect to card generation
-    // For demo purposes, let's redirect to the card generation page
-    console.log('🚀 PlayerDashboard: Navigating to /dashboard/player/cards');
     router.push('/dashboard/player/cards');
   };
 
@@ -90,8 +83,6 @@ export function PlayerDashboard() {
 
   const handleSaveProfile = async (updatedData: typeof defaultPlayerData) => {
     try {
-      console.log('💾 Saving profile data to database:', updatedData);
-      
       // Update local state immediately for better UX
       setCurrentPlayerData(updatedData);
       
@@ -140,9 +131,6 @@ export function PlayerDashboard() {
         pose_photo_url: updatedData.posePhoto || null,
       };
       
-      console.log('💾 Prepared update data:', updateData);
-      console.log('💾 Updating user ID:', user.id);
-      
       const { data, error } = await supabase!
         .from('users')
         .update(updateData)
@@ -156,9 +144,10 @@ export function PlayerDashboard() {
         return;
       }
       
-      console.log('💾 Profile saved successfully:', data);
+      // ✅ CRITICAL: Update local state FIRST for immediate UI update
+      setCurrentPlayerData(updatedData);
       
-      // Refresh the dashboard data to show the updated information
+      // Then refresh from database to sync everything else
       await refetch();
       
     } catch (error) {
@@ -178,12 +167,26 @@ export function PlayerDashboard() {
   // Sync database data to currentPlayerData for edit form population
   useEffect(() => {
     if (data.identity) {
+      // Helper to format height from inches to feet'inches"
+      const formatHeightForDisplay = (inches: number | null | undefined): string => {
+        if (!inches || inches === 0) return '';
+        const feet = Math.floor(inches / 12);
+        const remainingInches = inches % 12;
+        return `${feet}'${remainingInches}"`;
+      };
+      
+      // Helper to format weight with "lbs" suffix
+      const formatWeightForDisplay = (weight: number | null | undefined): string => {
+        if (!weight || weight === 0) return '';
+        return `${weight} lbs`;
+      };
+      
       setCurrentPlayerData({
         name: data.identity.name || '',
         jerseyNumber: String(data.identity.jerseyNumber || ''),
         position: data.identity.position || '',
-        height: String(data.identity.height || ''),
-        weight: String(data.identity.weight || ''),
+        height: formatHeightForDisplay(data.identity.height),
+        weight: formatWeightForDisplay(data.identity.weight),
         age: data.identity.age || 0,
         team: data.identity.teamName || '',
         profilePhoto: data.identity.profilePhotoUrl || '',
@@ -200,7 +203,7 @@ export function PlayerDashboard() {
         }
       });
     }
-  }, [data.identity, data.careerHighs]);
+  }, [data.identity, data.careerHighs, data.seasonAverages]);
 
   // Helper function to check if data is meaningful (not null/empty/default)
   const hasValidData = (value: any, defaultCheck?: any) => {
@@ -224,8 +227,9 @@ export function PlayerDashboard() {
   const position = hasValidData(data.identity?.position) 
     ? data.identity!.position 
     : (currentPlayerData.position || "Position");
-  const profilePhoto = data.identity?.profilePhotoUrl || currentPlayerData.profilePhoto || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop&crop=faces";
-  const posePhoto = data.identity?.posePhotoUrl || currentPlayerData.posePhoto || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=600&fit=crop&crop=faces";
+  // ✅ CRITICAL: Use currentPlayerData FIRST (most up-to-date after save), then fall back to data.identity
+  const profilePhoto = currentPlayerData.profilePhoto || data.identity?.profilePhotoUrl || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop&crop=faces";
+  const posePhoto = currentPlayerData.posePhoto || data.identity?.posePhotoUrl || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=600&fit=crop&crop=faces";
   const age = (data.identity?.age !== undefined && data.identity?.age !== null && data.identity?.age > 0) 
     ? data.identity.age 
     : (currentPlayerData.age > 0 ? currentPlayerData.age : "--");
@@ -353,45 +357,80 @@ export function PlayerDashboard() {
                           
                           <div className="mb-6">
                             <p className="text-orange-100 mb-4">SEASON AVERAGES</p>
-                            {/* Primary Stats Row */}
-                            <div className="flex gap-8 mb-6">
-                              <div>
-                                <div className="text-3xl font-bold text-white">{seasonPts}</div>
-                                <div className="text-orange-200">Points</div>
-                              </div>
-                              <div>
-                                <div className="text-3xl font-bold text-white">{seasonReb}</div>
-                                <div className="text-orange-200">Rebounds</div>
-                              </div>
-                              <div>
-                                <div className="text-3xl font-bold text-white">{seasonAst}</div>
-                                <div className="text-orange-200">Assists</div>
-                              </div>
-                            </div>
-                            
-                            {/* Shooting Efficiency - Integrated Below */}
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="w-2 h-2 bg-orange-300 rounded-full"></div>
-                              <p className="text-orange-200 text-sm font-medium uppercase tracking-wider">Shooting Efficiency</p>
-                            </div>
-                            <div className="grid grid-cols-4 gap-4">
-                              <div className="text-center">
-                                <div className="text-xl font-bold text-white">{seasonFg}</div>
-                                <div className="text-orange-300 text-xs">FG%</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xl font-bold text-white">{season3Pt}</div>
-                                <div className="text-orange-300 text-xs">3PT%</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xl font-bold text-white">{seasonFt}</div>
-                                <div className="text-orange-300 text-xs">FT%</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xl font-bold text-white">{seasonMin}</div>
-                                <div className="text-orange-300 text-xs">MPG</div>
-                              </div>
-                            </div>
+                            {loading ? (
+                              <>
+                                {/* ⚡ SKELETON: Loading state for season stats */}
+                                <div className="flex gap-8 mb-6">
+                                  <SkeletonStat size="large" />
+                                  <SkeletonStat size="large" />
+                                  <SkeletonStat size="large" />
+                                </div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-2 h-2 bg-orange-300 rounded-full"></div>
+                                  <p className="text-orange-200 text-sm font-medium uppercase tracking-wider">Shooting Efficiency</p>
+                                </div>
+                                <div className="grid grid-cols-4 gap-4">
+                                  <div className="text-center space-y-2">
+                                    <Skeleton className="h-7 w-16 mx-auto" />
+                                    <Skeleton className="h-3 w-8 mx-auto" />
+                                  </div>
+                                  <div className="text-center space-y-2">
+                                    <Skeleton className="h-7 w-16 mx-auto" />
+                                    <Skeleton className="h-3 w-10 mx-auto" />
+                                  </div>
+                                  <div className="text-center space-y-2">
+                                    <Skeleton className="h-7 w-16 mx-auto" />
+                                    <Skeleton className="h-3 w-8 mx-auto" />
+                                  </div>
+                                  <div className="text-center space-y-2">
+                                    <Skeleton className="h-7 w-12 mx-auto" />
+                                    <Skeleton className="h-3 w-8 mx-auto" />
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                {/* Primary Stats Row */}
+                                <div className="flex gap-8 mb-6">
+                                  <div>
+                                    <div className="text-3xl font-bold text-white">{seasonPts}</div>
+                                    <div className="text-orange-200">Points</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-3xl font-bold text-white">{seasonReb}</div>
+                                    <div className="text-orange-200">Rebounds</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-3xl font-bold text-white">{seasonAst}</div>
+                                    <div className="text-orange-200">Assists</div>
+                                  </div>
+                                </div>
+                                
+                                {/* Shooting Efficiency - Integrated Below */}
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-2 h-2 bg-orange-300 rounded-full"></div>
+                                  <p className="text-orange-200 text-sm font-medium uppercase tracking-wider">Shooting Efficiency</p>
+                                </div>
+                                <div className="grid grid-cols-4 gap-4">
+                                  <div className="text-center">
+                                    <div className="text-xl font-bold text-white">{seasonFg}</div>
+                                    <div className="text-orange-300 text-xs">FG%</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-xl font-bold text-white">{season3Pt}</div>
+                                    <div className="text-orange-300 text-xs">3PT%</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-xl font-bold text-white">{seasonFt}</div>
+                                    <div className="text-orange-300 text-xs">FT%</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-xl font-bold text-white">{seasonMin}</div>
+                                    <div className="text-orange-300 text-xs">MPG</div>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
 
                           <div className="flex flex-wrap gap-3 mt-4">
@@ -418,15 +457,20 @@ export function PlayerDashboard() {
                         {/* Player Image */}
                         <div className="flex-[0.7] relative">
                           <ImageWithFallback 
+                            key={posePhoto} // Force remount on URL change (bypass browser cache)
                             src={posePhoto}
                             alt={currentPlayerData.name}
                             className="absolute right-0 top-0 h-full w-auto object-cover object-top"
                           />
-                          <div className="absolute top-4 right-4 bg-black/30 rounded px-3 py-1">
-                            <span className="text-orange-200 font-bold">{String(identityTeam).toUpperCase()}</span>
-                          </div>
+                          {/* Team Badge - Only show if team exists */}
+                          {hasValidData(identityTeam) && identityTeam !== "No Team" && (
+                            <div className="absolute top-4 right-4 bg-black/30 rounded px-3 py-1">
+                              <span className="text-orange-200 font-bold">{String(identityTeam).toUpperCase()}</span>
+                            </div>
+                          )}
+                          {/* Jersey Number Overlay */}
                           <div className="absolute bottom-4 right-4 text-6xl font-bold text-white opacity-50">
-                            {age}
+                            #{jerseyNumber}
                           </div>
                         </div>
                       </div>
@@ -489,20 +533,28 @@ export function PlayerDashboard() {
                       </div>
                       
                       {/* Chart */}
-                      <PerformanceChart series={
-                        data.series && data.series.length > 0 
-                          ? data.series.map(s => ({
-                              date: s.date,
-                              points: s.points || 0,
-                              rebounds: s.rebounds || 0,
-                              assists: s.assists || 0,
-                              fieldGoal: s.fgm && s.fga ? (s.fga ? (s.fgm / s.fga) * 100 : 0) : 0,
-                              threePoint: s.threePm && s.threePa ? (s.threePa ? (s.threePm / s.threePa) * 100 : 0) : 0,
-                              freeThrow: s.ftm && s.fta ? (s.fta ? (s.ftm / s.fta) * 100 : 0) : 0,
-                              month: s.date
-                            }))
-                          : [] // Empty array for new users
-                      }
+                      <PerformanceChart 
+                        series={
+                          data.series && data.series.length > 0 
+                            ? data.series.map(s => ({
+                                date: s.date,
+                                points: s.points || 0,
+                                rebounds: s.rebounds || 0,
+                                assists: s.assists || 0,
+                                fieldGoal: s.fgm && s.fga ? (s.fga ? (s.fgm / s.fga) * 100 : 0) : 0,
+                                threePoint: s.threePm && s.threePa ? (s.threePa ? (s.threePm / s.threePa) * 100 : 0) : 0,
+                                freeThrow: s.ftm && s.fta ? (s.fta ? (s.ftm / s.fta) * 100 : 0) : 0,
+                                fgm: s.fgm || 0,
+                                fga: s.fga || 0,
+                                threePm: s.threePm || 0,
+                                threePa: s.threePa || 0,
+                                ftm: s.ftm || 0,
+                                fta: s.fta || 0,
+                                month: s.date
+                              }))
+                            : [] // Empty array for new users
+                        }
+                        seasonAverages={data.season}
                       />
                     </CardContent>
                   </div>
@@ -676,18 +728,38 @@ export function PlayerDashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center p-3 glass-card rounded-lg">
-                      <span className="text-muted-foreground">Points</span>
-                      <span className="text-card-foreground font-bold text-lg">{careerPts}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 glass-card rounded-lg">
-                      <span className="text-muted-foreground">Rebounds</span>
-                      <span className="text-card-foreground font-bold text-lg">{careerReb}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 glass-card rounded-lg">
-                      <span className="text-muted-foreground">Assists</span>
-                      <span className="text-card-foreground font-bold text-lg">{careerAst}</span>
-                    </div>
+                    {loading ? (
+                      <>
+                        {/* ⚡ SKELETON: Loading state for career highs */}
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Points</span>
+                          <Skeleton className="h-6 w-12" />
+                        </div>
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Rebounds</span>
+                          <Skeleton className="h-6 w-12" />
+                        </div>
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Assists</span>
+                          <Skeleton className="h-6 w-12" />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Points</span>
+                          <span className="text-card-foreground font-bold text-lg">{careerPts}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Rebounds</span>
+                          <span className="text-card-foreground font-bold text-lg">{careerReb}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Assists</span>
+                          <span className="text-card-foreground font-bold text-lg">{careerAst}</span>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>

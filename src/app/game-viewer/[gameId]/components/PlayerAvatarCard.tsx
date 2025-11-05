@@ -17,6 +17,7 @@ import { User } from 'lucide-react';
 interface PlayerAvatarCardProps {
   playerName: string;
   teamName: string;
+  photoUrl?: string | null;
   size?: 'sm' | 'md' | 'lg';
   animate?: boolean;
 }
@@ -25,7 +26,7 @@ interface PlayerAvatarCardProps {
  * PlayerAvatarCard - Player avatar display
  * 
  * Features:
- * - Circular avatar with initial
+ * - Square avatar with photo or initials
  * - Team badge
  * - Responsive sizing
  * - Optional animation
@@ -33,6 +34,7 @@ interface PlayerAvatarCardProps {
 export const PlayerAvatarCard: React.FC<PlayerAvatarCardProps> = ({ 
   playerName,
   teamName,
+  photoUrl,
   size = 'md',
   animate = true
 }) => {
@@ -64,17 +66,28 @@ export const PlayerAvatarCard: React.FC<PlayerAvatarCardProps> = ({
       {...animationProps}
       className="flex flex-col items-center gap-1"
     >
-      {/* Avatar Circle */}
+      {/* Avatar Square */}
       <div className={`
         ${sizeClasses[size]}
-        rounded-full
+        rounded-lg
         bg-gradient-to-br from-orange-500 to-red-500
         flex items-center justify-center
         font-bold text-white
         shadow-lg shadow-orange-500/20
         ring-2 ring-white/20
+        overflow-hidden
       `}>
-        {initial === '?' ? <User className="w-1/2 h-1/2" /> : initial}
+        {photoUrl ? (
+          <img 
+            src={photoUrl} 
+            alt={playerName}
+            className="w-full h-full object-cover"
+          />
+        ) : initial === '?' ? (
+          <User className="w-1/2 h-1/2" />
+        ) : (
+          initial
+        )}
       </div>
       
       {/* Team Badge */}

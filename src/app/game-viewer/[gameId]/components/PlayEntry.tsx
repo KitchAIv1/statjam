@@ -113,6 +113,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
         <PlayerAvatarCard
           playerName={play.playerName || 'Unknown Player'}
           teamName={teamName}
+          photoUrl={play.playerPhotoUrl}
           size="md"
         />
 

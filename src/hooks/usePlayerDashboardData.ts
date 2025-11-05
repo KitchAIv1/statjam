@@ -23,26 +23,26 @@ export function usePlayerDashboardData(user: { id: string } | null) {
 
   const refetch = useCallback(async () => {
     if (!user?.id) {
-      console.log('🔍 usePlayerDashboardData: No user ID, skipping fetch');
       setLoading(false);
       return;
     }
 
     try {
+      // ⚡ OPTIMIZATION: Check cache BEFORE setting loading=true to prevent flash
+      const userId = user.id;
+      const dashboardCacheKey = CacheKeys.playerDashboard(userId);
+      const cachedDashboard = cache.get<PlayerDashboardData>(dashboardCacheKey);
+      
+      if (cachedDashboard) {
+        // Cache hit: instant load, no loading state
+        setData(cachedDashboard);
+        setLoading(false);
+        return;
+      }
+      
+      // Cache miss: show loading state
       setLoading(true);
       setError(null);
-      
-      // Check if we have cached dashboard data first
-      const userId = user.id;
-      if (userId) {
-        const dashboardCacheKey = CacheKeys.playerDashboard(userId);
-        const cachedDashboard = cache.get<PlayerDashboardData>(dashboardCacheKey);
-        if (cachedDashboard) {
-          setData(cachedDashboard);
-          setLoading(false);
-          return;
-        }
-      }
       
       // Fetch only essential data first (reduced from 8 to 4 critical calls)
       const [identity, season, careerHighs, perf] = await Promise.all([

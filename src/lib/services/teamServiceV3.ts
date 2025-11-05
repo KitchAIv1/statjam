@@ -177,7 +177,7 @@ export class TeamServiceV3 {
       let players: any[] = [];
       if (regularPlayerIds.length > 0) {
         players = await this.makeRequest<any>('users', {
-          'select': 'id,name,email,jersey_number,position',
+          'select': 'id,name,email,jersey_number,position,profile_photo_url',
           'id': `in.(${regularPlayerIds.join(',')})`
         });
         console.log('✅ TeamServiceV3: Found', players.length, 'regular player details');
@@ -205,6 +205,7 @@ export class TeamServiceV3 {
           email: player.email || '',
           jerseyNumber: player.jersey_number || 0,
           position: player.position || 'Player',
+          photo_url: player.profile_photo_url || null, // Map profile_photo_url to photo_url for UI
           is_custom_player: false // ✅ FIX: Use snake_case to match database convention
         };
       });
@@ -217,6 +218,7 @@ export class TeamServiceV3 {
           email: '',
           jerseyNumber: player.jersey_number || 0,
           position: player.position || 'Player',
+          photo_url: null, // Custom players don't have profile photos
           is_custom_player: true // ✅ FIX: Use snake_case to match database convention
         };
       });

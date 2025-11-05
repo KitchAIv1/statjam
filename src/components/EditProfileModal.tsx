@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Upload, X } from 'lucide-react';
+import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { usePhotoUpload } from '@/hooks/usePhotoUpload';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 interface PlayerProfile {
   name: string;
@@ -37,14 +38,18 @@ interface EditProfileModalProps {
 }
 
 const positions = [
-  'Point Guard',
-  'Shooting Guard', 
-  'Small Forward',
-  'Power Forward',
-  'Center'
+  { value: 'PG', label: 'Point Guard' },
+  { value: 'SG', label: 'Shooting Guard' },
+  { value: 'SF', label: 'Small Forward' },
+  { value: 'PF', label: 'Power Forward' },
+  { value: 'C', label: 'Center' },
+  { value: 'G', label: 'Guard' },
+  { value: 'F', label: 'Forward' },
 ];
 
 export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditProfileModalProps) {
+  const { user } = useAuthContext();
+  
   // Ensure all form fields have valid string values (never null/undefined)
   const sanitizePlayerData = (data: PlayerProfile): PlayerProfile => ({
     name: data.name || '',
@@ -61,9 +66,66 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
   });
 
   const [formData, setFormData] = useState<PlayerProfile>(sanitizePlayerData(playerData));
-  const [previewProfilePhoto, setPreviewProfilePhoto] = useState<string | null>(null);
-  const [previewPosePhoto, setPreviewPosePhoto] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  // Photo upload hooks (with cleanup of old photos)
+  const profilePhotoUpload = usePhotoUpload({
+    userId: user?.id || '',
+    photoType: 'profile',
+    currentPhotoUrl: playerData.profilePhoto, // For cleanup
+    onSuccess: (url) => handleInputChange('profilePhoto', url),
+    onError: (error) => console.error('Profile photo upload error:', error)
+  });
+  
+  const posePhotoUpload = usePhotoUpload({
+    userId: user?.id || '',
+    photoType: 'pose',
+    currentPhotoUrl: playerData.posePhoto, // For cleanup
+    onSuccess: (url) => handleInputChange('posePhoto', url),
+    onError: (error) => console.error('Pose photo upload error:', error)
+  });
+  
+  // Separate state for height (feet and inches)
+  const [heightFeet, setHeightFeet] = useState<string>('');
+  const [heightInches, setHeightInches] = useState<string>('');
+  
+  // Update formData when playerData prop changes
+  useEffect(() => {
+    setFormData(sanitizePlayerData(playerData));
+  }, [playerData]);
+  
+  // Initialize height from formData on mount or when formData.height changes
+  useEffect(() => {
+    const parseHeight = (heightStr: string): { feet: string; inches: string } => {
+      if (!heightStr || heightStr === 'N/A') return { feet: '', inches: '' };
+      
+      // Try feet'inches" format
+      const feetInchesMatch = heightStr.match(/(\d+)'(\d+)/);
+      if (feetInchesMatch) {
+        return {
+          feet: feetInchesMatch[1],
+          inches: feetInchesMatch[2]
+        };
+      }
+      
+      // Try plain number (assumed inches) - convert to feet/inches
+      const totalInches = parseInt(heightStr);
+      if (!isNaN(totalInches)) {
+        const feet = Math.floor(totalInches / 12);
+        const inches = totalInches % 12;
+        return {
+          feet: feet.toString(),
+          inches: inches.toString()
+        };
+      }
+      
+      return { feet: '', inches: '' };
+    };
+    
+    const { feet, inches } = parseHeight(formData.height);
+    setHeightFeet(feet);
+    setHeightInches(inches);
+  }, [formData.height]);
 
   const handleInputChange = (field: keyof PlayerProfile, value: string | number) => {
     setFormData(prev => ({
@@ -75,6 +137,35 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
       setValidationErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  // Handle height feet/inches changes
+  const handleHeightChange = (type: 'feet' | 'inches', value: string) => {
+    // Only allow numbers
+    if (value && !/^\d+$/.test(value)) return;
+    
+    if (type === 'feet') {
+      setHeightFeet(value);
+    } else {
+      setHeightInches(value);
+    }
+    
+    // Calculate total inches and update formData
+    const feet = type === 'feet' ? parseInt(value) || 0 : parseInt(heightFeet) || 0;
+    const inches = type === 'inches' ? parseInt(value) || 0 : parseInt(heightInches) || 0;
+    
+    // Construct height string in feet'inches" format
+    const heightString = feet > 0 || inches > 0 ? `${feet}'${inches}"` : '';
+    handleInputChange('height', heightString);
+    
+    // Clear validation error when user types
+    if (validationErrors.height) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.height;
         return newErrors;
       });
     }
@@ -93,23 +184,6 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     }
   };
 
-  const handlePhotoUpload = (type: 'profile' | 'pose', event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        if (type === 'profile') {
-          setPreviewProfilePhoto(result);
-          handleInputChange('profilePhoto', result);
-        } else {
-          setPreviewPosePhoto(result);
-          handleInputChange('posePhoto', result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleSave = async () => {
     // Validate all fields before saving
@@ -132,7 +206,8 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     }
 
     try {
-      onSave(formData);
+      // ✅ FIX: Await save completion before closing modal (ensures photos update)
+      await onSave(formData);
       notify.success('Profile updated successfully');
       onClose();
     } catch (error) {
@@ -143,9 +218,31 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
 
   const handleCancel = () => {
     setFormData(sanitizePlayerData(playerData));
-    setPreviewProfilePhoto(null);
-    setPreviewPosePhoto(null);
     setValidationErrors({});
+    
+    // Reset height inputs
+    const parseHeight = (heightStr: string): { feet: string; inches: string } => {
+      if (!heightStr || heightStr === 'N/A') return { feet: '', inches: '' };
+      const feetInchesMatch = heightStr.match(/(\d+)'(\d+)/);
+      if (feetInchesMatch) {
+        return { feet: feetInchesMatch[1], inches: feetInchesMatch[2] };
+      }
+      const totalInches = parseInt(heightStr);
+      if (!isNaN(totalInches)) {
+        return { feet: Math.floor(totalInches / 12).toString(), inches: (totalInches % 12).toString() };
+      }
+      return { feet: '', inches: '' };
+    };
+    const { feet, inches } = parseHeight(playerData.height);
+    setHeightFeet(feet);
+    setHeightInches(inches);
+    
+    // Reset photo upload states
+    profilePhotoUpload.clearPreview();
+    profilePhotoUpload.clearError();
+    posePhotoUpload.clearPreview();
+    posePhotoUpload.clearError();
+    
     onClose();
   };
 
@@ -164,89 +261,33 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
         <div className="space-y-6 px-2">
           {/* Photo Upload Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Profile Photo */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Profile Photo</Label>
-              <div className="relative">
-                <div className="w-full aspect-square max-w-[200px] mx-auto rounded-lg overflow-hidden bg-muted border-2 border-dashed border-border hover:border-primary/50 transition-colors">
-                  {previewProfilePhoto || formData.profilePhoto ? (
-                    <div className="relative w-full h-full">
-                      <ImageWithFallback
-                        src={previewProfilePhoto || formData.profilePhoto}
-                        alt="Profile preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="absolute top-2 right-2"
-                        onClick={() => {
-                          setPreviewProfilePhoto(null);
-                          handleInputChange('profilePhoto', '');
-                        }}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
-                      <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                      <span className="text-sm text-muted-foreground text-center px-2">
-                        Click to upload profile photo
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoUpload('profile', e)}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Pose Photo */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Action/Pose Photo</Label>
-              <div className="relative">
-                <div className="w-full aspect-square max-w-[200px] mx-auto rounded-lg overflow-hidden bg-muted border-2 border-dashed border-border hover:border-primary/50 transition-colors">
-                  {previewPosePhoto || formData.posePhoto ? (
-                    <div className="relative w-full h-full">
-                      <ImageWithFallback
-                        src={previewPosePhoto || formData.posePhoto}
-                        alt="Pose preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="absolute top-2 right-2"
-                        onClick={() => {
-                          setPreviewPosePhoto(null);
-                          handleInputChange('posePhoto', '');
-                        }}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
-                      <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                      <span className="text-sm text-muted-foreground text-center px-2">
-                        Click to upload action photo
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoUpload('pose', e)}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-            </div>
+            <PhotoUploadField
+              label="Profile Photo"
+              value={formData.profilePhoto}
+              previewUrl={profilePhotoUpload.previewUrl}
+              uploading={profilePhotoUpload.uploading}
+              error={profilePhotoUpload.error}
+              aspectRatio="square"
+              onFileSelect={profilePhotoUpload.handleFileSelect}
+              onRemove={() => {
+                profilePhotoUpload.clearPreview();
+                handleInputChange('profilePhoto', '');
+              }}
+            />
+            
+            <PhotoUploadField
+              label="Action/Pose Photo"
+              value={formData.posePhoto}
+              previewUrl={posePhotoUpload.previewUrl}
+              uploading={posePhotoUpload.uploading}
+              error={posePhotoUpload.error}
+              aspectRatio="portrait"
+              onFileSelect={posePhotoUpload.handleFileSelect}
+              onRemove={() => {
+                posePhotoUpload.clearPreview();
+                handleInputChange('posePhoto', '');
+              }}
+            />
           </div>
 
           {/* Basic Info Grid */}
@@ -278,8 +319,8 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 </SelectTrigger>
                 <SelectContent>
                   {positions.map((position) => (
-                    <SelectItem key={position} value={position}>
-                      {position}
+                    <SelectItem key={position.value} value={position.value}>
+                      {position.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -309,11 +350,13 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
               <Label htmlFor="jersey">Jersey Number</Label>
               <Input
                 id="jersey"
+                type="number"
                 value={formData.jerseyNumber}
                 onChange={(e) => handleInputChange('jerseyNumber', e.target.value)}
                 onBlur={() => handleBlur('jerseyNumber')}
-                placeholder="Enter jersey number"
-                maxLength={2}
+                placeholder="0-999"
+                min="0"
+                max="999"
                 className="bg-input-background"
                 aria-invalid={!!validationErrors.jerseyNumber}
               />
@@ -323,29 +366,58 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="height">Height</Label>
-              <Input
-                id="height"
-                value={formData.height}
-                onChange={(e) => handleInputChange('height', e.target.value)}
-                onBlur={() => handleBlur('height')}
-                placeholder="e.g., 6'8&quot;"
-                className="bg-input-background"
-                aria-invalid={!!validationErrors.height}
-              />
+              <Label htmlFor="height-feet">Height</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Input
+                    id="height-feet"
+                    type="number"
+                    value={heightFeet}
+                    onChange={(e) => handleHeightChange('feet', e.target.value)}
+                    onBlur={() => handleBlur('height')}
+                    placeholder="Feet"
+                    min="4"
+                    max="7"
+                    className="bg-input-background text-center"
+                    aria-invalid={!!validationErrors.height}
+                    aria-label="Height in feet"
+                  />
+                </div>
+                <span className="text-2xl font-light text-muted-foreground">′</span>
+                <div className="flex-1">
+                  <Input
+                    id="height-inches"
+                    type="number"
+                    value={heightInches}
+                    onChange={(e) => handleHeightChange('inches', e.target.value)}
+                    onBlur={() => handleBlur('height')}
+                    placeholder="Inches"
+                    min="0"
+                    max="11"
+                    className="bg-input-background text-center"
+                    aria-invalid={!!validationErrors.height}
+                    aria-label="Height in inches"
+                  />
+                </div>
+                <span className="text-2xl font-light text-muted-foreground">″</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Example: 6 feet 8 inches</p>
               {validationErrors.height && (
                 <p className="text-sm text-destructive">{validationErrors.height}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="weight">Weight</Label>
+              <Label htmlFor="weight">Weight (lbs)</Label>
               <Input
                 id="weight"
-                value={formData.weight}
-                onChange={(e) => handleInputChange('weight', e.target.value)}
+                type="number"
+                value={formData.weight.replace(/[^\d]/g, '')}
+                onChange={(e) => handleInputChange('weight', e.target.value ? `${e.target.value} lbs` : '')}
                 onBlur={() => handleBlur('weight')}
-                placeholder="e.g., 235 lbs"
+                placeholder="180"
+                min="50"
+                max="400"
                 className="bg-input-background"
                 aria-invalid={!!validationErrors.weight}
               />

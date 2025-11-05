@@ -167,6 +167,7 @@ function transformStatsToPlays(
       statType: stat.stat_type,
       playerId: stat.player_id || stat.custom_player_id || '', // ✅ FIX: Support custom players
       playerName,
+      playerPhotoUrl: (stat as any).player_photo_url || null, // ✅ Include player photo for avatar display
       teamId: stat.team_id || '',
       teamName,
       modifier: stat.modifier,
@@ -370,9 +371,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
 
       // ✅ FIX: Query both users AND custom_players tables in parallel
       const [regularPlayersResponse, customPlayersResponse] = await Promise.all([
-        // Regular players from users table
+        // Regular players from users table (including profile photo)
         allPlayerIds.length > 0 
-          ? fetch(`${supabaseUrl}/rest/v1/users?select=id,name,email&id=in.(${allPlayerIds.join(',')})`, { headers })
+          ? fetch(`${supabaseUrl}/rest/v1/users?select=id,name,email,profile_photo_url&id=in.(${allPlayerIds.join(',')})`, { headers })
           : Promise.resolve(null),
         // Custom players from custom_players table
         statsCustomPlayerIds.length > 0
@@ -380,43 +381,54 @@ export function useGameViewerV2(gameId: string): GameViewerData {
           : Promise.resolve(null)
       ]);
 
-      // Build combined players map
-      let playersMap = new Map<string, string>();
+      // Build combined players map (name + photo URL)
+      let playersMap = new Map<string, { name: string; photoUrl: string | null }>();
       
       // Add regular players
       if (regularPlayersResponse && regularPlayersResponse.ok) {
         const playersData = await regularPlayersResponse.json();
         playersData.forEach((p: any) => {
-          playersMap.set(p.id, p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`);
+          playersMap.set(p.id, {
+            name: p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`,
+            photoUrl: p.profile_photo_url || null
+          });
         });
       }
 
-      // Add custom players
+      // Add custom players (no photos)
       if (customPlayersResponse && customPlayersResponse.ok) {
         const customPlayersData = await customPlayersResponse.json();
         customPlayersData.forEach((p: any) => {
-          playersMap.set(p.id, p.name || `Custom Player ${p.id.substring(0, 8)}`);
+          playersMap.set(p.id, {
+            name: p.name || `Custom Player ${p.id.substring(0, 8)}`,
+            photoUrl: null
+          });
         });
       }
 
-      // Enrich stats with player names (check both player_id and custom_player_id)
+      // Enrich stats with player names and photo URLs (check both player_id and custom_player_id)
       gameStats = gameStats.map(stat => {
         const statWithCustomId = stat as any;
         const playerId = stat.player_id || statWithCustomId.custom_player_id;
-        const playerName = playersMap.get(playerId) || `Player ${playerId?.substring(0, 8)}`;
+        const playerInfo = playersMap.get(playerId) || { name: `Player ${playerId?.substring(0, 8)}`, photoUrl: null };
         return {
           ...stat,
           custom_player_id: statWithCustomId.custom_player_id, // ✅ FIX: Explicitly preserve custom_player_id
-          player_name: playerName
+          player_name: playerInfo.name,
+          player_photo_url: playerInfo.photoUrl
         };
       });
 
       // Enrich substitutions with player names
-      gameSubstitutions = gameSubstitutions.map(sub => ({
-        ...sub,
-        player_in_name: playersMap.get(sub.player_in_id) || `Player ${sub.player_in_id?.substring(0, 8)}`,
-        player_out_name: playersMap.get(sub.player_out_id) || `Player ${sub.player_out_id?.substring(0, 8)}`
-      }));
+      gameSubstitutions = gameSubstitutions.map(sub => {
+        const playerInInfo = playersMap.get(sub.player_in_id) || { name: `Player ${sub.player_in_id?.substring(0, 8)}`, photoUrl: null };
+        const playerOutInfo = playersMap.get(sub.player_out_id) || { name: `Player ${sub.player_out_id?.substring(0, 8)}`, photoUrl: null };
+        return {
+          ...sub,
+          player_in_name: playerInInfo.name,
+          player_out_name: playerOutInfo.name
+        };
+      });
 
       // 7. Calculate real-time scores from game_stats (fallback if DB scores are 0)
       const calculateScoresFromStats = (stats: GameStats[], teamAId: string, teamBId: string) => {

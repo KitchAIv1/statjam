@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, Area, AreaChart } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -231,7 +231,22 @@ const CustomLegend = ({ activeMetrics, onToggleMetric }: any) => {
   );
 };
 
-export function PerformanceChart({ series }: { series?: Array<Record<string, any>> }) {
+interface SeasonAverages {
+  pointsPerGame?: number;
+  reboundsPerGame?: number;
+  assistsPerGame?: number;
+  fieldGoalPct?: number;
+  threePointPct?: number;
+  freeThrowPct?: number;
+}
+
+export function PerformanceChart({ 
+  series, 
+  seasonAverages 
+}: { 
+  series?: Array<Record<string, any>>;
+  seasonAverages?: SeasonAverages | null;
+}) {
   const [activeMetrics, setActiveMetrics] = useState(['points', 'fieldGoal', 'threePoint']);
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
@@ -459,10 +474,41 @@ export function PerformanceChart({ series }: { series?: Array<Record<string, any
           <h4 className="font-medium text-foreground mb-3">Key Performance Metrics</h4>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {chartMetrics.filter(m => m.category === 'performance').map((metric) => {
+              // ✅ USE PRE-CALCULATED SEASON AVERAGES (ONE SOURCE OF TRUTH)
+              let avgValue = 0;
+              if (seasonAverages) {
+                switch (metric.key) {
+                  case 'points':
+                    avgValue = seasonAverages.pointsPerGame || 0;
+                    break;
+                  case 'rebounds':
+                    avgValue = seasonAverages.reboundsPerGame || 0;
+                    break;
+                  case 'assists':
+                    avgValue = seasonAverages.assistsPerGame || 0;
+                    break;
+                  case 'steals':
+                  case 'blocks':
+                    // These aren't in seasonAverages yet, calculate from series if available
+                    const currentData = getCurrentData();
+                    avgValue = currentData.length > 0
+                      ? currentData.reduce((sum, game) => sum + (Number(game[metric.key as keyof typeof game]) || 0), 0) / currentData.length
+                      : 0;
+                    break;
+                }
+              }
+              
+              // Calculate trend: recent games (last 3) vs earlier games
               const currentData = getCurrentData();
-              const latestValue = currentData[currentData.length - 1][metric.key as keyof typeof currentData[0]];
-              const previousValue = currentData[currentData.length - 2]?.[metric.key as keyof typeof currentData[0]] || latestValue;
-              const change = previousValue ? ((Number(latestValue) - Number(previousValue)) / Number(previousValue)) * 100 : 0;
+              const recentGames = currentData.slice(-3);
+              const earlierGames = currentData.slice(0, -3);
+              const recentAvg = recentGames.length > 0
+                ? recentGames.reduce((sum, g) => sum + (Number(g[metric.key as keyof typeof g]) || 0), 0) / recentGames.length
+                : avgValue;
+              const earlierAvg = earlierGames.length > 0
+                ? earlierGames.reduce((sum, g) => sum + (Number(g[metric.key as keyof typeof g]) || 0), 0) / earlierGames.length
+                : avgValue;
+              const change = earlierAvg > 0 ? ((recentAvg - earlierAvg) / earlierAvg) * 100 : 0;
               
               return (
                 <div key={metric.key} className="glass-card p-4 rounded-lg">
@@ -475,7 +521,7 @@ export function PerformanceChart({ series }: { series?: Array<Record<string, any
                   </div>
                   <div className="flex items-end justify-between">
                     <span className="text-2xl font-bold text-foreground">
-                      {typeof latestValue === 'number' ? latestValue.toFixed(1) : latestValue}
+                      {avgValue.toFixed(1)}
                     </span>
                     <span className={`text-sm font-medium ${
                       change > 0 ? 'text-green-500' : change < 0 ? 'text-red-500' : 'text-muted-foreground'
@@ -494,10 +540,54 @@ export function PerformanceChart({ series }: { series?: Array<Record<string, any
           <h4 className="font-medium text-foreground mb-3">Shooting Efficiency</h4>
           <div className="grid grid-cols-3 gap-4">
             {chartMetrics.filter(m => m.category === 'shooting').map((metric) => {
+              // ✅ USE PRE-CALCULATED SEASON AVERAGES (ONE SOURCE OF TRUTH)
+              let avgValue = 0;
+              if (seasonAverages) {
+                switch (metric.key) {
+                  case 'fieldGoal':
+                    avgValue = seasonAverages.fieldGoalPct || 0;
+                    break;
+                  case 'threePoint':
+                    avgValue = seasonAverages.threePointPct || 0;
+                    break;
+                  case 'freeThrow':
+                    avgValue = seasonAverages.freeThrowPct || 0;
+                    break;
+                }
+              }
+              
+              // Calculate trend: recent games vs earlier games (from series data)
               const currentData = getCurrentData();
-              const latestValue = currentData[currentData.length - 1][metric.key as keyof typeof currentData[0]];
-              const previousValue = currentData[currentData.length - 2]?.[metric.key as keyof typeof currentData[0]] || latestValue;
-              const change = previousValue ? ((Number(latestValue) - Number(previousValue)) / Number(previousValue)) * 100 : 0;
+              let recentAvg = avgValue;
+              let earlierAvg = avgValue;
+              
+              if (currentData.length > 0) {
+                let madeKey = '';
+                let attemptKey = '';
+                if (metric.key === 'fieldGoal') {
+                  madeKey = 'fgm';
+                  attemptKey = 'fga';
+                } else if (metric.key === 'threePoint') {
+                  madeKey = 'threePm';
+                  attemptKey = 'threePa';
+                } else if (metric.key === 'freeThrow') {
+                  madeKey = 'ftm';
+                  attemptKey = 'fta';
+                }
+                
+                const recentGames = currentData.slice(-3);
+                const earlierGames = currentData.slice(0, -3);
+                
+                const recentMade = recentGames.reduce((sum, g) => sum + (Number(g[madeKey as keyof typeof g]) || 0), 0);
+                const recentAttempts = recentGames.reduce((sum, g) => sum + (Number(g[attemptKey as keyof typeof g]) || 0), 0);
+                recentAvg = recentAttempts > 0 ? (recentMade / recentAttempts) * 100 : avgValue;
+                
+                const earlierMade = earlierGames.reduce((sum, g) => sum + (Number(g[madeKey as keyof typeof g]) || 0), 0);
+                const earlierAttempts = earlierGames.reduce((sum, g) => sum + (Number(g[attemptKey as keyof typeof g]) || 0), 0);
+                earlierAvg = earlierAttempts > 0 ? (earlierMade / earlierAttempts) * 100 : avgValue;
+              }
+              
+              const change = earlierAvg > 0 ? ((recentAvg - earlierAvg) / earlierAvg) * 100 : 0;
               
               return (
                 <div key={metric.key} className="glass-card-accent p-4 rounded-lg">
@@ -510,7 +600,7 @@ export function PerformanceChart({ series }: { series?: Array<Record<string, any
                   </div>
                   <div className="flex items-end justify-between">
                     <span className="text-2xl font-bold text-foreground">
-                      {typeof latestValue === 'number' ? `${latestValue.toFixed(1)}%` : latestValue}
+                      {`${avgValue.toFixed(1)}%`}
                     </span>
                     <span className={`text-sm font-medium ${
                       change > 0 ? 'text-green-500' : change < 0 ? 'text-red-500' : 'text-muted-foreground'
