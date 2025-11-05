@@ -83,6 +83,7 @@ interface GameViewerData {
 
 /**
  * Transform raw stats AND substitutions into play-by-play entries with running score calculation
+ * ✅ FIX: Sort chronologically FIRST, then calculate running scores, then reverse for display
  */
 function transformStatsToPlays(
   stats: GameStats[], 
@@ -93,11 +94,22 @@ function transformStatsToPlays(
   substitutions: any[] = [],
   timeouts: any[] = []
 ): PlayByPlayEntry[] {
+  // ✅ STEP 1: Sort all raw data chronologically (oldest first) BEFORE score calculation
+  const sortedStats = [...stats].sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+  const sortedSubs = [...substitutions].sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+  const sortedTimeouts = [...timeouts].sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+  
   let runningScoreHome = 0;
   let runningScoreAway = 0;
   
-  // Convert stats to play entries
-  const statPlays = stats.map(stat => {
+  // ✅ STEP 2: Convert sorted stats to play entries with correct running score
+  const statPlays = sortedStats.map(stat => {
     const teamName = stat.team_id === teamAId ? teamAName : 
                      stat.team_id === teamBId ? teamBName : 
                      'Unknown Team';
@@ -179,8 +191,8 @@ function transformStatsToPlays(
     };
   });
 
-  // Convert substitutions to play entries
-  const substitutionPlays = substitutions.map(sub => {
+  // ✅ STEP 3: Convert sorted substitutions to play entries
+  const substitutionPlays = sortedSubs.map(sub => {
     const teamName = sub.team_id === teamAId ? teamAName : 
                      sub.team_id === teamBId ? teamBName : 
                      'Unknown Team';
@@ -208,8 +220,8 @@ function transformStatsToPlays(
     };
   });
 
-  // Convert timeouts to play entries
-  const timeoutPlays = timeouts.map(timeout => {
+  // ✅ STEP 4: Convert sorted timeouts to play entries
+  const timeoutPlays = sortedTimeouts.map(timeout => {
     const teamName = timeout.team_id === teamAId ? teamAName : 
                      timeout.team_id === teamBId ? teamBName : 
                      'Unknown Team';
@@ -238,7 +250,8 @@ function transformStatsToPlays(
     };
   });
 
-  // Merge stats, substitutions, AND timeouts, sort by timestamp (newest first)
+  // ✅ STEP 5: Merge all plays (already sorted chronologically with correct scores)
+  // Then sort by timestamp newest first for display
   const allPlays = [...statPlays, ...substitutionPlays, ...timeoutPlays].sort((a, b) => {
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });

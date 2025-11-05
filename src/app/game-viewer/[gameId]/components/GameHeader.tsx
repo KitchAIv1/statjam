@@ -78,8 +78,8 @@ const GameHeader: React.FC<GameHeaderProps> = ({ theme, onThemeToggle, game, isL
         </div>
       </div>
 
-      {/* Main Header - Scores */}
-      <div className="flex items-center justify-between px-4 sm:px-8 py-6 max-w-7xl mx-auto">
+      {/* Main Header - Scores - Responsive padding and gaps */}
+      <div className="flex items-center justify-between gap-2 px-2 sm:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
         {/* Away Team */}
         <TeamDisplay
           teamName={game.teamBName}
@@ -88,13 +88,13 @@ const GameHeader: React.FC<GameHeaderProps> = ({ theme, onThemeToggle, game, isL
           side="right"
         />
 
-        {/* Center - Quarter & Status */}
-        <div className="flex flex-col items-center gap-2 min-w-[120px] text-center">
-          <div className="text-xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+        {/* Center - Quarter & Status - Responsive */}
+        <div className="flex flex-col items-center gap-1 sm:gap-2 min-w-[60px] sm:min-w-[120px] text-center flex-shrink-0">
+          <div className="text-base sm:text-xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
             {game.quarter <= 4 ? `Q${game.quarter}` : `OT${game.quarter - 4}`}
           </div>
           {game.status === 'completed' && (
-            <div className="text-2xl font-extrabold text-green-500">
+            <div className="text-lg sm:text-2xl font-extrabold text-green-500">
               FINAL
             </div>
           )}
@@ -153,18 +153,18 @@ function TeamDisplay({
   const flexDirection = side === 'left' ? 'flex-row' : 'flex-row-reverse';
   
   return (
-    <div className={`flex ${flexDirection} items-center gap-4 min-w-[160px]`}>
-      {/* Team Logo */}
-      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-orange-500/20">
+    <div className={`flex ${flexDirection} items-center gap-2 sm:gap-4`}>
+      {/* Team Logo - Responsive size */}
+      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white text-lg sm:text-xl font-bold shadow-lg shadow-orange-500/20 flex-shrink-0">
         {teamName.charAt(0).toUpperCase()}
       </div>
       
-      {/* Team Info */}
-      <div className={`flex flex-col ${side === 'right' ? 'items-end' : 'items-start'}`}>
-        <div className={`text-3xl font-extrabold ${isLeading ? 'text-foreground' : 'text-muted-foreground'}`}>
+      {/* Team Info - Score above, name below, same alignment for both teams */}
+      <div className="flex flex-col items-center min-w-0">
+        <div className={`text-2xl sm:text-3xl font-extrabold ${isLeading ? 'text-foreground' : 'text-muted-foreground'}`}>
           {score}
         </div>
-        <div className="text-lg font-bold text-foreground">
+        <div className="text-xs sm:text-sm font-bold text-foreground truncate max-w-[80px] sm:max-w-[120px]">
           {teamName}
         </div>
       </div>
