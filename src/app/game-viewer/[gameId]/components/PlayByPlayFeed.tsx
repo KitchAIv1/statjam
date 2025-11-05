@@ -89,7 +89,7 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
 
   return (
     <div className={`space-y-0 transition-colors duration-300 ${isDark ? 'bg-slate-900' : 'bg-gradient-to-br from-orange-50/30 to-background'}`}>
-      {/* Feed Header */}
+      {/* Feed Header - Sticky with border */}
       <div className={`sticky top-0 z-50 border-b px-6 py-4 transition-colors duration-300 ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-orange-200'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -112,8 +112,8 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
         </div>
       </div>
 
-      {/* Score Separator */}
-      <div className={`flex items-center gap-4 px-6 py-3 transition-colors duration-300 ${isDark ? 'bg-slate-800/50' : 'bg-orange-50'}`}>
+      {/* Score Separator - Sticky with solid background and top border (aggressive overlap) */}
+      <div className={`sticky top-[56px] z-40 flex items-center gap-4 px-6 py-3 transition-colors duration-300 border-y ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-orange-200'}`}>
         <div className={`flex-1 h-px ${isDark ? 'bg-gradient-to-r from-transparent via-slate-600 to-transparent' : 'bg-gradient-to-r from-transparent via-orange-300 to-transparent'}`} />
         <div className={`text-sm font-semibold ${isDark ? 'text-muted-foreground' : 'text-gray-700'}`}>
           {game.teamAName} {game.homeScore} - {game.awayScore} {game.teamBName}
