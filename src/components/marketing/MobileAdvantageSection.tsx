@@ -84,12 +84,12 @@ export function MobileAdvantageSection({
       />
 
       {/* Content Container */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 py-20 lg:py-28">
-        <div className="grid lg:grid-cols-[38%_62%] gap-12 lg:gap-16 items-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 py-16 lg:py-20">
+        <div className="grid lg:grid-cols-[38%_62%] gap-8 lg:gap-12 items-center">
           
           {/* Left Column - Text Block */}
           <div 
-            className={`space-y-8 transition-all duration-700 ${
+            className={`space-y-6 transition-all duration-700 ${
               isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
             }`}
           >
@@ -109,7 +109,7 @@ export function MobileAdvantageSection({
             </p>
 
             {/* Bullet Points */}
-            <ul className="space-y-4">
+            <ul className="space-y-3">
               {benefits.map((benefit, index) => (
                 <li 
                   key={index}
@@ -131,7 +131,7 @@ export function MobileAdvantageSection({
             </ul>
 
             {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <Button
                 onClick={handleCtaClick}
                 className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 text-base lg:text-lg font-semibold rounded-full shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transition-all duration-300 hover:scale-105"
@@ -149,7 +149,7 @@ export function MobileAdvantageSection({
 
           {/* Right Column - iPhone Mockups */}
           <div 
-            className={`relative h-[600px] lg:h-[700px] transition-all duration-1000 ${
+            className={`relative h-[500px] lg:h-[600px] transition-all duration-1000 ${
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}
           >
@@ -160,26 +160,16 @@ export function MobileAdvantageSection({
                 transform: isVisible 
                   ? 'translateY(-50%) scale(1.03) rotate(-5deg)' 
                   : 'translateY(-50%) scale(1) rotate(0deg)',
-                zIndex: 1
+                zIndex: 1,
+                filter: 'drop-shadow(0 25px 50px rgba(0, 0, 0, 0.4))'
               }}
             >
-              <div className="relative">
-                {/* Phone Shadow */}
-                <div className="absolute inset-0 bg-black/40 blur-2xl translate-y-4 rounded-[3rem]" />
-                
-                {/* Phone Container */}
-                <div className="relative rounded-[3rem] overflow-hidden shadow-2xl border border-neutral-800/50">
-                  {/* Glass Reflection */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none z-10" />
-                  
-                  <ImageWithFallback
-                    src="/images/mobile-tracker-ui.png"
-                    alt="StatJam mobile stat tracker interface with game clock, shot clock, and one-tap stat buttons"
-                    className="w-full h-auto"
-                    loading="lazy"
-                  />
-                </div>
-              </div>
+              <ImageWithFallback
+                src="/images/mobile-tracker-ui.png"
+                alt="StatJam mobile stat tracker interface with game clock, shot clock, and one-tap stat buttons"
+                className="w-full h-auto"
+                loading="lazy"
+              />
             </div>
 
             {/* Front/Right Phone - Live Feed */}
@@ -189,26 +179,16 @@ export function MobileAdvantageSection({
                 transform: isVisible 
                   ? 'translateY(-50%) scale(1)' 
                   : 'translateY(-50%) scale(0.95)',
-                zIndex: 2
+                zIndex: 2,
+                filter: 'drop-shadow(0 25px 50px rgba(0, 0, 0, 0.5))'
               }}
             >
-              <div className="relative">
-                {/* Phone Shadow */}
-                <div className="absolute inset-0 bg-black/50 blur-3xl translate-y-6 rounded-[3rem]" />
-                
-                {/* Phone Container */}
-                <div className="relative rounded-[3rem] overflow-hidden shadow-2xl border border-neutral-700/50">
-                  {/* Glass Reflection */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none z-10" />
-                  
-                  <ImageWithFallback
-                    src="/images/mobile-live-feed..png"
-                    alt="StatJam mobile live play-by-play feed showing real-time game updates and scores"
-                    className="w-full h-auto"
-                    loading="lazy"
-                  />
-                </div>
-              </div>
+              <ImageWithFallback
+                src="/images/mobile-live-feed..png"
+                alt="StatJam mobile live play-by-play feed showing real-time game updates and scores"
+                className="w-full h-auto"
+                loading="lazy"
+              />
             </div>
           </div>
 
@@ -216,7 +196,7 @@ export function MobileAdvantageSection({
 
         {/* Optional Caption */}
         <p 
-          className={`text-center text-sm lg:text-base text-neutral-400 mt-12 lg:mt-16 transition-all duration-700 delay-500 ${
+          className={`text-center text-sm lg:text-base text-neutral-400 mt-8 lg:mt-10 transition-all duration-700 delay-500 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           }`}
         >
