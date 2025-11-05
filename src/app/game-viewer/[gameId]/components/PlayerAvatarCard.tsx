@@ -18,7 +18,7 @@ interface PlayerAvatarCardProps {
   playerName: string;
   teamName: string;
   photoUrl?: string | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   animate?: boolean;
 }
 
@@ -45,13 +45,17 @@ export const PlayerAvatarCard: React.FC<PlayerAvatarCardProps> = ({
   const sizeClasses = {
     sm: 'w-8 h-8 text-sm',
     md: 'w-10 h-10 text-base',
-    lg: 'w-12 h-12 text-lg'
+    lg: 'w-12 h-12 text-lg',
+    xl: 'w-16 h-16 text-xl',
+    '2xl': 'w-[84px] h-[84px] text-2xl'
   };
 
   const badgeSizes = {
     sm: 'text-[10px] px-1',
     md: 'text-xs px-1.5',
-    lg: 'text-xs px-2'
+    lg: 'text-xs px-2',
+    xl: 'text-sm px-2.5',
+    '2xl': 'text-base px-3'
   };
 
   const Component = animate ? motion.div : 'div';

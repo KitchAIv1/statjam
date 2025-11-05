@@ -114,7 +114,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
           playerName={play.playerName || 'Unknown Player'}
           teamName={teamName}
           photoUrl={play.playerPhotoUrl}
-          size="md"
+          size="2xl"
         />
 
         {/* Play Details */}

@@ -89,29 +89,14 @@ export function HorizontalRosterV3({
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-orange-500" />
-          <span 
-            className="text-sm font-medium"
-            style={{ color: 'var(--dashboard-text-primary)' }}
-          >
-            {teamName} - On Court
-          </span>
-        </div>
-        
-        {onSubstitution && (
-          <Button
-            onClick={() => selectedPlayer && onSubstitution(selectedPlayer)}
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-xs hover:border-orange-500 hover:text-orange-500"
-            disabled={!selectedPlayer}
-          >
-            <RefreshCw className="w-3 h-3 mr-1" />
-            Sub
-          </Button>
-        )}
+      <div className="flex items-center gap-2 mb-2">
+        <Users className="w-4 h-4 text-orange-500" />
+        <span 
+          className="text-sm font-medium"
+          style={{ color: 'var(--dashboard-text-primary)' }}
+        >
+          {teamName} - On Court
+        </span>
       </div>
 
       {/* Horizontal Player Row */}
@@ -123,43 +108,43 @@ export function HorizontalRosterV3({
           
           return (
             <div key={player.id} className="flex flex-col items-center gap-2">
-              {/* Player Avatar */}
-              <Button
-                onClick={() => !isEmpty && onPlayerSelect(player.id)}
-                disabled={isEmpty}
-                className={`w-20 h-20 rounded-lg p-0 flex items-center justify-center text-lg font-bold transition-all ${
-                  isEmpty 
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed border-2 border-dashed border-gray-300 dark:border-gray-600'
-                    : isSelected
-                      ? 'border-2 border-orange-500 shadow-lg transform scale-105'
-                      : 'border-2 border-transparent hover:border-orange-400 hover:scale-105'
-                }`}
-                style={!isEmpty ? {
-                  background: `linear-gradient(135deg, ${playerColor}, ${playerColor}dd)`,
-                  color: '#ffffff'
-                } : {}}
-              >
-                {isEmpty ? (
-                  '+'
-                ) : player.photo_url ? (
-                  <img 
-                    src={player.photo_url} 
-                    alt={player.name}
-                    className="w-full h-full rounded-lg object-cover"
-                  />
-                ) : (
-                  getPlayerInitials(player.name)
-                )}
-              </Button>
-
-              {/* Jersey Number */}
-              <div className="text-center">
+              {/* Player Avatar with Jersey Overlay */}
+              <div className="relative w-28 h-28">
+                <Button
+                  onClick={() => !isEmpty && onPlayerSelect(player.id)}
+                  disabled={isEmpty}
+                  className={`w-full h-full rounded-lg p-0 flex items-center justify-center text-xl font-bold transition-all overflow-hidden ${
+                    isEmpty 
+                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed border-2 border-dashed border-gray-300 dark:border-gray-600'
+                      : isSelected
+                        ? 'border-2 border-orange-500 shadow-lg transform scale-105'
+                        : 'border-2 border-transparent hover:border-orange-400 hover:scale-105'
+                  }`}
+                  style={!isEmpty ? {
+                    background: `linear-gradient(135deg, ${playerColor}, ${playerColor}dd)`,
+                    color: '#ffffff'
+                  } : {}}
+                >
+                  {isEmpty ? (
+                    '+'
+                  ) : player.photo_url ? (
+                    <img 
+                      src={player.photo_url} 
+                      alt={player.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getPlayerInitials(player.name)
+                  )}
+                </Button>
+                
+                {/* Jersey Number Overlay at Bottom */}
                 {!isEmpty && (
                   <div 
-                    className="text-base font-bold px-3 py-1 rounded"
+                    className="absolute bottom-0 left-0 right-0 text-center text-sm font-bold py-1 px-2"
                     style={{ 
-                      background: isSelected ? 'var(--dashboard-primary)' : 'var(--dashboard-border)',
-                      color: isSelected ? '#ffffff' : 'var(--dashboard-text-secondary)'
+                      background: isSelected ? 'rgba(249, 115, 22, 0.9)' : 'rgba(107, 114, 128, 0.9)',
+                      color: '#ffffff'
                     }}
                   >
                     #{player.jerseyNumber || '?'}

@@ -144,17 +144,38 @@ export class TeamServiceV3 {
   /**
    * Get team players using raw HTTP requests
    * This is the method that was hanging in the original TeamService
+   * 
+   * HYBRID APPROACH: Try authenticated first (for stat tracker), fallback to public (for live viewer)
    */
   static async getTeamPlayers(teamId: string): Promise<any[]> {
     try {
       console.log('🚀 TeamServiceV3: Fetching team players via raw HTTP for team:', teamId);
 
       // Step 1: Get team_players relationships (includes both player_id and custom_player_id)
-      // Use authenticated request for coach teams (RLS requires it)
-      const teamPlayers = await this.makeAuthenticatedRequest<any>('team_players', {
-        'select': 'player_id,custom_player_id',
-        'team_id': `eq.${teamId}`
-      });
+      // Try authenticated first (for coach teams/stat tracker), fallback to public (for live viewer)
+      let teamPlayers: any[] = [];
+      
+      try {
+        // Attempt authenticated request first (for stat tracker context)
+        teamPlayers = await this.makeAuthenticatedRequest<any>('team_players', {
+          'select': 'player_id,custom_player_id',
+          'team_id': `eq.${teamId}`
+        });
+        console.log('✅ TeamServiceV3: Authenticated request successful');
+      } catch (authError: any) {
+        // If authentication fails, try public access (for live viewer context)
+        if (authError.message === 'Not authenticated') {
+          console.log('🌐 TeamServiceV3: Auth failed, falling back to public access for live viewer');
+          teamPlayers = await this.makeRequest<any>('team_players', {
+            'select': 'player_id,custom_player_id',
+            'team_id': `eq.${teamId}`
+          });
+          console.log('✅ TeamServiceV3: Public request successful (live viewer context)');
+        } else {
+          // Re-throw non-auth errors
+          throw authError;
+        }
+      }
 
       if (!teamPlayers || teamPlayers.length === 0) {
         console.log('📝 TeamServiceV3: No players found for team:', teamId);

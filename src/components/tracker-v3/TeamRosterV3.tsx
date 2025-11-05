@@ -152,10 +152,10 @@ export function TeamRosterV3({
                 }`}
                 onClick={() => onPlayerSelect(player.id)}
               >
-                {/* Player Avatar with Jersey Below */}
-                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                {/* Player Avatar with Jersey Overlay */}
+                <div className="flex-shrink-0 relative w-14 h-14">
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md"
+                    className="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md overflow-hidden"
                     style={{
                       background: `linear-gradient(135deg, ${playerColor}, ${playerColor}dd)`
                     }}
@@ -164,17 +164,17 @@ export function TeamRosterV3({
                       <img 
                         src={player.photo_url} 
                         alt={player.name}
-                        className="w-full h-full rounded-full object-cover"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
                       getPlayerInitials(player.name)
                     )}
                   </div>
-                  {/* Jersey Number Below Avatar */}
-                  <div className={`px-1 py-0.5 rounded text-xs font-bold text-white ${
-                    teamSide === 'left' ? 'bg-orange-500' : 'bg-blue-500'
+                  {/* Jersey Number Overlay at Bottom */}
+                  <div className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-center text-xs font-bold text-white ${
+                    teamSide === 'left' ? 'bg-orange-600/90' : 'bg-blue-600/90'
                   }`}>
-                    #{player.jerseyNumber || 'none'}
+                    #{player.jerseyNumber || '?'}
                   </div>
                 </div>
 
@@ -186,28 +186,6 @@ export function TeamRosterV3({
                     </span>
                   </div>
                 </div>
-
-                {/* Substitution Button - Compact */}
-                {onSubstitution && (
-                  <div className="flex-shrink-0">
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSubstitution(player.id);
-                      }}
-                      variant="outline"
-                      size="sm"
-                      className={`h-7 w-7 p-0 hover:scale-105 ${
-                        teamSide === 'left'
-                          ? 'hover:border-orange-500 hover:text-orange-500'
-                          : 'hover:border-blue-500 hover:text-blue-500'
-                      }`}
-                      title="Substitute Player"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                    </Button>
-                  </div>
-                )}
               </div>
             );
           })}
