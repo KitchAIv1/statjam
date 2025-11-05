@@ -77,6 +77,8 @@ interface MobileLayoutV3Props {
   userId?: string; // ✅ FIX: User ID for opponent stats
   onPossessionChange?: (teamId: string) => void; // ✅ PHASE 6: Manual possession control
   gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'; // ✅ Game status
+  onStatRecord?: (statType: string, modifier?: string) => Promise<void>; // ✅ USE DESKTOP LOGIC
+  onFoulRecord?: (foulType: 'personal' | 'technical') => Promise<void>; // ✅ USE DESKTOP LOGIC
 }
 
 export function MobileLayoutV3({
@@ -94,15 +96,26 @@ export function MobileLayoutV3({
   isCoachMode = false,
   userId,
   onPossessionChange,
-  gameStatus = 'in_progress' // ✅ Game status
+  gameStatus = 'in_progress', // ✅ Game status
+  onStatRecord, // ✅ DESKTOP LOGIC
+  onFoulRecord // ✅ DESKTOP LOGIC
 }: MobileLayoutV3Props) {
   const [possessionTeam, setPossessionTeam] = useState<'A' | 'B'>('A');
 
   // Get selected player details from both teams
   const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
 
-  // Handle stat recording
+  // ✅ USE DESKTOP LOGIC (passed as prop) or fallback to old logic for safety
   const handleStatRecord = async (statType: string, modifier?: string) => {
+    if (onStatRecord) {
+      // ✅ DESKTOP LOGIC - Single source of truth
+      console.log('🖥️ MOBILE: Using desktop handleStatRecord logic');
+      await onStatRecord(statType, modifier);
+      return;
+    }
+
+    // ⚠️ FALLBACK: Old mobile logic (keep for safety during testing)
+    console.warn('⚠️ MOBILE: Using old mobile logic (fallback)');
     if (!selectedPlayer) return;
 
     // ✅ FIX: Handle opponent team stats (same logic as expanded view)
@@ -120,21 +133,33 @@ export function MobileLayoutV3({
       return;
     }
 
-    // Regular player stats
+    // ✅ FIX: Check if player is custom player (custom players use customPlayerId field)
+    const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+    const isCustomPlayer = selectedPlayer.startsWith('custom-');
     const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
     const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
 
     await tracker.recordStat({
       gameId: gameData.id,
-      playerId: selectedPlayer,
+      playerId: isCustomPlayer ? undefined : selectedPlayer, // ✅ Only for real players
+      customPlayerId: isCustomPlayer ? selectedPlayer : undefined, // ✅ Only for custom players
       teamId,
       statType,
       modifier
     });
   };
 
-  // Handle foul recording
+  // ✅ USE DESKTOP LOGIC (passed as prop) or fallback to old logic for safety
   const handleFoulRecord = async (foulType: 'personal' | 'technical') => {
+    if (onFoulRecord) {
+      // ✅ DESKTOP LOGIC - Single source of truth
+      console.log('🖥️ MOBILE: Using desktop handleFoulRecord logic');
+      await onFoulRecord(foulType);
+      return;
+    }
+
+    // ⚠️ FALLBACK: Old mobile logic (keep for safety during testing)
+    console.warn('⚠️ MOBILE: Using old mobile foul logic (fallback)');
     if (!selectedPlayer) return;
 
     // ✅ FIX: Handle opponent team fouls (same logic as expanded view)
@@ -152,13 +177,15 @@ export function MobileLayoutV3({
       return;
     }
 
-    // Regular player fouls
+    // ✅ FIX: Check if player is custom player (custom players use customPlayerId field)
+    const isCustomPlayer = selectedPlayer.startsWith('custom-');
     const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
     const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
 
     await tracker.recordStat({
       gameId: gameData.id,
-      playerId: selectedPlayer,
+      playerId: isCustomPlayer ? undefined : selectedPlayer, // ✅ Only for real players
+      customPlayerId: isCustomPlayer ? selectedPlayer : undefined, // ✅ Only for custom players
       teamId,
       statType: 'foul',
       modifier: foulType

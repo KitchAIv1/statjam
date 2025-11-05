@@ -417,9 +417,10 @@ function StatTrackerV3Content() {
       const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
       actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
       
-      // Check if this is a custom player
+      // Check if this is a custom player (TWO CHECKS: ID prefix OR flag)
       const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-      const isCustomPlayer = selectedPlayerData && selectedPlayerData.is_custom_player === true;
+      const isCustomPlayer = selectedPlayer.startsWith('custom-') || 
+                            (selectedPlayerData && selectedPlayerData.is_custom_player === true);
       
       if (isCustomPlayer) {
         // CUSTOM PLAYER STATS: Use the actual custom player ID
@@ -501,8 +502,10 @@ function StatTrackerV3Content() {
       const isTeamAPlayer = teamAPlayers.some(p => p.id === foulerPlayerId);
       actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
       
+      // ✅ FIX: Check if fouler is custom player (TWO CHECKS)
       const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === foulerPlayerId);
-      const isCustomPlayer = foulerData && foulerData.is_custom_player === true;
+      const isCustomPlayer = foulerPlayerId.startsWith('custom-') || 
+                            (foulerData && foulerData.is_custom_player === true);
       
       if (isCustomPlayer) {
         actualCustomPlayerId = foulerPlayerId;
@@ -565,8 +568,10 @@ function StatTrackerV3Content() {
       const isTeamAPlayer = teamAPlayers.some(p => p.id === foulerPlayerId);
       foulerTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
       
+      // ✅ FIX: Check if fouler is custom player (TWO CHECKS)
       const foulerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === foulerPlayerId);
-      const isCustomPlayer = foulerData && foulerData.is_custom_player === true;
+      const isCustomPlayer = foulerPlayerId.startsWith('custom-') || 
+                            (foulerData && foulerData.is_custom_player === true);
       
       if (isCustomPlayer) {
         foulerCustomPlayerId = foulerPlayerId;
@@ -819,32 +824,437 @@ function StatTrackerV3Content() {
   
   const benchPlayers = getBenchPlayers();
 
+  // ✅ SHARED MODALS: Render modals for BOTH mobile and desktop views
+  const sharedModals = (
+    <>
+      {/* Substitution Modal - Unified for both mobile and desktop */}
+      <SubstitutionModalV3
+        isOpen={showSubModal}
+        onClose={() => {
+          setShowSubModal(false);
+          setSubOutPlayer(null);
+        }}
+        playerOutId={subOutPlayer}
+        playerOutData={(() => {
+          if (!subOutPlayer) return null;
+          return [...teamAPlayers, ...teamBPlayers].find(p => p.id === subOutPlayer) || null;
+        })()}
+        benchPlayers={(() => {
+          if (!subOutPlayer) return [];
+          const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
+          return isTeamAPlayer ? currentBenchA : currentBenchB;
+        })()}
+        onConfirm={handleSubConfirm}
+      />
+
+      {/* Timeout Modal - Enhanced UX with countdown */}
+      <TimeoutModalV3
+        isOpen={showTimeoutModal}
+        teamAName={gameData.team_a?.name || 'Team A'}
+        teamBName={gameData.team_b?.name || 'Team B'}
+        teamAId={gameData.team_a_id}
+        teamBId={gameData.team_b_id}
+        onStartTimeout={handleStartTimeout}
+        onResume={handleResumePlay}
+        onCancel={handleCancelTimeout}
+        timeoutActive={tracker.timeoutActive}
+        timeoutSecondsRemaining={tracker.timeoutSecondsRemaining}
+        timeoutTeamId={tracker.timeoutTeamId}
+      />
+
+      {/* ✅ PHASE 4: Play Sequence Modals */}
+      
+      {/* Assist Prompt Modal - After made shots */}
+      {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'assist' && (
+        <AssistPromptModal
+          isOpen={true}
+          onClose={tracker.clearPlayPrompt}
+          onSelectPlayer={async (playerId) => {
+            // Record assist stat linked to the shot
+            // ✅ PHASE 5 FIX: Assists must have modifier IS NULL per database constraint
+            
+            // ✅ FIX: Check if assisting player is custom player (TWO CHECKS)
+            const assistingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+            const isCustomPlayer = playerId.startsWith('custom-') || 
+                                  (assistingPlayer && assistingPlayer.is_custom_player === true);
+            const primaryEventId = tracker.playPrompt.primaryEventId;
+            
+            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+            
+            await tracker.recordStat({
+              gameId: gameData.id,
+              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+              teamId,
+              statType: 'assist',
+              modifier: null, // ✅ NULL modifier for assists
+              metadata: primaryEventId ? { primaryEventId } : undefined
+            });
+            
+            tracker.clearPlayPrompt();
+          }}
+          onSkip={() => {
+            console.log('⏭️ Skipping assist prompt');
+            tracker.clearPlayPrompt();
+          }}
+          players={(() => {
+            // Get players from the SCORING team (not shooter's team, but their teammates)
+            const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
+            if (shooterTeamId === gameData.team_a_id) {
+              return teamAPlayers;
+            } else {
+              return teamBPlayers;
+            }
+          })()}
+          shooterName={tracker.playPrompt.metadata?.shooterName || 'Unknown'}
+          shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
+          shotValue={tracker.playPrompt.metadata?.shotValue || 2}
+        />
+      )}
+
+      {/* Rebound Prompt Modal - After missed shots */}
+      {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'rebound' && (
+        <ReboundPromptModal
+          isOpen={true}
+          onClose={tracker.clearPlayPrompt}
+          onSelectPlayer={async (playerId, reboundType) => {
+            // ✅ FIX: Handle custom players properly
+            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+            const primaryEventId = tracker.playPrompt.primaryEventId;
+            
+            // Check if rebounder is a custom player
+            const rebounderData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+            const isCustomPlayer = playerId.startsWith('custom-') || 
+                                  (rebounderData && rebounderData.is_custom_player === true);
+            
+            await tracker.recordStat({
+              gameId: gameData.id,
+              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+              teamId,
+              statType: 'rebound',
+              modifier: reboundType,
+              metadata: primaryEventId ? { primaryEventId } : undefined
+            });
+            
+            tracker.clearPlayPrompt();
+          }}
+          onSkip={() => {
+            console.log('⏭️ Skipping rebound prompt');
+            tracker.clearPlayPrompt();
+          }}
+          teamAPlayers={teamAPlayers}
+          teamBPlayers={teamBPlayers}
+          shooterTeamId={tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id} // ✅ FIX: Pass shooter team ID
+          shooterName={tracker.playPrompt.metadata?.shooterName || 'Unknown'}
+          shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
+        />
+      )}
+
+      {/* Block Prompt Modal - After missed shots */}
+      {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'block' && (
+        <BlockPromptModal
+          isOpen={true}
+          onClose={tracker.clearPlayPrompt}
+          onSelectPlayer={async (playerId) => {
+            // ✅ FIX: Handle custom players properly
+            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+            const primaryEventId = tracker.playPrompt.primaryEventId;
+            
+            // Check if blocker is a custom player
+            const blockerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+            const isCustomPlayer = playerId.startsWith('custom-') || 
+                                  (blockerData && blockerData.is_custom_player === true);
+            
+            await tracker.recordStat({
+              gameId: gameData.id,
+              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+              teamId,
+              statType: 'block',
+              modifier: null,
+              metadata: primaryEventId ? { primaryEventId } : undefined
+            });
+            
+            tracker.clearPlayPrompt();
+          }}
+          onSkip={() => {
+            console.log('⏭️ Skipping block prompt');
+            tracker.clearPlayPrompt();
+          }}
+          defensivePlayers={(() => {
+            // Get DEFENSIVE team players (opposite of shooter's team)
+            const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
+            if (shooterTeamId === gameData.team_a_id) {
+              return teamBPlayers; // Shooter from Team A → defenders from Team B
+            } else {
+              return teamAPlayers; // Shooter from Team B → defenders from Team A
+            }
+          })()}
+          shooterName={tracker.playPrompt.metadata?.shooterName || 'Unknown'}
+          shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
+        />
+      )}
+
+      {/* Turnover Prompt Modal - After steals */}
+      {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'turnover' && (
+        <TurnoverPromptModal
+          isOpen={true}
+          onClose={tracker.clearPlayPrompt}
+          onSelectPlayer={async (playerId) => {
+            // Record turnover stat linked to the steal
+            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+            const primaryEventId = tracker.playPrompt.primaryEventId;
+            
+            // ✅ FIX: Check if player is a custom player (TWO CHECKS)
+            const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+            const isCustomPlayer = playerId.startsWith('custom-') || 
+                                  (playerData && playerData.is_custom_player === true);
+            
+            await tracker.recordStat({
+              gameId: gameData.id,
+              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+              teamId,
+              statType: 'turnover',
+              modifier: 'steal',
+              metadata: primaryEventId ? { primaryEventId } : undefined
+            });
+            
+            tracker.clearPlayPrompt();
+          }}
+          onSkip={() => {
+            console.log('⏭️ Skipping turnover prompt');
+            tracker.clearPlayPrompt();
+          }}
+          homePlayers={(() => {
+            // Get players from the OPPOSITE team (who lost the ball)
+            const stealerTeamId = tracker.playPrompt.metadata?.stealerTeamId;
+            if (stealerTeamId === gameData.team_a_id) {
+              return teamBPlayers; // Stealer from Team A → turnover by Team B
+            } else {
+              return teamAPlayers; // Stealer from Team B → turnover by Team A
+            }
+          })()}
+          stealerName={tracker.playPrompt.metadata?.stealerName || 'Unknown'}
+        />
+      )}
+
+      {/* ✅ PHASE 5: Foul Flow Modals */}
+      
+      {/* Foul Type Selection Modal */}
+      <FoulTypeSelectionModal
+        isOpen={showFoulTypeModal}
+        onClose={() => {
+          setShowFoulTypeModal(false);
+          setFoulerPlayerId(null);
+          setFoulerPlayerName('');
+        }}
+        onSelectFoulType={(foulType) => {
+          setSelectedFoulType(foulType);
+          setShowFoulTypeModal(false);
+          
+          // If shooting foul, open victim selection modal
+          if (foulType === 'shooting_2pt' || foulType === 'shooting_3pt' || foulType === 'bonus' || foulType === 'technical' || foulType === 'flagrant') {
+            setShowVictimSelectionModal(true);
+          }
+        }}
+        foulerName={foulerPlayerName}
+      />
+
+      {/* Victim Player Selection Modal */}
+      {showVictimSelectionModal && selectedFoulType && (
+        <VictimPlayerSelectionModal
+          isOpen={showVictimSelectionModal}
+          onClose={() => {
+            setShowVictimSelectionModal(false);
+            setSelectedFoulType(null);
+            setFoulerPlayerId(null);
+            setFoulerPlayerName('');
+          }}
+          onSelectPlayer={async (victimPlayerId) => {
+            // Open Free Throw Sequence Modal
+            console.log('🎯 Opening FT sequence for victim:', victimPlayerId, 'foul type:', selectedFoulType);
+            setShowVictimSelectionModal(false);
+            
+            // Set up free throw sequence based on foul type
+            const shotCount = selectedFoulType === 'shooting_2pt' || selectedFoulType === 'bonus' ? 2 : 
+                              selectedFoulType === 'shooting_3pt' ? 3 : 
+                              selectedFoulType === 'technical' || selectedFoulType === 'flagrant' ? 1 : 2;
+            
+            // Open FT sequence modal via play prompt
+            tracker.setPlayPrompt({
+              isOpen: true,
+              type: 'free_throw',
+              sequenceId: `ft-${Date.now()}`,
+              primaryEventId: null,
+              metadata: {
+                victimPlayerId,
+                victimName: [...teamAPlayers, ...teamBPlayers].find(p => p.id === victimPlayerId)?.name || 'Unknown',
+                shotCount,
+                foulType: selectedFoulType,
+                foulerId: foulerPlayerId
+              }
+            });
+            
+            // Reset foul flow state
+            setFoulerPlayerId(null);
+            setFoulerPlayerName('');
+            setSelectedFoulType(null);
+          }}
+          players={(() => {
+            // Get players from OPPOSITE team (victim team)
+            if (!foulerPlayerId) return [];
+            const isFoulerTeamA = teamAPlayers.some(p => p.id === foulerPlayerId);
+            return isFoulerTeamA ? teamBPlayers : teamAPlayers;
+          })()}
+          teamName={(() => {
+            if (!foulerPlayerId) return 'Unknown';
+            const isFoulerTeamA = teamAPlayers.some(p => p.id === foulerPlayerId);
+            return isFoulerTeamA ? (gameData.team_b?.name || 'Team B') : (gameData.team_a?.name || 'Team A');
+          })()}
+          foulType={selectedFoulType}
+        />
+      )}
+
+      {/* Free Throw Sequence Modal */}
+      {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'free_throw' && (
+        <FreeThrowSequenceModal
+          isOpen={true}
+          onClose={tracker.clearPlayPrompt}
+          onComplete={async (results) => {
+            // Record all FT results
+            const victimPlayerId = tracker.playPrompt.metadata?.victimPlayerId;
+            const isTeamAPlayer = teamAPlayers.some(p => p.id === victimPlayerId);
+            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+            
+            // ✅ FIX: Check if victim is a custom player (TWO CHECKS)
+            const victimData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === victimPlayerId);
+            const isCustomPlayer = victimPlayerId?.startsWith('custom-') || 
+                                  (victimData && victimData.is_custom_player === true);
+            
+            for (const result of results) {
+              await tracker.recordStat({
+                gameId: gameData.id,
+                playerId: isCustomPlayer ? undefined : victimPlayerId, // ✅ Only for real players
+                customPlayerId: isCustomPlayer ? victimPlayerId : undefined, // ✅ Only for custom players
+                teamId,
+                statType: 'free_throw',
+                modifier: result.made ? 'made' : 'missed'
+              });
+            }
+            
+            tracker.clearPlayPrompt();
+          }}
+          playerName={tracker.playPrompt.metadata?.victimName || 'Unknown'}
+          shotCount={tracker.playPrompt.metadata?.shotCount || 2}
+          foulType={tracker.playPrompt.metadata?.foulType || 'shooting_2pt'}
+        />
+      )}
+
+      {/* Shot Clock Violation Modal */}
+      {showViolationModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl border-2 border-red-500 p-6 max-w-md w-full shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🚨</span>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Shot Clock Violation!</h3>
+              <p className="text-gray-300 mb-6">
+                Record turnover for {
+                  violationTeamId === gameData.team_a_id 
+                    ? gameData.team_a?.name || 'Team A'
+                    : gameData.team_b?.name || 'Team B'
+                }
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    // Record shot clock violation as turnover
+                    if (selectedPlayer && violationTeamId) {
+                      // ✅ FIX: Check if player is a custom player (TWO CHECKS)
+                      const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+                      const isCustomPlayer = selectedPlayer.startsWith('custom-') || 
+                                            (playerData && playerData.is_custom_player === true);
+                      
+                      await tracker.recordStat({
+                        gameId: gameData.id,
+                        playerId: isCustomPlayer ? undefined : selectedPlayer, // ✅ Only for real players
+                        customPlayerId: isCustomPlayer ? selectedPlayer : undefined, // ✅ Only for custom players
+                        teamId: violationTeamId,
+                        statType: 'turnover',
+                        modifier: 'shot_clock_violation'
+                      });
+                    }
+                    setShowViolationModal(false);
+                  }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                >
+                  Record Violation
+                </button>
+                <button
+                  onClick={() => setShowViolationModal(false)}
+                  className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Substitution Loading Overlay */}
+      {isSubstituting && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-600 shadow-xl">
+            <div className="flex items-center space-x-3">
+              <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="text-white font-medium">Processing substitution...</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   // Mobile Layout
   if (isMobile) {
     return (
-      <MobileLayoutV3
-        gameData={gameData}
-        tracker={tracker}
-        teamAPlayers={teamAPlayers}
-        teamBPlayers={teamBPlayers}
-        selectedTeam={'A'} // Default for mobile compatibility
-        selectedPlayer={selectedPlayer}
-        onTeamSelect={() => {}} // No-op for mobile compatibility
-        onPlayerSelect={setSelectedPlayer}
-        onSubstitution={handleSubstitution}
-        onTeamPlayersUpdate={(updatedTeamA, updatedTeamB) => {
-          console.log('🔄 Updating main team players state after substitution');
-          setTeamAPlayers(updatedTeamA);
-          setTeamBPlayers(updatedTeamB);
-          // Force re-render with new key
-          setRosterRefreshKey(Date.now());
-        }}
-        onTimeOut={handleTimeoutClick}
-        isCoachMode={coachMode}
-        userId={user?.id}
-        onPossessionChange={tracker.manualSetPossession}
-        gameStatus={tracker.gameStatus}
-      />
+      <>
+        <MobileLayoutV3
+          gameData={gameData}
+          tracker={tracker}
+          teamAPlayers={teamAPlayers}
+          teamBPlayers={teamBPlayers}
+          selectedTeam={'A'} // Default for mobile compatibility
+          selectedPlayer={selectedPlayer}
+          onTeamSelect={() => {}} // No-op for mobile compatibility
+          onPlayerSelect={setSelectedPlayer}
+          onSubstitution={handleSubstitution}
+          onTeamPlayersUpdate={(updatedTeamA, updatedTeamB) => {
+            console.log('🔄 Updating main team players state after substitution');
+            setTeamAPlayers(updatedTeamA);
+            setTeamBPlayers(updatedTeamB);
+            // Force re-render with new key
+            setRosterRefreshKey(Date.now());
+          }}
+          onTimeOut={handleTimeoutClick}
+          isCoachMode={coachMode}
+          userId={user?.id}
+          onPossessionChange={tracker.manualSetPossession}
+          gameStatus={tracker.gameStatus}
+          onStatRecord={handleStatRecord} // ✅ USE DESKTOP LOGIC
+          onFoulRecord={handleFoulRecord} // ✅ USE DESKTOP LOGIC
+        />
+        {/* ✅ MOBILE: Render shared modals */}
+        {sharedModals}
+      </>
     );
   }
 
@@ -969,389 +1379,8 @@ function StatTrackerV3Content() {
           </div>
         </div>
 
-        {/* Substitution Modal - Unified for both mobile and desktop */}
-        <SubstitutionModalV3
-          isOpen={showSubModal}
-          onClose={() => {
-            setShowSubModal(false);
-            setSubOutPlayer(null);
-          }}
-          playerOutId={subOutPlayer}
-          playerOutData={(() => {
-            if (!subOutPlayer) return null;
-            return [...teamAPlayers, ...teamBPlayers].find(p => p.id === subOutPlayer) || null;
-          })()}
-          benchPlayers={(() => {
-            if (!subOutPlayer) return [];
-            const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
-            return isTeamAPlayer ? currentBenchA : currentBenchB;
-          })()}
-          onConfirm={handleSubConfirm}
-        />
-
-        {/* Timeout Modal - Enhanced UX with countdown */}
-        <TimeoutModalV3
-          isOpen={showTimeoutModal}
-          teamAName={gameData.team_a?.name || 'Team A'}
-          teamBName={gameData.team_b?.name || 'Team B'}
-          teamAId={gameData.team_a_id}
-          teamBId={gameData.team_b_id}
-          onStartTimeout={handleStartTimeout}
-          onResume={handleResumePlay}
-          onCancel={handleCancelTimeout}
-          timeoutActive={tracker.timeoutActive}
-          timeoutSecondsRemaining={tracker.timeoutSecondsRemaining}
-          timeoutTeamId={tracker.timeoutTeamId}
-        />
-
-        {/* ✅ PHASE 4: Play Sequence Modals */}
-        
-        {/* Assist Prompt Modal - After made shots */}
-        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'assist' && (
-          <AssistPromptModal
-            isOpen={true}
-            onClose={tracker.clearPlayPrompt}
-            onSelectPlayer={async (playerId) => {
-              // Record assist stat linked to the shot
-              // ✅ PHASE 5 FIX: Assists must have modifier IS NULL per database constraint
-              
-              // ✅ COACH MODE FIX: Check if assisting player is custom player
-              const assistingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
-              const isCustomPlayer = assistingPlayer && assistingPlayer.is_custom_player === true;
-              
-              await tracker.recordStat({
-                gameId: gameIdParam,
-                playerId: isCustomPlayer ? undefined : playerId,
-                customPlayerId: isCustomPlayer ? playerId : undefined,
-                teamId: tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id,
-                statType: 'assist'
-                // No modifier for assists - database constraint requires NULL
-              });
-              tracker.clearPlayPrompt();
-            }}
-            onSkip={tracker.clearPlayPrompt}
-            players={teamAPlayers.filter(p => 
-              p.id !== tracker.playPrompt.metadata?.shooterId
-            )}
-            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
-            shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
-            shotValue={tracker.playPrompt.metadata?.shotValue || 2}
-          />
-        )}
-
-        {/* Rebound Prompt Modal - After missed shots */}
-        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'rebound' && (
-          <ReboundPromptModal
-            isOpen={true}
-            onClose={tracker.clearPlayPrompt}
-            onSelectPlayer={async (playerId, reboundType) => {
-              // Record rebound stat linked to the miss
-              
-              // ✅ COACH MODE FIX: Check if rebounding player is custom player
-              const reboundingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
-              const isCustomPlayer = reboundingPlayer && reboundingPlayer.is_custom_player === true;
-              
-              await tracker.recordStat({
-                gameId: gameIdParam,
-                playerId: isCustomPlayer ? undefined : playerId,
-                customPlayerId: isCustomPlayer ? playerId : undefined,
-                teamId: teamAPlayers.find(p => p.id === playerId)?.id ? gameData.team_a_id : gameData.team_b_id,
-                statType: 'rebound',
-                modifier: reboundType
-              });
-              tracker.clearPlayPrompt();
-            }}
-            onSkip={tracker.clearPlayPrompt}
-            teamAPlayers={teamAPlayers.map(p => ({ ...p, teamId: gameData.team_a_id }))}
-            teamBPlayers={
-              // ✅ COACH MODE FIX: Don't show opponent team in rebound modal
-              // Opponent has no individual players, so only show home team
-              coachMode ? [] : teamBPlayers.map(p => ({ ...p, teamId: gameData.team_b_id }))
-            }
-            shooterTeamId={tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id}
-            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
-            shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
-          />
-        )}
-
-        {/* Block Prompt Modal - After missed shots */}
-        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'block' && (
-          <BlockPromptModal
-            isOpen={true}
-            onClose={tracker.clearPlayPrompt}
-            onSelectPlayer={async (playerId) => {
-              // Record block stat linked to the miss
-              // ✅ PHASE 5 FIX: Blocks must have modifier IS NULL per database constraint
-              
-              // ✅ COACH MODE FIX: Check if blocking player is custom player
-              const blockingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
-              const isCustomPlayer = blockingPlayer && blockingPlayer.is_custom_player === true;
-              
-              await tracker.recordStat({
-                gameId: gameIdParam,
-                playerId: isCustomPlayer ? undefined : playerId,
-                customPlayerId: isCustomPlayer ? playerId : undefined,
-                teamId: teamAPlayers.find(p => p.id === playerId)?.id ? gameData.team_a_id : gameData.team_b_id,
-                statType: 'block'
-                // No modifier for blocks - database constraint requires NULL
-              });
-              tracker.clearPlayPrompt();
-            }}
-            onSkip={tracker.clearPlayPrompt}
-            defensivePlayers={
-              // ✅ Only show opposing team players (defenders)
-              (() => {
-                const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
-                const opposingPlayers = shooterTeamId === gameData.team_a_id ? teamBPlayers : teamAPlayers;
-                const opposingTeamId = shooterTeamId === gameData.team_a_id ? gameData.team_b_id : gameData.team_a_id;
-                console.log('🏀 BLOCK MODAL DEBUG:', {
-                  shooterTeamId,
-                  teamAId: gameData.team_a_id,
-                  teamBId: gameData.team_b_id,
-                  opposingTeamId,
-                  opposingPlayersCount: opposingPlayers.length,
-                  opposingPlayerNames: opposingPlayers.map(p => p.name)
-                });
-                return opposingPlayers.map(p => ({ ...p, teamId: opposingTeamId }));
-              })()
-            }
-            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
-            shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
-          />
-        )}
-
-        {/* Turnover Prompt Modal - After opponent steal in coach mode */}
-        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'turnover' && (
-          <TurnoverPromptModal
-            isOpen={true}
-            onClose={tracker.clearPlayPrompt}
-            onSelectPlayer={async (playerId) => {
-              // Record turnover for selected home player
-              
-              // ✅ COACH MODE FIX: Check if turnover player is custom player
-              const turnoverPlayer = teamAPlayers.find(p => p.id === playerId);
-              const isCustomPlayer = turnoverPlayer && turnoverPlayer.is_custom_player === true;
-              
-              await tracker.recordStat({
-                gameId: gameIdParam,
-                playerId: isCustomPlayer ? undefined : playerId,
-                customPlayerId: isCustomPlayer ? playerId : undefined,
-                teamId: tracker.playPrompt.metadata?.homeTeamId || gameData.team_a_id,
-                statType: 'turnover',
-                modifier: null,
-                sequenceId: tracker.playPrompt.sequenceId || undefined
-              });
-              tracker.clearPlayPrompt();
-            }}
-            onSkip={tracker.clearPlayPrompt}
-            homePlayers={teamAPlayers.map(p => ({ ...p, teamId: gameData.team_a_id }))}
-            stealerName={tracker.playPrompt.metadata?.stealerName || 'Opponent Team'}
-          />
-        )}
-
-        {/* ✅ PHASE 5: Free Throw Sequence Modal - After shooting foul */}
-        {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'free_throw' && (
-          <FreeThrowSequenceModal
-            isOpen={true}
-            onClose={tracker.clearPlayPrompt}
-            onComplete={async (results) => {
-              console.log('🏀 Free throw sequence complete:', results);
-              
-              // ✅ COACH MODE FIX: Check if FT shooter is custom player
-              const shooterId = tracker.playPrompt.metadata?.shooterId;
-              const ftShooter = [...teamAPlayers, ...teamBPlayers].find(p => p.id === shooterId);
-              const isCustomPlayer = ftShooter && ftShooter.is_custom_player === true;
-              
-              // Record each free throw
-              for (let i = 0; i < results.length; i++) {
-                const result = results[i];
-                const isLastShot = i === results.length - 1;
-                
-                // ✅ PHASE 6B: Check if this is a technical/flagrant FT
-                const foulType = tracker.playPrompt.metadata?.foulType;
-                const isTechnicalOrFlagrant = foulType === 'technical' || foulType === 'flagrant';
-                
-                await tracker.recordStat({
-                  gameId: gameIdParam,
-                  playerId: isCustomPlayer ? undefined : shooterId,
-                  customPlayerId: isCustomPlayer ? shooterId : undefined,
-                  teamId: tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id,
-                  statType: 'free_throw',
-                  modifier: result.made ? 'made' : 'missed',
-                  sequenceId: tracker.playPrompt.sequenceId || undefined,
-                  metadata: isTechnicalOrFlagrant ? { isTechnicalOrFlagrantFT: true } : undefined // ✅ PHASE 6B: Flag for possession retention
-                });
-                
-                // If last shot was missed, prompt for rebound
-                if (isLastShot && result.shouldRebound) {
-                  console.log('🎯 Last FT missed, prompting for rebound');
-                  // Rebound prompt will be triggered by PlayEngine
-                }
-              }
-              
-              tracker.clearPlayPrompt();
-            }}
-            shooterName={tracker.playPrompt.metadata?.shooterName || 'Player'}
-            totalShots={tracker.playPrompt.metadata?.totalShots || 2}
-            foulType={tracker.playPrompt.metadata?.foulType || 'shooting'}
-          />
-        )}
-
-        {/* ✅ PHASE 5: Foul Type Selection Modal - First step of foul flow */}
-        <FoulTypeSelectionModal
-          isOpen={showFoulTypeModal}
-          onClose={() => setShowFoulTypeModal(false)}
-          onSelectFoulType={handleFoulTypeSelection}
-          foulerName={foulerPlayerName}
-        />
-
-        {/* ✅ PHASE 5: Victim Player Selection Modal - Second step for shooting fouls */}
-        <VictimPlayerSelectionModal
-          isOpen={showVictimSelectionModal}
-          onClose={() => setShowVictimSelectionModal(false)}
-          onSelectPlayer={handleVictimSelection}
-          players={
-            // Get opposing team players based on fouler's team
-            // ✅ PERFORMANCE FIX: Only calculate when modal is open
-            showVictimSelectionModal && foulerPlayerId && gameData
-              ? (teamAPlayers.some(p => p.id === foulerPlayerId)
-                  ? teamBPlayers.map(p => ({
-                      id: p.id,
-                      name: p.name,
-                      teamId: gameData.team_b_id
-                    }))
-                  : teamAPlayers.map(p => ({
-                      id: p.id,
-                      name: p.name,
-                      teamId: gameData.team_a_id
-                    }))
-                )
-              : []
-          }
-          teamName={
-            foulerPlayerId && gameData
-              ? (teamAPlayers.some(p => p.id === foulerPlayerId)
-                  ? (coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B'))
-                  : (gameData.team_a?.name || 'Team A')
-                )
-              : 'Team'
-          }
-          foulType={selectedFoulType || ''}
-        />
-
-        {/* ✅ Shot Clock Violation Modal */}
-        {showViolationModal && violationTeamId && gameData && (
-          <ShotClockViolationModal
-            isOpen={showViolationModal}
-            onClose={() => setShowViolationModal(false)}
-            onRecordViolation={async (placeholderTeamId) => {
-              console.log('🚨 Recording shot clock violation for placeholder team:', placeholderTeamId);
-              
-              // ✅ MAP PLACEHOLDER TO ACTUAL UUID
-              // violationTeamId can be "teamA", "teamB", or actual UUID
-              // We need to convert placeholder strings to real UUIDs
-              let actualTeamId: string;
-              let teamName: string;
-              
-              if (placeholderTeamId === 'teamA' || placeholderTeamId === gameData.team_a_id) {
-                actualTeamId = gameData.team_a_id;
-                teamName = gameData.team_a?.name || gameData.team_a_name || 'Team A';
-              } else if (placeholderTeamId === 'teamB' || placeholderTeamId === gameData.team_b_id) {
-                actualTeamId = gameData.team_b_id;
-                teamName = coachMode 
-                  ? (opponentNameParam || 'Opponent Team')
-                  : (gameData.team_b?.name || gameData.team_b_name || 'Team B');
-              } else {
-                console.error('❌ Unknown team ID:', placeholderTeamId);
-                return;
-              }
-              
-              console.log('✅ Mapped to actual UUID:', actualTeamId, 'Team:', teamName);
-              
-              // ⚠️ WORKAROUND: DB constraint requires player_id OR custom_player_id
-              // For team turnovers (unattributed), use user ID as proxy (same pattern as opponent stats)
-              // TODO: Backend needs to:
-              //   1. Support 'shot_clock_violation' modifier
-              //   2. Allow team-level turnovers without player attribution
-              
-              // Determine if this is an opponent stat (coach mode only)
-              const isOpponentStat = coachMode && actualTeamId !== gameData.team_a_id;
-              
-              await tracker.recordStat({
-                gameId: gameIdParam,
-                playerId: user?.id || undefined, // ⚠️ Use user ID as proxy (DB constraint workaround)
-                customPlayerId: undefined,
-                teamId: actualTeamId, // ✅ Use actual UUID, not placeholder
-                statType: 'turnover',
-                modifier: undefined, // ⚠️ NULL for now (DB constraint requires this)
-                isOpponentStat: isOpponentStat,
-                // ✅ Store violation type in metadata for future migration
-                metadata: {
-                  violationType: 'shot_clock_violation',
-                  autoRecorded: true,
-                  isTeamTurnover: true, // Flag: Not attributed to specific player
-                  proxyPlayerId: user?.id, // Track proxy for future cleanup
-                  timestamp: new Date().toISOString()
-                }
-              });
-              
-              // Reset shot clock to 24s for opponent
-              tracker.resetShotClock(24);
-              
-              console.log('✅ Shot clock violation recorded as generic turnover (metadata preserved for future migration)');
-            }}
-            teamWithPossession={violationTeamId}
-            teamName={
-              violationTeamId === 'teamA' || violationTeamId === gameData.team_a_id
-                ? (gameData.team_a?.name || gameData.team_a_name || 'Team A')
-                : coachMode
-                  ? (opponentNameParam || 'Opponent Team')
-                  : (gameData.team_b?.name || gameData.team_b_name || 'Team B')
-            }
-            autoDismissSeconds={10}
-          />
-        )}
-
-        {/* ✅ Game Ended Overlay - Blocks all interactions */}
-        {(tracker.gameStatus === 'completed' || tracker.gameStatus === 'cancelled') && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl border-4 border-red-500">
-              <div className="text-6xl mb-4">🏁</div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                {tracker.gameStatus === 'completed' ? 'Game Ended' : 'Game Cancelled'}
-              </h2>
-              <p className="text-lg text-gray-600 mb-6">
-                This game has ended. No more stats can be recorded.
-              </p>
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors"
-              >
-                Back to Dashboard
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Dimmed Overlay During Timeout - Prevents Stat Entry */}
-        {tracker.timeoutActive && (
-          <div className="fixed inset-0 bg-black/60 z-40 pointer-events-none">
-            {/* Overlay blocks interaction with stat tracker during timeout */}
-          </div>
-        )}
-
-        {/* Substitution Loading Overlay */}
-        {isSubstituting && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-slate-800 rounded-lg p-6 border border-slate-600 shadow-xl">
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                <div className="text-white font-medium">Processing substitution...</div>
-              </div>
-            </div>
-          </div>
-        )}
-
+        {/* ✅ DESKTOP: Render shared modals */}
+        {sharedModals}
 
       </div>
       </div>
