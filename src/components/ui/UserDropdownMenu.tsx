@@ -8,9 +8,10 @@ interface UserDropdownMenuProps {
   user: any;
   userRole: string;
   signOut: () => Promise<{ success: boolean; }>;
+  profilePhotoUrl?: string | null;
 }
 
-export function UserDropdownMenu({ user, userRole, signOut }: UserDropdownMenuProps) {
+export function UserDropdownMenu({ user, userRole, signOut, profilePhotoUrl }: UserDropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -89,8 +90,16 @@ export function UserDropdownMenu({ user, userRole, signOut }: UserDropdownMenuPr
         className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
       >
         {/* User Avatar */}
-        <div className="w-8 h-8 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center">
-          <User className="w-4 h-4 text-white" />
+        <div className="w-8 h-8 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center overflow-hidden">
+          {profilePhotoUrl ? (
+            <img 
+              src={profilePhotoUrl} 
+              alt="Profile" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <User className="w-4 h-4 text-white" />
+          )}
         </div>
         
         {/* User Info */}
@@ -113,8 +122,16 @@ export function UserDropdownMenu({ user, userRole, signOut }: UserDropdownMenuPr
           {/* User Info Header */}
           <div className="px-4 py-3 border-b border-gray-700">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center overflow-hidden">
+                {profilePhotoUrl ? (
+                  <img 
+                    src={profilePhotoUrl} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-5 h-5 text-white" />
+                )}
               </div>
               <div className="flex-1">
                 <div className="font-medium text-white text-sm">

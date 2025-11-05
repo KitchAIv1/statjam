@@ -421,11 +421,15 @@ export function PlayerDashboard() {
                             alt={currentPlayerData.name}
                             className="absolute right-0 top-0 h-full w-auto object-cover object-top"
                           />
-                          <div className="absolute top-4 right-4 bg-black/30 rounded px-3 py-1">
-                            <span className="text-orange-200 font-bold">{String(identityTeam).toUpperCase()}</span>
-                          </div>
+                          {/* Team Badge - Only show if team exists */}
+                          {hasValidData(identityTeam) && identityTeam !== "No Team" && (
+                            <div className="absolute top-4 right-4 bg-black/30 rounded px-3 py-1">
+                              <span className="text-orange-200 font-bold">{String(identityTeam).toUpperCase()}</span>
+                            </div>
+                          )}
+                          {/* Jersey Number Overlay */}
                           <div className="absolute bottom-4 right-4 text-6xl font-bold text-white opacity-50">
-                            {age}
+                            #{jerseyNumber}
                           </div>
                         </div>
                       </div>

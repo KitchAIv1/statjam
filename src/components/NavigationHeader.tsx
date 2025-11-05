@@ -118,7 +118,12 @@ function NavigationHeaderContent() {
               // Authenticated user menu
               <>
                 {userRole === 'organizer' && <OrganizerGuideButton />}
-                <UserDropdownMenu user={user} userRole={userRole || 'fan'} signOut={signOut} />
+                <UserDropdownMenu 
+                  user={user} 
+                  userRole={userRole || 'fan'} 
+                  signOut={signOut}
+                  profilePhotoUrl={user?.profile_photo_url}
+                />
               </>
             ) : (
               // Guest auth buttons
