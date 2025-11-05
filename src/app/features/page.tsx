@@ -25,18 +25,6 @@ export default function FeaturesPage() {
     '/images/Player carousel 4.png'
   ];
 
-  // Redirect if user is signed in
-  useEffect(() => {
-    if (!loading && user) {
-      router.push('/');
-    }
-  }, [user, loading, router]);
-
-  // If loading or user exists, don't render
-  if (loading || user) {
-    return null;
-  }
-
   const profiles = [
     {
       id: 'player',
@@ -50,7 +38,6 @@ export default function FeaturesPage() {
         'Personal dashboard with season averages & career highs',
         'Performance analytics with game-by-game trends',
         'Personal stat tracker for pickup games & practices',
-        'Achievement badges & performance highlights',
         'Profile photos & action poses with NBA-style cards',
         'Complete game history with detailed box scores',
         'Upcoming games & tournament schedules',
@@ -85,14 +72,12 @@ export default function FeaturesPage() {
       gradient: 'from-purple-500 to-pink-500',
       glowColor: 'rgba(168, 85, 247, 0.2)',
       features: [
-        'Team management with mixed rosters (users + custom players)',
+        'Manage rosters with registered and guest players',
         'Quick Track stat tracking for non-tournament games',
         'Player performance analytics & game-to-game trends',
-        'Opponent stat tracking during games',
         'Team statistics & player performance reports',
         'Real-time game viewing with live updates',
-        'Public/private team visibility controls',
-        'Game scheduling & team management'
+        'Public/private team visibility controls'
       ]
     },
     {
@@ -150,6 +135,18 @@ export default function FeaturesPage() {
 
     return () => observers.forEach(observer => observer.disconnect());
   }, []);
+
+  // Redirect if user is signed in (after all hooks are called)
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/');
+    }
+  }, [user, loading, router]);
+
+  // If loading or user exists, don't render content
+  if (loading || user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
