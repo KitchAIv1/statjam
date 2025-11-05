@@ -41,10 +41,10 @@ export function HeroSection({ onWatchLive, onViewTournament }: HeroSectionProps)
                   NBA‑Level Stats. Real‑Time. Zero Friction.
                 </div>
                 <div className="text-lg sm:text-xl lg:text-2xl opacity-85 leading-relaxed mb-3">
-                  Automation handles clock, possession, and sequences — you focus on the game.
+                  Automation handles clock, possession, and shot sequences — you just tap and track.
                 </div>
                 <div className="text-base sm:text-lg lg:text-xl opacity-75 leading-relaxed">
-                  Built for organizers, stat admins, coaches, players, and fans.
+                  Built for tournaments, teams, and coaches who demand pro-level precision — anywhere, anytime.
                 </div>
               </div>
             </div>

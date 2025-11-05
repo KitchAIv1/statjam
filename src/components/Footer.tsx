@@ -80,7 +80,7 @@ export function Footer() {
           {/* Copyright */}
           <div className="text-center md:text-left">
             <p className="text-gray-400">
-              &copy; 2025 StatJam. All Rights Reserved.
+              &copy; 2025 StatJam by Stratpremier. All Rights Reserved.
             </p>
           </div>
 
