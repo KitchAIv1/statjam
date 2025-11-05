@@ -25,7 +25,7 @@ export const PROFILE_LIMITS = {
   },
   jerseyNumber: {
     min: 0,
-    max: 99,
+    max: 999,
   },
   height: {
     min: 48, // 4'0" in inches
@@ -147,7 +147,7 @@ export function validateJerseyNumber(jerseyNumber: string | number): string | nu
   }
 
   if (num > PROFILE_LIMITS.jerseyNumber.max) {
-    return `Jersey number must be between 0 and ${PROFILE_LIMITS.jerseyNumber.max}`;
+    return `Jersey number must be between ${PROFILE_LIMITS.jerseyNumber.min} and ${PROFILE_LIMITS.jerseyNumber.max}`;
   }
 
   return null;
@@ -175,11 +175,11 @@ export function validatePosition(position: string): string | null {
  */
 export function validateHeight(height: string | number): string | null {
   const num = typeof height === 'string' 
-    ? parseFloat(height) 
+    ? parseHeightToInches(height) 
     : height;
 
-  if (isNaN(num)) {
-    return 'Height must be a number';
+  if (num === null || isNaN(num)) {
+    return 'Height must be a valid number';
   }
 
   if (num < PROFILE_LIMITS.height.min) {
@@ -197,8 +197,9 @@ export function validateHeight(height: string | number): string | null {
  * Validate weight (in lbs)
  */
 export function validateWeight(weight: string | number): string | null {
+  // Extract numeric value from string (handles "180 lbs", "180", etc.)
   const num = typeof weight === 'string' 
-    ? parseFloat(weight) 
+    ? parseFloat(weight.replace(/[^\d.]/g, '')) 
     : weight;
 
   if (isNaN(num)) {

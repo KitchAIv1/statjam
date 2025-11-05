@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
@@ -37,11 +37,13 @@ interface EditProfileModalProps {
 }
 
 const positions = [
-  'Point Guard',
-  'Shooting Guard', 
-  'Small Forward',
-  'Power Forward',
-  'Center'
+  { value: 'PG', label: 'Point Guard' },
+  { value: 'SG', label: 'Shooting Guard' },
+  { value: 'SF', label: 'Small Forward' },
+  { value: 'PF', label: 'Power Forward' },
+  { value: 'C', label: 'Center' },
+  { value: 'G', label: 'Guard' },
+  { value: 'F', label: 'Forward' },
 ];
 
 export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditProfileModalProps) {
@@ -64,6 +66,48 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
   const [previewProfilePhoto, setPreviewProfilePhoto] = useState<string | null>(null);
   const [previewPosePhoto, setPreviewPosePhoto] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  // Separate state for height (feet and inches)
+  const [heightFeet, setHeightFeet] = useState<string>('');
+  const [heightInches, setHeightInches] = useState<string>('');
+  
+  // Update formData when playerData prop changes
+  useEffect(() => {
+    setFormData(sanitizePlayerData(playerData));
+  }, [playerData]);
+  
+  // Initialize height from formData on mount or when formData.height changes
+  useEffect(() => {
+    const parseHeight = (heightStr: string): { feet: string; inches: string } => {
+      if (!heightStr || heightStr === 'N/A') return { feet: '', inches: '' };
+      
+      // Try feet'inches" format
+      const feetInchesMatch = heightStr.match(/(\d+)'(\d+)/);
+      if (feetInchesMatch) {
+        return {
+          feet: feetInchesMatch[1],
+          inches: feetInchesMatch[2]
+        };
+      }
+      
+      // Try plain number (assumed inches) - convert to feet/inches
+      const totalInches = parseInt(heightStr);
+      if (!isNaN(totalInches)) {
+        const feet = Math.floor(totalInches / 12);
+        const inches = totalInches % 12;
+        return {
+          feet: feet.toString(),
+          inches: inches.toString()
+        };
+      }
+      
+      return { feet: '', inches: '' };
+    };
+    
+    const { feet, inches } = parseHeight(formData.height);
+    setHeightFeet(feet);
+    setHeightInches(inches);
+  }, [formData.height]);
 
   const handleInputChange = (field: keyof PlayerProfile, value: string | number) => {
     setFormData(prev => ({
@@ -75,6 +119,35 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
       setValidationErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  // Handle height feet/inches changes
+  const handleHeightChange = (type: 'feet' | 'inches', value: string) => {
+    // Only allow numbers
+    if (value && !/^\d+$/.test(value)) return;
+    
+    if (type === 'feet') {
+      setHeightFeet(value);
+    } else {
+      setHeightInches(value);
+    }
+    
+    // Calculate total inches and update formData
+    const feet = type === 'feet' ? parseInt(value) || 0 : parseInt(heightFeet) || 0;
+    const inches = type === 'inches' ? parseInt(value) || 0 : parseInt(heightInches) || 0;
+    
+    // Construct height string in feet'inches" format
+    const heightString = feet > 0 || inches > 0 ? `${feet}'${inches}"` : '';
+    handleInputChange('height', heightString);
+    
+    // Clear validation error when user types
+    if (validationErrors.height) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.height;
         return newErrors;
       });
     }
@@ -146,6 +219,24 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     setPreviewProfilePhoto(null);
     setPreviewPosePhoto(null);
     setValidationErrors({});
+    
+    // Reset height inputs
+    const parseHeight = (heightStr: string): { feet: string; inches: string } => {
+      if (!heightStr || heightStr === 'N/A') return { feet: '', inches: '' };
+      const feetInchesMatch = heightStr.match(/(\d+)'(\d+)/);
+      if (feetInchesMatch) {
+        return { feet: feetInchesMatch[1], inches: feetInchesMatch[2] };
+      }
+      const totalInches = parseInt(heightStr);
+      if (!isNaN(totalInches)) {
+        return { feet: Math.floor(totalInches / 12).toString(), inches: (totalInches % 12).toString() };
+      }
+      return { feet: '', inches: '' };
+    };
+    const { feet, inches } = parseHeight(playerData.height);
+    setHeightFeet(feet);
+    setHeightInches(inches);
+    
     onClose();
   };
 
@@ -278,8 +369,8 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 </SelectTrigger>
                 <SelectContent>
                   {positions.map((position) => (
-                    <SelectItem key={position} value={position}>
-                      {position}
+                    <SelectItem key={position.value} value={position.value}>
+                      {position.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -309,11 +400,13 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
               <Label htmlFor="jersey">Jersey Number</Label>
               <Input
                 id="jersey"
+                type="number"
                 value={formData.jerseyNumber}
                 onChange={(e) => handleInputChange('jerseyNumber', e.target.value)}
                 onBlur={() => handleBlur('jerseyNumber')}
-                placeholder="Enter jersey number"
-                maxLength={2}
+                placeholder="0-999"
+                min="0"
+                max="999"
                 className="bg-input-background"
                 aria-invalid={!!validationErrors.jerseyNumber}
               />
@@ -323,29 +416,58 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="height">Height</Label>
-              <Input
-                id="height"
-                value={formData.height}
-                onChange={(e) => handleInputChange('height', e.target.value)}
-                onBlur={() => handleBlur('height')}
-                placeholder="e.g., 6'8&quot;"
-                className="bg-input-background"
-                aria-invalid={!!validationErrors.height}
-              />
+              <Label htmlFor="height-feet">Height</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Input
+                    id="height-feet"
+                    type="number"
+                    value={heightFeet}
+                    onChange={(e) => handleHeightChange('feet', e.target.value)}
+                    onBlur={() => handleBlur('height')}
+                    placeholder="Feet"
+                    min="4"
+                    max="7"
+                    className="bg-input-background text-center"
+                    aria-invalid={!!validationErrors.height}
+                    aria-label="Height in feet"
+                  />
+                </div>
+                <span className="text-2xl font-light text-muted-foreground">′</span>
+                <div className="flex-1">
+                  <Input
+                    id="height-inches"
+                    type="number"
+                    value={heightInches}
+                    onChange={(e) => handleHeightChange('inches', e.target.value)}
+                    onBlur={() => handleBlur('height')}
+                    placeholder="Inches"
+                    min="0"
+                    max="11"
+                    className="bg-input-background text-center"
+                    aria-invalid={!!validationErrors.height}
+                    aria-label="Height in inches"
+                  />
+                </div>
+                <span className="text-2xl font-light text-muted-foreground">″</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Example: 6 feet 8 inches</p>
               {validationErrors.height && (
                 <p className="text-sm text-destructive">{validationErrors.height}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="weight">Weight</Label>
+              <Label htmlFor="weight">Weight (lbs)</Label>
               <Input
                 id="weight"
-                value={formData.weight}
-                onChange={(e) => handleInputChange('weight', e.target.value)}
+                type="number"
+                value={formData.weight.replace(/[^\d]/g, '')}
+                onChange={(e) => handleInputChange('weight', e.target.value ? `${e.target.value} lbs` : '')}
                 onBlur={() => handleBlur('weight')}
-                placeholder="e.g., 235 lbs"
+                placeholder="180"
+                min="50"
+                max="400"
                 className="bg-input-background"
                 aria-invalid={!!validationErrors.weight}
               />

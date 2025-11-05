@@ -163,12 +163,26 @@ export function PlayerDashboard() {
   // Sync database data to currentPlayerData for edit form population
   useEffect(() => {
     if (data.identity) {
+      // Helper to format height from inches to feet'inches"
+      const formatHeightForDisplay = (inches: number | null | undefined): string => {
+        if (!inches || inches === 0) return '';
+        const feet = Math.floor(inches / 12);
+        const remainingInches = inches % 12;
+        return `${feet}'${remainingInches}"`;
+      };
+      
+      // Helper to format weight with "lbs" suffix
+      const formatWeightForDisplay = (weight: number | null | undefined): string => {
+        if (!weight || weight === 0) return '';
+        return `${weight} lbs`;
+      };
+      
       setCurrentPlayerData({
         name: data.identity.name || '',
         jerseyNumber: String(data.identity.jerseyNumber || ''),
         position: data.identity.position || '',
-        height: String(data.identity.height || ''),
-        weight: String(data.identity.weight || ''),
+        height: formatHeightForDisplay(data.identity.height),
+        weight: formatWeightForDisplay(data.identity.weight),
         age: data.identity.age || 0,
         team: data.identity.teamName || '',
         profilePhoto: data.identity.profilePhotoUrl || '',
