@@ -10,6 +10,7 @@ export interface PlayByPlayEntry {
   teamName: string;
   playerId?: string;
   playerName?: string;
+  playerPhotoUrl?: string | null;
   statType?: string;
   statValue?: number;
   modifier?: string;
