@@ -20,6 +20,7 @@ interface PlayerAvatarCardProps {
   photoUrl?: string | null;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   animate?: boolean;
+  className?: string;
 }
 
 /**
@@ -37,7 +38,8 @@ const PlayerAvatarCardComponent: React.FC<PlayerAvatarCardProps> = ({
   teamName,
   photoUrl,
   size = 'md',
-  animate = true
+  animate = true,
+  className = ''
 }) => {
   
   const initial = playerName ? playerName.charAt(0).toUpperCase() : '?';
@@ -78,7 +80,7 @@ const PlayerAvatarCardComponent: React.FC<PlayerAvatarCardProps> = ({
   return (
     <Component
       {...animationProps}
-      className="flex flex-col items-center gap-1"
+      className={`flex flex-col items-center gap-1 ${className}`}
     >
       {/* Avatar Square */}
       <div className={`

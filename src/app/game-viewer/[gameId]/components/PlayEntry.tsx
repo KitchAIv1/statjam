@@ -94,7 +94,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
     <div
       key={`${play.id}-${theme}`}
       className={`
-        relative p-4 rounded-lg transition-all duration-300 border-b
+        relative p-3 sm:p-4 rounded-lg transition-all duration-300 border-b
         ${getCardClasses()}
         ${isDark ? 'border-slate-700/50' : 'border-orange-200/50'}
       `}
@@ -107,64 +107,73 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
         timestamp={play.timestamp}
       />
 
-      {/* Main Content */}
-      <div className="flex items-start gap-4">
-        {/* Player Avatar */}
+      {/* Main Content - Responsive gap */}
+      <div className="flex items-start gap-2 sm:gap-4">
+        {/* Player Avatar - Responsive size: xl on mobile, 2xl on desktop */}
+        <PlayerAvatarCard
+          playerName={play.playerName || 'Unknown Player'}
+          teamName={teamName}
+          photoUrl={play.playerPhotoUrl}
+          size="xl"
+          className="sm:hidden"
+          animate={false}
+        />
         <PlayerAvatarCard
           playerName={play.playerName || 'Unknown Player'}
           teamName={teamName}
           photoUrl={play.playerPhotoUrl}
           size="2xl"
+          className="hidden sm:flex"
           animate={false}
         />
 
-        {/* Play Details */}
-        <div className="flex-1 space-y-2">
-          {/* Play Description with Icon */}
-          <div className="flex items-start gap-3">
+        {/* Play Details - Responsive spacing */}
+        <div className="flex-1 space-y-1 sm:space-y-2 min-w-0">
+          {/* Play Description with Icon - Responsive gap */}
+          <div className="flex items-start gap-2 sm:gap-3">
             <ActionIcon type={play.statType} size="md" animate={false} />
-            <div className="flex-1">
-              <p className={`text-base font-bold leading-tight ${isDark ? 'text-foreground' : 'text-gray-900'}`}>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm sm:text-base font-bold leading-tight ${isDark ? 'text-foreground' : 'text-gray-900'}`}>
                 {getEnhancedPlayDescription(play.description, play.statType, play.modifier, playerStats)}
                 {typeof playerPoints === 'number' && scoringInfo && (
-                  <span className="ml-2 px-2 py-0.5 bg-orange-500/20 text-orange-600 rounded text-sm font-bold">
+                  <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-orange-500/20 text-orange-600 rounded text-xs sm:text-sm font-bold">
                     ({playerPoints} PTS)
                   </span>
                 )}
                 {isTimeout && play.modifier && (
-                  <span className="ml-2 text-xs text-yellow-600 opacity-80">
+                  <span className="ml-1 sm:ml-2 text-xs text-yellow-600 opacity-80">
                     ({play.modifier === 'full' ? '60s' : '30s'})
                   </span>
                 )}
               </p>
               
-              {/* Player & Team Info */}
-              <div className="flex items-center gap-3 mt-1 text-sm">
-                <span className={`font-semibold ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>{play.playerName || 'Unknown Player'}</span>
+              {/* Player & Team Info - Responsive */}
+              <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm">
+                <span className={`font-semibold truncate ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>{play.playerName || 'Unknown Player'}</span>
                 <span className={isDark ? 'text-muted-foreground' : 'text-gray-500'}>•</span>
-                <span className={isDark ? 'text-muted-foreground' : 'text-gray-600'}>{teamName}</span>
+                <span className={`truncate ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>{teamName}</span>
               </div>
             </div>
           </div>
 
-          {/* Scoring/Type Badge & Score */}
-          <div className="flex items-center justify-between gap-3">
-            {/* Badge */}
+          {/* Scoring/Type Badge & Score - Responsive with wrapping */}
+          <div className="flex items-center flex-wrap gap-2 sm:gap-3">
+            {/* Badge - Responsive sizing */}
             {scoringInfo ? (
-              <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-md text-sm font-bold uppercase tracking-wide">
+              <span className="px-2 sm:px-3 py-1 bg-green-500/20 text-green-400 rounded-md text-xs sm:text-sm font-bold uppercase tracking-wide whitespace-nowrap">
                 {scoringInfo.description}
               </span>
             ) : isSubstitution ? (
-              <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-md text-xs font-bold uppercase tracking-wide">
+              <span className="px-2 sm:px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-md text-xs font-bold uppercase tracking-wide whitespace-nowrap">
                 SUBSTITUTION
               </span>
             ) : (
-              <span className={`px-2 py-1 rounded-md text-xs font-semibold uppercase tracking-wide ${isDark ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-700'}`}>
+              <span className={`px-2 py-1 rounded-md text-xs font-semibold uppercase tracking-wide whitespace-nowrap ${isDark ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-700'}`}>
                 {play.statType?.replace(/_/g, ' ')}
               </span>
             )}
             
-            {/* Score Card */}
+            {/* Score Card - Mobile optimized */}
             <PlayScoreCard
               teamAName={teamAName}
               teamBName={teamBName}
@@ -174,8 +183,8 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
             />
           </div>
 
-          {/* Reactions Row */}
-          <div className={`flex items-center gap-4 text-xs ${isDark ? 'text-muted-foreground' : 'text-gray-500'}`}>
+          {/* Reactions Row - Responsive */}
+          <div className={`flex items-center gap-3 sm:gap-4 text-xs ${isDark ? 'text-muted-foreground' : 'text-gray-500'}`}>
             <button className="flex items-center gap-1 hover:text-red-500 transition-colors">
               <Heart className="w-3.5 h-3.5" /> 0
             </button>
