@@ -85,11 +85,11 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
   ];
 
   return (
-    <section id="live-games" className="py-24 bg-white">
+    <section id="live-games" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
       {/* Header */}
-            <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3">
                 <span className="text-orange-500">Live</span> Tournament Action
                 <span className="hidden sm:inline"> — Real‑Time Updates, No Refresh</span>
               </h2>
@@ -130,8 +130,8 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
             </div>
             {/* Live now */}
             {group.live.length > 0 && (
-              <div className="grid md:grid-cols-2 gap-6 mb-4">
-                {group.live.map((g) => {
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4 max-w-6xl">
+                {group.live.slice(0, 2).map((g) => {
                   const timeLabel = `${g.quarter <= 4 ? `Q${g.quarter}` : `OT${g.quarter - 4}`} ${String(g.game_clock_minutes || 0).padStart(2,'0')}:${String(g.game_clock_seconds || 0).padStart(2,'0')}`;
                   return (
                     <MemoizedLiveGameCard
@@ -151,8 +151,8 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
             )}
             {/* Scheduled */}
             {group.scheduled.length > 0 && (
-              <div className="grid md:grid-cols-2 gap-6">
-                {group.scheduled.map((g) => {
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
+                {group.scheduled.slice(0, 2).map((g) => {
                   const timeLabel = `Q${g.quarter} ${String(g.game_clock_minutes || 0).padStart(2,'0')}:${String(g.game_clock_seconds || 0).padStart(2,'0')}`;
                   return (
                     <MemoizedLiveGameCard
@@ -174,7 +174,7 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
         ))}
 
             {/* Bottom CTA */}
-            <div className="text-center mt-12">
+            <div className="text-center mt-8">
               <p className="text-lg text-gray-600 mb-6">
                 Experience every moment as it unfolds across multiple courts simultaneously.
               </p>

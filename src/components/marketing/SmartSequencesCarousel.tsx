@@ -155,15 +155,15 @@ export function SmartSequencesCarousel({
     <section 
       id="sequences" 
       ref={sectionRef}
-      className="py-20 lg:py-28 bg-neutral-950"
+      className="py-12 lg:py-16 bg-neutral-950"
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-white mb-6">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-3">
             Smart Sequences: Where Real Basketball Meets Automation
           </h2>
-          <p className="text-base lg:text-lg text-neutral-300 max-w-4xl mx-auto leading-relaxed">
+          <p className="text-sm lg:text-base text-neutral-300 max-w-3xl mx-auto leading-relaxed">
             Every play tells a story — StatJam captures it with precision. When a shooting foul happens, 
             the system guides you step-by-step, asking the right questions, resetting clocks, and tracking 
             outcomes — all automatically. What used to take 5 manual inputs now happens in one smooth flow.
@@ -180,7 +180,7 @@ export function SmartSequencesCarousel({
           onTouchEnd={handleTouchEnd}
         >
           {/* Slides Container */}
-          <div className="relative aspect-[16/10] lg:aspect-[16/9] rounded-2xl overflow-hidden bg-neutral-950 shadow-2xl">
+          <div className="relative aspect-[16/7] lg:aspect-[16/8] rounded-2xl overflow-hidden bg-neutral-950 shadow-2xl">
             {slides.map((slide, index) => (
               <div
                 key={index}
@@ -215,17 +215,17 @@ export function SmartSequencesCarousel({
           </button>
 
           {/* Caption */}
-          <div className="mt-8 text-center max-w-md mx-auto">
-            <h3 className="text-xl lg:text-2xl font-semibold text-white mb-3">
+          <div className="mt-4 text-center max-w-md mx-auto">
+            <h3 className="text-lg lg:text-xl font-semibold text-white mb-2">
               {slides[currentSlide].title}
             </h3>
-            <p className="text-base text-neutral-300 leading-relaxed">
+            <p className="text-sm lg:text-base text-neutral-300 leading-relaxed">
               {slides[currentSlide].body}
             </p>
           </div>
 
           {/* Dots Navigation */}
-          <div className="flex justify-center gap-3 mt-8">
+          <div className="flex justify-center gap-3 mt-4">
             {slides.map((_, index) => (
               <button
                 key={index}
