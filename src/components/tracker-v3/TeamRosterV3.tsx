@@ -155,7 +155,7 @@ export function TeamRosterV3({
                 {/* Player Avatar with Jersey Below */}
                 <div className="flex flex-col items-center gap-1 flex-shrink-0">
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-md"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md"
                     style={{
                       background: `linear-gradient(135deg, ${playerColor}, ${playerColor}dd)`
                     }}
@@ -164,7 +164,7 @@ export function TeamRosterV3({
                       <img 
                         src={player.photo_url} 
                         alt={player.name}
-                        className="w-full h-full rounded-lg object-cover"
+                        className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
                       getPlayerInitials(player.name)
