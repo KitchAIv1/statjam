@@ -52,11 +52,17 @@ export function SkeletonCard({ className = '' }: { className?: string }) {
   );
 }
 
-export function SkeletonStat({ className = '' }: { className?: string }) {
+export function SkeletonStat({ className = '', size = 'default' }: { className?: string; size?: 'default' | 'large' | 'small' }) {
+  const sizes = {
+    large: { number: 'h-10 w-12', label: 'h-4 w-16' },      // For text-3xl stats (hero section)
+    default: { number: 'h-6 w-10', label: 'h-4 w-20' },     // For text-xl stats
+    small: { number: 'h-6 w-12', label: 'h-4 w-16' }        // For text-lg stats (career highs)
+  };
+  
   return (
     <div className={`space-y-2 ${className}`}>
-      <Skeleton className="h-8 w-16" />
-      <Skeleton className="h-4 w-20" />
+      <Skeleton className={sizes[size].number} />
+      <Skeleton className={sizes[size].label} />
     </div>
   );
 }

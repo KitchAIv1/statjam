@@ -27,13 +27,14 @@
 
 ### **1. Project Overview** (`01-project/`)
 - **PRD_CURRENT.md** - Current Product Requirements Document (v2.0)
+- **PROJECT_STATUS.md** - Current project status (updated Jan 2025)
+- **JANUARY_2025_UPDATES.md** - Complete summary of January 2025 updates
 - **STAT_ADMIN_TRACKER_COMPLETE_MAP.md** - Complete architecture documentation
 - **STAT_TRACKER_QUICK_REFERENCE.md** - Developer quick reference guide
 - **STAT_TRACKER_COMPONENT_MAP.md** - Visual component hierarchy
 - **STAT_TRACKER_AUDIT_SUMMARY.md** - Production readiness assessment
 - **STAT_TRACKER_DOCUMENTATION_INDEX.md** - Master documentation index
 - **FEATURES_COMPLETE.md** - Complete feature list
-- **PROJECT_STATUS.md** - Current project status
 - **SYSTEM_ARCHITECTURE.md** - High-level system architecture
 - **MVP_READINESS_AUDIT.md** - MVP readiness assessment
 - **AUDIT_INDEX.md** - Audit documentation index
@@ -58,13 +59,17 @@
 - **REAL_TIME_ARCHITECTURE.md** - Real-time architecture
 
 ### **4. Features** (`04-features/`)
+- **FEATURES_PAGE.md** - Features page implementation (premium dark theme, carousels, device mockups)
+- **MOBILE_ADVANTAGE_SECTION.md** - Mobile advantage section documentation
+- **SMART_SEQUENCES_IMPLEMENTATION.md** - Smart sequences feature
 - **Authentication** - Auth system documentation
-- **Dashboards** - Dashboard documentation
+- **Dashboards** - Dashboard documentation (Player, Coach, Organizer)
 - **Live-viewer** - Live viewer documentation
 - **Organizer-guide** - Organizer guide documentation
 - **Personal-stat-tracker** - Personal stat tracker documentation
 - **Player-cards** - Player cards documentation
 - **Stat-tracker** - Stat tracker documentation
+- **shared/PHOTO_UPLOAD_SYSTEM.md** - Reusable photo upload system
 
 ### **5. Fixes** (`04-fixes/`)
 - **AUTH_SESSION_ISSUES_FIX.md** - Auth session fixes
@@ -169,6 +174,6 @@
 
 ---
 
-**Last Updated**: October 30, 2025  
+**Last Updated**: January 2025  
 **Maintained By**: Development Team  
 **Status**: ✅ Complete and Current

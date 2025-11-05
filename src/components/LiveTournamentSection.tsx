@@ -16,7 +16,6 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
   
   // Group by organizer - STABLE MEMOIZATION
   const grouped = useMemo(() => {
-    console.log('🔄 LiveTournamentSection: Regrouping games (this should be rare)');
     const map = new Map<string, { organizerName: string; live: typeof actualGames; scheduled: typeof actualGames }>();
     
     if (!actualGames || actualGames.length === 0) {
