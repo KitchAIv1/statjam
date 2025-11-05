@@ -68,10 +68,11 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
   const [formData, setFormData] = useState<PlayerProfile>(sanitizePlayerData(playerData));
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   
-  // Photo upload hooks
+  // Photo upload hooks (with cleanup of old photos)
   const profilePhotoUpload = usePhotoUpload({
     userId: user?.id || '',
     photoType: 'profile',
+    currentPhotoUrl: playerData.profilePhoto, // For cleanup
     onSuccess: (url) => handleInputChange('profilePhoto', url),
     onError: (error) => console.error('Profile photo upload error:', error)
   });
@@ -79,6 +80,7 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
   const posePhotoUpload = usePhotoUpload({
     userId: user?.id || '',
     photoType: 'pose',
+    currentPhotoUrl: playerData.posePhoto, // For cleanup
     onSuccess: (url) => handleInputChange('posePhoto', url),
     onError: (error) => console.error('Pose photo upload error:', error)
   });

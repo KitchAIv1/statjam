@@ -38,9 +38,66 @@ const DEFAULT_MAX_SIZE_MB = 5;
 const DEFAULT_ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 const BYTES_IN_MB = 1024 * 1024;
 
+// Image dimension limits
+const MIN_DIMENSION = 200; // Minimum width or height in pixels
+const MAX_DIMENSION = 4000; // Maximum width or height in pixels
+
 // ============================================================================
 // VALIDATION
 // ============================================================================
+
+/**
+ * Validate image dimensions (width and height)
+ * Prevents excessively large or small images from being uploaded
+ */
+export async function validateImageDimensions(file: File): Promise<ValidationResult> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      // Clean up object URL
+      URL.revokeObjectURL(objectUrl);
+      
+      const { width, height } = img;
+      console.log('🔍 Image dimensions:', { width, height });
+      
+      // Check minimum dimensions
+      if (width < MIN_DIMENSION || height < MIN_DIMENSION) {
+        console.error('❌ Image too small:', { width, height, min: MIN_DIMENSION });
+        resolve({ 
+          isValid: false, 
+          error: `Image is too small. Minimum dimensions: ${MIN_DIMENSION}x${MIN_DIMENSION}px. Your image: ${width}x${height}px` 
+        });
+        return;
+      }
+      
+      // Check maximum dimensions
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        console.error('❌ Image too large:', { width, height, max: MAX_DIMENSION });
+        resolve({ 
+          isValid: false, 
+          error: `Image is too large. Maximum dimensions: ${MAX_DIMENSION}x${MAX_DIMENSION}px. Your image: ${width}x${height}px` 
+        });
+        return;
+      }
+      
+      console.log('✅ Dimensions valid');
+      resolve({ isValid: true });
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      console.error('❌ Error loading image for dimension check');
+      resolve({ 
+        isValid: false, 
+        error: 'Unable to load image. The file may be corrupted.' 
+      });
+    };
+    
+    img.src = objectUrl;
+  });
+}
 
 /**
  * Verify file is actually an image by checking magic numbers (file signature)
@@ -167,6 +224,14 @@ export async function validateImageFile(
     if (!mimeVerification.isValid) {
       console.error('❌ MIME verification failed:', mimeVerification.error);
       return mimeVerification;
+    }
+
+    // ✅ PERFORMANCE: Validate image dimensions
+    console.log('🔍 Checking image dimensions...');
+    const dimensionValidation = await validateImageDimensions(file);
+    if (!dimensionValidation.isValid) {
+      console.error('❌ Dimension validation failed:', dimensionValidation.error);
+      return dimensionValidation;
     }
 
     console.log('✅ File validation passed');
