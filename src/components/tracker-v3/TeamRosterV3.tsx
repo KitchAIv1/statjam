@@ -143,7 +143,7 @@ export function TeamRosterV3({
             return (
               <div
                 key={`${player.id}-${index}-${refreshKey}`}
-                className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
+                className={`flex items-center gap-3 p-2 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
                   isSelected
                     ? teamSide === 'left'
                       ? 'border-orange-500 bg-orange-100 shadow-md scale-105'
@@ -153,9 +153,9 @@ export function TeamRosterV3({
                 onClick={() => onPlayerSelect(player.id)}
               >
                 {/* Player Avatar with Jersey Overlay */}
-                <div className="flex-shrink-0 relative w-14 h-14">
+                <div className="flex-shrink-0 relative w-[81px] h-[81px]">
                   <div
-                    className="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md overflow-hidden"
+                    className="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-base shadow-md overflow-hidden"
                     style={{
                       background: `linear-gradient(135deg, ${playerColor}, ${playerColor}dd)`
                     }}
@@ -171,7 +171,7 @@ export function TeamRosterV3({
                     )}
                   </div>
                   {/* Jersey Number Overlay at Bottom */}
-                  <div className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-center text-xs font-bold text-white ${
+                  <div className={`absolute bottom-0 left-0 right-0 px-2 py-1 text-center text-sm font-bold text-white ${
                     teamSide === 'left' ? 'bg-orange-600/90' : 'bg-blue-600/90'
                   }`}>
                     #{player.jerseyNumber || '?'}
