@@ -143,28 +143,11 @@ export function PlayerDashboard() {
         return;
       }
       
-      console.log('💾 Profile saved to database successfully');
-      console.log('📸 New photo URLs saved to database:', {
-        profile: updatedData.profilePhoto,
-        pose: updatedData.posePhoto
-      });
-      
       // ✅ CRITICAL: Update local state FIRST for immediate UI update
-      console.log('📝 Updating currentPlayerData state with:', {
-        profilePhoto: updatedData.profilePhoto,
-        posePhoto: updatedData.posePhoto
-      });
       setCurrentPlayerData(updatedData);
-      console.log('✅ setCurrentPlayerData called - state update queued');
       
       // Then refresh from database to sync everything else
-      console.log('🔄 Calling refetch() to sync from database...');
       await refetch();
-      console.log('✅ refetch() completed');
-      console.log('🔍 After refetch, data.identity photos:', {
-        profile: data.identity?.profilePhotoUrl,
-        pose: data.identity?.posePhotoUrl
-      });
       
     } catch (error) {
       console.error('💾 Unexpected error saving profile:', error);
@@ -196,11 +179,6 @@ export function PlayerDashboard() {
         if (!weight || weight === 0) return '';
         return `${weight} lbs`;
       };
-      
-      console.log('🔄 Syncing player data from database to UI:', {
-        profilePhoto: data.identity.profilePhotoUrl,
-        posePhoto: data.identity.posePhotoUrl
-      });
       
       setCurrentPlayerData({
         name: data.identity.name || '',
@@ -251,20 +229,6 @@ export function PlayerDashboard() {
   // ✅ CRITICAL: Use currentPlayerData FIRST (most up-to-date after save), then fall back to data.identity
   const profilePhoto = currentPlayerData.profilePhoto || data.identity?.profilePhotoUrl || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop&crop=faces";
   const posePhoto = currentPlayerData.posePhoto || data.identity?.posePhotoUrl || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=600&fit=crop&crop=faces";
-  
-  // 🔍 DEBUG: Log photo URLs being used
-  console.log('🖼️ Photo URLs in use:', {
-    profilePhoto,
-    posePhoto,
-    fromCurrentPlayerData: {
-      profile: currentPlayerData.profilePhoto,
-      pose: currentPlayerData.posePhoto
-    },
-    fromDataIdentity: {
-      profile: data.identity?.profilePhotoUrl,
-      pose: data.identity?.posePhotoUrl
-    }
-  });
   const age = (data.identity?.age !== undefined && data.identity?.age !== null && data.identity?.age > 0) 
     ? data.identity.age 
     : (currentPlayerData.age > 0 ? currentPlayerData.age : "--");
