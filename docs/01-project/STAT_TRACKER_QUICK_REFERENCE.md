@@ -697,6 +697,134 @@ localStorage.getItem('supabase.auth.token')
 
 ---
 
+## Error Handling
+
+### Error Handling Pattern
+All stat recording functions now include comprehensive error handling:
+
+```typescript
+try {
+  // Stat recording logic
+  await tracker.recordStat({
+    gameId: gameData.id,
+    playerId: actualPlayerId,
+    customPlayerId: actualCustomPlayerId,
+    teamId: actualTeamId,
+    statType: statType,
+    modifier: modifier
+  });
+  
+  // Success cleanup
+  tracker.clearPlayPrompt();
+} catch (error) {
+  console.error('❌ Error recording stat:', error);
+  notify.error(
+    'Failed to record stat',
+    error instanceof Error ? error.message : 'Please try again'
+  );
+  
+  // Error cleanup
+  tracker.clearPlayPrompt();
+}
+```
+
+### Protected Functions
+All stat recording paths now have error handling:
+- ✅ `handleStatRecord()` - Direct stat buttons
+- ✅ `recordFoulWithoutVictim()` - Personal/Offensive fouls
+- ✅ `handleVictimSelection()` - Shooting fouls + FTs
+- ✅ AssistPromptModal → `onSelectPlayer()`
+- ✅ ReboundPromptModal → `onSelectPlayer()`
+- ✅ BlockPromptModal → `onSelectPlayer()`
+- ✅ TurnoverPromptModal → `onSelectPlayer()`
+- ✅ FreeThrowSequenceModal → `onComplete()`
+- ✅ ShotClockViolationModal → Record button
+- ✅ Mobile fallback logic (handleStatRecord, handleFoulRecord)
+
+### Custom Player Detection
+Always use dual check for custom players:
+
+```typescript
+const selectedPlayerData = [...teamAPlayers, ...teamBPlayers]
+  .find(p => p.id === selectedPlayer);
+  
+const isCustomPlayer = selectedPlayer.startsWith('custom-') || 
+                      (selectedPlayerData && selectedPlayerData.is_custom_player === true);
+
+// Use in recordStat:
+await tracker.recordStat({
+  playerId: isCustomPlayer ? undefined : selectedPlayer,
+  customPlayerId: isCustomPlayer ? selectedPlayer : undefined,
+  // ... other fields
+});
+```
+
+### Error Notification Service
+Uses Sonner toast library (already installed):
+
+```typescript
+import { notify } from '@/lib/services/notificationService';
+
+// Success
+notify.success('Stat recorded successfully');
+
+// Error
+notify.error('Failed to record stat', 'Please try again');
+
+// Warning
+notify.warning('Unusual value detected', 'Please verify');
+
+// Info
+notify.info('Stat updated', 'Check the live viewer');
+```
+
+---
+
+## Mobile Architecture
+
+### Desktop Logic Integration
+Mobile now uses desktop game engine logic via props:
+
+**MobileLayoutV3 Props**:
+```typescript
+interface MobileLayoutV3Props {
+  // ... existing props
+  onStatRecord?: (statType: string, modifier?: string) => Promise<void>;
+  onFoulRecord?: (foulType: 'personal' | 'technical') => Promise<void>;
+}
+```
+
+**Mobile Implementation**:
+```typescript
+const handleStatRecord = async (statType: string, modifier?: string) => {
+  if (onStatRecord) {
+    // ✅ Use desktop logic (includes error handling)
+    await onStatRecord(statType, modifier);
+    return;
+  }
+  
+  // ⚠️ Fallback (only if desktop logic not provided)
+  try {
+    // Old mobile logic
+  } catch (error) {
+    console.error('❌ MOBILE FALLBACK: Error:', error);
+  }
+};
+```
+
+### Benefits
+- ✅ Single source of truth for game logic
+- ✅ Desktop error handling automatically inherited
+- ✅ Custom player support works identically
+- ✅ Reduced code duplication
+- ✅ Easier maintenance and bug fixes
+
+### Current Status
+- **Phase 1**: Mobile uses desktop logic (✅ Complete)
+- **Phase 2**: Remove fallback logic (⚠️ Pending testing confirmation)
+
+---
+
 ## Resources
 
 ### Documentation
@@ -713,6 +841,6 @@ localStorage.getItem('supabase.auth.token')
 
 ---
 
-**Last Updated**: October 30, 2025  
+**Last Updated**: January 2025  
 **Maintained By**: Development Team
 

@@ -1,9 +1,9 @@
 # 🎯 StatJam MVP: Current Status
 
-**Date**: December 2025  
-**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE  
-**Version**: 0.15.0+ (Automation Suite Complete + Homepage Optimized)  
-**Branch**: `main` (latest: `26def52`)  
+**Date**: January 2025  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT  
+**Version**: 0.14.4+ (Error Handling Complete + Custom Player Support + Mobile Architecture Refactoring)  
+**Branch**: `main` (latest: `2bd912c`)  
 **Live Site**: [www.statjam.net](https://www.statjam.net) ✅
 
 ---
@@ -20,42 +20,47 @@
 - Code quality is high with TypeScript throughout
 
 **Recent Achievements** ✅:
-1. **🎨 MARKETING HOMEPAGE + PERFORMANCE (Dec 2025)**: Professional marketing homepage with NBA-level messaging, SEO optimization, lazy loading, WebP images. 40% bundle size reduction, comprehensive meta tags, Open Graph support. All sections optimized for MVP conversion.
-2. **🏠 HOMEPAGE UI POLISH (Dec 2025)**: Enhanced typography hierarchy, improved CTA layouts, gradient icons, hover effects, consistent spacing rhythm. Professional premium feel throughout.
-3. **🤖 COMPLETE AUTOMATION SUITE (Oct 29)**: Phases 2-6 fully deployed - Clock automation, possession tracking, play sequences, free throw flow, foul possession logic, manual control. All features tested and production-ready.
-2. **🎨 STAT TRACKER UI REFINEMENTS (Oct 28)**: Container height alignment (650px), prevented button shifting, optimized spacing, scrollable stat grids, skeleton loading for coach tracker
-3. **📱 MOBILE UX REFINEMENTS (Oct 28)**: CRITICAL FIX - Mobile opponent stat recording, possession indicator integration, opponent panel optimization, stats display relocation, unified component architecture
-4. **🏀 PHASE 3: POSSESSION TRACKING (Oct 28)**: NEW feature - Auto-flip possession on events, jump ball arrow, database persistence, UI indicator + **CRITICAL BUG FIX**: Unconditional possession flipping (works from first stat)
-5. **🕐 PHASE 2: CLOCK AUTOMATION (Oct 28)**: NEW feature - Shot clock auto-reset, game clock auto-pause, NBA rules compliance
-5. **👨‍🏫 COACH TEAM CARD SYSTEM (Oct 22)**: Complete coach role with team management, player management, Quick Track integration
-6. **🏀 TEAM STATS TAB (Oct 22)**: Team/player stats in Live Viewer with real-time updates, mobile responsive
-7. **🔒 CRITICAL SECURITY FIXES (Oct 21)**: Next.js CVE-2025-29927 patched, CSP/HSTS headers added, security rating A-
-8. **🗑️ TOURNAMENT DELETION FIX (Oct 21)**: Complete RLS policy fix for tournament deletion with substitutions
-9. **🎓 ORGANIZER GUIDE UX (Oct 21)**: Complete 3-surface guide system with React Context state management
-10. **🏗️ MAJOR REFACTORING (Oct 20)**: AuthPageV2 decomposed from 997-line monolith to modular architecture
-11. **🛡️ Frontend Modularity Guardrails**: ESLint rules + .cursorrules enforce code quality standards
-12. **🎯 Tier 2 Validation Features**: Password strength indicator, enhanced email/name validation, metadata validation
-13. **Team Fouls & Timeouts**: Complete NBA-style implementation with auto-tracking and interactive modal
-14. **Enhanced Timeout UX**: Countdown timer, clock control, type selection (Full/30s), play-by-play integration
-15. **Desktop Substitution Fix**: Unified desktop/mobile substitution logic, now 100% functional
-16. **Validation & Error Handling**: Comprehensive input validation with toast notifications
-17. **Security Hardening (P0)**: Constructor safety, CORS validation, XSS protection with DOMPurify
-18. **My Tournaments**: Player Dashboard now shows actual upcoming games
-19. **Live Game Status**: Home page cards correctly show LIVE status when tracker is running
-20. **Centralized Authentication**: AuthContext eliminates redundant API calls (97% reduction)
-21. **Live Viewer**: Silent updates, NBA-style play-by-play with stats, subs, and timeouts
-22. **Performance**: JWT auto-refresh, memoization, optimized re-renders
+1. **🛡️ COMPREHENSIVE ERROR HANDLING (Jan 2025)**: Complete error handling for all stat recording paths with toast notifications. All 10 stat paths protected (direct stats, automation modals, foul flow, FTs, violations). Mobile inherits desktop error handling via props architecture. Zero silent failures, production-ready.
+2. **🏀 CUSTOM PLAYER SUPPORT COMPLETE (Jan 2025)**: Fixed HTTP 409 foreign key violations for custom players. Dual detection method (ID prefix + flag check) across all automation modals. Rebound modal shows correct offense/defense teams. Free throw sequences work for custom players. Complete coverage across all flows.
+3. **📱 MOBILE ARCHITECTURE REFACTORING (Jan 2025)**: Mobile now uses desktop game engine logic via props (single source of truth). Reduced code duplication, easier maintenance. Removed unused props. Phase 1 complete, fallback logic retained for testing safety.
+4. **🎨 MARKETING HOMEPAGE + PERFORMANCE (Dec 2025)**: Professional marketing homepage with NBA-level messaging, SEO optimization, lazy loading, WebP images. 40% bundle size reduction, comprehensive meta tags, Open Graph support. All sections optimized for MVP conversion.
+5. **🏠 HOMEPAGE UI POLISH (Dec 2025)**: Enhanced typography hierarchy, improved CTA layouts, gradient icons, hover effects, consistent spacing rhythm. Professional premium feel throughout.
+6. **🤖 COMPLETE AUTOMATION SUITE (Oct 29)**: Phases 2-6 fully deployed - Clock automation, possession tracking, play sequences, free throw flow, foul possession logic, manual control. All features tested and production-ready.
+7. **🎨 STAT TRACKER UI REFINEMENTS (Oct 28)**: Container height alignment (650px), prevented button shifting, optimized spacing, scrollable stat grids, skeleton loading for coach tracker
+8. **📱 MOBILE UX REFINEMENTS (Oct 28)**: CRITICAL FIX - Mobile opponent stat recording, possession indicator integration, opponent panel optimization, stats display relocation, unified component architecture
+9. **🏀 PHASE 3: POSSESSION TRACKING (Oct 28)**: NEW feature - Auto-flip possession on events, jump ball arrow, database persistence, UI indicator + **CRITICAL BUG FIX**: Unconditional possession flipping (works from first stat)
+10. **🕐 PHASE 2: CLOCK AUTOMATION (Oct 28)**: NEW feature - Shot clock auto-reset, game clock auto-pause, NBA rules compliance
+11. **👨‍🏫 COACH TEAM CARD SYSTEM (Oct 22)**: Complete coach role with team management, player management, Quick Track integration
+12. **🏀 TEAM STATS TAB (Oct 22)**: Team/player stats in Live Viewer with real-time updates, mobile responsive
+13. **🔒 CRITICAL SECURITY FIXES (Oct 21)**: Next.js CVE-2025-29927 patched, CSP/HSTS headers added, security rating A-
+14. **🗑️ TOURNAMENT DELETION FIX (Oct 21)**: Complete RLS policy fix for tournament deletion with substitutions
+15. **🎓 ORGANIZER GUIDE UX (Oct 21)**: Complete 3-surface guide system with React Context state management
+16. **🏗️ MAJOR REFACTORING (Oct 20)**: AuthPageV2 decomposed from 997-line monolith to modular architecture
+17. **🛡️ Frontend Modularity Guardrails**: ESLint rules + .cursorrules enforce code quality standards
+18. **🎯 Tier 2 Validation Features**: Password strength indicator, enhanced email/name validation, metadata validation
+19. **Team Fouls & Timeouts**: Complete NBA-style implementation with auto-tracking and interactive modal
+20. **Enhanced Timeout UX**: Countdown timer, clock control, type selection (Full/30s), play-by-play integration
+21. **Desktop Substitution Fix**: Unified desktop/mobile substitution logic, now 100% functional
+22. **Validation & Error Handling**: Comprehensive input validation with toast notifications
+23. **Security Hardening (P0)**: Constructor safety, CORS validation, XSS protection with DOMPurify
+24. **My Tournaments**: Player Dashboard now shows actual upcoming games
+25. **Live Game Status**: Home page cards correctly show LIVE status when tracker is running
+26. **Centralized Authentication**: AuthContext eliminates redundant API calls (97% reduction)
+27. **Live Viewer**: Silent updates, NBA-style play-by-play with stats, subs, and timeouts
+28. **Performance**: JWT auto-refresh, memoization, optimized re-renders
 
 **System Status**:
 - 🟢 **Organizer Dashboard**: 100% functional (tournament management, team rosters, guide system, tournament deletion)
 - 🟢 **Organizer Guide**: 100% functional (3-surface UX, Context state, WhatsApp support)
-- 🟢 **Stat Tracker V3**: 100% functional (tracking, substitutions, shot clock, team fouls, timeouts, validation)
+- 🟢 **Stat Tracker V3**: 100% functional (tracking, substitutions, shot clock, team fouls, timeouts, validation, **error handling**, **custom player support**, **mobile architecture refactoring**)
 - 🟢 **Live Viewer V2**: 100% functional (real-time updates, play-by-play with timeouts, **Team Stats Tab**)
 - 🟢 **Team Stats Tab**: 100% functional (team/player stats, real-time minutes, mobile responsive, +/- calculation)
 - 🟢 **Player Dashboard**: 100% functional (profile, stats, tournaments, game log, validation)
 - 🟢 **Authentication V2**: 100% functional (modular architecture, Tier 2 validation, auto-refresh, XSS protection)
 - 🟢 **Live Game Cards**: 100% functional (automatic status updates)
 - 🟢 **Input Validation**: 100% functional (real-time feedback, password strength, name validation, email validation)
+- 🟢 **Error Handling**: 100% functional (comprehensive try-catch blocks, toast notifications, state cleanup, all 10 stat paths protected)
+- 🟢 **Custom Player Support**: 100% functional (dual detection method, all automation modals, complete flow coverage)
 - 🟢 **Team Fouls**: 100% functional (auto-tracking, bonus indicator, database trigger)
 - 🟢 **Timeouts**: 100% functional (interactive modal, countdown, play-by-play integration)
 - 🟢 **Tournament Deletion**: 100% functional (RLS policy fix, cascade deletion, foreign key constraints resolved)

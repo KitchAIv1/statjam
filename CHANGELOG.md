@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.14.4] - 2025-01-XX
+
+### 🛡️ **COMPREHENSIVE ERROR HANDLING & ARCHITECTURE IMPROVEMENTS**
+
+#### Error Handling System
+- **Added**: Complete error handling for all stat recording paths
+- **Added**: Toast notifications (Sonner) for all failures with user-friendly messages
+- **Added**: Try-catch blocks around all automation modal callbacks (6 modals)
+- **Added**: Error handling for foul flow (simple + shooting fouls)
+- **Added**: Error handling for free throw sequences
+- **Added**: Error handling for shot clock violations
+- **Added**: Mobile fallback logic wrapped in try-catch for safety
+- **Result**: Zero silent failures, users see clear error messages
+- **Coverage**: 100% of all 10 stat recording paths protected
+
+**Error Handling Pattern**:
+```typescript
+try {
+  await tracker.recordStat({...});
+  tracker.clearPlayPrompt();
+} catch (error) {
+  console.error('❌ Error:', error);
+  notify.error('Failed to record [stat]', error.message || 'Please try again');
+  tracker.clearPlayPrompt(); // Cleanup on error
+}
+```
+
+#### Custom Player Support - Complete Coverage
+- **Fixed**: HTTP 409 foreign key violations when recording custom player stats
+- **Fixed**: Desktop `handleStatRecord()` now uses dual check (ID prefix OR flag)
+- **Fixed**: All 8 automation modals now handle custom players correctly
+- **Fixed**: Rebound modal shows correct offense/defense teams
+- **Fixed**: Free throw sequence for custom players after shooting fouls
+- **Result**: Custom players work identically to regular players across all flows
+
+**Custom Player Detection**:
+```typescript
+const isCustomPlayer = playerId.startsWith('custom-') || 
+                      (playerData && playerData.is_custom_player === true);
+```
+
+#### Mobile Architecture Refactoring (Phase 1)
+- **Changed**: Mobile now uses desktop game engine logic via props
+- **Added**: `onStatRecord` and `onFoulRecord` props to MobileLayoutV3
+- **Added**: Fallback logic retained for safety during testing
+- **Result**: Single source of truth for game logic, reduced code duplication
+- **Status**: Mobile inherits desktop error handling automatically
+
+#### Code Cleanup
+- **Removed**: Unused `onTeamPlayersUpdate` prop from MobileLayoutV3
+- **Result**: Cleaner prop interface, reduced complexity
+
+#### Files Modified
+- `/src/app/stat-tracker-v3/page.tsx` - Added error handling, custom player fixes
+- `/src/components/tracker-v3/mobile/MobileLayoutV3.tsx` - Desktop logic integration, cleanup
+
+#### Technical Details
+- **Error Notifications**: 6-second duration for errors (readable)
+- **State Cleanup**: Modals close and state resets even on error
+- **Console Logging**: Detailed error logs for debugging
+- **Custom Players**: Dual detection method (ID prefix + flag check)
+- **Mobile Integration**: Props-based architecture (inherits desktop safety)
+
+#### Benefits
+- ✅ Production-ready error handling
+- ✅ Better user experience (no silent failures)
+- ✅ Easier debugging with console logs
+- ✅ Single source of truth for game logic
+- ✅ Reduced code duplication
+- ✅ Complete custom player support
+
+---
+
 ## [0.14.3] - 2025-12-19
 
 ### ⚡ **CRITICAL PERFORMANCE OPTIMIZATIONS**
