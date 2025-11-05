@@ -361,19 +361,31 @@ export function PlayerDashboard() {
                               <>
                                 {/* ⚡ SKELETON: Loading state for season stats */}
                                 <div className="flex gap-8 mb-6">
-                                  <SkeletonStat />
-                                  <SkeletonStat />
-                                  <SkeletonStat />
+                                  <SkeletonStat size="large" />
+                                  <SkeletonStat size="large" />
+                                  <SkeletonStat size="large" />
                                 </div>
                                 <div className="flex items-center gap-2 mb-3">
                                   <div className="w-2 h-2 bg-orange-300 rounded-full"></div>
                                   <p className="text-orange-200 text-sm font-medium uppercase tracking-wider">Shooting Efficiency</p>
                                 </div>
                                 <div className="grid grid-cols-4 gap-4">
-                                  <SkeletonStat className="text-center" />
-                                  <SkeletonStat className="text-center" />
-                                  <SkeletonStat className="text-center" />
-                                  <SkeletonStat className="text-center" />
+                                  <div className="text-center space-y-2">
+                                    <Skeleton className="h-7 w-16 mx-auto" />
+                                    <Skeleton className="h-3 w-8 mx-auto" />
+                                  </div>
+                                  <div className="text-center space-y-2">
+                                    <Skeleton className="h-7 w-16 mx-auto" />
+                                    <Skeleton className="h-3 w-10 mx-auto" />
+                                  </div>
+                                  <div className="text-center space-y-2">
+                                    <Skeleton className="h-7 w-16 mx-auto" />
+                                    <Skeleton className="h-3 w-8 mx-auto" />
+                                  </div>
+                                  <div className="text-center space-y-2">
+                                    <Skeleton className="h-7 w-12 mx-auto" />
+                                    <Skeleton className="h-3 w-8 mx-auto" />
+                                  </div>
                                 </div>
                               </>
                             ) : (
