@@ -21,6 +21,7 @@ import { usePlayerDashboardData } from "@/hooks/usePlayerDashboardData";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3 } from "lucide-react";
+import { Skeleton, SkeletonStat } from "@/components/ui/skeleton";
 
 const defaultPlayerData = {
   name: "",
@@ -356,45 +357,68 @@ export function PlayerDashboard() {
                           
                           <div className="mb-6">
                             <p className="text-orange-100 mb-4">SEASON AVERAGES</p>
-                            {/* Primary Stats Row */}
-                            <div className="flex gap-8 mb-6">
-                              <div>
-                                <div className="text-3xl font-bold text-white">{seasonPts}</div>
-                                <div className="text-orange-200">Points</div>
-                              </div>
-                              <div>
-                                <div className="text-3xl font-bold text-white">{seasonReb}</div>
-                                <div className="text-orange-200">Rebounds</div>
-                              </div>
-                              <div>
-                                <div className="text-3xl font-bold text-white">{seasonAst}</div>
-                                <div className="text-orange-200">Assists</div>
-                              </div>
-                            </div>
-                            
-                            {/* Shooting Efficiency - Integrated Below */}
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="w-2 h-2 bg-orange-300 rounded-full"></div>
-                              <p className="text-orange-200 text-sm font-medium uppercase tracking-wider">Shooting Efficiency</p>
-                            </div>
-                            <div className="grid grid-cols-4 gap-4">
-                              <div className="text-center">
-                                <div className="text-xl font-bold text-white">{seasonFg}</div>
-                                <div className="text-orange-300 text-xs">FG%</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xl font-bold text-white">{season3Pt}</div>
-                                <div className="text-orange-300 text-xs">3PT%</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xl font-bold text-white">{seasonFt}</div>
-                                <div className="text-orange-300 text-xs">FT%</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xl font-bold text-white">{seasonMin}</div>
-                                <div className="text-orange-300 text-xs">MPG</div>
-                              </div>
-                            </div>
+                            {loading ? (
+                              <>
+                                {/* ⚡ SKELETON: Loading state for season stats */}
+                                <div className="flex gap-8 mb-6">
+                                  <SkeletonStat />
+                                  <SkeletonStat />
+                                  <SkeletonStat />
+                                </div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-2 h-2 bg-orange-300 rounded-full"></div>
+                                  <p className="text-orange-200 text-sm font-medium uppercase tracking-wider">Shooting Efficiency</p>
+                                </div>
+                                <div className="grid grid-cols-4 gap-4">
+                                  <SkeletonStat className="text-center" />
+                                  <SkeletonStat className="text-center" />
+                                  <SkeletonStat className="text-center" />
+                                  <SkeletonStat className="text-center" />
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                {/* Primary Stats Row */}
+                                <div className="flex gap-8 mb-6">
+                                  <div>
+                                    <div className="text-3xl font-bold text-white">{seasonPts}</div>
+                                    <div className="text-orange-200">Points</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-3xl font-bold text-white">{seasonReb}</div>
+                                    <div className="text-orange-200">Rebounds</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-3xl font-bold text-white">{seasonAst}</div>
+                                    <div className="text-orange-200">Assists</div>
+                                  </div>
+                                </div>
+                                
+                                {/* Shooting Efficiency - Integrated Below */}
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-2 h-2 bg-orange-300 rounded-full"></div>
+                                  <p className="text-orange-200 text-sm font-medium uppercase tracking-wider">Shooting Efficiency</p>
+                                </div>
+                                <div className="grid grid-cols-4 gap-4">
+                                  <div className="text-center">
+                                    <div className="text-xl font-bold text-white">{seasonFg}</div>
+                                    <div className="text-orange-300 text-xs">FG%</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-xl font-bold text-white">{season3Pt}</div>
+                                    <div className="text-orange-300 text-xs">3PT%</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-xl font-bold text-white">{seasonFt}</div>
+                                    <div className="text-orange-300 text-xs">FT%</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-xl font-bold text-white">{seasonMin}</div>
+                                    <div className="text-orange-300 text-xs">MPG</div>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
 
                           <div className="flex flex-wrap gap-3 mt-4">
@@ -692,18 +716,38 @@ export function PlayerDashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center p-3 glass-card rounded-lg">
-                      <span className="text-muted-foreground">Points</span>
-                      <span className="text-card-foreground font-bold text-lg">{careerPts}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 glass-card rounded-lg">
-                      <span className="text-muted-foreground">Rebounds</span>
-                      <span className="text-card-foreground font-bold text-lg">{careerReb}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 glass-card rounded-lg">
-                      <span className="text-muted-foreground">Assists</span>
-                      <span className="text-card-foreground font-bold text-lg">{careerAst}</span>
-                    </div>
+                    {loading ? (
+                      <>
+                        {/* ⚡ SKELETON: Loading state for career highs */}
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Points</span>
+                          <Skeleton className="h-6 w-12" />
+                        </div>
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Rebounds</span>
+                          <Skeleton className="h-6 w-12" />
+                        </div>
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Assists</span>
+                          <Skeleton className="h-6 w-12" />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Points</span>
+                          <span className="text-card-foreground font-bold text-lg">{careerPts}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Rebounds</span>
+                          <span className="text-card-foreground font-bold text-lg">{careerReb}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 glass-card rounded-lg">
+                          <span className="text-muted-foreground">Assists</span>
+                          <span className="text-card-foreground font-bold text-lg">{careerAst}</span>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
