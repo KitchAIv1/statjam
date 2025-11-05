@@ -65,8 +65,6 @@ export class PlayerGameStatsService {
    */
   static async getPlayerGameStats(userId: string): Promise<GameStatsSummary[]> {
     try {
-      console.log('🏀 PlayerGameStatsService: Fetching game stats for player:', userId);
-
       // Step 1: Get all raw stats for this player from game_stats table
       const { data: rawStats, error: statsError } = await supabase
         .from('game_stats')
@@ -80,17 +78,14 @@ export class PlayerGameStatsService {
       }
 
       if (!rawStats || rawStats.length === 0) {
-        console.log('📊 No game stats found for player');
         return [];
       }
 
-      console.log(`📊 Found ${rawStats.length} raw stats for player`);
-
       // Step 2: Get unique game IDs
       const gameIds = [...new Set(rawStats.map(s => s.game_id))];
-      console.log(`🎮 Player participated in ${gameIds.length} games`);
 
       // Step 3: Fetch game info for all games
+      // NBA STANDARD: Only include completed games (excludes in_progress, scheduled, Coach Games)
       const { data: games, error: gamesError } = await supabase
         .from('games')
         .select(`
@@ -101,11 +96,13 @@ export class PlayerGameStatsService {
           home_score,
           away_score,
           tournament_id,
+          status,
           tournaments (name),
           team_a:teams!team_a_id (id, name),
           team_b:teams!team_b_id (id, name)
         `)
-        .in('id', gameIds);
+        .in('id', gameIds)
+        .eq('status', 'completed'); // ✅ NBA STANDARD: Only completed games
 
       if (gamesError) {
         console.error('❌ Error fetching game info:', gamesError);
@@ -113,7 +110,6 @@ export class PlayerGameStatsService {
       }
 
       if (!games || games.length === 0) {
-        console.log('📊 No game info found');
         return [];
       }
 
@@ -169,7 +165,6 @@ export class PlayerGameStatsService {
         } as GameStatsSummary;
       }).filter(Boolean) as GameStatsSummary[];
 
-      console.log(`✅ Aggregated stats for ${gameStatsSummaries.length} games`);
       return gameStatsSummaries;
 
     } catch (error) {

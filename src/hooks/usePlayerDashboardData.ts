@@ -23,7 +23,6 @@ export function usePlayerDashboardData(user: { id: string } | null) {
 
   const refetch = useCallback(async () => {
     if (!user?.id) {
-      console.log('🔍 usePlayerDashboardData: No user ID, skipping fetch');
       setLoading(false);
       return;
     }

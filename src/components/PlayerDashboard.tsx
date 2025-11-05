@@ -56,11 +56,6 @@ export function PlayerDashboard() {
   const [currentTab, setCurrentTab] = useState("dashboard");
   const [showCardGeneration, setShowCardGeneration] = useState(false);
 
-  // Minimal logging for production
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🎯 PlayerDashboard: Loading state:', loading);
-  }
-
   const handlePremiumFeatureClick = (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -76,11 +71,8 @@ export function PlayerDashboard() {
   };
 
   const handleSubscriptionClose = () => {
-    console.log('🎯 PlayerDashboard: handleSubscriptionClose called');
     setIsSubscriptionModalOpen(false);
     // If user upgraded, redirect to card generation
-    // For demo purposes, let's redirect to the card generation page
-    console.log('🚀 PlayerDashboard: Navigating to /dashboard/player/cards');
     router.push('/dashboard/player/cards');
   };
 
@@ -90,8 +82,6 @@ export function PlayerDashboard() {
 
   const handleSaveProfile = async (updatedData: typeof defaultPlayerData) => {
     try {
-      console.log('💾 Saving profile data to database:', updatedData);
-      
       // Update local state immediately for better UX
       setCurrentPlayerData(updatedData);
       
@@ -140,9 +130,6 @@ export function PlayerDashboard() {
         pose_photo_url: updatedData.posePhoto || null,
       };
       
-      console.log('💾 Prepared update data:', updateData);
-      console.log('💾 Updating user ID:', user.id);
-      
       const { data, error } = await supabase!
         .from('users')
         .update(updateData)
@@ -155,8 +142,6 @@ export function PlayerDashboard() {
         alert(`Failed to save profile: ${error.message}`);
         return;
       }
-      
-      console.log('💾 Profile saved successfully:', data);
       
       // Refresh the dashboard data to show the updated information
       await refetch();
@@ -489,20 +474,28 @@ export function PlayerDashboard() {
                       </div>
                       
                       {/* Chart */}
-                      <PerformanceChart series={
-                        data.series && data.series.length > 0 
-                          ? data.series.map(s => ({
-                              date: s.date,
-                              points: s.points || 0,
-                              rebounds: s.rebounds || 0,
-                              assists: s.assists || 0,
-                              fieldGoal: s.fgm && s.fga ? (s.fga ? (s.fgm / s.fga) * 100 : 0) : 0,
-                              threePoint: s.threePm && s.threePa ? (s.threePa ? (s.threePm / s.threePa) * 100 : 0) : 0,
-                              freeThrow: s.ftm && s.fta ? (s.fta ? (s.ftm / s.fta) * 100 : 0) : 0,
-                              month: s.date
-                            }))
-                          : [] // Empty array for new users
-                      }
+                      <PerformanceChart 
+                        series={
+                          data.series && data.series.length > 0 
+                            ? data.series.map(s => ({
+                                date: s.date,
+                                points: s.points || 0,
+                                rebounds: s.rebounds || 0,
+                                assists: s.assists || 0,
+                                fieldGoal: s.fgm && s.fga ? (s.fga ? (s.fgm / s.fga) * 100 : 0) : 0,
+                                threePoint: s.threePm && s.threePa ? (s.threePa ? (s.threePm / s.threePa) * 100 : 0) : 0,
+                                freeThrow: s.ftm && s.fta ? (s.fta ? (s.ftm / s.fta) * 100 : 0) : 0,
+                                fgm: s.fgm || 0,
+                                fga: s.fga || 0,
+                                threePm: s.threePm || 0,
+                                threePa: s.threePa || 0,
+                                ftm: s.ftm || 0,
+                                fta: s.fta || 0,
+                                month: s.date
+                              }))
+                            : [] // Empty array for new users
+                        }
+                        seasonAverages={data.season}
                       />
                     </CardContent>
                   </div>
