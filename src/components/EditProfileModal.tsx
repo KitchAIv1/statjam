@@ -206,7 +206,8 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     }
 
     try {
-      onSave(formData);
+      // ✅ FIX: Await save completion before closing modal (ensures photos update)
+      await onSave(formData);
       notify.success('Profile updated successfully');
       onClose();
     } catch (error) {

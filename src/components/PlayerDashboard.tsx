@@ -143,8 +143,13 @@ export function PlayerDashboard() {
         return;
       }
       
+      console.log('💾 Profile saved to database successfully');
+      console.log('🔄 Refreshing dashboard data...');
+      
       // Refresh the dashboard data to show the updated information
       await refetch();
+      
+      console.log('✅ Dashboard data refreshed - photos should update automatically');
       
     } catch (error) {
       console.error('💾 Unexpected error saving profile:', error);
@@ -161,6 +166,7 @@ export function PlayerDashboard() {
   };
 
   // Sync database data to currentPlayerData for edit form population
+  // ✅ OPTIMIZED: Added photo URLs to dependencies for real-time updates
   useEffect(() => {
     if (data.identity) {
       // Helper to format height from inches to feet'inches"
@@ -176,6 +182,11 @@ export function PlayerDashboard() {
         if (!weight || weight === 0) return '';
         return `${weight} lbs`;
       };
+      
+      console.log('🔄 Syncing player data from database to UI:', {
+        profilePhoto: data.identity.profilePhotoUrl,
+        posePhoto: data.identity.posePhotoUrl
+      });
       
       setCurrentPlayerData({
         name: data.identity.name || '',
@@ -199,7 +210,7 @@ export function PlayerDashboard() {
         }
       });
     }
-  }, [data.identity, data.careerHighs]);
+  }, [data.identity, data.identity?.profilePhotoUrl, data.identity?.posePhotoUrl, data.careerHighs, data.seasonAverages]);
 
   // Helper function to check if data is meaningful (not null/empty/default)
   const hasValidData = (value: any, defaultCheck?: any) => {

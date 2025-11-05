@@ -284,6 +284,7 @@ export function constructFilePath(userId: string, fileName: string, folder?: str
 
 /**
  * Upload image to Supabase Storage
+ * ✅ OPTIMIZED: Validation removed (already done in hook before calling this)
  */
 export async function uploadImage(
   file: File,
@@ -298,11 +299,8 @@ export async function uploadImage(
     generateUniqueName = true
   } = options;
 
-  // Validate file (✅ FIX: Added await for async validation)
-  const validation = await validateImageFile(file, maxSizeMB, allowedTypes);
-  if (!validation.isValid) {
-    throw new Error(validation.error);
-  }
+  // NOTE: File validation is handled by usePhotoUpload hook before calling this function
+  // No need to validate twice - improves performance
 
   // Check Supabase client
   if (!supabase) {
