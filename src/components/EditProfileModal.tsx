@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Upload, X } from 'lucide-react';
+import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { usePhotoUpload } from '@/hooks/usePhotoUpload';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 interface PlayerProfile {
   name: string;
@@ -47,6 +48,8 @@ const positions = [
 ];
 
 export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditProfileModalProps) {
+  const { user } = useAuthContext();
+  
   // Ensure all form fields have valid string values (never null/undefined)
   const sanitizePlayerData = (data: PlayerProfile): PlayerProfile => ({
     name: data.name || '',
@@ -63,9 +66,22 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
   });
 
   const [formData, setFormData] = useState<PlayerProfile>(sanitizePlayerData(playerData));
-  const [previewProfilePhoto, setPreviewProfilePhoto] = useState<string | null>(null);
-  const [previewPosePhoto, setPreviewPosePhoto] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  // Photo upload hooks
+  const profilePhotoUpload = usePhotoUpload({
+    userId: user?.id || '',
+    photoType: 'profile',
+    onSuccess: (url) => handleInputChange('profilePhoto', url),
+    onError: (error) => console.error('Profile photo upload error:', error)
+  });
+  
+  const posePhotoUpload = usePhotoUpload({
+    userId: user?.id || '',
+    photoType: 'pose',
+    onSuccess: (url) => handleInputChange('posePhoto', url),
+    onError: (error) => console.error('Pose photo upload error:', error)
+  });
   
   // Separate state for height (feet and inches)
   const [heightFeet, setHeightFeet] = useState<string>('');
@@ -166,23 +182,6 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     }
   };
 
-  const handlePhotoUpload = (type: 'profile' | 'pose', event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        if (type === 'profile') {
-          setPreviewProfilePhoto(result);
-          handleInputChange('profilePhoto', result);
-        } else {
-          setPreviewPosePhoto(result);
-          handleInputChange('posePhoto', result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleSave = async () => {
     // Validate all fields before saving
@@ -216,8 +215,6 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
 
   const handleCancel = () => {
     setFormData(sanitizePlayerData(playerData));
-    setPreviewProfilePhoto(null);
-    setPreviewPosePhoto(null);
     setValidationErrors({});
     
     // Reset height inputs
@@ -237,6 +234,12 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     setHeightFeet(feet);
     setHeightInches(inches);
     
+    // Reset photo upload states
+    profilePhotoUpload.clearPreview();
+    profilePhotoUpload.clearError();
+    posePhotoUpload.clearPreview();
+    posePhotoUpload.clearError();
+    
     onClose();
   };
 
@@ -255,89 +258,33 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
         <div className="space-y-6 px-2">
           {/* Photo Upload Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Profile Photo */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Profile Photo</Label>
-              <div className="relative">
-                <div className="w-full aspect-square max-w-[200px] mx-auto rounded-lg overflow-hidden bg-muted border-2 border-dashed border-border hover:border-primary/50 transition-colors">
-                  {previewProfilePhoto || formData.profilePhoto ? (
-                    <div className="relative w-full h-full">
-                      <ImageWithFallback
-                        src={previewProfilePhoto || formData.profilePhoto}
-                        alt="Profile preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="absolute top-2 right-2"
-                        onClick={() => {
-                          setPreviewProfilePhoto(null);
-                          handleInputChange('profilePhoto', '');
-                        }}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
-                      <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                      <span className="text-sm text-muted-foreground text-center px-2">
-                        Click to upload profile photo
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoUpload('profile', e)}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Pose Photo */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Action/Pose Photo</Label>
-              <div className="relative">
-                <div className="w-full aspect-square max-w-[200px] mx-auto rounded-lg overflow-hidden bg-muted border-2 border-dashed border-border hover:border-primary/50 transition-colors">
-                  {previewPosePhoto || formData.posePhoto ? (
-                    <div className="relative w-full h-full">
-                      <ImageWithFallback
-                        src={previewPosePhoto || formData.posePhoto}
-                        alt="Pose preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="absolute top-2 right-2"
-                        onClick={() => {
-                          setPreviewPosePhoto(null);
-                          handleInputChange('posePhoto', '');
-                        }}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
-                      <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                      <span className="text-sm text-muted-foreground text-center px-2">
-                        Click to upload action photo
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoUpload('pose', e)}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-            </div>
+            <PhotoUploadField
+              label="Profile Photo"
+              value={formData.profilePhoto}
+              previewUrl={profilePhotoUpload.previewUrl}
+              uploading={profilePhotoUpload.uploading}
+              error={profilePhotoUpload.error}
+              aspectRatio="square"
+              onFileSelect={profilePhotoUpload.handleFileSelect}
+              onRemove={() => {
+                profilePhotoUpload.clearPreview();
+                handleInputChange('profilePhoto', '');
+              }}
+            />
+            
+            <PhotoUploadField
+              label="Action/Pose Photo"
+              value={formData.posePhoto}
+              previewUrl={posePhotoUpload.previewUrl}
+              uploading={posePhotoUpload.uploading}
+              error={posePhotoUpload.error}
+              aspectRatio="portrait"
+              onFileSelect={posePhotoUpload.handleFileSelect}
+              onRemove={() => {
+                posePhotoUpload.clearPreview();
+                handleInputChange('posePhoto', '');
+              }}
+            />
           </div>
 
           {/* Basic Info Grid */}
