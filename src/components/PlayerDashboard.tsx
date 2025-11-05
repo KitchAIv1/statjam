@@ -144,24 +144,19 @@ export function PlayerDashboard() {
       }
       
       console.log('💾 Profile saved to database successfully');
-      console.log('🔄 Refreshing dashboard data...');
-      
-      // Refresh the dashboard data to show the updated information
-      await refetch();
-      
-      console.log('✅ Dashboard data refreshed');
-      console.log('🔄 Force updating UI with new photo URLs:', {
-        profilePhoto: updatedData.profilePhoto,
-        posePhoto: updatedData.posePhoto
+      console.log('📸 New photo URLs:', {
+        profile: updatedData.profilePhoto,
+        pose: updatedData.posePhoto
       });
       
-      // ✅ FIX: Force update currentPlayerData with new photos after refetch
-      // This ensures photos display immediately even if refetch doesn't trigger useEffect
-      setCurrentPlayerData(prev => ({
-        ...prev,
-        profilePhoto: updatedData.profilePhoto,
-        posePhoto: updatedData.posePhoto
-      }));
+      // ✅ CRITICAL: Update local state FIRST for immediate UI update
+      setCurrentPlayerData(updatedData);
+      console.log('✅ Local state updated with new photos');
+      
+      // Then refresh from database to sync everything else
+      console.log('🔄 Refreshing dashboard data from database...');
+      await refetch();
+      console.log('✅ Dashboard data refreshed from database');
       
     } catch (error) {
       console.error('💾 Unexpected error saving profile:', error);
@@ -178,7 +173,6 @@ export function PlayerDashboard() {
   };
 
   // Sync database data to currentPlayerData for edit form population
-  // ✅ OPTIMIZED: Added photo URLs to dependencies for real-time updates
   useEffect(() => {
     if (data.identity) {
       // Helper to format height from inches to feet'inches"
@@ -222,7 +216,7 @@ export function PlayerDashboard() {
         }
       });
     }
-  }, [data.identity, data.identity?.profilePhotoUrl, data.identity?.posePhotoUrl, data.careerHighs, data.seasonAverages]);
+  }, [data.identity, data.careerHighs, data.seasonAverages]);
 
   // Helper function to check if data is meaningful (not null/empty/default)
   const hasValidData = (value: any, defaultCheck?: any) => {
@@ -440,6 +434,7 @@ export function PlayerDashboard() {
                         {/* Player Image */}
                         <div className="flex-[0.7] relative">
                           <ImageWithFallback 
+                            key={posePhoto} // Force remount on URL change (bypass browser cache)
                             src={posePhoto}
                             alt={currentPlayerData.name}
                             className="absolute right-0 top-0 h-full w-auto object-cover object-top"

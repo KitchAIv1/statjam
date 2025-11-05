@@ -36,6 +36,7 @@ const nextConfig: NextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net", // ✅ Allow CDN for compression library
+              "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net", // ✅ Explicitly allow script elements from CDN
               "worker-src 'self' blob:", // ✅ Allow web workers for image compression
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",

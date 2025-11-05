@@ -93,6 +93,7 @@ export function UserDropdownMenu({ user, userRole, signOut, profilePhotoUrl }: U
         <div className="w-8 h-8 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center overflow-hidden">
           {profilePhotoUrl ? (
             <img 
+              key={profilePhotoUrl} // Force remount on URL change (bypass browser cache)
               src={profilePhotoUrl} 
               alt="Profile" 
               className="w-full h-full object-cover"
@@ -125,6 +126,7 @@ export function UserDropdownMenu({ user, userRole, signOut, profilePhotoUrl }: U
               <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center overflow-hidden">
                 {profilePhotoUrl ? (
                   <img 
+                    key={profilePhotoUrl} // Force remount on URL change (bypass browser cache)
                     src={profilePhotoUrl} 
                     alt="Profile" 
                     className="w-full h-full object-cover"
