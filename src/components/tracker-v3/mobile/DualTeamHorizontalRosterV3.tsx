@@ -161,7 +161,7 @@ export function DualTeamHorizontalRosterV3({
                     }
                   }}
                   disabled={isEmpty}
-                  className={`w-12 h-12 rounded-full p-0 flex items-center justify-center text-xs font-bold transition-all ${
+                  className={`w-12 h-12 rounded-lg p-0 flex items-center justify-center text-xs font-bold transition-all ${
                     isEmpty 
                       ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed border border-dashed border-gray-300'
                       : isSelected
@@ -179,7 +179,7 @@ export function DualTeamHorizontalRosterV3({
                     <img 
                       src={player.photo_url} 
                       alt={player.name}
-                      className="w-full h-full rounded-full object-cover"
+                      className="w-full h-full rounded-lg object-cover"
                     />
                   ) : (
                     getPlayerInitials(player.name)
