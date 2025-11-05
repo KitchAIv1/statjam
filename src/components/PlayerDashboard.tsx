@@ -144,19 +144,27 @@ export function PlayerDashboard() {
       }
       
       console.log('💾 Profile saved to database successfully');
-      console.log('📸 New photo URLs:', {
+      console.log('📸 New photo URLs saved to database:', {
         profile: updatedData.profilePhoto,
         pose: updatedData.posePhoto
       });
       
       // ✅ CRITICAL: Update local state FIRST for immediate UI update
+      console.log('📝 Updating currentPlayerData state with:', {
+        profilePhoto: updatedData.profilePhoto,
+        posePhoto: updatedData.posePhoto
+      });
       setCurrentPlayerData(updatedData);
-      console.log('✅ Local state updated with new photos');
+      console.log('✅ setCurrentPlayerData called - state update queued');
       
       // Then refresh from database to sync everything else
-      console.log('🔄 Refreshing dashboard data from database...');
+      console.log('🔄 Calling refetch() to sync from database...');
       await refetch();
-      console.log('✅ Dashboard data refreshed from database');
+      console.log('✅ refetch() completed');
+      console.log('🔍 After refetch, data.identity photos:', {
+        profile: data.identity?.profilePhotoUrl,
+        pose: data.identity?.posePhotoUrl
+      });
       
     } catch (error) {
       console.error('💾 Unexpected error saving profile:', error);
@@ -240,8 +248,23 @@ export function PlayerDashboard() {
   const position = hasValidData(data.identity?.position) 
     ? data.identity!.position 
     : (currentPlayerData.position || "Position");
-  const profilePhoto = data.identity?.profilePhotoUrl || currentPlayerData.profilePhoto || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop&crop=faces";
-  const posePhoto = data.identity?.posePhotoUrl || currentPlayerData.posePhoto || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=600&fit=crop&crop=faces";
+  // ✅ CRITICAL: Use currentPlayerData FIRST (most up-to-date after save), then fall back to data.identity
+  const profilePhoto = currentPlayerData.profilePhoto || data.identity?.profilePhotoUrl || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop&crop=faces";
+  const posePhoto = currentPlayerData.posePhoto || data.identity?.posePhotoUrl || "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=600&fit=crop&crop=faces";
+  
+  // 🔍 DEBUG: Log photo URLs being used
+  console.log('🖼️ Photo URLs in use:', {
+    profilePhoto,
+    posePhoto,
+    fromCurrentPlayerData: {
+      profile: currentPlayerData.profilePhoto,
+      pose: currentPlayerData.posePhoto
+    },
+    fromDataIdentity: {
+      profile: data.identity?.profilePhotoUrl,
+      pose: data.identity?.posePhotoUrl
+    }
+  });
   const age = (data.identity?.age !== undefined && data.identity?.age !== null && data.identity?.age > 0) 
     ? data.identity.age 
     : (currentPlayerData.age > 0 ? currentPlayerData.age : "--");
