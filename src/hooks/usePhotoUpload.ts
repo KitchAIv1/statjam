@@ -49,13 +49,25 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
    * Handle file selection and upload
    */
   const handleFileSelect = async (file: File): Promise<void> => {
-    setError(null);
-    setProgress(0);
+    try {
+      console.log('📤 Starting file upload process...');
+      setError(null);
+      setProgress(0);
 
-    // Validate file (✅ HARDENED: Now async to verify MIME type)
-    const validation = await validateImageFile(file, maxSizeMB);
-    if (!validation.isValid) {
-      const errorMessage = validation.error || 'Invalid file';
+      // Validate file (✅ HARDENED: Now async to verify MIME type)
+      console.log('🔍 Validating file...');
+      const validation = await validateImageFile(file, maxSizeMB);
+      if (!validation.isValid) {
+        const errorMessage = validation.error || 'Invalid file';
+        console.error('❌ Validation failed:', errorMessage);
+        setError(errorMessage);
+        onError?.(errorMessage);
+        return;
+      }
+      console.log('✅ Validation passed');
+    } catch (err) {
+      const errorMessage = `Validation error: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      console.error('❌ Unexpected error during validation:', err);
       setError(errorMessage);
       onError?.(errorMessage);
       return;
@@ -76,14 +88,21 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
       setProgress(50); // Simulated progress
 
       // Upload to Supabase Storage
+      console.log('📤 Uploading to Supabase Storage...');
       const result = await uploadPlayerPhoto(file, userId, photoType);
+      console.log('✅ Upload successful:', result.publicUrl);
       
       setProgress(100);
       setPreviewUrl(result.publicUrl);
       onSuccess?.(result.publicUrl);
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Upload failed';
+      const errorMessage = err instanceof Error ? err.message : 'Upload failed - please try again';
+      console.error('❌ Upload error:', err);
+      console.error('❌ Error details:', { 
+        message: err instanceof Error ? err.message : 'Unknown', 
+        stack: err instanceof Error ? err.stack : undefined 
+      });
       setError(errorMessage);
       setPreviewUrl(null);
       onError?.(errorMessage);
