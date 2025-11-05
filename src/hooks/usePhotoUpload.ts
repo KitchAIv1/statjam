@@ -5,7 +5,7 @@
  * Single responsibility: Coordinate photo upload UI state.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { uploadPlayerPhoto, deletePlayerPhoto, validateImageFile } from '@/lib/services/imageUploadService';
 
 // ============================================================================
@@ -41,6 +41,9 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  // Track current blob URL for cleanup (prevent memory leaks)
+  const blobUrlRef = useRef<string | null>(null);
 
   /**
    * Handle file selection and upload
@@ -49,8 +52,8 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
     setError(null);
     setProgress(0);
 
-    // Validate file
-    const validation = validateImageFile(file, maxSizeMB);
+    // Validate file (✅ HARDENED: Now async to verify MIME type)
+    const validation = await validateImageFile(file, maxSizeMB);
     if (!validation.isValid) {
       const errorMessage = validation.error || 'Invalid file';
       setError(errorMessage);
@@ -58,8 +61,14 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
       return;
     }
 
+    // ✅ FIX: Revoke old blob URL before creating new one (prevent memory leak)
+    if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+      URL.revokeObjectURL(blobUrlRef.current);
+    }
+
     // Create preview
     const objectUrl = URL.createObjectURL(file);
+    blobUrlRef.current = objectUrl;
     setPreviewUrl(objectUrl);
 
     try {
@@ -79,9 +88,10 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
       setPreviewUrl(null);
       onError?.(errorMessage);
       
-      // Cleanup preview URL
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
+      // ✅ FIX: Cleanup blob URL on error
+      if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
       }
     } finally {
       setUploading(false);
@@ -92,8 +102,9 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
    * Clear preview
    */
   const clearPreview = (): void => {
-    if (previewUrl && previewUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(previewUrl);
+    if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
     }
     setPreviewUrl(null);
     setProgress(0);
@@ -105,6 +116,15 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
   const clearError = (): void => {
     setError(null);
   };
+
+  // ✅ FIX: Cleanup blob URL on component unmount (prevent memory leak)
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+    };
+  }, []);
 
   return {
     uploading,

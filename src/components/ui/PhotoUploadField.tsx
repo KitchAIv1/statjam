@@ -74,11 +74,13 @@ export function PhotoUploadField({
 
   /**
    * Handle file drop
+   * ✅ HARDENED: Prevents concurrent uploads
    */
   const handleDrop = (event: DragEvent<HTMLDivElement>): void => {
     event.preventDefault();
     event.stopPropagation();
 
+    // ✅ FIX: Block drops while uploading to prevent race conditions
     if (disabled || uploading) return;
 
     const file = event.dataTransfer.files?.[0];

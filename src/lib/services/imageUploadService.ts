@@ -43,13 +43,71 @@ const BYTES_IN_MB = 1024 * 1024;
 // ============================================================================
 
 /**
- * Validate image file before upload
+ * Verify file is actually an image by checking magic numbers (file signature)
+ * Prevents renamed executables from bypassing type checks
  */
-export function validateImageFile(
+async function verifyImageMimeType(file: File): Promise<ValidationResult> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    
+    reader.onloadend = (e) => {
+      if (!e.target?.result) {
+        resolve({ isValid: false, error: 'Unable to read file' });
+        return;
+      }
+
+      const arr = new Uint8Array(e.target.result as ArrayBuffer);
+      
+      // Check magic numbers (file signatures)
+      // JPEG: FF D8 FF
+      if (arr[0] === 0xFF && arr[1] === 0xD8 && arr[2] === 0xFF) {
+        resolve({ isValid: true });
+        return;
+      }
+      
+      // PNG: 89 50 4E 47
+      if (arr[0] === 0x89 && arr[1] === 0x50 && arr[2] === 0x4E && arr[3] === 0x47) {
+        resolve({ isValid: true });
+        return;
+      }
+      
+      // GIF: 47 49 46 38
+      if (arr[0] === 0x47 && arr[1] === 0x49 && arr[2] === 0x46 && arr[3] === 0x38) {
+        resolve({ isValid: true });
+        return;
+      }
+      
+      // WebP: 52 49 46 46 ... 57 45 42 50
+      if (arr[0] === 0x52 && arr[1] === 0x49 && arr[2] === 0x46 && arr[3] === 0x46 &&
+          arr[8] === 0x57 && arr[9] === 0x45 && arr[10] === 0x42 && arr[11] === 0x50) {
+        resolve({ isValid: true });
+        return;
+      }
+      
+      resolve({ 
+        isValid: false, 
+        error: 'File is not a valid image. The file content does not match an image format.' 
+      });
+    };
+    
+    reader.onerror = () => {
+      resolve({ isValid: false, error: 'Error reading file' });
+    };
+    
+    // Read first 12 bytes to check magic numbers
+    reader.readAsArrayBuffer(file.slice(0, 12));
+  });
+}
+
+/**
+ * Validate image file before upload
+ * ✅ HARDENED: Now includes MIME type verification via magic numbers
+ */
+export async function validateImageFile(
   file: File,
   maxSizeMB: number = DEFAULT_MAX_SIZE_MB,
   allowedTypes: string[] = DEFAULT_ALLOWED_TYPES
-): ValidationResult {
+): Promise<ValidationResult> {
   // Check if file exists
   if (!file) {
     return { isValid: false, error: 'No file selected' };
@@ -64,12 +122,18 @@ export function validateImageFile(
     };
   }
 
-  // Check file type
+  // Check file type (MIME type from browser)
   if (!allowedTypes.includes(file.type)) {
     return { 
       isValid: false, 
       error: 'Invalid file type. Please upload an image file (JPEG, PNG, WebP, or GIF)' 
     };
+  }
+
+  // ✅ SECURITY: Verify actual file content (prevent renamed executables)
+  const mimeVerification = await verifyImageMimeType(file);
+  if (!mimeVerification.isValid) {
+    return mimeVerification;
   }
 
   return { isValid: true };
@@ -81,10 +145,21 @@ export function validateImageFile(
 
 /**
  * Generate unique filename for upload
+ * ✅ HARDENED: Sanitizes extension to prevent path traversal attacks
  */
 export function generateUniqueFileName(userId: string, originalName: string, prefix?: string): string {
   const timestamp = Date.now();
-  const extension = originalName.split('.').pop()?.toLowerCase() || 'jpg';
+  
+  // ✅ SECURITY: Sanitize file extension (only alphanumeric chars)
+  let extension = originalName.split('.').pop()?.toLowerCase() || 'jpg';
+  extension = extension.replace(/[^a-z0-9]/gi, ''); // Remove special chars
+  
+  // Whitelist only valid image extensions
+  const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+  if (!validExtensions.includes(extension)) {
+    extension = 'jpg'; // Default to jpg if invalid
+  }
+  
   const sanitizedPrefix = prefix ? `${prefix}-` : '';
   return `${sanitizedPrefix}${timestamp}.${extension}`;
 }
