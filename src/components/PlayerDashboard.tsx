@@ -149,7 +149,19 @@ export function PlayerDashboard() {
       // Refresh the dashboard data to show the updated information
       await refetch();
       
-      console.log('✅ Dashboard data refreshed - photos should update automatically');
+      console.log('✅ Dashboard data refreshed');
+      console.log('🔄 Force updating UI with new photo URLs:', {
+        profilePhoto: updatedData.profilePhoto,
+        posePhoto: updatedData.posePhoto
+      });
+      
+      // ✅ FIX: Force update currentPlayerData with new photos after refetch
+      // This ensures photos display immediately even if refetch doesn't trigger useEffect
+      setCurrentPlayerData(prev => ({
+        ...prev,
+        profilePhoto: updatedData.profilePhoto,
+        posePhoto: updatedData.posePhoto
+      }));
       
     } catch (error) {
       console.error('💾 Unexpected error saving profile:', error);
