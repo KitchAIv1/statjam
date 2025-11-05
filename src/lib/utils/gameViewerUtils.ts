@@ -147,6 +147,7 @@ export const calculateFieldGoalPercentage = (made: number, attempts: number): nu
 
 /**
  * Get enhanced play description with stats
+ * NBA-style: Simple action text without inline stats
  */
 export const getEnhancedPlayDescription = (
   originalDescription: string,
@@ -161,28 +162,61 @@ export const getEnhancedPlayDescription = (
     freeThrowAttempts: number;
   }
 ): string => {
-  if (!playerStats || !statType) {
+  if (!statType) {
     return originalDescription;
   }
 
-  const action = modifier === 'made' ? 'made' : 'missed';
+  const action = modifier === 'made' ? 'makes' : 'misses';
   
   switch (statType) {
     case 'field_goal':
-      const fgStats = formatFieldGoalStats(playerStats.fieldGoalMade, playerStats.fieldGoalAttempts);
-      return `${action} field goal (${fgStats} FG)`;
+      return `${action} 2-pt jumper`;
       
     case 'three_pointer':
-      const threeStats = formatFieldGoalStats(playerStats.threePointerMade, playerStats.threePointerAttempts);
-      return `${action} 3-pointer (${threeStats} 3PT)`;
+      return `${action} 3-pointer`;
       
     case 'free_throw':
-      const ftStats = formatFieldGoalStats(playerStats.freeThrowMade, playerStats.freeThrowAttempts);
-      return `${action} free throw (${ftStats} FT)`;
+      return `${action} free throw`;
       
     default:
       return originalDescription;
   }
+};
+
+/**
+ * Format shooting stats for display (NBA-style)
+ * Returns stats like "15 PTS • 5-10 FG • 2-5 3PT"
+ */
+export const formatShootingStats = (
+  playerPoints: number,
+  playerStats: {
+    fieldGoalMade: number;
+    fieldGoalAttempts: number;
+    threePointerMade: number;
+    threePointerAttempts: number;
+    freeThrowMade: number;
+    freeThrowAttempts: number;
+  },
+  statType: string
+): string => {
+  const parts: string[] = [];
+  
+  // Always show points
+  parts.push(`${playerPoints} PTS`);
+  
+  // Show relevant shooting stats based on play type
+  if (statType === 'field_goal' || statType === 'three_pointer') {
+    parts.push(`${playerStats.fieldGoalMade}-${playerStats.fieldGoalAttempts} FG`);
+    
+    // Show 3PT stats if player has attempted any
+    if (playerStats.threePointerAttempts > 0) {
+      parts.push(`${playerStats.threePointerMade}-${playerStats.threePointerAttempts} 3PT`);
+    }
+  } else if (statType === 'free_throw') {
+    parts.push(`${playerStats.freeThrowMade}-${playerStats.freeThrowAttempts} FT`);
+  }
+  
+  return parts.join(' • ');
 };
 
 /**

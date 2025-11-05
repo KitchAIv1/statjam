@@ -14,7 +14,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { PlayByPlayEntry } from '@/lib/types/playByPlay';
 import { GameViewerTheme } from '../hooks/useGameViewerTheme';
-import { getEnhancedPlayDescription, getScoringInfo } from '@/lib/utils/gameViewerUtils';
+import { getEnhancedPlayDescription, getScoringInfo, formatShootingStats } from '@/lib/utils/gameViewerUtils';
 import { ActionIcon } from './ActionIcon';
 import { PlayTimeStamp } from './PlayTimeStamp';
 import { PlayerAvatarCard } from './PlayerAvatarCard';
@@ -72,14 +72,14 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
       latest: 'bg-orange-500/10 border-l-4 border-l-orange-500 hover:bg-orange-500/15',
       substitution: 'bg-indigo-500/10 border-l-4 border-l-indigo-500 hover:bg-indigo-500/15',
       timeout: 'bg-yellow-500/10 border-l-4 border-l-yellow-500 hover:bg-yellow-500/15',
-      default: 'bg-slate-800/50 border-l border-l-slate-700 hover:bg-slate-800/70'
+      default: 'bg-slate-800/30 border-l border-l-slate-700 hover:bg-slate-800/40'
     };
     
     const lightClasses = {
       latest: 'bg-orange-100 border-l-4 border-l-orange-500 hover:bg-orange-200',
       substitution: 'bg-indigo-100 border-l-4 border-l-indigo-500 hover:bg-indigo-200',
       timeout: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
-      default: 'bg-white border-l-2 border-l-orange-300 hover:bg-orange-50 shadow-sm'
+      default: 'bg-gray-50 border-l-2 border-l-gray-200 hover:bg-gray-100 shadow-sm'
     };
     
     const classes = isDark ? darkClasses : lightClasses;
@@ -94,9 +94,9 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
     <div
       key={`${play.id}-${theme}`}
       className={`
-        relative p-3 sm:p-4 rounded-lg transition-all duration-300 border-b
+        relative p-2 sm:p-3 rounded-lg transition-all duration-300 border-b
         ${getCardClasses()}
-        ${isDark ? 'border-slate-700/50' : 'border-orange-200/50'}
+        ${isDark ? 'border-slate-700/50' : 'border-gray-200/50'}
       `}
     >
       {/* Time Stamp */}
@@ -107,15 +107,15 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
         timestamp={play.timestamp}
       />
 
-      {/* Main Content - Responsive gap */}
+      {/* Main Content - Three-column layout: Avatar | Content | Points Badge */}
       <div className="flex items-start gap-2 sm:gap-4">
-        {/* Player Avatar - Responsive size: xl on mobile, 2xl on desktop */}
+        {/* LEFT: Player Avatar - Responsive size: xl on mobile, 2xl on desktop */}
         <PlayerAvatarCard
           playerName={play.playerName || 'Unknown Player'}
           teamName={teamName}
           photoUrl={play.playerPhotoUrl}
           size="xl"
-          className="sm:hidden"
+          className="sm:hidden flex-shrink-0"
           animate={false}
         />
         <PlayerAvatarCard
@@ -123,23 +123,18 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
           teamName={teamName}
           photoUrl={play.playerPhotoUrl}
           size="2xl"
-          className="hidden sm:flex"
+          className="hidden sm:flex flex-shrink-0"
           animate={false}
         />
 
-        {/* Play Details - Responsive spacing */}
-        <div className="flex-1 space-y-1 sm:space-y-2 min-w-0">
+        {/* CENTER: Play Details - Flexible content area */}
+        <div className="flex-1 space-y-0.5 sm:space-y-1 min-w-0">
           {/* Play Description with Icon - Responsive gap */}
           <div className="flex items-start gap-2 sm:gap-3">
             <ActionIcon type={play.statType} size="md" animate={false} />
             <div className="flex-1 min-w-0">
               <p className={`text-sm sm:text-base font-bold leading-tight ${isDark ? 'text-foreground' : 'text-gray-900'}`}>
                 {getEnhancedPlayDescription(play.description, play.statType, play.modifier, playerStats)}
-                {typeof playerPoints === 'number' && scoringInfo && (
-                  <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-orange-500/20 text-orange-600 rounded text-xs sm:text-sm font-bold">
-                    ({playerPoints} PTS)
-                  </span>
-                )}
                 {isTimeout && play.modifier && (
                   <span className="ml-1 sm:ml-2 text-xs text-yellow-600 opacity-80">
                     ({play.modifier === 'full' ? '60s' : '30s'})
@@ -153,18 +148,25 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
                 <span className={isDark ? 'text-muted-foreground' : 'text-gray-500'}>•</span>
                 <span className={`truncate ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>{teamName}</span>
               </div>
+
+              {/* NBA-Style Shooting Stats - Only show for scoring plays */}
+              {typeof playerPoints === 'number' && playerStats && scoringInfo && play.statType && (
+                <div className={`mt-1 text-xs sm:text-sm font-semibold ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>
+                  {formatShootingStats(playerPoints, playerStats, play.statType)}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Scoring/Type Badge & Score - Responsive with wrapping */}
+          {/* Badge & Score Row - Compact inline layout */}
           <div className="flex items-center flex-wrap gap-2 sm:gap-3">
             {/* Badge - Responsive sizing */}
             {scoringInfo ? (
-              <span className="px-2 sm:px-3 py-1 bg-green-500/20 text-green-400 rounded-md text-xs sm:text-sm font-bold uppercase tracking-wide whitespace-nowrap">
+              <span className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-bold uppercase tracking-wide whitespace-nowrap ${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-500/30 text-green-600'}`}>
                 {scoringInfo.description}
               </span>
             ) : isSubstitution ? (
-              <span className="px-2 sm:px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-md text-xs font-bold uppercase tracking-wide whitespace-nowrap">
+              <span className={`px-2 sm:px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wide whitespace-nowrap ${isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500/30 text-indigo-600'}`}>
                 SUBSTITUTION
               </span>
             ) : (
@@ -173,7 +175,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
               </span>
             )}
             
-            {/* Score Card - Mobile optimized */}
+            {/* Score Card - Inline */}
             <PlayScoreCard
               teamAName={teamAName}
               teamBName={teamBName}
@@ -195,6 +197,77 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
               <Share2 className="w-3.5 h-3.5" /> Share
             </button>
           </div>
+        </div>
+
+        {/* RIGHT: Indicator Text - Clean text-only indicators */}
+        <div className="flex-shrink-0 flex items-center">
+          {scoringInfo ? (
+            // Scoring plays: Colorful points text
+            <div className="flex flex-col items-end">
+              <div className={`text-2xl sm:text-3xl font-extrabold leading-none
+                ${play.statType === 'three_pointer' 
+                  ? 'text-orange-600' 
+                  : play.statType === 'field_goal'
+                  ? 'text-green-600'
+                  : 'text-blue-600'}
+              `}>
+                +{scoringInfo.points}
+              </div>
+              <div className={`text-[10px] sm:text-xs font-bold uppercase tracking-tight
+                ${play.statType === 'three_pointer' 
+                  ? 'text-orange-500' 
+                  : play.statType === 'field_goal'
+                  ? 'text-green-500'
+                  : 'text-blue-500'}
+              `}>
+                {scoringInfo.points === 1 ? 'PT' : 'PTS'}
+              </div>
+            </div>
+          ) : (play.statType === 'field_goal' || play.statType === 'three_pointer' || play.statType === 'free_throw') && play.modifier !== 'made' ? (
+            // Missed shots: Gray text
+            <div className={`text-sm sm:text-base font-bold uppercase ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              MISS
+            </div>
+          ) : play.statType === 'rebound' ? (
+            // Rebounds: Orange (offensive) or Blue (defensive)
+            <div className="flex flex-col items-end">
+              <div className={`text-xs sm:text-sm font-extrabold uppercase leading-none
+                ${play.modifier === 'offensive' ? 'text-orange-600' : 'text-blue-600'}
+              `}>
+                {play.modifier === 'offensive' ? 'OFF' : 'DEF'}
+              </div>
+              <div className={`text-[10px] sm:text-xs font-bold uppercase tracking-tight
+                ${play.modifier === 'offensive' ? 'text-orange-500' : 'text-blue-500'}
+              `}>
+                REB
+              </div>
+            </div>
+          ) : play.statType === 'assist' ? (
+            // Assists: Purple text
+            <div className="text-base sm:text-lg font-extrabold uppercase text-purple-600">
+              AST
+            </div>
+          ) : play.statType === 'block' ? (
+            // Blocks: Red text
+            <div className="text-base sm:text-lg font-extrabold uppercase text-red-600">
+              BLK
+            </div>
+          ) : play.statType === 'steal' ? (
+            // Steals: Teal text
+            <div className="text-base sm:text-lg font-extrabold uppercase text-teal-600">
+              STL
+            </div>
+          ) : play.statType === 'turnover' ? (
+            // Turnovers: Amber text
+            <div className="text-sm sm:text-base font-extrabold uppercase text-amber-600">
+              TO
+            </div>
+          ) : play.statType === 'foul' ? (
+            // Fouls: Yellow text
+            <div className={`text-base sm:text-lg font-extrabold uppercase ${isDark ? 'text-yellow-500' : 'text-yellow-600'}`}>
+              FOUL
+            </div>
+          ) : null}
         </div>
       </div>
 

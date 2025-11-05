@@ -60,6 +60,51 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
     return pts > 0 ? pts : undefined;
   }, [plays]);
 
+  // Calculate cumulative player shooting stats (for NBA-style display)
+  const calculatePlayerStats = useCallback((idx: number, id?: string) => {
+    if (!id || !plays) return undefined;
+    
+    let fgMade = 0, fgAttempts = 0;
+    let threeMade = 0, threeAttempts = 0;
+    let ftMade = 0, ftAttempts = 0;
+    
+    // Count all plays from end to current index (chronological order)
+    for (let i = plays.length - 1; i >= idx; i--) {
+      if (plays[i].playerId === id) {
+        const play = plays[i];
+        
+        if (play.statType === 'field_goal') {
+          fgAttempts++;
+          if (play.modifier === 'made') fgMade++;
+        } else if (play.statType === 'three_pointer') {
+          fgAttempts++;
+          threeAttempts++;
+          if (play.modifier === 'made') {
+            fgMade++;
+            threeMade++;
+          }
+        } else if (play.statType === 'free_throw') {
+          ftAttempts++;
+          if (play.modifier === 'made') ftMade++;
+        }
+      }
+    }
+    
+    // Only return if player has attempted any shots
+    if (fgAttempts > 0 || ftAttempts > 0) {
+      return {
+        fieldGoalMade: fgMade,
+        fieldGoalAttempts: fgAttempts,
+        threePointerMade: threeMade,
+        threePointerAttempts: threeAttempts,
+        freeThrowMade: ftMade,
+        freeThrowAttempts: ftAttempts
+      };
+    }
+    
+    return undefined;
+  }, [plays]);
+
   const isLive = game?.status?.toLowerCase().includes('live') || 
                  game?.status?.toLowerCase().includes('progress');
 
@@ -122,6 +167,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               game={memoizedGame}
               isLive={isLive}
               theme={theme}
+              calculatePlayerStats={calculatePlayerStats}
               calculatePlayerPoints={calculatePlayerPoints}
             />
           </TabsContent>
