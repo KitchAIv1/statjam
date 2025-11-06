@@ -105,15 +105,24 @@ export class CoachAnalyticsService {
     try {
       console.log('📊 CoachAnalyticsService: Fetching team analytics for:', teamId);
 
-      // Get all games for this team
-      const games = await this.makeAuthenticatedRequest<any>('games', {
+      // Get all games for this team (include both completed AND in_progress games)
+      // ✅ FIX: Coach-tracked games may still be in_progress, so include them
+      const completedGames = await this.makeAuthenticatedRequest<any>('games', {
         'or': `(team_a_id.eq.${teamId},team_b_id.eq.${teamId})`,
         'status': 'eq.completed',
         'select': 'id,team_a_id,team_b_id,home_score,away_score,created_at'
       });
 
+      const inProgressGames = await this.makeAuthenticatedRequest<any>('games', {
+        'or': `(team_a_id.eq.${teamId},team_b_id.eq.${teamId})`,
+        'status': 'eq.in_progress',
+        'select': 'id,team_a_id,team_b_id,home_score,away_score,created_at'
+      });
+
+      const games = [...completedGames, ...inProgressGames];
+
       if (games.length === 0) {
-        console.log('📊 No completed games found for team');
+        console.log('📊 No games found for team (completed or in_progress)');
         return null;
       }
 
@@ -148,15 +157,20 @@ export class CoachAnalyticsService {
         totalPoints += teamScore || 0;
         totalOpponentPoints += opponentScore || 0;
 
-        // Get game stats
+        // Get game stats (EXCLUDE opponent stats - only count actual team stats)
+        // ✅ FIX: Filter out is_opponent_stat=true to prevent opponent stats from being counted
         const gameStats = await this.makeAuthenticatedRequest<any>('game_stats', {
           'game_id': `eq.${game.id}`,
           'team_id': `eq.${teamId}`,
-          'select': 'stat_type,modifier,stat_value'
+          'is_opponent_stat': 'eq.false', // ✅ CRITICAL: Exclude opponent stats
+          'select': 'stat_type,modifier,stat_value,is_opponent_stat'
         });
 
+        // ✅ ADDITIONAL FILTER: Double-check in code (defensive programming)
+        const teamStatsOnly = gameStats.filter((stat: any) => !stat.is_opponent_stat);
+
         // Aggregate stats
-        gameStats.forEach((stat: any) => {
+        teamStatsOnly.forEach((stat: any) => {
           const statType = stat.stat_type;
           const modifier = stat.modifier;
 
