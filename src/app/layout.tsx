@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import './globals.css'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
@@ -65,11 +66,30 @@ export default function RootLayout({
         {/* Performance optimization hints */}
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://plausible.io" />
+        <link rel="dns-prefetch" href="https://plausible.io" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
         <meta name="theme-color" content="#f97316" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
       <body>
+        {/* Privacy-friendly analytics by Plausible */}
+        <Script
+          src="https://plausible.io/js/pa-NNW082sSo-ye6M6LkIgUu.js"
+          strategy="afterInteractive"
+          async
+        />
+        <Script
+          id="plausible-init"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.plausible = window.plausible || function() { (plausible.q = plausible.q || []).push(arguments) };
+              plausible.init = plausible.init || function(i) { plausible.o = i || {} };
+              plausible.init();
+            `,
+          }}
+        />
         <AuthProvider>
           <ErrorBoundary showDetails={true}>
             {children}
