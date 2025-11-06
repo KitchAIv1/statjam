@@ -1,5 +1,13 @@
 # StatJam - Your Courtside Command Center
 
+<div align="center">
+  <a href="https://www.producthunt.com/products/statjam?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-statjam" target="_blank">
+    <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1035008&theme=light&t=1762437800195" alt="StatJam - Level stats, real-time, zero friction | Product Hunt" width="250" height="54" />
+  </a>
+</div>
+
+<br />
+
 Professional-grade sports tournament app for real-time stat tracking and tournament management.
 
 ## 🌐 **Live Site**

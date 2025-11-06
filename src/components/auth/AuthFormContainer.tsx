@@ -107,6 +107,25 @@ export const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
               {isLogin ? 'Sign up' : 'Sign in'}
             </button>
           </div>
+
+          {/* Product Hunt Badge */}
+          <div style={{ textAlign: 'center', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '12px' }}>As featured on</p>
+            <a 
+              href="https://www.producthunt.com/products/statjam?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-statjam" 
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-block' }}
+            >
+              <img 
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1035008&theme=light&t=1762437800195" 
+                alt="StatJam - Level stats, real-time, zero friction | Product Hunt" 
+                style={{ width: '250px', height: '54px' }} 
+                width="250" 
+                height="54" 
+              />
+            </a>
+          </div>
         </div>
       </div>
     </>

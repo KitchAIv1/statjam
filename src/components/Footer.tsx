@@ -75,6 +75,27 @@ export function Footer() {
 
         <Separator className="mb-8 bg-gray-700" />
 
+        {/* Product Hunt Badge */}
+        <div className="text-center mb-8">
+          <p className="text-sm text-gray-400 mb-4">As featured on</p>
+          <a 
+            href="https://www.producthunt.com/products/statjam?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-statjam" 
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block"
+          >
+            <img 
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1035008&theme=light&t=1762437800195" 
+              alt="StatJam - Level stats, real-time, zero friction | Product Hunt" 
+              style={{ width: '250px', height: '54px' }} 
+              width="250" 
+              height="54" 
+            />
+          </a>
+        </div>
+
+        <Separator className="mb-8 bg-gray-700" />
+
         {/* Bottom section */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           {/* Copyright */}

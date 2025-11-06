@@ -35,13 +35,14 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net", // ✅ Allow CDN for compression library
-              "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net", // ✅ Explicitly allow script elements from CDN
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://plausible.io", // ✅ Allow CDN + Plausible
+              "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://plausible.io", // ✅ Allow script elements
               "worker-src 'self' blob:", // ✅ Allow web workers for image compression
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://images.unsplash.com https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://cdn.jsdelivr.net", // ✅ Allow fetching from CDN
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://images.unsplash.com https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://cdn.jsdelivr.net https://plausible.io", // ✅ Allow Plausible
+              "frame-src 'self' https://plausible.io", // ✅ Allow Plausible iframes
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'"

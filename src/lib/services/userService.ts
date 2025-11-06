@@ -4,7 +4,7 @@ import { authServiceV2 } from '@/lib/services/authServiceV2';
 export interface UserProfile {
   id: string;
   email: string;
-  role: 'organizer' | 'player' | 'stat_admin';
+  role: 'organizer' | 'player' | 'stat_admin' | 'coach' | 'fan' | 'admin';
   country: string;
   premium_status: boolean;
   profile_image?: string;

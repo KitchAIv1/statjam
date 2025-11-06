@@ -39,6 +39,8 @@ const OrganizerDashboardContent = () => {
         router.push('/dashboard/stat-admin');
       } else if (userRole === 'coach') {
         router.push('/dashboard/coach');
+      } else if (userRole === 'admin') {
+        router.push('/admin/dashboard');
       }
     }
 
