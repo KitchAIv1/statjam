@@ -17,10 +17,10 @@ export const navigationConfig: Record<string, NavigationConfig> = {
   admin: {
     primary: [
       {
-        label: 'Features',
-        href: '/features',
-        icon: BarChart3,
-        description: 'Explore our features'
+        label: 'Dashboard',
+        href: '/admin/dashboard',
+        icon: Home,
+        description: 'Admin dashboard'
       },
       {
         label: 'Templates',
@@ -77,12 +77,6 @@ export const navigationConfig: Record<string, NavigationConfig> = {
   organizer: {
     primary: [
       {
-        label: 'Features',
-        href: '/features',
-        icon: BarChart3,
-        description: 'Explore our features'
-      },
-      {
         label: 'Overview',
         href: '/dashboard?section=overview',
         icon: Home,
@@ -126,12 +120,6 @@ export const navigationConfig: Record<string, NavigationConfig> = {
   player: {
     primary: [
       {
-        label: 'Features',
-        href: '/features',
-        icon: BarChart3,
-        description: 'Explore our features'
-      },
-      {
         label: 'Dashboard',
         href: '/dashboard/player',
         icon: Home,
@@ -171,12 +159,6 @@ export const navigationConfig: Record<string, NavigationConfig> = {
   stat_admin: {
     primary: [
       {
-        label: 'Features',
-        href: '/features',
-        icon: BarChart3,
-        description: 'Explore our features'
-      },
-      {
         label: 'Dashboard',
         href: '/dashboard/stat-admin',
         icon: Home,
@@ -207,12 +189,6 @@ export const navigationConfig: Record<string, NavigationConfig> = {
   
   coach: {
     primary: [
-      {
-        label: 'Features',
-        href: '/features',
-        icon: BarChart3,
-        description: 'Explore our features'
-      },
       {
         label: 'Dashboard',
         href: '/dashboard/coach',
@@ -256,12 +232,6 @@ export const navigationConfig: Record<string, NavigationConfig> = {
   
   fan: {
     primary: [
-      {
-        label: 'Features',
-        href: '/features',
-        icon: BarChart3,
-        description: 'Explore our features'
-      },
       {
         label: 'Tournaments',
         href: '/tournaments',
