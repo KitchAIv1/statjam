@@ -3,17 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, PlayCircle, Trophy, Settings, Share2, Eye, EyeOff, 
-  MapPin, Calendar, MoreVertical, Edit, Trash2, UserPlus, AlertCircle 
+  MapPin, Calendar, MoreVertical, Edit, Trash2, UserPlus, AlertCircle, BarChart3 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CoachTeam } from '@/lib/types/coach';
 import { CoachQuickTrackModal } from './CoachQuickTrackModal';
 import { CoachTournamentSearchModal } from './CoachTournamentSearchModal';
 import { PlayerManagementModal } from '@/components/shared/PlayerManagementModal';
 import { CoachPlayerManagementService } from '@/lib/services/coachPlayerManagementService';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
+import { CoachTeamAnalyticsTab } from './CoachTeamAnalyticsTab';
 
 interface CoachTeamCardProps {
   team: CoachTeam;
@@ -37,6 +39,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   const [showTournamentSearch, setShowTournamentSearch] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showPlayerManagement, setShowPlayerManagement] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   
   // Loading states
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -247,6 +250,15 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
               <Trophy className="w-4 h-4" />
               {loadingAction === 'tournament' ? 'Searching...' : 'Add to Tournament'}
             </Button>
+
+            <Button
+              onClick={() => setShowAnalytics(true)}
+              variant="outline"
+              className="flex-1 min-w-[120px] gap-2"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Analytics
+            </Button>
           </div>
 
           {/* Secondary Actions (when expanded) */}
@@ -323,6 +335,17 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
           onClose={() => setShowPlayerManagement(false)}
           onUpdate={handlePlayerUpdate}
         />
+      )}
+
+      {showAnalytics && (
+        <Dialog open={showAnalytics} onOpenChange={setShowAnalytics}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Team Analytics - {team.name}</DialogTitle>
+            </DialogHeader>
+            <CoachTeamAnalyticsTab teamId={team.id} teamName={team.name} />
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );
