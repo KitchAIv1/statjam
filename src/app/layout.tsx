@@ -4,6 +4,7 @@ import './globals.css'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { Toaster } from 'sonner'
+import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 
 export const metadata: Metadata = {
   title: 'StatJam — NBA-Level Stats, Real-Time, Zero Friction',
@@ -101,6 +102,7 @@ export default function RootLayout({
             closeButton
             duration={4000}
           />
+          <FeedbackButton />
         </AuthProvider>
       </body>
     </html>
