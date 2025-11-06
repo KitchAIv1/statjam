@@ -64,65 +64,64 @@ export function Footer() {
           </div>
         </div>
 
-        <Separator className="mb-8 bg-gray-700" />
+        <Separator className="mb-12 bg-gray-700" />
 
-        {/* Unifying tagline */}
-        <div className="text-center mb-8 px-4">
-          <p className="text-base sm:text-lg text-gray-300 italic">
-            StatJam — Built for ballers, coaches, and organizers who play anywhere but want to look pro.
+        {/* Tagline */}
+        <div className="text-center mb-12 px-4">
+          <p className="text-lg text-gray-300 italic max-w-3xl mx-auto">
+            Built for ballers, coaches, and organizers who play anywhere but want to look pro.
           </p>
         </div>
 
-        <Separator className="mb-8 bg-gray-700" />
+        {/* Bottom section - Copyright, Social, Product Hunt */}
+        <div className="flex flex-col items-center gap-8">
+          {/* Social Media Icons + Product Hunt Badge */}
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            {/* Social Icons */}
+            <div className="flex items-center gap-6">
+              <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors">
+                <Facebook className="w-6 h-6" />
+                <span className="sr-only">Facebook</span>
+              </a>
+              <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors">
+                <Instagram className="w-6 h-6" />
+                <span className="sr-only">Instagram</span>
+              </a>
+              <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors">
+                <Twitter className="w-6 h-6" />
+                <span className="sr-only">X (Twitter)</span>
+              </a>
+              <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors">
+                <TikTokIcon className="w-6 h-6" />
+                <span className="sr-only">TikTok</span>
+              </a>
+            </div>
 
-        {/* Product Hunt Badge */}
-        <div className="text-center mb-8">
-          <p className="text-sm text-gray-400 mb-4">As featured on</p>
-          <a 
-            href="https://www.producthunt.com/products/statjam?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-statjam" 
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block"
-          >
-            <img 
-              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1035008&theme=light&t=1762437800195" 
-              alt="StatJam - Level stats, real-time, zero friction | Product Hunt" 
-              style={{ width: '250px', height: '54px' }} 
-              width="250" 
-              height="54" 
-            />
-          </a>
-        </div>
+            {/* Vertical divider on desktop */}
+            <div className="hidden md:block w-px h-12 bg-gray-700" />
 
-        <Separator className="mb-8 bg-gray-700" />
-
-        {/* Bottom section */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-          {/* Copyright */}
-          <div className="text-center md:text-left">
-            <p className="text-gray-400">
-              &copy; 2025 StatJam by Stratpremier. All Rights Reserved.
-            </p>
+            {/* Product Hunt Badge */}
+            <a 
+              href="https://www.producthunt.com/products/statjam?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-statjam" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block hover:opacity-90 transition-opacity"
+            >
+              <img 
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1035008&theme=light&t=1762437800195" 
+                alt="StatJam - Level stats, real-time, zero friction | Product Hunt" 
+                style={{ width: '200px', height: '43px' }} 
+                width="200" 
+                height="43" 
+              />
+            </a>
           </div>
 
-          {/* Social Media Icons */}
-          <div className="flex items-center gap-6">
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              <Facebook className="w-6 h-6" />
-              <span className="sr-only">Facebook</span>
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              <Instagram className="w-6 h-6" />
-              <span className="sr-only">Instagram</span>
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              <Twitter className="w-6 h-6" />
-              <span className="sr-only">X (Twitter)</span>
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              <TikTokIcon className="w-6 h-6" />
-              <span className="sr-only">TikTok</span>
-            </a>
+          {/* Copyright */}
+          <div className="text-center">
+            <p className="text-sm text-gray-500">
+              &copy; 2025 StatJam by Stratpremier. All Rights Reserved.
+            </p>
           </div>
         </div>
       </div>
