@@ -35,7 +35,16 @@ export class CoachAnalyticsService {
   private static readonly SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   /**
+   * Get access token from authServiceV2 localStorage (same as GameServiceV3)
+   */
+  private static getAccessToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('sb-access-token');
+  }
+
+  /**
    * Make authenticated request to Supabase REST API
+   * Uses same authentication pattern as GameServiceV3
    */
   private static async makeAuthenticatedRequest<T>(
     table: string,
@@ -43,33 +52,34 @@ export class CoachAnalyticsService {
     retryCount: number = 0
   ): Promise<T[]> {
     try {
-      // Get access token from localStorage
-      const authData = localStorage.getItem('supabase.auth.token');
-      if (!authData) {
-        throw new Error('No authentication token found');
+      // Get access token (same method as GameServiceV3)
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('No access token found - user not authenticated');
       }
 
-      const { access_token } = JSON.parse(authData);
-      if (!access_token) {
-        throw new Error('Invalid authentication token');
+      if (!this.SUPABASE_URL || !this.SUPABASE_ANON_KEY) {
+        throw new Error('Missing Supabase configuration');
       }
 
       // Build query string
       const queryString = new URLSearchParams(params).toString();
-      const url = `${this.SUPABASE_URL}/rest/v1/${table}?${queryString}`;
+      const url = `${this.SUPABASE_URL}/rest/v1/${table}${queryString ? `?${queryString}` : ''}`;
 
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'apikey': this.SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           'Prefer': 'return=representation'
         }
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        const errorText = await response.text();
+        console.error(`❌ CoachAnalyticsService: HTTP ${response.status}:`, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
