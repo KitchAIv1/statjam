@@ -808,7 +808,16 @@ function StatTrackerV3Content() {
         <Card className="w-full max-w-md" style={{ background: 'var(--dashboard-card)', borderColor: 'var(--dashboard-border)' }}>
           <CardContent className="p-6 text-center">
             <p className="text-red-500 mb-4">{error}</p>
-            <Button onClick={() => router.push('/dashboard')} variant="outline">
+            <Button onClick={() => {
+              // ✅ FIX: Role-based dashboard routing
+              if (coachMode || userRole === 'coach') {
+                router.push('/dashboard/coach');
+              } else if (userRole === 'stat_admin') {
+                router.push('/dashboard/stat-admin');
+              } else {
+                router.push('/dashboard');
+              }
+            }} variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Button>
@@ -824,7 +833,16 @@ function StatTrackerV3Content() {
         <Card className="w-full max-w-md" style={{ background: 'var(--dashboard-card)', borderColor: 'var(--dashboard-border)' }}>
           <CardContent className="p-6 text-center">
             <p style={{ color: 'var(--dashboard-text-primary)' }} className="mb-4">No game data found</p>
-            <Button onClick={() => router.push('/dashboard')} variant="outline">
+            <Button onClick={() => {
+              // ✅ FIX: Role-based dashboard routing
+              if (coachMode || userRole === 'coach') {
+                router.push('/dashboard/coach');
+              } else if (userRole === 'stat_admin') {
+                router.push('/dashboard/stat-admin');
+              } else {
+                router.push('/dashboard');
+              }
+            }} variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Button>
@@ -1340,7 +1358,16 @@ function StatTrackerV3Content() {
         <div className="container mx-auto px-3 py-3 max-w-7xl min-h-screen flex flex-col">
         {/* Top Scoreboard & Clock with Integrated Shot Clock */}
         <TopScoreboardV3
-          onBack={() => router.push('/dashboard')}
+          onBack={() => {
+            // ✅ FIX: Role-based dashboard routing
+            if (coachMode || userRole === 'coach') {
+              router.push('/dashboard/coach');
+            } else if (userRole === 'stat_admin') {
+              router.push('/dashboard/stat-admin');
+            } else {
+              router.push('/dashboard');
+            }
+          }}
           teamAName={gameData.team_a?.name || 'Team A'}
           teamBName={coachMode ? (opponentName || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
           teamAScore={tracker.scores[gameData.team_a_id] || 0}
