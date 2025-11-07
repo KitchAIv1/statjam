@@ -154,7 +154,8 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
       console.log('✅ Automation settings saved successfully');
       
       // Launch the EXISTING stat-tracker-v3 in coach mode
-      const trackerUrl = `/stat-tracker-v3?gameId=${game.id}&coachMode=true&coachTeamId=${team.id}&opponentName=${encodeURIComponent(formData.opponent_name)}`;
+      // ✅ REFINEMENT: No need to pass opponentName - it's stored in the database
+      const trackerUrl = `/stat-tracker-v3?gameId=${game.id}&coachMode=true&coachTeamId=${team.id}`;
       
       // Navigate to tracker
       window.location.href = trackerUrl;

@@ -48,6 +48,7 @@ interface GameData {
   team_b?: { name?: string | null } | null;
   team_a_name?: string | null;
   team_b_name?: string | null;
+  opponent_name?: string | null; // ✅ Coach mode: Opponent name from coach input
 }
 
 interface Player {
@@ -85,10 +86,13 @@ function StatTrackerV3Content() {
   // Coach Mode Parameters
   const coachMode = params.get('coachMode') === 'true';
   const coachTeamIdParam = params.get('coachTeamId') || '';
-  const opponentNameParam = params.get('opponentName') || 'Opponent';
+  const opponentNameParamFallback = params.get('opponentName') || 'Opponent';
   
   // Game State
   const [gameData, setGameData] = useState<GameData | null>(null);
+  
+  // ✅ REFINEMENT: Use opponent_name from database (coach input) instead of URL param
+  const opponentName = coachMode ? (gameData?.opponent_name || opponentNameParamFallback) : '';
   const [teamAPlayers, setTeamAPlayers] = useState<Player[]>([]);
   const [teamBPlayers, setTeamBPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1336,7 +1340,7 @@ function StatTrackerV3Content() {
         <TopScoreboardV3
           onBack={() => router.push('/dashboard')}
           teamAName={gameData.team_a?.name || 'Team A'}
-          teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
+          teamBName={coachMode ? (opponentName || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
           teamAScore={tracker.scores[gameData.team_a_id] || 0}
           teamBScore={coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)}
           quarter={tracker.quarter}
@@ -1407,7 +1411,7 @@ function StatTrackerV3Content() {
                 teamAId={gameData.team_a_id}
                 teamBId={coachMode ? 'opponent-team' : gameData.team_b_id}
                 teamAName={gameData.team_a?.name || 'Team A'}
-                teamBName={coachMode ? (opponentNameParam || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
+                teamBName={coachMode ? (opponentName || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
                 isCoachMode={coachMode}
                 onPossessionChange={tracker.manualSetPossession}
                 gameStatus={tracker.gameStatus}
@@ -1424,7 +1428,7 @@ function StatTrackerV3Content() {
             <div className="h-full">
               {coachMode ? (
                 <OpponentTeamPanel
-                  opponentName={opponentNameParam}
+                  opponentName={opponentName}
                   selectedPlayer={selectedPlayer}
                   onPlayerSelect={setSelectedPlayer}
                   gameId={gameData.id}

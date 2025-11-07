@@ -355,7 +355,8 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                         <Button
                           onClick={() => {
                             // ✅ RESUME: Navigate to stat-tracker-v3 with coach mode params
-                            const resumeUrl = `/stat-tracker-v3?gameId=${game.id}&coachMode=true&coachTeamId=${team.id}&opponentName=${encodeURIComponent(game.opponent_name || 'Opponent')}`;
+                            // ✅ REFINEMENT: No need to pass opponentName - it's in the database
+                            const resumeUrl = `/stat-tracker-v3?gameId=${game.id}&coachMode=true&coachTeamId=${team.id}`;
                             window.location.href = resumeUrl;
                           }}
                           size="sm"
