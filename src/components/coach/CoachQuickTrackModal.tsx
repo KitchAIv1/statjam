@@ -10,6 +10,7 @@ import { CoachTeam, QuickTrackGameRequest } from '@/lib/types/coach';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { AutomationFlags, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation';
 import { GameServiceV3 } from '@/lib/services/gameServiceV3';
+import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
 
 interface CoachQuickTrackModalProps {
   team: CoachTeam;
@@ -261,7 +262,12 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
         return (
           <div>
             <div style={styles.formGroup}>
-              <Label style={styles.label}>Opponent Team Name *</Label>
+              <SmartTooltip
+                id="coach-opponent-name"
+                content="Use the opponent name your staff recognizes. It appears across the tracker and analytics."
+              >
+                <Label style={styles.label}>Opponent Team Name *</Label>
+              </SmartTooltip>
               <Input
                 value={formData.opponent_name}
                 onChange={(e) => updateFormData({ opponent_name: e.target.value })}
@@ -271,7 +277,13 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
             </div>
             
             <div style={styles.formGroup}>
-              <Label style={styles.label}>Tournament/League (Optional)</Label>
+              <SmartTooltip
+                id="coach-opponent-league"
+                content="Add the tournament or league label to keep schedules organized."
+                side="top"
+              >
+                <Label style={styles.label}>Tournament/League (Optional)</Label>
+              </SmartTooltip>
               <Input
                 value={formData.opponent_tournament_name}
                 onChange={(e) => updateFormData({ opponent_tournament_name: e.target.value })}

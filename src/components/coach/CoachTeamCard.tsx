@@ -20,6 +20,7 @@ import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { CoachGameService } from '@/lib/services/coachGameService';
 import { CoachTeamAnalyticsTab } from './CoachTeamAnalyticsTab';
 import { CoachGameStatsModal } from './CoachGameStatsModal';
+import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
 
 interface CoachTeamCardProps {
   team: CoachTeam;
@@ -224,7 +225,14 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                       {playerCountLoading ? '...' : playerCount}
                       <span className="hidden sm:inline"> players</span>
                       {playerCount < 5 && (
-                        <AlertCircle className="w-3 h-3 ml-1 text-orange-500 inline" title="Minimum 5 players required" />
+                        <>
+                          <AlertCircle
+                            className="w-3 h-3 ml-1 text-orange-500 inline"
+                            aria-label="Minimum 5 players required"
+                            role="img"
+                          />
+                          <span className="sr-only">Minimum 5 players required</span>
+                        </>
                       )}
                     </span>
                   </div>
@@ -249,7 +257,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 size="sm"
                 onClick={handleGenerateShareToken}
                 className="h-8 w-8 p-0 shrink-0"
-                title="Share team"
+                aria-label="Share team"
                 disabled={loadingAction === 'share'}
               >
                 <Share2 className="w-4 h-4" />
@@ -264,7 +272,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 disabled={playerCount < 5 || playerCountLoading}
                 variant={playerCount < 5 ? "secondary" : "default"}
                 className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
-                title={playerCount < 5 ? "Add at least 5 players first" : "Start tracking a new game"}
+                aria-label={playerCount < 5 ? "Add at least 5 players first" : "Start tracking a new game"}
               >
                 <PlayCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 <span className="hidden sm:inline truncate">Quick Track</span>
@@ -276,31 +284,33 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 size="sm"
                 variant="outline"
                 className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
-                title="View team analytics"
               >
                 <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 <span className="hidden sm:inline truncate">Analytics</span>
                 <span className="sm:hidden truncate">Stats</span>
               </Button>
 
-              <Button
-                onClick={() => setShowPlayerManagement(true)}
-                size="sm"
-                variant="outline"
-                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
-                title="Manage team roster"
+              <SmartTooltip
+                id="coach-manage-roster"
+                content="Open the roster manager to add players before you start tracking."
               >
-                <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                <span className="hidden sm:inline truncate">Manage</span>
-                <span className="sm:hidden truncate">Players</span>
-              </Button>
+                <Button
+                  onClick={() => setShowPlayerManagement(true)}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
+                >
+                  <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                  <span className="hidden sm:inline truncate">Manage</span>
+                  <span className="sm:hidden truncate">Players</span>
+                </Button>
+              </SmartTooltip>
 
               <Button
                 onClick={() => setShowEditTeam(true)}
                 size="sm"
                 variant="outline"
                 className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
-                title="Edit team details"
               >
                 <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 <span className="truncate">Edit</span>

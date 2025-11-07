@@ -59,11 +59,14 @@ export function StatButtonsV3({ selectedPlayer, onStatRecord }: StatButtonsV3Pro
   };
 
   return (
-    <Card style={{ 
+    <Card
+      data-coach-tour="stat-buttons"
+      style={{ 
       background: 'var(--dashboard-card)', 
       borderColor: 'var(--dashboard-border)',
       borderWidth: '1px'
-    }}>
+      }}
+    >
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2" style={{ color: 'var(--dashboard-text-primary)' }}>
           <BarChart3 className="w-5 h-5 text-orange-500" />

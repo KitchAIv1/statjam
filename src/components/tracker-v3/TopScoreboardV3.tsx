@@ -115,6 +115,7 @@ export function TopScoreboardV3({
 
   return (
     <div 
+      data-coach-tour="scoreboard"
       className="w-full rounded-xl p-4 mb-3 relative"
       style={{ 
         background: '#ffffff', 
@@ -131,6 +132,7 @@ export function TopScoreboardV3({
             variant="outline" 
             size="sm" 
             onClick={onBack}
+            data-coach-tour="back-button"
             className="hover:bg-orange-500/10 hover:border-orange-500 pointer-events-auto"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

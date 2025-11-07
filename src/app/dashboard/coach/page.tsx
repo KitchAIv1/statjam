@@ -9,6 +9,9 @@ import { CoachTeamsSection } from '@/components/coach/CoachTeamsSection';
 import { CoachQuickTrackSection } from '@/components/coach/CoachQuickTrackSection';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CoachTeam } from '@/lib/types/coach';
+import { WelcomeChecklist } from '@/components/onboarding/WelcomeChecklist';
+import { HelpPanel } from '@/components/support/HelpPanel';
+import { coachChecklistSteps, coachFAQs } from '@/config/onboarding/coachOnboarding';
 
 /**
  * CoachDashboardContent - Main dashboard content with search params
@@ -160,6 +163,13 @@ const CoachDashboardContent = () => {
         
         <main className="pt-16 p-6">
           <div className="max-w-7xl mx-auto">
+            <WelcomeChecklist
+              role="coach"
+              steps={coachChecklistSteps}
+              subtitle="Complete these quick steps to get game-ready in minutes."
+              className="mt-6 mb-8"
+            />
+
             {/* Page Header */}
             <div className="mb-8 text-center">
               <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
@@ -174,6 +184,17 @@ const CoachDashboardContent = () => {
             {renderSectionContent()}
           </div>
         </main>
+
+        <HelpPanel
+          role="coach"
+          faqs={coachFAQs}
+          checklistLink="/dashboard/coach"
+          onChecklistOpen={() => {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('open-onboarding-checklist', { detail: { role: 'coach' } }));
+            }
+          }}
+        />
       </div>
     </ErrorBoundary>
   );

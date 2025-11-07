@@ -32,6 +32,9 @@ import { VictimPlayerSelectionModal } from '@/components/tracker-v3/modals/Victi
 import { ShotClockViolationModal } from '@/components/tracker-v3/modals/ShotClockViolationModal';
 import { useShotClockViolation } from '@/hooks/useShotClockViolation';
 import { notify } from '@/lib/services/notificationService';
+import { FeatureTour } from '@/components/onboarding/FeatureTour';
+import { CompletionNudge } from '@/components/onboarding/CompletionNudge';
+import { coachFeatureTourSteps } from '@/config/onboarding/coachOnboarding';
 
 interface GameData {
   id: string;
@@ -106,6 +109,7 @@ function StatTrackerV3Content() {
   const [shotClockViolation, setShotClockViolation] = useState(false);
   const [rosterRefreshKey, setRosterRefreshKey] = useState<string | number>(0);
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+  const [dismissedCompletionReminder, setDismissedCompletionReminder] = useState(false);
   
   // ✅ PHASE 5: Foul Flow State
   const [showFoulTypeModal, setShowFoulTypeModal] = useState(false);
@@ -1315,6 +1319,14 @@ function StatTrackerV3Content() {
     </>
   );
 
+  const featureTour = (coachMode && !isMobile) ? (
+    <FeatureTour
+      tourId="coach-tracker"
+      steps={coachFeatureTourSteps}
+      shouldStart={coachMode && !isMobile}
+    />
+  ) : null;
+
   // Mobile Layout
   if (isMobile) {
     return (
@@ -1347,6 +1359,7 @@ function StatTrackerV3Content() {
         />
         {/* ✅ MOBILE: Render shared modals */}
         {sharedModals}
+        {featureTour}
       </>
     );
   }
@@ -1395,6 +1408,27 @@ function StatTrackerV3Content() {
           onShotClockSetTime={tracker.setShotClockTime}
           gameStatus={tracker.gameStatus}
         />
+
+        {coachMode && tracker.gameStatus === 'in_progress' && !dismissedCompletionReminder && (
+          <CompletionNudge
+            className="mb-4"
+            message="End the game when you're finished to unlock full coach analytics."
+            primaryAction={{
+              label: 'End Game',
+              onClick: () => {
+                try {
+                  tracker.closeGame();
+                } catch (error) {
+                  console.error('❌ Error closing game from nudge:', error);
+                }
+              }
+            }}
+            secondaryAction={{
+              label: 'Dismiss',
+              onClick: () => setDismissedCompletionReminder(true)
+            }}
+          />
+        )}
 
         {/* ✅ REFINEMENT: Possession Indicator moved to Last Action section (saves space) */}
 
@@ -1483,6 +1517,7 @@ function StatTrackerV3Content() {
 
         {/* ✅ DESKTOP: Render shared modals */}
         {sharedModals}
+        {featureTour}
 
       </div>
       </div>

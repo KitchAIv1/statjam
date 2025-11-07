@@ -24,11 +24,14 @@ export function ActionBarV3({ gameId, lastAction, onGameEnd }: ActionBarV3Props)
   };
 
   return (
-    <Card style={{ 
+    <Card
+      data-coach-tour="action-bar"
+      style={{ 
       background: 'var(--dashboard-card)', 
       borderColor: 'var(--dashboard-border)',
       borderWidth: '1px'
-    }}>
+      }}
+    >
       <CardContent className="p-4">
         <div className="space-y-4">
           {/* Last Action Display */}

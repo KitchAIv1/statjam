@@ -3,6 +3,7 @@
 import React from 'react';
 import { RefreshCw, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
 
 interface Player {
   id: string;
@@ -83,6 +84,7 @@ export function TeamRosterV3({
 
   return (
     <div 
+      data-coach-tour={teamSide === 'left' ? 'player-selector' : undefined}
       className="w-full h-full rounded-xl p-6 border-2 flex flex-col"
       style={{ 
         background: '#ffffff',
@@ -122,18 +124,23 @@ export function TeamRosterV3({
 
       {/* Players Section - On Court Only */}
       <div className="flex-1 flex flex-col">
-        <div className="flex items-center gap-2 mb-4">
-          <h4 className={`text-lg font-semibold ${
-            teamSide === 'left' ? 'text-orange-800' : 'text-blue-800'
-          }`}>
-            On Court
-          </h4>
-          <div className={`px-2 py-1 rounded text-xs font-bold text-white ${
-            teamSide === 'left' ? 'bg-orange-500' : 'bg-blue-500'
-          }`}>
-            {onCourtPlayers.length}/5
+        <SmartTooltip
+          id={`coach-player-select-${teamSide}`}
+          content="Tap a player to make them active. Stats apply to the highlighted player."
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <h4 className={`text-lg font-semibold ${
+              teamSide === 'left' ? 'text-orange-800' : 'text-blue-800'
+            }`}>
+              On Court
+            </h4>
+            <div className={`px-2 py-1 rounded text-xs font-bold text-white ${
+              teamSide === 'left' ? 'bg-orange-500' : 'bg-blue-500'
+            }`}>
+              {onCourtPlayers.length}/5
+            </div>
           </div>
-        </div>
+        </SmartTooltip>
 
         <div className="grid grid-cols-1 gap-2 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
           {displayPlayers.map((player, index) => {
