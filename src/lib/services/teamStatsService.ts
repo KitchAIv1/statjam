@@ -186,45 +186,48 @@ export class TeamStatsService {
       gameStats.forEach(stat => {
         const statType = stat.stat_type;
         const modifier = stat.modifier;
-        const value = stat.stat_value || 1;
+        // ✅ FIX: For counting shots, always use 1 (each row = 1 attempt)
+        // stat_value is points scored (2 or 3), not shot count
+        const shotCount = 1;
+        const statValue = stat.stat_value || 1;
 
         switch (statType) {
           case 'field_goal':
           case 'two_pointer':
             if (modifier === 'made') {
-              fieldGoalsMade += value;
-              fieldGoalsAttempted += value;
+              fieldGoalsMade += shotCount; // ✅ Count shots, not points
+              fieldGoalsAttempted += shotCount;
             } else if (modifier === 'missed') {
-              fieldGoalsAttempted += value;
+              fieldGoalsAttempted += shotCount;
             }
             break;
           case 'three_pointer':
             if (modifier === 'made') {
-              threePointersMade += value;
-              threePointersAttempted += value;
-              fieldGoalsMade += value; // 3-pointers also count as field goals
-              fieldGoalsAttempted += value;
+              threePointersMade += shotCount; // ✅ Count shots, not points
+              threePointersAttempted += shotCount;
+              fieldGoalsMade += shotCount; // 3-pointers also count as field goals
+              fieldGoalsAttempted += shotCount;
             } else if (modifier === 'missed') {
-              threePointersAttempted += value;
-              fieldGoalsAttempted += value;
+              threePointersAttempted += shotCount;
+              fieldGoalsAttempted += shotCount;
             }
             break;
           case 'free_throw':
             if (modifier === 'made') {
-              freeThrowsMade += value;
-              freeThrowsAttempted += value;
+              freeThrowsMade += shotCount; // ✅ Count shots, not points
+              freeThrowsAttempted += shotCount;
             } else if (modifier === 'missed') {
-              freeThrowsAttempted += value;
+              freeThrowsAttempted += shotCount;
             }
             break;
           case 'rebound':
-            rebounds += value;
+            rebounds += statValue; // Use stat_value for non-shooting stats
             break;
           case 'assist':
-            assists += value;
+            assists += statValue;
             break;
           case 'turnover':
-            turnovers += value;
+            turnovers += statValue;
             break;
         }
       });
