@@ -1321,6 +1321,7 @@ function StatTrackerV3Content() {
           onTimeOut={handleTimeoutClick}
           isCoachMode={coachMode}
           userId={user?.id}
+          opponentName={opponentName} // ✅ FIX: Pass opponent name from database
           onPossessionChange={tracker.manualSetPossession}
           gameStatus={tracker.gameStatus}
           onStatRecord={handleStatRecord} // ✅ USE DESKTOP LOGIC

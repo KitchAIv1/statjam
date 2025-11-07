@@ -74,6 +74,7 @@ interface MobileLayoutV3Props {
   onTimeOut: () => void; // Add timeout handler from main page
   isCoachMode?: boolean; // Add coach mode flag
   userId?: string; // ✅ FIX: User ID for opponent stats
+  opponentName?: string; // ✅ FIX: Opponent name from database
   onPossessionChange?: (teamId: string) => void; // ✅ PHASE 6: Manual possession control
   gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'; // ✅ Game status
   onStatRecord?: (statType: string, modifier?: string) => Promise<void>; // ✅ USE DESKTOP LOGIC
@@ -93,6 +94,7 @@ export function MobileLayoutV3({
   onTimeOut,
   isCoachMode = false,
   userId,
+  opponentName,
   onPossessionChange,
   gameStatus = 'in_progress', // ✅ Game status
   onStatRecord, // ✅ DESKTOP LOGIC
@@ -259,7 +261,7 @@ export function MobileLayoutV3({
           isCoachMode={isCoachMode}
           gameId={gameData.id}
           teamId={gameData.team_a_id}
-          opponentName={isCoachMode ? 'Opponent Team' : undefined}
+          opponentName={isCoachMode ? (opponentName || 'Opponent') : undefined}
         />
 
         {/* Mobile Stat Grid */}
