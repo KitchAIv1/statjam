@@ -261,7 +261,7 @@ export class GameServiceV3 {
       console.log('🚀 GameServiceV3: Fetching single game via raw HTTP for:', gameId);
 
       const games = await this.makeRequest<any>('games', {
-        'select': 'id,tournament_id,team_a_id,team_b_id,start_time,status,created_at,quarter,game_clock_minutes,game_clock_seconds,is_clock_running,home_score,away_score,team_a_fouls,team_b_fouls,team_a_timeouts_remaining,team_b_timeouts_remaining,automation_settings',
+        'select': 'id,tournament_id,team_a_id,team_b_id,start_time,status,created_at,quarter,game_clock_minutes,game_clock_seconds,is_clock_running,home_score,away_score,team_a_fouls,team_b_fouls,team_a_timeouts_remaining,team_b_timeouts_remaining,automation_settings,opponent_name',
         'id': `eq.${gameId}`
       });
 
