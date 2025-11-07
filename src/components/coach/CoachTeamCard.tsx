@@ -3,19 +3,23 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, PlayCircle, Trophy, Settings, Share2, Eye, EyeOff, 
-  MapPin, Calendar, MoreVertical, Edit, Trash2, UserPlus, AlertCircle, BarChart3 
+  MapPin, Calendar, MoreVertical, Edit, Trash2, UserPlus, AlertCircle, BarChart3,
+  Clock, CheckCircle, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CoachTeam } from '@/lib/types/coach';
+import { CoachGame } from '@/lib/types/coach';
 import { CoachQuickTrackModal } from './CoachQuickTrackModal';
 import { CoachTournamentSearchModal } from './CoachTournamentSearchModal';
 import { PlayerManagementModal } from '@/components/shared/PlayerManagementModal';
 import { CoachPlayerManagementService } from '@/lib/services/coachPlayerManagementService';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
+import { CoachGameService } from '@/lib/services/coachGameService';
 import { CoachTeamAnalyticsTab } from './CoachTeamAnalyticsTab';
+import { CoachGameStatsModal } from './CoachGameStatsModal';
 
 interface CoachTeamCardProps {
   team: CoachTeam;
@@ -23,23 +27,30 @@ interface CoachTeamCardProps {
 }
 
 /**
- * CoachTeamCard - Individual team card component
+ * CoachTeamCard - Enhanced team card with game history
  * 
  * Features:
- * - Team info display with visibility toggle
- * - Primary actions (Quick Track, Add to Tournament)
- * - Secondary actions (Edit, Share, View Games)
- * - Status indicators and badges
+ * - Full-width card with team info
+ * - Expandable game history (in-progress & completed)
+ * - Quick actions per game (Resume, View Stats)
+ * - Team management actions
  * 
- * Follows .cursorrules: <200 lines, single responsibility
+ * Follows .cursorrules: <500 lines, single responsibility
  */
 export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   // Modal states
   const [showQuickTrack, setShowQuickTrack] = useState(false);
   const [showTournamentSearch, setShowTournamentSearch] = useState(false);
-  const [showActions, setShowActions] = useState(false);
   const [showPlayerManagement, setShowPlayerManagement] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showEditTeam, setShowEditTeam] = useState(false);
+  const [showGameStats, setShowGameStats] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<CoachGame | null>(null);
+  
+  // Game history states
+  const [games, setGames] = useState<CoachGame[]>([]);
+  const [gamesExpanded, setGamesExpanded] = useState(true);
+  const [gamesLoading, setGamesLoading] = useState(false);
   
   // Loading states
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -63,6 +74,23 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
     };
 
     loadPlayerCount();
+  }, [team.id]);
+
+  // Load games on mount
+  useEffect(() => {
+    const loadGames = async () => {
+      try {
+        setGamesLoading(true);
+        const teamGames = await CoachGameService.getTeamGames(team.id, 5);
+        setGames(teamGames);
+      } catch (error) {
+        console.error('❌ Error loading team games:', error);
+      } finally {
+        setGamesLoading(false);
+      }
+    };
+
+    loadGames();
   }, [team.id]);
 
   // Handle visibility toggle
@@ -94,10 +122,10 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
       // Copy to clipboard
       await navigator.clipboard.writeText(token.token);
       
-      // Show success notification (you can implement toast here)
-      console.log('✅ Import token copied to clipboard');
+      alert('✅ Import token copied to clipboard!');
     } catch (error) {
       console.error('❌ Error generating share token:', error);
+      alert('Failed to generate share token');
     } finally {
       setLoadingAction(null);
     }
@@ -109,7 +137,6 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
     const validation = await CoachPlayerService.validateMinimumPlayers(team.id, 5);
     
     if (!validation.isValid) {
-      // Show error and redirect to player management
       alert(validation.message || 'Need at least 5 players to start tracking');
       setShowPlayerManagement(true);
       return;
@@ -118,14 +145,8 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
     setShowQuickTrack(true);
   };
 
-  // Handle player management modal
-  const handlePlayerManagement = () => {
-    setShowPlayerManagement(true);
-  };
-
   // Handle player management update
   const handlePlayerUpdate = () => {
-    // Reload player count
     const loadPlayerCount = async () => {
       try {
         const count = await CoachPlayerService.getTeamPlayerCount(team.id);
@@ -139,175 +160,258 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
     onUpdate();
   };
 
+  // Format game time
+  const formatGameTime = (game: CoachGame) => {
+    if (game.status === 'in_progress') {
+      const quarter = game.quarter || 1;
+      const mins = game.game_clock_minutes || 0;
+      const secs = game.game_clock_seconds || 0;
+      return `Q${quarter} ${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+    if (game.end_time) {
+      return new Date(game.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    if (game.start_time) {
+      return new Date(game.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    return 'N/A';
+  };
+
+  // Get game status badge
+  const getGameStatusBadge = (status: string) => {
+    switch (status) {
+      case 'in_progress':
+        return <Badge className="bg-green-500 text-white gap-1"><Clock className="w-3 h-3" /> Live</Badge>;
+      case 'completed':
+        return <Badge variant="secondary" className="gap-1"><CheckCircle className="w-3 h-3" /> Completed</Badge>;
+      case 'scheduled':
+        return <Badge variant="outline" className="gap-1"><Calendar className="w-3 h-3" /> Scheduled</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const inProgressGames = games.filter(g => g.status === 'in_progress');
+  const completedGames = games.filter(g => g.status === 'completed');
 
   return (
     <>
-      <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative">
-        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
-          <div className="flex-1">
-            <CardTitle className="text-lg font-semibold mb-2">{team.name}</CardTitle>
-            
-                    {/* Team Meta */}
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2 flex-wrap">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        <span>
-                          {playerCountLoading ? '...' : playerCount} players
-                          {playerCount < 5 && (
-                            <AlertCircle className="w-3 h-3 ml-1 text-orange-500 inline" />
-                          )}
-                        </span>
-                      </div>
-                      
-                      {team.location?.city && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>{team.location.city}</span>
-                        </div>
+      <Card className="hover:shadow-md transition-all duration-200">
+        <CardHeader className="pb-3">
+          {/* Mobile-First Layout */}
+          <div className="space-y-4">
+            {/* Team Info - Always Full Width */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <CardTitle className="text-lg sm:text-xl font-semibold truncate">{team.name}</CardTitle>
+                  <Badge 
+                    variant={team.visibility === 'public' ? 'default' : 'secondary'}
+                    className="gap-1 cursor-pointer hover:opacity-80 shrink-0"
+                    onClick={handleVisibilityToggle}
+                    title="Click to toggle visibility"
+                  >
+                    {team.visibility === 'public' ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                    <span className="hidden sm:inline">{team.visibility === 'public' ? 'Public' : 'Private'}</span>
+                  </Badge>
+                </div>
+                
+                {/* Stats - Responsive Grid */}
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span>
+                      {playerCountLoading ? '...' : playerCount}
+                      <span className="hidden sm:inline"> players</span>
+                      {playerCount < 5 && (
+                        <AlertCircle className="w-3 h-3 ml-1 text-orange-500 inline" title="Minimum 5 players required" />
                       )}
-                      
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>{team.games_count || 0} games</span>
-                      </div>
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span>{games.length}<span className="hidden sm:inline"> games</span></span>
+                  </div>
+                  
+                  {team.location?.city && (
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="truncate max-w-[100px] sm:max-w-none">{team.location.city}</span>
                     </div>
-          </div>
+                  )}
+                </div>
+              </div>
 
-          {/* Actions Menu */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowActions(!showActions)}
-            className="h-8 w-8 p-0"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </Button>
-        </CardHeader>
-
-        <CardContent>
-          {/* Badges */}
-          <div className="flex gap-2 mb-4 flex-wrap">
-            <Badge 
-              variant={team.visibility === 'public' ? 'default' : 'secondary'}
-              className="gap-1 cursor-pointer hover:opacity-80"
-              onClick={handleVisibilityToggle}
-            >
-              {team.visibility === 'public' ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-              {team.visibility === 'public' ? 'Public' : 'Private'}
-            </Badge>
-            
-            {team.tournament_id ? (
-              team.approval_status === 'pending' ? (
-                <Badge variant="outline" className="gap-1 bg-orange-50 text-orange-700 border-orange-200">
-                  <Trophy className="w-3 h-3" />
-                  Pending Approval
-                </Badge>
-              ) : team.approval_status === 'rejected' ? (
-                <Badge variant="outline" className="gap-1 bg-red-50 text-red-700 border-red-200">
-                  <Trophy className="w-3 h-3" />
-                  Request Denied
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="gap-1 bg-green-50 text-green-700 border-green-200">
-                  <Trophy className="w-3 h-3" />
-                  Tournament Linked
-                </Badge>
-              )
-            ) : (
-              <Badge variant="secondary" className="gap-1">
-                Independent Team
-              </Badge>
-            )}
-          </div>
-
-          {/* Primary Actions */}
-          <div className="flex gap-2 flex-wrap mb-4">
-            <Button
-              onClick={handleQuickTrack}
-              className="flex-1 min-w-[120px] gap-2"
-              disabled={loadingAction === 'quicktrack' || playerCountLoading}
-              variant={playerCount < 5 ? "secondary" : "default"}
-            >
-              {playerCount < 5 ? (
-                <>
-                  <AlertCircle className="w-4 h-4" />
-                  Add Players First
-                </>
-              ) : (
-                <>
-                  <PlayCircle className="w-4 h-4" />
-                  {loadingAction === 'quicktrack' ? 'Starting...' : 'Quick Track'}
-                </>
-              )}
-            </Button>
-
-            <Button
-              onClick={() => setShowTournamentSearch(true)}
-              variant="outline"
-              className="flex-1 min-w-[120px] gap-2"
-              disabled={loadingAction === 'tournament'}
-            >
-              <Trophy className="w-4 h-4" />
-              {loadingAction === 'tournament' ? 'Searching...' : 'Add to Tournament'}
-            </Button>
-
-            <Button
-              onClick={() => setShowAnalytics(true)}
-              variant="outline"
-              className="flex-1 min-w-[120px] gap-2"
-            >
-              <BarChart3 className="w-4 h-4" />
-              Analytics
-            </Button>
-          </div>
-
-          {/* Secondary Actions (when expanded) */}
-          {showActions && (
-            <div className="flex gap-2 flex-wrap pt-3 border-t border-border">
+              {/* Share Button - Always Visible */}
               <Button
-                onClick={handlePlayerManagement}
                 variant="ghost"
                 size="sm"
-                className="gap-2"
-              >
-                <UserPlus className="w-4 h-4" />
-                Manage Players
-              </Button>
-
-              <Button
-                onClick={handleVisibilityToggle}
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-                disabled={loadingAction === 'visibility'}
-              >
-                {team.visibility === 'public' ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                {loadingAction === 'visibility' ? 'Updating...' : 
-                 team.visibility === 'public' ? 'Make Private' : 'Make Public'}
-              </Button>
-
-              <Button
                 onClick={handleGenerateShareToken}
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-                disabled={loadingAction === 'share' || team.visibility === 'private'}
+                className="h-8 w-8 p-0 shrink-0"
+                title="Share team"
+                disabled={loadingAction === 'share'}
               >
                 <Share2 className="w-4 h-4" />
-                {loadingAction === 'share' ? 'Generating...' : 'Share Token'}
+              </Button>
+            </div>
+
+            {/* Action Buttons - Responsive Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <Button
+                onClick={handleQuickTrack}
+                size="sm"
+                disabled={playerCount < 5 || playerCountLoading}
+                variant={playerCount < 5 ? "secondary" : "default"}
+                className="gap-2 w-full"
+                title={playerCount < 5 ? "Add at least 5 players first" : "Start tracking a new game"}
+              >
+                <PlayCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Quick Track</span>
+                <span className="sm:hidden">Track</span>
+              </Button>
+              
+              <Button
+                onClick={() => setShowAnalytics(true)}
+                size="sm"
+                variant="outline"
+                className="gap-2 w-full"
+                title="View team analytics"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Analytics</span>
+                <span className="sm:hidden">Stats</span>
               </Button>
 
               <Button
-                onClick={() => console.log('Edit team:', team.id)}
-                variant="ghost"
+                onClick={() => setShowPlayerManagement(true)}
                 size="sm"
-                className="gap-2"
+                variant="outline"
+                className="gap-2 w-full"
+                title="Manage team roster"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span className="hidden sm:inline">Manage</span>
+                <span className="sm:hidden">Players</span>
+              </Button>
+
+              <Button
+                onClick={() => setShowEditTeam(true)}
+                size="sm"
+                variant="outline"
+                className="gap-2 w-full"
+                title="Edit team details"
               >
                 <Edit className="w-4 h-4" />
                 Edit
               </Button>
             </div>
-          )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-0">
+          {/* Game History Section */}
+          <div className="border-t pt-4">
+            <button
+              onClick={() => setGamesExpanded(!gamesExpanded)}
+              className="flex items-center justify-between w-full text-left mb-3 hover:opacity-80 transition-opacity"
+            >
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                Recent Games
+                {inProgressGames.length > 0 && (
+                  <Badge className="bg-green-500 text-white text-xs">{inProgressGames.length} Live</Badge>
+                )}
+              </h3>
+              {gamesExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {gamesExpanded && (
+              <div className="space-y-2">
+                {gamesLoading ? (
+                  <div className="text-sm text-muted-foreground py-4 text-center">Loading games...</div>
+                ) : games.length === 0 ? (
+                  <div className="text-sm text-muted-foreground py-4 text-center">
+                    No games yet. Click "Quick Track" to start!
+                  </div>
+                ) : (
+                  <>
+                    {/* In-Progress Games - Mobile Optimized */}
+                    {inProgressGames.map((game) => (
+                      <div
+                        key={game.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            {getGameStatusBadge(game.status)}
+                            <span className="font-medium text-sm truncate">vs {game.opponent_name}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            <span className="font-semibold">{game.home_score} - {game.away_score}</span>
+                            <span className="mx-1">•</span>
+                            <span>{formatGameTime(game)}</span>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => window.location.href = `/coach-tracker/${game.id}`}
+                          size="sm"
+                          className="gap-2 w-full sm:w-auto shrink-0"
+                        >
+                          <PlayCircle className="w-3 h-3" />
+                          Resume
+                        </Button>
+                      </div>
+                    ))}
+
+                    {/* Completed Games - Mobile Optimized */}
+                    {completedGames.map((game) => (
+                      <div
+                        key={game.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-muted/50 border rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            {getGameStatusBadge(game.status)}
+                            <span className="font-medium text-sm truncate">vs {game.opponent_name}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            <span className="font-semibold">{game.home_score} - {game.away_score}</span>
+                            <span className="mx-1">•</span>
+                            <span>{formatGameTime(game)}</span>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setSelectedGame(game);
+                            setShowGameStats(true);
+                          }}
+                          size="sm"
+                          variant="outline"
+                          className="gap-2 w-full sm:w-auto shrink-0"
+                          title="View box score and player stats"
+                        >
+                          <BarChart3 className="w-3 h-3" />
+                          <span className="hidden sm:inline">View Stats</span>
+                          <span className="sm:hidden">Stats</span>
+                        </Button>
+                      </div>
+                    ))}
+
+                    {games.length >= 5 && (
+                      <Button
+                        onClick={() => window.location.href = '/dashboard/coach?section=games'}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full mt-2"
+                      >
+                        View All Games →
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -316,7 +420,12 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
         <CoachQuickTrackModal
           team={team}
           onClose={() => setShowQuickTrack(false)}
-          onGameCreated={onUpdate}
+          onGameCreated={() => {
+            setShowQuickTrack(false);
+            // Reload games
+            CoachGameService.getTeamGames(team.id, 5).then(setGames);
+            onUpdate();
+          }}
         />
       )}
 
@@ -324,7 +433,10 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
         <CoachTournamentSearchModal
           team={team}
           onClose={() => setShowTournamentSearch(false)}
-          onTournamentAttached={onUpdate}
+          onTournamentLinked={() => {
+            setShowTournamentSearch(false);
+            onUpdate();
+          }}
         />
       )}
 
@@ -346,6 +458,42 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
             <CoachTeamAnalyticsTab teamId={team.id} teamName={team.name} />
           </DialogContent>
         </Dialog>
+      )}
+
+      {showEditTeam && (
+        <Dialog open={showEditTeam} onOpenChange={setShowEditTeam}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Team - {team.name}</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 text-center text-muted-foreground">
+              <Settings className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>Team editing functionality coming soon!</p>
+              <p className="text-sm mt-2">You'll be able to update team name, location, and other details here.</p>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => setShowEditTeam(false)}>Close</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {showGameStats && selectedGame && (
+        <CoachGameStatsModal
+          isOpen={showGameStats}
+          onClose={() => {
+            setShowGameStats(false);
+            setSelectedGame(null);
+          }}
+          gameId={selectedGame.id}
+          teamId={team.id}
+          teamName={team.name}
+          opponentName={selectedGame.opponent_name || 'Unknown Opponent'}
+          finalScore={{
+            team: selectedGame.home_score || 0,
+            opponent: selectedGame.away_score || 0
+          }}
+        />
       )}
     </>
   );

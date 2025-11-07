@@ -284,9 +284,18 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         throw new Error('Missing Supabase configuration');
       }
 
+      // ✅ FIX: Try to get user auth token for coach games (fallback to anon for public games)
+      let authToken = supabaseKey; // Default to anon key
+      if (typeof window !== 'undefined') {
+        const userToken = localStorage.getItem('sb-access-token');
+        if (userToken) {
+          authToken = userToken; // Use authenticated token if available
+        }
+      }
+
       const headers = {
         'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
+        'Authorization': `Bearer ${authToken}`, // ✅ Use user token if available
         'Content-Type': 'application/json'
       };
 

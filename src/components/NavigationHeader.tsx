@@ -15,6 +15,11 @@ function NavigationHeaderContent() {
   const searchParams = useSearchParams();
   const { user, loading, signOut } = useAuthContext(); // ✅ NO API CALL - Uses context
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
+  
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
   
   const userRole = user?.role;
   const navigation = getNavigationForRole(userRole || null);
@@ -111,7 +116,7 @@ function NavigationHeaderContent() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-4">
-            {loading ? (
+            {!hasHydrated || loading ? (
               // Loading state
               <div className="w-8 h-8 animate-pulse bg-gray-700 rounded-full" />
             ) : isAuthenticated ? (

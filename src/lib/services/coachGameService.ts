@@ -20,8 +20,9 @@ export class CoachGameService {
       // TEMPORARY WORKAROUND: Create a dummy tournament for coach games
       // This will be removed once tournament_id is made nullable
       
-      // Step 1: Create or get a dummy tournament for coach games
+      // Step 1: Create or get dummy tournament and virtual opponent team
       let dummyTournamentId: string;
+      let virtualOpponentTeamId: string;
       
       try {
         // Try to find existing "Coach Games" tournament
@@ -42,7 +43,7 @@ export class CoachGameService {
               description: 'System tournament for coach-tracked games',
               organizer_id: user.id,
               status: 'active',
-              tournament_type: 'single_elimination', // Correct column name
+              tournament_type: 'single_elimination',
               start_date: new Date().toISOString(),
               end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
               venue: 'Various',
@@ -59,19 +60,50 @@ export class CoachGameService {
           if (tournamentError) throw tournamentError;
           dummyTournamentId = newTournament.id;
         }
-      } catch (tournamentErr) {
-        console.error('Failed to create dummy tournament:', tournamentErr);
-        throw new Error('Unable to create coach game - tournament setup failed');
+
+        // ✅ OPTION 1: Create or get virtual opponent team (ONE per coach)
+        const { data: existingOpponentTeam } = await supabase
+          .from('teams')
+          .select('id')
+          .eq('name', 'Virtual Opponent (System)')
+          .eq('coach_id', user.id)
+          .single();
+          
+        if (existingOpponentTeam) {
+          virtualOpponentTeamId = existingOpponentTeam.id;
+          console.log('✅ Using existing virtual opponent team:', virtualOpponentTeamId);
+        } else {
+          // Create virtual opponent team (NO PLAYERS, used for all coach games)
+          const { data: newOpponentTeam, error: opponentTeamError } = await supabase
+            .from('teams')
+            .insert({
+              name: 'Virtual Opponent (System)',
+              coach_id: user.id,
+              tournament_id: dummyTournamentId,
+              visibility: 'private'
+            })
+            .select('id')
+            .single();
+            
+          if (opponentTeamError) throw opponentTeamError;
+          virtualOpponentTeamId = newOpponentTeam.id;
+          console.log('✅ Created new virtual opponent team:', virtualOpponentTeamId);
+        }
+      } catch (err) {
+        console.error('❌ Failed to create dummy tournament/virtual opponent team:', err);
+        throw new Error('Unable to create coach game - setup failed');
       }
 
-      // Step 2: Create the game with dummy tournament_id
+      // Step 2: Create the game with dummy tournament_id and virtual opponent team
       const { data, error } = await supabase
         .from('games')
         .insert({
           tournament_id: dummyTournamentId, // TEMPORARY: Use dummy tournament
-          team_a_id: request.coach_team_id,
-          team_b_id: request.coach_team_id, // Placeholder for coach mode
+          team_a_id: request.coach_team_id, // Coach's real team
+          team_b_id: virtualOpponentTeamId, // ✅ OPTION 1: Virtual opponent team (no players)
           stat_admin_id: user.id,
+          is_coach_game: true, // ✅ Mark as coach game in database
+          opponent_name: request.opponent_name, // Store opponent name
           status: 'scheduled',
           start_time: new Date().toISOString(),
           quarter: 1,
@@ -80,7 +112,6 @@ export class CoachGameService {
           is_clock_running: false,
           home_score: 0,
           away_score: 0
-          // NOTE: Coach-specific fields will be added after migration
         })
         .select()
         .single();
@@ -154,6 +185,52 @@ export class CoachGameService {
       }));
     } catch (error) {
       console.error('❌ Error fetching coach games:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get games for a specific team
+   * ✅ FIX: Remove is_coach_game filter to find existing games (they have default FALSE)
+   * Uses team_a_id to identify coach team games (coach team is always team_a)
+   */
+  static async getTeamGames(teamId: string, limit: number = 10): Promise<CoachGame[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('team_a_id', teamId)
+        .eq('stat_admin_id', user.id) // Only games created by this coach
+        .order('start_time', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+
+      return (data || []).map(game => ({
+        id: game.id,
+        coach_id: game.stat_admin_id,
+        coach_team_id: game.team_a_id,
+        opponent_name: game.opponent_name || 'Unknown Opponent',
+        opponent_tournament_name: game.meta_json?.opponent_tournament_name,
+        is_coach_game: true,
+        status: game.status,
+        start_time: game.start_time,
+        end_time: game.end_time,
+        quarter: game.quarter,
+        game_clock_minutes: game.game_clock_minutes,
+        game_clock_seconds: game.game_clock_seconds,
+        is_clock_running: game.is_clock_running,
+        home_score: game.home_score,
+        away_score: game.away_score,
+        meta_json: game.meta_json,
+        created_at: game.created_at,
+        updated_at: game.updated_at
+      }));
+    } catch (error) {
+      console.error('❌ Error fetching team games:', error);
       throw error;
     }
   }

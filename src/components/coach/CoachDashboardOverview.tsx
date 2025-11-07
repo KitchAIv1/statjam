@@ -40,7 +40,6 @@ export function CoachDashboardOverview({
   const totalTeams = teams.length;
   const totalGames = teams.reduce((sum, team) => sum + (team.games_count || 0), 0);
   const publicTeams = teams.filter(team => team.visibility === 'public').length;
-  const recentTeams = teams.slice(0, 6); // Show up to 6 recent teams
 
   // Stats data following StatJam pattern
   const stats = [
@@ -96,9 +95,9 @@ export function CoachDashboardOverview({
   }
 
   return (
-    <div className="space-y-6 mt-6">
+    <div className="space-y-4 sm:space-y-6 mt-4 sm:mt-6 px-2 sm:px-0">
       {/* Quick Stats - Following StatJam Light Theme Pattern */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -129,11 +128,11 @@ export function CoachDashboardOverview({
 
       {/* My Teams Section */}
       <Card className="hover:shadow-lg transition-shadow">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-xl font-semibold">My Teams</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 pb-4">
+          <CardTitle className="text-lg sm:text-xl font-semibold">My Teams</CardTitle>
           <Button
             onClick={() => window.location.href = '/dashboard/coach?section=teams'}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             Create Team
@@ -152,9 +151,9 @@ export function CoachDashboardOverview({
                 </Card>
               ))}
             </div>
-          ) : recentTeams.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recentTeams.map((team) => (
+          ) : teams.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {teams.map((team) => (
                 <CoachTeamCard
                   key={team.id}
                   team={team}

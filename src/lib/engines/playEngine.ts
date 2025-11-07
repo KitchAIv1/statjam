@@ -130,7 +130,9 @@ export class PlayEngine {
       result.metadata = {
         shotType: event.statType,
         shotValue: event.statValue,
-        shooterId: this.getPlayerIdentifier(event) // ✅ FIX: Support custom players
+        shooterId: this.getPlayerIdentifier(event), // ✅ FIX: Support custom players
+        shooterTeamId: event.teamId, // ✅ FIX: Add team ID so modal knows which roster to show
+        shooterName: event.playerId || event.customPlayerId || 'Unknown' // For display
       };
       result.actions.push(`Prompt assist for made ${event.statType}`);
     }

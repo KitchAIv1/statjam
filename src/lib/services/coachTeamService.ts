@@ -48,9 +48,17 @@ export class CoachTeamService {
 
       if (error) throw error;
 
+      // ✅ FILTER OUT: Virtual opponent teams (system-generated for coach games)
+      // Filters out both old and new system opponent teams
+      const realTeams = (teams || []).filter(team => 
+        team.name !== 'Virtual Opponent (System)' && 
+        team.name !== 'Opponent Team (System)' &&
+        !team.name.endsWith('(System)')
+      );
+
       // Get accurate counts for each team in parallel
       const teamsWithCounts = await Promise.all(
-        (teams || []).map(async (team) => {
+        realTeams.map(async (team) => {
           const [playerCount, gamesCount] = await Promise.all([
             CoachPlayerService.getTeamPlayerCount(team.id),
             this.getTeamGamesCount(team.id)

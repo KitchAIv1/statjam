@@ -247,8 +247,13 @@ function StatTrackerV3Content() {
         // Load Team B players with individual error handling (including substitutions)
         let teamBPlayersData: Player[] = [];
         try {
-          teamBPlayersData = await TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_b_id, game.id);
-          console.log('✅ Team B players loaded (with substitutions):', teamBPlayersData.length);
+          // ✅ FIX: In coach mode, don't load team B (it's a dummy opponent team with no players)
+          if (!coachMode) {
+            teamBPlayersData = await TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_b_id, game.id);
+            console.log('✅ Team B players loaded (with substitutions):', teamBPlayersData.length);
+          } else {
+            console.log('🏀 Coach mode: Skipping Team B player load (opponent team is virtual)');
+          }
           setTeamBPlayers(teamBPlayersData);
         } catch (teamBError) {
           console.error('❌ Failed to load Team B players:', teamBError);
