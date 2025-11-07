@@ -228,7 +228,8 @@ function StatTrackerV3Content() {
                   name: cp.name,
                   jerseyNumber: cp.jersey_number,
                   email: cp.email,
-                  is_custom_player: cp.is_custom_player
+                  is_custom_player: cp.is_custom_player,
+                  photo_url: cp.photo_url // Player avatar from profile
                 }));
               } else {
                 // Tournament mode: Load tournament team players

@@ -37,7 +37,8 @@ export class CoachPlayerService {
               name,
               email,
               premium_status,
-              created_at
+              created_at,
+              profile_photo_url
             )
           `)
           .eq('team_id', teamId)
@@ -57,7 +58,8 @@ export class CoachPlayerService {
               premium_status: tp.users.premium_status,
               created_at: tp.users.created_at,
               team_player_id: tp.id,
-              is_on_team: true
+              is_on_team: true,
+              photo_url: tp.users.profile_photo_url || null // Map profile_photo_url to photo_url for UI
             });
           });
           console.log('✅ Loaded', regularPlayersResult.data?.length || 0, 'regular players');
