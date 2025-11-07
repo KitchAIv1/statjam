@@ -390,7 +390,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             // Use stat_value from database (already contains correct points)
             const points = stat.stat_value || 0;
             
-            if (stat.team_id === teamAId) {
+            // ✅ CRITICAL FIX: Check is_opponent_stat flag for coach mode (MUST MATCH REFRESH LOGIC)
+            if (stat.is_opponent_stat) {
+              // Opponent stats go to team B score
+              teamBScore += points;
+            } else if (stat.team_id === teamAId) {
               teamAScore += points;
             } else if (stat.team_id === teamBId) {
               teamBScore += points;
@@ -398,10 +402,17 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           }
           
           // Initialize scores with calculated totals
-          setScores({
-            [teamAId]: teamAScore,
-            [teamBId]: teamBScore
-          });
+          // Handle coach mode where both team IDs are the same
+          if (teamAId === teamBId) {
+            // Coach mode: Store opponent score separately
+            setScores({ [teamAId]: teamAScore, opponent: teamBScore });
+          } else {
+            // Tournament mode: Use both team IDs
+            setScores({
+              [teamAId]: teamAScore,
+              [teamBId]: teamBScore
+            });
+          }
         } else {
           // Ensure scores start at 0 if no stats found
           setScores({
