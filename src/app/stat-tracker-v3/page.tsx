@@ -121,7 +121,8 @@ function StatTrackerV3Content() {
     initialGameId: gameIdParam || 'unknown',
     teamAId: gameData?.team_a_id || 'teamA',
     teamBId: gameData?.team_b_id || 'teamB',
-    isCoachMode: coachMode // ✅ Pass coach mode flag for automation
+    isCoachMode: coachMode, // ✅ Pass coach mode flag for automation
+    initialGameData: gameData // ✅ PHASE 3: Pass game data to skip duplicate fetch
   });
 
   // ✅ Shot Clock Violation Detection

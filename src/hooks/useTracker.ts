@@ -9,6 +9,7 @@ interface UseTrackerProps {
   teamAId: string;
   teamBId: string;
   isCoachMode?: boolean; // ✅ NEW: Detect coach games for automation
+  initialGameData?: any; // ✅ PHASE 3: Optional game data to skip duplicate fetch
 }
 
 interface UseTrackerReturn {
@@ -105,7 +106,7 @@ interface UseTrackerReturn {
   }) => void;
 }
 
-export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = false }: UseTrackerProps): UseTrackerReturn => {
+export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = false, initialGameData }: UseTrackerProps): UseTrackerReturn => {
   // State
   const [gameId] = useState(initialGameId);
   const [quarter, setQuarterState] = useState(1);
@@ -197,8 +198,13 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         // Import GameServiceV3 (raw HTTP - reliable)
         const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
         
-        // Load game data to initialize quarter, clock, and other state
-        const game = await GameServiceV3.getGame(gameId);
+        // ✅ PHASE 3: Use provided game data or fetch from database
+        let game = initialGameData;
+        if (!game) {
+          // Fallback to fetch if not provided (backward compatible)
+          game = await GameServiceV3.getGame(gameId);
+        }
+        
         const gameError = !game;
         
         if (!gameError && game) {
@@ -416,7 +422,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     } else {
       setIsLoading(false);
     }
-  }, [gameId, teamAId, teamBId]);
+  }, [gameId, teamAId, teamBId, initialGameData]);
 
   // ✅ NEW: Function to refresh scores from database (matches viewer logic exactly)
   const refreshScoresFromDatabase = useCallback(async () => {
