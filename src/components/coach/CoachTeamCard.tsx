@@ -263,47 +263,47 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 size="sm"
                 disabled={playerCount < 5 || playerCountLoading}
                 variant={playerCount < 5 ? "secondary" : "default"}
-                className="gap-2 w-full"
+                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
                 title={playerCount < 5 ? "Add at least 5 players first" : "Start tracking a new game"}
               >
-                <PlayCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">Quick Track</span>
-                <span className="sm:hidden">Track</span>
+                <PlayCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="hidden sm:inline truncate">Quick Track</span>
+                <span className="sm:hidden truncate">Track</span>
               </Button>
               
               <Button
                 onClick={() => setShowAnalytics(true)}
                 size="sm"
                 variant="outline"
-                className="gap-2 w-full"
+                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
                 title="View team analytics"
               >
-                <BarChart3 className="w-4 h-4" />
-                <span className="hidden sm:inline">Analytics</span>
-                <span className="sm:hidden">Stats</span>
+                <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="hidden sm:inline truncate">Analytics</span>
+                <span className="sm:hidden truncate">Stats</span>
               </Button>
 
               <Button
                 onClick={() => setShowPlayerManagement(true)}
                 size="sm"
                 variant="outline"
-                className="gap-2 w-full"
+                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
                 title="Manage team roster"
               >
-                <UserPlus className="w-4 h-4" />
-                <span className="hidden sm:inline">Manage</span>
-                <span className="sm:hidden">Players</span>
+                <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="hidden sm:inline truncate">Manage</span>
+                <span className="sm:hidden truncate">Players</span>
               </Button>
 
               <Button
                 onClick={() => setShowEditTeam(true)}
                 size="sm"
                 variant="outline"
-                className="gap-2 w-full"
+                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
                 title="Edit team details"
               >
-                <Edit className="w-4 h-4" />
-                Edit
+                <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Edit</span>
               </Button>
             </div>
           </div>

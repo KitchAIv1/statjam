@@ -70,6 +70,19 @@ function NavigationHeaderContent() {
       }
     }
     
+    // ✅ FIX: Special handling for coach dashboard sections
+    if (userRole === 'coach' && pathname === '/dashboard/coach' && href.includes('section=')) {
+      const sectionMatch = href.match(/section=([^&]+)/);
+      if (sectionMatch) {
+        return currentSection === sectionMatch[1];
+      }
+    }
+    
+    // ✅ FIX: Exact match for coach dashboard (no section = overview)
+    if (userRole === 'coach' && href === '/dashboard/coach') {
+      return pathname === '/dashboard/coach' && !currentSection;
+    }
+    
     return pathname === href || pathname.startsWith(href + '/');
   };
 
