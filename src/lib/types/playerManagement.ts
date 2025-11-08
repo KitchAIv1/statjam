@@ -19,6 +19,7 @@ export interface GenericPlayer {
   is_custom_player?: boolean;
   premium_status?: boolean;
   created_at?: string;
+  profile_photo_url?: string; // Player profile photo
   
   // UI-specific fields
   is_on_team?: boolean;

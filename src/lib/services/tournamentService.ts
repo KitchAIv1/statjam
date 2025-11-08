@@ -855,7 +855,7 @@ export class TeamService {
       // ✅ PHASE 1 OPTIMIZATION: Direct, efficient query with proper error handling
       const { data: playerUsers, error: playersError } = await supabase
         .from('users')
-        .select('id, email, role, premium_status, country, created_at, name')
+        .select('id, email, role, premium_status, country, created_at, name, profile_photo_url')
         .eq('role', 'player')
         .order('premium_status', { ascending: false }) // Premium players first
         .order('created_at', { ascending: false })
@@ -884,6 +884,7 @@ export class TeamService {
         isPremium: user.premium_status || false,
         country: user.country || 'US',
         createdAt: user.created_at || new Date().toISOString(),
+        profilePhotoUrl: (user as any).profile_photo_url || undefined, // Add photo URL
       }));
 
       return players;
@@ -1067,7 +1068,7 @@ export class TeamService {
         
         const { data: users, error: usersError } = await supabase
           .from('users')
-          .select('id, email, premium_status, country, created_at, name')
+          .select('id, email, premium_status, country, created_at, name, profile_photo_url')
           .in('id', limitedPlayerIds);
 
         if (usersError) {
@@ -1091,6 +1092,7 @@ export class TeamService {
               isPremium: user.premium_status || false,
               country: user.country || 'US',
               createdAt: user.created_at || new Date().toISOString(),
+              profilePhotoUrl: user.profile_photo_url || undefined,
             };
           });
           allPlayers.push(...regularPlayers);

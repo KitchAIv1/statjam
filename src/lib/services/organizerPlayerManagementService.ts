@@ -113,7 +113,8 @@ export class OrganizerPlayerManagementService implements IPlayerManagementServic
       is_custom_player: false,
       premium_status: p.isPremium,
       created_at: p.createdAt,
-      is_on_team: assignedPlayerIds.has(p.id) // ✅ FIX: Set flag if player is on any team
+      is_on_team: assignedPlayerIds.has(p.id), // ✅ FIX: Set flag if player is on any team
+      profile_photo_url: p.profilePhotoUrl // ✅ FIX: Include profile photo URL
     }));
   }
   
@@ -148,7 +149,8 @@ export class OrganizerPlayerManagementService implements IPlayerManagementServic
         premium_status: p.isPremium,
         created_at: p.createdAt,
         is_on_team: true,
-        team_player_id: teamPlayerMap.get(p.id) // ✅ Include team_player_id for removal
+        team_player_id: teamPlayerMap.get(p.id), // ✅ Include team_player_id for removal
+        profile_photo_url: p.profilePhotoUrl // ✅ FIX: Include profile photo URL
       }));
     } catch (error) {
       console.error('❌ Error getting team players:', error);

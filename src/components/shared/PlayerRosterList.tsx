@@ -11,9 +11,10 @@
 'use client';
 
 import React from 'react';
-import { Users, Trash2 } from 'lucide-react';
+import { Users, Trash2, User } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { GenericPlayer } from '@/lib/types/playerManagement';
 
 interface PlayerRosterListProps {
@@ -46,7 +47,7 @@ export function PlayerRosterList({
       <div className="space-y-2">
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-3 p-3 border rounded-lg animate-pulse">
-            <div className="w-8 h-8 bg-muted rounded-full" />
+            <div className="w-10 h-10 bg-muted rounded-lg" />
             <div className="flex-1 space-y-1">
               <div className="h-4 bg-muted rounded w-32" />
               <div className="h-3 bg-muted rounded w-48" />
@@ -77,9 +78,14 @@ export function PlayerRosterList({
           key={player.id}
           className="flex items-center gap-3 p-3 border rounded-lg bg-green-50 border-green-200"
         >
-          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-            <Users className="w-4 h-4 text-green-600" />
-          </div>
+          <Avatar className="w-10 h-10 border-2 border-green-200">
+            {player.profile_photo_url && (
+              <AvatarImage src={player.profile_photo_url} alt={player.name} className="object-cover" />
+            )}
+            <AvatarFallback className="bg-green-100 text-green-600">
+              <User className="w-5 h-5" />
+            </AvatarFallback>
+          </Avatar>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

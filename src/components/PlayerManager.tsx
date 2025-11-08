@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Users, Plus, UserPlus, Trash2, Search, Filter, Calendar, Hash, Edit, CheckCircle, Loader2, AlertCircle, Check } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -556,6 +556,9 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                         <div className="relative flex-shrink-0">
                           <Avatar className="border-2 border-primary/20 w-8 h-8 sm:w-10 sm:h-10">
+                            {player.profilePhotoUrl && (
+                              <AvatarImage src={player.profilePhotoUrl} alt={player.name} className="object-cover" />
+                            )}
                             <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground font-semibold text-xs sm:text-sm">
                               {getInitials(player.name)}
                             </AvatarFallback>
@@ -793,6 +796,9 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
                           />
                         </div>
                         <Avatar className="w-8 h-8 flex-shrink-0">
+                          {player.profilePhotoUrl && (
+                            <AvatarImage src={player.profilePhotoUrl} alt={player.name} className="object-cover" />
+                          )}
                           <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                             {getInitials(player.name)}
                           </AvatarFallback>

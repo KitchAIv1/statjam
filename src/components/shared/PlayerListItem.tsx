@@ -14,6 +14,7 @@ import React from 'react';
 import { Check, User, Crown, Mail } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { GenericPlayer } from '@/lib/types/playerManagement';
 
 interface PlayerListItemProps {
@@ -43,9 +44,14 @@ export function PlayerListItem({
     >
       {/* Avatar */}
       <div className="relative">
-        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-          <User className="w-5 h-5 text-primary" />
-        </div>
+        <Avatar className="w-10 h-10 border-2 border-primary/20">
+          {player.profile_photo_url && (
+            <AvatarImage src={player.profile_photo_url} alt={player.name} className="object-cover" />
+          )}
+          <AvatarFallback className="bg-primary/10 text-primary">
+            <User className="w-5 h-5" />
+          </AvatarFallback>
+        </Avatar>
         {player.is_on_team && (
           <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
             <Check className="w-3 h-3 text-white" />

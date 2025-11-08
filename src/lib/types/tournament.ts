@@ -48,6 +48,7 @@ export interface Player {
   country: string;
   createdAt: string;
   is_custom_player?: boolean; // ✅ FIX: Flag to distinguish custom players from regular players
+  profilePhotoUrl?: string; // Player profile photo URL
 }
 
 export interface Team {
