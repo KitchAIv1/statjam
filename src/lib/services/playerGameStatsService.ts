@@ -71,13 +71,18 @@ export class PlayerGameStatsService {
    */
   static async getPlayerGameStats(userId: string): Promise<GameStatsSummary[]> {
     try {
+      console.log('🔍 PlayerGameStatsService: Fetching game stats for user:', userId);
+      
       // ⚡ Check cache first (5 min TTL)
       const cacheKey = CacheKeys.playerGameStats(userId);
       const cached = cache.get<GameStatsSummary[]>(cacheKey);
       if (cached) {
+        console.log('🔍 PlayerGameStatsService: Returning cached data');
         return cached;
       }
 
+      console.log('🔍 PlayerGameStatsService: Cache miss, querying game_stats table...');
+      
       // Step 1: Get all raw stats for this player from game_stats table
       // ⚡ OPTIMIZATION: Limit to last 50 games for faster queries
       const { data: rawStats, error: statsError } = await supabase
@@ -88,11 +93,18 @@ export class PlayerGameStatsService {
         .limit(2000); // ⚡ Limit: ~40 stats per game × 50 games
 
       if (statsError) {
-        console.error('❌ Error fetching player game stats:', statsError);
+        console.error('❌ PlayerGameStatsService: Error fetching game_stats:', statsError);
+        console.error('❌ Error code:', statsError.code);
+        console.error('❌ Error message:', statsError.message);
+        console.error('❌ Error details:', statsError.details);
+        console.error('❌ Error hint:', statsError.hint);
         return [];
       }
 
+      console.log('🔍 PlayerGameStatsService: Found', rawStats?.length || 0, 'raw stat entries');
+
       if (!rawStats || rawStats.length === 0) {
+        console.error('🔍 PlayerGameStatsService: No game_stats records found for player');
         return [];
       }
 
@@ -102,7 +114,9 @@ export class PlayerGameStatsService {
       // ⚡ OPTIMIZATION: Parallel queries (Step 3 & 4 run simultaneously)
       const [gamesResult, teamPlayersResult] = await Promise.all([
         // Step 3: Fetch game info for all games
-        // NBA STANDARD: Only include completed games (excludes in_progress, scheduled, Coach Games)
+        // ✅ PLAYER DASHBOARD: Include ALL games (completed + in_progress) for personal stats
+        // Note: Players should see cumulative stats from all games they've participated in,
+        // including coach-tracked games that may remain 'in_progress'
         supabase
           .from('games')
           .select(`
@@ -118,8 +132,8 @@ export class PlayerGameStatsService {
             team_a:teams!team_a_id (id, name),
             team_b:teams!team_b_id (id, name)
           `)
-          .in('id', gameIds)
-          .eq('status', 'completed'), // ✅ NBA STANDARD: Only completed games
+          .in('id', gameIds),
+          // ✅ Removed status filter - players should see stats from ALL their games
         
         // Step 4: Get player's team assignments to determine home/away
         supabase

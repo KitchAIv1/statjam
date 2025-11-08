@@ -206,8 +206,11 @@ export class PlayerDashboardService {
 
   static async getSeasonAverages(userId: string): Promise<SeasonAverages | null> {
     if (!userId) {
+      console.error('🔍 PlayerDashboard: getSeasonAverages called with no userId');
       return null;
     }
+    
+    console.log('🔍 PlayerDashboard: Fetching season averages for user:', userId);
     
     // PHASE 2: Try backend-aggregated table first (fast path)
     // Note: Suppressing 406 errors as the table is expected to be empty (using frontend calculation)
@@ -218,11 +221,15 @@ export class PlayerDashboardService {
       .maybeSingle(); // Use maybeSingle() to avoid 406 errors when table is empty
     
     if (data && !error) {
+      console.log('🔍 PlayerDashboard: Found season averages in backend table:', data);
       return toSeasonAverages(data);
     }
     
+    console.log('🔍 PlayerDashboard: No backend data, calculating from game_stats...');
     // PHASE 1: Fallback to frontend calculation from game_stats (primary method for now)
-    return this.calculateSeasonAveragesFromGameStats(userId);
+    const calculated = await this.calculateSeasonAveragesFromGameStats(userId);
+    console.log('🔍 PlayerDashboard: Calculated season averages:', calculated);
+    return calculated;
   }
 
   /**
@@ -231,10 +238,15 @@ export class PlayerDashboardService {
    */
   private static async calculateSeasonAveragesFromGameStats(userId: string): Promise<SeasonAverages | null> {
     try {
+      console.log('🔍 PlayerDashboard: Calling PlayerGameStatsService.getPlayerGameStats for:', userId);
       // Use existing PlayerGameStatsService to get aggregated game data
       const games = await PlayerGameStatsService.getPlayerGameStats(userId);
       
+      console.log('🔍 PlayerDashboard: PlayerGameStatsService returned:', games?.length || 0, 'games');
+      console.log('🔍 PlayerDashboard: Games data:', games);
+      
       if (!games || games.length === 0) {
+        console.error('🔍 PlayerDashboard: No games found for player, returning null');
         return null;
       }
       
@@ -276,8 +288,11 @@ export class PlayerDashboardService {
 
   static async getCareerHighs(userId: string): Promise<CareerHighs | null> {
     if (!userId) {
+      console.error('🔍 PlayerDashboard: getCareerHighs called with no userId');
       return null;
     }
+    
+    console.log('🔍 PlayerDashboard: Fetching career highs for user:', userId);
     
     // ⚠️ TEMPORARY FIX: Backend table has outdated data, always use frontend calculation
     // TODO Phase 2: Re-enable backend table once it's properly maintained by triggers
@@ -328,8 +343,11 @@ export class PlayerDashboardService {
 
   static async getPerformance(userId: string): Promise<{ kpis: PerformanceKpis | null; series: PerformanceSeriesEntry[] }> {
     if (!userId) {
+      console.error('🔍 PlayerDashboard: getPerformance called with no userId');
       return { kpis: null, series: [] };
     }
+    
+    console.log('🔍 PlayerDashboard: Fetching performance data for user:', userId);
     
     try {
       // PHASE 2: Try backend-aggregated table first (fast path)
