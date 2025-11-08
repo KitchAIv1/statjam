@@ -105,6 +105,7 @@ export function TeamInfoStep({
 
 interface AddPlayersStepProps {
   teamId: string;
+  tournamentId: string; // For filtering players already in tournament
   service: IPlayerManagementService;
   selectedPlayers: GenericPlayer[];
   onPlayerAdd: (player: GenericPlayer) => void;
@@ -113,6 +114,7 @@ interface AddPlayersStepProps {
 
 export function AddPlayersStep({
   teamId,
+  tournamentId,
   service,
   selectedPlayers,
   onPlayerAdd,
@@ -132,6 +134,7 @@ export function AddPlayersStep({
 
       <PlayerSelectionList
         teamId={teamId}
+        tournamentId={tournamentId}
         service={service}
         onPlayerAdd={onPlayerAdd}
         onPlayerRemove={onPlayerRemove}

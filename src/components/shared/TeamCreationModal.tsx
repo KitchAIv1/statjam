@@ -128,6 +128,7 @@ export function TeamCreationModal({
         return (
           <AddPlayersStep
             teamId={createdTeamId || 'temp'}
+            tournamentId={tournamentId}
             service={service}
             selectedPlayers={selectedPlayers}
             onPlayerAdd={handlePlayerAdd}

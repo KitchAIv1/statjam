@@ -20,6 +20,7 @@ import { CustomPlayerForm } from './CustomPlayerForm';
 
 interface PlayerSelectionListProps {
   teamId: string;
+  tournamentId?: string; // Optional: for team creation flow (when teamId is 'temp')
   service: IPlayerManagementService;
   onPlayerAdd: (player: GenericPlayer) => void;
   onPlayerRemove: (player: GenericPlayer) => void;
@@ -42,7 +43,8 @@ interface PlayerSelectionListProps {
  * Follows .cursorrules: <200 lines, single responsibility
  */
 export function PlayerSelectionList({ 
-  teamId, 
+  teamId,
+  tournamentId,
   service,
   onPlayerAdd, 
   onPlayerRemove, 
@@ -69,18 +71,21 @@ export function PlayerSelectionList({
 
       const results = await service.searchAvailablePlayers({
         query: query.trim() || undefined,
-        team_id: teamId, // ✅ FIX: Pass team_id to filter out players already in tournament
+        team_id: teamId,
+        tournament_id: tournamentId, // ✅ FIX: Pass tournament_id for team creation flow
         limit: 50
       });
       
-      // ✅ FIX: Only override is_on_team for deferred persistence mode (team creation)
-      // For normal mode, preserve the service's is_on_team flag (tournament-wide check)
+      // ✅ FIX: Preserve tournament-wide is_on_team flag, but also track local selections
+      // In deferPersistence mode, mark locally selected players as "on team" in addition to
+      // players already assigned to other teams in the tournament
       const resultsWithSelection = deferPersistence 
         ? results.map(player => {
             const isSelected = selectedPlayerIds.includes(player.id);
             return {
               ...player,
-              is_on_team: isSelected // Override only for local team creation
+              // Keep true if already on a team in tournament, OR if locally selected
+              is_on_team: player.is_on_team || isSelected
             };
           })
         : results; // Preserve service's is_on_team flag for existing teams
@@ -92,7 +97,7 @@ export function PlayerSelectionList({
     } finally {
       setLoading(false);
     }
-  }, [teamId, service, deferPersistence]);
+  }, [teamId, tournamentId, service, deferPersistence]);
 
   // Initial load with selected players
   useEffect(() => {
