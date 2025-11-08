@@ -9,6 +9,12 @@ export const coachChecklistSteps: ChecklistStep[] = [
     action: { label: "Go to My Teams", href: "/dashboard/coach?section=teams" }
   },
   {
+    title: "Choose team type: Official or Practice",
+    description:
+      "Official teams count toward players’ profile stats. Practice teams do not. Set this on the Team Type toggle when creating or editing a team.",
+    action: { label: "Edit Team Type", href: "/dashboard/coach?section=teams" }
+  },
+  {
     title: "Add your players",
     description: "Use Manage → Add Player to search existing profiles or add custom entries.",
     action: { label: "Manage Players", href: "/dashboard/coach?section=teams" }
@@ -38,6 +44,23 @@ export const coachFAQs: HelpFAQ[] = [
   {
     question: "How do I add or edit players?",
     answer: "Open your team card, select Manage, and add players from existing profiles or create custom ones."
+  },
+  {
+    question: "Official vs Practice — what’s the difference?",
+    answer:
+      "Official teams’ games are included in players’ profile dashboards and season totals. Practice teams are excluded from player profiles and are best for scrimmages or training. This setting is controlled by the Team Type toggle on the team card (Create/Edit Team)."
+  },
+  {
+    question: "Can I change a team from Practice to Official later?",
+    answer:
+      "Yes. Open the team card → Edit → switch Team Type. If you change Official → Practice, those games will stop appearing in players’ dashboards. If you change Practice → Official, future games under that team will count toward player stats.",
+    href: "/dashboard/coach?section=teams",
+    hrefLabel: "Open My Teams"
+  },
+  {
+    question: "Do customized players affect player profiles?",
+    answer:
+      "No. Customized players are for coach-side tracking only and are not included in player profile dashboards. The Official/Practice flag applies to teams with linked player profiles."
   },
   {
     question: "What if my opponent changes?",
