@@ -103,6 +103,7 @@ export const CacheKeys = {
   gameBasic: (gameId: string) => `game_basic:${gameId}`,
   playerDashboard: (userId: string) => `player_dashboard:${userId}`,
   playerGameStats: (userId: string) => `player_game_stats:${userId}`, // ⚡ NEW
+  organizerDashboard: (userId: string) => `organizer_dashboard:${userId}`, // ⚡ Organizer overview cache
 } as const;
 
 // Cache TTL constants (in minutes)
@@ -115,4 +116,15 @@ export const CacheTTL = {
   DASHBOARD_DATA: 3,    // Dashboard data should be relatively fresh
   playerDashboard: 3,   // ⚡ Player dashboard (aligned with DASHBOARD_DATA)
   playerGameStats: 5,   // ⚡ Player game stats (changes after each game)
+  organizerDashboard: 3, // ⚡ Organizer dashboard (aligned with DASHBOARD_DATA)
 } as const;
+
+/**
+ * ⚡ Cache invalidation helper for organizer dashboard
+ * Call this after tournament/game mutations to refresh overview data
+ */
+export function invalidateOrganizerDashboard(userId: string): void {
+  const cacheKey = CacheKeys.organizerDashboard(userId);
+  cache.delete(cacheKey);
+  console.log('🗑️ Cache invalidated: organizer dashboard for user', userId);
+}

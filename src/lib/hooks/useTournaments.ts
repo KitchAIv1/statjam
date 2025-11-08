@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tournament, TournamentListState, TournamentCreateRequest } from '@/lib/types/tournament';
 import { TournamentService } from '@/lib/services/tournamentService';
+import { invalidateOrganizerDashboard } from '@/lib/utils/cache';
 
 // Custom Hook for Tournament Data Management
 export function useTournaments(user: { id: string } | null) {
@@ -80,6 +81,12 @@ export function useTournaments(user: { id: string } | null) {
         tournaments: prev.tournaments.filter(t => t.id !== id),
         loading: false
       }));
+      
+      // ⚡ Invalidate dashboard cache after tournament deletion
+      if (user?.id) {
+        invalidateOrganizerDashboard(user.id);
+      }
+      
       return true;
     } catch (error) {
       setState(prev => ({
