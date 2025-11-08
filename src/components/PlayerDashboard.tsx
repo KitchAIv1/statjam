@@ -301,7 +301,7 @@ export function PlayerDashboard() {
 
         {/* Navigation Tabs */}
         <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 glass-card mb-8">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-2 glass-card mb-8">
             <TabsTrigger value="dashboard" className="data-[state=active]:glass-card-accent data-[state=active]:text-primary">
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
@@ -315,7 +315,8 @@ export function PlayerDashboard() {
                 Personal Stats
               </div>
             </TabsTrigger>
-            <TabsTrigger 
+            {/* AI Coaching - Temporarily Disabled */}
+            {/* <TabsTrigger 
               value="ai-coaching" 
               className="data-[state=active]:glass-card-accent data-[state=active]:text-primary"
             >
@@ -324,7 +325,7 @@ export function PlayerDashboard() {
                 AI Coaching
                 <Sparkles className="w-3 h-3 ml-1 text-primary" />
               </div>
-            </TabsTrigger>
+            </TabsTrigger> */}
           </TabsList>
 
           {/* Dashboard Content */}
@@ -771,10 +772,10 @@ export function PlayerDashboard() {
             <PersonalStatTracker />
           </TabsContent>
 
-          {/* AI Coaching Content */}
-          <TabsContent value="ai-coaching">
+          {/* AI Coaching Content - Temporarily Disabled */}
+          {/* <TabsContent value="ai-coaching">
             <AICoaching playerName={currentPlayerData.name} playerData={currentPlayerData} />
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </div>
       
