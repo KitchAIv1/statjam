@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Users, Save, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { X, Users, Save, ArrowRight, ArrowLeft, Check, Info, AlertCircle, Trophy, Dumbbell } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { CreateCoachTeamRequest, CoachPlayer } from '@/lib/types/coach';
 import { CoachPlayerSelectionList } from './CoachPlayerSelectionList';
@@ -46,7 +47,8 @@ export function CreateCoachTeamModal({ onClose, onTeamCreated }: CreateCoachTeam
       region: '',
       city: ''
     },
-    visibility: 'private'
+    visibility: 'private',
+    is_official_team: false // Default to practice team
   });
 
   // Handle form updates
@@ -220,6 +222,53 @@ export function CreateCoachTeamModal({ onClose, onTeamCreated }: CreateCoachTeam
                     ? 'Organizers can find and import this team' 
                     : 'Only you and assigned stat admins can see this team'}
                 </p>
+              </div>
+
+              {/* Team Type - Official vs Practice */}
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="is_official_team" className="text-base font-semibold cursor-pointer">
+                      Team Type
+                    </Label>
+                    {formData.is_official_team ? (
+                      <Trophy className="w-4 h-4 text-blue-600" />
+                    ) : (
+                      <Dumbbell className="w-4 h-4 text-amber-600" />
+                    )}
+                  </div>
+                  <Switch
+                    id="is_official_team"
+                    checked={formData.is_official_team || false}
+                    onCheckedChange={(checked) => 
+                      updateFormData({ is_official_team: checked })
+                    }
+                  />
+                </div>
+                
+                <div className="text-sm">
+                  {formData.is_official_team ? (
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
+                      <div>
+                        <p className="font-medium text-blue-900 mb-1">Official Team</p>
+                        <p className="text-blue-700">
+                          Games will count toward your players' statistics and appear on their StatJam profiles.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+                      <div>
+                        <p className="font-medium text-amber-900 mb-1">Practice Team</p>
+                        <p className="text-amber-700">
+                          Games are for your analysis only and won't affect player statistics.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ) : (

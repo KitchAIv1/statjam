@@ -40,6 +40,7 @@ export class CoachTeamService {
           tournament_id,
           approval_status,
           visibility,
+          is_official_team,
           created_at,
           updated_at
         `)
@@ -71,6 +72,7 @@ export class CoachTeamService {
             tournament_id: team.tournament_id,
             approval_status: team.approval_status,
             visibility: team.visibility,
+            is_official_team: team.is_official_team,
             created_at: team.created_at,
             updated_at: team.updated_at,
             player_count: playerCount,
@@ -119,6 +121,7 @@ export class CoachTeamService {
           coach_id: user.id,
           tournament_id: null, // Coach teams can exist without tournaments
           visibility: request.visibility,
+          is_official_team: request.is_official_team || false, // Default to practice team
           // Store location and level in metadata if needed
         })
         .select()
@@ -131,6 +134,7 @@ export class CoachTeamService {
         name: data.name,
         coach_id: data.coach_id,
         visibility: data.visibility,
+        is_official_team: data.is_official_team,
         created_at: data.created_at,
         updated_at: data.updated_at,
         player_count: 0,

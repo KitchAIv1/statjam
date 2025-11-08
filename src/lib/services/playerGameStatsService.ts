@@ -145,12 +145,19 @@ export class PlayerGameStatsService {
       const { data: games, error: gamesError } = gamesResult;
       const { data: teamPlayers, error: teamError } = teamPlayersResult;
 
+      console.log('🔍 PlayerGameStatsService: Fetched', games?.length || 0, 'games from database');
+      console.log('🔍 PlayerGameStatsService: Games data:', games);
+
       if (gamesError) {
-        console.error('❌ Error fetching game info:', gamesError);
+        console.error('❌ PlayerGameStatsService: Error fetching game info:', gamesError);
+        console.error('❌ Error code:', gamesError.code);
+        console.error('❌ Error message:', gamesError.message);
+        console.error('❌ Error details:', gamesError.details);
         return [];
       }
 
       if (!games || games.length === 0) {
+        console.error('🔍 PlayerGameStatsService: No games returned from query (after status filter)');
         return [];
       }
 

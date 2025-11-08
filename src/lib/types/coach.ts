@@ -18,6 +18,7 @@ export interface CoachTeam {
   tournament_id?: string; // Optional - null for independent teams
   approval_status?: 'pending' | 'approved' | 'rejected'; // Tournament join approval status
   visibility: 'private' | 'public';
+  is_official_team?: boolean; // NEW: Controls if games count toward player stats (default: false)
   level?: string; // e.g., "High School", "College", "Youth"
   location?: {
     country?: string;
@@ -127,6 +128,7 @@ export interface CreateCoachTeamRequest {
     city?: string;
   };
   visibility: 'private' | 'public';
+  is_official_team?: boolean; // NEW: Default false (practice team)
   initial_players?: Omit<CoachTeamPlayer, 'id' | 'coach_team_id' | 'created_at'>[];
 }
 
@@ -139,6 +141,7 @@ export interface UpdateCoachTeamRequest {
     city?: string;
   };
   visibility?: 'private' | 'public';
+  is_official_team?: boolean; // NEW: Allows toggling between official/practice
 }
 
 export interface CreateCoachGameRequest {

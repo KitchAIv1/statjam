@@ -4,12 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, PlayCircle, Trophy, Settings, Share2, Eye, EyeOff, 
   MapPin, Calendar, MoreVertical, Edit, Trash2, UserPlus, AlertCircle, BarChart3,
-  Clock, CheckCircle, ChevronDown, ChevronUp
+  Clock, CheckCircle, ChevronDown, ChevronUp, Info, AlertTriangle, Dumbbell
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { CoachTeam } from '@/lib/types/coach';
 import { CoachGame } from '@/lib/types/coach';
 import { CoachQuickTrackModal } from './CoachQuickTrackModal';
@@ -18,6 +22,7 @@ import { PlayerManagementModal } from '@/components/shared/PlayerManagementModal
 import { CoachPlayerManagementService } from '@/lib/services/coachPlayerManagementService';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { CoachGameService } from '@/lib/services/coachGameService';
+import { CoachTeamService } from '@/lib/services/coachTeamService';
 import { CoachTeamAnalyticsTab } from './CoachTeamAnalyticsTab';
 import { CoachGameStatsModal } from './CoachGameStatsModal';
 import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
@@ -58,6 +63,14 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   
   // Player count state
   const [playerCount, setPlayerCount] = useState<number>(team.player_count || 0);
+  
+  // Edit form state
+  const [editFormData, setEditFormData] = useState({
+    name: team.name,
+    is_official_team: team.is_official_team || false
+  });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [playerCountLoading, setPlayerCountLoading] = useState(false);
 
   // Load accurate player count on mount
@@ -99,7 +112,6 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
     try {
       setLoadingAction('visibility');
       
-      const { CoachTeamService } = await import('@/lib/services/coachTeamService');
       await CoachTeamService.updateTeam(team.id, {
         visibility: team.visibility === 'public' ? 'private' : 'public'
       });
@@ -109,6 +121,32 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
       console.error('❌ Error toggling visibility:', error);
     } finally {
       setLoadingAction(null);
+    }
+  };
+
+  // Handle team edit save
+  const handleSaveEdit = async () => {
+    try {
+      setEditLoading(true);
+      setEditError(null);
+
+      if (!editFormData.name.trim()) {
+        setEditError('Team name is required');
+        return;
+      }
+
+      await CoachTeamService.updateTeam(team.id, {
+        name: editFormData.name,
+        is_official_team: editFormData.is_official_team
+      });
+
+      setShowEditTeam(false);
+      onUpdate();
+    } catch (error) {
+      console.error('❌ Error updating team:', error);
+      setEditError(error instanceof Error ? error.message : 'Failed to update team');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -206,6 +244,21 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <CardTitle className="text-lg sm:text-xl font-semibold truncate">{team.name}</CardTitle>
+                  
+                  {/* Team Type Badge */}
+                  {team.is_official_team ? (
+                    <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 gap-1 shrink-0">
+                      <Trophy className="w-3 h-3" />
+                      <span className="hidden sm:inline">Official</span>
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-amber-600 border-amber-600 gap-1 shrink-0">
+                      <Dumbbell className="w-3 h-3" />
+                      <span className="hidden sm:inline">Practice</span>
+                    </Badge>
+                  )}
+                  
+                  {/* Visibility Badge */}
                   <Badge 
                     variant={team.visibility === 'public' ? 'default' : 'secondary'}
                     className="gap-1 cursor-pointer hover:opacity-80 shrink-0"
@@ -477,17 +530,106 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
 
       {showEditTeam && (
         <Dialog open={showEditTeam} onOpenChange={setShowEditTeam}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Edit Team - {team.name}</DialogTitle>
+              <DialogTitle>Edit Team</DialogTitle>
             </DialogHeader>
-            <div className="py-4 text-center text-muted-foreground">
-              <Settings className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Team editing functionality coming soon!</p>
-              <p className="text-sm mt-2">You'll be able to update team name, location, and other details here.</p>
+            
+            <div className="space-y-4 py-4">
+              {/* Team Name */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-team-name">Team Name *</Label>
+                <Input
+                  id="edit-team-name"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Eagles U16"
+                />
+              </div>
+
+              {/* Team Type Toggle */}
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="edit-is-official" className="text-base font-semibold cursor-pointer">
+                      Team Type
+                    </Label>
+                    {editFormData.is_official_team ? (
+                      <Trophy className="w-4 h-4 text-blue-600" />
+                    ) : (
+                      <Dumbbell className="w-4 h-4 text-amber-600" />
+                    )}
+                  </div>
+                  <Switch
+                    id="edit-is-official"
+                    checked={editFormData.is_official_team}
+                    onCheckedChange={(checked) => 
+                      setEditFormData(prev => ({ ...prev, is_official_team: checked }))
+                    }
+                  />
+                </div>
+                
+                <div className="text-sm">
+                  {editFormData.is_official_team ? (
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
+                      <div>
+                        <p className="font-medium text-blue-900 mb-1">Official Team</p>
+                        <p className="text-blue-700">
+                          Games will count toward your players' statistics and appear on their StatJam profiles.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+                      <div>
+                        <p className="font-medium text-amber-900 mb-1">Practice Team</p>
+                        <p className="text-amber-700">
+                          Games are for your analysis only and won't affect player statistics.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Warning when changing from official to practice */}
+              {editFormData.is_official_team === false && team.is_official_team === true && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Warning</AlertTitle>
+                  <AlertDescription>
+                    Changing to Practice Team will remove this team's games from player statistics. This action cannot be undone.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Error message */}
+              {editError && (
+                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                  {editError}
+                </div>
+              )}
             </div>
-            <div className="flex justify-end">
-              <Button onClick={() => setShowEditTeam(false)}>Close</Button>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowEditTeam(false)}
+                className="flex-1"
+                disabled={editLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveEdit}
+                disabled={editLoading || !editFormData.name.trim()}
+                className="flex-1"
+              >
+                {editLoading ? 'Saving...' : 'Save Changes'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
