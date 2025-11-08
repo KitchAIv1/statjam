@@ -142,15 +142,21 @@ function toNotification(row: Record<string, unknown>): NotificationItem {
 export class PlayerDashboardService {
   static async getIdentity(userId: string): Promise<PlayerIdentity | null> {
     if (!userId) {
+      console.error('🔍 PlayerDashboard: getIdentity called with no userId');
       return null;
     }
+    
+    console.log('🔍 PlayerDashboard: Fetching identity for user:', userId);
     
     // Check cache first
     const cacheKey = CacheKeys.user(userId);
     const cachedIdentity = cache.get<PlayerIdentity>(cacheKey);
     if (cachedIdentity) {
+      console.log('🔍 PlayerDashboard: Returning cached identity');
       return cachedIdentity;
     }
+    
+    console.log('🔍 PlayerDashboard: Cache miss, fetching from database...');
     
     const { data, error } = await supabase
       .from('users')
@@ -176,13 +182,23 @@ export class PlayerDashboardService {
         };
       }
       console.error('🔍 PlayerDashboard: Identity fetch error:', error);
+      console.error('🔍 PlayerDashboard: Error code:', error.code);
+      console.error('🔍 PlayerDashboard: Error message:', error.message);
+      console.error('🔍 PlayerDashboard: Error details:', error.details);
+      console.error('🔍 PlayerDashboard: Error hint:', error.hint);
+      console.error('🔍 PlayerDashboard: User ID:', userId);
       return null;
     }
+    console.log('🔍 PlayerDashboard: Raw data from database:', data);
     const identity = toIdentity(data);
+    console.log('🔍 PlayerDashboard: Transformed identity:', identity);
     
     // Cache the identity data
     if (identity) {
       cache.set(cacheKey, identity, CacheTTL.USER_DATA);
+      console.log('🔍 PlayerDashboard: Identity cached successfully');
+    } else {
+      console.error('🔍 PlayerDashboard: toIdentity() returned null');
     }
     
     return identity;
