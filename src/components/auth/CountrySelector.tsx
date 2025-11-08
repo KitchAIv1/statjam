@@ -145,9 +145,9 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
     <div style={{ marginBottom: '20px' }}>
       <div style={{
         marginBottom: '12px',
-        color: '#9CA3AF',
+        color: 'rgba(255, 255, 255, 0.8)',
         fontSize: '14px',
-        fontWeight: '500'
+        fontWeight: '600'
       }}>
         Popular Countries
       </div>
@@ -203,9 +203,10 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
           backgroundColor: 'rgba(255, 255, 255, 0.05)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderRadius: '8px',
-          color: '#9CA3AF',
+          color: 'rgba(255, 255, 255, 0.7)',
           cursor: disabled ? 'not-allowed' : 'pointer',
           fontSize: '14px',
+          fontWeight: '500',
           transition: 'all 0.2s'
         }}
         onMouseEnter={(e) => {

@@ -109,7 +109,7 @@ export const SignUpFormMultiStep: React.FC<SignUpFormMultiStepProps> = ({
             Who are you?
           </h3>
           <p style={{ 
-            color: '#9CA3AF', 
+            color: 'rgba(255, 255, 255, 0.7)', 
             fontSize: '14px', 
             marginBottom: '24px',
             textAlign: 'center'
@@ -175,7 +175,7 @@ export const SignUpFormMultiStep: React.FC<SignUpFormMultiStepProps> = ({
             Choose your role
           </h3>
           <p style={{ 
-            color: '#9CA3AF', 
+            color: 'rgba(255, 255, 255, 0.7)', 
             fontSize: '14px', 
             marginBottom: '24px',
             textAlign: 'center'
@@ -204,7 +204,7 @@ export const SignUpFormMultiStep: React.FC<SignUpFormMultiStepProps> = ({
             Where are you from?
           </h3>
           <p style={{ 
-            color: '#9CA3AF', 
+            color: 'rgba(255, 255, 255, 0.7)', 
             fontSize: '14px', 
             marginBottom: '24px',
             textAlign: 'center'
@@ -233,7 +233,7 @@ export const SignUpFormMultiStep: React.FC<SignUpFormMultiStepProps> = ({
             Secure your account
           </h3>
           <p style={{ 
-            color: '#9CA3AF', 
+            color: 'rgba(255, 255, 255, 0.7)', 
             fontSize: '14px', 
             marginBottom: '24px',
             textAlign: 'center'
@@ -295,11 +295,11 @@ export const SignUpFormMultiStep: React.FC<SignUpFormMultiStepProps> = ({
               flex: 1,
               padding: '14px 24px',
               backgroundColor: 'transparent',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
               borderRadius: '8px',
               color: '#fff',
               fontSize: '15px',
-              fontWeight: '500',
+              fontWeight: '600',
               cursor: (loading || disabled) ? 'not-allowed' : 'pointer',
               opacity: (loading || disabled) ? 0.5 : 1,
               transition: 'all 0.2s'
@@ -315,13 +315,13 @@ export const SignUpFormMultiStep: React.FC<SignUpFormMultiStepProps> = ({
             onClick={goToNextStep}
             disabled={loading || disabled}
             style={{
-              flex: canGoBack ? 0.5 : 1,
+              flex: 1,
               padding: '14px 24px',
               backgroundColor: 'transparent',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               borderRadius: '8px',
-              color: '#9CA3AF',
-              fontSize: '14px',
+              color: '#fff',
+              fontSize: '15px',
               fontWeight: '500',
               cursor: (loading || disabled) ? 'not-allowed' : 'pointer',
               opacity: (loading || disabled) ? 0.5 : 1,
@@ -338,7 +338,7 @@ export const SignUpFormMultiStep: React.FC<SignUpFormMultiStepProps> = ({
           disabled={loading || disabled || !canProceedFromStep()}
           style={{
             ...authPageStyles.button,
-            flex: canGoBack ? 2 : 1,
+            flex: 1,
             opacity: (loading || disabled || !canProceedFromStep()) ? 0.6 : 1,
             cursor: (loading || disabled || !canProceedFromStep()) ? 'not-allowed' : 'pointer'
           }}
