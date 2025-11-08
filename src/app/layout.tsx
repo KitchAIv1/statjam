@@ -56,6 +56,8 @@ export const metadata: Metadata = {
   },
 }
 
+import PlausibleRouteTracker from "@/components/analytics/PlausibleRouteTracker";
+
 export default function RootLayout({
   children,
 }: {
@@ -91,6 +93,13 @@ export default function RootLayout({
             `,
           }}
         />
+        {/* SPA route-change tracking for Plausible (guarded by env flag) */}
+        {/* Safe: no PII, sends only URL changes */}
+        {process.env.NEXT_PUBLIC_PLAUSIBLE_ENABLED !== "false" ? (
+          // Lazy import is not needed here; component is tiny and runs client-side only
+          // eslint-disable-next-line @next/next/no-sync-scripts
+          <PlausibleRouteTracker />
+        ) : null}
         <AuthProvider>
           <ErrorBoundary showDetails={true}>
             {children}

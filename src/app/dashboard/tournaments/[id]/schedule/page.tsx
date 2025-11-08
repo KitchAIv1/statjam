@@ -17,6 +17,7 @@ import {
   Users, 
   User,
   Edit,
+  AlertCircle,
   Trash2,
   Play,
   CheckCircle,
@@ -416,15 +417,21 @@ function CreateGameModal({
   onClose: () => void; 
   onSave: (data: any) => void; 
 }) {
+  // Filter teams with at least 5 players (minimum required for a game)
+  const eligibleTeams = teams.filter(team => team.players && team.players.length >= 5);
+  const ineligibleTeams = teams.filter(team => !team.players || team.players.length < 5);
+  
   console.log('🔍 CreateGameModal: Received teams:', teams.length, 'teams');
-  teams.forEach((team, index) => {
-    console.log(`   Modal Team ${index + 1}: ${team.name} (ID: ${team.id})`);
+  console.log('   Eligible teams (5+ players):', eligibleTeams.length);
+  console.log('   Ineligible teams (< 5 players):', ineligibleTeams.length);
+  eligibleTeams.forEach((team, index) => {
+    console.log(`   ✅ ${team.name} (${team.players?.length || 0} players)`);
+  });
+  ineligibleTeams.forEach((team, index) => {
+    console.log(`   ❌ ${team.name} (${team.players?.length || 0} players)`);
   });
   
   console.log('🔍 CreateGameModal: Received statAdmins:', statAdmins.length, 'admins');
-  statAdmins.forEach((admin, index) => {
-    console.log(`   Modal Admin ${index + 1}: ${admin.name} (${admin.email}) - ID: ${admin.id}`);
-  });
   
   // Helper function to format date for datetime-local input
   const formatDateTimeLocal = (dateString: string): string => {
@@ -455,8 +462,16 @@ function CreateGameModal({
     statAdminId: game?.stat_admin_id || '',
   });
 
+  const [showValidation, setShowValidation] = useState(false);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Show validation if form is incomplete
+    if (!isFormValid) {
+      setShowValidation(true);
+      return;
+    }
     
     // Validate date is within tournament range
     const gameDate = new Date(formData.startTime);
@@ -502,6 +517,45 @@ function CreateGameModal({
         
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Warning if teams are filtered */}
+          {ineligibleTeams.length > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-orange-900 mb-1">
+                    {ineligibleTeams.length} {ineligibleTeams.length === 1 ? 'team' : 'teams'} hidden
+                  </p>
+                  <p className="text-sm text-orange-800 mb-3">
+                    Teams with fewer than 5 players cannot be scheduled for games.
+                    {eligibleTeams.length === 0 && ' You need at least 2 teams with 5+ players to create a game.'}
+                  </p>
+                  <details className="text-xs text-orange-700">
+                    <summary className="cursor-pointer hover:text-orange-900 font-medium mb-2">
+                      View incomplete teams ({ineligibleTeams.length})
+                    </summary>
+                    <ul className="mt-2 space-y-1 ml-4 text-orange-600">
+                      {ineligibleTeams.map(team => (
+                        <li key={team.id}>
+                          • {team.name} ({team.players?.length || 0}/5 players)
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                  <button
+                    type="button"
+                    onClick={() => window.location.href = `/dashboard/tournaments/${tournament.id}/teams`}
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-orange-700 hover:text-orange-900 transition-colors"
+                  >
+                    Manage Teams →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Team Selection Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Team A */}
@@ -509,18 +563,21 @@ function CreateGameModal({
               <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <Users className="w-4 h-4 text-orange-600" />
                 Team A
-                <span className="text-xs text-muted-foreground">({teams.length} available)</span>
+                <span className="text-xs text-muted-foreground">({eligibleTeams.length} available)</span>
               </label>
               <select
                 className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                 value={formData.teamAId}
                 onChange={(e) => setFormData(prev => ({ ...prev, teamAId: e.target.value }))}
                 required
+                disabled={eligibleTeams.length === 0}
               >
-                <option value="">Select Team A</option>
-                {teams.map(team => (
+                <option value="">
+                  {eligibleTeams.length === 0 ? 'No teams with 5+ players' : 'Select Team A'}
+                </option>
+                {eligibleTeams.map(team => (
                   <option key={team.id} value={team.id}>
-                    {team.name}
+                    {team.name} ({team.players?.length || 0} players)
                   </option>
                 ))}
               </select>
@@ -532,7 +589,7 @@ function CreateGameModal({
                 <Users className="w-4 h-4 text-red-600" />
                 Team B
                 <span className="text-xs text-muted-foreground">
-                  ({teams.filter(team => team.id !== formData.teamAId).length} available)
+                  ({eligibleTeams.filter(team => team.id !== formData.teamAId).length} available)
                 </span>
               </label>
               <select
@@ -540,11 +597,14 @@ function CreateGameModal({
                 value={formData.teamBId}
                 onChange={(e) => setFormData(prev => ({ ...prev, teamBId: e.target.value }))}
                 required
+                disabled={eligibleTeams.length < 2}
               >
-                <option value="">Select Team B</option>
-                {teams.filter(team => team.id !== formData.teamAId).map(team => (
+                <option value="">
+                  {eligibleTeams.length < 2 ? 'Need 2+ teams with 5+ players' : 'Select Team B'}
+                </option>
+                {eligibleTeams.filter(team => team.id !== formData.teamAId).map(team => (
                   <option key={team.id} value={team.id}>
-                    {team.name}
+                    {team.name} ({team.players?.length || 0} players)
                   </option>
                 ))}
               </select>
@@ -608,16 +668,23 @@ function CreateGameModal({
             </select>
           </div>
 
-          {/* Validation Warning */}
-          {!isFormValid && (
-            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <p className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">Required fields missing:</p>
-              <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
-                {!formData.teamAId && <li>• Select Team A</li>}
-                {!formData.teamBId && <li>• Select Team B</li>}
-                {!formData.startTime && <li>• Select Date & Time</li>}
-                {!formData.venue && <li>• Enter Venue</li>}
-              </ul>
+          {/* Validation Warning - Only show after submit attempt */}
+          {showValidation && !isFormValid && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-900 mb-2">Required fields missing:</p>
+                  <ul className="text-sm text-red-800 space-y-1">
+                    {!formData.teamAId && <li>• Select Team A</li>}
+                    {!formData.teamBId && <li>• Select Team B</li>}
+                    {!formData.startTime && <li>• Select Date & Time</li>}
+                    {!formData.venue && <li>• Enter Venue</li>}
+                  </ul>
+                </div>
+              </div>
             </div>
           )}
 
