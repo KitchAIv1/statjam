@@ -23,10 +23,12 @@ import {
   PlayerManagementResponse
 } from '../types/coach';
 import { CoachPlayerService } from './coachPlayerService';
+import { invalidateCoachTeams } from '../utils/cache';
 
 export class CoachTeamService {
   /**
    * Get all teams for a coach with accurate player counts
+   * Note: Caching is handled by useCoachTeams hook
    */
   static async getCoachTeams(coachId: string): Promise<CoachTeam[]> {
     try {
@@ -129,6 +131,8 @@ export class CoachTeamService {
 
       if (error) throw error;
 
+      invalidateCoachTeams(user.id);
+
       return {
         id: data.id,
         name: data.name,
@@ -157,6 +161,11 @@ export class CoachTeamService {
         .eq('id', teamId);
 
       if (error) throw error;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        invalidateCoachTeams(user.id);
+      }
     } catch (error) {
       console.error('❌ Error updating coach team:', error);
       throw error;
@@ -174,6 +183,11 @@ export class CoachTeamService {
         .eq('id', teamId);
 
       if (error) throw error;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        invalidateCoachTeams(user.id);
+      }
     } catch (error) {
       console.error('❌ Error deleting coach team:', error);
       throw error;

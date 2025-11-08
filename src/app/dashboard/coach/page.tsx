@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { NavigationHeader } from '@/components/NavigationHeader';
@@ -8,16 +8,16 @@ import { CoachDashboardOverview } from '@/components/coach/CoachDashboardOvervie
 import { CoachTeamsSection } from '@/components/coach/CoachTeamsSection';
 import { CoachQuickTrackSection } from '@/components/coach/CoachQuickTrackSection';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { CoachTeam } from '@/lib/types/coach';
 import { WelcomeChecklist } from '@/components/onboarding/WelcomeChecklist';
 import { HelpPanel } from '@/components/support/HelpPanel';
 import { coachChecklistSteps, coachFAQs } from '@/config/onboarding/coachOnboarding';
+import { useCoachTeams } from '@/hooks/useCoachTeams';
 
 /**
  * CoachDashboardContent - Main dashboard content with search params
  */
 const CoachDashboardContent = () => {
-  const { user, loading } = useAuthContext();
+  const { user, loading: authLoading } = useAuthContext();
   const router = useRouter();
   const searchParams = useSearchParams();
   const userRole = user?.role;
@@ -25,10 +25,8 @@ const CoachDashboardContent = () => {
   // URL section parameter
   const section = searchParams.get('section') || 'overview';
   
-  // Dashboard state
-  const [teams, setTeams] = useState<CoachTeam[]>([]);
-  const [dashboardLoading, setDashboardLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // ⚡ Use custom hook for teams data with caching
+  const { teams, loading: teamsLoading, error, invalidateCache } = useCoachTeams(user);
 
   // Auth protection
   useEffect(() => {
@@ -36,65 +34,14 @@ const CoachDashboardContent = () => {
       sessionStorage.removeItem('auth-redirecting');
     }
     
-    if (!loading && (!user || userRole !== 'coach')) {
+    if (!authLoading && (!user || userRole !== 'coach')) {
       console.log('🔄 Coach dashboard: Redirecting to auth...');
       router.push('/auth');
     }
-  }, [user, userRole, loading, router]);
-
-  // Load coach data
-  useEffect(() => {
-    const loadCoachData = async () => {
-      if (!user || userRole !== 'coach') {
-        return;
-      }
-      
-      try {
-        setDashboardLoading(true);
-        setError(null);
-        
-        // Import coach service dynamically
-        const { CoachTeamService } = await import('@/lib/services/coachTeamService');
-        const coachTeams = await CoachTeamService.getCoachTeams(user.id);
-        
-        setTeams(coachTeams);
-      } catch (error) {
-        console.error('❌ Error loading coach data:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to load coach data';
-        setError(errorMessage);
-      } finally {
-        setDashboardLoading(false);
-      }
-    };
-
-    if (user && userRole === 'coach') {
-      loadCoachData();
-    } else {
-      setDashboardLoading(false);
-    }
-  }, [user, userRole]);
-
-  // Handle team updates
-  const handleTeamUpdate = () => {
-    // Reload teams when changes occur
-    if (user && userRole === 'coach') {
-      const loadTeams = async () => {
-        try {
-          const { CoachTeamService } = await import('@/lib/services/coachTeamService');
-          const coachTeams = await CoachTeamService.getCoachTeams(user.id);
-          setTeams(coachTeams);
-        } catch (error) {
-          console.error('❌ Error reloading teams:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Failed to reload teams';
-          setError(errorMessage);
-        }
-      };
-      loadTeams();
-    }
-  };
+  }, [user, userRole, authLoading, router]);
 
   // Loading state
-  if (loading || !user || userRole !== 'coach') {
+  if (authLoading || !user || userRole !== 'coach') {
     return (
       <div style={{
         minHeight: '100vh',
@@ -127,9 +74,9 @@ const CoachDashboardContent = () => {
         return (
           <CoachTeamsSection
             teams={teams}
-            loading={dashboardLoading}
+            loading={teamsLoading}
             error={error}
-            onTeamUpdate={handleTeamUpdate}
+            onTeamUpdate={invalidateCache}
           />
         );
       
@@ -137,7 +84,7 @@ const CoachDashboardContent = () => {
         return (
           <CoachQuickTrackSection
             teams={teams}
-            loading={dashboardLoading}
+            loading={teamsLoading}
             error={error}
           />
         );
@@ -148,9 +95,9 @@ const CoachDashboardContent = () => {
           <CoachDashboardOverview
             user={user}
             teams={teams}
-            loading={dashboardLoading}
+            loading={teamsLoading}
             error={error}
-            onTeamUpdate={handleTeamUpdate}
+            onTeamUpdate={invalidateCache}
           />
         );
     }

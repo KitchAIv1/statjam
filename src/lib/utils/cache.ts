@@ -102,25 +102,27 @@ export const CacheKeys = {
   tournament: (tournamentId: string) => `tournament:${tournamentId}`,
   gameBasic: (gameId: string) => `game_basic:${gameId}`,
   playerDashboard: (userId: string) => `player_dashboard:${userId}`,
-  playerGameStats: (userId: string) => `player_game_stats:${userId}`, // ⚡ NEW
-  organizerDashboard: (userId: string) => `organizer_dashboard:${userId}`, // ⚡ Organizer overview cache
-  organizerTournaments: (userId: string) => `organizer_tournaments:${userId}`, // ⚡ Organizer tournaments list
-  organizerGames: (userId: string) => `organizer_games:${userId}`, // ⚡ Organizer games list
+  playerGameStats: (userId: string) => `player_game_stats:${userId}`,
+  organizerDashboard: (userId: string) => `organizer_dashboard:${userId}`,
+  organizerTournaments: (userId: string) => `organizer_tournaments:${userId}`,
+  organizerGames: (userId: string) => `organizer_games:${userId}`,
+  coachTeams: (coachId: string) => `coach_teams:${coachId}`,
 } as const;
 
 // Cache TTL constants (in minutes)
 export const CacheTTL = {
-  TEAM_DATA: 10,        // Team info changes rarely
-  PLAYER_DATA: 5,       // Player data changes occasionally  
-  USER_DATA: 15,        // User profiles change rarely
-  TOURNAMENT_DATA: 30,  // Tournament info is mostly static
-  GAME_BASIC: 2,        // Game basic info can change during games
-  DASHBOARD_DATA: 3,    // Dashboard data should be relatively fresh
-  playerDashboard: 3,   // ⚡ Player dashboard (aligned with DASHBOARD_DATA)
-  playerGameStats: 5,   // ⚡ Player game stats (changes after each game)
-  organizerDashboard: 3, // ⚡ Organizer dashboard (aligned with DASHBOARD_DATA)
-  organizerTournaments: 3, // ⚡ Organizer tournaments list (aligned with DASHBOARD_DATA)
-  organizerGames: 3,    // ⚡ Organizer games list (aligned with DASHBOARD_DATA)
+  TEAM_DATA: 10,
+  PLAYER_DATA: 5,
+  USER_DATA: 15,
+  TOURNAMENT_DATA: 30,
+  GAME_BASIC: 2,
+  DASHBOARD_DATA: 3,
+  playerDashboard: 3,
+  playerGameStats: 5,
+  organizerDashboard: 3,
+  organizerTournaments: 3,
+  organizerGames: 3,
+  coachTeams: 3,
 } as const;
 
 /**
@@ -162,4 +164,14 @@ export function invalidateAllOrganizerCaches(userId: string): void {
   invalidateOrganizerTournaments(userId);
   invalidateOrganizerGames(userId);
   console.log('🗑️ Cache invalidated: all organizer caches for user', userId);
+}
+
+/**
+ * ⚡ Cache invalidation helper for coach teams list
+ * Call this after team create/update/delete or roster/game changes
+ */
+export function invalidateCoachTeams(coachId: string): void {
+  const cacheKey = CacheKeys.coachTeams(coachId);
+  cache.delete(cacheKey);
+  console.log('🗑️ Cache invalidated: coach teams for coach', coachId);
 }

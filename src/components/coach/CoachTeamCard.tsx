@@ -26,6 +26,7 @@ import { CoachTeamService } from '@/lib/services/coachTeamService';
 import { CoachTeamAnalyticsTab } from './CoachTeamAnalyticsTab';
 import { CoachGameStatsModal } from './CoachGameStatsModal';
 import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
+import { invalidateCoachTeams } from '@/lib/utils/cache';
 
 interface CoachTeamCardProps {
   team: CoachTeam;
@@ -55,13 +56,13 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   
   // Game history states
   const [games, setGames] = useState<CoachGame[]>([]);
-  const [gamesExpanded, setGamesExpanded] = useState(true);
+  const [gamesExpanded, setGamesExpanded] = useState(false); // ⚡ Start collapsed for better performance
   const [gamesLoading, setGamesLoading] = useState(false);
   
   // Loading states
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   
-  // Player count state
+  // Player count state (use cached value from team prop)
   const [playerCount, setPlayerCount] = useState<number>(team.player_count || 0);
   
   // Edit form state
@@ -75,27 +76,20 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [playerCountLoading, setPlayerCountLoading] = useState(false);
 
-  // Load accurate player count on mount
+  // ⚡ Update player count when team prop changes (from cache or refresh)
   useEffect(() => {
-    const loadPlayerCount = async () => {
-      try {
-        setPlayerCountLoading(true);
-        const count = await CoachPlayerService.getTeamPlayerCount(team.id);
-        setPlayerCount(count);
-      } catch (error) {
-        console.error('❌ Error loading player count:', error);
-      } finally {
-        setPlayerCountLoading(false);
-      }
-    };
+    if (team.player_count !== undefined) {
+      setPlayerCount(team.player_count);
+    }
+  }, [team.player_count]);
 
-    loadPlayerCount();
-  }, [team.id]);
-
-  // Load games on mount
+  // ⚡ Load games only when expanded (lazy loading)
   useEffect(() => {
+    if (!gamesExpanded || games.length > 0) {
+      return; // Don't load if collapsed or already loaded
+    }
+
     const loadGames = async () => {
       try {
         setGamesLoading(true);
@@ -109,7 +103,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
     };
 
     loadGames();
-  }, [team.id]);
+  }, [team.id, gamesExpanded, games.length]);
 
   // Handle visibility toggle
   const handleVisibilityToggle = async () => {
@@ -214,6 +208,10 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
       }
     };
     
+    if (team.coach_id) {
+      invalidateCoachTeams(team.coach_id);
+    }
+    
     loadPlayerCount();
     onUpdate();
   };
@@ -254,15 +252,16 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
 
   return (
     <>
-      <Card className="hover:shadow-md transition-all duration-200">
-        <CardHeader className="pb-3">
+      <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-accent to-orange-500"></div>
+        <CardHeader className="pb-3 relative">
           {/* Mobile-First Layout */}
           <div className="space-y-4">
             {/* Team Info - Always Full Width */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <CardTitle className="text-lg sm:text-xl font-semibold truncate">{team.name}</CardTitle>
+                  <CardTitle className="text-lg sm:text-xl font-semibold truncate group-hover:text-primary transition-colors">{team.name}</CardTitle>
                   
                   {/* Team Type Badge */}
                   {team.is_official_team ? (
@@ -292,11 +291,11 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 {/* Stats - Responsive Grid */}
                 <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
-                    <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span>
-                      {playerCountLoading ? '...' : playerCount}
-                      <span className="hidden sm:inline"> players</span>
-                      {playerCount < 5 && (
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span>
+                    {playerCount}
+                    <span className="hidden sm:inline"> players</span>
+                    {playerCount < 5 && (
                         <>
                           <AlertCircle
                             className="w-3 h-3 ml-1 text-orange-500 inline"
@@ -341,7 +340,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
               <Button
                 onClick={handleQuickTrack}
                 size="sm"
-                disabled={playerCount < 5 || playerCountLoading}
+                disabled={playerCount < 5}
                 variant={playerCount < 5 ? "secondary" : "default"}
                 className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
                 aria-label={playerCount < 5 ? "Add at least 5 players first" : "Start tracking a new game"}
@@ -414,8 +413,30 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
             >
               <h3 className="font-semibold text-sm flex items-center gap-2">
                 Recent Games
-                {inProgressGames.length > 0 && (
-                  <Badge className="bg-green-500 text-white text-xs">{inProgressGames.length} Live</Badge>
+                {/* Show game count and breakdown when collapsed */}
+                {!gamesExpanded && (
+                  <>
+                    {team.games_count !== undefined && team.games_count > 0 ? (
+                      <span className="text-xs text-muted-foreground font-normal">
+                        ({team.games_count} total)
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground font-normal">
+                        (No games yet)
+                      </span>
+                    )}
+                  </>
+                )}
+                {/* Show live badge and breakdown when expanded */}
+                {gamesExpanded && (
+                  <>
+                    {inProgressGames.length > 0 && (
+                      <Badge className="bg-green-500 text-white text-xs">{inProgressGames.length} Live</Badge>
+                    )}
+                    {completedGames.length > 0 && (
+                      <Badge variant="secondary" className="text-xs">{completedGames.length} Completed</Badge>
+                    )}
+                  </>
                 )}
               </h3>
               {gamesExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -523,8 +544,10 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
           onClose={() => setShowQuickTrack(false)}
           onGameCreated={() => {
             setShowQuickTrack(false);
-            // Reload games
             CoachGameService.getTeamGames(team.id, 5).then(setGames);
+            if (team.coach_id) {
+              invalidateCoachTeams(team.coach_id);
+            }
             onUpdate();
           }}
         />
