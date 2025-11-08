@@ -98,6 +98,20 @@
   }
 }
 
+/* ✨ PULSE GLOW: Inviting button glow animation */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4), 0 0 20px rgba(234, 88, 12, 0.2);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(234, 88, 12, 0.6), 0 0 30px rgba(234, 88, 12, 0.4);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
 /* ✅ STAT GRID SCROLL: Custom scrollbar for stat tracker center column */
 .stat-grid-scroll::-webkit-scrollbar {
   width: 6px;

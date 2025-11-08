@@ -568,7 +568,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Tournament Management</h2>
@@ -582,7 +582,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           }
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 relative overflow-hidden bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 animate-pulse-glow">
               <Plus className="w-4 h-4" />
               Create Tournament
             </Button>
