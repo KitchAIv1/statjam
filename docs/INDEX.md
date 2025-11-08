@@ -42,6 +42,11 @@
 
 ### **2. Development Guides** (`02-development/`)
 - **PERSONAL_STAT_TRACKER_IMPLEMENTATION_SUMMARY.md** - Personal stat tracker implementation
+- **COACH_TRACKER_PERFORMANCE_AUDIT.md** - Phase-by-phase performance roadmap for coach tracker
+- **COACH_SCALABILITY_ASSESSMENT.md** - Scale readiness report (handles 10K users)
+- **COACH_UI_REFINEMENTS.md** - Official/Practice toggle UI & delete team workflow
+- **OFFICIAL_TEAM_FLAG_IMPLEMENTATION.md** - Business logic and database changes for team type flag
+- **COACH_DASHBOARD_MOBILE_RESPONSIVE.md** - Mobile responsive layout notes
 - **DEPLOYMENT_GUIDE_PERSONAL_STATS.md** - Personal stats deployment guide
 - **DEBUG_GUIDE.md** - Debugging procedures
 - **MIGRATION_TEMPLATE.md** - Database migration template
@@ -62,8 +67,9 @@
 - **FEATURES_PAGE.md** - Features page implementation (premium dark theme, carousels, device mockups)
 - **MOBILE_ADVANTAGE_SECTION.md** - Mobile advantage section documentation
 - **SMART_SEQUENCES_IMPLEMENTATION.md** - Smart sequences feature
+- **coach-team-card/COACH_TEAM_CARD_IMPLEMENTATION.md** - Coach team management UI & services
 - **Authentication** - Auth system documentation
-- **Dashboards** - Dashboard documentation (Player, Coach, Organizer)
+- **Dashboards** - Dashboard documentation (Player, Organizer; Coach dashboard covered in coach-team-card)
 - **Live-viewer** - Live viewer documentation
 - **Organizer-guide** - Organizer guide documentation
 - **Personal-stat-tracker** - Personal stat tracker documentation
@@ -137,11 +143,11 @@
 
 ## 📊 **Documentation Statistics**
 
-- **Total Files**: 18+ documentation files
-- **Total Lines**: 4,500+ lines of documentation
+- **Total Files**: 120+ documentation files
+- **Total Lines**: 25,000+ lines of documentation
 - **Categories**: 9 major categories
-- **Coverage**: 100% of core features documented
-- **Status**: ✅ **COMPLETE** - All features documented
+- **Coverage**: 100% of core features documented (kept current weekly)
+- **Status**: ✅ **ACTIVE** - Updated with November 2025 coach enhancements
 
 ---
 
@@ -174,6 +180,6 @@
 
 ---
 
-**Last Updated**: January 2025  
+**Last Updated**: November 8, 2025  
 **Maintained By**: Development Team  
 **Status**: ✅ Complete and Current

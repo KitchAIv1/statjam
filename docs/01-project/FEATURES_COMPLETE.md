@@ -412,6 +412,24 @@ DATABASE
 
 ---
 
+## 🚀 **Recent Updates (November 8, 2025)**
+
+### **Official Team Flag & Coach Dashboard Enhancements**
+- ✅ Added `is_official_team` flag (migration `006_add_official_team_flag.sql`) with safe default (Practice)
+- ✅ CoachTeamService/Create/Edit UI exposes Official vs Practice toggle with player stat guidance
+- ✅ Player dashboards now honor official-only coach games; practice games remain coach-only
+- ✅ CoachTeamCard shows trophy/dumbbell badges, warning copy, and deletion safeguards
+- ✅ Switch component redesigned (gray OFF / blue ON) to clarify state at a glance
+- ✅ Need Help panel + onboarding checklist updated to explain team type impact and custom player behavior
+- ✅ Delete team action with confirmation dialog covering cascading impact (team data, games, roster links)
+
+### **Performance & Scalability**
+- ✅ Coach tracker double-fetch eliminated; player loading moved to `Promise.all` (Phase 3 optimization)
+- ✅ Scalability assessment confirms readiness for 10K users (< 1s load time benchmarks)
+- ✅ Documentation added: `COACH_TRACKER_PERFORMANCE_AUDIT.md`, `COACH_SCALABILITY_ASSESSMENT.md`, `COACH_UI_REFINEMENTS.md`
+
+---
+
 ### 👨‍🏫 **Coach Team Card System**
 
 **Status**: ✅ 100% Complete
@@ -419,6 +437,7 @@ DATABASE
 **Features**:
 - Coach role authentication and dashboard
 - Team creation and management (non-tournament teams)
+- Official vs Practice team classification (controls player dashboard inclusion)
 - Player management (existing StatJam users + custom players)
 - Quick Track stat tracking for coach teams
 - Team visibility controls (public/private)
@@ -430,6 +449,7 @@ DATABASE
 - Create new teams with 2-step process (team details → player management)
 - Manage existing teams with full player roster control
 - Quick Track button with player validation
+- Official/Practice badges with help copy explaining player stat impact
 - Team visibility toggle (public/private)
 
 **Player Management**:

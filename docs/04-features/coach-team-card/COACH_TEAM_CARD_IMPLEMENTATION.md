@@ -14,7 +14,8 @@ The Coach Team Card System provides coaches with comprehensive team management c
 ### Key Features
 
 - **Coach Role Authentication**: Dedicated coach role with specific permissions
-- **Team Management**: Create, edit, and manage non-tournament teams
+- **Team Management**: Create, edit, delete, and manage non-tournament teams
+- **Official vs Practice Team Types**: Toggle defines whether games impact player dashboards
 - **Player Management**: Add existing StatJam users or create custom players
 - **Quick Track Integration**: Reuse Stat Tracker V3 for coach-specific games
 - **Mixed Rosters**: Support both StatJam users and custom players
@@ -128,12 +129,14 @@ updateGameStatus(gameId: string, status: GameStatus): Promise<void>
 - Main coach dashboard with team overview
 - Team creation and management interface
 - Quick Track launch functionality
+- Onboarding checklist + help panel highlight team type rules
 
 **CoachTeamCard** (`/src/components/coach/CoachTeamCard.tsx`):
 - Individual team display with stats
 - Player count and validation
 - Quick Track button with minimum player check
 - Team visibility toggle
+- Team type badge (Official vs Practice) and edit modal warnings
 
 **CoachTeamsSection** (`/src/components/coach/CoachTeamsSection.tsx`):
 - Team listing and filtering
@@ -162,6 +165,7 @@ updateGameStatus(gameId: string, status: GameStatus): Promise<void>
 **CreateCoachTeamModal** (`/src/components/coach/CreateCoachTeamModal.tsx`):
 - 2-step team creation process
 - Step 1: Team details (name, location, visibility)
+- Team Type toggle (Official vs Practice) with player-impact messaging
 - Step 2: Player management (add players)
 - Progress indicator and validation
 
@@ -213,6 +217,31 @@ updateGameStatus(gameId: string, status: GameStatus): Promise<void>
 7. Game created → Navigate to /stat-tracker-v3?coachMode=true
 8. Stat Tracker V3 loads in coach mode with OpponentTeamPanel
 ```
+
+### Official vs Practice Team Flag
+
+**Business Logic**:
+- Official teams contribute to linked players' profile dashboards and season totals.
+- Practice teams remain coach-only; their games and stats are excluded from player dashboards.
+- Custom players are always coach-only regardless of team type setting.
+
+**UI Guidance**:
+- Create/Edit Team modal highlights the toggle with blue (Official) and amber (Practice) messaging.
+- Team cards display trophy (Official) or dumbbell (Practice) badges beside the team name.
+- Onboarding checklist and Help panel FAQs reinforce when to choose each mode.
+
+**Data Flow**:
+```
+Team modal toggle → CoachTeamService.create/update
+  → teams.is_official_team boolean
+  → Player dashboards (PlayerGameStatsService) filter coach games by official teams only
+```
+
+**Safeguards**:
+- Default team type is Practice to avoid unwanted stat pollution.
+- Warning alert appears when switching Official → Practice (players lose dashboard stats).
+- Delete confirmation dialog enumerates cascading impact (team data, game history, roster links).
+- Switch component redesigned for high-contrast OFF/ON states.
 
 ---
 
@@ -515,6 +544,25 @@ The Coach Team Card System is **fully implemented** and **production-ready**:
 ---
 
 ## 🎉 Latest Updates
+
+### v1.3.0 - November 8, 2025: Official Team Flag & Cleanup
+
+**New Capabilities**:
+- ✅ Official vs Practice team toggle controls player stat inclusion with clear badges
+- ✅ Delete team workflow with confirmation modal and async loading states
+- ✅ Switch component redesign (gray OFF / blue ON) for instant clarity
+- ✅ Help panel + checklist copy updated to explain player stat impact
+
+**Services & Data**:
+- Added `CoachTeamService.deleteTeam()` and propagated `is_official_team` through coach types
+- Player dashboard services respect `is_official_team` when aggregating coach games
+- Database migration `006_add_official_team_flag.sql` documents schema change
+
+**UX Enhancements**:
+- Action buttons align in a single row with explicit outline borders
+- Edit modal warning appears when downgrading Official → Practice
+- Delete confirmation lists cascading impact (team data, games, player links)
+- Need Help panel surfaced FAQ covering official/practice behavior and custom players
 
 ### v1.2.0 - December 2025: UI Optimizations & RLS Fixes
 
