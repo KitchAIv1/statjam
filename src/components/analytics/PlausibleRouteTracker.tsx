@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 /**
  * PlausibleRouteTracker
@@ -11,7 +11,6 @@ import { usePathname, useSearchParams } from "next/navigation";
  */
 export default function PlausibleRouteTracker() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const lastUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -38,7 +37,7 @@ export default function PlausibleRouteTracker() {
     } catch {
       // Swallow errors to avoid affecting app UX
     }
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return null;
 }
