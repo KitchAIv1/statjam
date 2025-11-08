@@ -293,16 +293,23 @@ export const SignUpFormMultiStep: React.FC<SignUpFormMultiStepProps> = ({
             disabled={loading || disabled}
             style={{
               flex: 1,
-              padding: '14px 24px',
+              padding: '16px',
+              minHeight: '52px',
               backgroundColor: 'transparent',
               border: '1px solid rgba(255, 255, 255, 0.3)',
-              borderRadius: '8px',
+              borderRadius: '12px',
               color: '#fff',
-              fontSize: '15px',
-              fontWeight: '600',
+              fontSize: '16px',
+              fontWeight: '700',
               cursor: (loading || disabled) ? 'not-allowed' : 'pointer',
               opacity: (loading || disabled) ? 0.5 : 1,
-              transition: 'all 0.2s'
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '0',
+              touchAction: 'manipulation',
+              boxSizing: 'border-box'
             }}
           >
             ← Back
@@ -316,16 +323,23 @@ export const SignUpFormMultiStep: React.FC<SignUpFormMultiStepProps> = ({
             disabled={loading || disabled}
             style={{
               flex: 1,
-              padding: '14px 24px',
+              padding: '16px',
+              minHeight: '52px',
               backgroundColor: 'transparent',
               border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '8px',
+              borderRadius: '12px',
               color: '#fff',
-              fontSize: '15px',
-              fontWeight: '500',
+              fontSize: '16px',
+              fontWeight: '700',
               cursor: (loading || disabled) ? 'not-allowed' : 'pointer',
               opacity: (loading || disabled) ? 0.5 : 1,
-              transition: 'all 0.2s'
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '0',
+              touchAction: 'manipulation',
+              boxSizing: 'border-box'
             }}
           >
             Skip
@@ -339,6 +353,7 @@ export const SignUpFormMultiStep: React.FC<SignUpFormMultiStepProps> = ({
           style={{
             ...authPageStyles.button,
             flex: 1,
+            marginBottom: '0',
             opacity: (loading || disabled || !canProceedFromStep()) ? 0.6 : 1,
             cursor: (loading || disabled || !canProceedFromStep()) ? 'not-allowed' : 'pointer'
           }}

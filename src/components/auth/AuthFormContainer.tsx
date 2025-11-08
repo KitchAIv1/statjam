@@ -94,7 +94,7 @@ export const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
           )}
 
           <div style={{ textAlign: 'center', marginTop: '20px' }}>
-            <span style={{ color: '#374151', fontSize: '14px' }}>
+            <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px', fontWeight: '500' }}>
               {isLogin ? "Don't have an account? " : "Already have an account? "}
             </span>
             <button
@@ -111,7 +111,7 @@ export const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
 
           {/* Product Hunt Badge */}
           <div style={{ textAlign: 'center', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '12px' }}>As featured on</p>
+            <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px', marginBottom: '12px', fontWeight: '500' }}>As featured on</p>
             <a 
               href="https://www.producthunt.com/products/statjam?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-statjam" 
               target="_blank"

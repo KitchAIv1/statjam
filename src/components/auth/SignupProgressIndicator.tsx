@@ -77,9 +77,9 @@ export const SignupProgressIndicator: React.FC<SignupProgressIndicatorProps> = (
       {/* Step Counter */}
       <div style={{
         marginLeft: '12px',
-        color: '#9CA3AF',
+        color: 'rgba(255, 255, 255, 0.7)',
         fontSize: '12px',
-        fontWeight: '500',
+        fontWeight: '600',
         minWidth: '40px',
         textAlign: 'right'
       }}>

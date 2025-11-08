@@ -208,17 +208,17 @@ export const authPageStyles: AuthPageStylesType = {
     }
   },
   switchButton: {
-    // Clean black text for maximum contrast
-    color: '#000000', // Pure black
+    // White text for better contrast on orange background
+    color: '#ffffff', // Pure white
     background: 'none', // No background
     border: 'none',
     cursor: 'pointer',
     textDecoration: 'underline',
-    fontWeight: '600', // Bolder text
+    fontWeight: '700', // Bolder text
     padding: '4px 8px',
     borderRadius: '6px',
     transition: 'all 0.2s ease',
-    textShadow: '0 1px 2px rgba(255, 255, 255, 0.9)', // Strong white shadow
+    textShadow: '0 1px 3px rgba(0, 0, 0, 0.4)', // Dark shadow for depth
   },
   error: {
     // Enhanced error visibility

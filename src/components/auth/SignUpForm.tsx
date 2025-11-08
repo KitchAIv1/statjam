@@ -133,7 +133,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
         disabled={disabled || loading}
       />
       
-      <div style={{ marginBottom: '16px', fontSize: '12px', color: '#6b7280' }}>
+      <div style={{ marginBottom: '16px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)' }}>
         Please confirm your password
       </div>
 

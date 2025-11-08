@@ -56,7 +56,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
         disabled={disabled || loading}
       />
       
-      <div style={{ marginBottom: '8px', fontSize: '12px', color: '#6b7280' }}>
+      <div style={{ marginBottom: '8px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)' }}>
         Password must be at least 6 characters long
       </div>
 
