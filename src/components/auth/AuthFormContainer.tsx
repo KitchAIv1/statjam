@@ -8,6 +8,7 @@
 import React from 'react';
 import { SignInForm } from './SignInForm';
 import { SignUpForm } from './SignUpForm';
+import { SignUpFormMultiStep } from './SignUpFormMultiStep';
 import { type UserRole } from './RoleSelector';
 import { authPageStyles, authPageCSSStyles } from './styles/AuthPageStyles';
 import { type PasswordStrength } from '@/utils/validators/authValidators';
@@ -80,7 +81,7 @@ export const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
               loading={loading}
             />
           ) : (
-            <SignUpForm
+            <SignUpFormMultiStep
               formData={signUpData}
               onInputChange={onInputChange}
               onSubmit={onSubmit}
