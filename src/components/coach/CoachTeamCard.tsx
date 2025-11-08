@@ -71,6 +71,10 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [playerCountLoading, setPlayerCountLoading] = useState(false);
 
   // Load accurate player count on mount
@@ -147,6 +151,21 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
       setEditError(error instanceof Error ? error.message : 'Failed to update team');
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  // Handle team deletion
+  const handleDeleteTeam = async () => {
+    try {
+      setDeleteLoading(true);
+      await CoachTeamService.deleteTeam(team.id);
+      setShowDeleteConfirm(false);
+      onUpdate();
+    } catch (error) {
+      console.error('❌ Error deleting team:', error);
+      alert('Failed to delete team. Please try again.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -318,7 +337,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
             </div>
 
             {/* Action Buttons - Responsive Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               <Button
                 onClick={handleQuickTrack}
                 size="sm"
@@ -336,7 +355,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 onClick={() => setShowAnalytics(true)}
                 size="sm"
                 variant="outline"
-                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
+                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 !border-gray-300"
               >
                 <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 <span className="hidden sm:inline truncate">Analytics</span>
@@ -351,7 +370,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                   onClick={() => setShowPlayerManagement(true)}
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
+                  className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 !border-gray-300"
                 >
                   <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                   <span className="hidden sm:inline truncate">Manage</span>
@@ -363,10 +382,21 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 onClick={() => setShowEditTeam(true)}
                 size="sm"
                 variant="outline"
-                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3"
+                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 !border-gray-300"
               >
                 <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 <span className="truncate">Edit</span>
+              </Button>
+
+              <Button
+                onClick={() => setShowDeleteConfirm(true)}
+                size="sm"
+                variant="outline"
+                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 !border-red-300 text-red-600 hover:text-red-700 hover:bg-red-50 hover:!border-red-400"
+                aria-label="Delete team"
+              >
+                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Delete</span>
               </Button>
             </div>
           </div>
@@ -629,6 +659,53 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 className="flex-1"
               >
                 {editLoading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="w-5 h-5" />
+                Delete Team
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete <span className="font-semibold text-foreground">{team.name}</span>?
+              </p>
+              
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium text-red-900">This action cannot be undone.</p>
+                <ul className="text-xs text-red-700 space-y-1 ml-4 list-disc">
+                  <li>All team data will be permanently deleted</li>
+                  <li>Game history will be removed</li>
+                  <li>Players will be unlinked from this team</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1"
+                disabled={deleteLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteTeam}
+                disabled={deleteLoading}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete Team'}
               </Button>
             </div>
           </DialogContent>

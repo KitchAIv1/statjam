@@ -164,6 +164,23 @@ export class CoachTeamService {
   }
 
   /**
+   * Delete a coach team
+   */
+  static async deleteTeam(teamId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('teams')
+        .delete()
+        .eq('id', teamId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('❌ Error deleting coach team:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Generate import token for team sharing
    */
   static async generateImportToken(
