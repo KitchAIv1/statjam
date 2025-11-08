@@ -8,6 +8,7 @@ import { Calendar, Clock, MapPin, Eye, Filter, Trophy } from "lucide-react";
 import { GameService } from '@/lib/services/gameService';
 import { useTournaments } from '@/lib/hooks/useTournaments';
 import { Game } from '@/lib/types/game';
+import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 
 interface GameWithTournament extends Game {
   tournament_name?: string;
@@ -31,7 +32,21 @@ export function OrganizerGameScheduler({ user }: OrganizerGameSchedulerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournaments.length]); // Only re-run when tournament count changes, not array reference
 
-  const loadGames = async () => {
+  const loadGames = async (skipCache: boolean = false) => {
+    if (!user?.id) return;
+
+    // ⚡ Check cache first (unless skipCache is true)
+    if (!skipCache) {
+      const cacheKey = CacheKeys.organizerGames(user.id);
+      const cachedGames = cache.get<GameWithTournament[]>(cacheKey);
+      
+      if (cachedGames) {
+        console.log('⚡ OrganizerGameScheduler: Using cached games data');
+        setGames(cachedGames);
+        return;
+      }
+    }
+
     try {
       setLoadingGames(true);
       
@@ -62,6 +77,13 @@ export function OrganizerGameScheduler({ user }: OrganizerGameSchedulerProps) {
       
       const totalTime = performance.now() - perfStart;
       console.log(`⚡ Loaded ${allGames.length} games in ${totalTime.toFixed(0)}ms (avg ${(totalTime / tournaments.length).toFixed(0)}ms per tournament)`);
+      
+      // ⚡ Store in cache
+      if (user?.id) {
+        const cacheKey = CacheKeys.organizerGames(user.id);
+        cache.set(cacheKey, allGames, CacheTTL.organizerGames);
+        console.log('⚡ OrganizerGameScheduler: Games cached for', CacheTTL.organizerGames, 'minutes');
+      }
       
       setGames(allGames);
     } catch (error) {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tournament, TournamentListState, TournamentCreateRequest } from '@/lib/types/tournament';
 import { TournamentService } from '@/lib/services/tournamentService';
-import { invalidateOrganizerDashboard } from '@/lib/utils/cache';
+import { invalidateOrganizerDashboard, invalidateOrganizerTournaments, cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 
 // Custom Hook for Tournament Data Management
 export function useTournaments(user: { id: string } | null) {
@@ -15,14 +15,31 @@ export function useTournaments(user: { id: string } | null) {
     },
   });
 
-  // Load tournaments
-  const loadTournaments = async () => {
+  // Load tournaments with caching
+  const loadTournaments = async (skipCache: boolean = false) => {
     if (!user || state.loading) {
       console.log('🔍 Skipping tournament load - no user or already loading');
       return;
     }
 
-    console.log('🔍 Loading tournaments for user:', user.id);
+    // ⚡ Check cache first (unless skipCache is true)
+    if (!skipCache) {
+      const cacheKey = CacheKeys.organizerTournaments(user.id);
+      const cachedTournaments = cache.get<Tournament[]>(cacheKey);
+      
+      if (cachedTournaments) {
+        console.log('⚡ useTournaments: Using cached tournaments data');
+        setState(prev => ({
+          ...prev,
+          tournaments: cachedTournaments,
+          loading: false,
+          error: null
+        }));
+        return;
+      }
+    }
+
+    console.log('🔍 useTournaments: Fetching fresh tournaments data...');
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     
@@ -32,6 +49,11 @@ export function useTournaments(user: { id: string } | null) {
       console.log('🔍 Using organizer ID:', organizerId);
       
       const tournaments = await TournamentService.getTournamentsByOrganizer(organizerId);
+      
+      // ⚡ Store in cache
+      const cacheKey = CacheKeys.organizerTournaments(user.id);
+      cache.set(cacheKey, tournaments, CacheTTL.organizerTournaments);
+      console.log('⚡ useTournaments: Tournaments cached for', CacheTTL.organizerTournaments, 'minutes');
       
       setState(prev => ({ ...prev, tournaments, loading: false }));
     } catch (error) {
@@ -59,6 +81,10 @@ export function useTournaments(user: { id: string } | null) {
         tournaments: [tournament, ...prev.tournaments],
         loading: false
       }));
+      
+      // ⚡ Invalidate tournaments cache after creation
+      invalidateOrganizerTournaments(user.id);
+      
       return tournament;
     } catch (error) {
       setState(prev => ({
@@ -82,9 +108,10 @@ export function useTournaments(user: { id: string } | null) {
         loading: false
       }));
       
-      // ⚡ Invalidate dashboard cache after tournament deletion
+      // ⚡ Invalidate caches after tournament deletion
       if (user?.id) {
         invalidateOrganizerDashboard(user.id);
+        invalidateOrganizerTournaments(user.id);
       }
       
       return true;

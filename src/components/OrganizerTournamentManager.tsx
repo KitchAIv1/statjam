@@ -25,7 +25,7 @@ import { OrganizerPlayerManagementService } from "@/lib/services/organizerPlayer
 import { TeamService, TournamentService } from "@/lib/services/tournamentService";
 import { useRouter } from 'next/navigation';
 import { notify } from '@/lib/services/notificationService';
-import { invalidateOrganizerDashboard } from '@/lib/utils/cache';
+import { invalidateOrganizerDashboard, invalidateOrganizerTournaments } from '@/lib/utils/cache';
 
 // Utility function for tournament status variants with enhanced styling
 function getStatusVariant(status: Tournament['status']) {
@@ -419,9 +419,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
         setValidationErrors([]);
         setIsCreateDialogOpen(false);
         
-        // ⚡ Invalidate dashboard cache after tournament creation
+        // ⚡ Invalidate caches after tournament creation
         if (user?.id) {
           invalidateOrganizerDashboard(user.id);
+          invalidateOrganizerTournaments(user.id);
         }
       }
     } catch (error) {
@@ -474,9 +475,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
         setIsDeleteDialogOpen(false);
         setTournamentToDelete(null);
         
-        // ⚡ Invalidate dashboard cache after tournament deletion
+        // ⚡ Invalidate caches after tournament deletion
         if (user?.id) {
           invalidateOrganizerDashboard(user.id);
+          invalidateOrganizerTournaments(user.id);
         }
       }
     } catch (error) {

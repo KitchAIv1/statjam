@@ -7,7 +7,7 @@ import { TournamentService, TeamService } from '@/lib/services/tournamentService
 import { GameService } from '@/lib/services/gameService';
 import { Tournament, Team } from '@/lib/types/tournament';
 import { Game } from '@/lib/types/game';
-import { invalidateOrganizerDashboard } from '@/lib/utils/cache';
+import { invalidateOrganizerDashboard, invalidateOrganizerGames } from '@/lib/utils/cache';
 import { 
   Calendar, 
   ArrowLeft, 
@@ -354,9 +354,10 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
                 setGames(updatedGames);
                 setShowCreateGame(false);
                 
-                // ⚡ Invalidate dashboard cache after game create/update
+                // ⚡ Invalidate caches after game create/update
                 if (user?.id) {
                   invalidateOrganizerDashboard(user.id);
+                  invalidateOrganizerGames(user.id);
                 }
               } catch (error) {
                 console.error('Failed to save game:', error);
@@ -395,9 +396,10 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
                 setGames(updatedGames);
                 setShowBracketBuilder(false);
                 
-                // ⚡ Invalidate dashboard cache after bracket generation
+                // ⚡ Invalidate caches after bracket generation
                 if (user?.id) {
                   invalidateOrganizerDashboard(user.id);
+                  invalidateOrganizerGames(user.id);
                 }
                 
                 console.log('✅ Bracket generated successfully');

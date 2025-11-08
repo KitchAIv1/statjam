@@ -104,6 +104,8 @@ export const CacheKeys = {
   playerDashboard: (userId: string) => `player_dashboard:${userId}`,
   playerGameStats: (userId: string) => `player_game_stats:${userId}`, // ⚡ NEW
   organizerDashboard: (userId: string) => `organizer_dashboard:${userId}`, // ⚡ Organizer overview cache
+  organizerTournaments: (userId: string) => `organizer_tournaments:${userId}`, // ⚡ Organizer tournaments list
+  organizerGames: (userId: string) => `organizer_games:${userId}`, // ⚡ Organizer games list
 } as const;
 
 // Cache TTL constants (in minutes)
@@ -117,6 +119,8 @@ export const CacheTTL = {
   playerDashboard: 3,   // ⚡ Player dashboard (aligned with DASHBOARD_DATA)
   playerGameStats: 5,   // ⚡ Player game stats (changes after each game)
   organizerDashboard: 3, // ⚡ Organizer dashboard (aligned with DASHBOARD_DATA)
+  organizerTournaments: 3, // ⚡ Organizer tournaments list (aligned with DASHBOARD_DATA)
+  organizerGames: 3,    // ⚡ Organizer games list (aligned with DASHBOARD_DATA)
 } as const;
 
 /**
@@ -127,4 +131,35 @@ export function invalidateOrganizerDashboard(userId: string): void {
   const cacheKey = CacheKeys.organizerDashboard(userId);
   cache.delete(cacheKey);
   console.log('🗑️ Cache invalidated: organizer dashboard for user', userId);
+}
+
+/**
+ * ⚡ Cache invalidation helper for organizer tournaments list
+ * Call this after tournament create/update/delete
+ */
+export function invalidateOrganizerTournaments(userId: string): void {
+  const cacheKey = CacheKeys.organizerTournaments(userId);
+  cache.delete(cacheKey);
+  console.log('🗑️ Cache invalidated: organizer tournaments for user', userId);
+}
+
+/**
+ * ⚡ Cache invalidation helper for organizer games list
+ * Call this after game create/update/delete
+ */
+export function invalidateOrganizerGames(userId: string): void {
+  const cacheKey = CacheKeys.organizerGames(userId);
+  cache.delete(cacheKey);
+  console.log('🗑️ Cache invalidated: organizer games for user', userId);
+}
+
+/**
+ * ⚡ Invalidate all organizer caches at once
+ * Use when you want to refresh everything
+ */
+export function invalidateAllOrganizerCaches(userId: string): void {
+  invalidateOrganizerDashboard(userId);
+  invalidateOrganizerTournaments(userId);
+  invalidateOrganizerGames(userId);
+  console.log('🗑️ Cache invalidated: all organizer caches for user', userId);
 }
