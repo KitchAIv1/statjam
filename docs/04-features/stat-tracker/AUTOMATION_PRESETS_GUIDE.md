@@ -1,9 +1,9 @@
 # Stat Tracker Automation Presets Guide
 
 ## Overview
-Stat admins can select between three automation modes before launching any game. This guide explains exactly what each preset does, how the new comparison UI works, and how demo games remain private while providing full training capabilities.
+Stat admins and coaches can select between three automation modes before launching any game. This guide explains exactly what each preset does, how the new comparison UI works, and how demo games remain private while providing full training capabilities.
 
-- **Location**: `/dashboard/stat-admin/automation-guide`
+- **Locations**: `/dashboard/stat-admin/automation-guide`, `/dashboard/coach/automation-guide`
 - **Component**: `src/components/tracker-v3/AutomationPresetsComparison.tsx`
 - **Page**: `src/app/dashboard/stat-admin/automation-guide/page.tsx`
 - **Related Services**: `GameServiceV3.updateGameAutomation`, `useTracker`

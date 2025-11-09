@@ -79,7 +79,7 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 - ✅ **Demo-Friendly**: Stat admins can launch private demo games without affecting live data
 
 ### **📘 Automation & Demo Training**
-- ✅ **Automation Guide Page**: `/dashboard/stat-admin/automation-guide` shows a feature-by-feature preset comparison
+- ✅ **Automation Guide Pages**: `/dashboard/stat-admin/automation-guide` and `/dashboard/coach/automation-guide` show feature-by-feature preset comparisons
 - ✅ **Minimal Mode**: Fully manual tracking mode with sequences disabled for training scenarios
 - ✅ **Balanced Mode**: Smart prompts and clock automation with manual override
 - ✅ **Full Automation**: Maximum automation including foul enforcement and undo history
