@@ -33,7 +33,7 @@ const PRESETS: Record<PresetType, { label: string; description: string; settings
     settings: {
       clock: { enabled: false, autoPause: false, autoReset: false, ftMode: false, madeBasketStop: false },
       possession: { enabled: true, autoFlip: true, persistState: true, jumpBallArrow: false },
-      sequences: { enabled: true, promptAssists: true, promptRebounds: true, promptBlocks: true, linkEvents: false, freeThrowSequence: true },
+      sequences: { enabled: false, promptAssists: false, promptRebounds: false, promptBlocks: false, linkEvents: false, freeThrowSequence: false },
       fouls: { enabled: false, bonusFreeThrows: false, foulOutEnforcement: false, technicalEjection: false },
       undo: { enabled: false, maxHistorySize: 50 }
     }
