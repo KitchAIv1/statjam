@@ -405,6 +405,27 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
         </CardHeader>
 
         <CardContent className="pt-0">
+          {/* Join Tournament CTA - Only show if team is NOT attached to a tournament */}
+          {!team.tournament_id && (
+            <div className="border-t pt-4 mb-4">
+              <Alert className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                <Trophy className="w-4 h-4 text-blue-600" />
+                <AlertTitle className="text-blue-900 font-semibold">Ready to compete?</AlertTitle>
+                <AlertDescription className="text-blue-700 text-sm mt-1">
+                  Join a tournament to track official games and compete with other teams.
+                </AlertDescription>
+                <Button
+                  onClick={() => setShowTournamentSearch(true)}
+                  size="sm"
+                  className="mt-3 gap-2 bg-blue-600 hover:bg-blue-700"
+                >
+                  <Trophy className="w-4 h-4" />
+                  Browse Tournaments
+                </Button>
+              </Alert>
+            </div>
+          )}
+
           {/* Game History Section */}
           <div className="border-t pt-4">
             <button
@@ -559,6 +580,9 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
           onClose={() => setShowTournamentSearch(false)}
           onTournamentLinked={() => {
             setShowTournamentSearch(false);
+            if (team.coach_id) {
+              invalidateCoachTeams(team.coach_id);
+            }
             onUpdate();
           }}
         />
