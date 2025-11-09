@@ -340,6 +340,14 @@ These can be added in future iterations based on user feedback.
 
 ---
 
+## 🆕 November 2025 Update
+- Minimal automation preset now disables smart sequence prompts entirely for training sessions  
+- Balanced and Full presets continue to leverage smart sequences without changes  
+- Marketing copy should highlight that automation is selectable per game via the Pre-Flight modal  
+- Reference: [`stat-tracker/AUTOMATION_PRESETS_GUIDE.md`](stat-tracker/AUTOMATION_PRESETS_GUIDE.md)
+
+---
+
 ## 📞 **Support**
 
 For questions or issues:

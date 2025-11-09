@@ -75,14 +75,24 @@ This document details the fixes and improvements made to the Stat Tracker V3 mob
 - **Functional Validation**: Clock-based stat validation prevents invalid recordings
 - **Complete Substitution Flow**: Both SUB buttons now properly trigger substitution modal
 
+## November 2025 Enhancements
+- ✅ **Automation Presets**: Minimal (manual), Balanced (smart prompts), Full (NBA workflow) now selectable in Pre-Flight modal  
+- ✅ **Minimal Mode Fix**: Sequences completely disabled in Minimal preset for training scenarios  
+- ✅ **Automation Guide Page**: `/dashboard/stat-admin/automation-guide` showcases comparison table implemented with `AutomationPresetsComparison` component  
+- ✅ **Demo RLS Updates**: Migrations `008`, `009`, `010` enable stat admins to track, aggregate, and configure demo games safely  
+- ✅ **Top Scoreboard Badge**: DEMO games display an amber “DEMO” indicator instead of “LIVE”
+
+> Detailed preset coverage and QA checklist: [`AUTOMATION_PRESETS_GUIDE.md`](./AUTOMATION_PRESETS_GUIDE.md)
+
 ## Status
-✅ All mobile layout issues resolved
+✅ All mobile layout issues resolved  
 ✅ Clock validation implemented  
-✅ Substitution functionality complete
-✅ V2 stat tracker removed from codebase
-✅ Ready for stat logic integration
+✅ Substitution functionality complete  
+✅ Automation presets documented and persisted per game  
+✅ Demo tracking flow fully operational
 
 ## Next Steps
-- Audit existing stat tracking logic in V1/legacy components
-- Connect V3 interface to proper stat recording services
+- Monitor automation telemetry to fine-tune presets  
+- Extend automation guide with video walkthroughs  
+- Continue auditing stat tracking logic from legacy V1 components  
 - Ensure real-time stat updates and persistence

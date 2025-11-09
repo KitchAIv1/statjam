@@ -737,23 +737,30 @@ const StatAdminDashboard = () => {
           onStartTracking={async (settings: AutomationFlags) => {
             setLaunchingTracker(selectedGame.id);
             
-            // Save settings to database
+            // ✅ CRITICAL: Save settings to database BEFORE launching tracker
             try {
-              await GameServiceV3.updateGameAutomation(selectedGame.id, settings);
-              console.log('✅ Game automation settings saved:', settings);
+              console.log('💾 Saving automation settings to database:', settings);
+              const success = await GameServiceV3.updateGameAutomation(selectedGame.id, settings);
+              if (success) {
+                console.log('✅ Game automation settings saved successfully');
+              } else {
+                console.error('❌ Failed to save automation settings - updateGameAutomation returned false');
+              }
             } catch (error) {
               console.error('❌ Failed to save automation settings:', error);
+              // Don't block tracker launch, but warn user
+              alert('Warning: Failed to save automation settings. Using tournament defaults.');
             }
             
             // Close modal
             setShowPreFlight(false);
             
-            // Navigate to tracker
+            // ✅ IMPORTANT: Add small delay to ensure database write completes
             setTimeout(() => {
               router.push(
                 `/stat-tracker-v3?gameId=${selectedGame.id}&teamAId=${selectedGame.teamAId}&teamBId=${selectedGame.teamBId}`
               );
-            }, 100);
+            }, 300); // Increased from 100ms to 300ms
           }}
           gameId={selectedGame.id}
           gameName={`${selectedGame.teamA} vs ${selectedGame.teamB}`}

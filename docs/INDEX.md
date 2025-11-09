@@ -12,7 +12,7 @@
 - **Component Map**: [Stat Tracker Component Map](01-project/STAT_TRACKER_COMPONENT_MAP.md)
 
 ### **For Product Managers**
-- **Current PRD**: [PRD Current v2.0](01-project/PRD_CURRENT.md)
+- **Current PRD**: [PRD Current v2.1](01-project/PRD_CURRENT.md)
 - **Feature Status**: [Features Complete](01-project/FEATURES_COMPLETE.md)
 - **Project Status**: [Project Status](01-project/PROJECT_STATUS.md)
 
@@ -68,6 +68,7 @@
 - **MOBILE_ADVANTAGE_SECTION.md** - Mobile advantage section documentation
 - **SMART_SEQUENCES_IMPLEMENTATION.md** - Smart sequences feature
 - **coach-team-card/COACH_TEAM_CARD_IMPLEMENTATION.md** - Coach team management UI & services
+- **stat-tracker/AUTOMATION_PRESETS_GUIDE.md** - Automation presets comparison + demo workflow
 - **Authentication** - Auth system documentation
 - **Dashboards** - Dashboard documentation (Player, Organizer; Coach dashboard covered in coach-team-card)
 - **Live-viewer** - Live viewer documentation
@@ -180,6 +181,6 @@
 
 ---
 
-**Last Updated**: November 8, 2025  
+**Last Updated**: November 9, 2025  
 **Maintained By**: Development Team  
 **Status**: ✅ Complete and Current

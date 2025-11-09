@@ -1,8 +1,8 @@
 # StatJam Product Requirements Document (PRD) - Current Version
 
-**Version**: 2.0  
-**Date**: October 30, 2025  
-**Status**: Production Ready (v0.15.0+)  
+**Version**: 2.1  
+**Date**: November 9, 2025  
+**Status**: Production Ready (v0.15.1)  
 **Previous Version**: [LEGACY_PRD_ORIGINAL.md](../08-archive/LEGACY_PRD_ORIGINAL.md)
 
 ---
@@ -80,10 +80,11 @@ StatJam is a professional-grade sports tournament management platform built for 
 - **Foul Possession Logic**: Technical/flagrant foul possession retention
 
 #### **Pre-Flight Check System**
-- **Automation Presets**: Minimal, Balanced, Full Automation
+- **Automation Presets**: Minimal (manual), Balanced (recommended), Full Automation (NBA workflow)
 - **Custom Settings**: Per-game automation configuration
 - **Settings Hierarchy**: Game → Tournament → Default settings
 - **Real-time Configuration**: Before game launch
+- **Demo Training Support**: Presets persisted for demo games; Minimal disables sequences entirely
 
 #### **Modal System** (10 Specialized Modals)
 - Shot Clock Violation Modal
@@ -252,6 +253,7 @@ StatJam is a professional-grade sports tournament management platform built for 
 - Permissions-Policy headers
 - CORS validation with origin whitelist
 - XSS protection with DOMPurify
+- Demo RLS policies for `game_stats`, `stats`, and `games` enabling private training environments
 
 #### **User Management**
 - Role-based access control (organizer, stat_admin, coach, player)

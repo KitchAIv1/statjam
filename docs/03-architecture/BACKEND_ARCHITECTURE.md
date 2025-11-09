@@ -34,6 +34,14 @@
 
 ---
 
+## ✅ November 2025 Backend Update
+- **Demo RLS Hardening**: Added migrations `008`, `009`, `010` so stat admins can safely track demo games (game_stats, stats, games update policies now include `is_demo = true`)
+- **Automation Persistence**: `GameServiceV3.updateGameAutomation` can now PATCH demo games thanks to revised `games_update_policy`
+- **Documentation**: Demo runbook updated (`database/DEMO_GAME_RLS_FIX_INSTRUCTIONS.md`) and automation presets guide published
+- **Tracker UI**: `TopScoreboardV3` demotes live badge to `DEMO` for training games, ensuring architecture reflects UI expectations
+
+---
+
 ## 📊 **DATABASE SCHEMA (ACTUAL IMPLEMENTATION)**
 
 ### Core Tables (Verified via Code Analysis)

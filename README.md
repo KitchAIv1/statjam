@@ -17,8 +17,8 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 ## 🎯 **Current Status: 🚀 MVP1 LIVE IN PRODUCTION (v0.15.0+)** 
 
 **Phase**: MVP1 Live - Production-Ready Platform with Advanced Automation  
-**Version**: 0.15.0+  
-**Last Updated**: October 30, 2025
+**Version**: 0.15.1  
+**Last Updated**: November 9, 2025  
 **Status**: ✅ **MVP1 LIVE** - Complete MVP with NBA-level automation now in production
 
 **Authentication**: ✅ Centralized Auth Context with JWT Auto-Refresh  
@@ -33,7 +33,7 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 **Validation**: ✅ Comprehensive Input Validation + Error Handling  
 **Notifications**: ✅ Toast Notifications for All User Actions  
 **Architecture**: ✅ Enterprise-Grade Foundation Complete  
-**Automation Suite**: ✅ NBA-Level Clock, Possession, Sequence Automation  
+**Automation Suite**: ✅ NBA-Level Clock, Possession, Sequence Automation + Preset Controls  
 **Coach System**: ✅ Complete Team Management with Mixed Rosters  
 **Pre-Flight Check**: ✅ Game-Specific Automation Configuration  
 **Shot Clock Violations**: ✅ Automatic Detection and Recording  
@@ -52,6 +52,7 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 - 🏗️ **Architecture**: [System Architecture](docs/03-architecture/BACKEND_ARCHITECTURE.md)
 - 🔐 **Authentication**: [Auth V2 Guide](docs/04-features/authentication/AUTH_V2_GUIDE.md)
 - 🏀 **Live Tracking**: [Live Tracking Victory](docs/04-fixes/LIVE_TRACKING_VICTORY.md)
+- 🤖 **Automation Presets**: [Automation Guide](docs/04-features/stat-tracker/AUTOMATION_PRESETS_GUIDE.md)
 - 🛠️ **Raw HTTP Pattern**: [Enterprise Integration](docs/03-architecture/RAW_HTTP_PATTERN.md)
 - 🔍 **Troubleshooting**: [Common Issues](docs/06-troubleshooting/COMMON_ISSUES.md)
 
@@ -74,6 +75,16 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 - ✅ **Timeout Management**: Interactive modal with countdown timer, clock auto-stop, type selection (Full/30s)
 - ✅ **Responsive Design**: Mobile, tablet, and desktop optimized
 - ✅ **Shot Clock Integration**: Compact mobile and desktop layouts
+- ✅ **Automation Presets**: Minimal (manual), Balanced (recommended), Full (NBA-level) with visual comparison guide  
+- ✅ **Demo-Friendly**: Stat admins can launch private demo games without affecting live data
+
+### **📘 Automation & Demo Training**
+- ✅ **Automation Guide Page**: `/dashboard/stat-admin/automation-guide` shows a feature-by-feature preset comparison
+- ✅ **Minimal Mode**: Fully manual tracking mode with sequences disabled for training scenarios
+- ✅ **Balanced Mode**: Smart prompts and clock automation with manual override
+- ✅ **Full Automation**: Maximum automation including foul enforcement and undo history
+- ✅ **Private Demo System**: Demo games, stats, and tracker banner visible only to stat admins (no public exposure)
+- ✅ **Demo RLS Policies**: Updated `game_stats`, `stats`, and `games` RLS to allow safe demo tracking and automation updates
 
 ### **📺 Live Viewer System V2**
 - ✅ **Silent Updates**: No loading screens on real-time data changes
@@ -139,6 +150,7 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 - ✅ **Performance Optimized**: Lazy loading, dynamic imports, WebP images, SEO meta tags
 - ✅ **Social Sharing**: Open Graph and Twitter Card support
 - ✅ **Company Branding**: Footer includes "© 2025 StatJam by Stratpremier. All Rights Reserved."
+- ✅ **Automation CTA**: Highlights smart automation with links to the new stat admin guide
 
 **Performance Metrics**:
 - 40% reduction in initial bundle size (lazy loading)

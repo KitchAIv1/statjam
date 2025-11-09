@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.1] - 2025-11-09
+
+### 🚀 Stat Admin Demo + Automation Presets
+- **Added**: Stat admin automation comparison guide at `/dashboard/stat-admin/automation-guide`
+- **Added**: Reusable `AutomationPresetsComparison` component with Minimal/Balanced/Full breakdown
+- **Fixed**: Minimal preset now disables assist/rebound/block/free-throw sequences entirely
+- **Added**: DEMO badge appears in `TopScoreboardV3` when tracking demo games
+- **Updated**: Pre-flight modal persists automation settings per game via `GameServiceV3.updateGameAutomation`
+
+### 🛡️ Demo Game RLS Hardening
+- **Migration 008**: `game_stats` policies allow stat admins to track demo games
+- **Migration 009**: `stats` table policies allow aggregate updates for demo games
+- **Migration 010**: `games` update policy allows stat admins to save demo automation presets
+- **Documentation**: `database/DEMO_GAME_RLS_FIX_INSTRUCTIONS.md` updated with new runbook
+
+### 🧭 Documentation Refresh
+- **README**: Added Automation & Demo Training section + updated status/version
+- **STAT_TRACKER_V3.md**: Logged November 2025 enhancements and demo support
+- **New**: `docs/04-features/stat-tracker/AUTOMATION_PRESETS_GUIDE.md` covering presets, QA checklist, and file references
+- **Changelog**: Created current entry (this section)
+
+### ✅ QA Checklist
+- Launch demo tracker → Minimal preset shows zero prompts
+- Balanced preset displays prompts + clock automation
+- Full preset enables foul enforcement + undo stack
+- `games.automation_settings` stores selected preset
+- Demo stats remain restricted to stat admin dashboard and tracker
+
 ---
 
 ## [0.14.4] - 2025-01-XX
