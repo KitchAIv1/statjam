@@ -1421,6 +1421,7 @@ function StatTrackerV3Content() {
           onShotClockReset={tracker.resetShotClock}
           onShotClockSetTime={tracker.setShotClockTime}
           gameStatus={tracker.gameStatus}
+          isDemo={gameData.is_demo}
         />
 
         {coachMode && tracker.gameStatus === 'in_progress' && !dismissedCompletionReminder && (

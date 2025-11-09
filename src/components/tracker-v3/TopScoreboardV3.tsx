@@ -36,6 +36,8 @@ interface TopScoreboardV3Props {
   onBack?: () => void;
   // ✅ Game Status
   gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime';
+  // ✅ Demo Flag
+  isDemo?: boolean;
 }
 
 export function TopScoreboardV3({
@@ -66,7 +68,9 @@ export function TopScoreboardV3({
   // Navigation Props
   onBack,
   // ✅ Game Status
-  gameStatus = 'in_progress'
+  gameStatus = 'in_progress',
+  // ✅ Demo Flag
+  isDemo = false
 }: TopScoreboardV3Props) {
 
   // NEW: Edit mode state
@@ -140,9 +144,23 @@ export function TopScoreboardV3({
           </Button>
         )}
         
-        {/* LIVE/ENDED Indicator - Top Right */}
+        {/* LIVE/DEMO/ENDED Indicator - Top Right */}
         <div className="flex items-center gap-2 pointer-events-auto">
-          {gameStatus === 'completed' || gameStatus === 'cancelled' ? (
+          {isDemo ? (
+            <>
+              <Badge 
+                variant="outline"
+                className="text-amber-600 border-amber-500 bg-amber-500/10 text-xs font-bold uppercase"
+              >
+                DEMO
+              </Badge>
+              
+              <div 
+                className="w-2 h-2 rounded-full bg-amber-500"
+                title="Demo Mode"
+              />
+            </>
+          ) : gameStatus === 'completed' || gameStatus === 'cancelled' ? (
             <>
               <Badge 
                 variant="destructive"
