@@ -578,7 +578,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
         <CoachTournamentSearchModal
           team={team}
           onClose={() => setShowTournamentSearch(false)}
-          onTournamentLinked={() => {
+          onTournamentAttached={() => {
             setShowTournamentSearch(false);
             if (team.coach_id) {
               invalidateCoachTeams(team.coach_id);
