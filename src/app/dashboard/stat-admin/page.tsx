@@ -671,10 +671,16 @@ const StatAdminDashboard = () => {
                           
                           <div style={{ 
                             ...styles.toolStatus, 
-                            ...styles.statusPending,
+                            ...(game.is_demo ? {
+                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                              color: '#fff',
+                              fontWeight: '700',
+                              textTransform: 'uppercase' as const,
+                              letterSpacing: '0.5px'
+                            } : styles.statusPending),
                             alignSelf: 'center'
                           }}>
-                            {game.status}
+                            {game.is_demo ? 'DEMO' : game.status}
                           </div>
                         </div>
                       </div>
