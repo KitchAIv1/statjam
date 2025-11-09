@@ -52,6 +52,7 @@ interface GameData {
   team_a_name?: string | null;
   team_b_name?: string | null;
   opponent_name?: string | null; // ✅ Coach mode: Opponent name from coach input
+  is_demo?: boolean; // ✅ Demo game flag
 }
 
 interface Player {
@@ -1369,6 +1370,19 @@ function StatTrackerV3Content() {
     <ErrorBoundary>
       <div className="min-h-screen overflow-y-auto" style={{ background: 'linear-gradient(135deg, #1f2937, #111827)' }}>
         <div className="container mx-auto px-3 py-3 max-w-7xl min-h-screen flex flex-col">
+        
+        {/* Demo Banner - Only shown for demo games */}
+        {gameData?.is_demo && (
+          <div className="mb-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white p-3 rounded-lg shadow-lg border-2 border-amber-400">
+            <div className="flex items-center justify-center gap-2 font-semibold">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+              </svg>
+              <span>🎯 DEMO MODE - This is a practice game for training purposes</span>
+            </div>
+          </div>
+        )}
+        
         {/* Top Scoreboard & Clock with Integrated Shot Clock */}
         <TopScoreboardV3
           onBack={() => {

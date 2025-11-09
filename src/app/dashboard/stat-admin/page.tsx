@@ -11,7 +11,7 @@ import { NavigationHeader } from '@/components/NavigationHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar } from 'lucide-react';
+import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar, Eye, Lightbulb } from 'lucide-react';
 import { PreFlightCheckModal } from '@/components/tracker-v3/modals/PreFlightCheckModal';
 import { AutomationFlags } from '@/lib/types/automation';
 
@@ -553,7 +553,41 @@ const StatAdminDashboard = () => {
                   {/* Games for this organizer */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '16px' }}>
                     {(organizerGroup.games || []).map((game: any) => (
-                      <div key={game.id} style={styles.toolCard}>
+                      <div 
+                        key={game.id} 
+                        style={{
+                          ...styles.toolCard,
+                          ...(game.is_demo ? {
+                            border: '2px solid #f59e0b',
+                            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)',
+                            position: 'relative' as const
+                          } : {})
+                        }}
+                      >
+                        {/* Demo Badge */}
+                        {game.is_demo && (
+                          <div style={{
+                            position: 'absolute' as const,
+                            top: '12px',
+                            right: '12px',
+                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                            color: '#fff',
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                            textTransform: 'uppercase' as const,
+                            letterSpacing: '0.5px'
+                          }}>
+                            <Lightbulb style={{ width: '12px', height: '12px' }} />
+                            Demo
+                          </div>
+                        )}
+                        
                         <div style={styles.toolIcon}>
                           <Trophy style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
                         </div>
@@ -599,6 +633,42 @@ const StatAdminDashboard = () => {
                             <Zap size={16} />
                             {launchingTracker === game.id ? 'Launching...' : 'Launch Tracker'}
                           </button>
+                          
+                          {/* Eye Viewer Button - Only for Demo Games */}
+                          {game.is_demo && (
+                            <button
+                              onClick={() => {
+                                router.push(`/game-viewer/${game.id}`);
+                              }}
+                              style={{
+                                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '10px 16px',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                                transition: 'all 0.3s ease'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0px)';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                              }}
+                            >
+                              <Eye size={16} />
+                              View Demo
+                            </button>
+                          )}
+                          
                           <div style={{ 
                             ...styles.toolStatus, 
                             ...styles.statusPending,

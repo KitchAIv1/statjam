@@ -77,11 +77,11 @@ export class StatAdminDashboardService {
         return cached;
       }
 
-      // ✅ STEP 1: Fetch games (essential data first)
-      console.log('📊 Step 1: Fetching games...');
+      // ✅ STEP 1: Fetch assigned games AND demo games
+      console.log('📊 Step 1: Fetching assigned + demo games...');
       const games = await this.makeRequest<any>('games', {
-        'select': 'id,tournament_id,team_a_id,team_b_id,start_time,status,created_at',
-        'stat_admin_id': `eq.${statAdminId}`
+        'select': 'id,tournament_id,team_a_id,team_b_id,start_time,status,created_at,is_demo',
+        'or': `(stat_admin_id.eq.${statAdminId},is_demo.eq.true)`
       });
 
       if (!games || games.length === 0) {
@@ -147,6 +147,7 @@ export class StatAdminDashboardService {
           status: game.status,
           tournamentId: game.tournament_id,
           createdAt: game.created_at,
+          is_demo: game.is_demo || false, // ✅ Include demo flag
           tournament: tournament, // Include full tournament object for automation flags
           organizer: organizer ? {
             id: organizer.id,
@@ -156,8 +157,13 @@ export class StatAdminDashboardService {
         };
       });
 
-      // Sort by creation date (newest first)
+      // Sort: Demo games first, then by creation date (newest first)
       const sortedGames = transformedGames.sort((a: any, b: any) => {
+        // Demo games always come first
+        if (a.is_demo && !b.is_demo) return -1;
+        if (!a.is_demo && b.is_demo) return 1;
+        
+        // Otherwise sort by date
         const dateA = new Date(a.createdAt || a.scheduledDate);
         const dateB = new Date(b.createdAt || b.scheduledDate);
         return dateB.getTime() - dateA.getTime();
