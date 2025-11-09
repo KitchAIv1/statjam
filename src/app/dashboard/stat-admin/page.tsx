@@ -457,28 +457,28 @@ const StatAdminDashboard = () => {
                 className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 border-orange-200 dark:border-orange-800 cursor-pointer overflow-hidden"
                 onClick={() => router.push('/dashboard/stat-admin/automation-guide')}
               >
-                <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20">
-                  <CardHeader>
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg">
-                        <BookOpen className="w-7 h-7 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-xl text-gray-900 dark:text-white flex items-center gap-2">
-                          Tracker Automation Guide
-                          <span className="text-xs px-2 py-1 bg-orange-500 text-white rounded-full font-normal">NEW</span>
-                        </CardTitle>
-                        <CardDescription className="text-gray-600 dark:text-gray-400 mt-1">
-                          Learn the differences between Minimal, Balanced, and Full automation modes
-                        </CardDescription>
-                      </div>
-                      <div className="text-orange-600 dark:text-orange-400">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
+                <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                      <BookOpen className="w-7 h-7 text-white" />
                     </div>
-                  </CardHeader>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                          Tracker Automation Guide
+                        </h3>
+                        <span className="text-xs px-2 py-1 bg-orange-500 text-white rounded-full font-medium flex-shrink-0">NEW</span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Learn the differences between Minimal, Balanced, and Full automation modes
+                      </p>
+                    </div>
+                    <div className="text-orange-600 dark:text-orange-400 flex-shrink-0">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </Card>
             </div>
