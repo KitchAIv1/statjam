@@ -405,29 +405,54 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
         </CardHeader>
 
         <CardContent className="pt-0">
-          {/* Join Tournament CTA - Only show if team is NOT attached to a tournament */}
-          {!team.tournament_id && (
-            <div className="border-t pt-4 mb-4">
-              <Alert className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-                <Trophy className="w-4 h-4 text-blue-600" />
-                <AlertTitle className="text-blue-900 font-semibold">Ready to compete?</AlertTitle>
-                <AlertDescription className="text-blue-700 text-sm mt-1">
-                  Join a tournament to track official games and compete with other teams.
-                </AlertDescription>
-                <Button
-                  onClick={() => setShowTournamentSearch(true)}
-                  size="sm"
-                  className="mt-3 gap-2 bg-blue-600 hover:bg-blue-700"
-                >
-                  <Trophy className="w-4 h-4" />
-                  Browse Tournaments
-                </Button>
-              </Alert>
+          {/* Tournament Status Section */}
+          {!team.tournament_id ? (
+            // No tournament attached - Show CTA
+            <div className="pt-4">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex flex-col gap-3">
+                  {/* Icon + Text Content */}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <Trophy className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-blue-900 font-semibold text-base">Ready to compete?</h3>
+                      <p className="text-blue-700 text-sm leading-relaxed mt-0.5">
+                        Join a tournament to track official games and compete with other teams.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Button - Full width for better card layout */}
+                  <Button
+                    onClick={() => setShowTournamentSearch(true)}
+                    size="sm"
+                    className="gap-2 bg-blue-600 hover:bg-blue-700 w-full"
+                  >
+                    <Trophy className="w-4 h-4" />
+                    Browse Tournaments
+                  </Button>
+                </div>
+              </div>
             </div>
-          )}
+          ) : team.approval_status === 'pending' ? (
+            // Tournament attached but pending approval
+            <div className="pt-4">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-amber-900 font-semibold text-base">Awaiting Approval</h3>
+                    <p className="text-amber-700 text-sm leading-relaxed mt-0.5">
+                      Your tournament join request is pending organizer approval. You'll be notified once approved.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {/* Game History Section */}
-          <div className="border-t pt-4">
+          <div className="border-t pt-4 mt-4">
             <button
               onClick={() => setGamesExpanded(!gamesExpanded)}
               className="flex items-center justify-between w-full text-left mb-3 hover:opacity-80 transition-opacity"
