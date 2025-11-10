@@ -16,7 +16,8 @@ import { formatGameDate } from '@/lib/utils/gameViewerUtils';
 import { StatusBadge } from './StatusBadge';
 import { ThemeToggle } from './ThemeToggle';
 import { GameViewerTheme } from '../hooks/useGameViewerTheme';
-import { Shield, Clock, AlertCircle } from 'lucide-react';
+import { Clock, AlertCircle } from 'lucide-react';
+import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
 
 interface GameHeaderProps {
   theme: GameViewerTheme;
@@ -25,6 +26,8 @@ interface GameHeaderProps {
     id: string;
     teamAName: string;
     teamBName: string;
+    teamALogo?: string;
+    teamBLogo?: string;
     status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime';
     startTime: string;
     quarter: number;
@@ -79,14 +82,17 @@ const GameHeader: React.FC<GameHeaderProps> = ({ theme, onThemeToggle, game, isL
       </div>
 
       {/* Main Header - Scores - Responsive padding and gaps */}
-      <div className="flex items-center justify-between gap-2 px-2 sm:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-center gap-6 sm:gap-12 px-4 sm:px-10 py-4 sm:py-6 max-w-6xl mx-auto">
         {/* Away Team */}
-        <TeamDisplay
-          teamName={game.teamBName}
-          score={game.awayScore}
-          isLeading={game.awayScore > game.homeScore}
-          side="right"
-        />
+        <div className="flex-1 flex justify-end">
+          <TeamDisplay
+            teamName={game.teamBName}
+            logoUrl={game.teamBLogo}
+            score={game.awayScore}
+            isLeading={game.awayScore > game.homeScore}
+            side="right"
+          />
+        </div>
 
         {/* Center - Quarter & Status - Responsive */}
         <div className="flex flex-col items-center gap-1 sm:gap-2 min-w-[60px] sm:min-w-[120px] text-center flex-shrink-0">
@@ -101,12 +107,15 @@ const GameHeader: React.FC<GameHeaderProps> = ({ theme, onThemeToggle, game, isL
         </div>
 
         {/* Home Team */}
-        <TeamDisplay
-          teamName={game.teamAName}
-          score={game.homeScore}
-          isLeading={game.homeScore > game.awayScore}
-          side="left"
-        />
+        <div className="flex-1 flex justify-start">
+          <TeamDisplay
+            teamName={game.teamAName}
+            logoUrl={game.teamALogo}
+            score={game.homeScore}
+            isLeading={game.homeScore > game.awayScore}
+            side="left"
+          />
+        </div>
       </div>
 
       {/* Stats Bar */}
@@ -141,27 +150,44 @@ const GameHeader: React.FC<GameHeaderProps> = ({ theme, onThemeToggle, game, isL
  */
 function TeamDisplay({ 
   teamName, 
+  logoUrl,
   score, 
   isLeading, 
   side 
 }: { 
   teamName: string; 
+  logoUrl?: string;
   score: number; 
   isLeading: boolean; 
   side: 'left' | 'right';
 }) {
   const flexDirection = side === 'left' ? 'flex-row' : 'flex-row-reverse';
+  const teamInitial = teamName?.charAt(0)?.toUpperCase() || 'T';
+  const hasLogo = Boolean(logoUrl);
+  const avatarClasses = hasLogo
+    ? 'w-[3.75rem] h-[3.75rem] sm:w-[4.5rem] sm:h-[4.5rem] rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 border border-border/40 bg-background shadow-md'
+    : 'w-[3.75rem] h-[3.75rem] sm:w-[4.5rem] sm:h-[4.5rem] rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white text-lg sm:text-xl font-bold shadow-lg shadow-orange-500/20 flex-shrink-0';
   
   return (
     <div className={`flex ${flexDirection} items-center gap-2 sm:gap-4`}>
       {/* Team Logo - Responsive size */}
-      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white text-lg sm:text-xl font-bold shadow-lg shadow-orange-500/20 flex-shrink-0">
-        {teamName.charAt(0).toUpperCase()}
+      <div className={avatarClasses}>
+        {hasLogo ? (
+          <ImageWithFallback
+            src={logoUrl!}
+            alt={`${teamName} logo`}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <span>{teamInitial}</span>
+        )}
       </div>
       
       {/* Team Info - Score above, name below, same alignment for both teams */}
       <div className="flex flex-col items-center min-w-0">
-        <div className={`text-2xl sm:text-3xl font-extrabold ${isLeading ? 'text-foreground' : 'text-muted-foreground'}`}>
+        <div className={`text-3xl sm:text-4xl font-extrabold ${isLeading ? 'text-foreground' : 'text-muted-foreground'}`}>
           {score}
         </div>
         <div className="text-xs sm:text-sm font-bold text-foreground truncate max-w-[80px] sm:max-w-[120px]">

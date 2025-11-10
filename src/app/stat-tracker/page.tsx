@@ -29,8 +29,8 @@ const StatTracker = () => {
   const [gameData, setGameData] = useState<Game | null>(null);
   const [teamAData, setTeamAData] = useState<Player[]>([]);
   const [teamBData, setTeamBData] = useState<Player[]>([]);
-  const [teamAInfo, setTeamAInfo] = useState<{ id: string; name: string } | null>(null);
-  const [teamBInfo, setTeamBInfo] = useState<{ id: string; name: string } | null>(null);
+  const [teamAInfo, setTeamAInfo] = useState<{ id: string; name: string; logo?: string } | null>(null);
+  const [teamBInfo, setTeamBInfo] = useState<{ id: string; name: string; logo?: string } | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
   

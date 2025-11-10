@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { use, useMemo, useCallback } from 'react';
+import React, { use, useMemo, useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameViewerV2 } from '@/hooks/useGameViewerV2';
 import { useTeamStats } from '@/hooks/useTeamStats';
@@ -21,6 +21,7 @@ import { TeamStatsTab } from './components/TeamStatsTab';
 import { LiveIndicator } from './components/LiveIndicator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { TeamService } from '@/lib/services/tournamentService';
 
 interface GameViewerPageProps {
   params: Promise<{ gameId: string }>;
@@ -30,6 +31,46 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   const { gameId } = use(params);
   const { game, stats, plays, loading, error } = useGameViewerV2(gameId);
   const { theme, isDark, toggleTheme } = useGameViewerTheme();
+  const [teamALogo, setTeamALogo] = useState<string | null>(null);
+  const [teamBLogo, setTeamBLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadTeamLogos() {
+      if (!game?.team_a_id && !game?.team_b_id) {
+        if (isMounted) {
+          setTeamALogo(null);
+          setTeamBLogo(null);
+        }
+        return;
+      }
+
+      try {
+        const [teamAInfo, teamBInfo] = await Promise.all([
+          game?.team_a_id ? TeamService.getTeamInfo(game.team_a_id) : Promise.resolve(null),
+          game?.team_b_id ? TeamService.getTeamInfo(game.team_b_id) : Promise.resolve(null),
+        ]);
+
+        if (!isMounted) return;
+
+        setTeamALogo(teamAInfo?.logo ?? null);
+        setTeamBLogo(teamBInfo?.logo ?? null);
+      } catch (err) {
+        console.error('❌ Failed to load team logos for game viewer:', err);
+        if (isMounted) {
+          setTeamALogo(null);
+          setTeamBLogo(null);
+        }
+      }
+    }
+
+    void loadTeamLogos();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [game?.team_a_id, game?.team_b_id]);
 
   // Prefetch team data for instant tab switching
   const teamAPrefetch = useTeamStats(gameId, game?.team_a_id || '', { 
@@ -126,6 +167,8 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
             ...game,
             teamAName: game.team_a_name || 'Team A',
             teamBName: game.team_b_name || 'Team B',
+            teamALogo: teamALogo || undefined,
+            teamBLogo: teamBLogo || undefined,
             homeScore: game.home_score || 0,
             awayScore: game.away_score || 0,
             status: game.status || 'scheduled',

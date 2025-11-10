@@ -1170,13 +1170,13 @@ export class TeamService {
   }
 
   // Get basic team info by ID
-  static async getTeamInfo(teamId: string): Promise<{ id: string; name: string } | null> {
+  static async getTeamInfo(teamId: string): Promise<{ id: string; name: string; logo?: string } | null> {
     try {
       console.log('🔍 TeamService: Fetching team info for:', teamId);
       
       const { data: team, error } = await supabase
         .from('teams')
-        .select('id, name')
+        .select('id, name, logo_url')
         .eq('id', teamId)
         .single();
 
@@ -1186,7 +1186,11 @@ export class TeamService {
       }
 
       console.log('🔍 TeamService: Found team info:', team);
-      return team;
+      return {
+        id: team.id,
+        name: team.name,
+        logo: team.logo_url || undefined,
+      };
     } catch (error) {
       console.error('Error getting team info:', error);
       return null;
