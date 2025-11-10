@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { OrganizerProfile, CoachProfile, StatAdminProfile, ProfileShareData } from '@/lib/types/profile';
 import { getCountryName } from '@/data/countries';
+import { SocialFooter } from '@/components/shared/SocialFooter';
 
 interface ProfileCardProps {
   profileData: OrganizerProfile | CoachProfile | StatAdminProfile;
@@ -273,31 +274,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
         </div>
 
         {/* StatJam Social Footer */}
-        <div className="border-t border-border/50 bg-muted/30 px-6 py-3 mt-6">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Follow StatJam for tips & updates</span>
-            <div className="flex items-center gap-2">
-              <a
-                href="https://www.facebook.com/people/Statjam/61583861420167/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-              >
-                <Facebook className="w-3 h-3" />
-                <span className="hidden sm:inline">Facebook</span>
-              </a>
-              <a
-                href="https://instagram.com/stat.jam"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2 py-1 rounded-md bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white transition-colors"
-              >
-                <Instagram className="w-3 h-3" />
-                <span className="hidden sm:inline">Instagram</span>
-              </a>
-            </div>
-          </div>
-        </div>
+        <SocialFooter variant="compact" />
       </CardContent>
     </Card>
   );

@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabase";
 import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3 } from "lucide-react";
 import { Skeleton, SkeletonStat } from "@/components/ui/skeleton";
 import { getCountryName } from "@/data/countries";
+import { SocialFooter } from "./shared/SocialFooter";
 
 const defaultPlayerData = {
   name: "",
@@ -489,6 +490,9 @@ export function PlayerDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* StatJam Social Footer */}
+                <SocialFooter />
 
                 {/* Performance Chart - Glass Effect */}
                 <Card className="glass-card-light relative overflow-hidden">
