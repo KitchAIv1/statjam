@@ -1,24 +1,24 @@
 // ============================================================================
-// USE ORGANIZER PROFILE HOOK
+// USE COACH PROFILE HOOK
 // ============================================================================
-// Purpose: Custom hook for organizer profile data and actions
+// Purpose: Custom hook for coach profile data and actions
 // Follows .cursorrules: <100 lines, single responsibility
 // ============================================================================
 
 import { useState, useEffect } from 'react';
-import { OrganizerProfile, ProfileUpdateRequest } from '@/lib/types/profile';
+import { CoachProfile, ProfileUpdateRequest } from '@/lib/types/profile';
 import { ProfileService } from '@/lib/services/profileService';
 
-interface UseOrganizerProfileReturn {
-  profileData: OrganizerProfile | null;
+interface UseCoachProfileReturn {
+  profileData: CoachProfile | null;
   loading: boolean;
   error: string | null;
   updateProfile: (updates: ProfileUpdateRequest) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
 }
 
-export function useOrganizerProfile(userId: string): UseOrganizerProfileReturn {
-  const [profileData, setProfileData] = useState<OrganizerProfile | null>(null);
+export function useCoachProfile(userId: string): UseCoachProfileReturn {
+  const [profileData, setProfileData] = useState<CoachProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +28,7 @@ export function useOrganizerProfile(userId: string): UseOrganizerProfileReturn {
       setLoading(true);
       setError(null);
       
-      const fetchedProfile = await ProfileService.getOrganizerProfile(userId);
+      const fetchedProfile = await ProfileService.getCoachProfile(userId);
       
       if (fetchedProfile) {
         setProfileData(fetchedProfile);
@@ -36,7 +36,7 @@ export function useOrganizerProfile(userId: string): UseOrganizerProfileReturn {
         setError('Failed to load profile');
       }
     } catch (err) {
-      console.error('❌ Error fetching organizer profile:', err);
+      console.error('❌ Error fetching coach profile:', err);
       setError('Failed to load profile');
     } finally {
       setLoading(false);

@@ -17,6 +17,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Upload, X } from 'lucide-react';
 import { OrganizerProfile, CoachProfile, ProfileUpdateRequest, SocialLinks } from '@/lib/types/profile';
 import { supabase } from '@/lib/supabase';
+import { SearchableCountrySelect } from '@/components/shared/SearchableCountrySelect';
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -48,16 +49,74 @@ export function ProfileEditModal({ isOpen, onClose, profileData, onSave }: Profi
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Handle photo selection
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Compress image before upload
+  const compressImage = async (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Max dimensions: 800x800 (sufficient for profile photos)
+          const maxSize = 800;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > maxSize) {
+              height = (height * maxSize) / width;
+              width = maxSize;
+            }
+          } else {
+            if (height > maxSize) {
+              width = (width * maxSize) / height;
+              height = maxSize;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Convert to blob with quality 0.85 (good balance of quality/size)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                resolve(file); // Fallback to original
+              }
+            },
+            'image/jpeg',
+            0.85
+          );
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle photo selection with compression
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhotoFile(file);
+      // Show preview immediately
       const reader = new FileReader();
       reader.onloadend = () => {
         setPhotoPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      
+      // Compress image in background
+      const compressedFile = await compressImage(file);
+      setPhotoFile(compressedFile);
     }
   };
 
@@ -90,17 +149,20 @@ export function ProfileEditModal({ isOpen, onClose, profileData, onSave }: Profi
     }
   };
 
-  // Handle save
+  // Handle save with improved feedback
   const handleSave = async () => {
     try {
       setSaving(true);
 
-      // Upload photo if changed
+      // Upload photo if changed (with progress indicator)
       let photoUrl = profileData.profilePhotoUrl;
       if (photoFile) {
         const uploadedUrl = await uploadPhoto();
         if (uploadedUrl) {
           photoUrl = uploadedUrl;
+        } else {
+          // Photo upload failed but continue with other updates
+          console.warn('⚠️ Photo upload failed, saving other profile changes');
         }
       }
 
@@ -113,15 +175,18 @@ export function ProfileEditModal({ isOpen, onClose, profileData, onSave }: Profi
         profilePhotoUrl: photoUrl
       };
 
+      // ⚡ Save happens in background, UI updates immediately via optimistic update
       const success = await onSave(updates);
+      
       if (success) {
+        // Success - close modal immediately (optimistic update already shown)
         onClose();
       } else {
-        alert('Failed to update profile. Please try again.');
+        alert('❌ Failed to update profile. Please try again.');
       }
     } catch (error) {
       console.error('❌ Error saving profile:', error);
-      alert('Failed to update profile. Please try again.');
+      alert('❌ Failed to update profile. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -200,12 +265,12 @@ export function ProfileEditModal({ isOpen, onClose, profileData, onSave }: Profi
 
           {/* Location */}
           <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              placeholder="City, Country"
+            <Label htmlFor="location">Country</Label>
+            <SearchableCountrySelect
+              value={formData.location || ''}
+              onChange={(country) => setFormData({ ...formData, location: country })}
+              disabled={saving || uploading}
+              placeholder="Type to search countries..."
             />
           </div>
 
@@ -257,7 +322,7 @@ export function ProfileEditModal({ isOpen, onClose, profileData, onSave }: Profi
             onClick={handleSave} 
             disabled={saving || uploading || !formData.name.trim()}
           >
-            {saving ? 'Saving...' : 'Save Changes'}
+            {uploading ? 'Uploading photo...' : saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { NavigationHeader } from '@/components/NavigationHeader';
@@ -12,6 +12,10 @@ import { WelcomeChecklist } from '@/components/onboarding/WelcomeChecklist';
 import { HelpPanel } from '@/components/support/HelpPanel';
 import { coachChecklistSteps, coachFAQs } from '@/config/onboarding/coachOnboarding';
 import { useCoachTeams } from '@/hooks/useCoachTeams';
+import { useCoachProfile } from '@/hooks/useCoachProfile';
+import { ProfileCard } from '@/components/profile/ProfileCard';
+import { ProfileEditModal } from '@/components/profile/ProfileEditModal';
+import { ProfileService } from '@/lib/services/profileService';
 import { Card } from '@/components/ui/card';
 import { BookOpen } from 'lucide-react';
 
@@ -29,6 +33,27 @@ const CoachDashboardContent = () => {
   
   // ⚡ Use custom hook for teams data with caching
   const { teams, loading: teamsLoading, error, invalidateCache } = useCoachTeams(user);
+  
+  // ⚡ Use custom hook for profile data
+  const { profileData, loading: profileLoading, updateProfile } = useCoachProfile(user?.id || '');
+  
+  // Profile edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Handle profile share
+  const handleShare = async () => {
+    if (!profileData) return;
+    
+    const shareData = ProfileService.generateShareData(profileData);
+    
+    try {
+      await navigator.clipboard.writeText(shareData.profileUrl);
+      alert('✅ Profile link copied to clipboard!');
+    } catch (error) {
+      console.error('❌ Error copying to clipboard:', error);
+      alert('Failed to copy link. Please try again.');
+    }
+  };
 
   // Auth protection
   useEffect(() => {
@@ -110,28 +135,27 @@ const CoachDashboardContent = () => {
       <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 text-foreground">
         <NavigationHeader />
         
-        <main className="pt-16 p-6">
-          <div className="max-w-7xl mx-auto">
+        <main className="pt-24 px-6 pb-6">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* Welcome Checklist - Collapsible onboarding */}
             <WelcomeChecklist
               role="coach"
               steps={coachChecklistSteps}
               subtitle="Complete these quick steps to get game-ready in minutes."
-              className="mt-6 mb-8"
             />
 
-
-            {/* Page Header */}
-            <div className="mb-8 mt-6 text-center">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
-                Coach Dashboard
-              </h1>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Manage your teams, track games, and connect with tournaments
-              </p>
-            </div>
+            {/* Profile Card - Replaces old page header with richer profile display */}
+            {!profileLoading && profileData && (
+              <ProfileCard
+                profileData={profileData}
+                shareData={ProfileService.generateShareData(profileData)}
+                onEdit={() => setShowEditModal(true)}
+                onShare={handleShare}
+              />
+            )}
 
             {/* Automation Guide Quick Link */}
-            <div className="mb-8">
+            <div>
               <Card
                 className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 border-orange-200 dark:border-orange-800 cursor-pointer overflow-hidden"
                 onClick={() => router.push('/dashboard/coach/automation-guide')}
@@ -177,6 +201,16 @@ const CoachDashboardContent = () => {
             }
           }}
         />
+
+        {/* Profile Edit Modal */}
+        {profileData && (
+          <ProfileEditModal
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            profileData={profileData}
+            onSave={updateProfile}
+          />
+        )}
       </div>
     </ErrorBoundary>
   );

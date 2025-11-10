@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { authPageStyles } from './styles/AuthPageStyles';
+import { COUNTRIES, POPULAR_COUNTRIES, getCountry } from '@/data/countries';
 
 interface CountrySelectorProps {
   value: string;
@@ -14,33 +15,8 @@ interface CountrySelectorProps {
   disabled?: boolean;
 }
 
-const POPULAR_COUNTRIES = [
-  { code: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' }
-];
-
-const ALL_COUNTRIES = [
-  ...POPULAR_COUNTRIES,
-  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
-  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
-  { code: 'CN', name: 'China', flag: '🇨🇳' },
-  { code: 'FR', name: 'France', flag: '🇫🇷' },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
-  { code: 'IN', name: 'India', flag: '🇮🇳' },
-  { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
-  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
-  { code: 'JP', name: 'Japan', flag: '🇯🇵' },
-  { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
-  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
-  { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
-  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
-  { code: 'TH', name: 'Thailand', flag: '🇹🇭' }
-];
+// Re-export for backward compatibility
+export { COUNTRIES as ALL_COUNTRIES, getCountryName } from '@/data/countries';
 
 export const CountrySelector: React.FC<CountrySelectorProps> = ({
   value,
@@ -50,12 +26,13 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
   const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Filter all 195+ countries
   const filteredCountries = searchQuery
-    ? ALL_COUNTRIES.filter(c => 
+    ? COUNTRIES.filter(c => 
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.code.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : ALL_COUNTRIES;
+    : COUNTRIES;
 
   const handleCountrySelect = (code: string) => {
     onChange(code);
@@ -63,7 +40,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
     setSearchQuery('');
   };
 
-  const selectedCountry = ALL_COUNTRIES.find(c => c.code === value);
+  const selectedCountry = getCountry(value);
 
   if (searchMode) {
     return (
