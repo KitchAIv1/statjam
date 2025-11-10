@@ -103,6 +103,7 @@ const CoachDashboardContent = () => {
             teams={teams}
             loading={teamsLoading}
             error={error}
+            userId={user?.id || ''}
             onTeamUpdate={invalidateCache}
           />
         );

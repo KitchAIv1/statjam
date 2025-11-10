@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import imageCompression from 'browser-image-compression';
-import { uploadPlayerPhoto, deletePlayerPhoto, uploadTournamentLogo, deleteTournamentLogo, validateImageFile, extractFilePathFromUrl } from '@/lib/services/imageUploadService';
+import { uploadPlayerPhoto, deletePlayerPhoto, uploadTournamentLogo, deleteTournamentLogo, uploadTeamLogo, deleteTeamLogo, validateImageFile, extractFilePathFromUrl } from '@/lib/services/imageUploadService';
 
 // ============================================================================
 // TYPES
@@ -15,12 +15,13 @@ import { uploadPlayerPhoto, deletePlayerPhoto, uploadTournamentLogo, deleteTourn
 
 export interface UsePhotoUploadOptions {
   userId: string;
-  photoType: 'profile' | 'pose' | 'tournament_logo';
+  photoType: 'profile' | 'pose' | 'tournament_logo' | 'team_logo';
   currentPhotoUrl?: string | null; // For cleanup of old photo
   maxSizeMB?: number;
   onSuccess?: (url: string) => void;
   onError?: (error: string) => void;
   tournamentId?: string; // Required for tournament_logo type
+  teamId?: string; // Required for team_logo type
 }
 
 export interface UsePhotoUploadReturn {
@@ -38,7 +39,7 @@ export interface UsePhotoUploadReturn {
 // ============================================================================
 
 export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadReturn {
-  const { userId, photoType, currentPhotoUrl, maxSizeMB = 5, onSuccess, onError, tournamentId } = options;
+  const { userId, photoType, currentPhotoUrl, maxSizeMB = 5, onSuccess, onError, tournamentId, teamId } = options;
 
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -127,6 +128,9 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
           if (photoType === 'tournament_logo' && currentPhotoUrl.includes('tournament-logos')) {
             await deleteTournamentLogo(currentPhotoUrl);
             console.log('✅ Old tournament logo deleted');
+          } else if (photoType === 'team_logo' && currentPhotoUrl.includes('team-logos')) {
+            await deleteTeamLogo(currentPhotoUrl);
+            console.log('✅ Old team logo deleted');
           } else if (currentPhotoUrl.includes('player-images')) {
             await deletePlayerPhoto(currentPhotoUrl);
             console.log('✅ Old player photo deleted');
@@ -147,6 +151,11 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
           throw new Error('Tournament ID required for tournament logo upload');
         }
         result = await uploadTournamentLogo(processedFile, tournamentId, userId);
+      } else if (photoType === 'team_logo') {
+        if (!teamId) {
+          throw new Error('Team ID required for team logo upload');
+        }
+        result = await uploadTeamLogo(processedFile, teamId, userId);
       } else {
         result = await uploadPlayerPhoto(processedFile, userId, photoType);
       }

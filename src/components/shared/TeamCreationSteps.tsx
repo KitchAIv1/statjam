@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IPlayerManagementService, GenericPlayer } from '@/lib/types/playerManagement';
 import { PlayerSelectionList } from './PlayerSelectionList';
+import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { UsePhotoUploadReturn } from '@/hooks/usePhotoUpload';
 
 type Step = 'info' | 'players' | 'confirm';
 
@@ -64,13 +66,15 @@ interface TeamInfoStepProps {
   coachName: string;
   onTeamNameChange: (value: string) => void;
   onCoachNameChange: (value: string) => void;
+  logoUpload?: UsePhotoUploadReturn; // Optional logo upload hook
 }
 
 export function TeamInfoStep({
   teamName,
   coachName,
   onTeamNameChange,
-  onCoachNameChange
+  onCoachNameChange,
+  logoUpload
 }: TeamInfoStepProps) {
   return (
     <div className="space-y-4">
@@ -78,6 +82,23 @@ export function TeamInfoStep({
         <Users className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-semibold">Team Information</h3>
       </div>
+
+      {/* Team Logo Upload */}
+      {logoUpload && (
+        <div className="space-y-2">
+          <Label>Team Logo (Optional)</Label>
+          <PhotoUploadField
+            label="Upload Team Logo"
+            previewUrl={logoUpload.previewUrl}
+            uploading={logoUpload.uploading}
+            progress={logoUpload.progress}
+            error={logoUpload.error}
+            onFileSelect={logoUpload.handleFileSelect}
+            onRemove={logoUpload.clearPreview}
+            onClearError={logoUpload.clearError}
+          />
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="team-name">Team Name *</Label>

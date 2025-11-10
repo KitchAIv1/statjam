@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Users, Save, ArrowRight, ArrowLeft, Check, Info, AlertCircle, Trophy, Dumbbell } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/Button";
@@ -12,8 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { CreateCoachTeamRequest, CoachPlayer } from '@/lib/types/coach';
 import { CoachPlayerSelectionList } from './CoachPlayerSelectionList';
 import { CreateCustomPlayerForm } from './CreateCustomPlayerForm';
+import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 
 interface CreateCoachTeamModalProps {
+  userId: string; // Coach ID for logo uploads
   onClose: () => void;
   onTeamCreated: () => void;
 }
@@ -29,7 +32,7 @@ interface CreateCoachTeamModalProps {
  * 
  * Follows .cursorrules: <200 lines, single responsibility
  */
-export function CreateCoachTeamModal({ onClose, onTeamCreated }: CreateCoachTeamModalProps) {
+export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateCoachTeamModalProps) {
   // Step state
   const [currentStep, setCurrentStep] = useState<'details' | 'players'>('details');
   const [createdTeamId, setCreatedTeamId] = useState<string | null>(null);
@@ -38,6 +41,24 @@ export function CreateCoachTeamModal({ onClose, onTeamCreated }: CreateCoachTeam
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addedPlayers, setAddedPlayers] = useState<CoachPlayer[]>([]);
+  const [logoUrl, setLogoUrl] = useState<string>('');
+
+  // Generate a temporary team ID for logo upload (before team exists)
+  const tempTeamId = useMemo(() => crypto.randomUUID(), []);
+
+  // Logo upload hook
+  const logoUpload = usePhotoUpload({
+    userId: userId,
+    photoType: 'team_logo',
+    teamId: tempTeamId,
+    onSuccess: (url) => {
+      setLogoUrl(url);
+      console.log('✅ Team logo uploaded:', url);
+    },
+    onError: (err) => {
+      console.error('❌ Logo upload error:', err);
+    },
+  });
   
   const [formData, setFormData] = useState<CreateCoachTeamRequest>({
     name: '',
@@ -78,9 +99,15 @@ export function CreateCoachTeamModal({ onClose, onTeamCreated }: CreateCoachTeam
       // Import coach team service
       const { CoachTeamService } = await import('@/lib/services/coachTeamService');
       
-      // Create the team
-      const team = await CoachTeamService.createTeam(formData);
+      // Create the team with logo
+      const team = await CoachTeamService.createTeam({
+        ...formData,
+        logo: logoUrl || undefined
+      });
       setCreatedTeamId(team.id);
+      
+      // Clear logo preview after successful creation
+      logoUpload.clearPreview();
       
       // Move to player management step
       setCurrentStep('players');
@@ -158,6 +185,21 @@ export function CreateCoachTeamModal({ onClose, onTeamCreated }: CreateCoachTeam
           {currentStep === 'details' ? (
             /* Step 1: Team Details */
             <div className="space-y-4">
+              {/* Team Logo Upload */}
+              <div className="space-y-2">
+                <Label>Team Logo (Optional)</Label>
+                <PhotoUploadField
+                  label="Upload Team Logo"
+                  previewUrl={logoUpload.previewUrl}
+                  uploading={logoUpload.uploading}
+                  progress={logoUpload.progress}
+                  error={logoUpload.error}
+                  onFileSelect={logoUpload.handleFileSelect}
+                  onRemove={logoUpload.clearPreview}
+                  onClearError={logoUpload.clearError}
+                />
+              </div>
+
               {/* Team Name */}
               <div className="space-y-2">
                 <Label htmlFor="team-name">Team Name *</Label>

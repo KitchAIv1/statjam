@@ -30,6 +30,7 @@ import { TeamService, TournamentService } from "@/lib/services/tournamentService
 import { useRouter } from 'next/navigation';
 import { notify } from '@/lib/services/notificationService';
 import { invalidateOrganizerDashboard, invalidateOrganizerTournaments } from '@/lib/utils/cache';
+import { getCountryName } from '@/data/countries';
 
 // Utility function for tournament status variants with enhanced styling
 function getStatusVariant(status: Tournament['status']) {
@@ -147,6 +148,12 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
         <div className="mt-2">
           <p className="text-sm text-muted-foreground line-clamp-2">{tournament.description}</p>
         </div>
+        {tournament.country && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MapPin className="w-3 h-3" />
+            <span>{getCountryName(tournament.country)}</span>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div 
@@ -1435,9 +1442,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
       </Dialog>
 
       {/* Create Team Modal */}
-      {isCreateTeamDialogOpen && selectedTournament && (
+      {isCreateTeamDialogOpen && selectedTournament && user && (
         <TeamCreationModal
           tournamentId={selectedTournament.id}
+          userId={user.id}
           service={new OrganizerPlayerManagementService()}
           onClose={() => setIsCreateTeamDialogOpen(false)}
           onTeamCreated={async () => {

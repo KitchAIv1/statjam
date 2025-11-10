@@ -430,3 +430,30 @@ export async function deleteTournamentLogo(publicUrl: string): Promise<void> {
   }
 }
 
+/**
+ * Upload team logo
+ */
+export async function uploadTeamLogo(
+  file: File,
+  teamId: string,
+  userId: string // coach_id or organizer_id
+): Promise<ImageUploadResult> {
+  return uploadImage(file, userId, {
+    bucket: 'team-logos',
+    folder: 'logos',
+    maxSizeMB: 5,
+    generateUniqueName: true,
+    filePrefix: `team-${teamId}`
+  });
+}
+
+/**
+ * Delete old team logo when replacing
+ */
+export async function deleteTeamLogo(publicUrl: string): Promise<void> {
+  const filePath = extractFilePathFromUrl(publicUrl, 'team-logos');
+  if (filePath) {
+    await deleteImage('team-logos', filePath);
+  }
+}
+

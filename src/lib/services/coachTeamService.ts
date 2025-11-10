@@ -38,6 +38,7 @@ export class CoachTeamService {
         .select(`
           id,
           name,
+          logo_url,
           coach_id,
           tournament_id,
           approval_status,
@@ -70,6 +71,7 @@ export class CoachTeamService {
           return {
             id: team.id,
             name: team.name,
+            logo: team.logo_url || undefined, // Map logo_url from database to logo
             coach_id: team.coach_id,
             tournament_id: team.tournament_id,
             approval_status: team.approval_status,
@@ -120,6 +122,7 @@ export class CoachTeamService {
         .from('teams')
         .insert({
           name: request.name,
+          logo_url: request.logo || null, // Map logo to logo_url database column
           coach_id: user.id,
           tournament_id: null, // Coach teams can exist without tournaments
           visibility: request.visibility,
@@ -136,6 +139,7 @@ export class CoachTeamService {
       return {
         id: data.id,
         name: data.name,
+        logo: data.logo_url || undefined, // Map logo_url from database to logo
         coach_id: data.coach_id,
         visibility: data.visibility,
         is_official_team: data.is_official_team,

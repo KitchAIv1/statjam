@@ -539,13 +539,14 @@ export class TournamentService {
 
 // Team Service
 export class TeamService {
-  static async createTeam(data: { name: string; coach?: string; tournamentId: string }): Promise<Team> {
+  static async createTeam(data: { name: string; coach?: string; logo?: string; tournamentId: string }): Promise<Team> {
     try {
       // Only include fields that exist in the database schema
       // Organizer-created teams are auto-approved (no join request needed)
       const teamData = {
         name: data.name,
         tournament_id: data.tournamentId,
+        logo_url: data.logo || null, // Map logo to logo_url database column
         approval_status: 'approved' as const,
       };
 
@@ -566,7 +567,7 @@ export class TeamService {
       return {
         id: team.id,
         name: team.name,
-        logo: '', // Default empty logo since column doesn't exist
+        logo: team.logo_url || undefined, // Map logo_url from database to logo
         players: [], // TODO: Implement player fetching
         captain: {
           id: '',

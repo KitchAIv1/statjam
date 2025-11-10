@@ -14,6 +14,7 @@ import { User } from './user';
 export interface CoachTeam {
   id: string;
   name: string;
+  logo?: string; // Team logo URL from Supabase Storage
   coach_id: string;
   tournament_id?: string; // Optional - null for independent teams
   approval_status?: 'pending' | 'approved' | 'rejected'; // Tournament join approval status
@@ -121,6 +122,7 @@ export interface TeamImportToken {
 
 export interface CreateCoachTeamRequest {
   name: string;
+  logo?: string; // Team logo URL from Supabase Storage
   level?: string;
   location?: {
     country?: string;
@@ -134,6 +136,7 @@ export interface CreateCoachTeamRequest {
 
 export interface UpdateCoachTeamRequest {
   name?: string;
+  logo?: string; // Team logo URL from Supabase Storage
   level?: string;
   location?: {
     country?: string;

@@ -10,14 +10,16 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { IPlayerManagementService, GenericPlayer } from '@/lib/types/playerManagement';
 import { StepIndicator, TeamInfoStep, AddPlayersStep, ConfirmStep } from './TeamCreationSteps';
+import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 
 interface TeamCreationModalProps {
   tournamentId: string;
+  userId: string; // User/Organizer ID for logo uploads
   service: IPlayerManagementService;
   onClose: () => void;
   onTeamCreated: (team: any) => void;
@@ -37,6 +39,7 @@ type Step = 'info' | 'players' | 'confirm';
  */
 export function TeamCreationModal({
   tournamentId,
+  userId,
   service,
   onClose,
   onTeamCreated
@@ -50,6 +53,24 @@ export function TeamCreationModal({
   const [coachName, setCoachName] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState<GenericPlayer[]>([]);
   const [createdTeamId, setCreatedTeamId] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string>('');
+
+  // Generate a temporary team ID for logo upload (before team exists)
+  const tempTeamId = useMemo(() => crypto.randomUUID(), []);
+
+  // Logo upload hook
+  const logoUpload = usePhotoUpload({
+    userId: userId,
+    photoType: 'team_logo',
+    teamId: tempTeamId,
+    onSuccess: (url) => {
+      setLogoUrl(url);
+      console.log('✅ Team logo uploaded:', url);
+    },
+    onError: (err) => {
+      console.error('❌ Logo upload error:', err);
+    },
+  });
 
   // Handle team info submission
   const handleTeamInfoNext = () => {
@@ -79,10 +100,11 @@ export function TeamCreationModal({
       // Import TeamService dynamically
       const { TeamService } = await import('@/lib/services/tournamentService');
       
-      // Create team
+      // Create team with logo
       const newTeam = await TeamService.createTeam({
         name: teamName.trim(),
         coach: coachName.trim() || undefined,
+        logo: logoUrl || undefined, // Include logo URL if uploaded
         tournamentId: tournamentId,
       });
 
@@ -97,6 +119,9 @@ export function TeamCreationModal({
           });
         }
       }
+
+      // Clear logo preview after successful creation
+      logoUpload.clearPreview();
 
       // Success - notify parent
       onTeamCreated(newTeam);
@@ -121,6 +146,7 @@ export function TeamCreationModal({
             coachName={coachName}
             onTeamNameChange={setTeamName}
             onCoachNameChange={setCoachName}
+            logoUpload={logoUpload}
           />
         );
 

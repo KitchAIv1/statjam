@@ -14,6 +14,7 @@ interface CoachTeamsSectionProps {
   teams: CoachTeam[];
   loading: boolean;
   error: string | null;
+  userId: string; // Coach ID for team creation
   onTeamUpdate: () => void;
 }
 
@@ -28,7 +29,7 @@ interface CoachTeamsSectionProps {
  * 
  * Follows .cursorrules: <200 lines, UI component only
  */
-export function CoachTeamsSection({ teams, loading, error, onTeamUpdate }: CoachTeamsSectionProps) {
+export function CoachTeamsSection({ teams, loading, error, userId, onTeamUpdate }: CoachTeamsSectionProps) {
   // State
   const [searchTerm, setSearchTerm] = useState('');
   const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'public' | 'private'>('all');
@@ -178,6 +179,7 @@ export function CoachTeamsSection({ teams, loading, error, onTeamUpdate }: Coach
       {/* Create Team Modal */}
       {showCreateTeam && (
         <CreateCoachTeamModal
+          userId={userId}
           onClose={() => setShowCreateTeam(false)}
           onTeamCreated={handleTeamCreated}
         />
