@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { PhotoUploadField } from "@/components/ui/PhotoUploadField";
+import { SearchableCountrySelect } from "@/components/shared/SearchableCountrySelect";
 import { useTournaments } from "@/lib/hooks/useTournaments";
 import { useTeamManagement } from "@/hooks/useTeamManagement";
 import { useTournamentTeamCount } from "@/hooks/useTournamentTeamCount";
@@ -79,6 +80,10 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
   
   const { hasGames, gameCount, loading: gameStatusLoading } = useTournamentGameStatus(tournament.id);
 
+  // Logo loading states
+  const [logoLoaded, setLogoLoaded] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+
   return (
     <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden cursor-pointer">
       <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-accent to-orange-500"></div>
@@ -88,13 +93,35 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
       >
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 overflow-hidden">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 overflow-hidden relative">
               {tournament.logo ? (
-                <img 
-                  src={tournament.logo} 
-                  alt={`${tournament.name} logo`} 
-                  className="w-full h-full object-cover rounded-xl"
-                />
+                <>
+                  {/* Shimmer loading effect */}
+                  {!logoLoaded && !logoError && (
+                    <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                  )}
+                  
+                  {/* Logo image */}
+                  <img 
+                    src={tournament.logo} 
+                    alt={`${tournament.name} logo`} 
+                    className={`w-full h-full object-cover rounded-xl transition-opacity duration-300 ${
+                      logoLoaded ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    loading="eager"
+                    decoding="async"
+                    onLoad={() => setLogoLoaded(true)}
+                    onError={() => {
+                      setLogoError(true);
+                      console.error('Failed to load tournament logo:', tournament.logo);
+                    }}
+                  />
+                  
+                  {/* Fallback on error */}
+                  {logoError && (
+                    <Trophy className="w-6 h-6 text-white" />
+                  )}
+                </>
               ) : (
                 <Trophy className="w-6 h-6 text-white" />
               )}
@@ -305,7 +332,9 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
     endDate: "",
     maxTeams: "",
     description: "",
-    ruleset: "NBA" // ✅ PHASE 1: Default to NBA ruleset
+    ruleset: "NBA", // ✅ PHASE 1: Default to NBA ruleset
+    logo: "", // Tournament logo URL
+    country: "US" // Default country
   });
   
   // Validation errors state
@@ -315,11 +344,14 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   const logoUpload = usePhotoUpload({
     userId: user?.id || '',
     photoType: 'tournament_logo',
-    tournamentId: tournamentToEdit?.id || '',
-    currentPhotoUrl: tournamentToEdit?.logo || null,
+    tournamentId: tournamentToEdit?.id || 'temp-new',
+    currentPhotoUrl: tournamentToEdit?.logo || newTournament.logo || null,
     onSuccess: (url) => {
       if (tournamentToEdit) {
         setTournamentToEdit({ ...tournamentToEdit, logo: url });
+      } else {
+        // For new tournament creation
+        setNewTournament({ ...newTournament, logo: url });
       }
     },
     onError: (error) => console.error('Logo upload error:', error)
@@ -426,8 +458,9 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
         isPublic: true,
         entryFee: 0,
         prizePool: 0,
-        country: "US",
-        ruleset: newTournament.ruleset as 'NBA' | 'FIBA' | 'NCAA'
+        country: newTournament.country,
+        ruleset: newTournament.ruleset as 'NBA' | 'FIBA' | 'NCAA',
+        logo: newTournament.logo || undefined // Include uploaded logo
       };
 
       const result = await createTournament(tournamentData);
@@ -439,8 +472,11 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           endDate: "",
           maxTeams: "",
           description: "",
-          ruleset: "NBA"
+          ruleset: "NBA",
+          logo: "",
+          country: "US"
         });
+        logoUpload.clearPreview(); // Clear logo preview
         setValidationErrors([]);
         setIsCreateDialogOpen(false);
         
@@ -525,7 +561,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
         console.log('Tournament data to save:', tournamentToEdit);
         console.log('Assigned stat admins:', assignedStatAdmins);
         
-        // Save tournament settings (including status changes)
+        // Save tournament settings (including status changes and logo)
         const updatedTournament = await TournamentService.updateTournament({
           id: tournamentToEdit.id,
           name: tournamentToEdit.name,
@@ -534,7 +570,8 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           startDate: tournamentToEdit.startDate,
           endDate: tournamentToEdit.endDate,
           maxTeams: tournamentToEdit.maxTeams,
-          tournamentType: tournamentToEdit.tournamentType
+          tournamentType: tournamentToEdit.tournamentType,
+          logo: tournamentToEdit.logo // Include logo in update
         });
         
         // Save stat admin assignments to games
@@ -545,7 +582,12 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           setIsSettingsOpen(false);
           setTournamentToEdit(null);
           setAssignedStatAdmins([]);
-          // The tournaments list will automatically refresh due to React state updates
+          
+          // ⚡ Invalidate caches after tournament update
+          if (user?.id) {
+            invalidateOrganizerDashboard(user.id);
+            invalidateOrganizerTournaments(user.id);
+          }
         } else {
           console.error('❌ Failed to save some tournament settings');
           // Keep modal open so user can retry
@@ -710,6 +752,17 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                   placeholder="Brief description of the tournament"
                 />
               </div>
+              
+              {/* Country Selector */}
+              <div className="grid gap-2">
+                <Label htmlFor="country">Country</Label>
+                <SearchableCountrySelect
+                  value={newTournament.country}
+                  onChange={(value) => setNewTournament({ ...newTournament, country: value })}
+                  placeholder="Select country"
+                />
+              </div>
+
               {/* ✅ PHASE 1: Ruleset Selector */}
               <div className="grid gap-2">
                 <Label htmlFor="ruleset">Game Rules</Label>
@@ -725,6 +778,24 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   💡 All automation features are OFF by default
+                </p>
+              </div>
+
+              {/* Tournament Logo Upload */}
+              <div className="grid gap-2">
+                <Label>Tournament Logo (Optional)</Label>
+                <PhotoUploadField
+                  label="Upload Logo"
+                  value={null}
+                  previewUrl={logoUpload.previewUrl}
+                  uploading={logoUpload.uploading}
+                  error={logoUpload.error}
+                  aspectRatio="square"
+                  onFileSelect={logoUpload.handleFileSelect}
+                  onRemove={() => logoUpload.clearPreview()}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Square image recommended (min 256x256px, max 5MB)
                 </p>
               </div>
               
@@ -1013,8 +1084,8 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
 
       {/* Tournament Settings Modal */}
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[95vh] overflow-hidden p-0">
-          <DialogHeader className="px-6 py-4 border-b">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[95vh] flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-primary" />
               Tournament Settings - {tournamentToEdit?.name}
@@ -1024,7 +1095,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
             </DialogDescription>
           </DialogHeader>
           
-          <div className="overflow-y-auto flex-1">
+          <div className="flex-1 overflow-y-auto">
             {tournamentToEdit && (
               <Tabs defaultValue="general" className="w-full">
                 <div className="px-6 pt-4">
@@ -1352,7 +1423,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
             )}
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t">
+          <DialogFooter className="px-6 py-4 border-t flex-shrink-0 bg-background">
             <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
               Cancel
             </Button>

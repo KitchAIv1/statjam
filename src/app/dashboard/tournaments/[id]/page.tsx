@@ -34,6 +34,10 @@ const TournamentDetailPage = ({ params }: TournamentDetailPageProps) => {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loadingTournament, setLoadingTournament] = useState(true);
   
+  // Logo loading states
+  const [logoLoaded, setLogoLoaded] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+  
   const { id: tournamentId } = use(params);
 
   useEffect(() => {
@@ -145,17 +149,55 @@ const TournamentDetailPage = ({ params }: TournamentDetailPageProps) => {
           </button>
 
           <div className="flex items-start justify-between gap-6 flex-wrap mb-8">
-            <div className="flex-1 min-w-[300px]">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
-                {tournament.name}
-              </h1>
-              <p className="text-lg text-muted-foreground mb-4">{tournament.description}</p>
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold uppercase border ${getStatusColor(tournament.status)}`}>
-                {tournament.status === 'active' && <Play className="w-4 h-4" />}
-                {tournament.status === 'draft' && <Edit className="w-4 h-4" />}
-                {tournament.status === 'completed' && <CheckCircle className="w-4 h-4" />}
-                {tournament.status === 'cancelled' && <Pause className="w-4 h-4" />}
-                {tournament.status}
+            <div className="flex items-start gap-4 flex-1 min-w-[300px]">
+              {/* Tournament Logo */}
+              <div className="w-24 h-24 bg-gradient-to-br from-orange-600 to-red-600 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg relative">
+                {tournament.logo ? (
+                  <>
+                    {/* Shimmer loading effect */}
+                    {!logoLoaded && !logoError && (
+                      <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    )}
+                    
+                    {/* Logo image */}
+                    <img 
+                      src={tournament.logo} 
+                      alt={`${tournament.name} logo`} 
+                      className={`w-full h-full object-cover transition-opacity duration-300 ${
+                        logoLoaded ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      loading="eager"
+                      decoding="async"
+                      onLoad={() => setLogoLoaded(true)}
+                      onError={() => {
+                        setLogoError(true);
+                        console.error('Failed to load tournament logo:', tournament.logo);
+                      }}
+                    />
+                    
+                    {/* Fallback on error */}
+                    {logoError && (
+                      <Trophy className="w-12 h-12 text-white" />
+                    )}
+                  </>
+                ) : (
+                  <Trophy className="w-12 h-12 text-white" />
+                )}
+              </div>
+
+              {/* Tournament Info */}
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+                  {tournament.name}
+                </h1>
+                <p className="text-lg text-muted-foreground mb-4">{tournament.description}</p>
+                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold uppercase border ${getStatusColor(tournament.status)}`}>
+                  {tournament.status === 'active' && <Play className="w-4 h-4" />}
+                  {tournament.status === 'draft' && <Edit className="w-4 h-4" />}
+                  {tournament.status === 'completed' && <CheckCircle className="w-4 h-4" />}
+                  {tournament.status === 'cancelled' && <Pause className="w-4 h-4" />}
+                  {tournament.status}
+                </div>
               </div>
             </div>
 

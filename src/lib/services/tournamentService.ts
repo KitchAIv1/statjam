@@ -22,6 +22,7 @@ export class TournamentService {
         prize_pool: data.prizePool,
         country: data.country,
         organizer_id: organizerId,
+        logo: data.logo || null,
       };
 
       const { data: tournament, error } = await supabase
@@ -78,6 +79,7 @@ export class TournamentService {
       if (data.entryFee !== undefined) updateData.entry_fee = data.entryFee;
       if (data.prizePool !== undefined) updateData.prize_pool = data.prizePool;
       if (data.country !== undefined) updateData.country = data.country;
+      if (data.logo !== undefined) updateData.logo = data.logo;
 
       const { data: tournament, error } = await supabase
         .from('tournaments')
@@ -332,7 +334,7 @@ export class TournamentService {
         .select(`
           id, name, description, status, start_date, end_date, venue, 
           max_teams, current_teams, tournament_type, is_public, 
-          entry_fee, prize_pool, country, organizer_id, created_at, updated_at
+          entry_fee, prize_pool, country, organizer_id, created_at, updated_at, logo
         `)
         .eq('id', id)
         .single();
@@ -365,6 +367,7 @@ export class TournamentService {
         organizerId: tournament.organizer_id,
         createdAt: tournament.created_at || new Date().toISOString(),
         updatedAt: tournament.updated_at || new Date().toISOString(),
+        logo: tournament.logo || undefined,
       };
     } catch (error) {
       console.error('Error getting tournament:', error);
@@ -379,7 +382,7 @@ export class TournamentService {
         .select(`
           id, name, description, status, start_date, end_date, venue, 
           max_teams, current_teams, tournament_type, is_public, 
-          entry_fee, prize_pool, country, organizer_id, created_at, updated_at
+          entry_fee, prize_pool, country, organizer_id, created_at, updated_at, logo
         `)
         .eq('organizer_id', organizerId)
         .order('created_at', { ascending: false });
@@ -408,6 +411,7 @@ export class TournamentService {
         organizerId: tournament.organizer_id,
         createdAt: tournament.created_at || new Date().toISOString(),
         updatedAt: tournament.updated_at || new Date().toISOString(),
+        logo: tournament.logo || undefined,
       }));
 
       return mappedTournaments;

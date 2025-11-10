@@ -128,27 +128,29 @@ export function PhotoUploadField({
         onDrop={handleDrop}
         onClick={hasPhoto ? undefined : handleClick}
       >
-        {/* Preview Image */}
-        {hasPhoto && !uploading && (
+        {/* Preview Image - Show immediately, even during upload */}
+        {hasPhoto && (
           <div className="relative w-full h-full">
             <ImageWithFallback
               src={previewUrl || value || ''}
               alt={label}
               className="w-full h-full object-cover"
             />
-            <Button
-              size="sm"
-              variant="destructive"
-              className="absolute top-2 right-2"
-              onClick={handleRemove}
-              disabled={disabled}
-            >
-              <X className="w-4 h-4" />
-            </Button>
+            {!uploading && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="absolute top-2 right-2"
+                onClick={handleRemove}
+                disabled={disabled}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         )}
 
-        {/* Upload Prompt */}
+        {/* Upload Prompt - Only show when no photo */}
         {!hasPhoto && !uploading && (
           <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
             <Upload className="w-8 h-8 text-muted-foreground mb-2" />
@@ -161,11 +163,19 @@ export function PhotoUploadField({
           </label>
         )}
 
-        {/* Loading State */}
-        {uploading && (
+        {/* Loading Overlay - Show over preview during upload */}
+        {uploading && hasPhoto && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm">
+            <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
+            <span className="text-sm text-muted-foreground font-medium">Uploading...</span>
+          </div>
+        )}
+
+        {/* Loading State - Show when no preview yet */}
+        {uploading && !hasPhoto && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
             <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
-            <span className="text-sm text-muted-foreground">Uploading...</span>
+            <span className="text-sm text-muted-foreground">Processing...</span>
           </div>
         )}
 
