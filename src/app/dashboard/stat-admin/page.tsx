@@ -14,6 +14,10 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar, Eye, Lightbulb, BookOpen } from 'lucide-react';
 import { PreFlightCheckModal } from '@/components/tracker-v3/modals/PreFlightCheckModal';
 import { AutomationFlags } from '@/lib/types/automation';
+import { ProfileCard } from '@/components/profile/ProfileCard';
+import { ProfileEditModal } from '@/components/profile/ProfileEditModal';
+import { useStatAdminProfile } from '@/hooks/useStatAdminProfile';
+import { ProfileService } from '@/lib/services/profileService';
 
 const StatAdminDashboard = () => {
   const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
@@ -29,6 +33,25 @@ const StatAdminDashboard = () => {
   // ✅ PRE-FLIGHT CHECK: Modal state
   const [showPreFlight, setShowPreFlight] = useState(false);
   const [selectedGame, setSelectedGame] = useState<any>(null);
+  
+  // ⚡ Profile data
+  const { profileData, loading: profileLoading, updateProfile } = useStatAdminProfile(user?.id || '');
+  const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Handle profile share
+  const handleShare = async () => {
+    if (!profileData) return;
+    
+    const shareData = ProfileService.generateShareData(profileData);
+    
+    try {
+      await navigator.clipboard.writeText(shareData.profileUrl);
+      alert('✅ Profile link copied to clipboard!');
+    } catch (error) {
+      console.error('❌ Error copying to clipboard:', error);
+      alert('Failed to copy link. Please try again.');
+    }
+  };
 
   // Calculate flat games array and stats from grouped data (only when data is loaded)
   const flatGames = gamesLoading ? [] : assignedGames.flatMap(organizerGroup => organizerGroup.games || []);
@@ -323,18 +346,17 @@ const StatAdminDashboard = () => {
     <div className="min-h-screen bg-background">
       <NavigationHeader />
       <ErrorBoundary>
-        <main className="pt-16 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="space-y-6 mt-6">
-            {/* Modern Header */}
-            <div className="text-center space-y-4">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-                Stat Admin Dashboard
-              </h1>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Track your assigned games and manage statistical data with precision and efficiency.
-              </p>
-            </div>
+        <main className="pt-24 px-6 pb-6">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* Profile Card */}
+            {!profileLoading && profileData && (
+              <ProfileCard
+                profileData={profileData}
+                shareData={ProfileService.generateShareData(profileData)}
+                onEdit={() => setShowEditModal(true)}
+                onShare={handleShare}
+              />
+            )}
 
             {/* Modern Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -722,7 +744,6 @@ const StatAdminDashboard = () => {
               </CardContent>
             </Card>
           </div>
-        </div>
         </main>
       </ErrorBoundary>
       
@@ -773,6 +794,16 @@ const StatAdminDashboard = () => {
             undo: { enabled: false, maxHistorySize: 50 }
           }}
           userRole="stat_admin"
+        />
+      )}
+
+      {/* Profile Edit Modal */}
+      {profileData && (
+        <ProfileEditModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          profileData={profileData}
+          onSave={updateProfile}
         />
       )}
     </div>

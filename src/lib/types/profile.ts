@@ -53,6 +53,19 @@ export interface CoachStats {
   totalPlayers: number;
 }
 
+// Stat Admin-specific profile with stats
+export interface StatAdminProfile extends BaseProfile {
+  role: 'stat_admin';
+  stats: StatAdminStats;
+}
+
+export interface StatAdminStats {
+  totalGamesAssigned: number;
+  gamesCompleted: number;
+  gamesPending: number;
+  completionRate: number;
+}
+
 // Profile update request
 export interface ProfileUpdateRequest {
   name?: string;

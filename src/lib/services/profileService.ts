@@ -12,6 +12,8 @@ import {
   OrganizerStats,
   CoachProfile,
   CoachStats,
+  StatAdminProfile,
+  StatAdminStats,
   ProfileUpdateRequest,
   ProfileShareData,
   UserRole
@@ -179,6 +181,67 @@ export class ProfileService {
   }
 
   /**
+   * Get stat admin profile with stats
+   */
+  static async getStatAdminProfile(userId: string): Promise<StatAdminProfile | null> {
+    try {
+      // Fetch user profile
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, email, name, role, profile_photo_url, bio, location, social_links, created_at')
+        .eq('id', userId)
+        .eq('role', 'stat_admin')
+        .single();
+
+      if (userError || !userData) {
+        console.error('❌ Error fetching stat admin profile:', userError);
+        return null;
+      }
+
+      // Get games where this stat admin is assigned
+      const { data: gamesData, error: gamesError } = await supabase
+        .from('games')
+        .select('id, status')
+        .eq('stat_admin_id', userId);
+
+      if (gamesError) {
+        console.error('❌ Error fetching stat admin games:', gamesError);
+        return null;
+      }
+
+      const totalGamesAssigned = gamesData?.length || 0;
+      const gamesCompleted = gamesData?.filter(g => g.status === 'completed').length || 0;
+      const gamesPending = totalGamesAssigned - gamesCompleted;
+      const completionRate = totalGamesAssigned > 0 
+        ? Math.round((gamesCompleted / totalGamesAssigned) * 100)
+        : 0;
+
+      const stats: StatAdminStats = {
+        totalGamesAssigned,
+        gamesCompleted,
+        gamesPending,
+        completionRate
+      };
+
+      return {
+        id: userData.id,
+        email: userData.email,
+        name: userData.name || userData.email.split('@')[0],
+        role: 'stat_admin',
+        profilePhotoUrl: userData.profile_photo_url,
+        bio: userData.bio,
+        location: userData.location,
+        socialLinks: userData.social_links,
+        createdAt: userData.created_at,
+        stats
+      };
+    } catch (error) {
+      console.error('❌ Error in getStatAdminProfile:', error);
+      return null;
+    }
+  }
+
+  /**
    * Update user profile
    */
   static async updateProfile(userId: string, updates: ProfileUpdateRequest): Promise<boolean> {
@@ -213,7 +276,19 @@ export class ProfileService {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://statjam.com';
     const profileUrl = `${baseUrl}/profile/${profileData.role}/${profileData.id}`;
     
-    const roleLabel = profileData.role === 'organizer' ? 'Tournament Organizer' : 'Coach';
+    let roleLabel = 'User';
+    switch (profileData.role) {
+      case 'organizer':
+        roleLabel = 'Tournament Organizer';
+        break;
+      case 'coach':
+        roleLabel = 'Coach';
+        break;
+      case 'stat_admin':
+        roleLabel = 'Stat Admin';
+        break;
+    }
+    
     const shareText = `Check out ${profileData.name}'s profile on StatJam! ${roleLabel} | ${profileUrl}`;
 
     return {

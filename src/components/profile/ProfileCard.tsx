@@ -16,11 +16,11 @@ import {
   Edit, Share2, Trophy, Users, Calendar, MapPin, 
   Twitter, Instagram, Globe, Facebook, ImageOff 
 } from 'lucide-react';
-import { OrganizerProfile, CoachProfile, ProfileShareData } from '@/lib/types/profile';
+import { OrganizerProfile, CoachProfile, StatAdminProfile, ProfileShareData } from '@/lib/types/profile';
 import { getCountryName } from '@/data/countries';
 
 interface ProfileCardProps {
-  profileData: OrganizerProfile | CoachProfile;
+  profileData: OrganizerProfile | CoachProfile | StatAdminProfile;
   shareData: ProfileShareData;
   onEdit: () => void;
   onShare: () => void;
@@ -60,6 +60,8 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
         return 'bg-blue-600 hover:bg-blue-700';
       case 'coach':
         return 'bg-orange-600 hover:bg-orange-700';
+      case 'stat_admin':
+        return 'bg-purple-600 hover:bg-purple-700';
       default:
         return 'bg-gray-600 hover:bg-gray-700';
     }
@@ -80,6 +82,13 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
         { label: 'Teams', value: stats.totalTeams, icon: Users },
         { label: 'Games Tracked', value: stats.gamesTracked, icon: Calendar },
         { label: 'Players', value: stats.totalPlayers, icon: Users }
+      ];
+    } else if (profileData.role === 'stat_admin') {
+      const stats = profileData.stats;
+      return [
+        { label: 'Games Assigned', value: stats.totalGamesAssigned, icon: Calendar },
+        { label: 'Completed', value: stats.gamesCompleted, icon: Trophy },
+        { label: 'Completion Rate', value: `${stats.completionRate}%`, icon: Trophy }
       ];
     }
     return [];
@@ -146,7 +155,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
               <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                 <Badge className={`${getRoleBadgeClass(profileData.role)} text-white gap-1`}>
                   <Trophy className="w-3 h-3" />
-                  {profileData.role === 'organizer' ? 'Organizer' : 'Coach'}
+                  {profileData.role === 'organizer' ? 'Organizer' : profileData.role === 'coach' ? 'Coach' : 'Stat Admin'}
                 </Badge>
                 {profileData.location && (
                   <span className="text-sm text-muted-foreground flex items-center gap-1">
