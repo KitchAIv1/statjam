@@ -704,6 +704,28 @@ export class TeamService {
     }
   }
 
+  /**
+   * Update a team (organizer-created teams only)
+   */
+  static async updateTeam(teamId: string, updates: { name?: string; logo?: string }): Promise<void> {
+    try {
+      const updateData: any = {};
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.logo !== undefined) updateData.logo_url = updates.logo || null;
+
+      const { error } = await supabase
+        .from('teams')
+        .update(updateData)
+        .eq('id', teamId);
+
+      if (error) throw error;
+      console.log('✅ Team updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating team:', error);
+      throw error;
+    }
+  }
+
   static async getTeamsByTournament(tournamentId: string): Promise<Team[]> {
     try {
       console.log('🔍 TeamService: Fetching teams for tournament:', tournamentId);

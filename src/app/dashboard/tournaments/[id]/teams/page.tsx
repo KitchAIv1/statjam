@@ -25,6 +25,12 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 
 interface TeamManagementPageProps {
   params: Promise<{ id: string }>;
@@ -54,6 +60,12 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [currentPlayers, setCurrentPlayers] = useState<GenericPlayer[]>([]);
   const [removingPlayer, setRemovingPlayer] = useState<string | null>(null);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Logo loading states per team
+  const [teamLogosLoaded, setTeamLogosLoaded] = useState<Record<string, boolean>>({});
+  const [teamLogosError, setTeamLogosError] = useState<Record<string, boolean>>({});
   
   const service = new OrganizerPlayerManagementService();
   const minPlayers = 5;
@@ -364,13 +376,46 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                   <div className="p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-3 sm:gap-4 flex-1">
-                        <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center shrink-0 ${
-                          isCoachOwned 
-                            ? 'bg-gradient-to-br from-blue-500 to-purple-500' 
-                            : 'bg-gradient-to-br from-orange-500 to-red-500'
-                        }`}>
-                          <Shield className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                        </div>
+                        {/* Team Logo */}
+                        {team.logo ? (
+                          <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-muted shrink-0">
+                            {!teamLogosLoaded[team.id] && !teamLogosError[team.id] && (
+                              <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-muted via-muted-foreground/10 to-muted" />
+                            )}
+                            {!teamLogosError[team.id] ? (
+                              <img
+                                src={team.logo}
+                                alt={`${team.name} logo`}
+                                className={`w-full h-full object-cover transition-opacity duration-300 ${
+                                  teamLogosLoaded[team.id] ? 'opacity-100' : 'opacity-0'
+                                }`}
+                                onLoad={() => setTeamLogosLoaded(prev => ({ ...prev, [team.id]: true }))}
+                                onError={() => {
+                                  setTeamLogosError(prev => ({ ...prev, [team.id]: true }));
+                                  setTeamLogosLoaded(prev => ({ ...prev, [team.id]: false }));
+                                }}
+                                loading="eager"
+                                decoding="async"
+                              />
+                            ) : (
+                              <div className={`w-full h-full flex items-center justify-center ${
+                                isCoachOwned 
+                                  ? 'bg-gradient-to-br from-blue-500 to-purple-500' 
+                                  : 'bg-gradient-to-br from-orange-500 to-red-500'
+                              }`}>
+                                <Shield className="w-6 h-6 text-white" />
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center shrink-0 ${
+                            isCoachOwned 
+                              ? 'bg-gradient-to-br from-blue-500 to-purple-500' 
+                              : 'bg-gradient-to-br from-orange-500 to-red-500'
+                          }`}>
+                            <Shield className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-lg sm:text-xl font-bold text-foreground truncate">{team.name}</h3>
@@ -404,6 +449,12 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                           {isSelected ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
                         <button 
+                          onClick={() => {
+                            if (!isCoachOwned) {
+                              setEditingTeam(team);
+                              setShowEditModal(true);
+                            }
+                          }}
                           disabled={isCoachOwned}
                           className={`p-2 rounded-lg transition-colors ${
                             isCoachOwned
@@ -531,9 +582,10 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
       </div>
 
       {/* Create Team Modal */}
-      {showCreateTeam && (
+      {showCreateTeam && user && (
         <TeamCreationModal
           tournamentId={tournamentId}
+          userId={user.id}
           service={service}
           onClose={() => setShowCreateTeam(false)}
           onTeamCreated={async (team) => {
@@ -543,8 +595,139 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
           }}
         />
       )}
+
+      {/* Edit Team Modal */}
+      {showEditModal && editingTeam && user && <TeamEditModal
+        team={editingTeam}
+        userId={user.id}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingTeam(null);
+        }}
+        onTeamUpdated={async () => {
+          const teamsData = await TeamService.getTeamsByTournament(tournamentId);
+          setTeams(teamsData);
+          setShowEditModal(false);
+          setEditingTeam(null);
+        }}
+      />}
     </div>
   );
 };
+
+// Team Edit Modal Component
+function TeamEditModal({ team, userId, onClose, onTeamUpdated }: {
+  team: Team;
+  userId: string;
+  onClose: () => void;
+  onTeamUpdated: () => void;
+}) {
+  const [teamName, setTeamName] = useState(team.name);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const logoUpload = usePhotoUpload({
+    userId: userId,
+    photoType: 'team_logo',
+    teamId: team.id,
+    currentPhotoUrl: team.logo || null,
+    onSuccess: (url) => {
+      console.log('✅ Team logo updated:', url);
+    },
+    onError: (err) => {
+      console.error('❌ Logo upload error:', err);
+      setError(`Logo upload failed: ${err}`);
+    },
+  });
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+
+      if (!teamName.trim()) {
+        setError('Team name is required');
+        return;
+      }
+
+      // Update team via service
+      await TeamService.updateTeam(team.id, {
+        name: teamName,
+        logo: logoUpload.previewUrl || team.logo
+      });
+
+      onTeamUpdated();
+    } catch (err) {
+      console.error('❌ Error updating team:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update team');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Edit Team</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          {/* Team Logo */}
+          <div className="space-y-2">
+            <Label>Team Logo</Label>
+            <PhotoUploadField
+              label="Upload Team Logo"
+              previewUrl={logoUpload.previewUrl || team.logo}
+              uploading={logoUpload.uploading}
+              progress={logoUpload.progress}
+              error={logoUpload.error}
+              onFileSelect={logoUpload.handleFileSelect}
+              onRemove={logoUpload.clearPreview}
+              onClearError={logoUpload.clearError}
+            />
+          </div>
+
+          {/* Team Name */}
+          <div className="space-y-2">
+            <Label htmlFor="team-name">Team Name *</Label>
+            <Input
+              id="team-name"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              placeholder="e.g., Warriors, Lakers"
+            />
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 pt-4 border-t">
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+            className="flex-1"
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving || !teamName.trim()}
+            className="flex-1"
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default TeamManagementPage;
