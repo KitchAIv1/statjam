@@ -14,7 +14,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar, Eye, Lightbulb, BookOpen } from 'lucide-react';
 import { PreFlightCheckModal } from '@/components/tracker-v3/modals/PreFlightCheckModal';
 import { AutomationFlags } from '@/lib/types/automation';
-import { ProfileCard } from '@/components/profile/ProfileCard';
+import { ProfileCard, ProfileCardSkeleton } from '@/components/profile/ProfileCard';
 import { ProfileEditModal } from '@/components/profile/ProfileEditModal';
 import { useStatAdminProfile } from '@/hooks/useStatAdminProfile';
 import { ProfileService } from '@/lib/services/profileService';
@@ -349,14 +349,16 @@ const StatAdminDashboard = () => {
         <main className="pt-24 px-6 pb-6">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Profile Card */}
-            {!profileLoading && profileData && (
+            {profileLoading ? (
+              <ProfileCardSkeleton />
+            ) : profileData ? (
               <ProfileCard
                 profileData={profileData}
                 shareData={ProfileService.generateShareData(profileData)}
                 onEdit={() => setShowEditModal(true)}
                 onShare={handleShare}
               />
-            )}
+            ) : null}
 
             {/* Modern Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

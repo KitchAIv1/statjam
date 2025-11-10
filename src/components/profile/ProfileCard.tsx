@@ -303,3 +303,53 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
   );
 }
 
+/**
+ * ProfileCardSkeleton - Loading skeleton for profile card
+ * Prevents layout shift while profile data loads
+ */
+export function ProfileCardSkeleton() {
+  return (
+    <Card className="border-2 border-border/50 overflow-hidden">
+      <CardContent className="p-0">
+        <div className="flex flex-col md:flex-row gap-6 p-6">
+          {/* Avatar Skeleton */}
+          <div className="flex-shrink-0">
+            <div className="w-24 h-24 rounded-full bg-muted animate-pulse" />
+          </div>
+
+          {/* Content Skeleton */}
+          <div className="flex-1 space-y-4">
+            {/* Name & Role */}
+            <div>
+              <div className="h-7 w-48 bg-muted animate-pulse rounded mb-2" />
+              <div className="h-5 w-24 bg-muted animate-pulse rounded" />
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="text-center">
+                  <div className="h-6 w-12 bg-muted animate-pulse rounded mx-auto mb-1" />
+                  <div className="h-4 w-16 bg-muted animate-pulse rounded mx-auto" />
+                </div>
+              ))}
+            </div>
+
+            {/* Bio */}
+            <div className="space-y-2">
+              <div className="h-4 w-full bg-muted animate-pulse rounded" />
+              <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
+            </div>
+          </div>
+
+          {/* Actions Skeleton */}
+          <div className="flex md:flex-col gap-2">
+            <div className="h-9 w-24 bg-muted animate-pulse rounded" />
+            <div className="h-9 w-24 bg-muted animate-pulse rounded" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+

@@ -13,7 +13,7 @@ import { HelpPanel } from '@/components/support/HelpPanel';
 import { coachChecklistSteps, coachFAQs } from '@/config/onboarding/coachOnboarding';
 import { useCoachTeams } from '@/hooks/useCoachTeams';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
-import { ProfileCard } from '@/components/profile/ProfileCard';
+import { ProfileCard, ProfileCardSkeleton } from '@/components/profile/ProfileCard';
 import { ProfileEditModal } from '@/components/profile/ProfileEditModal';
 import { ProfileService } from '@/lib/services/profileService';
 import { Card } from '@/components/ui/card';
@@ -146,14 +146,16 @@ const CoachDashboardContent = () => {
             />
 
             {/* Profile Card - Replaces old page header with richer profile display */}
-            {!profileLoading && profileData && (
+            {profileLoading ? (
+              <ProfileCardSkeleton />
+            ) : profileData ? (
               <ProfileCard
                 profileData={profileData}
                 shareData={ProfileService.generateShareData(profileData)}
                 onEdit={() => setShowEditModal(true)}
                 onShare={handleShare}
               />
-            )}
+            ) : null}
 
             {/* Automation Guide Quick Link */}
             <div>

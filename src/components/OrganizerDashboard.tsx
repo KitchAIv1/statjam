@@ -5,7 +5,7 @@ import { OrganizerDashboardOverview } from "./OrganizerDashboardOverview";
 import { OrganizerTournamentManager } from "./OrganizerTournamentManager";
 import { OrganizerGameScheduler } from "./OrganizerGameScheduler";
 import { OrganizerLiveStream } from "./OrganizerLiveStream";
-import { ProfileCard } from "./profile/ProfileCard";
+import { ProfileCard, ProfileCardSkeleton } from "./profile/ProfileCard";
 import { ProfileEditModal } from "./profile/ProfileEditModal";
 import { useOrganizerProfile } from "@/hooks/useOrganizerProfile";
 import { ProfileService } from "@/lib/services/profileService";
@@ -88,7 +88,6 @@ export function OrganizerDashboard({ user }: OrganizerDashboardProps) {
       {/* Main Content - Full Width */}
       <main className="pt-24 px-6 pb-6">
         <div className="max-w-7xl mx-auto space-y-6">
-          
           {/* Profile Card - Top of Dashboard */}
           {!profileLoading && profileData && (
             <ProfileCard
