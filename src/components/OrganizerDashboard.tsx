@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Users } from "lucide-react";
 import { OrganizerDashboardOverview } from "./OrganizerDashboardOverview";
 import { OrganizerTournamentManager } from "./OrganizerTournamentManager";
 import { OrganizerGameScheduler } from "./OrganizerGameScheduler";
 import { OrganizerLiveStream } from "./OrganizerLiveStream";
+import { ProfileCard } from "./profile/ProfileCard";
+import { ProfileEditModal } from "./profile/ProfileEditModal";
+import { useOrganizerProfile } from "@/hooks/useOrganizerProfile";
+import { ProfileService } from "@/lib/services/profileService";
 
 type ActiveSection = 'overview' | 'tournaments' | 'teams' | 'games' | 'live-stream';
 
@@ -13,9 +18,28 @@ interface OrganizerDashboardProps {
 
 export function OrganizerDashboard({ user }: OrganizerDashboardProps) {
   const searchParams = useSearchParams();
+  const [showEditModal, setShowEditModal] = useState(false);
   
   // Get current section from URL params, default to overview
   const currentSection = (searchParams.get('section') || 'overview') as ActiveSection;
+  
+  // Fetch organizer profile data
+  const { profileData, loading: profileLoading, updateProfile } = useOrganizerProfile(user?.id || '');
+
+  // Handle profile share
+  const handleShare = async () => {
+    if (!profileData) return;
+    
+    const shareData = ProfileService.generateShareData(profileData);
+    
+    try {
+      await navigator.clipboard.writeText(shareData.profileUrl);
+      alert('✅ Profile link copied to clipboard!');
+    } catch (error) {
+      console.error('❌ Error copying to clipboard:', error);
+      alert('Failed to copy link. Please try again.');
+    }
+  };
 
   const renderContent = () => {
     switch (currentSection) {
@@ -62,11 +86,33 @@ export function OrganizerDashboard({ user }: OrganizerDashboardProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Main Content - Full Width */}
-      <main className="pt-16 p-6">
-        <div className="max-w-7xl mx-auto">
+      <main className="pt-24 px-6 pb-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          
+          {/* Profile Card - Top of Dashboard */}
+          {!profileLoading && profileData && (
+            <ProfileCard
+              profileData={profileData}
+              shareData={ProfileService.generateShareData(profileData)}
+              onEdit={() => setShowEditModal(true)}
+              onShare={handleShare}
+            />
+          )}
+          
+          {/* Main Dashboard Content */}
           {renderContent()}
         </div>
       </main>
+
+      {/* Profile Edit Modal */}
+      {profileData && (
+        <ProfileEditModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          profileData={profileData}
+          onSave={updateProfile}
+        />
+      )}
     </div>
   );
 }
