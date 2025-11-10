@@ -20,6 +20,8 @@ Beautiful profile card system for Organizer and Coach dashboards with photo uplo
 - Social links (Twitter, Instagram, Website)
 - Edit & Share buttons
 - Responsive design (mobile/desktop)
+- **New (Nov 2025):** Country display now uses `getCountryName()` for consistent flag + name rendering across Organizer, Coach, Stat Admin, and Player dashboards.
+- **New (Nov 2025):** Height and weight formatting for Player dashboard (`6'2"`, `180 lbs`) handled in UI layer.
 
 ### ✅ Profile Edit Modal
 - Photo upload (Supabase storage)
@@ -29,11 +31,28 @@ Beautiful profile card system for Organizer and Coach dashboards with photo uplo
 - Social links (Twitter, Instagram, Website)
 - Real-time preview
 - Save/Cancel actions
+- **New (Nov 2025):** Shared `SearchableCountrySelect` provides ISO-3166 list with typeahead for all roles.
 
 ### ✅ Profile Sharing
 - Copy profile URL to clipboard
 - Shareable link format: `/profile/{role}/{userId}`
 - Social share text generation
+
+---
+
+## 🆕 2025-11-10 Player Dashboard & Country Selector Refinements
+
+1. **Player Profile Card Enhancements**  
+   - Height/weight display now appends unit suffixes only when values exist, preventing duplicate text (e.g., avoids `74""`).
+   - Country chip reuses `getCountryName()` helper so player cards match organizer/coach stat cards.
+
+2. **Country Field Standardization**  
+   - Supabase `users.country` column maps to frontend `location` for all roles.  
+   - `playerDashboardService.getIdentity()` now normalizes the column, enabling cards/edit modals to share the same display logic.
+
+3. **Edit Modal Ergonomics**  
+   - Country selector moved near the top of the form to guarantee dropdown visibility inside modal scroll container.  
+   - `SearchableCountrySelect` includes clear button, keyboard navigation, and popular country shortcuts; see `src/components/shared/SearchableCountrySelect.tsx`.
 
 ---
 

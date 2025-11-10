@@ -15,6 +15,7 @@ export interface Tournament {
   prizePool: number;
   country: string;
   organizerId: string;
+  logo?: string; // Tournament logo URL from Supabase Storage
   createdAt: string;
   updatedAt: string;
 }
@@ -31,6 +32,7 @@ export interface TournamentCreateRequest {
   entryFee: number;
   prizePool: number;
   country: string;
+  logo?: string; // Tournament logo URL from Supabase Storage
   ruleset?: 'NBA' | 'FIBA' | 'NCAA' | 'CUSTOM'; // ✅ PHASE 1: Ruleset selection
 }
 

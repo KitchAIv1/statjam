@@ -15,6 +15,7 @@ Frontend service (`PlayerDashboardService`) that:
 2. ✅ Falls back to calculating from `game_stats` table when aggregated tables are empty
 3. ✅ Uses existing `PlayerGameStatsService` for efficient stat aggregation
 4. ✅ Calculates all metrics using NBA-standard formulas from `personalStatsCalculations`
+5. **✅ (Nov 2025)** Normalizes Supabase `users.country` → frontend `location` so cards/edit modals share the same API contract as organizer/coach dashboards.
 
 ### **Metrics Currently Calculated:**
 

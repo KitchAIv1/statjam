@@ -26,6 +26,21 @@ See: [Photo Upload System Documentation](/docs/04-features/shared/PHOTO_UPLOAD_S
 
 ---
 
+## 🆕 2025-11-10 UPDATE — COUNTRY & PLAYER PARITY
+
+### Highlights
+- ✅ **Standardized Country Selector** — All profile edit modals (Organizer, Coach, Stat Admin, Player) now use the shared `SearchableCountrySelect` component (`src/components/shared/SearchableCountrySelect.tsx`).
+- ✅ **Player Modal Upgrade** — Player Edit Profile modal now includes the country selector directly below the Name/Position fields so the dropdown opens within visible viewport.
+- ✅ **Supabase Column Mapping** — Clarified that the Supabase `users.country` column is mapped to the frontend `location` property for players. Service layer (`playerDashboardService.ts`) handles translation automatically.
+- ✅ **Optimistic UX Remains** — Country changes participate in the existing optimistic save flow for all roles.
+
+### Required Follow-up
+- [ ] Document planned IP-based country detection (optional future enhancement) once implemented.
+
+See also: [`Profile Card Implementation`](./PROFILE_CARD_IMPLEMENTATION.md) for card display updates and [`PLAYER_DASHBOARD.md`](./PLAYER_DASHBOARD.md) for dashboard parity.
+
+---
+
 ## 📋 EXECUTIVE SUMMARY
 
 ### Original Issues (All Resolved):

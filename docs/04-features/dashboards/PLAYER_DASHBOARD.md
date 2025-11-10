@@ -12,6 +12,7 @@
 - Consolidated global styling to the orange/red Figma theme; removed legacy dark-theme remnants.
 - Normalized UI component imports and casing (e.g., `Button.tsx` vs `button.tsx`) to prevent case-sensitivity build issues.
 - Kept glassmorphism minimal (simple themed cards) to ensure reliability and speed; design fidelity remains aligned with Figma.
+- **New (Nov 2025):** Player profile header now surfaces ISO country with flag/name and formats height/weight with unit suffixes.
 
 ---
 
@@ -37,6 +38,29 @@
     - `./ui/button` → `@/components/ui/Button` (capitalized to match filesystem).
     - Similar updates for `badge`, `card`, `tabs`, `select`, `dialog`, `popover`, `progress`, `input`, `label`.
   - Ensured `PlayerDashboard.tsx` is a client component and uses app tokens.
+  - **New (Nov 2025):** `PlayerDashboard.tsx` now:
+    - Displays country via `getCountryName()`.
+    - Converts raw height/weight to readable UI (`6'2"`, `180 lbs`) without double units.
+    - Consumes the shared `SearchableCountrySelect` in `EditProfileModal` for parity with other dashboards.
+
+---
+
+### 🆕 November 2025 — Country & Profile Data Updates
+
+1. **Country Mapping Normalization**  
+   - `playerDashboardService.getIdentity()` now selects `users.country` and exposes it as `location` to match organizer/coach profile types.  
+   - `updateProfile` persistence writes back to `users.country`, preventing orphaned `location` values.
+
+2. **Unified Country Selector Experience**  
+   - Player `EditProfileModal` adopts the shared `SearchableCountrySelect` (195 country ISO list, search-as-you-type, clear button).  
+   - Field relocated under Name/Position so the dropdown opens fully inside the modal scroll region.
+
+3. **Player Card Formatting Enhancements**  
+   - Height/weight display adds unit suffixes only when numeric data exists, eliminating crashes from non-string values.  
+   - Country chip renders flag + human-readable name using `getCountryName()` helper for consistency with Organizer/Coach profile cards.
+
+4. **Debug & Verification Hooks**  
+   - Temporary console diagnostics added to verify country codes flowing from Supabase; remove once QA confirms dataset accuracy.
 
 ---
 

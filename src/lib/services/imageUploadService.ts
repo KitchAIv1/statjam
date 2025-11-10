@@ -403,3 +403,30 @@ export async function deletePlayerPhoto(publicUrl: string): Promise<void> {
   }
 }
 
+/**
+ * Upload tournament logo
+ */
+export async function uploadTournamentLogo(
+  file: File,
+  tournamentId: string,
+  organizerId: string
+): Promise<ImageUploadResult> {
+  return uploadImage(file, organizerId, {
+    bucket: 'tournament-logos',
+    folder: 'logos',
+    maxSizeMB: 5,
+    generateUniqueName: true,
+    filePrefix: `tournament-${tournamentId}`
+  });
+}
+
+/**
+ * Delete old tournament logo when replacing
+ */
+export async function deleteTournamentLogo(publicUrl: string): Promise<void> {
+  const filePath = extractFilePathFromUrl(publicUrl, 'tournament-logos');
+  if (filePath) {
+    await deleteImage('tournament-logos', filePath);
+  }
+}
+
