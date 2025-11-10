@@ -714,6 +714,7 @@ export class TeamService {
         .select(`
           id,
           name,
+          logo_url,
           tournament_id,
           approval_status,
           coach_id,
@@ -826,7 +827,7 @@ export class TeamService {
         return {
           id: team.id,
           name: team.name,
-          logo: '', // Default empty logo since column doesn't exist
+          logo: team.logo_url || undefined, // Map logo_url from database to logo
           players: teamPlayers,
           captain: captain,
           coach: '', // Default empty coach since column doesn't exist

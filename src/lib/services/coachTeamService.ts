@@ -159,9 +159,16 @@ export class CoachTeamService {
    */
   static async updateTeam(teamId: string, updates: UpdateCoachTeamRequest): Promise<void> {
     try {
+      // Map frontend fields to database columns
+      const updateData: any = {};
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.logo !== undefined) updateData.logo_url = updates.logo || null;
+      if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
+      if (updates.is_official_team !== undefined) updateData.is_official_team = updates.is_official_team;
+      
       const { error } = await supabase
         .from('teams')
-        .update(updates)
+        .update(updateData)
         .eq('id', teamId);
 
       if (error) throw error;

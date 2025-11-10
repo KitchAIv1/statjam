@@ -27,6 +27,8 @@ import { CoachTeamAnalyticsTab } from './CoachTeamAnalyticsTab';
 import { CoachGameStatsModal } from './CoachGameStatsModal';
 import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
 import { invalidateCoachTeams } from '@/lib/utils/cache';
+import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 
 interface CoachTeamCardProps {
   team: CoachTeam;
@@ -65,13 +67,34 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   // Player count state (use cached value from team prop)
   const [playerCount, setPlayerCount] = useState<number>(team.player_count || 0);
   
+  // Logo loading states
+  const [logoLoaded, setLogoLoaded] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+  
   // Edit form state
   const [editFormData, setEditFormData] = useState({
     name: team.name,
-    is_official_team: team.is_official_team || false
+    is_official_team: team.is_official_team || false,
+    logo: team.logo || ''
   });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Logo upload hook for editing
+  const editLogoUpload = usePhotoUpload({
+    userId: team.coach_id,
+    photoType: 'team_logo',
+    teamId: team.id,
+    currentPhotoUrl: team.logo || null,
+    onSuccess: (url) => {
+      setEditFormData(prev => ({ ...prev, logo: url }));
+      console.log('✅ Team logo updated:', url);
+    },
+    onError: (err) => {
+      console.error('❌ Logo upload error:', err);
+      setEditError(`Logo upload failed: ${err}`);
+    },
+  });
   
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -135,7 +158,8 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
 
       await CoachTeamService.updateTeam(team.id, {
         name: editFormData.name,
-        is_official_team: editFormData.is_official_team
+        is_official_team: editFormData.is_official_team,
+        logo: editFormData.logo || undefined
       });
 
       setShowEditTeam(false);
@@ -260,7 +284,40 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
             {/* Team Info - Always Full Width */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
+                  {/* Team Logo */}
+                  {team.logo ? (
+                    <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-muted shrink-0">
+                      {!logoLoaded && !logoError && (
+                        <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-muted via-muted-foreground/10 to-muted" />
+                      )}
+                      {!logoError ? (
+                        <img
+                          src={team.logo}
+                          alt={`${team.name} logo`}
+                          className={`w-full h-full object-cover transition-opacity duration-300 ${
+                            logoLoaded ? 'opacity-100' : 'opacity-0'
+                          }`}
+                          onLoad={() => setLogoLoaded(true)}
+                          onError={() => {
+                            setLogoError(true);
+                            setLogoLoaded(false);
+                          }}
+                          loading="eager"
+                          decoding="async"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <Users className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                      <Users className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  
                   <CardTitle className="text-lg sm:text-xl font-semibold truncate group-hover:text-primary transition-colors">{team.name}</CardTitle>
                   
                   {/* Team Type Badge */}
@@ -641,6 +698,24 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
             </DialogHeader>
             
             <div className="space-y-4 py-4">
+              {/* Team Logo Upload */}
+              <div className="space-y-2">
+                <Label>Team Logo</Label>
+                <PhotoUploadField
+                  label="Upload Team Logo"
+                  previewUrl={editLogoUpload.previewUrl || editFormData.logo}
+                  uploading={editLogoUpload.uploading}
+                  progress={editLogoUpload.progress}
+                  error={editLogoUpload.error}
+                  onFileSelect={editLogoUpload.handleFileSelect}
+                  onRemove={() => {
+                    editLogoUpload.clearPreview();
+                    setEditFormData(prev => ({ ...prev, logo: '' }));
+                  }}
+                  onClearError={editLogoUpload.clearError}
+                />
+              </div>
+
               {/* Team Name */}
               <div className="space-y-2">
                 <Label htmlFor="edit-team-name">Team Name *</Label>
