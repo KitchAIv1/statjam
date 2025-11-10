@@ -22,6 +22,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3 } from "lucide-react";
 import { Skeleton, SkeletonStat } from "@/components/ui/skeleton";
+import { getCountryName } from "@/data/countries";
 
 const defaultPlayerData = {
   name: "",
@@ -31,6 +32,7 @@ const defaultPlayerData = {
   weight: "",
   age: 0,
   team: "",
+  location: "",
   profilePhoto: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop&crop=faces",
   posePhoto: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=600&fit=crop&crop=faces",
   seasonAverages: {
@@ -127,6 +129,7 @@ export function PlayerDashboard() {
         age: updatedData.age ? parseInt(String(updatedData.age)) : null,
         height: parseHeight(updatedData.height), // Convert to inches (INTEGER)
         weight: parseWeight(updatedData.weight), // Extract number (INTEGER)
+        country: updatedData.location || null, // Map 'location' field to DB 'country' column
         profile_photo_url: updatedData.profilePhoto || null,
         pose_photo_url: updatedData.posePhoto || null,
       };
@@ -189,6 +192,7 @@ export function PlayerDashboard() {
         weight: formatWeightForDisplay(data.identity.weight),
         age: data.identity.age || 0,
         team: data.identity.teamName || '',
+        location: data.identity.location || '',
         profilePhoto: data.identity.profilePhotoUrl || '',
         posePhoto: data.identity.posePhotoUrl || '',
         seasonAverages: {
@@ -239,6 +243,7 @@ export function PlayerDashboard() {
   const weight = hasValidData(data.identity?.weight) 
     ? data.identity!.weight 
     : (currentPlayerData.weight || "--");
+  const location = data.identity?.location || currentPlayerData.location || '';
 
   // Season averages with better fallback logic - show live data even if 0
   const seasonPts = (data.season?.pointsPerGame !== undefined && data.season?.pointsPerGame !== null) 
@@ -348,11 +353,17 @@ export function PlayerDashboard() {
                               <span className="text-lg font-semibold">{position}</span>
                             </div>
                             <div className="flex items-center gap-2 text-orange-100">
-                              <span>{height}</span>
+                              <span>{height}{height !== '--' && !String(height).includes('"') && '"'}</span>
                               <span>•</span>
-                              <span>{weight}</span>
+                              <span>{weight}{weight !== '--' && !String(weight).includes('lbs') && ' lbs'}</span>
                               <span>•</span>
                               <span>Age {age}</span>
+                              {location && (
+                                <>
+                                  <span>•</span>
+                                  <span>{getCountryName(location)}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                           

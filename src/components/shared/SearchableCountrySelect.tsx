@@ -58,6 +58,13 @@ export function SearchableCountrySelect({
 
   const selectedCountry = countries.find(c => c.code === value);
 
+  // Debug: Log when value changes to verify it's received
+  useEffect(() => {
+    if (value) {
+      console.log('🌍 Country selector value:', value, '- Found:', selectedCountry?.name || 'NOT FOUND');
+    }
+  }, [value, selectedCountry]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

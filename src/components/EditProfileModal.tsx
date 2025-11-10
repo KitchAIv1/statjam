@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { SearchableCountrySelect } from '@/components/shared/SearchableCountrySelect';
 
 interface PlayerProfile {
   name: string;
@@ -16,6 +17,7 @@ interface PlayerProfile {
   weight: string;
   age: number;
   team: string;
+  location?: string;  // Country code
   profilePhoto: string;
   posePhoto: string;
   seasonAverages: {
@@ -59,6 +61,7 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     weight: data.weight || '',
     age: data.age || 0,
     team: data.team || '',
+    location: data.location || '',
     profilePhoto: data.profilePhoto || '',
     posePhoto: data.posePhoto || '',
     seasonAverages: data.seasonAverages,
@@ -91,7 +94,13 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
   
   // Update formData when playerData prop changes
   useEffect(() => {
-    setFormData(sanitizePlayerData(playerData));
+    const sanitized = sanitizePlayerData(playerData);
+    setFormData(sanitized);
+    
+    // Debug: Log location to verify it's loaded from DB
+    if (sanitized.location) {
+      console.log('✅ Location loaded from DB:', sanitized.location);
+    }
   }, [playerData]);
   
   // Initialize height from formData on mount or when formData.height changes
@@ -325,6 +334,16 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="location">Country</Label>
+              <SearchableCountrySelect
+                value={formData.location || ''}
+                onChange={(country) => handleInputChange('location', country)}
+                disabled={profilePhotoUpload.uploading || posePhotoUpload.uploading}
+                placeholder="Type to search countries..."
+              />
             </div>
 
             <div className="space-y-2">

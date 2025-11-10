@@ -56,7 +56,7 @@ function toIdentity(row: Record<string, unknown>): PlayerIdentity | null {
     age: (row as any).age ?? 0,
     height: (row as any).height ?? 'N/A',
     weight: (row as any).weight ?? 'N/A',
-    country: (row as any).country ?? undefined,
+    location: (row as any).country ?? undefined,  // Map DB 'country' column to 'location' field
     profilePhotoUrl: (row as any).profile_photo_url ?? undefined,
     posePhotoUrl: (row as any).pose_photo_url ?? undefined,
   };
@@ -176,7 +176,7 @@ export class PlayerDashboardService {
           age: undefined,
           height: '',
           weight: '',
-          country: undefined,
+          location: undefined,
           profilePhotoUrl: undefined,
           posePhotoUrl: undefined,
         };

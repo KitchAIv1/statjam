@@ -8,7 +8,7 @@ export interface PlayerIdentity {
   age?: number;
   height?: string | number;
   weight?: string | number;
-  country?: string;
+  location?: string;  // Country code
   profilePhotoUrl?: string;
   posePhotoUrl?: string;
 }
