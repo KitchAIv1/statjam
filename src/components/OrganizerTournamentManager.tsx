@@ -15,10 +15,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { PhotoUploadField } from "@/components/ui/PhotoUploadField";
 import { useTournaments } from "@/lib/hooks/useTournaments";
 import { useTeamManagement } from "@/hooks/useTeamManagement";
 import { useTournamentTeamCount } from "@/hooks/useTournamentTeamCount";
 import { useTournamentGameStatus } from "@/hooks/useTournamentGameStatus";
+import { usePhotoUpload } from "@/hooks/usePhotoUpload";
 import { TournamentTableRow } from "@/components/TournamentTableRow";
 import { Tournament } from "@/lib/types/tournament";
 import { TeamCreationModal } from "@/components/shared/TeamCreationModal";
@@ -86,8 +88,16 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
       >
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <Trophy className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 overflow-hidden">
+              {tournament.logo ? (
+                <img 
+                  src={tournament.logo} 
+                  alt={`${tournament.name} logo`} 
+                  className="w-full h-full object-cover rounded-xl"
+                />
+              ) : (
+                <Trophy className="w-6 h-6 text-white" />
+              )}
             </div>
             <div>
               <CardTitle className="text-base group-hover:text-primary transition-colors">{tournament.name}</CardTitle>
@@ -300,6 +310,20 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   
   // Validation errors state
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Logo upload for settings modal
+  const logoUpload = usePhotoUpload({
+    userId: user?.id || '',
+    photoType: 'tournament_logo',
+    tournamentId: tournamentToEdit?.id || '',
+    currentPhotoUrl: tournamentToEdit?.logo || null,
+    onSuccess: (url) => {
+      if (tournamentToEdit) {
+        setTournamentToEdit({ ...tournamentToEdit, logo: url });
+      }
+    },
+    onError: (error) => console.error('Logo upload error:', error)
+  });
 
   // Load stat admins when settings modal opens
   const loadStatAdmins = async () => {
@@ -1089,6 +1113,26 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                             onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, description: e.target.value })}
                             rows={3}
                           />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Tournament Logo</Label>
+                          <PhotoUploadField
+                            label="Upload Logo"
+                            value={tournamentToEdit.logo || null}
+                            previewUrl={logoUpload.previewUrl}
+                            uploading={logoUpload.uploading}
+                            error={logoUpload.error}
+                            aspectRatio="square"
+                            onFileSelect={logoUpload.handleFileSelect}
+                            onRemove={() => {
+                              logoUpload.clearPreview();
+                              setTournamentToEdit({ ...tournamentToEdit, logo: '' });
+                            }}
+                          />
+                          <p className="text-sm text-muted-foreground">
+                            Square image recommended (min 256x256px, max 5MB)
+                          </p>
                         </div>
 
                         <div className="grid grid-cols-3 gap-4">

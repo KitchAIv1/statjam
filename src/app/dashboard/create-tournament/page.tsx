@@ -1,12 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Trophy, Settings, Users, Check, ArrowLeft, ArrowRight, Calendar, MapPin, DollarSign } from 'lucide-react';
 import { useTournamentForm } from '@/lib/hooks/useTournamentForm';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { getRulesetDisplayName, getRulesetDescription } from '@/lib/types/ruleset';
+import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 
 const CreateTournamentV2 = () => {
   const { user, loading } = useAuthV2();
@@ -23,6 +25,17 @@ const CreateTournamentV2 = () => {
     submitTournament,
     resetForm,
   } = useTournamentForm();
+
+  // Logo upload state
+  const [tempTournamentId] = useState(`temp-${Date.now()}`); // Temp ID for upload
+  const logoUpload = usePhotoUpload({
+    userId: user?.id || '',
+    photoType: 'tournament_logo',
+    tournamentId: tempTournamentId,
+    currentPhotoUrl: data.logo || null,
+    onSuccess: (url) => updateData('logo', url),
+    onError: (error) => console.error('Logo upload error:', error)
+  });
 
   useEffect(() => {
     if (!loading && (!user || userRole !== 'organizer')) {
@@ -461,6 +474,26 @@ const CreateTournamentV2 = () => {
                 </select>
                 {errors.country && <span style={styles.errorText}>{errors.country}</span>}
               </div>
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Tournament Logo (Optional)</label>
+              <PhotoUploadField
+                label="Upload Logo"
+                value={data.logo || null}
+                previewUrl={logoUpload.previewUrl}
+                uploading={logoUpload.uploading}
+                error={logoUpload.error}
+                aspectRatio="square"
+                onFileSelect={logoUpload.handleFileSelect}
+                onRemove={() => {
+                  logoUpload.clearPreview();
+                  updateData('logo', '');
+                }}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--dashboard-text-secondary)', marginTop: '8px', display: 'block' }}>
+                Square image recommended (min 256x256px, max 5MB)
+              </span>
             </div>
           </div>
         );
