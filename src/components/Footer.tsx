@@ -93,11 +93,21 @@ export function Footer() {
           <div className="flex flex-col md:flex-row items-center gap-8">
             {/* Social Icons */}
             <div className="flex items-center gap-6">
-              <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors">
+              <a
+                href="https://www.facebook.com/people/Statjam/61583861420167/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-orange-500 transition-colors"
+              >
                 <Facebook className="w-6 h-6" />
                 <span className="sr-only">Facebook</span>
               </a>
-              <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors">
+              <a
+                href="https://instagram.com/stat.jam"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-orange-500 transition-colors"
+              >
                 <Instagram className="w-6 h-6" />
                 <span className="sr-only">Instagram</span>
               </a>
