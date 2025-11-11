@@ -1,0 +1,58 @@
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { getTournamentPageData } from '@/lib/services/tournamentPublicService';
+import { TournamentPageShell } from '@/components/tournament/TournamentPageShell';
+
+interface TournamentPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: TournamentPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const data = await getTournamentPageData(id);
+
+  if (!data) {
+    return {
+      title: 'Tournament Not Found • StatJam',
+    };
+  }
+
+  const { tournament } = data;
+  const title = `${tournament.name} • StatJam`;
+  const description = tournament.location
+    ? `${tournament.name} — ${tournament.location}`
+    : `${tournament.name} on StatJam`;
+
+  const images = tournament.logo
+    ? [{ url: tournament.logo, alt: `${tournament.name} logo` }]
+    : undefined;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images,
+    },
+  };
+}
+
+export default async function TournamentPage({ params }: TournamentPageProps) {
+  const { id } = await params;
+  const data = await getTournamentPageData(id);
+
+  if (!data) {
+    notFound();
+  }
+
+  return <TournamentPageShell data={data} />;
+}
+

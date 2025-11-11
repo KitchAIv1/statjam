@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Users, Calendar, Target, TrendingUp, Award, Clock, ArrowRight } from "lucide-react";
+import { Trophy, Users, Calendar, Target, TrendingUp, Award, Clock, ArrowRight, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/Button";
@@ -190,11 +190,13 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
             {recentTournaments.length > 0 ? recentTournaments.map((tournament, index) => (
               <div 
                 key={index} 
-                className="group p-4 border rounded-xl hover:border-primary/30 hover:bg-muted/30 transition-all duration-300 cursor-pointer"
-                onClick={() => router.push('/dashboard?section=tournaments')}
+                className="group p-4 border rounded-xl hover:border-primary/30 hover:bg-muted/30 transition-all duration-300"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
+                  <div 
+                    className="flex-1 cursor-pointer"
+                    onClick={() => router.push('/dashboard?section=tournaments')}
+                  >
                     <div className="flex items-center gap-2 mb-1">
                       <Trophy className="w-4 h-4 text-primary" />
                       <p className="font-semibold group-hover:text-primary transition-colors">{tournament.name}</p>
@@ -217,13 +219,27 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
                       )}
                     </div>
                   </div>
-                  <Badge 
-                    variant={tournament.status === 'Active' ? 'default' : 'secondary'}
-                    className={`${getOverviewStatusClasses(tournament.status)} shrink-0 px-3 py-1 text-xs uppercase tracking-wide`}
-                  >
-                    {tournament.status === 'Active' && <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>}
-                    {tournament.status}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge 
+                      variant={tournament.status === 'Active' ? 'default' : 'secondary'}
+                      className={`${getOverviewStatusClasses(tournament.status)} shrink-0 px-3 py-1 text-xs uppercase tracking-wide`}
+                    >
+                      {tournament.status === 'Active' && <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>}
+                      {tournament.status}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 h-7 text-xs hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 dark:hover:bg-blue-950/30"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`/tournament/${tournament.id}`, '_blank');
+                      }}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      View Public
+                    </Button>
+                  </div>
                 </div>
                 {tournament.status === 'Active' && (
                   <div className="space-y-2">

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2, UserCheck, UserX, Target, CalendarDays } from "lucide-react";
+import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2, UserCheck, UserX, Target, CalendarDays, ExternalLink } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -211,7 +211,7 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
           </div>
         </div>
         
-        <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-border/50">
+        <div className="grid grid-cols-5 gap-1.5 pt-2 border-t border-border/50">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -278,6 +278,26 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
             <Settings className="w-3 h-3" />
             <span className="hidden sm:inline">Settings</span>
           </Button>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="gap-1 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 dark:hover:bg-blue-950/30"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(`/tournament/${tournament.id}`, '_blank');
+                }}
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span className="hidden sm:inline">View</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View Public Page</p>
+            </TooltipContent>
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>

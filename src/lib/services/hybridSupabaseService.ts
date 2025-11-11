@@ -107,7 +107,44 @@ export class HybridSupabaseService {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          // Try to get error details from response body
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          let isTableNotFound = false;
+          try {
+            const errorData = await response.json().catch(() => null);
+            if (errorData?.message) {
+              errorMessage = `${errorMessage} - ${errorData.message}`;
+              // Check if table doesn't exist (404 with "does not exist" message)
+              if (response.status === 404 && (errorData.message.includes('does not exist') || errorData.message.includes('relation'))) {
+                isTableNotFound = true;
+              }
+            } else if (errorData?.error) {
+              errorMessage = `${errorMessage} - ${errorData.error}`;
+              if (response.status === 404 && (errorData.error.includes('does not exist') || errorData.error.includes('relation'))) {
+                isTableNotFound = true;
+              }
+            }
+            // Only log non-404 errors for debugging (404s are expected for missing tables)
+            if (!isTableNotFound) {
+              console.error('🚨 HybridService: Query error details:', {
+                url,
+                status: response.status,
+                statusText: response.statusText,
+                errorData
+              });
+            }
+          } catch {
+            // If JSON parsing fails, use the status text
+          }
+          
+          // For 404 table not found errors, mark for immediate throw (no retries)
+          if (isTableNotFound) {
+            const notFoundError = new Error(errorMessage);
+            (notFoundError as any).isTableNotFound = true;
+            throw notFoundError;
+          }
+          
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
@@ -115,6 +152,14 @@ export class HybridSupabaseService {
         return data;
 
       } catch (error: any) {
+        // Check if this is a "table doesn't exist" error - don't retry these
+        const isTableNotFound = (error as any).isTableNotFound || error.message?.includes('does not exist') || error.message?.includes('404');
+        
+        if (isTableNotFound) {
+          // For missing tables, throw immediately without retries or warnings
+          throw error;
+        }
+        
         console.warn(`⚠️ HybridService: Query attempt ${attempt + 1} failed:`, error.message);
         
         if (attempt === retries) {

@@ -48,6 +48,12 @@ export const navigationConfig: Record<string, NavigationConfig> = {
   guest: {
     primary: [
       {
+        label: 'Tournaments',
+        href: '/tournaments',
+        icon: Trophy,
+        description: 'Browse tournaments'
+      },
+      {
         label: 'Features',
         href: '/features',
         icon: BarChart3,

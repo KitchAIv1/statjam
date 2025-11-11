@@ -749,7 +749,8 @@ export class TeamService {
               premium_status,
               country,
               created_at,
-              name
+              name,
+              profile_photo_url
             ),
             custom_players!custom_player_id (
               id,
@@ -815,6 +816,7 @@ export class TeamService {
                 isPremium: user.premium_status || false,
                 country: user.country || 'US',
                 createdAt: user.created_at || new Date().toISOString(),
+                profilePhotoUrl: user.profile_photo_url || undefined,
               };
             });
 

@@ -4,9 +4,11 @@ export interface Tournament {
   name: string;
   description: string;
   status: 'draft' | 'active' | 'completed' | 'cancelled';
+  slug?: string;
   startDate: string;
   endDate: string;
   venue: string;
+  location?: string;
   maxTeams: number;
   currentTeams: number;
   tournamentType: 'single_elimination' | 'double_elimination' | 'round_robin' | 'swiss';
@@ -15,6 +17,10 @@ export interface Tournament {
   prizePool: number;
   country: string;
   organizerId: string;
+  organizerName?: string;
+  venues?: string[];
+  divisions?: string[];
+  branding?: Record<string, any>;
   logo?: string; // Tournament logo URL from Supabase Storage
   createdAt: string;
   updatedAt: string;
