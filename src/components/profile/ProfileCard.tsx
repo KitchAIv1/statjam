@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { OptimizedAvatar } from "@/components/ui/OptimizedAvatar";
 import { 
   Edit, Share2, Trophy, Users, Calendar, MapPin, 
   Twitter, Instagram, Globe, Facebook, ImageOff 
@@ -41,7 +41,7 @@ interface ProfileCardProps {
  * Follows .cursorrules: <200 lines, UI only
  */
 export function ProfileCard({ profileData, shareData, onEdit, onShare }: ProfileCardProps) {
-  // Track avatar image loading state
+  // Track avatar image loading state (for fallback display)
   const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
 
   // Get initials for avatar fallback
@@ -104,41 +104,25 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
       
       <CardContent className="p-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          {/* Profile Photo */}
+          {/* Profile Photo - Optimized for instant loading */}
           <div className="relative flex-shrink-0">
-            <Avatar className="w-32 h-32 sm:w-36 sm:h-36 border-4 border-primary/20 group-hover:border-primary/40 transition-colors">
-              {/* Loading Shimmer Effect */}
-              {imageStatus === 'loading' && profileData.profilePhotoUrl && (
-                <div className="absolute inset-0 bg-gradient-to-r from-muted via-muted/50 to-muted animate-shimmer bg-[length:200%_100%]" />
-              )}
-              
-              {/* Avatar Image with optimizations */}
-              {profileData.profilePhotoUrl && imageStatus !== 'error' && (
-                <AvatarImage 
-                  src={profileData.profilePhotoUrl} 
-                  alt={profileData.name}
-                  loading="eager"
-                  decoding="async"
-                  onLoad={() => setImageStatus('loaded')}
-                  onError={() => setImageStatus('error')}
-                  className={`object-cover transition-opacity duration-300 ${
-                    imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
-                  }`}
-                />
-              )}
-              
-              {/* Fallback - Shows for no image, loading (behind shimmer), or error */}
-              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-3xl font-bold">
-                {imageStatus === 'error' && profileData.profilePhotoUrl ? (
+            <OptimizedAvatar
+              src={profileData.profilePhotoUrl}
+              alt={profileData.name}
+              size="xl"
+              priority={true}
+              className="border-4 border-primary/20 group-hover:border-primary/40 transition-colors"
+              fallback={
+                imageStatus === 'error' && profileData.profilePhotoUrl ? (
                   <div className="flex flex-col items-center gap-2">
                     <ImageOff className="w-8 h-8 opacity-50" />
                     <span className="text-xs opacity-75">Failed</span>
                   </div>
                 ) : (
-                  getInitials(profileData.name)
-                )}
-              </AvatarFallback>
-            </Avatar>
+                  <span className="text-3xl font-bold">{getInitials(profileData.name)}</span>
+                )
+              }
+            />
             
             {/* Status Indicator */}
             <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-gradient-to-br from-green-400 to-green-500 rounded-full border-4 border-white dark:border-gray-900 flex items-center justify-center">
