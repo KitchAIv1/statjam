@@ -89,6 +89,7 @@ export function TeamInfoStep({
           <Label>Team Logo (Optional)</Label>
           <PhotoUploadField
             label="Upload Team Logo"
+            value={logoUpload.previewUrl || null}
             previewUrl={logoUpload.previewUrl}
             uploading={logoUpload.uploading}
             progress={logoUpload.progress}

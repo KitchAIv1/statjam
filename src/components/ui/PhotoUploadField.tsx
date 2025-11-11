@@ -22,6 +22,8 @@ export interface PhotoUploadFieldProps {
   previewUrl: string | null;
   uploading: boolean;
   error: string | null;
+  progress?: number | null;
+  onClearError?: () => void;
   disabled?: boolean;
   aspectRatio?: 'square' | 'portrait' | 'landscape';
   onFileSelect: (file: File) => void;
@@ -39,6 +41,8 @@ export function PhotoUploadField({
   previewUrl,
   uploading,
   error,
+  progress = null,
+  onClearError,
   disabled = false,
   aspectRatio = 'square',
   onFileSelect,
@@ -165,17 +169,23 @@ export function PhotoUploadField({
 
         {/* Loading Overlay - Show over preview during upload */}
         {uploading && hasPhoto && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm">
-            <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/90 backdrop-blur-sm">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <span className="text-sm text-muted-foreground font-medium">Uploading...</span>
+            {typeof progress === 'number' && (
+              <span className="text-xs text-muted-foreground">{Math.round(progress)}%</span>
+            )}
           </div>
         )}
 
         {/* Loading State - Show when no preview yet */}
         {uploading && !hasPhoto && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
-            <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/80">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <span className="text-sm text-muted-foreground">Processing...</span>
+            {typeof progress === 'number' && (
+              <span className="text-xs text-muted-foreground">{Math.round(progress)}%</span>
+            )}
           </div>
         )}
 
@@ -192,7 +202,20 @@ export function PhotoUploadField({
 
       {/* Error Message */}
       {error && (
-        <p className="text-sm text-destructive text-center">{error}</p>
+        <div className="flex items-center justify-center gap-2 text-sm text-destructive text-center">
+          <span>{error}</span>
+          {onClearError && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-destructive hover:text-destructive"
+              onClick={onClearError}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Help Text */}

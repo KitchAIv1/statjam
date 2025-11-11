@@ -274,6 +274,11 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   const inProgressGames = games.filter(g => g.status === 'in_progress');
   const completedGames = games.filter(g => g.status === 'completed');
 
+  const handleLogoRemove = () => {
+    setEditFormData(prev => ({ ...prev, logo: '' }));
+    editLogoUpload.clearPreview();
+  };
+
   return (
     <>
       <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden">
@@ -703,15 +708,13 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 <Label>Team Logo</Label>
                 <PhotoUploadField
                   label="Upload Team Logo"
+                  value={editFormData.logo || null}
                   previewUrl={editLogoUpload.previewUrl || editFormData.logo}
                   uploading={editLogoUpload.uploading}
                   progress={editLogoUpload.progress}
                   error={editLogoUpload.error}
                   onFileSelect={editLogoUpload.handleFileSelect}
-                  onRemove={() => {
-                    editLogoUpload.clearPreview();
-                    setEditFormData(prev => ({ ...prev, logo: '' }));
-                  }}
+                  onRemove={handleLogoRemove}
                   onClearError={editLogoUpload.clearError}
                 />
               </div>

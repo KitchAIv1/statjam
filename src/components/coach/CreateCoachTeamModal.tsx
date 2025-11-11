@@ -144,7 +144,7 @@ export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateC
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
@@ -181,15 +181,16 @@ export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateC
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pr-1 min-h-0">
           {currentStep === 'details' ? (
             /* Step 1: Team Details */
-            <div className="space-y-4">
+            <div className="space-y-4 pb-4">
               {/* Team Logo Upload */}
               <div className="space-y-2">
                 <Label>Team Logo (Optional)</Label>
                 <PhotoUploadField
                   label="Upload Team Logo"
+                  value={logoUrl || null}
                   previewUrl={logoUpload.previewUrl}
                   uploading={logoUpload.uploading}
                   progress={logoUpload.progress}
@@ -315,7 +316,7 @@ export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateC
             </div>
           ) : (
             /* Step 2: Player Management */
-            <div className="space-y-4">
+            <div className="space-y-4 pb-4">
               {/* Added Players Summary */}
               {addedPlayers.length > 0 && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
