@@ -570,6 +570,53 @@ export class AuthServiceV2 {
   }
 
   /**
+   * 🔐 UPDATE USER COUNTRY - Update country after signup
+   */
+  async updateUserCountry(userId: string, country: string): Promise<{ data: any | null; error: Error | null }> {
+    try {
+      console.log('🔐 AuthServiceV2: Updating user country:', { userId, country });
+
+      const session = this.getSession();
+      if (!session.accessToken) {
+        throw new Error('No access token available for country update');
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+
+      const response = await fetch(`${this.config.url}/rest/v1/users?id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': this.config.anonKey,
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          country: country
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(`Country update failed: ${errorData.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ AuthServiceV2: User country updated successfully');
+      
+      return { data: data[0] || data, error: null };
+
+    } catch (error: any) {
+      console.error('❌ AuthServiceV2: Update country error:', error.message);
+      return { data: null, error };
+    }
+  }
+
+  /**
    * 🔐 RESEND CONFIRMATION EMAIL - Raw HTTP (never hangs)
    */
   async resendConfirmationEmail(email: string): Promise<{ error: Error | null }> {

@@ -28,7 +28,7 @@ export class ProfileService {
       // Fetch user profile
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, email, name, role, profile_photo_url, bio, location, social_links, created_at')
+        .select('id, email, name, role, profile_photo_url, bio, country, social_links, created_at')
         .eq('id', userId)
         .eq('role', 'organizer')
         .single();
@@ -93,7 +93,7 @@ export class ProfileService {
         role: 'organizer',
         profilePhotoUrl: userData.profile_photo_url,
         bio: userData.bio,
-        location: userData.location,
+        location: userData.country, // Map DB 'country' column to 'location' field
         socialLinks: userData.social_links,
         createdAt: userData.created_at,
         stats
@@ -112,7 +112,7 @@ export class ProfileService {
       // Fetch user profile
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, email, name, role, profile_photo_url, bio, location, social_links, created_at')
+        .select('id, email, name, role, profile_photo_url, bio, country, social_links, created_at')
         .eq('id', userId)
         .eq('role', 'coach')
         .single();
@@ -169,7 +169,7 @@ export class ProfileService {
         role: 'coach',
         profilePhotoUrl: userData.profile_photo_url,
         bio: userData.bio,
-        location: userData.location,
+        location: userData.country, // Map DB 'country' column to 'location' field
         socialLinks: userData.social_links,
         createdAt: userData.created_at,
         stats
@@ -188,7 +188,7 @@ export class ProfileService {
       // Fetch user profile
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, email, name, role, profile_photo_url, bio, location, social_links, created_at')
+        .select('id, email, name, role, profile_photo_url, bio, country, social_links, created_at')
         .eq('id', userId)
         .eq('role', 'stat_admin')
         .single();
@@ -230,7 +230,7 @@ export class ProfileService {
         role: 'stat_admin',
         profilePhotoUrl: userData.profile_photo_url,
         bio: userData.bio,
-        location: userData.location,
+        location: userData.country, // Map DB 'country' column to 'location' field
         socialLinks: userData.social_links,
         createdAt: userData.created_at,
         stats
@@ -251,7 +251,7 @@ export class ProfileService {
         .update({
           name: updates.name,
           bio: updates.bio,
-          location: updates.location,
+          country: updates.location, // Map 'location' field to DB 'country' column
           social_links: updates.socialLinks,
           profile_photo_url: updates.profilePhotoUrl
         })

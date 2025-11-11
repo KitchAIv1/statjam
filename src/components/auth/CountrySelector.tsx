@@ -26,6 +26,9 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
   const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Convert popular country codes to Country objects
+  const popularCountries = POPULAR_COUNTRIES.map(code => getCountry(code)).filter(Boolean);
+
   // Filter all 195+ countries
   const filteredCountries = searchQuery
     ? COUNTRIES.filter(c => 
@@ -130,16 +133,16 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
       </div>
       
       <div style={{ display: 'grid', gap: '8px', marginBottom: '16px' }}>
-        {POPULAR_COUNTRIES.map((country) => (
+        {popularCountries.map((country) => (
           <button
-            key={country.code}
+            key={country!.code}
             type="button"
-            onClick={() => handleCountrySelect(country.code)}
+            onClick={() => handleCountrySelect(country!.code)}
             disabled={disabled}
             style={{
               padding: '14px 16px',
-              backgroundColor: value === country.code ? 'rgba(249, 115, 22, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-              border: value === country.code ? '2px solid #f97316' : '1px solid rgba(255, 255, 255, 0.1)',
+              backgroundColor: value === country!.code ? 'rgba(249, 115, 22, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+              border: value === country!.code ? '2px solid #f97316' : '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '8px',
               color: '#fff',
               cursor: disabled ? 'not-allowed' : 'pointer',
@@ -149,21 +152,21 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
               fontWeight: '500'
             }}
             onMouseEnter={(e) => {
-              if (!disabled && value !== country.code) {
+              if (!disabled && value !== country!.code) {
                 e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
                 e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
               }
             }}
             onMouseLeave={(e) => {
-              if (value !== country.code) {
+              if (value !== country!.code) {
                 e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                 e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
               }
             }}
           >
-            <span style={{ marginRight: '12px', fontSize: '20px' }}>{country.flag}</span>
-            {country.name}
-            {value === country.code && (
+            <span style={{ marginRight: '12px', fontSize: '20px' }}>{country!.flag}</span>
+            {country!.name}
+            {value === country!.code && (
               <span style={{ float: 'right', color: '#f97316' }}>✓</span>
             )}
           </button>

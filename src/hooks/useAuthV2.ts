@@ -244,6 +244,11 @@ export function useAuthV2() {
         }
         
         if (profile) {
+          // Check for pending country from signup
+          const pendingCountry = typeof window !== 'undefined' 
+            ? localStorage.getItem('pending_country') 
+            : null;
+          
           // ✅ ENHANCED: Validate role matches requested userType
           const requestedRole = metadata?.userType || 'player';
           if (profile.role !== requestedRole) {
@@ -264,6 +269,28 @@ export function useAuthV2() {
             }
           }
           
+          // ✅ Update country if pending from signup
+          if (pendingCountry && (!profile.country || profile.country === 'US')) {
+            console.log('🌍 useAuthV2: Updating profile with pending country:', pendingCountry);
+            try {
+              const { data: updatedProfile, error: updateError } = await authServiceV2.updateUserCountry(profile.id, pendingCountry);
+              if (updatedProfile && !updateError) {
+                console.log('✅ useAuthV2: Country updated successfully!');
+                profile.country = pendingCountry; // Update local profile
+                
+                // Clear pending country from localStorage
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('pending_country');
+                  console.log('🧹 useAuthV2: Cleared pending_country from localStorage');
+                }
+              } else {
+                console.error('❌ useAuthV2: Country update failed:', updateError?.message);
+              }
+            } catch (countryError: any) {
+              console.error('❌ useAuthV2: Country update threw error:', countryError.message);
+            }
+          }
+          
           setState({ user: profile, loading: false, error: null });
           return { success: true, autoSignedIn: true, profile };
         } else {
@@ -273,16 +300,32 @@ export function useAuthV2() {
           if (metadata) {
             console.log('🔧 useAuthV2: Attempting manual profile creation as fallback...');
             
+            // Check for pending country from signup
+            const pendingCountry = typeof window !== 'undefined' 
+              ? localStorage.getItem('pending_country') 
+              : null;
+            
+            if (pendingCountry) {
+              console.log('🌍 useAuthV2: Found pending country from signup:', pendingCountry);
+            }
+            
             try {
               const { data: createdProfile, error: createError } = await authServiceV2.createUserProfile({
                 email: data.user.email,
                 role: metadata.userType || 'player',
                 name: `${metadata.firstName || ''} ${metadata.lastName || ''}`.trim(),
-                country: 'US'
+                country: pendingCountry || 'US'
               });
               
               if (createdProfile && !createError) {
                 console.log('✅ useAuthV2: Manual profile creation successful!');
+                
+                // Clear pending country from localStorage after successful use
+                if (typeof window !== 'undefined' && pendingCountry) {
+                  localStorage.removeItem('pending_country');
+                  console.log('🧹 useAuthV2: Cleared pending_country from localStorage');
+                }
+                
                 setState({ user: createdProfile, loading: false, error: null });
                 return { success: true, autoSignedIn: true, profile: createdProfile };
               } else {
