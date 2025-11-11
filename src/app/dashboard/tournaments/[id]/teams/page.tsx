@@ -547,6 +547,7 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                             <PlayerSelectionList
                               key={currentPlayers.map(p => p.id).join(',')}
                               teamId={team.id}
+                              tournamentId={tournamentId}
                               service={service}
                               onPlayerAdd={handlePlayerAdd}
                               onPlayerRemove={handlePlayerRemove}

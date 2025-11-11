@@ -32,9 +32,11 @@ export class CoachPlayerManagementService implements IPlayerManagementService {
   async searchAvailablePlayers(request: PlayerSearchRequest): Promise<GenericPlayer[]> {
     const { CoachPlayerService } = await import('./coachPlayerService');
     
+    // ✅ FIX: Use team_id as exclude_team_id if exclude_team_id is not provided
+    // This ensures players already on the team are excluded from search
     const searchRequest: SearchPlayersRequest = {
       query: request.query,
-      exclude_team_id: request.exclude_team_id,
+      exclude_team_id: request.exclude_team_id || request.team_id,
       limit: request.limit || 50
     };
     
@@ -51,7 +53,8 @@ export class CoachPlayerManagementService implements IPlayerManagementService {
       premium_status: p.premium_status,
       created_at: p.created_at,
       is_on_team: p.is_on_team,
-      team_player_id: p.team_player_id
+      team_player_id: p.team_player_id,
+      profile_photo_url: p.profile_photo_url || p.photo_url || undefined // Include profile photo URL
     }));
   }
   
@@ -69,7 +72,8 @@ export class CoachPlayerManagementService implements IPlayerManagementService {
       premium_status: p.premium_status,
       created_at: p.created_at,
       is_on_team: p.is_on_team,
-      team_player_id: p.team_player_id
+      team_player_id: p.team_player_id,
+      profile_photo_url: p.profile_photo_url || p.photo_url || undefined // Include profile photo URL
     }));
   }
   

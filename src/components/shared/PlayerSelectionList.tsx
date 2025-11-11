@@ -152,10 +152,16 @@ export function PlayerSelectionList({
           });
 
           if (response.success) {
+            // Update local state
             setPlayers(prev => prev.map(p => 
               p.id === player.id ? { ...p, is_on_team: false, team_player_id: undefined } : p
             ));
             onPlayerRemove(player);
+            // ✅ FIX: Refresh search to reflect updated is_on_team status from server
+            // This ensures players removed from tournament teams are included in search again
+            setTimeout(() => {
+              searchPlayers(searchQuery || '', []);
+            }, 100);
           } else {
             setError(response.message || response.error || 'Failed to remove player');
           }
@@ -167,10 +173,16 @@ export function PlayerSelectionList({
           });
 
           if (response.success) {
+            // Update local state
             setPlayers(prev => prev.map(p => 
               p.id === player.id ? { ...p, is_on_team: true } : p
             ));
             onPlayerAdd(player);
+            // ✅ FIX: Refresh search to reflect updated is_on_team status from server
+            // This ensures players added to tournament teams are excluded from search
+            setTimeout(() => {
+              searchPlayers(searchQuery || '', []);
+            }, 100);
           } else {
             setError(response.message || response.error || 'Failed to add player');
           }

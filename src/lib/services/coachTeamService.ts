@@ -185,20 +185,39 @@ export class CoachTeamService {
 
   /**
    * Delete a coach team
+   * ✅ FIX: Delete team_players records first to avoid foreign key constraint violation
    */
   static async deleteTeam(teamId: string): Promise<void> {
     try {
-      const { error } = await supabase
+      // Step 1: Delete all team_players relationships for this team (includes both regular and custom players)
+      const { error: teamPlayersError } = await supabase
+        .from('team_players')
+        .delete()
+        .eq('team_id', teamId);
+
+      if (teamPlayersError) {
+        console.error('❌ Error deleting team players:', teamPlayersError);
+        throw new Error(`Failed to delete team players: ${teamPlayersError.message}`);
+      }
+
+      // Step 2: Delete the team itself
+      const { error: deleteError } = await supabase
         .from('teams')
         .delete()
         .eq('id', teamId);
 
-      if (error) throw error;
+      if (deleteError) {
+        console.error('❌ Error deleting team:', deleteError);
+        throw new Error(`Failed to delete team: ${deleteError.message}`);
+      }
 
+      // Step 3: Invalidate cache
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         invalidateCoachTeams(user.id);
       }
+
+      console.log('✅ CoachTeamService: Team deleted successfully:', teamId);
     } catch (error) {
       console.error('❌ Error deleting coach team:', error);
       throw error;

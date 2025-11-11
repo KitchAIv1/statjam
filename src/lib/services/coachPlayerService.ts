@@ -49,7 +49,7 @@ export class CoachPlayerService {
         } else {
           // Add regular players
           (regularPlayersResult.data || []).forEach(tp => {
-            players.push({
+            const playerData = {
               id: tp.users.id,
               name: tp.users.name || 'Unknown Player',
               email: tp.users.email,
@@ -59,8 +59,10 @@ export class CoachPlayerService {
               created_at: tp.users.created_at,
               team_player_id: tp.id,
               is_on_team: true,
-              photo_url: tp.users.profile_photo_url || null // Map profile_photo_url to photo_url for UI
-            });
+              profile_photo_url: tp.users.profile_photo_url || null, // Use profile_photo_url to match GenericPlayer interface
+              photo_url: tp.users.profile_photo_url || null // Keep for backwards compatibility
+            };
+            players.push(playerData);
           });
           console.log('✅ Loaded', regularPlayersResult.data?.length || 0, 'regular players');
         }
@@ -135,7 +137,7 @@ export class CoachPlayerService {
     try {
       let query = supabase
         .from('users')
-        .select('id, name, email, premium_status, created_at')
+        .select('id, name, email, premium_status, created_at, profile_photo_url')
         .eq('role', 'player')
         .order('premium_status', { ascending: false })
         .order('name', { ascending: true });
@@ -170,7 +172,9 @@ export class CoachPlayerService {
         profile_player_id: player.id,
         premium_status: player.premium_status,
         created_at: player.created_at,
-        is_on_team: existingPlayerIds.includes(player.id)
+        is_on_team: existingPlayerIds.includes(player.id),
+        profile_photo_url: player.profile_photo_url || null, // Include profile photo URL
+        photo_url: player.profile_photo_url || null // Keep for backwards compatibility
       }));
     } catch (error) {
       console.error('❌ Error searching available players:', error);

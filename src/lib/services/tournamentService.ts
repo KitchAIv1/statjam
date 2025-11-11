@@ -608,6 +608,17 @@ export class TeamService {
         throw new Error(`Failed to fetch team: ${teamFetchError.message}`);
       }
 
+      // ✅ FIX: Delete all team_players relationships first to avoid foreign key constraint violation
+      const { error: teamPlayersError } = await supabase
+        .from('team_players')
+        .delete()
+        .eq('team_id', teamId);
+
+      if (teamPlayersError) {
+        console.error('❌ TeamService: Error deleting team players:', teamPlayersError);
+        throw new Error(`Failed to delete team players: ${teamPlayersError.message}`);
+      }
+
       // Delete the team
       const { error: deleteError } = await supabase
         .from('teams')

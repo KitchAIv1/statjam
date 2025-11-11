@@ -11,6 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Team as TeamType, Player } from "@/lib/types/tournament";
 import { TeamService } from "@/lib/services/tournamentService";
+import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
+import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 
 interface PlayerManagerProps {
   team: TeamType | null;
@@ -20,6 +22,7 @@ interface PlayerManagerProps {
 }
 
 export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerManagerProps) {
+  const { isOpen: isProfileModalOpen, playerId, openModal, closeModal } = usePlayerProfileModal();
   const [teamPlayers, setTeamPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -550,7 +553,11 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
             {/* Players Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {teamPlayers.map((player) => (
-                <Card key={player.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20">
+                <Card 
+                  key={player.id} 
+                  onClick={() => openModal(player.id)}
+                  className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 cursor-pointer"
+                >
                   <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -585,7 +592,10 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
                         size="sm" 
                         variant="ghost"
                         className="hover:bg-primary/10 hover:text-primary h-8 flex-1"
-                        onClick={() => handleEditPlayer(player)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditPlayer(player);
+                        }}
                       >
                         <Edit className="w-3 h-3 mr-1" />
                         Edit
@@ -594,7 +604,10 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
                         size="sm" 
                         variant="ghost"
                         className="hover:bg-destructive/10 hover:text-destructive h-8 w-8 p-0 flex-shrink-0"
-                        onClick={() => handleRemovePlayerFromTeam(player.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemovePlayerFromTeam(player.id);
+                        }}
                         disabled={addingPlayerId !== null}
                         title="Remove player from team"
                       >
@@ -914,6 +927,11 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Player Profile Modal */}
+      {playerId && (
+        <PlayerProfileModal isOpen={isProfileModalOpen} onClose={closeModal} playerId={playerId} />
+      )}
     </>
   );
 }

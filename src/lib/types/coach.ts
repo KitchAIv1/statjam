@@ -47,7 +47,8 @@ export interface CoachPlayer {
   profile_player_id?: string; // Links to users table if StatJam user
   premium_status?: boolean;
   created_at: string;
-  photo_url?: string | null; // Player avatar from profile (mapped from profile_photo_url)
+  profile_photo_url?: string | null; // Player avatar from profile (matches GenericPlayer interface)
+  photo_url?: string | null; // Deprecated: kept for backwards compatibility, use profile_photo_url
   
   // Team-specific data
   team_player_id?: string; // ID in team_players table

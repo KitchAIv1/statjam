@@ -5,9 +5,12 @@ import { Search, Plus, Check, User, Crown, Mail, UserPlus, Users, AlertCircle } 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CoachPlayer, SearchPlayersRequest } from '@/lib/types/coach';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { CreateCustomPlayerForm } from './CreateCustomPlayerForm';
+import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
+import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { MigrationChecker } from '@/lib/utils/migrationChecker';
 
 interface CoachPlayerSelectionListProps {
@@ -35,6 +38,7 @@ export function CoachPlayerSelectionList({
   onPlayerRemove, 
   className = '' 
 }: CoachPlayerSelectionListProps) {
+  const { isOpen, playerId, openModal, closeModal } = usePlayerProfileModal();
   // Mode state
   const [mode, setMode] = useState<'search' | 'create'>('search');
   
@@ -226,16 +230,27 @@ export function CoachPlayerSelectionList({
           </div>
         ) : players.length > 0 ? (
           // Players list
-          players.map((player) => (
-            <div 
-              key={player.id}
-              className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-            >
+          <>
+            {players.map((player) => (
+              <div 
+                key={player.id}
+                onClick={() => openModal(player.id)}
+                className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              >
               {/* Avatar */}
               <div className="relative">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                  <User className="w-5 h-5 text-primary" />
-                </div>
+                <Avatar className="w-10 h-10 border-2 border-primary/20">
+                  {(player.profile_photo_url || player.photo_url) && (
+                    <AvatarImage 
+                      src={player.profile_photo_url || player.photo_url || ''} 
+                      alt={player.name} 
+                      className="object-cover" 
+                    />
+                  )}
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    <User className="w-5 h-5" />
+                  </AvatarFallback>
+                </Avatar>
                 {player.is_on_team && (
                   <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                     <Check className="w-3 h-3 text-white" />
@@ -269,7 +284,10 @@ export function CoachPlayerSelectionList({
                 <Button
                   size="sm"
                   variant={player.is_on_team ? "destructive" : "default"}
-                  onClick={() => handlePlayerToggle(player)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlayerToggle(player);
+                  }}
                   disabled={processingPlayer === player.id}
                   className="min-w-[80px]"
                 >
@@ -283,7 +301,8 @@ export function CoachPlayerSelectionList({
                 </Button>
               </div>
             </div>
-          ))
+            ))}
+            </>
         ) : searchQuery ? (
           // No results
           <div className="text-center py-8 text-muted-foreground">

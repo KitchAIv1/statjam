@@ -25,6 +25,7 @@ interface PlayerManagementModalProps {
   onClose: () => void;
   onUpdate: () => void;
   minPlayers?: number;
+  tournamentId?: string; // Optional: for organizer tournament teams to exclude players from entire tournament
 }
 
 /**
@@ -44,7 +45,8 @@ export function PlayerManagementModal({
   service,
   onClose, 
   onUpdate,
-  minPlayers = 5
+  minPlayers = 5,
+  tournamentId
 }: PlayerManagementModalProps) {
   // 🔍 DEBUG: Verify new modal is loading
   console.log('✅ NEW PlayerManagementModal loaded for team:', team.name);
@@ -150,6 +152,7 @@ export function PlayerManagementModal({
             <PlayerSelectionList
               key={currentPlayers.map(p => p.id).join(',')}
               teamId={team.id}
+              tournamentId={tournamentId}
               service={service}
               onPlayerAdd={handlePlayerAdd}
               onPlayerRemove={handlePlayerRemove}
