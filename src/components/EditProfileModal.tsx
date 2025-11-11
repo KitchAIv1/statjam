@@ -64,8 +64,16 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     location: data.location || '',
     profilePhoto: data.profilePhoto || '',
     posePhoto: data.posePhoto || '',
-    seasonAverages: data.seasonAverages,
-    careerHigh: data.careerHigh,
+    seasonAverages: data.seasonAverages || {
+      rebounds: 0,
+      assists: 0,
+      fieldGoalPercent: 0
+    },
+    careerHigh: data.careerHigh || {
+      points: 0,
+      rebounds: 0,
+      assists: 0
+    },
   });
 
   const [formData, setFormData] = useState<PlayerProfile>(sanitizePlayerData(playerData));
@@ -199,17 +207,24 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     const { validatePlayerProfile } = await import('@/lib/validation/profileValidation');
     const { notify } = await import('@/lib/services/notificationService');
     
+    console.log('🔍 EditProfileModal: Form data being validated:', formData);
+    
     const errors = validatePlayerProfile(formData);
+    
+    console.log('🔍 EditProfileModal: Validation errors:', errors);
+    console.log('🔍 EditProfileModal: Number of errors:', Object.keys(errors).length);
     
     if (Object.keys(errors).length > 0) {
       // Convert ProfileValidationErrors to Record<string, string>
       const errorRecord: Record<string, string> = {};
       (Object.keys(errors) as Array<keyof typeof errors>).forEach(key => {
         if (errors[key]) {
+          console.log(`🔍 EditProfileModal: Error for ${key}:`, errors[key]);
           errorRecord[key] = errors[key]!;
         }
       });
       setValidationErrors(errorRecord);
+      console.log('🔍 EditProfileModal: Error record set:', errorRecord);
       notify.error('Validation error', 'Please fix the errors before saving');
       return;
     }
@@ -264,6 +279,8 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
           </DialogTitle>
           <DialogDescription>
             Make changes to your profile information and save them.
+            <br />
+            <span className="text-destructive">*</span> Required fields
           </DialogDescription>
         </DialogHeader>
         
@@ -302,14 +319,16 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
           {/* Basic Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">
+                Full Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 onBlur={() => handleBlur('name')}
                 placeholder="Enter your full name"
-                className="bg-input-background"
+                className={`bg-input-background ${validationErrors.name ? 'border-destructive' : ''}`}
                 aria-invalid={!!validationErrors.name}
               />
               {validationErrors.name && (
@@ -318,12 +337,14 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="position">Position</Label>
+              <Label htmlFor="position">
+                Position <span className="text-xs text-muted-foreground">(Optional)</span>
+              </Label>
               <Select
                 value={formData.position}
                 onValueChange={(value) => handleInputChange('position', value)}
               >
-                <SelectTrigger className="bg-input-background">
+                <SelectTrigger className={`bg-input-background ${validationErrors.position ? 'border-destructive' : ''}`}>
                   <SelectValue placeholder="Select position" />
                 </SelectTrigger>
                 <SelectContent>
@@ -334,10 +355,15 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                   ))}
                 </SelectContent>
               </Select>
+              {validationErrors.position && (
+                <p className="text-sm text-destructive">{validationErrors.position}</p>
+              )}
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="location">Country</Label>
+              <Label htmlFor="location">
+                Country <span className="text-xs text-muted-foreground">(Optional)</span>
+              </Label>
               <SearchableCountrySelect
                 value={formData.location || ''}
                 onChange={(country) => handleInputChange('location', country)}
@@ -347,7 +373,9 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="age">Age</Label>
+              <Label htmlFor="age">
+                Age <span className="text-xs text-muted-foreground">(Optional)</span>
+              </Label>
               <Input
                 id="age"
                 type="number"
@@ -357,7 +385,7 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 placeholder="Enter your age"
                 min="10"
                 max="99"
-                className="bg-input-background"
+                className={`bg-input-background ${validationErrors.age ? 'border-destructive' : ''}`}
                 aria-invalid={!!validationErrors.age}
               />
               {validationErrors.age && (
@@ -366,7 +394,9 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="jersey">Jersey Number</Label>
+              <Label htmlFor="jersey">
+                Jersey Number <span className="text-xs text-muted-foreground">(Optional)</span>
+              </Label>
               <Input
                 id="jersey"
                 type="number"
@@ -376,7 +406,7 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 placeholder="0-999"
                 min="0"
                 max="999"
-                className="bg-input-background"
+                className={`bg-input-background ${validationErrors.jerseyNumber ? 'border-destructive' : ''}`}
                 aria-invalid={!!validationErrors.jerseyNumber}
               />
               {validationErrors.jerseyNumber && (
@@ -385,7 +415,9 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="height-feet">Height</Label>
+              <Label htmlFor="height-feet">
+                Height <span className="text-xs text-muted-foreground">(Optional)</span>
+              </Label>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <Input
@@ -427,7 +459,9 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="weight">Weight (lbs)</Label>
+              <Label htmlFor="weight">
+                Weight (lbs) <span className="text-xs text-muted-foreground">(Optional)</span>
+              </Label>
               <Input
                 id="weight"
                 type="number"
@@ -437,7 +471,7 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 placeholder="180"
                 min="50"
                 max="400"
-                className="bg-input-background"
+                className={`bg-input-background ${validationErrors.weight ? 'border-destructive' : ''}`}
                 aria-invalid={!!validationErrors.weight}
               />
               {validationErrors.weight && (
@@ -446,7 +480,9 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="team">Team</Label>
+              <Label htmlFor="team">
+                Team <span className="text-xs text-muted-foreground">(Optional)</span>
+              </Label>
               <Input
                 id="team"
                 value={formData.team}

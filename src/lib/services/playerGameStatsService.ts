@@ -71,18 +71,13 @@ export class PlayerGameStatsService {
    */
   static async getPlayerGameStats(userId: string): Promise<GameStatsSummary[]> {
     try {
-      console.log('🔍 PlayerGameStatsService: Fetching game stats for user:', userId);
-      
       // ⚡ Check cache first (5 min TTL)
       const cacheKey = CacheKeys.playerGameStats(userId);
       const cached = cache.get<GameStatsSummary[]>(cacheKey);
       if (cached) {
-        console.log('🔍 PlayerGameStatsService: Returning cached data');
         return cached;
       }
 
-      console.log('🔍 PlayerGameStatsService: Cache miss, querying game_stats table...');
-      
       // Step 1: Get all raw stats for this player from game_stats table
       // ⚡ OPTIMIZATION: Limit to last 50 games for faster queries
       const { data: rawStats, error: statsError } = await supabase
@@ -94,17 +89,10 @@ export class PlayerGameStatsService {
 
       if (statsError) {
         console.error('❌ PlayerGameStatsService: Error fetching game_stats:', statsError);
-        console.error('❌ Error code:', statsError.code);
-        console.error('❌ Error message:', statsError.message);
-        console.error('❌ Error details:', statsError.details);
-        console.error('❌ Error hint:', statsError.hint);
         return [];
       }
 
-      console.log('🔍 PlayerGameStatsService: Found', rawStats?.length || 0, 'raw stat entries');
-
       if (!rawStats || rawStats.length === 0) {
-        console.error('🔍 PlayerGameStatsService: No game_stats records found for player');
         return [];
       }
 
