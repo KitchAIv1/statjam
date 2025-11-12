@@ -8,6 +8,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { ProfileService } from '@/lib/services/profileService';
 import { notify } from '@/lib/services/notificationService';
+import { getCountry } from '@/data/countries';
 
 interface TournamentHeroProps {
   data: TournamentPageData;
@@ -48,6 +49,7 @@ export function TournamentHero({ data }: TournamentHeroProps) {
   const dateRange = formatDateRange(tournament.startDate, tournament.endDate);
   const location = tournament.location || 'Venue TBA';
   const organizerName = organizerProfile?.name || 'Elite Sports Collective';
+  const countryData = tournament.country ? getCountry(tournament.country) : null;
   const organizerInitials = organizerName
     .split(' ')
     .map((n) => n[0])
@@ -82,6 +84,12 @@ export function TournamentHero({ data }: TournamentHeroProps) {
               {tournament.name}
             </h1>
             <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-[#B3B3B3] sm:gap-2 sm:text-base">
+              {countryData && (
+                <>
+                  <span className="text-base sm:text-lg shrink-0" title={countryData.name}>{countryData.flag}</span>
+                  <span className="shrink-0">·</span>
+                </>
+              )}
               <MapPin className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
               <span className="truncate">{location}</span>
               <span className="shrink-0">·</span>

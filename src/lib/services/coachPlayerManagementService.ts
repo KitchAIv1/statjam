@@ -12,6 +12,7 @@ import {
   IPlayerManagementService,
   GenericPlayer,
   PlayerSearchRequest,
+  PlayerSearchResponse,
   AddPlayerToTeamRequest,
   RemovePlayerFromTeamRequest,
   CreateCustomPlayerRequest,
@@ -29,7 +30,7 @@ import {
  * Maps CoachPlayerService to generic interface for component reusability
  */
 export class CoachPlayerManagementService implements IPlayerManagementService {
-  async searchAvailablePlayers(request: PlayerSearchRequest): Promise<GenericPlayer[]> {
+  async searchAvailablePlayers(request: PlayerSearchRequest): Promise<PlayerSearchResponse> {
     const { CoachPlayerService } = await import('./coachPlayerService');
     
     // ✅ FIX: Use team_id as exclude_team_id if exclude_team_id is not provided
@@ -43,7 +44,7 @@ export class CoachPlayerManagementService implements IPlayerManagementService {
     const players = await CoachPlayerService.searchAvailablePlayers(searchRequest);
     
     // Map CoachPlayer to GenericPlayer
-    return players.map(p => ({
+    const mappedPlayers = players.map(p => ({
       id: p.id,
       name: p.name,
       email: p.email,
@@ -56,6 +57,14 @@ export class CoachPlayerManagementService implements IPlayerManagementService {
       team_player_id: p.team_player_id,
       profile_photo_url: p.profile_photo_url || p.photo_url || undefined // Include profile photo URL
     }));
+    
+    // For now, assume hasMore if we got a full page (can be improved later)
+    const hasMore = players.length === (request.limit || 50);
+    
+    return {
+      players: mappedPlayers,
+      hasMore
+    };
   }
   
   async getTeamPlayers(teamId: string): Promise<GenericPlayer[]> {

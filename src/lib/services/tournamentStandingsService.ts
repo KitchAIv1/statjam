@@ -29,6 +29,13 @@ interface GameResult {
   status: string;
 }
 
+interface GameStat {
+  game_id: string;
+  team_id: string;
+  stat_value: number;
+  modifier: string;
+}
+
 export class TournamentStandingsService {
   /**
    * Get tournament standings calculated from completed games
@@ -49,6 +56,54 @@ export class TournamentStandingsService {
         return [];
       }
 
+      // Fetch game_stats for all completed games to calculate scores as fallback
+      const gameIds = games.map(g => g.id);
+      let gameStatsMap = new Map<string, GameStat[]>();
+      
+      if (gameIds.length > 0) {
+        try {
+          // Fetch stats for all games at once (more efficient)
+          const allStats = await hybridSupabaseService.query<GameStat>(
+            'game_stats',
+            'game_id, team_id, stat_value, modifier',
+            { game_id: `in.(${gameIds.join(',')})` }
+          );
+          
+          // Group stats by game_id
+          allStats.forEach(stat => {
+            if (!gameStatsMap.has(stat.game_id)) {
+              gameStatsMap.set(stat.game_id, []);
+            }
+            gameStatsMap.get(stat.game_id)!.push(stat);
+          });
+        } catch (error) {
+          console.warn('⚠️ TournamentStandingsService: Failed to fetch game_stats, using DB scores only:', error);
+        }
+      }
+
+      /**
+       * Calculate scores from game_stats as fallback if DB scores are 0
+       */
+      const calculateScoresFromStats = (gameId: string, teamAId: string, teamBId: string): { teamAScore: number; teamBScore: number } => {
+        const stats = gameStatsMap.get(gameId) || [];
+        let teamAScore = 0;
+        let teamBScore = 0;
+        
+        stats.forEach(stat => {
+          // Only count made shots (modifier = 'made')
+          if (stat.modifier === 'made') {
+            const points = stat.stat_value || 0;
+            if (stat.team_id === teamAId) {
+              teamAScore += points;
+            } else if (stat.team_id === teamBId) {
+              teamBScore += points;
+            }
+          }
+        });
+        
+        return { teamAScore, teamBScore };
+      };
+
       // Fetch all teams for this tournament to get names/logos
       const teams = await TeamService.getTeamsByTournament(tournamentId);
       const teamMap = new Map(teams.map(t => [t.id, { name: t.name, logo: (t as any).logo_url || (t as any).logo }]));
@@ -67,8 +122,29 @@ export class TournamentStandingsService {
       games.forEach(game => {
         const teamAId = game.team_a_id;
         const teamBId = game.team_b_id;
-        const teamAScore = game.home_score || 0;
-        const teamBScore = game.away_score || 0;
+        
+        // Use DB scores if available, otherwise calculate from game_stats as fallback
+        let teamAScore = game.home_score || 0;
+        let teamBScore = game.away_score || 0;
+        
+        // If scores are 0 or missing, calculate from game_stats as fallback
+        // This handles cases where the database trigger didn't update scores properly
+        const gameStats = gameStatsMap.get(game.id) || [];
+        const hasStats = gameStats.length > 0;
+        
+        if ((teamAScore === 0 && teamBScore === 0) && hasStats) {
+          const calculatedScores = calculateScoresFromStats(game.id, teamAId, teamBId);
+          teamAScore = calculatedScores.teamAScore;
+          teamBScore = calculatedScores.teamBScore;
+          
+          if (teamAScore > 0 || teamBScore > 0) {
+            console.log(`📊 TournamentStandingsService: Calculated scores from stats for game ${game.id}:`, {
+              dbScores: { home: game.home_score, away: game.away_score },
+              calculatedScores: { teamAScore, teamBScore },
+              statsCount: gameStats.length
+            });
+          }
+        }
 
         // Initialize team A if not exists
         if (!standingsMap.has(teamAId)) {

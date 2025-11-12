@@ -12,6 +12,7 @@ import {
   IPlayerManagementService,
   GenericPlayer,
   PlayerSearchRequest,
+  PlayerSearchResponse,
   AddPlayerToTeamRequest,
   RemovePlayerFromTeamRequest,
   CreateCustomPlayerRequest,
@@ -25,97 +26,123 @@ import {
  * Used for tournament team management
  */
 export class OrganizerPlayerManagementService implements IPlayerManagementService {
-  async searchAvailablePlayers(request: PlayerSearchRequest): Promise<GenericPlayer[]> {
-    const { TeamService } = await import('./tournamentService');
+  async searchAvailablePlayers(request: PlayerSearchRequest): Promise<PlayerSearchResponse> {
     const { supabase } = await import('@/lib/supabase');
     
-    // Get all players
-    const allPlayers = await TeamService.getAllPlayers();
-    
-    // ✅ FIX: Get ALL players already assigned to teams in this tournament
-    let assignedPlayerIds: Set<string> = new Set();
-    let tournamentId: string | null = null;
-    
-    // Determine tournament ID from either direct tournament_id or team_id
-    if (request.tournament_id) {
-      // Team creation flow: tournament_id provided directly
-      tournamentId = request.tournament_id;
-    } else if (request.team_id && request.team_id !== 'temp') {
-      // Team management flow: query tournament from team_id
-      const isValidTeamId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.team_id);
+    try {
+      // ✅ FIX: Query database directly with search filters (removes 100-player limit)
+      // Build query with database-level filtering for better performance
+      const limit = request.limit || 50; // Default page size
+      const offset = request.offset || 0;
       
-      if (isValidTeamId) {
-        try {
-          const { data: teamData } = await supabase
-            .from('teams')
-            .select('tournament_id')
-            .eq('id', request.team_id)
-            .single();
-          
-          tournamentId = teamData?.tournament_id || null;
-        } catch (error) {
-          console.error('❌ Error querying team tournament:', error);
-        }
+      let query = supabase
+        .from('users')
+        .select('id, name, email, premium_status, country, created_at, profile_photo_url', { count: 'exact' })
+        .eq('role', 'player')
+        .order('premium_status', { ascending: false }) // Premium players first
+        .order('created_at', { ascending: false }); // Newest first
+      
+      // Add text search at database level if provided
+      if (request.query) {
+        query = query.or(`name.ilike.%${request.query}%,email.ilike.%${request.query}%`);
       }
-    }
-    
-    // If we have a tournament ID, get all assigned players
-    if (tournamentId) {
-      try {
-        // Get all teams in this tournament
-        const { data: tournamentTeams } = await supabase
-          .from('teams')
-          .select('id')
-          .eq('tournament_id', tournamentId);
+      
+      // Apply pagination
+      query = query.range(offset, offset + limit - 1);
+      
+      const { data: playerUsers, error: playersError, count } = await query;
+      
+      if (playersError) {
+        console.error('❌ Error searching players:', playersError);
+        return { players: [], hasMore: false };
+      }
+      
+      if (!playerUsers || playerUsers.length === 0) {
+        return { players: [], hasMore: false };
+      }
+      
+      // Determine if there are more results
+      const hasMore = count !== null ? (offset + limit < count) : playerUsers.length === limit;
+      
+      // ✅ FIX: Get ALL players already assigned to teams in this tournament
+      let assignedPlayerIds: Set<string> = new Set();
+      let tournamentId: string | null = null;
+      
+      // Determine tournament ID from either direct tournament_id or team_id
+      if (request.tournament_id) {
+        // Team creation flow: tournament_id provided directly
+        tournamentId = request.tournament_id;
+      } else if (request.team_id && request.team_id !== 'temp') {
+        // Team management flow: query tournament from team_id
+        const isValidTeamId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.team_id);
         
-        if (tournamentTeams && tournamentTeams.length > 0) {
-          const teamIds = tournamentTeams.map(t => t.id);
-          
-          // Get all players assigned to ANY team in this tournament
-          const { data: teamPlayers } = await supabase
-            .from('team_players')
-            .select('player_id')
-            .in('team_id', teamIds)
-            .not('player_id', 'is', null);
-          
-          if (teamPlayers) {
-            assignedPlayerIds = new Set(teamPlayers.map(tp => tp.player_id));
-            console.log(`✅ Found ${assignedPlayerIds.size} players already assigned to teams in tournament ${tournamentId}`);
+        if (isValidTeamId) {
+          try {
+            const { data: teamData } = await supabase
+              .from('teams')
+              .select('tournament_id')
+              .eq('id', request.team_id)
+              .single();
+            
+            tournamentId = teamData?.tournament_id || null;
+          } catch (error) {
+            console.error('❌ Error querying team tournament:', error);
           }
         }
-      } catch (error) {
-        console.error('❌ Error checking assigned players:', error);
       }
+      
+      // If we have a tournament ID, get all assigned players
+      if (tournamentId) {
+        try {
+          // Get all teams in this tournament
+          const { data: tournamentTeams } = await supabase
+            .from('teams')
+            .select('id')
+            .eq('tournament_id', tournamentId);
+          
+          if (tournamentTeams && tournamentTeams.length > 0) {
+            const teamIds = tournamentTeams.map(t => t.id);
+            
+            // Get all players assigned to ANY team in this tournament
+            const { data: teamPlayers } = await supabase
+              .from('team_players')
+              .select('player_id')
+              .in('team_id', teamIds)
+              .not('player_id', 'is', null);
+            
+            if (teamPlayers) {
+              assignedPlayerIds = new Set(teamPlayers.map(tp => tp.player_id));
+              console.log(`✅ Found ${assignedPlayerIds.size} players already assigned to teams in tournament ${tournamentId}`);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error checking assigned players:', error);
+        }
+      }
+      
+      // Map to GenericPlayer with is_on_team flag
+      const players = playerUsers.map((user, index) => ({
+        id: user.id,
+        name: user.name || user.email.split('@')[0],
+        email: user.email,
+        jersey_number: offset + index + 1, // Sequential jersey numbers (for display)
+        position: 'PG' as const, // Default position
+        is_custom_player: false,
+        premium_status: user.premium_status || false,
+        created_at: user.created_at || new Date().toISOString(),
+        is_on_team: assignedPlayerIds.has(user.id), // Set flag if player is on any team
+        profile_photo_url: user.profile_photo_url || undefined
+      }));
+      
+      return {
+        players,
+        hasMore,
+        totalCount: count || undefined
+      };
+    } catch (error) {
+      console.error('❌ Error in searchAvailablePlayers:', error);
+      return { players: [], hasMore: false };
     }
-    
-    // Filter by query if provided
-    let filteredPlayers = allPlayers;
-    if (request.query) {
-      const query = request.query.toLowerCase();
-      filteredPlayers = allPlayers.filter(p => 
-        p.name.toLowerCase().includes(query) ||
-        (p.email && p.email.toLowerCase().includes(query))
-      );
-    }
-    
-    // Apply limit
-    if (request.limit) {
-      filteredPlayers = filteredPlayers.slice(0, request.limit);
-    }
-    
-    // Map to GenericPlayer with is_on_team flag
-    return filteredPlayers.map(p => ({
-      id: p.id,
-      name: p.name,
-      email: p.email,
-      jersey_number: p.jerseyNumber,
-      position: p.position,
-      is_custom_player: false,
-      premium_status: p.isPremium,
-      created_at: p.createdAt,
-      is_on_team: assignedPlayerIds.has(p.id), // ✅ FIX: Set flag if player is on any team
-      profile_photo_url: p.profilePhotoUrl // ✅ FIX: Include profile photo URL
-    }));
   }
   
   async getTeamPlayers(teamId: string): Promise<GenericPlayer[]> {

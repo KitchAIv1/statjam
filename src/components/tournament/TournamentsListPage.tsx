@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Trophy, Calendar, MapPin, Users, Shield, Play, Clock, TrendingUp, ExternalLink, ArrowRight, Search, X, CheckCircle2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useLiveGamesHybrid } from '@/hooks/useLiveGamesHybrid';
+import { getCountry } from '@/data/countries';
 
 interface Tournament {
   id: string;
@@ -20,6 +21,7 @@ interface Tournament {
   start_date?: string | null;
   end_date?: string | null;
   venue?: string | null;
+  country?: string | null;
   logo?: string | null;
   organizer_id?: string | null;
 }
@@ -50,7 +52,7 @@ export function TournamentsListPage() {
       try {
         const data = await hybridSupabaseService.query<Tournament>(
           'tournaments',
-          'id, name, status, start_date, end_date, venue, logo, organizer_id',
+          'id, name, status, start_date, end_date, venue, country, logo, organizer_id',
           {}
         );
 
@@ -193,12 +195,31 @@ export function TournamentsListPage() {
   }, [tournamentsWithStats, selectedFilter, searchQuery, showVerifiedOnly]);
 
   // Get featured tournament (first live, or first upcoming)
+  // Applies same filtering as upcoming tournaments: excludes 0 teams and TEST tournaments
   const featuredTournament = useMemo(() => {
-    const live = tournamentsWithStats.find(t => {
+    // Filter out tournaments that shouldn't be featured
+    const validTournaments = tournamentsWithStats.filter(t => {
+      const hasNoTeams = t.teamCount === 0;
+      const isTestTournament = t.name.toLowerCase().startsWith('test');
+      return !hasNoTeams && !isTestTournament;
+    });
+
+    // First priority: Find first live tournament
+    const live = validTournaments.find(t => {
       const status = (t.status || '').toLowerCase();
       return status === 'active' || status === 'live';
     });
-    return live || tournamentsWithStats[0];
+    
+    // Second priority: First upcoming tournament
+    if (!live) {
+      const upcoming = validTournaments.find(t => {
+        const status = (t.status || '').toLowerCase();
+        return status === 'draft' || status === 'upcoming' || !status;
+      });
+      return upcoming || validTournaments[0];
+    }
+    
+    return live;
   }, [tournamentsWithStats]);
 
   // Get live tournaments
@@ -214,7 +235,17 @@ export function TournamentsListPage() {
     const filtered = filteredTournaments.filter(t => {
       const status = (t.status || '').toLowerCase();
       const isUpcoming = status === 'draft' || status === 'upcoming' || !status;
-      return isUpcoming && t.id !== featuredTournament?.id;
+      
+      // Filter out tournaments that shouldn't be shown:
+      // 1. Tournaments with 0 teams
+      // 2. Tournaments with name starting with "TEST" or "test"
+      const hasNoTeams = t.teamCount === 0;
+      const isTestTournament = t.name.toLowerCase().startsWith('test');
+      
+      return isUpcoming && 
+             t.id !== featuredTournament?.id && 
+             !hasNoTeams && 
+             !isTestTournament;
     });
     
     // Limit display
@@ -442,6 +473,14 @@ export function TournamentsListPage() {
                             )}
                           </div>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-[#B3B3B3] sm:text-sm sm:gap-3">
+                            {featuredTournament.country && getCountry(featuredTournament.country) && (
+                              <>
+                                <span className="text-base sm:text-lg shrink-0" title={getCountry(featuredTournament.country)?.name}>
+                                  {getCountry(featuredTournament.country)?.flag}
+                                </span>
+                                <span className="shrink-0">·</span>
+                              </>
+                            )}
                             <div className="flex items-center gap-1.5">
                               <MapPin className="h-3.5 w-3.5" />
                               <span className="truncate">{featuredTournament.venue || 'Venue TBA'}</span>
@@ -627,7 +666,13 @@ export function TournamentsListPage() {
                   <h2 className="text-2xl font-bold text-white sm:text-3xl">Upcoming Tournaments</h2>
                   {filteredTournaments.filter(t => {
                     const status = (t.status || '').toLowerCase();
-                    return (status === 'draft' || status === 'upcoming' || !status) && t.id !== featuredTournament?.id;
+                    const isUpcoming = status === 'draft' || status === 'upcoming' || !status;
+                    const hasNoTeams = t.teamCount === 0;
+                    const isTestTournament = t.name.toLowerCase().startsWith('test');
+                    return isUpcoming && 
+                           t.id !== featuredTournament?.id && 
+                           !hasNoTeams && 
+                           !isTestTournament;
                   }).length > displayLimit && (
                     <button
                       onClick={() => setDisplayLimit(prev => prev + 12)}
@@ -675,6 +720,14 @@ export function TournamentsListPage() {
                               <span className="truncate">{formatDateRange(tournament.start_date, tournament.end_date)}</span>
                             </div>
                             <div className="flex items-center gap-1.5 truncate">
+                              {tournament.country && getCountry(tournament.country) && (
+                                <>
+                                  <span className="text-sm shrink-0" title={getCountry(tournament.country)?.name}>
+                                    {getCountry(tournament.country)?.flag}
+                                  </span>
+                                  <span className="shrink-0">·</span>
+                                </>
+                              )}
                               <MapPin className="h-3 w-3 shrink-0" />
                               <span className="truncate">{tournament.venue || 'Venue TBA'}</span>
                             </div>

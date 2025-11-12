@@ -11,9 +11,10 @@
 'use client';
 
 import React from 'react';
-import { Search, User } from 'lucide-react';
+import { Search, User, ChevronDown } from 'lucide-react';
 import { GenericPlayer } from '@/lib/types/playerManagement';
 import { PlayerListItem } from './PlayerListItem';
+import { Button } from '@/components/ui/Button';
 
 interface PlayerSearchResultsProps {
   players: GenericPlayer[];
@@ -21,6 +22,9 @@ interface PlayerSearchResultsProps {
   searchQuery: string;
   processingPlayer: string | null;
   onPlayerToggle: (player: GenericPlayer) => void;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  totalCount?: number;
 }
 
 /**
@@ -39,7 +43,10 @@ export function PlayerSearchResults({
   loading,
   searchQuery,
   processingPlayer,
-  onPlayerToggle
+  onPlayerToggle,
+  hasMore = false,
+  onLoadMore,
+  totalCount
 }: PlayerSearchResultsProps) {
   if (loading) {
     // Loading skeleton
@@ -66,6 +73,13 @@ export function PlayerSearchResults({
     // Players list (only showing available players, not those already on team)
     return (
       <>
+        {/* Result count */}
+        {totalCount !== undefined && (
+          <div className="text-xs text-muted-foreground mb-2 px-1">
+            Showing {availablePlayers.length} of {totalCount}+ players
+          </div>
+        )}
+        
         {availablePlayers.map((player) => (
           <PlayerListItem
             key={player.id}
@@ -74,6 +88,22 @@ export function PlayerSearchResults({
             onToggle={onPlayerToggle}
           />
         ))}
+        
+        {/* Load More Button */}
+        {hasMore && onLoadMore && (
+          <div className="text-center pt-4 pb-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onLoadMore}
+              disabled={loading}
+              className="w-full"
+            >
+              <ChevronDown className="w-4 h-4 mr-2" />
+              {loading ? 'Loading...' : 'Load More Players'}
+            </Button>
+          </div>
+        )}
       </>
     );
   }

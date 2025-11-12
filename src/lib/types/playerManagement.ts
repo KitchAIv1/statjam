@@ -44,6 +44,16 @@ export interface PlayerSearchRequest {
   tournament_id?: string; // For team creation: use tournament directly
   exclude_team_id?: string;
   limit?: number;
+  offset?: number; // For pagination
+}
+
+/**
+ * Search response with pagination metadata
+ */
+export interface PlayerSearchResponse {
+  players: GenericPlayer[];
+  hasMore: boolean;
+  totalCount?: number; // Optional: total matching players (if available)
 }
 
 /**
@@ -91,7 +101,7 @@ export interface ServiceResponse<T = any> {
  * All player management operations must implement this interface
  */
 export interface IPlayerManagementService {
-  searchAvailablePlayers(request: PlayerSearchRequest): Promise<GenericPlayer[]>;
+  searchAvailablePlayers(request: PlayerSearchRequest): Promise<PlayerSearchResponse>;
   getTeamPlayers(teamId: string): Promise<GenericPlayer[]>;
   getTeamPlayerCount(teamId: string): Promise<number>;
   addPlayerToTeam(request: AddPlayerToTeamRequest): Promise<ServiceResponse>;

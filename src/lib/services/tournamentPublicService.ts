@@ -12,6 +12,7 @@ export interface TournamentPageData {
     endDate: string | null;
     location: string | null;
     venue?: string | null;
+    country?: string | null;
     organizerId: string | null;
     logo?: string | null;
     branding?: Record<string, unknown> | null;
@@ -37,6 +38,7 @@ interface RawTournament {
   start_date?: string | null;
   end_date?: string | null;
   venue?: string | null;
+  country?: string | null;
   organizer_id?: string | null;
   logo?: string | null;
 }
@@ -51,7 +53,7 @@ export async function getTournamentPageData(slug: string): Promise<TournamentPag
   try {
     tournaments = await hybridSupabaseService.query<RawTournament>(
       'tournaments',
-      'id, name, status, start_date, end_date, venue, organizer_id, logo',
+      'id, name, status, start_date, end_date, venue, country, organizer_id, logo',
       { id: `eq.${slug}` }
     );
   } catch (error: any) {
@@ -114,6 +116,7 @@ async function buildTournamentPageData(tournament: RawTournament): Promise<Tourn
       endDate: tournament.end_date || null,
       location: tournament.venue || null, // Use venue as location
       venue: tournament.venue || null,
+      country: tournament.country || null,
       organizerId: tournament.organizer_id || null,
       logo: tournament.logo || null,
       branding: null

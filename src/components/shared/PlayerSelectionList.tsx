@@ -62,25 +62,29 @@ export function PlayerSelectionList({
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [processingPlayer, setProcessingPlayer] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [currentOffset, setCurrentOffset] = useState(0);
+  const [totalCount, setTotalCount] = useState<number | undefined>(undefined);
 
   // Debounced search
-  const searchPlayers = useCallback(async (query: string, selectedPlayerIds: string[] = []) => {
+  const searchPlayers = useCallback(async (query: string, selectedPlayerIds: string[] = [], offset: number = 0, append: boolean = false) => {
     try {
       setLoading(true);
       setError(null);
 
-      const results = await service.searchAvailablePlayers({
+      const response = await service.searchAvailablePlayers({
         query: query.trim() || undefined,
         team_id: teamId,
         tournament_id: tournamentId, // ✅ FIX: Pass tournament_id for team creation flow
-        limit: 50
+        limit: 50, // Page size
+        offset: offset
       });
       
       // ✅ FIX: Preserve tournament-wide is_on_team flag, but also track local selections
       // In deferPersistence mode, mark locally selected players as "on team" in addition to
       // players already assigned to other teams in the tournament
       const resultsWithSelection = deferPersistence 
-        ? results.map(player => {
+        ? response.players.map(player => {
             const isSelected = selectedPlayerIds.includes(player.id);
             return {
               ...player,
@@ -88,9 +92,19 @@ export function PlayerSelectionList({
               is_on_team: player.is_on_team || isSelected
             };
           })
-        : results; // Preserve service's is_on_team flag for existing teams
+        : response.players; // Preserve service's is_on_team flag for existing teams
       
-      setPlayers(resultsWithSelection);
+      if (append) {
+        // Append to existing players (for Load More)
+        setPlayers(prev => [...prev, ...resultsWithSelection]);
+      } else {
+        // Replace players (for new search)
+        setPlayers(resultsWithSelection);
+      }
+      
+      setHasMore(response.hasMore);
+      setCurrentOffset(offset);
+      setTotalCount(response.totalCount);
     } catch (error) {
       console.error('❌ Error searching players:', error);
       setError('Failed to search players');
@@ -99,10 +113,19 @@ export function PlayerSelectionList({
     }
   }, [teamId, tournamentId, service, deferPersistence]);
 
+  // Load more players (pagination)
+  const loadMorePlayers = useCallback(async () => {
+    if (!hasMore || loading) return;
+    
+    const selectedIds = players.filter(p => p.is_on_team).map(p => p.id);
+    const nextOffset = currentOffset + 50; // Page size
+    await searchPlayers(searchQuery, selectedIds, nextOffset, true);
+  }, [hasMore, loading, currentOffset, searchQuery, players, searchPlayers]);
+
   // Initial load with selected players
   useEffect(() => {
     const selectedIds = initialSelectedPlayers.map(p => p.id);
-    searchPlayers('', selectedIds);
+    searchPlayers('', selectedIds, 0, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount
 
@@ -114,7 +137,7 @@ export function PlayerSelectionList({
       // Get current selections without triggering re-render
       setPlayers(currentPlayers => {
         const currentSelectedIds = currentPlayers.filter(p => p.is_on_team).map(p => p.id);
-        searchPlayers(searchQuery, currentSelectedIds);
+        searchPlayers(searchQuery, currentSelectedIds, 0, false); // Reset offset on new search
         return currentPlayers; // Return unchanged to avoid re-render
       });
     }, 300); // Debounce 300ms
@@ -160,7 +183,7 @@ export function PlayerSelectionList({
             // ✅ FIX: Refresh search to reflect updated is_on_team status from server
             // This ensures players removed from tournament teams are included in search again
             setTimeout(() => {
-              searchPlayers(searchQuery || '', []);
+              searchPlayers(searchQuery || '', [], 0, false);
             }, 100);
           } else {
             setError(response.message || response.error || 'Failed to remove player');
@@ -181,7 +204,7 @@ export function PlayerSelectionList({
             // ✅ FIX: Refresh search to reflect updated is_on_team status from server
             // This ensures players added to tournament teams are excluded from search
             setTimeout(() => {
-              searchPlayers(searchQuery || '', []);
+              searchPlayers(searchQuery || '', [], 0, false);
             }, 100);
           } else {
             setError(response.message || response.error || 'Failed to add player');
@@ -260,6 +283,9 @@ export function PlayerSelectionList({
             searchQuery={searchQuery}
             processingPlayer={processingPlayer}
             onPlayerToggle={handlePlayerToggle}
+            hasMore={hasMore}
+            onLoadMore={loadMorePlayers}
+            totalCount={totalCount}
           />
         </div>
       ) : (
