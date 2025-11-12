@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, User, Settings, LogOut, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { OptimizedAvatar } from './OptimizedAvatar';
 
 interface UserDropdownMenuProps {
   user: any;
@@ -89,19 +90,15 @@ export function UserDropdownMenu({ user, userRole, signOut, profilePhotoUrl }: U
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
       >
-        {/* User Avatar */}
-        <div className="w-8 h-8 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center overflow-hidden">
-          {profilePhotoUrl ? (
-            <img 
-              key={profilePhotoUrl} // Force remount on URL change (bypass browser cache)
-              src={profilePhotoUrl} 
-              alt="Profile" 
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <User className="w-4 h-4 text-white" />
-          )}
-        </div>
+        {/* User Avatar - Optimized for instant loading */}
+        <OptimizedAvatar
+          src={profilePhotoUrl}
+          alt="Profile"
+          size="sm"
+          priority={true}
+          className="border-2 border-white/20"
+          fallback={<User className="w-4 h-4 text-white" />}
+        />
         
         {/* User Info */}
         <div className="hidden md:block text-left">
@@ -123,18 +120,14 @@ export function UserDropdownMenu({ user, userRole, signOut, profilePhotoUrl }: U
           {/* User Info Header */}
           <div className="px-4 py-3 border-b border-gray-700">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center overflow-hidden">
-                {profilePhotoUrl ? (
-                  <img 
-                    key={profilePhotoUrl} // Force remount on URL change (bypass browser cache)
-                    src={profilePhotoUrl} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User className="w-5 h-5 text-white" />
-                )}
-              </div>
+              <OptimizedAvatar
+                src={profilePhotoUrl}
+                alt="Profile"
+                size="md"
+                priority={true}
+                className="border-2 border-white/20"
+                fallback={<User className="w-5 h-5 text-white" />}
+              />
               <div className="flex-1">
                 <div className="font-medium text-white text-sm">
                   {getUserDisplayName()}

@@ -105,6 +105,14 @@ export function useAuthV2() {
         console.log('✅ useAuthV2: User loaded:', profile.email, 'role:', profile.role);
         if (isMounted) setState({ user: profile, loading: false, error: null });
         
+        // ⚡ OPTIMIZATION: Preload avatar in background for instant loading
+        if (profile.id && profile.role) {
+          import('@/lib/services/avatarPreloadService').then(({ AvatarPreloadService }) => {
+            AvatarPreloadService.preloadCurrentUserAvatar(profile.id).catch(() => {});
+            AvatarPreloadService.preloadDashboardAvatars(profile.id, profile.role).catch(() => {});
+          });
+        }
+        
         // Setup automatic token refresh
         setupTokenRefreshTimer();
 
@@ -181,6 +189,15 @@ export function useAuthV2() {
 
       console.log('✅ useAuthV2: Sign in successful, role:', profile.role);
       setState({ user: profile, loading: false, error: null });
+      
+      // ⚡ OPTIMIZATION: Preload avatar in background for instant loading
+      if (profile.id && profile.role) {
+        import('@/lib/services/avatarPreloadService').then(({ AvatarPreloadService }) => {
+          AvatarPreloadService.preloadCurrentUserAvatar(profile.id).catch(() => {});
+          AvatarPreloadService.preloadDashboardAvatars(profile.id, profile.role).catch(() => {});
+        });
+      }
+      
       return { success: true };
 
     } catch (error: any) {
