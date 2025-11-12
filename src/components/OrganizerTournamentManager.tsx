@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { PhotoUploadField } from "@/components/ui/PhotoUploadField";
 import { SearchableCountrySelect } from "@/components/shared/SearchableCountrySelect";
+import { SearchableStatAdminSelect } from "@/components/shared/SearchableStatAdminSelect";
 import { useTournaments } from "@/lib/hooks/useTournaments";
 import { useTeamManagement } from "@/hooks/useTeamManagement";
 import { useTournamentTeamCount } from "@/hooks/useTournamentTeamCount";
@@ -588,7 +589,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
         console.log('Tournament data to save:', tournamentToEdit);
         console.log('Assigned stat admins:', assignedStatAdmins);
         
-        // Save tournament settings (including status changes and logo)
+        // Save tournament settings (including status changes, logo, venue, and country)
         const updatedTournament = await TournamentService.updateTournament({
           id: tournamentToEdit.id,
           name: tournamentToEdit.name,
@@ -598,7 +599,9 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           endDate: tournamentToEdit.endDate,
           maxTeams: tournamentToEdit.maxTeams,
           tournamentType: tournamentToEdit.tournamentType,
-          logo: tournamentToEdit.logo // Include logo in update
+          logo: tournamentToEdit.logo, // Include logo in update
+          venue: tournamentToEdit.venue, // Include venue in update
+          country: tournamentToEdit.country // Include country in update
         });
         
         // Save stat admin assignments to games
@@ -694,14 +697,48 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
               Create Tournament
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
+          <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col p-0">
+            <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
               <DialogTitle>Create New Tournament</DialogTitle>
               <DialogDescription>
                 Set up a new basketball tournament with your preferred format and settings.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div 
+              className="flex-1 overflow-y-auto px-6 py-4 dialog-scroll"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                const element = e.currentTarget;
+                const scrollAmount = 50;
+                
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  element.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  element.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+                } else if (e.key === 'PageDown') {
+                  e.preventDefault();
+                  element.scrollBy({ top: element.clientHeight * 0.9, behavior: 'smooth' });
+                } else if (e.key === 'PageUp') {
+                  e.preventDefault();
+                  element.scrollBy({ top: -(element.clientHeight * 0.9), behavior: 'smooth' });
+                } else if (e.key === 'Home') {
+                  e.preventDefault();
+                  element.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (e.key === 'End') {
+                  e.preventDefault();
+                  element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
+                }
+              }}
+              onClick={(e) => {
+                // Focus the scrollable area when clicked
+                if (e.currentTarget !== document.activeElement) {
+                  e.currentTarget.focus();
+                }
+              }}
+            >
+              <div className="grid gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="name">Tournament Name <span className="text-red-500">*</span></Label>
                 <Input
@@ -848,8 +885,9 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                   </div>
                 </div>
               )}
+              </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="px-6 py-4 border-t flex-shrink-0">
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                 Cancel
               </Button>
@@ -1122,11 +1160,53 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto">
+          <div 
+            className="flex-1 overflow-y-auto dialog-scroll"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              const element = e.currentTarget;
+              const scrollAmount = 50;
+              
+              // Don't interfere with input fields or select dropdowns
+              const target = e.target as HTMLElement;
+              if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.closest('[role="combobox"]')) {
+                return;
+              }
+              
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                element.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                element.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+              } else if (e.key === 'PageDown') {
+                e.preventDefault();
+                element.scrollBy({ top: element.clientHeight * 0.9, behavior: 'smooth' });
+              } else if (e.key === 'PageUp') {
+                e.preventDefault();
+                element.scrollBy({ top: -(element.clientHeight * 0.9), behavior: 'smooth' });
+              } else if (e.key === 'Home') {
+                e.preventDefault();
+                element.scrollTo({ top: 0, behavior: 'smooth' });
+              } else if (e.key === 'End') {
+                e.preventDefault();
+                element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
+              }
+            }}
+            onClick={(e) => {
+              // Focus the scrollable area when clicked (but not on interactive elements)
+              const target = e.target as HTMLElement;
+              if (!target.closest('input, textarea, select, button, [role="button"], [role="combobox"], a')) {
+                if (e.currentTarget !== document.activeElement) {
+                  e.currentTarget.focus();
+                }
+              }
+            }}
+          >
             {tournamentToEdit && (
               <Tabs defaultValue="general" className="w-full">
                 <div className="px-6 pt-4">
-                  <TabsList className="grid w-full grid-cols-4">
+                  <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="general" className="gap-2">
                       <Trophy className="w-4 h-4" />
                       General
@@ -1134,10 +1214,6 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                     <TabsTrigger value="stat-admin" className="gap-2">
                       <Shield className="w-4 h-4" />
                       Stat Admin
-                    </TabsTrigger>
-                    <TabsTrigger value="venue" className="gap-2">
-                      <MapPin className="w-4 h-4" />
-                      Venue
                     </TabsTrigger>
                     <TabsTrigger value="prizes" className="gap-2">
                       <Award className="w-4 h-4" />
@@ -1148,29 +1224,46 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
 
                 <div className="px-6 pb-4">
                   {/* General Settings Tab */}
-                  <TabsContent value="general" className="space-y-6 mt-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Trophy className="w-5 h-5 text-primary" />
-                          Tournament Information
-                        </CardTitle>
-                        <CardDescription>Basic tournament details and configuration</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-name">Tournament Name</Label>
+                  <TabsContent value="general" className="space-y-3 mt-4">
+                    {/* Basic Information & Visual Identity - Side by side on desktop */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {/* Basic Information */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <Trophy className="w-4 h-4 text-primary" />
+                            Basic Information
+                          </CardTitle>
+                          <CardDescription className="text-xs">Tournament name, description, and status</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3 pt-0">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-name" className="text-sm">Tournament Name</Label>
                             <Input
                               id="edit-name"
                               value={tournamentToEdit.name}
                               onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, name: e.target.value })}
+                              placeholder="Enter tournament name"
+                              className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-status">Status</Label>
+                          
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-description" className="text-sm">Description</Label>
+                            <Textarea
+                              id="edit-description"
+                              value={tournamentToEdit.description || ''}
+                              onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, description: e.target.value })}
+                              placeholder="Describe your tournament"
+                              rows={3}
+                              className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-status" className="text-sm">Status</Label>
                             <Select value={tournamentToEdit.status} onValueChange={(value: Tournament['status']) => setTournamentToEdit({ ...tournamentToEdit, status: value })}>
-                              <SelectTrigger>
+                              <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1201,43 +1294,57 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                               </SelectContent>
                             </Select>
                           </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-description">Description</Label>
-                          <Textarea
-                            id="edit-description"
-                            value={tournamentToEdit.description || ''}
-                            onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, description: e.target.value })}
-                            rows={3}
-                          />
-                        </div>
+                        </CardContent>
+                      </Card>
 
-                        <div className="space-y-2">
-                          <Label>Tournament Logo</Label>
-                          <PhotoUploadField
-                            label="Upload Logo"
-                            value={tournamentToEdit.logo || null}
-                            previewUrl={logoUpload.previewUrl}
-                            uploading={logoUpload.uploading}
-                            error={logoUpload.error}
-                            aspectRatio="square"
-                            onFileSelect={logoUpload.handleFileSelect}
-                            onRemove={() => {
-                              logoUpload.clearPreview();
-                              setTournamentToEdit({ ...tournamentToEdit, logo: '' });
-                            }}
-                          />
-                          <p className="text-sm text-muted-foreground">
-                            Square image recommended (min 256x256px, max 5MB)
-                          </p>
-                        </div>
+                      {/* Visual Identity */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <Trophy className="w-4 h-4 text-primary" />
+                            Visual Identity
+                          </CardTitle>
+                          <CardDescription className="text-xs">Tournament logo and branding</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-2 pt-0">
+                          <div className="space-y-1.5">
+                            <Label className="text-sm">Tournament Logo</Label>
+                            <PhotoUploadField
+                              label="Upload Logo"
+                              value={tournamentToEdit.logo || null}
+                              previewUrl={logoUpload.previewUrl}
+                              uploading={logoUpload.uploading}
+                              error={logoUpload.error}
+                              aspectRatio="square"
+                              onFileSelect={logoUpload.handleFileSelect}
+                              onRemove={() => {
+                                logoUpload.clearPreview();
+                                setTournamentToEdit({ ...tournamentToEdit, logo: '' });
+                              }}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Square image recommended (min 256x256px, max 5MB)
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
 
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-format">Format</Label>
+                    {/* Tournament Structure */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Users className="w-4 h-4 text-primary" />
+                          Tournament Structure
+                        </CardTitle>
+                        <CardDescription className="text-xs">Format and team capacity</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3 pt-0">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-format" className="text-sm">Tournament Format</Label>
                             <Select value={tournamentToEdit.tournamentType} onValueChange={(value) => setTournamentToEdit({ ...tournamentToEdit, tournamentType: value as any })}>
-                              <SelectTrigger>
+                              <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1248,68 +1355,98 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-start-date">Start Date</Label>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-max-teams" className="text-sm">Maximum Teams</Label>
+                            <Select value={tournamentToEdit.maxTeams.toString()} onValueChange={(value) => setTournamentToEdit({ ...tournamentToEdit, maxTeams: parseInt(value) })}>
+                              <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="4">4 Teams</SelectItem>
+                                <SelectItem value="5">5 Teams</SelectItem>
+                                <SelectItem value="6">6 Teams</SelectItem>
+                                <SelectItem value="7">7 Teams</SelectItem>
+                                <SelectItem value="8">8 Teams</SelectItem>
+                                <SelectItem value="9">9 Teams</SelectItem>
+                                <SelectItem value="10">10 Teams</SelectItem>
+                                <SelectItem value="11">11 Teams</SelectItem>
+                                <SelectItem value="12">12 Teams</SelectItem>
+                                <SelectItem value="16">16 Teams</SelectItem>
+                                <SelectItem value="18">18 Teams</SelectItem>
+                                <SelectItem value="24">24 Teams</SelectItem>
+                                <SelectItem value="32">32 Teams</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Schedule */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Calendar className="w-4 h-4 text-primary" />
+                          Schedule
+                        </CardTitle>
+                        <CardDescription className="text-xs">Tournament start and end dates</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3 pt-0">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-start-date" className="text-sm">Start Date</Label>
                             <Input
                               id="edit-start-date"
                               type="date"
                               value={tournamentToEdit.startDate}
                               onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, startDate: e.target.value })}
+                              className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-end-date">End Date</Label>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-end-date" className="text-sm">End Date</Label>
                             <Input
                               id="edit-end-date"
                               type="date"
                               value={tournamentToEdit.endDate}
                               onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, endDate: e.target.value })}
+                              className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
                             />
-                          </div>
-                        </div>
-
-                        <Separator />
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-max-teams">Maximum Teams</Label>
-                            <Select value={tournamentToEdit.maxTeams.toString()} onValueChange={(value) => setTournamentToEdit({ ...tournamentToEdit, maxTeams: parseInt(value) })}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="4">4 Teams</SelectItem>
-                                <SelectItem value="8">8 Teams</SelectItem>
-                                <SelectItem value="16">16 Teams</SelectItem>
-                                <SelectItem value="32">32 Teams</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-3">
-                            <Label>Registration Settings</Label>
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor="auto-register" className="text-sm">Allow Auto Registration</Label>
-                              <Switch id="auto-register" defaultChecked />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor="public-registration" className="text-sm">Public Registration</Label>
-                              <Switch id="public-registration" />
-                            </div>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                  </TabsContent>
 
-                  {/* Other tabs would be implemented here */}
-                  <TabsContent value="venue" className="space-y-6 mt-6">
+                    {/* Location */}
                     <Card>
-                      <CardHeader>
-                        <CardTitle>Venue Settings</CardTitle>
-                        <CardDescription>Configure tournament venue and location</CardDescription>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <MapPin className="w-4 h-4 text-primary" />
+                          Location
+                        </CardTitle>
+                        <CardDescription className="text-xs">Venue and country</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <p className="text-muted-foreground">Venue settings will be implemented here.</p>
+                      <CardContent className="space-y-3 pt-0">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-venue" className="text-sm">Venue</Label>
+                            <Input
+                              id="edit-venue"
+                              value={tournamentToEdit.venue || ''}
+                              onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, venue: e.target.value })}
+                              placeholder="Enter venue name or address"
+                              className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="edit-country" className="text-sm">Country</Label>
+                            <SearchableCountrySelect
+                              value={tournamentToEdit.country || 'US'}
+                              onChange={(value) => setTournamentToEdit({ ...tournamentToEdit, country: value })}
+                              placeholder="Select country"
+                            />
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -1366,60 +1503,19 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                         ) : (
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                              <Label className="text-sm font-medium">Available Stat Admins</Label>
+                              <Label className="text-sm font-medium">Select Stat Admins</Label>
                               <Badge variant="secondary" className="text-xs">
                                 {assignedStatAdmins.length} of {statAdmins.length} assigned
                               </Badge>
                             </div>
                             
-                            <div className="grid gap-3 max-h-64 overflow-y-auto">
-                              {statAdmins.map((admin) => {
-                                const isAssigned = assignedStatAdmins.includes(admin.id);
-                                return (
-                                  <div
-                                    key={admin.id}
-                                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                                      isAssigned 
-                                        ? 'border-primary bg-primary/5' 
-                                        : 'border-border hover:border-primary/50'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <Avatar className="w-8 h-8">
-                                        <AvatarFallback className="text-xs">
-                                          {admin.name ? admin.name.split(' ').map(n => n[0]).join('').toUpperCase() : 
-                                           admin.email.split('@')[0].slice(0, 2).toUpperCase()}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div>
-                                        <p className="font-medium text-sm">
-                                          {admin.name || admin.email.split('@')[0]}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">{admin.email}</p>
-                                      </div>
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      variant={isAssigned ? "default" : "outline"}
-                                      onClick={() => handleToggleStatAdmin(admin.id)}
-                                      className="gap-1.5"
-                                    >
-                                      {isAssigned ? (
-                                        <>
-                                          <UserCheck className="w-3 h-3" />
-                                          Assigned
-                                        </>
-                                      ) : (
-                                        <>
-                                          <UserPlus className="w-3 h-3" />
-                                          Assign
-                                        </>
-                                      )}
-                                    </Button>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                            <SearchableStatAdminSelect
+                              statAdmins={statAdmins}
+                              selectedIds={assignedStatAdmins}
+                              onToggle={handleToggleStatAdmin}
+                              loading={loadingStatAdmins}
+                              placeholder="Search and select stat admins..."
+                            />
                             
                             {assignedStatAdmins.length > 0 && (
                               <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">

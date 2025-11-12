@@ -300,6 +300,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
                   key={game.id}
                   game={game}
                   teams={teams}
+                  tournament={tournament}
                   onEdit={() => handleEditGame(game)}
                   onDelete={async () => {
                     try {
@@ -333,6 +334,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
                     teamAId: gameData.teamAId,
                     teamBId: gameData.teamBId,
                     startTime: gameData.startTime,
+                    venue: gameData.venue,
                     statAdminId: gameData.statAdminId || null,
                   });
                   console.log('✅ Game updated successfully');
@@ -471,7 +473,7 @@ function CreateGameModal({
     teamAId: game?.team_a_id || '',
     teamBId: game?.team_b_id || '',
     startTime: game?.start_time?.slice(0, 16) || minDate,
-    venue: tournament.venue || '',
+    venue: game?.venue || tournament.venue || '',
     statAdminId: game?.stat_admin_id || '',
   });
 
@@ -737,11 +739,13 @@ function CreateGameModal({
 function GameCard({ 
   game, 
   teams, 
+  tournament,
   onEdit, 
   onDelete 
 }: { 
   game: Game; 
   teams: Team[]; 
+  tournament?: Tournament | null;
   onEdit: () => void; 
   onDelete: () => void; 
 }) {
@@ -892,7 +896,7 @@ function GameCard({
         </div>
         <div style={styles.detail}>
           <MapPin style={{ width: '16px', height: '16px' }} />
-          Venue: TBD
+          Venue: {game.venue || tournament?.venue || 'TBD'}
         </div>
         {game.stat_admin_id && (
           <div style={styles.detail}>

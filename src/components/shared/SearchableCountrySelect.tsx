@@ -138,12 +138,12 @@ export function SearchableCountrySelect({
           disabled={disabled}
           className={`
             w-full px-3 py-2 pr-10
-            bg-background border border-input rounded-md
+            bg-white border border-gray-300 rounded-md
             text-sm text-left
-            focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+            focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
             disabled:cursor-not-allowed disabled:opacity-50
             transition-colors
-            ${isOpen ? 'ring-2 ring-ring' : ''}
+            ${isOpen ? 'ring-2 ring-primary/20 border-primary' : ''}
           `}
         >
           {selectedCountry ? (
@@ -186,7 +186,7 @@ export function SearchableCountrySelect({
               }}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               autoFocus
             />
           </div>

@@ -7,6 +7,7 @@ export interface Game {
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime';
   start_time: string;
   end_time?: string;
+  venue?: string;
   quarter: number;
   game_clock_minutes: number;
   game_clock_seconds: number;

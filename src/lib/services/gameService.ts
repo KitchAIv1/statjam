@@ -87,22 +87,30 @@ export class GameService {
     try {
       console.log('🔍 GameService: Creating game:', gameData);
       
+      // Build insert data - only include venue if provided (column may not exist yet)
+      const insertData: any = {
+        tournament_id: gameData.tournamentId,
+        team_a_id: gameData.teamAId,
+        team_b_id: gameData.teamBId,
+        stat_admin_id: gameData.statAdminId || null,
+        status: 'scheduled',
+        start_time: gameData.startTime,
+        quarter: 1,
+        game_clock_minutes: 12,
+        game_clock_seconds: 0,
+        is_clock_running: false,
+        home_score: 0,
+        away_score: 0
+      };
+      
+      // Only include venue if provided and not empty (column may not exist yet - requires migration)
+      if (gameData.venue && gameData.venue.trim()) {
+        insertData.venue = gameData.venue.trim();
+      }
+
       const { data: game, error } = await supabase
         .from('games')
-        .insert({
-          tournament_id: gameData.tournamentId,
-          team_a_id: gameData.teamAId,
-          team_b_id: gameData.teamBId,
-          stat_admin_id: gameData.statAdminId || null,
-          status: 'scheduled',
-          start_time: gameData.startTime,
-          quarter: 1,
-          game_clock_minutes: 12,
-          game_clock_seconds: 0,
-          is_clock_running: false,
-          home_score: 0,
-          away_score: 0
-        })
+        .insert([insertData])
         .select()
         .single();
 
@@ -159,6 +167,10 @@ export class GameService {
       if (updateData.teamAId !== undefined) dbUpdateData.team_a_id = updateData.teamAId;
       if (updateData.teamBId !== undefined) dbUpdateData.team_b_id = updateData.teamBId;
       if (updateData.startTime !== undefined) dbUpdateData.start_time = updateData.startTime;
+      // Only include venue if provided and not empty (column may not exist yet - requires migration)
+      if (updateData.venue !== undefined && updateData.venue && updateData.venue.trim()) {
+        dbUpdateData.venue = updateData.venue.trim();
+      }
       if (updateData.statAdminId !== undefined) dbUpdateData.stat_admin_id = updateData.statAdminId;
       if (updateData.status !== undefined) dbUpdateData.status = updateData.status;
 
