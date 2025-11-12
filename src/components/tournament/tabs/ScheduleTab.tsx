@@ -7,7 +7,7 @@ import { Game } from '@/lib/types/game';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { CalendarDays, Clock, MapPin, Play, Shield } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Play, Shield, Lock, CheckCircle } from 'lucide-react';
 
 interface ScheduleTabProps {
   tournamentId: string;
@@ -93,6 +93,47 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
           {games.map((game) => {
             const teamAName = game.teamAName || 'Team A';
             const teamBName = game.teamBName || 'Team B';
+            
+            // Determine if game can be viewed
+            const isLive = game.status === 'in_progress' || game.status === 'overtime';
+            const isCompleted = game.status === 'completed';
+            const isCancelled = game.status === 'cancelled';
+            const isScheduled = game.status === 'scheduled';
+            
+            // Check if scheduled game has started (start_time has passed)
+            const gameStartTime = game.start_time ? new Date(game.start_time) : null;
+            const hasStarted = gameStartTime ? gameStartTime <= new Date() : false;
+            
+            // Check if stat admin has started tracking (indicated by scores or clock running)
+            const hasStatsAdminStarted = (game.home_score > 0 || game.away_score > 0 || game.is_clock_running);
+            
+            // Can view if live, completed, or scheduled but started/stat admin has begun tracking
+            const canView = isLive || isCompleted || (isScheduled && (hasStarted || hasStatsAdminStarted));
+            
+            // Get button text and icon based on state
+            const getButtonContent = () => {
+              if (isLive) {
+                return { icon: Play, text: 'Watch Live', className: 'border-[#FF3B30]/50 text-[#FF3B30] hover:border-[#FF3B30] hover:bg-[#FF3B30]/10' };
+              }
+              if (isCompleted) {
+                return { icon: CheckCircle, text: 'View Final', className: 'border-white/20 text-white/60 hover:border-white/30 hover:text-white/80' };
+              }
+              if (isCancelled) {
+                return { icon: Lock, text: 'Cancelled', className: 'border-white/10 text-white/30 cursor-not-allowed opacity-50' };
+              }
+              if (isScheduled && (hasStarted || hasStatsAdminStarted)) {
+                // Game scheduled but start time has passed or stat admin has started tracking
+                if (hasStatsAdminStarted) {
+                  return { icon: Play, text: 'Watch Live', className: 'border-[#FF3B30]/50 text-[#FF3B30] hover:border-[#FF3B30] hover:bg-[#FF3B30]/10' };
+                }
+                return { icon: Clock, text: 'Starting Soon', className: 'border-orange-500/50 text-orange-500 hover:border-orange-500 hover:bg-orange-500/10' };
+              }
+              // Scheduled and not started yet
+              return { icon: Lock, text: 'Not Started', className: 'border-white/10 text-white/30 cursor-not-allowed opacity-50' };
+            };
+            
+            const buttonContent = getButtonContent();
+            const ButtonIcon = buttonContent.icon;
 
             return (
               <Card key={game.id} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/80 backdrop-blur sm:rounded-3xl sm:p-5 sm:text-sm">
@@ -136,11 +177,17 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                     <div className="text-[10px] uppercase tracking-wide text-white/40 sm:text-xs">{formatDate(game.start_time)}</div>
                     <Badge className={`text-[10px] sm:text-xs ${badgeClassForStatus(game.status)}`}>{statusLabel(game.status)}</Badge>
                     <button
-                      onClick={() => window.open(`/game-viewer/${game.id}`, '_blank')}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-[10px] font-semibold text-white/70 transition hover:border-white/40 hover:text-white sm:gap-2 sm:px-4 sm:py-2 sm:text-xs"
+                      onClick={() => {
+                        if (canView) {
+                          window.open(`/game-viewer/${game.id}`, '_blank');
+                        }
+                      }}
+                      disabled={!canView}
+                      className={`inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-semibold transition sm:gap-2 sm:px-4 sm:py-2 sm:text-xs ${buttonContent.className} ${!canView ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      title={!canView && isScheduled && !hasStarted ? 'Game has not started yet' : canView ? 'Click to view game' : ''}
                     >
-                      <Play className="h-3 w-3 sm:h-4 sm:w-4" />
-                      View Game
+                      <ButtonIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                      {buttonContent.text}
                     </button>
                   </div>
                 </div>
