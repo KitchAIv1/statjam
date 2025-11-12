@@ -16,6 +16,8 @@ interface ScheduleTabProps {
 interface GameWithLogos extends Game {
   teamALogo?: string;
   teamBLogo?: string;
+  teamAName?: string;
+  teamBName?: string;
 }
 
 export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
@@ -30,7 +32,7 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
         const data = await GameService.getGamesByTournament(tournamentId);
         if (!mounted) return;
 
-        // Load team logos for each game
+        // Load team logos and names for each game
         const gamesWithLogos = await Promise.all(
           data.map(async (game) => {
             const [teamAInfo, teamBInfo] = await Promise.all([
@@ -42,6 +44,8 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
               ...game,
               teamALogo: teamAInfo?.logo,
               teamBLogo: teamBInfo?.logo,
+              teamAName: teamAInfo?.name,
+              teamBName: teamBInfo?.name,
             };
           })
         );
@@ -87,8 +91,8 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
       ) : (
         <div className="space-y-3 sm:space-y-4">
           {games.map((game) => {
-            const teamAName = game.team_a_name || 'Team A';
-            const teamBName = game.team_b_name || 'Team B';
+            const teamAName = game.teamAName || 'Team A';
+            const teamBName = game.teamBName || 'Team B';
 
             return (
               <Card key={game.id} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/80 backdrop-blur sm:rounded-3xl sm:p-5 sm:text-sm">

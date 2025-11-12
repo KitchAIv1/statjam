@@ -448,15 +448,30 @@ function CreateGameModal({
   
   console.log('🔍 CreateGameModal: Received statAdmins:', statAdmins.length, 'admins');
   
-  // Helper function to format date for datetime-local input
+  // Helper function to format date for datetime-local input (converts UTC to local)
   const formatDateTimeLocal = (dateString: string): string => {
+    if (!dateString) return '';
     const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return '';
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // Helper function to convert datetime-local value to ISO string (local time to UTC)
+  const convertLocalToISO = (localDateTime: string): string => {
+    if (!localDateTime) return '';
+    // datetime-local format: "YYYY-MM-DDTHH:mm"
+    // Create a date object treating it as local time
+    const localDate = new Date(localDateTime);
+    // Check if date is valid
+    if (isNaN(localDate.getTime())) return '';
+    // Return ISO string (will be in UTC)
+    return localDate.toISOString();
   };
   
   const minDate = formatDateTimeLocal(tournament.startDate);
@@ -472,7 +487,7 @@ function CreateGameModal({
   const [formData, setFormData] = useState({
     teamAId: game?.team_a_id || '',
     teamBId: game?.team_b_id || '',
-    startTime: game?.start_time?.slice(0, 16) || minDate,
+    startTime: game?.start_time ? formatDateTimeLocal(game.start_time) : minDate,
     venue: game?.venue || tournament.venue || '',
     statAdminId: game?.stat_admin_id || '',
   });
@@ -488,8 +503,11 @@ function CreateGameModal({
       return;
     }
     
+    // Convert datetime-local to ISO string for storage
+    const isoStartTime = convertLocalToISO(formData.startTime);
+    
     // Validate date is within tournament range
-    const gameDate = new Date(formData.startTime);
+    const gameDate = new Date(isoStartTime);
     const tournamentStart = new Date(tournament.startDate);
     const tournamentEnd = new Date(tournament.endDate);
     
@@ -498,7 +516,11 @@ function CreateGameModal({
       return;
     }
     
-    onSave(formData);
+    // Pass ISO string to onSave
+    onSave({
+      ...formData,
+      startTime: isoStartTime
+    });
   };
 
   const isFormValid = formData.teamAId && formData.teamBId && formData.startTime && formData.venue;
@@ -950,15 +972,30 @@ function BracketBuilderModal({
   onClose: () => void; 
   onGenerate: (config: any) => void; 
 }) {
-  // Helper function to format date for datetime-local input
+  // Helper function to format date for datetime-local input (converts UTC to local)
   const formatDateTimeLocal = (dateString: string): string => {
+    if (!dateString) return '';
     const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return '';
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // Helper function to convert datetime-local value to ISO string (local time to UTC)
+  const convertLocalToISO = (localDateTime: string): string => {
+    if (!localDateTime) return '';
+    // datetime-local format: "YYYY-MM-DDTHH:mm"
+    // Create a date object treating it as local time
+    const localDate = new Date(localDateTime);
+    // Check if date is valid
+    if (isNaN(localDate.getTime())) return '';
+    // Return ISO string (will be in UTC)
+    return localDate.toISOString();
   };
 
   const minDate = formatDateTimeLocal(tournament.startDate);
@@ -976,8 +1013,11 @@ function BracketBuilderModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Convert datetime-local to ISO string for storage
+    const isoStartDate = convertLocalToISO(bracketConfig.startDate);
+    
     // Validate date is within tournament range
-    const bracketStartDate = new Date(bracketConfig.startDate);
+    const bracketStartDate = new Date(isoStartDate);
     const tournamentStart = new Date(tournament.startDate);
     const tournamentEnd = new Date(tournament.endDate);
     
@@ -989,7 +1029,7 @@ function BracketBuilderModal({
     onGenerate({
       tournamentType: bracketConfig.tournamentType,
       teams: bracketConfig.selectedTeams,
-      startDate: bracketConfig.startDate,
+      startDate: isoStartDate, // Pass ISO string
       venue: bracketConfig.venue,
       gamesPerDay: bracketConfig.gamesPerDay,
       daysBetweenGames: bracketConfig.daysBetweenGames,
