@@ -238,6 +238,7 @@ export function MobileLayoutV3({
           shotClockIsVisible={tracker.shotClock.isVisible ?? true}
           onShotClockReset={tracker.resetShotClock}
           onShotClockSetTime={tracker.setShotClockTime}
+          onToggleShotClockVisibility={tracker.toggleShotClockVisibility}
           showPossessionIndicator={tracker.ruleset && tracker.automationFlags?.possession?.enabled && !!tracker.possession}
           currentPossessionTeamId={tracker.possession?.currentTeamId}
           teamAId={gameData.team_a_id}

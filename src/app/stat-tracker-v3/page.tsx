@@ -1539,6 +1539,7 @@ function StatTrackerV3Content() {
           onShotClockStop={tracker.stopShotClock}
           onShotClockReset={tracker.resetShotClock}
           onShotClockSetTime={tracker.setShotClockTime}
+          onToggleShotClockVisibility={tracker.toggleShotClockVisibility}
           gameStatus={tracker.gameStatus}
           isDemo={gameData.is_demo}
         />

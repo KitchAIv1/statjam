@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Play, Pause, RotateCcw, Edit3, Check, X, ArrowLeft } from 'lucide-react';
+import { Play, Pause, RotateCcw, Edit3, Check, X, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,7 @@ interface TopScoreboardV3Props {
   onShotClockStop?: () => void;
   onShotClockReset?: () => void;
   onShotClockSetTime?: (seconds: number) => void;
+  onToggleShotClockVisibility?: () => void; // ✅ Toggle shot clock display
   // Navigation Props
   onBack?: () => void;
   // ✅ Game Status
@@ -65,6 +66,7 @@ export function TopScoreboardV3({
   onShotClockStop,
   onShotClockReset,
   onShotClockSetTime,
+  onToggleShotClockVisibility,
   // Navigation Props
   onBack,
   // ✅ Game Status
@@ -377,7 +379,7 @@ export function TopScoreboardV3({
             </div>
 
             {/* Right Container - Shot Clock + 2x2 Button Grid */}
-            {shotClockIsVisible && (
+            {shotClockIsVisible ? (
               <div className="flex flex-col items-center justify-between gap-3 p-3 md:p-4 rounded-xl border-2 bg-white shadow-lg min-w-[240px] md:min-w-[280px]" style={{ borderColor: '#e5e7eb' }}>
                 {/* Shot Clock Display */}
                 <div className="flex flex-col items-center w-full">
@@ -487,7 +489,46 @@ export function TopScoreboardV3({
                     </>
                   )}
                 </div>
+
+                {/* ✅ Toggle Shot Clock Visibility Button */}
+                {onToggleShotClockVisibility && (
+                  <Button
+                    onClick={onToggleShotClockVisibility}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-3 text-xs font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-gray-300 rounded-md transition-all duration-200"
+                    title={shotClockIsVisible ? "Hide Shot Clock" : "Show Shot Clock"}
+                  >
+                    {shotClockIsVisible ? (
+                      <>
+                        <EyeOff className="w-3 h-3 mr-1.5" />
+                        Hide
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3 h-3 mr-1.5" />
+                        Show
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
+            ) : (
+              /* ✅ Show Toggle Button When Shot Clock is Hidden */
+              onToggleShotClockVisibility && (
+                <div className="flex items-center justify-center p-3 md:p-4 rounded-xl border-2 border-gray-300 bg-gray-50 min-w-[240px] md:min-w-[280px]">
+                  <Button
+                    onClick={onToggleShotClockVisibility}
+                    variant="outline"
+                    size="sm"
+                    className="h-10 px-4 text-sm font-semibold text-gray-600 hover:text-gray-800 hover:bg-gray-100 border-2 border-gray-400 rounded-md transition-all duration-200"
+                    title="Show Shot Clock"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Show Shot Clock
+                  </Button>
+                </div>
+              )
             )}
           </div>
         </div>

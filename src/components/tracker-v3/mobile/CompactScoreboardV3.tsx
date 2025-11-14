@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ChevronRight, ChevronLeft, Play, Pause, RotateCcw } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Play, Pause, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { PossessionIndicator } from '../PossessionIndicator';
@@ -34,6 +34,7 @@ interface CompactScoreboardV3Props {
   shotClockIsVisible?: boolean;
   onShotClockReset?: (seconds?: number) => void;
   onShotClockSetTime?: (seconds: number) => void;
+  onToggleShotClockVisibility?: () => void; // ✅ Toggle shot clock display
   // ✅ REFINEMENT 4: Possession Indicator Props
   showPossessionIndicator?: boolean;
   currentPossessionTeamId?: string;
@@ -72,6 +73,7 @@ export function CompactScoreboardV3({
   shotClockIsVisible = true,
   onShotClockReset,
   onShotClockSetTime,
+  onToggleShotClockVisibility,
   showPossessionIndicator = false,
   currentPossessionTeamId,
   teamAId,
@@ -181,7 +183,7 @@ export function CompactScoreboardV3({
         </div>
 
         {/* Right Container - Shot Clock Section + Buttons (beside T2) */}
-        {shotClockIsVisible && (
+        {shotClockIsVisible ? (
           <div className="col-span-1 flex flex-col items-center justify-center gap-2">
             {/* Shot Clock Section */}
             <div className="flex flex-col items-center justify-center gap-1">
@@ -244,7 +246,46 @@ export function CompactScoreboardV3({
                 ✏️
               </Button>
             </div>
+
+            {/* ✅ Toggle Shot Clock Visibility Button */}
+            {onToggleShotClockVisibility && (
+              <Button
+                onClick={onToggleShotClockVisibility}
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[8px] font-semibold text-gray-400 hover:text-gray-600 hover:bg-gray-100 border border-gray-300 rounded transition-all mt-1"
+                title={shotClockIsVisible ? "Hide Shot Clock" : "Show Shot Clock"}
+              >
+                {shotClockIsVisible ? (
+                  <>
+                    <EyeOff className="w-2.5 h-2.5 mr-1" />
+                    Hide
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-2.5 h-2.5 mr-1" />
+                    Show
+                  </>
+                )}
+              </Button>
+            )}
           </div>
+        ) : (
+          /* ✅ Show Toggle Button When Shot Clock is Hidden */
+          onToggleShotClockVisibility && (
+            <div className="col-span-1 flex items-center justify-center">
+              <Button
+                onClick={onToggleShotClockVisibility}
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-[9px] font-semibold text-gray-400 hover:text-gray-600 hover:bg-gray-100 border border-gray-300 rounded transition-all"
+                title="Show Shot Clock"
+              >
+                <Eye className="w-3 h-3 mr-1" />
+                Show
+              </Button>
+            </div>
+          )
         )}
 
         {/* Team B - Narrower */}

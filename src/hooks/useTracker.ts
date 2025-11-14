@@ -51,6 +51,7 @@ interface UseTrackerReturn {
   shotClockTick: (seconds: number) => void;
   shotClockJustReset: boolean; // ✅ NBA Sync Fix
   setShotClockJustReset: (value: boolean) => void; // ✅ NBA Sync Fix
+  toggleShotClockVisibility: () => void; // ✅ Toggle shot clock display
   setQuarter: (quarter: number) => void;
   advanceIfNeeded: () => void;
   substitute: (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number }) => Promise<boolean>;
@@ -115,10 +116,25 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     secondsRemaining: 12 * 60 // 12 minutes (will be adjusted based on quarter)
   });
   // NEW: Shot Clock State
+  // ✅ Load visibility preference from localStorage on initialization
+  const getInitialShotClockVisibility = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`shotClockEnabled_${initialGameId}`);
+        if (saved !== null) {
+          return JSON.parse(saved);
+        }
+      } catch (error) {
+        console.warn('Failed to load shot clock visibility preference:', error);
+      }
+    }
+    return true; // Default: visible
+  };
+
   const [shotClock, setShotClock] = useState({
     isRunning: false,
     secondsRemaining: 24, // Default NBA shot clock
-    isVisible: true // Can be disabled per tournament settings
+    isVisible: getInitialShotClockVisibility() // ✅ Load from localStorage or default to true
   });
   
   // ✅ Shot Clock Sync Fix: Prevents immediate tick after reset (aligns with game clock)
@@ -661,6 +677,30 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     }));
   }, []);
 
+  // ✅ Toggle shot clock visibility (UI only - clock state continues internally)
+  const toggleShotClockVisibility = useCallback(() => {
+    setShotClock(prev => {
+      const newVisibility = !prev.isVisible;
+      
+      // Persist preference to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`shotClockEnabled_${gameId}`, JSON.stringify(newVisibility));
+        } catch (error) {
+          console.warn('Failed to persist shot clock visibility preference:', error);
+        }
+      }
+      
+      setLastAction(`Shot clock ${newVisibility ? 'shown' : 'hidden'}`);
+      console.log(`👁️ Shot clock visibility toggled: ${newVisibility ? 'VISIBLE' : 'HIDDEN'}`);
+      
+      return {
+        ...prev,
+        isVisible: newVisibility
+      };
+    });
+  }, [gameId]);
+
   const setQuarter = useCallback(async (newQuarter: number) => {
     setQuarterState(newQuarter);
     setLastAction(`Advanced to Quarter ${newQuarter}`);
@@ -893,14 +933,22 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             isRunning: clockResult.newState.gameClockRunning
           }));
           
-          setShotClock(prev => ({
-            ...prev,
-            secondsRemaining: clockResult.newState.shotClock,
-            isRunning: clockResult.newState.shotClockRunning,
-            isVisible: clockResult.newState.shotClockDisabled !== undefined 
-              ? !clockResult.newState.shotClockDisabled 
-              : prev.isVisible // ✅ PRESERVE isVisible if not explicitly set
-          }));
+          setShotClock(prev => {
+            // ✅ FIX: Preserve user's visibility preference
+            // ClockEngine.shotClockDisabled is for FT mode only, not user visibility preference
+            // Only hide shot clock if ClockEngine explicitly disabled for FT mode (shotClockDisabled === true)
+            // When ClockEngine re-enables (shotClockDisabled = false), preserve user's preference
+            const newVisibility = clockResult.newState.shotClockDisabled === true
+              ? false // Hide for FT mode only
+              : prev.isVisible; // ✅ Preserve user preference (don't re-enable if user hid it)
+            
+            return {
+              ...prev,
+              secondsRemaining: clockResult.newState.shotClock,
+              isRunning: clockResult.newState.shotClockRunning,
+              isVisible: newVisibility
+            };
+          });
         }
       }
 
@@ -1411,6 +1459,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     shotClockTick,
     shotClockJustReset, // ✅ NBA Sync Fix: Flag for delayed tick
     setShotClockJustReset, // ✅ NBA Sync Fix: Clear flag after skip
+    toggleShotClockVisibility, // ✅ Toggle shot clock display
     setQuarter,
     advanceIfNeeded,
     substitute,
