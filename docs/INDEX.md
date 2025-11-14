@@ -51,7 +51,7 @@
 - **DEBUG_GUIDE.md** - Debugging procedures
 - **MIGRATION_TEMPLATE.md** - Database migration template
 - **MVP_VALIDATION_ERROR_HANDLING_PLAN.md** - Validation and error handling
-- **PERFORMANCE_MEASUREMENT.md** - Performance measurement guide
+- **TOURNAMENT_PAGE_PERFORMANCE_OPTIMIZATION.md** - Public tournament tab batching, caching, and UX polish
 - **TESTING_GUIDE.md** - Testing procedures
 - **test-admin.md** - Admin testing guide
 
