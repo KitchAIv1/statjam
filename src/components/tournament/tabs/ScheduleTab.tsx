@@ -1,72 +1,19 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { GameService } from '@/lib/services/gameService';
-import { TeamService } from '@/lib/services/tournamentService';
-import { Game } from '@/lib/types/game';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { CalendarDays, Clock, MapPin, Play, Shield, Lock, CheckCircle } from 'lucide-react';
+import { useScheduleData } from '@/hooks/useScheduleData';
+import { Game } from '@/lib/types/game';
 
 interface ScheduleTabProps {
   tournamentId: string;
 }
 
-interface GameWithLogos extends Game {
-  teamALogo?: string;
-  teamBLogo?: string;
-  teamAName?: string;
-  teamBName?: string;
-}
-
 export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
-  const [games, setGames] = useState<GameWithLogos[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const loadGames = async () => {
-      try {
-        const data = await GameService.getGamesByTournament(tournamentId);
-        if (!mounted) return;
-
-        // Load team logos and names for each game
-        const gamesWithLogos = await Promise.all(
-          data.map(async (game) => {
-            const [teamAInfo, teamBInfo] = await Promise.all([
-              game.team_a_id ? TeamService.getTeamInfo(game.team_a_id) : Promise.resolve(null),
-              game.team_b_id ? TeamService.getTeamInfo(game.team_b_id) : Promise.resolve(null),
-            ]);
-
-            return {
-              ...game,
-              teamALogo: teamAInfo?.logo,
-              teamBLogo: teamBInfo?.logo,
-              teamAName: teamAInfo?.name,
-              teamBName: teamBInfo?.name,
-            };
-          })
-        );
-
-        if (mounted) {
-          setGames(gamesWithLogos);
-        }
-      } catch (error) {
-        console.error('Failed to load schedule:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadGames();
-    return () => {
-      mounted = false;
-    };
-  }, [tournamentId]);
+  // ✅ OPTIMIZED: Use custom hook with batching and caching
+  const { games, loading } = useScheduleData(tournamentId);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -136,11 +83,11 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
             const ButtonIcon = buttonContent.icon;
 
             return (
-              <Card key={game.id} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/80 backdrop-blur sm:rounded-3xl sm:p-5 sm:text-sm">
-                <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <Avatar className="h-8 w-8 shrink-0 border border-white/10 sm:h-10 sm:w-10">
+              <Card key={game.id} className="rounded-xl border border-white/10 bg-white/5 p-3 text-[10px] text-white/80 backdrop-blur sm:rounded-2xl sm:p-4 sm:text-xs md:rounded-3xl md:p-5 md:text-sm">
+                <div className="flex flex-col gap-2.5 sm:gap-3 md:gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-4">
+                    <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2">
+                      <Avatar className="h-6 w-6 shrink-0 border border-white/10 sm:h-8 sm:w-8 md:h-10 md:w-10">
                         {game.teamALogo ? (
                           <AvatarImage
                             src={game.teamALogo}
@@ -150,14 +97,14 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                           />
                         ) : null}
                         <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10">
-                          <Shield className="h-4 w-4 text-[#FF3B30] sm:h-5 sm:w-5" />
+                          <Shield className="h-3 w-3 text-[#FF3B30] sm:h-4 sm:w-4 md:h-5 md:w-5" />
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm font-semibold text-white sm:text-base">{teamAName}</span>
+                      <span className="text-xs font-semibold text-white sm:text-sm md:text-base">{teamAName}</span>
                     </div>
-                    <span className="text-white/40">vs</span>
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <Avatar className="h-8 w-8 shrink-0 border border-white/10 sm:h-10 sm:w-10">
+                    <span className="text-white/40 text-xs sm:text-sm">vs</span>
+                    <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2">
+                      <Avatar className="h-6 w-6 shrink-0 border border-white/10 sm:h-8 sm:w-8 md:h-10 md:w-10">
                         {game.teamBLogo ? (
                           <AvatarImage
                             src={game.teamBLogo}
@@ -167,15 +114,15 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                           />
                         ) : null}
                         <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10">
-                          <Shield className="h-4 w-4 text-[#FF3B30] sm:h-5 sm:w-5" />
+                          <Shield className="h-3 w-3 text-[#FF3B30] sm:h-4 sm:w-4 md:h-5 md:w-5" />
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm font-semibold text-white sm:text-base">{teamBName}</span>
+                      <span className="text-xs font-semibold text-white sm:text-sm md:text-base">{teamBName}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                    <div className="text-[10px] uppercase tracking-wide text-white/40 sm:text-xs">{formatDate(game.start_time)}</div>
-                    <Badge className={`text-[10px] sm:text-xs ${badgeClassForStatus(game.status)}`}>{statusLabel(game.status)}</Badge>
+                  <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 md:gap-3">
+                    <div className="text-[9px] uppercase tracking-wide text-white/40 sm:text-[10px] md:text-xs">{formatDate(game.start_time)}</div>
+                    <Badge className={`text-[9px] sm:text-[10px] md:text-xs ${badgeClassForStatus(game.status)}`}>{statusLabel(game.status)}</Badge>
                     <button
                       onClick={() => {
                         if (canView) {
@@ -183,10 +130,10 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                         }
                       }}
                       disabled={!canView}
-                      className={`inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-semibold transition sm:gap-2 sm:px-4 sm:py-2 sm:text-xs ${buttonContent.className} ${!canView ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      className={`inline-flex items-center justify-center gap-1 rounded-full border px-2 py-1 text-[9px] font-semibold transition sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[10px] md:gap-2 md:px-4 md:py-2 md:text-xs ${buttonContent.className} ${!canView ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                       title={!canView && isScheduled && !hasStarted ? 'Game has not started yet' : canView ? 'Click to view game' : ''}
                     >
-                      <ButtonIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <ButtonIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4" />
                       {buttonContent.text}
                     </button>
                   </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -43,8 +43,133 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthContext();
   const [activeTab, setActiveTab] = useState<TournamentTab>('overview');
+  
+  // ✅ FIX: Initialize phase based on tournament status
+  const getInitialPhase = (): 'upcoming' | 'live' | 'finals' => {
+    const status = data.tournament.status?.toLowerCase() || '';
+    if (status === 'active' || status === 'live') return 'live';
+    if (status === 'completed') return 'finals';
+    return 'upcoming';
+  };
+  
+  const [activePhase, setActivePhase] = useState<'upcoming' | 'live' | 'finals'>(getInitialPhase());
+  const tabsListRef = useRef<HTMLDivElement>(null);
 
   const tabOptions = useMemo(() => TABS, []);
+
+  // ✅ FIX: Handle phase change from hero section
+  const handlePhaseChange = (phase: 'upcoming' | 'live' | 'finals') => {
+    setActivePhase(phase);
+    // If "Live" is clicked, switch to Live Games tab
+    if (phase === 'live') {
+      setActiveTab('live');
+    }
+    // If "Upcoming" is clicked, switch to Schedule tab
+    else if (phase === 'upcoming') {
+      setActiveTab('schedule');
+    }
+    // If "Finals" is clicked, switch to Standings tab
+    else if (phase === 'finals') {
+      setActiveTab('standings');
+    }
+  };
+
+  // ✅ FIX: Sync phase when tab changes manually
+  const handleTabChange = (tab: TournamentTab) => {
+    setActiveTab(tab);
+    // Update phase based on tab selection
+    if (tab === 'live') {
+      setActivePhase('live');
+    } else if (tab === 'schedule') {
+      setActivePhase('upcoming');
+    } else if (tab === 'standings') {
+      setActivePhase('finals');
+    }
+  };
+
+  // ✅ FIX: Enable mouse drag scrolling for desktop testing (only on empty space, not tabs)
+  useEffect(() => {
+    const tabsList = tabsListRef.current;
+    if (!tabsList) return;
+
+    let isDown = false;
+    let startX: number;
+    let scrollLeft: number;
+    let startTarget: EventTarget | null = null;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only enable drag if clicking on the container itself, not on a tab button
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-slot="tabs-trigger"]')) {
+        // User clicked on a tab - let it handle the click normally
+        return;
+      }
+      
+      isDown = true;
+      startTarget = e.target;
+      tabsList.style.cursor = 'grabbing';
+      startX = e.pageX - tabsList.offsetLeft;
+      scrollLeft = tabsList.scrollLeft;
+    };
+
+    const handleMouseLeave = () => {
+      isDown = false;
+      tabsList.style.cursor = 'grab';
+    };
+
+    const handleMouseUp = () => {
+      isDown = false;
+      tabsList.style.cursor = 'grab';
+      startTarget = null;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown || !startTarget) return;
+      e.preventDefault();
+      const x = e.pageX - tabsList.offsetLeft;
+      const walk = (x - startX) * 2; // Scroll speed multiplier
+      tabsList.scrollLeft = scrollLeft - walk;
+    };
+
+    tabsList.addEventListener('mousedown', handleMouseDown);
+    tabsList.addEventListener('mouseleave', handleMouseLeave);
+    tabsList.addEventListener('mouseup', handleMouseUp);
+    tabsList.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      tabsList.removeEventListener('mousedown', handleMouseDown);
+      tabsList.removeEventListener('mouseleave', handleMouseLeave);
+      tabsList.removeEventListener('mouseup', handleMouseUp);
+      tabsList.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+
+  // ✅ FIX: Auto-scroll active tab into view when tab changes
+  useEffect(() => {
+    const tabsList = tabsListRef.current;
+    if (!tabsList) return;
+
+    // Find the active tab trigger element
+    const activeTrigger = tabsList.querySelector(`[data-slot="tabs-trigger"][data-state="active"]`) as HTMLElement;
+    if (!activeTrigger) return;
+
+    // Calculate scroll position to center the active tab
+    const containerRect = tabsList.getBoundingClientRect();
+    const triggerRect = activeTrigger.getBoundingClientRect();
+    const scrollLeft = tabsList.scrollLeft;
+    const triggerLeft = triggerRect.left - containerRect.left + scrollLeft;
+    const triggerWidth = triggerRect.width;
+    const containerWidth = containerRect.width;
+    
+    // Center the active tab in the viewport
+    const targetScroll = triggerLeft - (containerWidth / 2) + (triggerWidth / 2);
+    
+    // Smooth scroll to the target position
+    tabsList.scrollTo({
+      left: Math.max(0, Math.min(targetScroll, tabsList.scrollWidth - containerWidth)),
+      behavior: 'smooth'
+    });
+  }, [activeTab]);
 
   const handleSignIn = () => {
     router.push('/auth?mode=signin');
@@ -63,10 +188,10 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
   return (
     <div className="min-h-screen bg-black text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A0A0A]/95 backdrop-blur-lg">
-        <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-2 px-4 py-2.5 sm:gap-4 sm:px-6 sm:py-3">
+        <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-4 sm:py-2.5 md:px-6 md:py-3">
           {/* Left: StatJam Logo */}
-          <a href="/" className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80">
-            <h1 className="text-lg font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent sm:text-xl">
+          <a href="/" className="flex shrink-0 items-center gap-1.5 transition-opacity hover:opacity-80 sm:gap-2">
+            <h1 className="text-base font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent sm:text-lg md:text-xl">
               StatJam
             </h1>
           </a>
@@ -91,69 +216,85 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
           </div>
 
           {/* Right: Log In + Start Tournament */}
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
             <button 
               onClick={handleSignIn}
-              className="hidden rounded-full border border-white/10 bg-transparent px-3 py-1.5 text-xs text-white/70 transition hover:border-white/30 hover:text-white sm:block sm:px-4 sm:py-2 sm:text-sm"
+              className="hidden rounded-full border border-white/10 bg-transparent px-2.5 py-1 text-[10px] text-white/70 transition hover:border-white/30 hover:text-white sm:block sm:px-3 sm:py-1.5 sm:text-xs md:px-4 md:py-2 md:text-sm"
             >
               Log In
             </button>
             <button 
               onClick={handleStartTournament}
-              className="rounded-full bg-[#FF3B30] px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-[#FF3B30]/30 transition hover:brightness-110 sm:px-4 sm:py-2 sm:text-sm"
+              className="rounded-full bg-[#FF3B30] px-2.5 py-1 text-[10px] font-semibold text-white shadow-lg shadow-[#FF3B30]/30 transition hover:brightness-110 sm:px-3 sm:py-1.5 sm:text-xs md:px-4 md:py-2 md:text-sm"
             >
-              Start Tournament
+              <span className="hidden sm:inline">Start Tournament</span>
+              <span className="sm:hidden">Start</span>
             </button>
           </div>
         </div>
       </header>
 
-      <TournamentHero data={data} />
-      <TournamentPrimaryNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <TournamentHero 
+        data={data} 
+        activePhase={activePhase}
+        onPhaseChange={handlePhaseChange}
+      />
+      <TournamentPrimaryNav activeTab={activeTab} onTabChange={handleTabChange} />
 
-      <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-4 pb-12 pt-6 sm:gap-6 sm:px-6 sm:pb-16 sm:pt-10 lg:flex-row">
-        <div className="flex-1 space-y-4 sm:space-y-6">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TournamentTab)}>
-            <TabsList className="grid w-full grid-cols-2 gap-1.5 bg-transparent p-0 text-white sm:grid-cols-3 sm:gap-2 lg:hidden">
-              {tabOptions.map((tab) => (
-                <TabsTrigger
-                  key={tab}
-                  value={tab}
-                  className="rounded-full border border-white/10 bg-[#121212] px-2 py-1.5 text-[10px] uppercase tracking-wide text-white/70 transition hover:border-white/30 hover:text-white data-[state=active]:border-[#FF3B30]/80 data-[state=active]:bg-[#FF3B30]/20 data-[state=active]:text-white sm:px-4 sm:py-2 sm:text-xs"
-                >
-                  {labelForTab(tab)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+      <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-3 px-3 pb-8 pt-4 sm:gap-4 sm:px-4 sm:pb-12 sm:pt-6 md:gap-6 md:px-6 md:pb-16 md:pt-10 lg:flex-row">
+        <div className="flex-1 space-y-3 sm:space-y-4 md:space-y-6">
+          <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as TournamentTab)}>
+            {/* Mobile: Horizontal scrollable tabs - Works with mouse drag on desktop too */}
+            <div 
+              ref={tabsListRef}
+              className="mb-3 overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing sm:mb-4 lg:hidden"
+              style={{ 
+                scrollBehavior: 'smooth',
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehaviorX: 'contain'
+              }}
+            >
+              <TabsList className="inline-flex w-max min-w-full gap-1.5 bg-transparent p-0 px-3 text-white sm:gap-2 sm:px-4 [&>*]:cursor-pointer [&>*]:select-none [&>*]:touch-none">
+                {tabOptions.map((tab) => (
+                  <TabsTrigger
+                    key={tab}
+                    value={tab}
+                    className="shrink-0 rounded-full border border-white/10 bg-[#121212] px-2.5 py-1.5 text-[10px] uppercase tracking-wide text-white/70 transition hover:border-white/30 hover:text-white data-[state=active]:border-[#FF3B30]/80 data-[state=active]:bg-[#FF3B30]/20 data-[state=active]:text-white sm:px-3 sm:py-2 sm:text-xs"
+                  >
+                    {labelForTab(tab)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
-            <TabsContent value="overview">
+            <TabsContent value="overview" className="mt-0">
               <OverviewTab data={data} />
             </TabsContent>
-            <TabsContent value="schedule">
+            <TabsContent value="schedule" className="mt-0">
               <ScheduleTab tournamentId={data.tournament.id} />
             </TabsContent>
-            <TabsContent value="bracket">
+            <TabsContent value="bracket" className="mt-0">
               <BracketTab tournamentId={data.tournament.id} />
             </TabsContent>
-            <TabsContent value="standings">
+            <TabsContent value="standings" className="mt-0">
               <StandingsTab tournamentId={data.tournament.id} />
             </TabsContent>
-            <TabsContent value="leaders">
+            <TabsContent value="leaders" className="mt-0">
               <LeadersTab tournamentId={data.tournament.id} />
             </TabsContent>
-            <TabsContent value="teams">
+            <TabsContent value="teams" className="mt-0">
               <TeamsTab tournamentId={data.tournament.id} />
             </TabsContent>
-            <TabsContent value="players">
+            <TabsContent value="players" className="mt-0">
               <PlayersTab tournamentId={data.tournament.id} />
             </TabsContent>
-            <TabsContent value="live">
+            <TabsContent value="live" className="mt-0">
               <LiveGamesTab tournamentId={data.tournament.id} />
             </TabsContent>
-            <TabsContent value="media">
+            <TabsContent value="media" className="mt-0">
               <MediaTab tournamentId={data.tournament.id} />
             </TabsContent>
-            <TabsContent value="info">
+            <TabsContent value="info" className="mt-0">
               <InfoTab data={data} />
             </TabsContent>
           </Tabs>
@@ -164,20 +305,20 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
         </aside>
       </main>
 
-      <footer className="border-t border-white/10 bg-[#121212] py-6 sm:py-10">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-4 sm:gap-6 sm:px-6 md:flex-row md:items-center md:justify-between">
+      <footer className="border-t border-white/10 bg-[#121212] py-4 sm:py-6 md:py-10">
+        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-3 px-3 sm:gap-4 sm:px-4 md:gap-6 md:px-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-wide text-white/40 sm:text-sm">Organizer</div>
-            <div className="mt-1 text-base font-semibold text-white/90 sm:text-lg">Elite Sports Federation</div>
-            <div className="text-xs text-[#B3B3B3] sm:text-sm">15 prior tournaments • Verified</div>
+            <div className="text-[10px] uppercase tracking-wide text-white/40 sm:text-xs md:text-sm">Organizer</div>
+            <div className="mt-0.5 text-sm font-semibold text-white/90 sm:mt-1 sm:text-base md:text-lg">Elite Sports Federation</div>
+            <div className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">15 prior tournaments • Verified</div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[#B3B3B3] sm:gap-3 sm:text-sm">
+          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[#B3B3B3] sm:gap-2 sm:text-xs md:gap-3 md:text-sm">
             <a href="#" className="transition hover:text-white">Privacy</a>
-            <Separator orientation="vertical" className="h-4 bg-white/20" />
+            <Separator orientation="vertical" className="h-3 bg-white/20 sm:h-4" />
             <a href="#" className="transition hover:text-white">Terms</a>
-            <Separator orientation="vertical" className="h-4 bg-white/20" />
+            <Separator orientation="vertical" className="h-3 bg-white/20 sm:h-4" />
             <a href="#" className="transition hover:text-white">Contact</a>
-            <Separator orientation="vertical" className="h-4 bg-white/20" />
+            <Separator orientation="vertical" className="h-3 bg-white/20 sm:h-4" />
             <span>© {new Date().getFullYear()} StatJam</span>
           </div>
         </div>

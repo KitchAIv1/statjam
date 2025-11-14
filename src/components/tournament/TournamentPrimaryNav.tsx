@@ -30,18 +30,24 @@ export function TournamentPrimaryNav({ activeTab, onTabChange }: TournamentPrima
   return (
     <nav className="sticky top-[52px] z-30 hidden border-b border-white/10 bg-[#121212]/95 backdrop-blur-lg sm:top-[60px] lg:block">
       <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-0.5 overflow-x-auto sm:gap-1">
+        <div className="flex items-center gap-0.5 overflow-x-auto sm:gap-1 scrollbar-hide [&>*]:cursor-pointer [&>*]:select-none">
           {PRIMARY_TABS.map(({ tab, label }) => {
             const isActive = activeTab === tab;
             return (
               <button
                 key={tab}
-                onClick={() => onTabChange(tab)}
+                onClick={(e) => {
+                  // ✅ FIX: Ensure tab click works - prevent any event blocking
+                  e.stopPropagation();
+                  console.log('🔍 [TournamentPrimaryNav] Tab clicked:', tab, label);
+                  onTabChange(tab);
+                }}
                 className={`relative shrink-0 px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30]/40 sm:px-4 sm:text-sm ${
                   isActive
                     ? 'text-white'
                     : 'text-[#B3B3B3] hover:text-white'
                 }`}
+                type="button"
               >
                 {label}
                 {isActive && (

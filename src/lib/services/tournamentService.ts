@@ -1269,6 +1269,42 @@ export class TeamService {
     }
   }
 
+  // ✅ OPTIMIZATION: Batch fetch team info for multiple teams (reduces N+1 queries)
+  static async getBatchTeamInfo(teamIds: string[]): Promise<Map<string, { id: string; name: string; logo?: string }>> {
+    try {
+      if (teamIds.length === 0) {
+        return new Map();
+      }
+
+      console.log('🔍 TeamService: Batch fetching team info for', teamIds.length, 'teams');
+      
+      const { data: teams, error } = await supabase
+        .from('teams')
+        .select('id, name, logo_url')
+        .in('id', teamIds);
+
+      if (error) {
+        console.error('❌ Supabase error batch fetching team info:', error);
+        return new Map();
+      }
+
+      const teamMap = new Map<string, { id: string; name: string; logo?: string }>();
+      (teams || []).forEach(team => {
+        teamMap.set(team.id, {
+          id: team.id,
+          name: team.name,
+          logo: team.logo_url || undefined,
+        });
+      });
+
+      console.log('🔍 TeamService: Batch fetched', teamMap.size, 'team infos');
+      return teamMap;
+    } catch (error) {
+      console.error('Error batch fetching team info:', error);
+      return new Map();
+    }
+  }
+
   // EMERGENCY FIX: Simple team count query to avoid timeouts
   // Only counts approved teams (excludes pending and rejected)
   static async getTeamCountByTournament(tournamentId: string): Promise<number> {

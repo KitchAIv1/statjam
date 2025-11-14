@@ -35,11 +35,21 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
     return games.filter((game) => game.tournament_id === data.tournament.id).slice(0, 3);
   }, [games, data.tournament.id]);
 
+  // ✅ FIX: Create stable game IDs array for dependency tracking
+  const filteredGameIds = useMemo(() => {
+    return filteredGames.map(g => g.id).sort().join(',');
+  }, [filteredGames]);
+
   useEffect(() => {
     let mounted = true;
 
     const loadLogos = async () => {
-      if (filteredGames.length === 0) return;
+      if (filteredGames.length === 0) {
+        if (mounted) {
+          setGamesWithLogos([]);
+        }
+        return;
+      }
 
       const gamesWithLogosData = await Promise.all(
         filteredGames.map(async (game) => {
@@ -66,7 +76,7 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
     return () => {
       mounted = false;
     };
-  }, [filteredGames]);
+  }, [filteredGameIds]); // ✅ FIX: Use stable game IDs instead of filteredGames array
 
   return (
     <div className="space-y-6">

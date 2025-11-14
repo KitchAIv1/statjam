@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { TournamentLeadersService, PlayerLeader } from '@/lib/services/tournamentLeadersService';
+import { useState } from 'react';
+import { PlayerLeader } from '@/lib/services/tournamentLeadersService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { User } from 'lucide-react';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
+import { useTournamentLeaders } from '@/hooks/useTournamentLeaders';
 
 interface LeadersTabProps {
   tournamentId: string;
@@ -25,39 +26,14 @@ const CATEGORIES: Array<{ key: LeaderCategory; label: string; valueKey: keyof Pl
 
 export function LeadersTab({ tournamentId }: LeadersTabProps) {
   const [selectedCategory, setSelectedCategory] = useState<LeaderCategory>('points');
-  const [leaders, setLeaders] = useState<PlayerLeader[]>([]);
-  const [loading, setLoading] = useState(true);
   const [minGames, setMinGames] = useState(1);
   const { isOpen, playerId, openModal, closeModal } = usePlayerProfileModal();
 
-  useEffect(() => {
-    let mounted = true;
-
-    const loadLeaders = async () => {
-      try {
-        const data = await TournamentLeadersService.getTournamentPlayerLeaders(
-          tournamentId,
-          selectedCategory,
-          minGames
-        );
-        if (mounted) {
-          setLeaders(data.slice(0, 10)); // Top 10 leaders
-        }
-      } catch (error) {
-        console.error('Failed to load leaders:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadLeaders();
-
-    return () => {
-      mounted = false;
-    };
-  }, [tournamentId, selectedCategory, minGames]);
+  // ✅ OPTIMIZED: Use custom hook with batching and caching
+  const { leaders: allLeaders, loading } = useTournamentLeaders(tournamentId, selectedCategory, minGames);
+  
+  // Top 10 leaders
+  const leaders = allLeaders.slice(0, 10);
 
   const formatValue = (leader: PlayerLeader, valueKey: keyof PlayerLeader): string => {
     const value = leader[valueKey] as number;
@@ -81,16 +57,16 @@ export function LeadersTab({ tournamentId }: LeadersTabProps) {
   };
 
   return (
-    <Card className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/80 backdrop-blur sm:rounded-3xl sm:p-6">
-      <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
+    <Card className="rounded-xl border border-white/10 bg-white/5 p-3 text-white/80 backdrop-blur sm:rounded-2xl sm:p-4 md:rounded-3xl md:p-6">
+      <div className="flex flex-col gap-2 sm:gap-3 md:gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white sm:text-xl">Leaders</h2>
-          <p className="text-xs text-white/50 sm:text-sm">Advanced stats refresh in real-time</p>
+          <h2 className="text-base font-semibold text-white sm:text-lg md:text-xl">Leaders</h2>
+          <p className="text-[10px] text-white/50 sm:text-xs md:text-sm">Advanced stats refresh in real-time</p>
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-white/50 sm:text-xs">
+        <div className="flex items-center gap-1.5 text-[9px] text-white/50 sm:gap-2 sm:text-[10px] md:text-xs">
           <span>Min games:</span>
           <button
-            className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-white/60 hover:border-white/30 hover:text-white sm:px-3 sm:text-xs"
+            className="rounded-full border border-white/10 px-2 py-0.5 text-[9px] text-white/60 hover:border-white/30 hover:text-white sm:px-2.5 sm:py-1 sm:text-[10px] md:px-3 md:text-xs"
             onClick={() => setMinGames(minGames === 1 ? 2 : 1)}
           >
             {minGames} {minGames === 1 ? 'game' : 'games'}
@@ -98,20 +74,20 @@ export function LeadersTab({ tournamentId }: LeadersTabProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="players" className="mt-4 sm:mt-6">
+      <Tabs defaultValue="players" className="mt-3 sm:mt-4 md:mt-6">
         <TabsList className="grid w-full grid-cols-2 bg-white/5">
-          <TabsTrigger value="players" className="text-xs sm:text-sm">Players</TabsTrigger>
-          <TabsTrigger value="teams" disabled className="text-xs sm:text-sm">Teams (Coming Soon)</TabsTrigger>
+          <TabsTrigger value="players" className="text-[10px] sm:text-xs md:text-sm">Players</TabsTrigger>
+          <TabsTrigger value="teams" disabled className="text-[10px] sm:text-xs md:text-sm">Teams (Coming Soon)</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="players" className="mt-4 space-y-3 sm:mt-6 sm:space-y-4">
+        <TabsContent value="players" className="mt-3 space-y-2.5 sm:mt-4 sm:space-y-3 md:mt-6 md:space-y-4">
           {/* Category Selector */}
-          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+          <div className="flex flex-wrap gap-1 sm:gap-1.5 md:gap-2">
             {CATEGORIES.map((category) => (
               <button
                 key={category.key}
                 onClick={() => setSelectedCategory(category.key)}
-                className={`rounded-full px-2.5 py-1.5 text-[10px] font-semibold transition sm:px-4 sm:py-2 sm:text-sm ${
+                className={`rounded-full px-2 py-1 text-[9px] font-semibold transition sm:px-2.5 sm:py-1.5 sm:text-[10px] md:px-4 md:py-2 md:text-sm ${
                   selectedCategory === category.key
                     ? 'bg-[#FF3B30] text-white'
                     : 'border border-white/10 bg-white/5 text-white/70 hover:border-white/30 hover:text-white'
@@ -123,17 +99,17 @@ export function LeadersTab({ tournamentId }: LeadersTabProps) {
           </div>
 
           {loading ? (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {[1, 2, 3].map((item) => (
-                <div key={item} className="h-20 animate-pulse rounded-2xl border border-white/10 bg-white/5" />
+                <div key={item} className="h-16 animate-pulse rounded-xl border border-white/10 bg-white/5 sm:h-20 sm:rounded-2xl" />
               ))}
             </div>
           ) : leaders.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center text-white/60">
+            <div className="rounded-xl border border-white/10 bg-black/30 p-4 text-center text-[10px] text-white/60 sm:rounded-2xl sm:p-6 sm:text-xs md:p-8 md:text-sm">
               No player stats available yet. Leaders will appear as games are tracked.
             </div>
           ) : (
-            <div className="space-y-2.5 sm:space-y-3">
+            <div className="space-y-2 sm:space-y-2.5 md:space-y-3">
               {leaders.map((leader) => {
                 const value = formatValue(leader, CATEGORIES.find(c => c.key === selectedCategory)!.valueKey);
                 const initials = getInitials(leader.playerName);
@@ -142,28 +118,28 @@ export function LeadersTab({ tournamentId }: LeadersTabProps) {
                   <div
                     key={`${leader.playerId}-${selectedCategory}`}
                     onClick={() => openModal(leader.playerId)}
-                    className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 transition hover:border-white/20 hover:bg-black/40 sm:rounded-2xl sm:px-5 sm:py-4"
+                    className="flex cursor-pointer items-center justify-between gap-1.5 rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 transition hover:border-white/20 hover:bg-black/40 sm:gap-2 sm:rounded-xl sm:px-3 sm:py-2.5 md:rounded-2xl md:px-5 md:py-4"
                   >
-                    <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-                      <div className="text-sm font-bold text-white/40 sm:text-lg">#{leader.rank}</div>
-                      <Avatar className="h-8 w-8 shrink-0 border-2 border-white/10 sm:h-12 sm:w-12">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2 md:gap-4">
+                      <div className="text-xs font-bold text-white/40 sm:text-sm md:text-lg">#{leader.rank}</div>
+                      <Avatar className="h-6 w-6 shrink-0 border-2 border-white/10 sm:h-8 sm:w-8 md:h-12 md:w-12">
                         {leader.profilePhotoUrl ? (
                           <AvatarImage src={leader.profilePhotoUrl} alt={leader.playerName} />
                         ) : null}
                         <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-white">
-                          {initials || <User className="h-4 w-4 sm:h-6 sm:w-6" />}
+                          {initials || <User className="h-3 w-3 sm:h-4 sm:w-4 md:h-6 md:w-6" />}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-white truncate sm:text-lg">{leader.playerName}</div>
-                        <div className="text-[10px] text-white/50 truncate sm:text-xs">
+                        <div className="text-[10px] font-semibold text-white truncate sm:text-xs md:text-lg">{leader.playerName}</div>
+                        <div className="text-[9px] text-white/50 truncate sm:text-[10px] md:text-xs">
                           {leader.teamName} • {leader.gamesPlayed} {leader.gamesPlayed === 1 ? 'game' : 'games'}
                         </div>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <div className="text-lg font-bold text-[#FF3B30] sm:text-2xl">{value}</div>
-                      <div className="text-[10px] text-white/40 sm:text-xs">{getCategoryLabel(selectedCategory)}</div>
+                      <div className="text-sm font-bold text-[#FF3B30] sm:text-lg md:text-2xl">{value}</div>
+                      <div className="text-[9px] text-white/40 sm:text-[10px] md:text-xs">{getCategoryLabel(selectedCategory)}</div>
                     </div>
                   </div>
                 );

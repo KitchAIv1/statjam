@@ -1,44 +1,18 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { TournamentStandingsService, TeamStanding } from '@/lib/services/tournamentStandingsService';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Shield } from 'lucide-react';
+import { useTournamentStandings } from '@/hooks/useTournamentStandings';
 
 interface StandingsTabProps {
   tournamentId: string;
 }
 
 export function StandingsTab({ tournamentId }: StandingsTabProps) {
-  const [standings, setStandings] = useState<TeamStanding[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const loadStandings = async () => {
-      try {
-        const data = await TournamentStandingsService.getTournamentStandings(tournamentId);
-        if (mounted) {
-          setStandings(data);
-        }
-      } catch (error) {
-        console.error('Failed to load standings:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadStandings();
-
-    return () => {
-      mounted = false;
-    };
-  }, [tournamentId]);
+  // ✅ OPTIMIZED: Use custom hook with caching
+  const { standings, loading } = useTournamentStandings(tournamentId);
 
   const formatPointDifferential = (diff: number): string => {
     return diff >= 0 ? `+${diff}` : `${diff}`;
@@ -68,56 +42,58 @@ export function StandingsTab({ tournamentId }: StandingsTabProps) {
             No completed games yet. Standings will appear as games finish.
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto rounded-xl border border-white/10 sm:mt-6 sm:rounded-2xl">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10 text-white/50 sm:w-12">#</TableHead>
-                  <TableHead className="min-w-[140px] text-white/50 sm:min-w-0">Team</TableHead>
-                  <TableHead className="text-center text-white/50">W</TableHead>
-                  <TableHead className="text-center text-white/50">L</TableHead>
-                  <TableHead className="text-center text-white/50">PF</TableHead>
-                  <TableHead className="text-center text-white/50">PA</TableHead>
-                  <TableHead className="text-center text-white/50">Diff</TableHead>
-                  <TableHead className="text-center text-white/50">Streak</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {standings.map((team) => {
-                  return (
-                    <TableRow key={team.teamId} className="border-white/5">
-                      <TableCell className="font-semibold text-white/70">{team.rank}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <Avatar className="h-6 w-6 shrink-0 border border-white/10 sm:h-8 sm:w-8">
-                            {team.teamLogo ? (
-                              <AvatarImage
-                                src={team.teamLogo}
-                                alt={`${team.teamName} logo`}
-                                className="object-cover"
-                                loading="lazy"
-                              />
-                            ) : null}
-                            <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10">
-                              <Shield className="h-3 w-3 text-[#FF3B30] sm:h-4 sm:w-4" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="truncate text-sm font-medium text-white sm:text-base">{team.teamName}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center text-sm text-white/80 sm:text-base">{team.wins}</TableCell>
-                      <TableCell className="text-center text-sm text-white/80 sm:text-base">{team.losses}</TableCell>
-                      <TableCell className="text-center text-xs text-white/70 sm:text-sm">{team.pointsFor}</TableCell>
-                      <TableCell className="text-center text-xs text-white/70 sm:text-sm">{team.pointsAgainst}</TableCell>
-                      <TableCell className="text-center text-xs font-semibold text-white/80 sm:text-sm">
-                        {formatPointDifferential(team.pointDifferential)}
-                      </TableCell>
-                      <TableCell className="text-center text-xs text-white/70 sm:text-sm">{team.streak}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+          <div className="mt-4 -mx-3 overflow-x-auto sm:mx-0 sm:mt-6 sm:rounded-xl md:rounded-2xl">
+            <div className="min-w-[600px] rounded-xl border border-white/10 sm:min-w-0 sm:rounded-2xl">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-8 text-[10px] text-white/50 sm:w-10 sm:text-xs md:w-12">#</TableHead>
+                    <TableHead className="min-w-[120px] text-[10px] text-white/50 sm:min-w-[140px] sm:text-xs md:min-w-0">Team</TableHead>
+                    <TableHead className="text-center text-[10px] text-white/50 sm:text-xs">W</TableHead>
+                    <TableHead className="text-center text-[10px] text-white/50 sm:text-xs">L</TableHead>
+                    <TableHead className="text-center text-[10px] text-white/50 sm:text-xs">PF</TableHead>
+                    <TableHead className="text-center text-[10px] text-white/50 sm:text-xs">PA</TableHead>
+                    <TableHead className="text-center text-[10px] text-white/50 sm:text-xs">Diff</TableHead>
+                    <TableHead className="text-center text-[10px] text-white/50 sm:text-xs">Streak</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {standings.map((team) => {
+                    return (
+                      <TableRow key={team.teamId} className="border-white/5">
+                        <TableCell className="font-semibold text-xs text-white/70 sm:text-sm md:text-base">{team.rank}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+                            <Avatar className="h-5 w-5 shrink-0 border border-white/10 sm:h-6 sm:w-6 md:h-8 md:w-8">
+                              {team.teamLogo ? (
+                                <AvatarImage
+                                  src={team.teamLogo}
+                                  alt={`${team.teamName} logo`}
+                                  className="object-cover"
+                                  loading="lazy"
+                                />
+                              ) : null}
+                              <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10">
+                                <Shield className="h-2.5 w-2.5 text-[#FF3B30] sm:h-3 sm:w-3 md:h-4 md:w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="truncate text-xs font-medium text-white sm:text-sm md:text-base">{team.teamName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center text-xs text-white/80 sm:text-sm md:text-base">{team.wins}</TableCell>
+                        <TableCell className="text-center text-xs text-white/80 sm:text-sm md:text-base">{team.losses}</TableCell>
+                        <TableCell className="text-center text-[10px] text-white/70 sm:text-xs md:text-sm">{team.pointsFor}</TableCell>
+                        <TableCell className="text-center text-[10px] text-white/70 sm:text-xs md:text-sm">{team.pointsAgainst}</TableCell>
+                        <TableCell className="text-center text-[10px] font-semibold text-white/80 sm:text-xs md:text-sm">
+                          {formatPointDifferential(team.pointDifferential)}
+                        </TableCell>
+                        <TableCell className="text-center text-[10px] text-white/70 sm:text-xs md:text-sm">{team.streak}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
       </Card>

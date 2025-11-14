@@ -83,16 +83,36 @@ export class TournamentLeadersService {
 
       const gameIds = games.map(g => g.id);
 
-      // Fetch all game stats for these games
-      // Note: This might be a large query for tournaments with many games
-      const allStats: GameStat[] = [];
-      for (const gameId of gameIds) {
-        const stats = await hybridSupabaseService.query<GameStat>(
-          'game_stats',
-          'game_id, player_id, custom_player_id, team_id, stat_type, stat_value, modifier',
-          { game_id: `eq.${gameId}` }
-        );
-        allStats.push(...stats);
+      // ✅ OPTIMIZATION: Batch fetch all game stats in one query instead of N queries
+      console.log('🏆 TournamentLeadersService: Batch fetching stats for', gameIds.length, 'games');
+      let allStats: GameStat[] = [];
+      
+      if (gameIds.length > 0) {
+        try {
+          // ✅ Batch query: Use PostgREST 'in' filter format: in.(id1,id2,id3)
+          const stats = await hybridSupabaseService.query<GameStat>(
+            'game_stats',
+            'game_id, player_id, custom_player_id, team_id, stat_type, stat_value, modifier',
+            { game_id: `in.(${gameIds.join(',')})` }
+          );
+          allStats = stats || [];
+          console.log('✅ TournamentLeadersService: Batch fetched', allStats.length, 'stats');
+        } catch (error) {
+          // Fallback to individual queries if batch fails (shouldn't happen, but safe fallback)
+          console.warn('⚠️ TournamentLeadersService: Batch query failed, falling back to individual queries:', error);
+          for (const gameId of gameIds) {
+            try {
+              const stats = await hybridSupabaseService.query<GameStat>(
+                'game_stats',
+                'game_id, player_id, custom_player_id, team_id, stat_type, stat_value, modifier',
+                { game_id: `eq.${gameId}` }
+              );
+              allStats.push(...(stats || []));
+            } catch (err) {
+              console.error(`❌ Failed to fetch stats for game ${gameId}:`, err);
+            }
+          }
+        }
       }
 
       if (allStats.length === 0) {
