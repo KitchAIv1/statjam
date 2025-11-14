@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2025-11-14
+
+### 🏆 Bracket Builder Phase 4 & 5 Complete
+- **Added**: NBA-style bracket visualization components (`BracketMatch`, `BracketRound`, `SingleEliminationBracket`, `BracketVisualization`, `DivisionBracketView`)
+- **Added**: `BracketService` for calculating brackets, division filtering, auto-population of winners, and championship bracket logic
+- **Added**: Division-aware tournament creation & team management (division selector in organizer modals and forms)
+- **Added**: Championship bracket view that only shows cross-division games
+- **Added**: Auto-progression — winners automatically populate the next round slots
+- **Added**: Real-time bracket updates via `hybridSupabaseService` subscription to `games`
+- **Added**: Enhanced tooltips with venue, schedule, live/completed status, and winner details
+- **Added**: Regeneration eligibility checks with warnings + confirmation modal
+- **Fixed**: `GameService.deleteGame` now cascades deletes to `game_stats`, `game_substitutions`, `game_timeouts`, and legacy `stats`
+- **Docs**: Added full bracket implementation design + division logic docs
+
+### 📄 Documentation & Migrations
+- **Docs**: `docs/04-features/tournament-bracket/*.md` updated with final implementation details
+- **Migration 013**: Added division metadata fields to `tournaments` & `teams` tables
+
+---
+
 ## [0.15.1] - 2025-11-09
 
 ### 🚀 Stat Admin Demo + Automation Presets

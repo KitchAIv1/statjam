@@ -7,6 +7,24 @@
 
 ---
 
+## ✅ Implementation Update — November 14, 2025
+
+Phases 1 through 5 are now live in production. Key highlights:
+
+- **New Components**: `BracketVisualization`, `SingleEliminationBracket`, `BracketRound`, `BracketMatch`, `DivisionBracketView`
+- **Service Layer**: `BracketService` derives division brackets, championship brackets, winner paths, and auto-populates empty slots
+- **Division Support**: Tournament forms, team creation/edit modals, and schedule tabs now respect `has_divisions`, `division_count`, `division_names`, and per-team `division`
+- **Championship Logic**: Division brackets display intra-division games only; championship bracket filters cross-division games (or unassigned teams)
+- **Auto-Progression**: Winners automatically advance to the next round when the underlying `games` rows are marked `completed`
+- **Real-Time Updates**: `hybridSupabaseService` subscriptions refresh brackets whenever games are created/updated/deleted
+- **Bracket Regeneration Safety**: Eligibility checker prevents regeneration once games have begun and surfaces confirmation copy for destructive actions
+- **UX Polish**: Orange theme, hover tooltips (venue, schedule, live/completed status, winner), mobile vertical layout, desktop horizontal layout with connectors
+- **Deletion Safety**: `GameService.deleteGame()` now cascades to `game_stats`, `game_substitutions`, `game_timeouts`, and legacy `stats`
+
+Refer to the Changelog entry `[0.16.0] - 2025-11-14` for a concise summary of shipped work.
+
+---
+
 ## 🎯 Core Principles
 
 ### ✅ What We WILL Do

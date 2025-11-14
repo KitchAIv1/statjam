@@ -4,6 +4,16 @@
 
 ---
 
+## ✅ Implementation Notes — November 14, 2025
+
+- **Intra-Division Brackets**: Division views now include **only** games where *both* teams belong to the selected division.
+- **Championship Bracket**: Championship view includes games where teams come from **different divisions** (or at least one team has no division). This ensures the bracket only displays cross-division matchups.
+- **Auto-Advancement**: Completed division games automatically populate the next round slots and auto-feed the championship bracket once division winners emerge.
+- **UI Toggle**: When the organizer selects “All Divisions”, `DivisionBracketView` renders every division bracket plus a championship bracket. Selecting a specific division renders just that division’s bracket via `BracketVisualization`.
+- **Schedule Regeneration Rules**: The bracket builder now warns organizers before regenerating brackets once games exist, preventing accidental data loss during division-to-championship transitions.
+
+---
+
 ## 🏗️ Tournament Structure with Divisions
 
 ### Two-Phase Tournament Format
