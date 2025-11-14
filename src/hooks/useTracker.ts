@@ -1010,8 +1010,16 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         );
         
         // ✅ SEQUENTIAL PROMPTS: Handle prompt queue (Block → Rebound) + Free Throws
+        // ✅ FIX: Skip assist/rebound prompts if this stat is part of a foul sequence (has sequenceId)
+        // This prevents assist/rebound modals from appearing during shooting foul sequences
+        // When a stat has a sequenceId, it means it's linked to a foul, so skip prompts
+        const isPartOfFoulSequence = !!stat.sequenceId;
+        const shouldSkipAssistPrompt = isPartOfFoulSequence && playResult.promptType === 'assist';
+        const shouldSkipReboundPrompt = isPartOfFoulSequence && playResult.promptType === 'rebound';
+        
         if (playResult.shouldPrompt && playResult.promptType && 
-            (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block' || playResult.promptType === 'free_throw')) {
+            (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block' || playResult.promptType === 'free_throw') &&
+            !shouldSkipAssistPrompt && !shouldSkipReboundPrompt) {
           
           // ✅ COACH MODE FIX: Don't show prompts for opponent actions
           if (isCoachMode && stat.isOpponentStat) {
@@ -1139,8 +1147,12 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         modifier: stat.modifier || null,
         quarter: quarter,
         gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
-        gameTimeSeconds: clock.secondsRemaining % 60
-        });
+        gameTimeSeconds: clock.secondsRemaining % 60,
+        // ✅ FIX: Pass sequenceId and event linking fields to database
+        sequenceId: stat.sequenceId,
+        linkedEventId: stat.linkedEventId,
+        eventMetadata: stat.eventMetadata
+      });
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);

@@ -230,18 +230,36 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
             </div>
           ) : play.statType === 'rebound' ? (
             // Rebounds: Orange (offensive) or Blue (defensive)
-            <div className="flex flex-col items-end">
-              <div className={`text-xs sm:text-sm font-extrabold uppercase leading-none
-                ${play.modifier === 'offensive' ? 'text-orange-600' : 'text-blue-600'}
-              `}>
-                {play.modifier === 'offensive' ? 'OFF' : 'DEF'}
-              </div>
-              <div className={`text-[10px] sm:text-xs font-bold uppercase tracking-tight
-                ${play.modifier === 'offensive' ? 'text-orange-500' : 'text-blue-500'}
-              `}>
-                REB
-              </div>
-            </div>
+            // ✅ FIX: Explicitly check for both 'offensive' and 'defensive' modifiers with robust checking
+            (() => {
+              const modifier = play.modifier?.toString().toLowerCase().trim();
+              const isOffensive = modifier === 'offensive';
+              const isDefensive = modifier === 'defensive';
+              
+              // ✅ FIX: Only default to defensive if modifier is explicitly 'defensive' or missing
+              // If modifier is 'offensive', always show as offensive
+              const displayType = isOffensive ? 'offensive' : (isDefensive ? 'defensive' : 'defensive');
+              
+              // 🔍 DEBUG: Log if modifier is unexpected (remove after testing)
+              if (modifier && !isOffensive && !isDefensive) {
+                console.warn('⚠️ Unexpected rebound modifier:', modifier, 'Defaulting to defensive');
+              }
+              
+              return (
+                <div className="flex flex-col items-end">
+                  <div className={`text-xs sm:text-sm font-extrabold uppercase leading-none
+                    ${displayType === 'offensive' ? 'text-orange-600' : 'text-blue-600'}
+                  `}>
+                    {displayType === 'offensive' ? 'OFF' : 'DEF'}
+                  </div>
+                  <div className={`text-[10px] sm:text-xs font-bold uppercase tracking-tight
+                    ${displayType === 'offensive' ? 'text-orange-500' : 'text-blue-500'}
+                  `}>
+                    REB
+                  </div>
+                </div>
+              );
+            })()
           ) : play.statType === 'assist' ? (
             // Assists: Purple text
             <div className="text-base sm:text-lg font-extrabold uppercase text-purple-600">

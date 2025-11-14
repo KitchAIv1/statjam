@@ -76,12 +76,13 @@ export function TimeoutModalV3({
       
       {/* Modal */}
       <div 
-        className="relative w-full max-w-md mx-4 overflow-hidden rounded-xl border shadow-2xl"
+        className="relative w-full max-w-md mx-4 overflow-hidden rounded-xl border shadow-2xl pointer-events-auto"
         style={{ 
           backgroundColor: '#1e293b',
           borderColor: '#475569',
           borderWidth: '2px'
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="pb-4 px-6 pt-6">

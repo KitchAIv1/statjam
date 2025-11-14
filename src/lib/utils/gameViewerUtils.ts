@@ -168,12 +168,16 @@ export const getEnhancedPlayDescription = (
 
   const action = modifier === 'made' ? 'makes' : 'misses';
   
+  // ✅ Preserve "(and-1)" from original description if present
+  const hasAndOne = originalDescription.includes('(and-1)');
+  const andOneSuffix = hasAndOne ? ' (and-1)' : '';
+  
   switch (statType) {
     case 'field_goal':
-      return `${action} 2-pt jumper`;
+      return `${action} 2-pt jumper${andOneSuffix}`;
       
     case 'three_pointer':
-      return `${action} 3-pointer`;
+      return `${action} 3-pointer${andOneSuffix}`;
       
     case 'free_throw':
       return `${action} free throw`;

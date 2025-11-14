@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, TrendingUp, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -31,6 +31,8 @@ interface ReboundPromptModalProps {
   onSkip: () => void;
   teamAPlayers: Player[];
   teamBPlayers: Player[];
+  teamAId: string; // ✅ FIX: Add actual team IDs for proper comparison
+  teamBId: string; // ✅ FIX: Add actual team IDs for proper comparison
   shooterTeamId: string;
   shooterName: string;
   shotType: string;
@@ -43,6 +45,8 @@ export function ReboundPromptModal({
   onSkip,
   teamAPlayers,
   teamBPlayers,
+  teamAId, // ✅ FIX: Add actual team IDs
+  teamBId, // ✅ FIX: Add actual team IDs
   shooterTeamId,
   shooterName,
   shotType
@@ -50,12 +54,64 @@ export function ReboundPromptModal({
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [reboundType, setReboundType] = useState<'offensive' | 'defensive' | null>(null);
 
+  // ✅ FIX: Reset state when modal opens/closes to prevent stale data
+  useEffect(() => {
+    if (isOpen) {
+      // Reset when modal opens
+      setSelectedPlayerId(null);
+      setReboundType(null);
+      
+      // 🔍 DEBUG: Log modal props when it opens
+      console.log('🔍 [REBOUND MODAL OPEN]', {
+        shooterTeamId,
+        shooterName,
+        shotType,
+        teamAId,
+        teamBId,
+        teamAPlayersCount: teamAPlayers.length,
+        teamBPlayersCount: teamBPlayers.length
+      });
+    }
+  }, [isOpen, shooterTeamId, shooterName, shotType, teamAId, teamBId, teamAPlayers, teamBPlayers]);
+
   if (!isOpen) return null;
 
   const handlePlayerSelect = (playerId: string, playerTeamId: string) => {
     setSelectedPlayerId(playerId);
-    // Determine rebound type based on player's team vs shooter's team
-    setReboundType(playerTeamId === shooterTeamId ? 'offensive' : 'defensive');
+    
+    // ✅ FIX: Determine rebound type based on which team array the player belongs to
+    // Check if player is in teamA or teamB arrays
+    const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+    const isTeamBPlayer = teamBPlayers.some(p => p.id === playerId);
+    
+    // Get the actual team ID based on which array the player is in
+    let actualPlayerTeamId: string | null = null;
+    if (isTeamAPlayer) {
+      actualPlayerTeamId = teamAId; // ✅ Use the actual teamAId prop
+    } else if (isTeamBPlayer) {
+      actualPlayerTeamId = teamBId; // ✅ Use the actual teamBId prop
+    } else {
+      // Fallback (shouldn't happen, but just in case)
+      console.warn('⚠️ Player not found in either team array, using fallback');
+      actualPlayerTeamId = playerTeamId;
+    }
+    
+    // ✅ FIX: Compare actual team IDs (offensive = same team as shooter, defensive = different team)
+    const isOffensiveRebound = actualPlayerTeamId === shooterTeamId;
+    setReboundType(isOffensiveRebound ? 'offensive' : 'defensive');
+    
+    // 🔍 DEBUG: Log for troubleshooting
+    console.log('🔍 [REBOUND DEBUG]', {
+      playerId,
+      isTeamAPlayer,
+      isTeamBPlayer,
+      actualPlayerTeamId,
+      shooterTeamId,
+      teamAId,
+      teamBId,
+      isOffensiveRebound,
+      reboundType: isOffensiveRebound ? 'offensive' : 'defensive'
+    });
   };
 
   const handleConfirm = () => {

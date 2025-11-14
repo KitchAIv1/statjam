@@ -51,6 +51,7 @@ interface GameStats {
   modifier?: string | null;
   game_time_minutes?: number;
   game_time_seconds?: number;
+  sequence_id?: string | null; // ✅ NEW: For detecting and-1 situations
 }
 
 interface PlayByPlayEntry {
@@ -109,6 +110,39 @@ function transformStatsToPlays(
   let runningScoreAway = 0;
   
   // ✅ STEP 2: Convert sorted stats to play entries with correct running score
+  // First, build a map of sequence_id to shooting fouls for and-1 detection
+  // Track shooting fouls by their sequence_id so we can detect and-1 situations
+  const shootingFoulMap = new Map<string, boolean>();
+  
+  // 🔍 DEBUG: Log all stats with sequence_id
+  const statsWithSequenceId = sortedStats.filter(s => s.sequence_id);
+  console.log('🔍 [AND-1 DEBUG] Total stats:', sortedStats.length);
+  console.log('🔍 [AND-1 DEBUG] Stats with sequence_id:', statsWithSequenceId.length);
+  if (statsWithSequenceId.length > 0) {
+    console.log('🔍 [AND-1 DEBUG] Stats with sequence_id details:', statsWithSequenceId.map(s => ({
+      id: s.id,
+      stat_type: s.stat_type,
+      modifier: s.modifier,
+      sequence_id: s.sequence_id,
+      created_at: s.created_at
+    })));
+  }
+  
+  sortedStats.forEach(stat => {
+    // ✅ Check for shooting fouls with a sequence_id
+    if (stat.stat_type === 'foul' && 
+        stat.modifier === 'shooting' && 
+        stat.sequence_id && 
+        typeof stat.sequence_id === 'string' &&
+        stat.sequence_id.trim() !== '') { // Ensure sequence_id is not empty string
+      shootingFoulMap.set(stat.sequence_id, true);
+      console.log('🔍 [AND-1 DEBUG] Found shooting foul with sequence_id:', stat.sequence_id);
+    }
+  });
+  
+  console.log('🔍 [AND-1 DEBUG] Shooting foul map size:', shootingFoulMap.size);
+  console.log('🔍 [AND-1 DEBUG] Shooting foul map keys:', Array.from(shootingFoulMap.keys()));
+  
   const statPlays = sortedStats.map(stat => {
     const teamName = stat.team_id === teamAId ? teamAName : 
                      stat.team_id === teamBId ? teamBName : 
@@ -119,17 +153,56 @@ function transformStatsToPlays(
     let description = '';
     let points = 0;
     
+    // ✅ Check if this is an and-1 situation (made shot with shooting foul sequence)
+    // A shot is an and-1 if:
+    // 1. It has a valid sequence_id (not null, not undefined, not empty)
+    // 2. There's a shooting foul with the same sequence_id
+    // 3. The shot was made (field_goal or three_pointer with modifier 'made')
+    const hasSequenceId = stat.sequence_id && 
+                          typeof stat.sequence_id === 'string' && 
+                          stat.sequence_id.trim() !== '';
+    const hasShootingFoul = hasSequenceId && stat.sequence_id && shootingFoulMap.has(stat.sequence_id);
+    const isMadeShot = (stat.stat_type === 'field_goal' || stat.stat_type === 'three_pointer') &&
+                       stat.modifier === 'made';
+    const isAndOne = hasShootingFoul && isMadeShot;
+    
+    // 🔍 DEBUG: Log made shots to trace and-1 detection
+    if (isMadeShot) {
+      const debugInfo = {
+        stat_type: stat.stat_type,
+        modifier: stat.modifier,
+        sequence_id: stat.sequence_id,
+        hasSequenceId,
+        hasShootingFoul,
+        isAndOne,
+        shootingFoulMapHasSequenceId: stat.sequence_id ? shootingFoulMap.has(stat.sequence_id) : false,
+        shootingFoulMapKeys: Array.from(shootingFoulMap.keys())
+      };
+      console.log('🔍 [AND-1 DEBUG] Made shot detected:', JSON.stringify(debugInfo, null, 2));
+      if (isAndOne) {
+        console.log('✅ [AND-1 DEBUG] AND-1 DETECTED! This shot should show (and-1)');
+      } else if (hasSequenceId && !hasShootingFoul) {
+        console.log('⚠️ [AND-1 DEBUG] Shot has sequence_id but NO shooting foul found in map');
+      }
+    }
+    
     switch (stat.stat_type) {
       case 'three_pointer':
         description = stat.modifier === 'made' 
-          ? `${playerName} made 3PT` 
+          ? `${playerName} made 3PT${isAndOne ? ' (and-1)' : ''}` 
           : `${playerName} missed 3PT`;
+        if (isAndOne && stat.modifier === 'made') {
+          console.log('✅ [AND-1 DEBUG] Description set for 3PT:', description);
+        }
         points = stat.modifier === 'made' ? 3 : 0;
         break;
       case 'field_goal':
         description = stat.modifier === 'made'
-          ? `${playerName} made 2PT`
+          ? `${playerName} made 2PT${isAndOne ? ' (and-1)' : ''}`
           : `${playerName} missed 2PT`;
+        if (isAndOne && stat.modifier === 'made') {
+          console.log('✅ [AND-1 DEBUG] Description set for 2PT:', description);
+        }
         points = stat.modifier === 'made' ? 2 : 0;
         break;
       case 'free_throw':
@@ -154,7 +227,12 @@ function transformStatsToPlays(
         description = `${playerName} turnover`;
         break;
       case 'foul':
-        description = `${playerName} foul`;
+        // ✅ FIX: Show "shooting foul" when modifier is 'shooting'
+        description = stat.modifier === 'shooting' 
+          ? `${playerName} shooting foul`
+          : stat.modifier 
+          ? `${playerName} ${stat.modifier} foul`
+          : `${playerName} foul`;
         break;
       default:
         description = `${playerName} ${stat.stat_type}`;
@@ -268,7 +346,11 @@ export function useGameViewerV2(gameId: string): GameViewerData {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const fetchGameData = useCallback(async (isUpdate: boolean = false) => {
-    if (!gameId) return;
+    console.log('🔍 [AND-1 DEBUG] fetchGameData CALLED - isUpdate:', isUpdate, 'gameId:', gameId);
+    if (!gameId) {
+      console.log('🔍 [AND-1 DEBUG] fetchGameData EARLY RETURN - no gameId');
+      return;
+    }
 
     try {
       // Only show loading spinner on initial load, not on updates
@@ -276,6 +358,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         setLoading(true);
       }
       setError(null);
+      console.log('🔍 [AND-1 DEBUG] fetchGameData STARTING - fetching data...');
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -334,8 +417,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         gameInfo.tournament_id
           ? fetch(`${supabaseUrl}/rest/v1/tournaments?select=name&id=eq.${gameInfo.tournament_id}`, { headers })
           : Promise.resolve(null),
-        // Stats (include custom_player_id for custom players)
-        fetch(`${supabaseUrl}/rest/v1/game_stats?select=id,game_id,player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at&game_id=eq.${gameId}&order=created_at.desc`, { headers }),
+        // Stats (include custom_player_id and sequence_id for custom players and and-1 detection)
+        fetch(`${supabaseUrl}/rest/v1/game_stats?select=id,game_id,player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at,sequence_id&game_id=eq.${gameId}&order=created_at.desc`, { headers }),
         // Substitutions
         fetch(`${supabaseUrl}/rest/v1/game_substitutions?select=*&game_id=eq.${gameId}&order=created_at.asc`, { headers }),
         // Timeouts
@@ -362,6 +445,20 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       let gameStats: GameStats[] = [];
       if (statsResponse.ok) {
         gameStats = await statsResponse.json();
+        // 🔍 DEBUG: Check if sequence_id is in the response
+        console.log('🔍 [AND-1 DEBUG] ========== FETCHING STATS ==========');
+        console.log('🔍 [AND-1 DEBUG] Raw stats from DB:', gameStats.length);
+        const statsWithSequenceId = gameStats.filter((s: any) => s.sequence_id);
+        console.log('🔍 [AND-1 DEBUG] Stats with sequence_id in DB response:', statsWithSequenceId.length);
+        if (statsWithSequenceId.length > 0) {
+          console.log('🔍 [AND-1 DEBUG] Sample stat with sequence_id:', {
+            id: statsWithSequenceId[0].id,
+            stat_type: statsWithSequenceId[0].stat_type,
+            modifier: statsWithSequenceId[0].modifier,
+            sequence_id: statsWithSequenceId[0].sequence_id,
+            hasSequenceId: !!statsWithSequenceId[0].sequence_id
+          });
+        }
       } else {
         console.error('❌ useGameViewerV2: Failed to fetch game_stats:', statsResponse.status);
       }
@@ -489,6 +586,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       };
 
       // 9. Transform stats, substitutions, AND timeouts into play-by-play entries
+      console.log('🔍 [AND-1 DEBUG] About to transform stats. Total stats:', gameStats.length);
       const playByPlayEntries = transformStatsToPlays(
         gameStats,
         gameInfo.team_a_id,
@@ -498,6 +596,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         gameSubstitutions,
         gameTimeouts
       );
+      console.log('🔍 [AND-1 DEBUG] Transform complete. Total plays:', playByPlayEntries.length);
 
       // ✅ ANTI-FLICKER: Only update if data actually changed
       setGame(prevGame => {
@@ -566,6 +665,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
   }, [gameId, isInitialLoad]);
 
   useEffect(() => {
+    console.log('🔍 [AND-1 DEBUG] useEffect CALLED - about to call fetchGameData(false)');
     void fetchGameData(false); // Initial load
   }, [fetchGameData]);
 

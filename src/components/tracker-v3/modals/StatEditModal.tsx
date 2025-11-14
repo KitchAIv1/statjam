@@ -107,8 +107,27 @@ export function StatEditModal({
   };
 
   const formatStatDisplay = (stat: GameStatRecord): string => {
+    // ✅ FIX: Show "SHOOTING FOUL" clearly for shooting fouls
+    if (stat.stat_type === 'foul' && stat.modifier === 'shooting') {
+      const value = stat.stat_value > 0 ? ` +${stat.stat_value}` : '';
+      return `SHOOTING FOUL${value}`;
+    }
+    
+    // ✅ FIX: Show rebound type clearly (OFFENSIVE/DEFENSIVE)
+    if (stat.stat_type === 'rebound') {
+      const reboundType = stat.modifier?.toLowerCase();
+      if (reboundType === 'offensive') {
+        return 'REBOUND (OFFENSIVE)';
+      } else if (reboundType === 'defensive') {
+        return 'REBOUND (DEFENSIVE)';
+      } else {
+        // Fallback if modifier is missing or invalid
+        return 'REBOUND (UNKNOWN)';
+      }
+    }
+    
     const type = stat.stat_type.replace(/_/g, ' ').toUpperCase();
-    const modifier = stat.modifier ? ` (${stat.modifier})` : '';
+    const modifier = stat.modifier ? ` (${stat.modifier.toUpperCase()})` : '';
     const value = stat.stat_value > 0 ? ` +${stat.stat_value}` : '';
     return `${type}${modifier}${value}`;
   };

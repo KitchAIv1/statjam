@@ -29,6 +29,7 @@ import { TurnoverPromptModal } from '@/components/tracker-v3/modals/TurnoverProm
 import { FreeThrowSequenceModal } from '@/components/tracker-v3/modals/FreeThrowSequenceModal';
 import { FoulTypeSelectionModal, FoulType } from '@/components/tracker-v3/modals/FoulTypeSelectionModal';
 import { VictimPlayerSelectionModal } from '@/components/tracker-v3/modals/VictimPlayerSelectionModal';
+import { ShotMadeMissedModal } from '@/components/tracker-v3/modals/ShotMadeMissedModal';
 import { ShotClockViolationModal } from '@/components/tracker-v3/modals/ShotClockViolationModal';
 import { useShotClockViolation } from '@/hooks/useShotClockViolation';
 import { notify } from '@/lib/services/notificationService';
@@ -115,9 +116,12 @@ function StatTrackerV3Content() {
   // ✅ PHASE 5: Foul Flow State
   const [showFoulTypeModal, setShowFoulTypeModal] = useState(false);
   const [showVictimSelectionModal, setShowVictimSelectionModal] = useState(false);
+  const [showShotMadeMissedModal, setShowShotMadeMissedModal] = useState(false);
   const [selectedFoulType, setSelectedFoulType] = useState<string | null>(null);
   const [foulerPlayerId, setFoulerPlayerId] = useState<string | null>(null);
   const [foulerPlayerName, setFoulerPlayerName] = useState<string>('');
+  const [victimPlayerId, setVictimPlayerId] = useState<string | null>(null);
+  const [victimPlayerName, setVictimPlayerName] = useState<string>('');
 
   // Roster/Bench State (lifted from MobileLayoutV3 for unified substitution logic)
   const [currentRosterA, setCurrentRosterA] = useState<Player[]>([]);
@@ -567,6 +571,45 @@ function StatTrackerV3Content() {
     
     if (!foulerPlayerId || !selectedFoulType || !gameData) return;
     
+    // Store victim info temporarily
+    setVictimPlayerId(victimId);
+    setVictimPlayerName(victimName);
+    
+    // For shooting fouls (2pt/3pt), show shot made/missed modal first
+    if (selectedFoulType === 'shooting_2pt' || selectedFoulType === 'shooting_3pt') {
+      setShowShotMadeMissedModal(true);
+      return;
+    }
+    
+    // For other fouls (bonus, technical, flagrant), proceed directly to free throws
+    await recordFoulAndFreeThrows(victimId, victimName, false); // false = not a made shot
+  };
+  
+  // ✅ NEW: Handle shot made/missed selection for shooting fouls
+  const handleShotMadeMissed = async (made: boolean) => {
+    if (!victimPlayerId || !victimPlayerName || !foulerPlayerId || !selectedFoulType || !gameData) return;
+    
+    // ✅ FIX: Close shot modal and immediately open FT modal for smooth transition
+    setShowShotMadeMissedModal(false);
+    
+    try {
+      // ✅ FIX: Open FT modal FIRST, then record stats in background for smooth UI
+      await recordFoulAndFreeThrows(victimPlayerId, victimPlayerName, made, true); // true = open modal immediately
+    } catch (error) {
+      console.error('❌ Error recording shooting foul:', error);
+      notify.error(
+        'Failed to record shooting foul',
+        error instanceof Error ? error.message : 'Please try again'
+      );
+      // Reset state even on error
+      resetFoulFlowState();
+    }
+  };
+  
+  // ✅ NEW: Unified function to record foul and free throws
+  const recordFoulAndFreeThrows = async (victimId: string, victimName: string, shotMade: boolean, openModalImmediately: boolean = false) => {
+    if (!foulerPlayerId || !selectedFoulType || !gameData) return;
+    
     try {
       // Determine fouler details
       let foulerActualPlayerId: string | undefined = undefined;
@@ -597,20 +640,38 @@ function StatTrackerV3Content() {
       // Determine victim team (opposite of fouler)
       const victimTeamId = foulerTeamId === gameData.team_a_id ? gameData.team_b_id : gameData.team_a_id;
       
+      // Determine victim player details
+      const isVictimTeamAPlayer = teamAPlayers.some(p => p.id === victimId);
+      let victimActualPlayerId: string | undefined = undefined;
+      let victimCustomPlayerId: string | undefined = undefined;
+      
+      const victimData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === victimId);
+      const isVictimCustomPlayer = victimId.startsWith('custom-') || 
+                                  (victimData && victimData.is_custom_player === true);
+      
+      if (isVictimCustomPlayer) {
+        victimCustomPlayerId = victimId;
+      } else {
+        victimActualPlayerId = victimId;
+      }
+      
       // Map foul type to modifier and FT count
       let modifier = 'shooting';
       let ftCount = 2;
       let ftType: '1-and-1' | 'shooting' | 'technical' | 'flagrant' = 'shooting';
+      const shotType = selectedFoulType === 'shooting_3pt' ? '3pt' : '2pt';
       
       switch (selectedFoulType) {
         case 'shooting_2pt':
           modifier = 'shooting';
-          ftCount = 2;
+          // If shot made: 1 FT (and-1), if missed: 2 FTs
+          ftCount = shotMade ? 1 : 2;
           ftType = 'shooting';
           break;
         case 'shooting_3pt':
           modifier = 'shooting';
-          ftCount = 3;
+          // If shot made: 1 FT (and-1), if missed: 3 FTs
+          ftCount = shotMade ? 1 : 3;
           ftType = 'shooting';
           break;
         case 'bonus':
@@ -630,9 +691,29 @@ function StatTrackerV3Content() {
           break;
       }
       
-      // ✅ Generate sequence_id to link foul and FTs
+      // ✅ Generate sequence_id to link foul, shot (if made), and FTs
       const { v4: uuidv4 } = await import('uuid');
       const sequenceId = uuidv4();
+      
+      // ✅ FIX: Open FT modal FIRST for smooth UI transition (before recording stats)
+      if (openModalImmediately) {
+        tracker.setPlayPrompt({
+          isOpen: true,
+          type: 'free_throw',
+          sequenceId: sequenceId,
+          primaryEventId: null,
+          metadata: {
+            shooterId: victimId,
+            shooterName: victimName,
+            shooterTeamId: victimTeamId,
+            foulType: ftType,
+            totalShots: ftCount,
+            foulerId: foulerPlayerId
+          }
+        });
+        // Reset state immediately after opening modal
+        resetFoulFlowState();
+      }
       
       // Record the foul with sequence_id for linking
       await tracker.recordStat({
@@ -643,40 +724,56 @@ function StatTrackerV3Content() {
         isOpponentStat: foulerIsOpponentStat,
         statType: 'foul',
         modifier: modifier,
-        sequenceId: sequenceId // ✅ Link foul to FTs
+        sequenceId: sequenceId // ✅ Link foul to shot and FTs
       });
       
-      // Trigger FT modal with same sequence_id
-      tracker.setPlayPrompt({
-        isOpen: true,
-        type: 'free_throw',
-        sequenceId: sequenceId, // ✅ Use same sequence_id
-        primaryEventId: null,
-        metadata: {
-          shooterId: victimId,
-          shooterName: victimName,
-          shooterTeamId: victimTeamId,
-          foulType: ftType,
-          totalShots: ftCount,
-          foulerId: foulerPlayerId
-        }
-      });
+      // ✅ If shot was made, record the made shot first
+      if (shotMade && (selectedFoulType === 'shooting_2pt' || selectedFoulType === 'shooting_3pt')) {
+        await tracker.recordStat({
+          gameId: gameData.id,
+          teamId: victimTeamId,
+          playerId: victimActualPlayerId,
+          customPlayerId: victimCustomPlayerId,
+          isOpponentStat: false,
+          statType: selectedFoulType === 'shooting_3pt' ? 'three_pointer' : 'field_goal', // ✅ FIX: Use correct stat_type values
+          modifier: 'made',
+          sequenceId: sequenceId // ✅ Link to foul and FTs
+        });
+      }
       
-      // Reset state
-      setFoulerPlayerId(null);
-      setFoulerPlayerName('');
-      setSelectedFoulType(null);
+      // ✅ Trigger FT modal if not already opened (for non-shooting fouls)
+      if (!openModalImmediately) {
+        tracker.setPlayPrompt({
+          isOpen: true,
+          type: 'free_throw',
+          sequenceId: sequenceId, // ✅ Use same sequence_id
+          primaryEventId: null,
+          metadata: {
+            shooterId: victimId,
+            shooterName: victimName,
+            shooterTeamId: victimTeamId,
+            foulType: ftType,
+            totalShots: ftCount,
+            foulerId: foulerPlayerId
+          }
+        });
+        
+        // Reset state
+        resetFoulFlowState();
+      }
     } catch (error) {
-      console.error('❌ Error recording shooting foul:', error);
-      notify.error(
-        'Failed to record shooting foul',
-        error instanceof Error ? error.message : 'Please try again'
-      );
-      // Reset state even on error
-      setFoulerPlayerId(null);
-      setFoulerPlayerName('');
-      setSelectedFoulType(null);
+      console.error('❌ Error recording foul and free throws:', error);
+      throw error; // Re-throw to be handled by caller
     }
+  };
+  
+  // ✅ Helper function to reset foul flow state
+  const resetFoulFlowState = () => {
+    setFoulerPlayerId(null);
+    setFoulerPlayerName('');
+    setSelectedFoulType(null);
+    setVictimPlayerId(null);
+    setVictimPlayerName('');
   };
 
   // Handle timeout with enhanced modal
@@ -972,6 +1069,15 @@ function StatTrackerV3Content() {
           onClose={tracker.clearPlayPrompt}
           onSelectPlayer={async (playerId, reboundType) => {
             try {
+              // 🔍 DEBUG: Log rebound recording
+              console.log('🔍 [REBOUND RECORD DEBUG]', {
+                playerId,
+                reboundType,
+                shooterTeamId: tracker.playPrompt.metadata?.shooterTeamId,
+                teamAId: gameData.team_a_id,
+                teamBId: gameData.team_b_id
+              });
+              
               // ✅ FIX: Handle custom players properly
               const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
               const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
@@ -982,13 +1088,25 @@ function StatTrackerV3Content() {
               const isCustomPlayer = playerId.startsWith('custom-') || 
                                     (rebounderData && rebounderData.is_custom_player === true);
               
+              // 🔍 DEBUG: Verify rebound type before recording
+              const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
+              const expectedReboundType = teamId === shooterTeamId ? 'offensive' : 'defensive';
+              if (reboundType !== expectedReboundType) {
+                console.warn('⚠️ [REBOUND TYPE MISMATCH]', {
+                  recorded: reboundType,
+                  expected: expectedReboundType,
+                  rebounderTeamId: teamId,
+                  shooterTeamId
+                });
+              }
+              
               await tracker.recordStat({
                 gameId: gameData.id,
                 playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
                 customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
                 teamId,
                 statType: 'rebound',
-                modifier: reboundType,
+                modifier: reboundType, // ✅ Use the reboundType determined by the modal
                 metadata: primaryEventId ? { primaryEventId } : undefined
               });
               
@@ -1008,6 +1126,8 @@ function StatTrackerV3Content() {
           }}
           teamAPlayers={teamAPlayers}
           teamBPlayers={teamBPlayers}
+          teamAId={gameData.team_a_id} // ✅ FIX: Pass actual team IDs for proper comparison
+          teamBId={gameData.team_b_id} // ✅ FIX: Pass actual team IDs for proper comparison
           shooterTeamId={tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id} // ✅ FIX: Pass shooter team ID
           shooterName={tracker.playPrompt.metadata?.shooterName || 'Unknown'}
           shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
@@ -1151,39 +1271,10 @@ function StatTrackerV3Content() {
           isOpen={showVictimSelectionModal}
           onClose={() => {
             setShowVictimSelectionModal(false);
-            setSelectedFoulType(null);
-            setFoulerPlayerId(null);
-            setFoulerPlayerName('');
+            resetFoulFlowState();
           }}
-          onSelectPlayer={async (victimPlayerId) => {
-            // Open Free Throw Sequence Modal
-            console.log('🎯 Opening FT sequence for victim:', victimPlayerId, 'foul type:', selectedFoulType);
-            setShowVictimSelectionModal(false);
-            
-            // Set up free throw sequence based on foul type
-            const shotCount = selectedFoulType === 'shooting_2pt' || selectedFoulType === 'bonus' ? 2 : 
-                              selectedFoulType === 'shooting_3pt' ? 3 : 
-                              selectedFoulType === 'technical' || selectedFoulType === 'flagrant' ? 1 : 2;
-            
-            // Open FT sequence modal via play prompt
-            tracker.setPlayPrompt({
-              isOpen: true,
-              type: 'free_throw',
-              sequenceId: `ft-${Date.now()}`,
-              primaryEventId: null,
-              metadata: {
-                victimPlayerId,
-                victimName: [...teamAPlayers, ...teamBPlayers].find(p => p.id === victimPlayerId)?.name || 'Unknown',
-                shotCount,
-                foulType: selectedFoulType,
-                foulerId: foulerPlayerId
-              }
-            });
-            
-            // Reset foul flow state
-            setFoulerPlayerId(null);
-            setFoulerPlayerName('');
-            setSelectedFoulType(null);
+          onSelectPlayer={async (victimPlayerId, victimPlayerName) => {
+            await handleVictimSelection(victimPlayerId, victimPlayerName);
           }}
           players={(() => {
             // Get players from OPPOSITE team (victim team)
@@ -1200,6 +1291,20 @@ function StatTrackerV3Content() {
         />
       )}
 
+      {/* Shot Made/Missed Modal - For shooting fouls */}
+      {showShotMadeMissedModal && selectedFoulType && victimPlayerId && victimPlayerName && (
+        <ShotMadeMissedModal
+          isOpen={showShotMadeMissedModal}
+          onClose={() => {
+            setShowShotMadeMissedModal(false);
+            resetFoulFlowState();
+          }}
+          onSelect={handleShotMadeMissed}
+          playerName={victimPlayerName}
+          shotType={selectedFoulType === 'shooting_3pt' ? '3pt' : '2pt'}
+        />
+      )}
+
       {/* Free Throw Sequence Modal */}
       {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'free_throw' && (
         <FreeThrowSequenceModal
@@ -1208,23 +1313,37 @@ function StatTrackerV3Content() {
           onComplete={async (results) => {
             try {
               // Record all FT results
-              const victimPlayerId = tracker.playPrompt.metadata?.victimPlayerId;
-              const isTeamAPlayer = teamAPlayers.some(p => p.id === victimPlayerId);
+              // ✅ FIX: Use shooterId (not victimPlayerId) to match metadata
+              const shooterId = tracker.playPrompt.metadata?.shooterId;
+              if (!shooterId) {
+                throw new Error('Shooter ID not found in metadata');
+              }
+              
+              const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
+              if (!shooterTeamId) {
+                throw new Error('Shooter team ID not found in metadata');
+              }
+              
+              const isTeamAPlayer = teamAPlayers.some(p => p.id === shooterId);
               const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
               
-              // ✅ FIX: Check if victim is a custom player (TWO CHECKS)
-              const victimData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === victimPlayerId);
-              const isCustomPlayer = victimPlayerId?.startsWith('custom-') || 
-                                    (victimData && victimData.is_custom_player === true);
+              // ✅ FIX: Check if shooter is a custom player (TWO CHECKS)
+              const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === shooterId);
+              const isCustomPlayer = shooterId?.startsWith('custom-') || 
+                                    (shooterData && shooterData.is_custom_player === true);
+              
+              // ✅ FIX: Get sequenceId from playPrompt to link free throws to foul sequence
+              const sequenceId = tracker.playPrompt.sequenceId;
               
               for (const result of results) {
                 await tracker.recordStat({
                   gameId: gameData.id,
-                  playerId: isCustomPlayer ? undefined : victimPlayerId, // ✅ Only for real players
-                  customPlayerId: isCustomPlayer ? victimPlayerId : undefined, // ✅ Only for custom players
+                  playerId: isCustomPlayer ? undefined : shooterId, // ✅ Only for real players
+                  customPlayerId: isCustomPlayer ? shooterId : undefined, // ✅ Only for custom players
                   teamId,
                   statType: 'free_throw',
-                  modifier: result.made ? 'made' : 'missed'
+                  modifier: result.made ? 'made' : 'missed',
+                  sequenceId: sequenceId // ✅ Link free throws to foul sequence
                 });
               }
               
@@ -1238,9 +1357,9 @@ function StatTrackerV3Content() {
               tracker.clearPlayPrompt();
             }
           }}
-          playerName={tracker.playPrompt.metadata?.victimName || 'Unknown'}
-          shotCount={tracker.playPrompt.metadata?.shotCount || 2}
-          foulType={tracker.playPrompt.metadata?.foulType || 'shooting_2pt'}
+          shooterName={tracker.playPrompt.metadata?.shooterName || 'Unknown'}
+          totalShots={tracker.playPrompt.metadata?.totalShots || 2}
+          foulType={tracker.playPrompt.metadata?.foulType || 'shooting'}
         />
       )}
 

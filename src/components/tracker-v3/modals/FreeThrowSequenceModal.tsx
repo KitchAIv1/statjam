@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Target, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/card';
@@ -25,9 +25,18 @@ export function FreeThrowSequenceModal({
   const [currentShot, setCurrentShot] = useState(1);
   const [results, setResults] = useState<{ made: boolean; shouldRebound: boolean }[]>([]);
 
+  // ✅ FIX: Reset modal state when it closes (prevents flash/rerender)
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset state after modal closes
+      setCurrentShot(1);
+      setResults([]);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const handleShotResult = (made: boolean) => {
+  const handleShotResult = async (made: boolean) => {
     const newResults = [...results, { made, shouldRebound: !made }];
     setResults(newResults);
 
@@ -35,8 +44,8 @@ export function FreeThrowSequenceModal({
     if (foulType === '1-and-1') {
       // 1-and-1: Stop if first shot is missed
       if (currentShot === 1 && !made) {
-        onComplete(newResults);
-        resetModal();
+        await onComplete(newResults);
+        // ✅ FIX: Modal will reset automatically via useEffect when isOpen becomes false
         return;
       }
       // 1-and-1: Continue to second shot if first is made
@@ -46,8 +55,8 @@ export function FreeThrowSequenceModal({
       }
       // 1-and-1: Complete after second shot
       if (currentShot === 2) {
-        onComplete(newResults);
-        resetModal();
+        await onComplete(newResults);
+        // ✅ FIX: Modal will reset automatically via useEffect when isOpen becomes false
         return;
       }
     } else {
@@ -56,22 +65,17 @@ export function FreeThrowSequenceModal({
         setCurrentShot(currentShot + 1);
         return;
       } else {
-        // Sequence complete
-        onComplete(newResults);
-        resetModal();
+        // Sequence complete - ✅ FIX: Wait for onComplete to finish, modal resets via useEffect
+        await onComplete(newResults);
+        // ✅ FIX: Modal will reset automatically via useEffect when isOpen becomes false
         return;
       }
     }
   };
 
-  const resetModal = () => {
-    setCurrentShot(1);
-    setResults([]);
-  };
-
   const handleClose = () => {
-    resetModal();
     onClose();
+    // ✅ FIX: Modal will reset automatically via useEffect when isOpen becomes false
   };
 
   const getFoulTypeDisplay = () => {
