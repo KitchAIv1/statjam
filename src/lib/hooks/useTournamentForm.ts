@@ -19,6 +19,9 @@ export function useTournamentForm() {
       country: 'US',
       logo: '', // Tournament logo URL
       ruleset: 'NBA', // ✅ PHASE 1: Default to NBA ruleset
+      has_divisions: false, // Default: no divisions
+      division_count: undefined,
+      division_names: undefined,
     },
     errors: {},
     loading: false,
@@ -77,6 +80,15 @@ export function useTournamentForm() {
           errors.maxTeams = 'At least 2 teams required';
         } else if (state.data.maxTeams > 64) {
           errors.maxTeams = 'Maximum 64 teams allowed';
+        }
+
+        // Validate division settings if divisions are enabled
+        if (state.data.has_divisions) {
+          if (!state.data.division_count || state.data.division_count < 2) {
+            errors.division_count = 'At least 2 divisions required';
+          } else if (state.data.division_count > 8) {
+            errors.division_count = 'Maximum 8 divisions allowed';
+          }
         }
         break;
 
@@ -205,6 +217,9 @@ export function useTournamentForm() {
         entryFee: 0,
         prizePool: 0,
         country: 'US',
+        has_divisions: false,
+        division_count: undefined,
+        division_names: undefined,
       },
       errors: {},
       loading: false,

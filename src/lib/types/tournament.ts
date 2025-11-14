@@ -19,7 +19,10 @@ export interface Tournament {
   organizerId: string;
   organizerName?: string;
   venues?: string[];
-  divisions?: string[];
+  divisions?: string[]; // Legacy: computed from teams, use has_divisions + division_names instead
+  has_divisions?: boolean; // Whether tournament uses divisions
+  division_count?: number; // Number of divisions
+  division_names?: string[]; // Custom division names (e.g., ["East", "West"])
   branding?: Record<string, any>;
   logo?: string; // Tournament logo URL from Supabase Storage
   createdAt: string;
@@ -40,6 +43,9 @@ export interface TournamentCreateRequest {
   country: string;
   logo?: string; // Tournament logo URL from Supabase Storage
   ruleset?: 'NBA' | 'FIBA' | 'NCAA' | 'CUSTOM'; // ✅ PHASE 1: Ruleset selection
+  has_divisions?: boolean; // Whether tournament uses divisions
+  division_count?: number; // Number of divisions
+  division_names?: string[]; // Custom division names (e.g., ["East", "West"])
 }
 
 export interface TournamentUpdateRequest extends Partial<TournamentCreateRequest> {
@@ -70,6 +76,7 @@ export interface Team {
   wins: number;
   losses: number;
   tournamentId: string;
+  division?: string; // Division name (e.g., "A", "B", "East", "West")
   createdAt: string;
   approval_status?: 'pending' | 'approved' | 'rejected'; // Team join approval status
 }
@@ -79,6 +86,7 @@ export interface TeamCreateRequest {
   logo?: string;
   coach?: string;
   tournamentId: string;
+  division?: string; // Division name (e.g., "A", "B", "East", "West")
 }
 
 export interface Game {

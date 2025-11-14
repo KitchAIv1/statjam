@@ -8,6 +8,10 @@ import { GameService } from '@/lib/services/gameService';
 import { Tournament, Team } from '@/lib/types/tournament';
 import { Game } from '@/lib/types/game';
 import { invalidateOrganizerDashboard, invalidateOrganizerGames } from '@/lib/utils/cache';
+import { BracketService } from '@/lib/services/bracketService';
+import { BracketVisualization } from '@/components/bracket/BracketVisualization';
+import { DivisionBracketView } from '@/components/bracket/DivisionBracketView';
+import { hybridSupabaseService } from '@/lib/services/hybridSupabaseService';
 import { 
   Calendar, 
   ArrowLeft, 
@@ -23,7 +27,8 @@ import {
   Play,
   CheckCircle,
   X,
-  Eye
+  Eye,
+  Trophy
 } from 'lucide-react';
 
 interface GameSchedulePageProps {
@@ -45,8 +50,59 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'live' | 'completed'>('all');
   const [filterDate, setFilterDate] = useState<string>('');
   const [showBracketBuilder, setShowBracketBuilder] = useState(false);
+  const [activeTab, setActiveTab] = useState<'schedule' | 'bracket'>('schedule');
+  const [selectedDivision, setSelectedDivision] = useState<string | null>(null);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const [pendingBracketConfig, setPendingBracketConfig] = useState<any>(null);
   
   const { id: tournamentId } = use(params);
+
+  /**
+   * Check if bracket can be regenerated for a specific division
+   */
+  const checkBracketRegenerationEligibility = React.useCallback((division?: string) => {
+    // Filter games by division if specified
+    const relevantGames = division
+      ? games.filter(game => {
+          const teamA = teams.find(t => t.id === game.team_a_id);
+          const teamB = teams.find(t => t.id === game.team_b_id);
+          return teamA?.division === division || teamB?.division === division;
+        })
+      : games;
+
+    // Check if any games have started
+    const hasStartedGames = relevantGames.some(g => 
+      g.status === 'in_progress' || g.status === 'completed' || g.status === 'overtime'
+    );
+    
+    // Check if bracket games exist
+    const hasBracketGames = relevantGames.length > 0;
+    
+    if (hasStartedGames) {
+      return {
+        allowed: false,
+        reason: 'Games have already started. Please edit individual games instead.',
+        action: 'edit_only' as const,
+        gamesToDelete: 0,
+      };
+    }
+    
+    if (hasBracketGames) {
+      return {
+        allowed: true,
+        reason: `Existing bracket will be replaced. ${relevantGames.length} current bracket game${relevantGames.length !== 1 ? 's' : ''} will be deleted.`,
+        action: 'regenerate_with_warning' as const,
+        gamesToDelete: relevantGames.length,
+      };
+    }
+    
+    return {
+      allowed: true,
+      reason: null,
+      action: 'generate_new' as const,
+      gamesToDelete: 0,
+    };
+  }, [games, teams]);
 
   useEffect(() => {
     if (!loading && (!user || userRole !== 'organizer')) {
@@ -89,6 +145,38 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
       loadData();
     }
   }, [user, userRole, loading, tournamentId, router]);
+
+  // Real-time subscription for bracket auto-progression
+  useEffect(() => {
+    if (!tournamentId || !user) return;
+
+    console.log('🔌 Schedule Page: Setting up real-time subscription for tournament:', tournamentId);
+
+    // Subscribe to game updates for this tournament
+    const unsubscribe = hybridSupabaseService.subscribe(
+      'games',
+      `tournament_id=eq.${tournamentId}`,
+      (payload: any) => {
+        console.log('🔄 Schedule Page: Game updated via real-time:', payload);
+        
+        // Reload games to get latest state
+        GameService.getGamesByTournament(tournamentId)
+          .then((updatedGames) => {
+            setGames(updatedGames);
+            console.log('✅ Schedule Page: Bracket updated with latest games');
+          })
+          .catch((error) => {
+            console.error('❌ Schedule Page: Failed to reload games after update:', error);
+          });
+      },
+      { fallbackToPolling: true, pollingInterval: 5000 } // Poll every 5 seconds as fallback
+    );
+
+    return () => {
+      console.log('🔌 Schedule Page: Cleaning up real-time subscription');
+      unsubscribe();
+    };
+  }, [tournamentId, user]);
 
   const handleCreateGame = () => {
     setSelectedGame(null);
@@ -195,7 +283,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
               <p className="text-lg text-muted-foreground">{tournament.name} - Manage tournament fixtures</p>
             </div>
 
-            <div className="flex gap-3 items-center">
+            <div className="flex gap-3 items-center relative">
               <button
                 onClick={handleCreateGame}
                 className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
@@ -204,19 +292,79 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
                 Schedule Game
               </button>
               
-              <button
-                onClick={() => setShowBracketBuilder(true)}
-                className="flex items-center gap-2 px-6 py-3 border border-orange-300 text-orange-600 rounded-lg font-semibold hover:bg-orange-50 transition-colors"
-              >
-                <Calendar className="w-4 h-4" />
-                Generate Bracket
-              </button>
+              {(() => {
+                const eligibility = checkBracketRegenerationEligibility();
+                const buttonText = eligibility.action === 'regenerate_with_warning' 
+                  ? 'Regenerate Bracket' 
+                  : 'Generate Bracket';
+                
+                return (
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        if (eligibility.action === 'regenerate_with_warning') {
+                          // Will be handled by BracketBuilderModal
+                          setShowBracketBuilder(true);
+                        } else if (eligibility.allowed) {
+                          setShowBracketBuilder(true);
+                        }
+                      }}
+                      disabled={!eligibility.allowed}
+                      className={`
+                        flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors
+                        ${eligibility.allowed
+                          ? 'border border-orange-300 text-orange-600 hover:bg-orange-50'
+                          : 'border border-gray-300 text-gray-400 cursor-not-allowed bg-gray-50'
+                        }
+                      `}
+                      title={eligibility.allowed ? undefined : (eligibility.reason || '')}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      {buttonText}
+                    </button>
+                    {!eligibility.allowed && (
+                      <div className="absolute top-full left-0 mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg text-xs text-orange-700 max-w-xs shadow-lg z-10 whitespace-normal">
+                        <div className="font-semibold mb-1">Cannot Generate Bracket</div>
+                        <div>{eligibility.reason}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-muted/50 rounded-2xl p-6 mb-6 border border-border">
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-border">
+          <button
+            onClick={() => setActiveTab('schedule')}
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+              activeTab === 'schedule'
+                ? 'border-orange-600 text-orange-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Schedule
+          </button>
+          <button
+            onClick={() => setActiveTab('bracket')}
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+              activeTab === 'bracket'
+                ? 'border-orange-600 text-orange-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Trophy className="w-4 h-4 inline mr-2" />
+            Bracket
+          </button>
+        </div>
+
+        {/* Schedule Tab Content */}
+        {activeTab === 'schedule' && (
+          <>
+            {/* Filters */}
+            <div className="bg-muted/50 rounded-2xl p-6 mb-6 border border-border">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
@@ -317,6 +465,155 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
             </div>
           )}
         </div>
+          </>
+        )}
+
+        {/* Bracket Tab Content */}
+        {activeTab === 'bracket' && (
+          <div className="bg-card rounded-2xl p-6 border border-border shadow-sm">
+            {/* Division Selector (if tournament has divisions) */}
+            {tournament.has_divisions && tournament.division_names && tournament.division_names.length > 0 && (
+              <div className="mb-6">
+                <label className="text-sm font-medium mb-2 block">Division</label>
+                <select
+                  className="w-full max-w-xs px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                  value={selectedDivision || 'all'}
+                  onChange={(e) => setSelectedDivision(e.target.value === 'all' ? null : e.target.value)}
+                >
+                  <option value="all">All Divisions (Championship)</option>
+                  {tournament.division_names.map(div => (
+                    <option key={div} value={div}>Division {div}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Bracket Visualization */}
+            {(() => {
+              try {
+                // If tournament has divisions and "All Divisions" is selected, show division view
+                if (tournament.has_divisions && tournament.division_names && tournament.division_names.length > 0 && !selectedDivision) {
+                  // Calculate brackets for each division
+                  const divisionBrackets: Record<string, any> = {};
+                  tournament.division_names.forEach(div => {
+                    const divBracket = BracketService.calculateBracket({
+                      games,
+                      teams,
+                      tournamentType: tournament.tournamentType,
+                      division: div,
+                    });
+                    if (divBracket.rounds.length > 0) {
+                      divisionBrackets[div] = divBracket;
+                    }
+                  });
+
+                  // Calculate championship bracket (cross-division games only)
+                  const championshipBracket = BracketService.calculateBracket({
+                    games,
+                    teams,
+                    tournamentType: tournament.tournamentType,
+                    division: undefined,
+                    isChampionship: true, // Explicitly mark as championship bracket
+                  });
+
+                  // Check if any brackets exist
+                  const hasAnyBrackets = Object.keys(divisionBrackets).length > 0 || championshipBracket.rounds.length > 0;
+
+                  if (!hasAnyBrackets) {
+                    return (
+                      <div className="text-center py-16">
+                        <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                        <h3 className="text-lg font-medium mb-2">No bracket generated yet</h3>
+                        <p className="text-muted-foreground mb-6">
+                          Generate brackets to visualize the tournament structure.
+                        </p>
+                        <button
+                          onClick={() => {
+                            setShowBracketBuilder(true);
+                            setActiveTab('schedule');
+                          }}
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          Generate Bracket
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <DivisionBracketView
+                      tournament={tournament}
+                      games={games}
+                      teams={teams}
+                      divisionBrackets={divisionBrackets}
+                      championshipBracket={championshipBracket.rounds.length > 0 ? championshipBracket : undefined}
+                      onGameClick={(gameId) => {
+                        const game = games.find(g => g.id === gameId);
+                        if (game) {
+                          handleEditGame(game);
+                        }
+                      }}
+                    />
+                  );
+                }
+
+                // Single bracket view (specific division or no divisions)
+                const bracketStructure = BracketService.calculateBracket({
+                  games,
+                  teams,
+                  tournamentType: tournament.tournamentType,
+                  division: selectedDivision || undefined,
+                });
+
+                if (bracketStructure.rounds.length === 0) {
+                  return (
+                    <div className="text-center py-16">
+                      <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="text-lg font-medium mb-2">No bracket generated yet</h3>
+                      <p className="text-muted-foreground mb-6">
+                        Generate a bracket to visualize the tournament structure.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setShowBracketBuilder(true);
+                          setActiveTab('schedule');
+                        }}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        Generate Bracket
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="bg-gradient-to-br from-orange-50/50 via-white/80 to-red-50/30 rounded-xl p-6 border border-orange-200/30 shadow-lg overflow-x-auto">
+                    <BracketVisualization
+                      structure={bracketStructure}
+                      games={games}
+                      teams={teams}
+                      onGameClick={(gameId) => {
+                        const game = games.find(g => g.id === gameId);
+                        if (game) {
+                          handleEditGame(game);
+                        }
+                      }}
+                    />
+                  </div>
+                );
+              } catch (error) {
+                console.error('Error calculating bracket:', error);
+                return (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p>Error loading bracket. Please try again.</p>
+                  </div>
+                );
+              }
+            })()}
+          </div>
+        )}
 
         {/* Create/Edit Game Modal */}
         {showCreateGame && (
@@ -374,10 +671,50 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
           <BracketBuilderModal
             tournament={tournament}
             teams={teams}
-            onClose={() => setShowBracketBuilder(false)}
+            games={games}
+            checkEligibility={checkBracketRegenerationEligibility}
+            onClose={() => {
+              setShowBracketBuilder(false);
+              setShowRegenerateConfirm(false);
+              setPendingBracketConfig(null);
+            }}
             onGenerate={async (bracketConfig) => {
               try {
                 console.log('🔍 Generating bracket with config:', bracketConfig);
+                
+                // Check eligibility for the specific division
+                const eligibility = checkBracketRegenerationEligibility(bracketConfig.division);
+                
+                // If regeneration needed, show confirmation first
+                if (eligibility.action === 'regenerate_with_warning' && !showRegenerateConfirm) {
+                  setPendingBracketConfig(bracketConfig);
+                  setShowRegenerateConfirm(true);
+                  return; // Wait for user confirmation
+                }
+                
+                // Log division information if available
+                if (bracketConfig.division) {
+                  console.log(`📊 Generating bracket for Division ${bracketConfig.division}`);
+                } else if (bracketConfig.isChampionship) {
+                  console.log('🏆 Generating championship bracket (all divisions)');
+                }
+                
+                // Delete existing games for this division if regenerating
+                if (eligibility.action === 'regenerate_with_warning' && eligibility.gamesToDelete > 0) {
+                  const gamesToDelete = bracketConfig.division
+                    ? games.filter(game => {
+                        const teamA = teams.find(t => t.id === game.team_a_id);
+                        const teamB = teams.find(t => t.id === game.team_b_id);
+                        return teamA?.division === bracketConfig.division || teamB?.division === bracketConfig.division;
+                      })
+                    : games; // Delete all games if championship bracket
+                  
+                  console.log(`🗑️ Deleting ${gamesToDelete.length} existing bracket games...`);
+                  for (const game of gamesToDelete) {
+                    await GameService.deleteGame(game.id);
+                  }
+                  console.log('✅ Existing games deleted');
+                }
                 
                 // Generate games based on bracket configuration
                 const generatedGames = generateBracketGames(
@@ -388,6 +725,8 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
                   tournamentId
                 );
                 
+                console.log(`✅ Generated ${generatedGames.length} games for bracket`);
+                
                 // Create all games in the database
                 for (const gameData of generatedGames) {
                   await GameService.createGame(gameData);
@@ -397,6 +736,8 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
                 const updatedGames = await GameService.getGamesByTournament(tournamentId);
                 setGames(updatedGames);
                 setShowBracketBuilder(false);
+                setShowRegenerateConfirm(false);
+                setPendingBracketConfig(null);
                 
                 // ⚡ Invalidate caches after bracket generation
                 if (user?.id) {
@@ -407,9 +748,103 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
                 console.log('✅ Bracket generated successfully');
               } catch (error) {
                 console.error('Failed to generate bracket:', error);
+                alert('Failed to generate bracket. Please try again.');
               }
             }}
           />
+        )}
+
+        {/* Regeneration Confirmation Modal */}
+        {showRegenerateConfirm && pendingBracketConfig && (
+          <div 
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-[1001]"
+            onClick={() => {
+              setShowRegenerateConfirm(false);
+              setPendingBracketConfig(null);
+            }}
+          >
+            <div 
+              className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-bold mb-4 text-gray-900">
+                Regenerate Bracket?
+              </h3>
+              <p className="text-gray-700 mb-2">
+                {(() => {
+                  const eligibility = checkBracketRegenerationEligibility(pendingBracketConfig.division);
+                  return eligibility.reason || 'This will replace the existing bracket.';
+                })()}
+              </p>
+              <p className="text-sm text-orange-600 font-medium mb-6">
+                ⚠️ This action cannot be undone. All existing bracket games will be permanently deleted.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowRegenerateConfirm(false);
+                    setPendingBracketConfig(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    // Trigger the actual generation
+                    const onGenerate = async (config: any) => {
+                      try {
+                        // Delete existing games
+                        const gamesToDelete = config.division
+                          ? games.filter(game => {
+                              const teamA = teams.find(t => t.id === game.team_a_id);
+                              const teamB = teams.find(t => t.id === game.team_b_id);
+                              return teamA?.division === config.division || teamB?.division === config.division;
+                            })
+                          : games;
+                        
+                        for (const game of gamesToDelete) {
+                          await GameService.deleteGame(game.id);
+                        }
+                        
+                        // Generate new games
+                        const generatedGames = generateBracketGames(
+                          config.tournamentType,
+                          config.teams,
+                          config.startDate,
+                          config.venue,
+                          tournamentId
+                        );
+                        
+                        for (const gameData of generatedGames) {
+                          await GameService.createGame(gameData);
+                        }
+                        
+                        const updatedGames = await GameService.getGamesByTournament(tournamentId);
+                        setGames(updatedGames);
+                        setShowBracketBuilder(false);
+                        setShowRegenerateConfirm(false);
+                        setPendingBracketConfig(null);
+                        
+                        if (user?.id) {
+                          invalidateOrganizerDashboard(user.id);
+                          invalidateOrganizerGames(user.id);
+                        }
+                      } catch (error) {
+                        console.error('Failed to regenerate bracket:', error);
+                        alert('Failed to regenerate bracket. Please try again.');
+                      }
+                    };
+                    
+                    await onGenerate(pendingBracketConfig);
+                  }}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Delete & Regenerate
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -963,12 +1398,21 @@ function GameCard({
 // Bracket Builder Modal Component
 function BracketBuilderModal({ 
   tournament, 
-  teams, 
+  teams,
+  games,
+  checkEligibility,
   onClose, 
   onGenerate 
 }: { 
   tournament: Tournament; 
-  teams: Team[]; 
+  teams: Team[];
+  games: Game[];
+  checkEligibility: (division?: string) => {
+    allowed: boolean;
+    reason: string | null;
+    action: 'generate_new' | 'regenerate_with_warning' | 'edit_only';
+    gamesToDelete: number;
+  };
   onClose: () => void; 
   onGenerate: (config: any) => void; 
 }) {
@@ -1001,17 +1445,151 @@ function BracketBuilderModal({
   const minDate = formatDateTimeLocal(tournament.startDate);
   const maxDate = formatDateTimeLocal(tournament.endDate);
 
+  // Initialize division selection: default to first division if tournament has divisions
+  const divisionOptions = React.useMemo(() => {
+    if (!tournament.has_divisions) return [];
+    
+    if (tournament.division_names && tournament.division_names.length > 0) {
+      return tournament.division_names;
+    }
+    
+    const count = tournament.division_count || 2;
+    return Array.from({ length: count }, (_, i) => 
+      String.fromCharCode(65 + i)
+    );
+  }, [tournament]);
+
+  const [selectedDivision, setSelectedDivision] = useState<string | null>(null);
+  
+  // Set initial division selection after divisionOptions is computed
+  React.useEffect(() => {
+    if (selectedDivision === null && tournament.has_divisions && divisionOptions.length > 0) {
+      // Default to first division if tournament has divisions
+      setSelectedDivision(divisionOptions[0]);
+    }
+  }, [tournament.has_divisions, divisionOptions.length]);
+  
+  // Filter teams by selected division
+  const availableTeams = React.useMemo(() => {
+    if (!tournament.has_divisions || !selectedDivision) {
+      return teams;
+    }
+    return teams.filter(team => team.division === selectedDivision);
+  }, [teams, tournament.has_divisions, selectedDivision]);
+
+  const [seedingMethod, setSeedingMethod] = useState<'manual' | 'tournament_record' | 'historical_record' | 'random'>('manual');
+  const [manualSeeds, setManualSeeds] = useState<Record<string, number>>({}); // teamId -> seed number
+  const [showSeeding, setShowSeeding] = useState(false);
+
   const [bracketConfig, setBracketConfig] = useState({
     tournamentType: tournament.tournamentType,
-    selectedTeams: teams.slice(0, Math.min(teams.length, 8)), // Max 8 teams for demo
+    selectedTeams: [] as Team[], // Will be initialized in useEffect
     startDate: minDate, // Start with tournament start date
     venue: tournament.venue,
     gamesPerDay: 2,
     daysBetweenGames: 1,
   });
 
+  // Initialize and reset selected teams when division or available teams change
+  React.useEffect(() => {
+    const initialTeams = availableTeams.slice(0, Math.min(availableTeams.length, 8));
+    setBracketConfig(prev => ({
+      ...prev,
+      // Filter out any teams that don't belong to the selected division
+      selectedTeams: prev.selectedTeams
+        .filter(team => {
+          if (!tournament.has_divisions || !selectedDivision) return true;
+          return team.division === selectedDivision;
+        })
+        .filter(team => availableTeams.some(t => t.id === team.id))
+        .concat(
+          // Add new teams if we have space
+          initialTeams.filter(t => !prev.selectedTeams.some(st => st.id === t.id))
+        )
+        .slice(0, Math.min(availableTeams.length, 8))
+    }));
+    
+    // Initialize manual seeds when teams change
+    if (seedingMethod === 'manual') {
+      const newSeeds: Record<string, number> = {};
+      const teamsToSeed = bracketConfig.selectedTeams.length > 0 
+        ? bracketConfig.selectedTeams 
+        : initialTeams;
+      teamsToSeed.forEach((team, idx) => {
+        newSeeds[team.id] = manualSeeds[team.id] || idx + 1;
+      });
+      setManualSeeds(newSeeds);
+    }
+  }, [selectedDivision, availableTeams.length, tournament.has_divisions]);
+
+  // Auto-seed when method changes
+  React.useEffect(() => {
+    if (seedingMethod !== 'manual' && bracketConfig.selectedTeams.length > 0) {
+      const seeds = BracketService.calculateSeeding({
+        teams: bracketConfig.selectedTeams,
+        method: seedingMethod,
+      });
+      const seedMap: Record<string, number> = {};
+      seeds.forEach(s => {
+        seedMap[s.teamId] = s.seed;
+      });
+      setManualSeeds(seedMap);
+    }
+  }, [seedingMethod, bracketConfig.selectedTeams.length]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate minimum teams
+    if (bracketConfig.selectedTeams.length < 2) {
+      alert('Please select at least 2 teams to generate a bracket');
+      return;
+    }
+
+    // Check eligibility for regeneration
+    const eligibility = checkEligibility(selectedDivision || undefined);
+    
+    // If games have started, block generation
+    if (!eligibility.allowed) {
+      alert(eligibility.reason || 'Cannot generate bracket at this time.');
+      return;
+    }
+    
+    // Validate division consistency: if a division is selected, all teams must belong to it
+    if (tournament.has_divisions && selectedDivision) {
+      const invalidTeams = bracketConfig.selectedTeams.filter(
+        team => team.division !== selectedDivision
+      );
+      
+      if (invalidTeams.length > 0) {
+        alert(
+          `All selected teams must belong to Division ${selectedDivision}. ` +
+          `Please remove: ${invalidTeams.map(t => t.name).join(', ')}`
+        );
+        return;
+      }
+    }
+    
+    // Validate championship bracket: if "All Divisions" is selected, warn if not all divisions are represented
+    if (tournament.has_divisions && !selectedDivision) {
+      const divisionsInBracket = new Set(
+        bracketConfig.selectedTeams
+          .map(t => t.division)
+          .filter(d => d && d !== '')
+      );
+      
+      const allDivisions = new Set(divisionOptions);
+      
+      if (divisionsInBracket.size < allDivisions.size) {
+        const missingDivisions = Array.from(allDivisions).filter(d => !divisionsInBracket.has(d));
+        const proceed = confirm(
+          `Championship bracket selected, but not all divisions are represented.\n\n` +
+          `Missing divisions: ${missingDivisions.join(', ')}\n\n` +
+          `Do you want to proceed anyway?`
+        );
+        if (!proceed) return;
+      }
+    }
     
     // Convert datetime-local to ISO string for storage
     const isoStartDate = convertLocalToISO(bracketConfig.startDate);
@@ -1026,13 +1604,29 @@ function BracketBuilderModal({
       return;
     }
     
+    // Apply seeding to teams before generating bracket
+    const seeds = seedingMethod === 'manual'
+      ? Object.entries(manualSeeds).map(([teamId, seed]) => ({ teamId, seed }))
+      : BracketService.calculateSeeding({
+          teams: bracketConfig.selectedTeams,
+          method: seedingMethod,
+        }).map(s => ({ teamId: s.teamId, seed: s.seed }));
+    
+    const seededTeams = BracketService.applySeedingToBracket(
+      bracketConfig.selectedTeams,
+      seeds
+    );
+
     onGenerate({
       tournamentType: bracketConfig.tournamentType,
-      teams: bracketConfig.selectedTeams,
+      teams: seededTeams, // Use seeded teams
       startDate: isoStartDate, // Pass ISO string
       venue: bracketConfig.venue,
       gamesPerDay: bracketConfig.gamesPerDay,
       daysBetweenGames: bracketConfig.daysBetweenGames,
+      division: selectedDivision, // Pass division info for logging/debugging
+      isChampionship: tournament.has_divisions && !selectedDivision, // Flag for championship bracket
+      seedingMethod, // Pass seeding method for reference
     });
   };
 
@@ -1165,6 +1759,36 @@ function BracketBuilderModal({
         <h2 style={styles.title}>Generate Tournament Bracket</h2>
         
         <form style={styles.form} onSubmit={handleSubmit}>
+          {/* Division Selector (if tournament uses divisions) */}
+          {tournament.has_divisions && divisionOptions.length > 0 && (
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Division</label>
+              <select
+                style={styles.select}
+                value={selectedDivision || 'all'}
+                onChange={(e) => {
+                  const div = e.target.value === 'all' ? null : e.target.value;
+                  setSelectedDivision(div);
+                }}
+              >
+                <option value="all">All Divisions (Championship)</option>
+                {divisionOptions.map(div => (
+                  <option key={div} value={div}>Division {div}</option>
+                ))}
+              </select>
+              <p style={{ fontSize: '12px', color: '#9D4EDD', marginTop: '4px' }}>
+                {selectedDivision 
+                  ? `Showing teams from Division ${selectedDivision} only (${availableTeams.length} teams)`
+                  : `Showing all teams for championship bracket (${availableTeams.length} teams)`}
+              </p>
+              {!selectedDivision && tournament.has_divisions && (
+                <p style={{ fontSize: '11px', color: '#FFA500', marginTop: '4px', fontStyle: 'italic' }}>
+                  ⚠️ Championship bracket: Ensure all divisions are represented or only division winners advance
+                </p>
+              )}
+            </div>
+          )}
+
           <div style={styles.formGroup}>
             <label style={styles.label}>Tournament Format</label>
             <select
@@ -1181,35 +1805,269 @@ function BracketBuilderModal({
             </select>
           </div>
 
+          {/* Seeding Section */}
+          {bracketConfig.selectedTeams.length > 0 && (
+            <div style={styles.formGroup}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <label style={styles.label}>Team Seeding</label>
+                <button
+                  type="button"
+                  onClick={() => setShowSeeding(!showSeeding)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {showSeeding ? 'Hide' : 'Show'} Seeding
+                </button>
+              </div>
+              
+              {showSeeding && (
+                <div style={{ 
+                  background: 'rgba(255, 255, 255, 0.05)', 
+                  borderRadius: '8px', 
+                  padding: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  {/* Seeding Method Selector */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ ...styles.label, fontSize: '12px', marginBottom: '4px' }}>
+                      Seeding Method
+                    </label>
+                    <select
+                      style={styles.select}
+                      value={seedingMethod}
+                      onChange={(e) => setSeedingMethod(e.target.value as any)}
+                    >
+                      <option value="manual">Manual (Edit Below)</option>
+                      <option value="tournament_record">Tournament Record</option>
+                      <option value="historical_record">Historical Record</option>
+                      <option value="random">Random</option>
+                    </select>
+                    {seedingMethod !== 'manual' && (
+                      <p style={{ fontSize: '11px', color: '#9D4EDD', marginTop: '4px' }}>
+                        {(() => {
+                          const seeds = BracketService.calculateSeeding({
+                            teams: bracketConfig.selectedTeams,
+                            method: seedingMethod,
+                          });
+                          return seeds.length > 0 ? `Seeded by: ${seeds[0].basis}` : '';
+                        })()}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Manual Seed Editor */}
+                  {seedingMethod === 'manual' && (
+                    <div>
+                      <label style={{ ...styles.label, fontSize: '12px', marginBottom: '8px' }}>
+                        Drag teams or edit seed numbers (1 = best seed)
+                      </label>
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '8px',
+                        maxHeight: '200px',
+                        overflowY: 'auto' as const,
+                        padding: '8px',
+                        background: 'rgba(0, 0, 0, 0.2)',
+                        borderRadius: '6px'
+                      }}>
+                        {[...bracketConfig.selectedTeams]
+                          .sort((a, b) => (manualSeeds[a.id] || 999) - (manualSeeds[b.id] || 999))
+                          .map((team, idx) => (
+                            <div 
+                              key={team.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                padding: '8px',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                borderRadius: '6px',
+                              }}
+                            >
+                              <span style={{ 
+                                color: '#9D4EDD', 
+                                fontSize: '12px', 
+                                fontWeight: '600',
+                                minWidth: '30px'
+                              }}>
+                                #{manualSeeds[team.id] || idx + 1}
+                              </span>
+                              <input
+                                type="number"
+                                min="1"
+                                max={bracketConfig.selectedTeams.length}
+                                value={manualSeeds[team.id] || idx + 1}
+                                onChange={(e) => {
+                                  const newSeed = parseInt(e.target.value) || 1;
+                                  setManualSeeds(prev => ({
+                                    ...prev,
+                                    [team.id]: Math.max(1, Math.min(bracketConfig.selectedTeams.length, newSeed))
+                                  }));
+                                }}
+                                style={{
+                                  width: '50px',
+                                  padding: '4px 8px',
+                                  background: 'rgba(255, 255, 255, 0.1)',
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  borderRadius: '4px',
+                                  color: '#ffffff',
+                                  fontSize: '12px',
+                                }}
+                              />
+                              <span style={{ color: '#ffffff', fontSize: '13px', flex: 1 }}>
+                                {team.name}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Auto-Seeding Display */}
+                  {seedingMethod !== 'manual' && (
+                    <div>
+                      <label style={{ ...styles.label, fontSize: '12px', marginBottom: '8px' }}>
+                        Seeding Order
+                      </label>
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '6px',
+                        maxHeight: '200px',
+                        overflowY: 'auto' as const,
+                        padding: '8px',
+                        background: 'rgba(0, 0, 0, 0.2)',
+                        borderRadius: '6px'
+                      }}>
+                        {(() => {
+                          const seeds = BracketService.calculateSeeding({
+                            teams: bracketConfig.selectedTeams,
+                            method: seedingMethod,
+                          });
+                          return seeds.map((seed) => {
+                            const team = bracketConfig.selectedTeams.find(t => t.id === seed.teamId);
+                            return (
+                              <div 
+                                key={seed.teamId}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '12px',
+                                  padding: '6px',
+                                  background: 'rgba(255, 255, 255, 0.05)',
+                                  borderRadius: '4px',
+                                }}
+                              >
+                                <span style={{ 
+                                  color: '#9D4EDD', 
+                                  fontSize: '12px', 
+                                  fontWeight: '600',
+                                  minWidth: '30px'
+                                }}>
+                                  #{seed.seed}
+                                </span>
+                                <span style={{ color: '#ffffff', fontSize: '13px', flex: 1 }}>
+                                  {team?.name || 'Unknown'}
+                                </span>
+                                <span style={{ color: '#9D4EDD', fontSize: '10px' }}>
+                                  {seed.basis}
+                                </span>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={styles.formGroup}>
             <label style={styles.label}>
               Select Teams ({bracketConfig.selectedTeams.length} selected)
+              {tournament.has_divisions && selectedDivision && (
+                <span style={{ fontSize: '12px', color: '#9D4EDD', fontWeight: 'normal' }}>
+                  {' '}(Division {selectedDivision} only)
+                </span>
+              )}
             </label>
-            <div style={styles.teamsGrid}>
-              {teams.map(team => (
-                <label key={team.id} style={styles.teamItem}>
-                  <input
-                    type="checkbox"
-                    style={styles.checkbox}
-                    checked={bracketConfig.selectedTeams.some(t => t.id === team.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setBracketConfig(prev => ({
-                          ...prev,
-                          selectedTeams: [...prev.selectedTeams, team]
-                        }));
-                      } else {
-                        setBracketConfig(prev => ({
-                          ...prev,
-                          selectedTeams: prev.selectedTeams.filter(t => t.id !== team.id)
-                        }));
-                      }
-                    }}
-                  />
-                  {team.name}
-                </label>
-              ))}
-            </div>
+            {availableTeams.length === 0 ? (
+              <div style={{ 
+                padding: '16px', 
+                background: 'rgba(255, 165, 0, 0.1)', 
+                border: '1px solid rgba(255, 165, 0, 0.3)',
+                borderRadius: '8px',
+                color: '#FFA500',
+                fontSize: '14px'
+              }}>
+                {selectedDivision 
+                  ? `No teams found in Division ${selectedDivision}. Please assign teams to this division first.`
+                  : 'No teams available for championship bracket.'}
+              </div>
+            ) : (
+              <div style={styles.teamsGrid}>
+                {availableTeams.map(team => {
+                  // Check if team belongs to selected division (for validation display)
+                  const isValidForDivision = !tournament.has_divisions || !selectedDivision || team.division === selectedDivision;
+                  
+                  return (
+                    <label 
+                      key={team.id} 
+                      style={{
+                        ...styles.teamItem,
+                        ...(!isValidForDivision ? {
+                          opacity: 0.5,
+                          background: 'rgba(255, 0, 0, 0.1)',
+                          border: '1px solid rgba(255, 0, 0, 0.3)'
+                        } : {})
+                      }}
+                      title={!isValidForDivision ? `Team belongs to Division ${team.division || 'None'}, not ${selectedDivision}` : ''}
+                    >
+                      <input
+                        type="checkbox"
+                        style={styles.checkbox}
+                        checked={bracketConfig.selectedTeams.some(t => t.id === team.id)}
+                        disabled={!isValidForDivision}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            // Validate division before adding
+                            if (tournament.has_divisions && selectedDivision && team.division !== selectedDivision) {
+                              alert(`Team "${team.name}" belongs to Division ${team.division || 'None'}, not Division ${selectedDivision}. Please select teams from the correct division.`);
+                              return;
+                            }
+                            setBracketConfig(prev => ({
+                              ...prev,
+                              selectedTeams: [...prev.selectedTeams, team]
+                            }));
+                          } else {
+                            setBracketConfig(prev => ({
+                              ...prev,
+                              selectedTeams: prev.selectedTeams.filter(t => t.id !== team.id)
+                            }));
+                          }
+                        }}
+                      />
+                      {team.name}
+                      {team.division && tournament.has_divisions && (
+                        <span style={{ fontSize: '10px', color: '#9D4EDD', marginLeft: '4px' }}>
+                          (Div {team.division})
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div style={styles.formGroup}>
@@ -1248,9 +2106,30 @@ function BracketBuilderModal({
           </div>
 
           <div style={styles.info}>
-            <strong>Preview:</strong> This will generate a {bracketConfig.tournamentType.replace('_', ' ')} 
-            bracket for {bracketConfig.selectedTeams.length} teams, starting on{' '}
-            {new Date(bracketConfig.startDate).toLocaleDateString()}.
+            <strong>Preview:</strong> This will {(() => {
+              const eligibility = checkEligibility(selectedDivision || undefined);
+              return eligibility.action === 'regenerate_with_warning' ? 'regenerate' : 'generate';
+            })()} a {bracketConfig.tournamentType.replace('_', ' ')} 
+            bracket for {bracketConfig.selectedTeams.length} teams
+            {tournament.has_divisions && selectedDivision && ` (Division ${selectedDivision})`}
+            {tournament.has_divisions && !selectedDivision && ' (Championship)'}
+            , starting on {new Date(bracketConfig.startDate).toLocaleDateString()}.
+            {bracketConfig.selectedTeams.length > 0 && tournament.has_divisions && (
+              <div style={{ marginTop: '8px', fontSize: '12px' }}>
+                <strong>Teams:</strong> {bracketConfig.selectedTeams.map(t => t.name).join(', ')}
+              </div>
+            )}
+            {(() => {
+              const eligibility = checkEligibility(selectedDivision || undefined);
+              if (eligibility.action === 'regenerate_with_warning' && eligibility.gamesToDelete > 0) {
+                return (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#FFA500' }}>
+                    ⚠️ {eligibility.gamesToDelete} existing game{eligibility.gamesToDelete !== 1 ? 's' : ''} will be deleted
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
 
           <div style={styles.buttonGroup}>
@@ -1311,23 +2190,30 @@ function generateSingleEliminationBracket(
   tournamentId: string
 ): any[] {
   const games: any[] = [];
-  const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
+  // Teams are already seeded by BracketService.applySeedingToBracket
+  // Use teams in seed order (1 vs last, 2 vs second-to-last, etc.)
+  const seededTeams = [...teams]; // Already in seed order
   let gameTime = new Date(startDate);
   
-  // Round 1 - Pair up teams
-  for (let i = 0; i < shuffledTeams.length; i += 2) {
-    if (i + 1 < shuffledTeams.length) {
-      games.push({
-        tournamentId,
-        teamAId: shuffledTeams[i].id,
-        teamBId: shuffledTeams[i + 1].id,
-        startTime: gameTime.toISOString(),
-        venue,
-      });
-      
-      // Space games 2 hours apart
-      gameTime = new Date(gameTime.getTime() + 2 * 60 * 60 * 1000);
-    }
+  // Round 1 - Pair up teams using proper bracket seeding
+  // Seed 1 vs Seed N, Seed 2 vs Seed N-1, etc.
+  const numTeams = seededTeams.length;
+  const numGames = Math.floor(numTeams / 2);
+  
+  for (let i = 0; i < numGames; i++) {
+    const teamAIndex = i;
+    const teamBIndex = numTeams - 1 - i;
+    
+    games.push({
+      tournamentId,
+      teamAId: seededTeams[teamAIndex].id,
+      teamBId: seededTeams[teamBIndex].id,
+      startTime: gameTime.toISOString(),
+      venue,
+    });
+    
+    // Space games 2 hours apart
+    gameTime = new Date(gameTime.getTime() + 2 * 60 * 60 * 1000);
   }
   
   return games;

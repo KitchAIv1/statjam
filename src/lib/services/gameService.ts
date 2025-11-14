@@ -199,6 +199,58 @@ export class GameService {
     try {
       console.log('🔍 GameService: Deleting game:', gameId);
       
+      // Step 1: Delete related records first (to avoid foreign key constraint violations)
+      // Delete game_stats
+      const { error: statsError } = await supabase
+        .from('game_stats')
+        .delete()
+        .eq('game_id', gameId);
+
+      if (statsError && statsError.code !== '42P01') {
+        console.error('Error deleting game_stats:', statsError);
+        throw new Error(`Failed to delete game_stats: ${statsError.message}`);
+      }
+      console.log('🗑️ Deleted game_stats for game:', gameId);
+
+      // Delete game_substitutions
+      const { error: substitutionsError } = await supabase
+        .from('game_substitutions')
+        .delete()
+        .eq('game_id', gameId);
+
+      if (substitutionsError && substitutionsError.code !== '42P01') {
+        console.error('Error deleting game_substitutions:', substitutionsError);
+        throw new Error(`Failed to delete game_substitutions: ${substitutionsError.message}`);
+      }
+      console.log('🗑️ Deleted game_substitutions for game:', gameId);
+
+      // Delete game_timeouts
+      const { error: timeoutsError } = await supabase
+        .from('game_timeouts')
+        .delete()
+        .eq('game_id', gameId);
+
+      if (timeoutsError && timeoutsError.code !== '42P01') {
+        console.error('Error deleting game_timeouts:', timeoutsError);
+        throw new Error(`Failed to delete game_timeouts: ${timeoutsError.message}`);
+      }
+      console.log('🗑️ Deleted game_timeouts for game:', gameId);
+
+      // Delete legacy stats table (if exists) - uses match_id column
+      const { error: legacyStatsError } = await supabase
+        .from('stats')
+        .delete()
+        .eq('match_id', gameId);
+
+      if (legacyStatsError && legacyStatsError.code !== '42P01') {
+        console.error('Error deleting legacy stats:', legacyStatsError);
+        // Don't throw - legacy table might not exist
+        console.warn('⚠️ Legacy stats deletion failed (table may not exist)');
+      } else {
+        console.log('🗑️ Deleted legacy stats for game:', gameId);
+      }
+
+      // Step 2: Now delete the game itself (all references are gone)
       const { error } = await supabase
         .from('games')
         .delete()

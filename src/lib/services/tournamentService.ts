@@ -7,7 +7,7 @@ export class TournamentService {
   // Tournament CRUD Operations
   static async createTournament(data: TournamentCreateRequest, organizerId: string): Promise<Tournament> {
     try {
-      const tournamentData = {
+      const tournamentData: any = {
         name: data.name,
         description: data.description,
         status: 'draft' as const,
@@ -24,6 +24,17 @@ export class TournamentService {
         organizer_id: organizerId,
         logo: data.logo || null,
       };
+
+      // Add division fields if provided
+      if (data.has_divisions !== undefined) {
+        tournamentData.has_divisions = data.has_divisions;
+      }
+      if (data.division_count !== undefined) {
+        tournamentData.division_count = data.has_divisions ? data.division_count : null;
+      }
+      if (data.division_names !== undefined && data.division_names.length > 0) {
+        tournamentData.division_names = JSON.stringify(data.division_names);
+      }
 
       const { data: tournament, error } = await supabase
         .from('tournaments')
@@ -53,6 +64,13 @@ export class TournamentService {
         prizePool: tournament.prize_pool,
         country: tournament.country,
         organizerId: tournament.organizer_id,
+        has_divisions: tournament.has_divisions || false,
+        division_count: tournament.division_count || undefined,
+        division_names: tournament.division_names 
+          ? (typeof tournament.division_names === 'string' 
+              ? JSON.parse(tournament.division_names) 
+              : tournament.division_names)
+          : undefined,
         createdAt: tournament.created_at || new Date().toISOString(),
         updatedAt: tournament.updated_at || new Date().toISOString(),
       };
@@ -80,6 +98,15 @@ export class TournamentService {
       if (data.prizePool !== undefined) updateData.prize_pool = data.prizePool;
       if (data.country !== undefined) updateData.country = data.country;
       if (data.logo !== undefined) updateData.logo = data.logo;
+      if (data.has_divisions !== undefined) updateData.has_divisions = data.has_divisions;
+      if (data.division_count !== undefined) {
+        updateData.division_count = data.has_divisions ? data.division_count : null;
+      }
+      if (data.division_names !== undefined) {
+        updateData.division_names = data.division_names.length > 0 
+          ? JSON.stringify(data.division_names) 
+          : null;
+      }
 
       const { data: tournament, error } = await supabase
         .from('tournaments')
@@ -110,8 +137,15 @@ export class TournamentService {
         prizePool: tournament.prize_pool,
         country: tournament.country,
         organizerId: tournament.organizer_id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        has_divisions: tournament.has_divisions || false,
+        division_count: tournament.division_count || undefined,
+        division_names: tournament.division_names 
+          ? (typeof tournament.division_names === 'string' 
+              ? JSON.parse(tournament.division_names) 
+              : tournament.division_names)
+          : undefined,
+        createdAt: tournament.created_at || new Date().toISOString(),
+        updatedAt: tournament.updated_at || new Date().toISOString(),
       };
     } catch (error) {
       console.error('Error updating tournament:', error);
@@ -334,7 +368,8 @@ export class TournamentService {
         .select(`
           id, name, description, status, start_date, end_date, venue, 
           max_teams, current_teams, tournament_type, is_public, 
-          entry_fee, prize_pool, country, organizer_id, created_at, updated_at, logo
+          entry_fee, prize_pool, country, organizer_id, created_at, updated_at, logo,
+          has_divisions, division_count, division_names
         `)
         .eq('id', id)
         .single();
@@ -365,6 +400,13 @@ export class TournamentService {
         prizePool: tournament.prize_pool,
         country: tournament.country,
         organizerId: tournament.organizer_id,
+        has_divisions: tournament.has_divisions || false,
+        division_count: tournament.division_count || undefined,
+        division_names: tournament.division_names 
+          ? (typeof tournament.division_names === 'string' 
+              ? JSON.parse(tournament.division_names) 
+              : tournament.division_names)
+          : undefined,
         createdAt: tournament.created_at || new Date().toISOString(),
         updatedAt: tournament.updated_at || new Date().toISOString(),
         logo: tournament.logo || undefined,
@@ -382,7 +424,8 @@ export class TournamentService {
         .select(`
           id, name, description, status, start_date, end_date, venue, 
           max_teams, current_teams, tournament_type, is_public, 
-          entry_fee, prize_pool, country, organizer_id, created_at, updated_at, logo
+          entry_fee, prize_pool, country, organizer_id, created_at, updated_at, logo,
+          has_divisions, division_count, division_names
         `)
         .eq('organizer_id', organizerId)
         .order('created_at', { ascending: false });
@@ -409,6 +452,13 @@ export class TournamentService {
         prizePool: tournament.prize_pool,
         country: tournament.country,
         organizerId: tournament.organizer_id,
+        has_divisions: tournament.has_divisions || false,
+        division_count: tournament.division_count || undefined,
+        division_names: tournament.division_names 
+          ? (typeof tournament.division_names === 'string' 
+              ? JSON.parse(tournament.division_names) 
+              : tournament.division_names)
+          : undefined,
         createdAt: tournament.created_at || new Date().toISOString(),
         updatedAt: tournament.updated_at || new Date().toISOString(),
         logo: tournament.logo || undefined,
@@ -539,21 +589,26 @@ export class TournamentService {
 
 // Team Service
 export class TeamService {
-  static async createTeam(data: { name: string; coach?: string; logo?: string; tournamentId: string }): Promise<Team> {
+  static async createTeam(data: { name: string; coach?: string; logo?: string; tournamentId: string; division?: string }): Promise<Team> {
     try {
       // Only include fields that exist in the database schema
       // Organizer-created teams are auto-approved (no join request needed)
-      const teamData = {
+      const teamData: any = {
         name: data.name,
         tournament_id: data.tournamentId,
         logo_url: data.logo || null, // Map logo to logo_url database column
         approval_status: 'approved' as const,
       };
 
+      // Add division if provided
+      if (data.division !== undefined) {
+        teamData.division = data.division || null;
+      }
+
       const { data: team, error } = await supabase
         .from('teams')
         .insert([teamData])
-        .select()
+        .select('id, name, logo_url, tournament_id, approval_status, division')
         .single();
 
       if (error) {
@@ -583,6 +638,7 @@ export class TeamService {
         wins: 0, // Default value since not in DB
         losses: 0, // Default value since not in DB
         tournamentId: team.tournament_id,
+        division: team.division || undefined, // Include division
         approval_status: team.approval_status || 'approved', // Include approval status
         createdAt: new Date().toISOString(), // Default since created_at doesn't exist in teams table
       };
@@ -718,11 +774,12 @@ export class TeamService {
   /**
    * Update a team (organizer-created teams only)
    */
-  static async updateTeam(teamId: string, updates: { name?: string; logo?: string }): Promise<void> {
+  static async updateTeam(teamId: string, updates: { name?: string; logo?: string; division?: string }): Promise<void> {
     try {
       const updateData: any = {};
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.logo !== undefined) updateData.logo_url = updates.logo || null;
+      if (updates.division !== undefined) updateData.division = updates.division || null;
 
       const { error } = await supabase
         .from('teams')
@@ -751,6 +808,7 @@ export class TeamService {
           tournament_id,
           approval_status,
           coach_id,
+          division,
           team_players (
             player_id,
             custom_player_id,
@@ -870,6 +928,7 @@ export class TeamService {
           wins: 0, // Default value since not in DB schema yet
           losses: 0, // Default value since not in DB schema yet
           tournamentId: team.tournament_id,
+          division: team.division || undefined, // Include division
           approval_status: team.approval_status, // Include approval status
           createdAt: new Date().toISOString(), // Default since created_at doesn't exist in teams table
         };

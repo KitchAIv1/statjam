@@ -362,7 +362,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
     description: "",
     ruleset: "NBA", // ✅ PHASE 1: Default to NBA ruleset
     logo: "", // Tournament logo URL
-    country: "US" // Default country
+    country: "US", // Default country
+    has_divisions: false, // Default: no divisions
+    division_count: undefined as number | undefined,
+    division_names: undefined as string[] | undefined,
   });
   
   // Validation errors state
@@ -468,6 +471,15 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           errors.push('End date must be after start date');
         }
       }
+
+      // Validate division settings if divisions are enabled
+      if (newTournament.has_divisions) {
+        if (!newTournament.division_count || newTournament.division_count < 2) {
+          errors.push('At least 2 divisions required');
+        } else if (newTournament.division_count > 8) {
+          errors.push('Maximum 8 divisions allowed');
+        }
+      }
       
       // If there are errors, display them and stop
       if (errors.length > 0) {
@@ -488,7 +500,12 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
         prizePool: 0,
         country: newTournament.country,
         ruleset: newTournament.ruleset as 'NBA' | 'FIBA' | 'NCAA',
-        logo: newTournament.logo || undefined // Include uploaded logo
+        logo: newTournament.logo || undefined, // Include uploaded logo
+        has_divisions: newTournament.has_divisions || false,
+        division_count: newTournament.has_divisions ? newTournament.division_count : undefined,
+        division_names: newTournament.has_divisions && newTournament.division_names 
+          ? newTournament.division_names 
+          : undefined,
       };
 
       const result = await createTournament(tournamentData);
@@ -502,7 +519,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           description: "",
           ruleset: "NBA",
           logo: "",
-          country: "US"
+          country: "US",
+          has_divisions: false,
+          division_count: undefined,
+          division_names: undefined,
         });
         logoUpload.clearPreview(); // Clear logo preview
         setValidationErrors([]);
@@ -589,7 +609,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
         console.log('Tournament data to save:', tournamentToEdit);
         console.log('Assigned stat admins:', assignedStatAdmins);
         
-        // Save tournament settings (including status changes, logo, venue, and country)
+        // Save tournament settings (including status changes, logo, venue, country, and divisions)
         const updatedTournament = await TournamentService.updateTournament({
           id: tournamentToEdit.id,
           name: tournamentToEdit.name,
@@ -601,7 +621,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           tournamentType: tournamentToEdit.tournamentType,
           logo: tournamentToEdit.logo, // Include logo in update
           venue: tournamentToEdit.venue, // Include venue in update
-          country: tournamentToEdit.country // Include country in update
+          country: tournamentToEdit.country, // Include country in update
+          has_divisions: tournamentToEdit.has_divisions, // Include division settings
+          division_count: tournamentToEdit.division_count,
+          division_names: tournamentToEdit.division_names
         });
         
         // Save stat admin assignments to games
@@ -708,6 +731,18 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
               className="flex-1 overflow-y-auto px-6 py-4 dialog-scroll"
               tabIndex={0}
               onKeyDown={(e) => {
+                // Don't interfere with input field navigation
+                const target = e.target as HTMLElement;
+                const isInputField = target.tagName === 'INPUT' || 
+                                    target.tagName === 'TEXTAREA' || 
+                                    target.tagName === 'SELECT' ||
+                                    target.closest('input, textarea, select');
+                
+                // Only handle scroll keys when NOT in an input field
+                if (isInputField) {
+                  return;
+                }
+                
                 const element = e.currentTarget;
                 const scrollAmount = 50;
                 
@@ -732,8 +767,16 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                 }
               }}
               onClick={(e) => {
-                // Focus the scrollable area when clicked
-                if (e.currentTarget !== document.activeElement) {
+                // Only focus scrollable area if clicking on non-interactive elements
+                const target = e.target as HTMLElement;
+                const isInteractiveElement = target.tagName === 'INPUT' || 
+                                            target.tagName === 'TEXTAREA' || 
+                                            target.tagName === 'SELECT' ||
+                                            target.tagName === 'BUTTON' ||
+                                            target.closest('input, textarea, select, button, [role="button"]');
+                
+                // Don't interfere with interactive elements - let them handle their own focus
+                if (!isInteractiveElement && e.currentTarget !== document.activeElement) {
                   e.currentTarget.focus();
                 }
               }}
@@ -746,13 +789,98 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                   value={newTournament.name}
                   onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
                   placeholder="Enter tournament name"
+                  className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
                   required
                 />
               </div>
+
+              {/* Tournament Structure - Divisions (FIRST - fundamental decision) */}
               <div className="grid gap-2">
-                <Label htmlFor="format">Format <span className="text-red-500">*</span></Label>
+                <Label>Tournament Structure</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewTournament({
+                        ...newTournament,
+                        has_divisions: false,
+                        division_count: undefined,
+                        division_names: undefined,
+                      });
+                    }}
+                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                      !newTournament.has_divisions
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-background text-muted-foreground hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold">Single Bracket</div>
+                    <div className="text-xs opacity-80">All teams together</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const count = 2;
+                      const names = ['A', 'B'];
+                      setNewTournament({
+                        ...newTournament,
+                        has_divisions: true,
+                        division_count: count,
+                        division_names: names,
+                      });
+                    }}
+                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                      newTournament.has_divisions
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-background text-muted-foreground hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold">Divisions</div>
+                    <div className="text-xs opacity-80">Groups first</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Division Configuration (shown only if divisions enabled) */}
+              {newTournament.has_divisions && (
+                <div className="grid gap-2">
+                  <Label htmlFor="division_count">Number of Divisions <span className="text-red-500">*</span></Label>
+                  <Select
+                    value={newTournament.division_count?.toString() || '2'}
+                    onValueChange={(value) => {
+                      const count = parseInt(value);
+                      const names = Array.from({ length: count }, (_, i) => 
+                        String.fromCharCode(65 + i)
+                      );
+                      setNewTournament({
+                        ...newTournament,
+                        division_count: count,
+                        division_names: names,
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
+                      <SelectValue placeholder="Select number of divisions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[2, 3, 4, 5, 6, 7, 8].map(num => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num} Divisions
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    💡 Divisions will be named: {newTournament.division_names?.join(', ') || 'A, B, C...'}
+                  </p>
+                </div>
+              )}
+
+              {/* Tournament Format (AFTER structure - depends on how teams are organized) */}
+              <div className="grid gap-2">
+                <Label htmlFor="format">Tournament Format <span className="text-red-500">*</span></Label>
                 <Select value={newTournament.format} onValueChange={(value) => setNewTournament({ ...newTournament, format: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
                     <SelectValue placeholder="Select tournament format" />
                   </SelectTrigger>
                   <SelectContent>
@@ -762,32 +890,11 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="startDate">Start Date <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={newTournament.startDate}
-                    onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="endDate">End Date <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={newTournament.endDate}
-                    onChange={(e) => setNewTournament({ ...newTournament, endDate: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="maxTeams">Maximum Teams <span className="text-red-500">*</span></Label>
                 <Select value={newTournament.maxTeams} onValueChange={(value) => setNewTournament({ ...newTournament, maxTeams: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
                     <SelectValue placeholder="Select max teams" />
                   </SelectTrigger>
                   <SelectContent>
@@ -807,6 +914,32 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="startDate">Start Date <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={newTournament.startDate}
+                    onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
+                    className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="endDate">End Date <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={newTournament.endDate}
+                    onChange={(e) => setNewTournament({ ...newTournament, endDate: e.target.value })}
+                    className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
+                    required
+                  />
+                </div>
+              </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
@@ -814,6 +947,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                   value={newTournament.description}
                   onChange={(e) => setNewTournament({ ...newTournament, description: e.target.value })}
                   placeholder="Brief description of the tournament"
+                  className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
                 />
               </div>
               
@@ -831,7 +965,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
               <div className="grid gap-2">
                 <Label htmlFor="ruleset">Game Rules</Label>
                 <Select value={newTournament.ruleset} onValueChange={(value) => setNewTournament({ ...newTournament, ruleset: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
                     <SelectValue placeholder="Select ruleset" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1413,6 +1547,126 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                               className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
                             />
                           </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Division Configuration */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Target className="w-4 h-4 text-primary" />
+                          Division Configuration
+                        </CardTitle>
+                        <CardDescription className="text-xs">Organize teams into divisions for group play</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3 pt-0">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label className="text-sm font-medium">Enable Divisions</Label>
+                              <p className="text-xs text-muted-foreground">Split teams into groups before championship bracket</p>
+                            </div>
+                            <Switch
+                              checked={tournamentToEdit.has_divisions || false}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  const count = tournamentToEdit.division_count || 2;
+                                  const names = tournamentToEdit.division_names || Array.from({ length: count }, (_, i) => String.fromCharCode(65 + i));
+                                  setTournamentToEdit({
+                                    ...tournamentToEdit,
+                                    has_divisions: true,
+                                    division_count: count,
+                                    division_names: names,
+                                  });
+                                } else {
+                                  setTournamentToEdit({
+                                    ...tournamentToEdit,
+                                    has_divisions: false,
+                                    division_count: undefined,
+                                    division_names: undefined,
+                                  });
+                                }
+                              }}
+                            />
+                          </div>
+
+                          {tournamentToEdit.has_divisions && (
+                            <>
+                              <div className="space-y-1.5">
+                                <Label htmlFor="edit-division-count" className="text-sm">Number of Divisions</Label>
+                                <Select
+                                  value={tournamentToEdit.division_count?.toString() || '2'}
+                                  onValueChange={(value) => {
+                                    const count = parseInt(value);
+                                    const names = Array.from({ length: count }, (_, i) => String.fromCharCode(65 + i));
+                                    setTournamentToEdit({
+                                      ...tournamentToEdit,
+                                      division_count: count,
+                                      division_names: names,
+                                    });
+                                  }}
+                                >
+                                  <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {[2, 3, 4, 5, 6, 7, 8].map(num => (
+                                      <SelectItem key={num} value={num.toString()}>
+                                        {num} Divisions
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              {tournamentToEdit.division_names && tournamentToEdit.division_names.length > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm">Division Names</Label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {tournamentToEdit.division_names.map((name, index) => (
+                                      <Badge key={index} variant="outline" className="px-3 py-1 text-sm">
+                                        Division {name}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    Divisions are automatically named alphabetically (A, B, C...)
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Division Statistics */}
+                              {teamManagement?.teams && teamManagement.teams.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-border">
+                                  <Label className="text-sm font-medium mb-2 block">Team Distribution</Label>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    {tournamentToEdit.division_names?.map((divName) => {
+                                      const teamsInDivision = teamManagement.teams.filter(t => t.division === divName).length;
+                                      return (
+                                        <div key={divName} className="bg-muted/50 rounded-lg p-2 text-center">
+                                          <div className="text-xs text-muted-foreground">Division {divName}</div>
+                                          <div className="text-lg font-semibold">{teamsInDivision} teams</div>
+                                        </div>
+                                      );
+                                    })}
+                                    {(() => {
+                                      const unassignedTeams = teamManagement.teams.filter(t => !t.division || t.division === '').length;
+                                      if (unassignedTeams > 0) {
+                                        return (
+                                          <div className="bg-orange-50 rounded-lg p-2 text-center border border-orange-200">
+                                            <div className="text-xs text-orange-700">Unassigned</div>
+                                            <div className="text-lg font-semibold text-orange-900">{unassignedTeams} teams</div>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
                       </CardContent>
                     </Card>

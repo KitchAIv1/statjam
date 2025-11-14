@@ -525,6 +525,71 @@ const CreateTournamentV2 = () => {
               {errors.tournamentType && <span style={styles.errorText}>{errors.tournamentType}</span>}
             </div>
 
+            {/* Tournament Structure - Divisions */}
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Tournament Structure</label>
+              <div style={{ marginBottom: '8px', fontSize: '13px', color: 'var(--dashboard-text-secondary)' }}>
+                Choose how teams will be organized
+              </div>
+              <div style={styles.typeGrid}>
+                <div
+                  style={{
+                    ...styles.typeOption,
+                    ...(data.has_divisions === false ? styles.typeOptionSelected : {})
+                  }}
+                  onClick={() => {
+                    updateData('has_divisions', false);
+                    updateData('division_count', undefined);
+                    updateData('division_names', undefined);
+                  }}
+                >
+                  <div style={styles.typeOptionTitle}>Single Bracket</div>
+                  <div style={styles.typeOptionDesc}>All teams compete together</div>
+                </div>
+                <div
+                  style={{
+                    ...styles.typeOption,
+                    ...(data.has_divisions === true ? styles.typeOptionSelected : {})
+                  }}
+                  onClick={() => updateData('has_divisions', true)}
+                >
+                  <div style={styles.typeOptionTitle}>Divisions</div>
+                  <div style={styles.typeOptionDesc}>Teams compete in groups first</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Division Configuration (shown only if divisions enabled) */}
+            {data.has_divisions && (
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Number of Divisions *</label>
+                <select
+                  value={data.division_count || 2}
+                  onChange={(e) => {
+                    const count = parseInt(e.target.value);
+                    updateData('division_count', count);
+                    // Auto-generate division names (A, B, C, etc.)
+                    const names = Array.from({ length: count }, (_, i) => 
+                      String.fromCharCode(65 + i)
+                    );
+                    updateData('division_names', names);
+                  }}
+                  style={{
+                    ...styles.select,
+                    ...(errors.division_count ? styles.inputError : {})
+                  }}
+                >
+                  {[2, 3, 4, 5, 6, 7, 8].map(num => (
+                    <option key={num} value={num}>{num} Divisions</option>
+                  ))}
+                </select>
+                {errors.division_count && <span style={styles.errorText}>{errors.division_count}</span>}
+                <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--dashboard-text-tertiary)' }}>
+                  💡 Divisions will be named: {data.division_names?.join(', ') || 'A, B, C...'}
+                </div>
+              </div>
+            )}
+
             <div style={styles.formRow}>
               <div style={styles.fieldGroup}>
                 <label style={styles.label}>Maximum Teams *</label>
@@ -706,6 +771,14 @@ const CreateTournamentV2 = () => {
                   <span style={styles.reviewLabel}>Format</span>
                   <span style={styles.reviewValue}>
                     {data.tournamentType?.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+                <div style={styles.reviewItem}>
+                  <span style={styles.reviewLabel}>Tournament Structure</span>
+                  <span style={styles.reviewValue}>
+                    {data.has_divisions 
+                      ? `Divisions (${data.division_count || 2} divisions: ${data.division_names?.join(', ') || 'A, B, C...'})`
+                      : 'Single Bracket'}
                   </span>
                 </div>
                 <div style={styles.reviewItem}>

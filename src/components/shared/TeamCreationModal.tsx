@@ -10,12 +10,14 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { IPlayerManagementService, GenericPlayer } from '@/lib/types/playerManagement';
 import { StepIndicator, TeamInfoStep, AddPlayersStep, ConfirmStep } from './TeamCreationSteps';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
+import { TournamentService } from '@/lib/services/tournamentService';
+import { Tournament } from '@/lib/types/tournament';
 
 interface TeamCreationModalProps {
   tournamentId: string;
@@ -47,13 +49,28 @@ export function TeamCreationModal({
   const [step, setStep] = useState<Step>('info');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tournament, setTournament] = useState<Tournament | null>(null);
   
   // Form data
   const [teamName, setTeamName] = useState('');
   const [coachName, setCoachName] = useState('');
+  const [selectedDivision, setSelectedDivision] = useState<string>('');
   const [selectedPlayers, setSelectedPlayers] = useState<GenericPlayer[]>([]);
   const [createdTeamId, setCreatedTeamId] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string>('');
+
+  // Fetch tournament to check if divisions are enabled
+  useEffect(() => {
+    const loadTournament = async () => {
+      try {
+        const t = await TournamentService.getTournament(tournamentId);
+        setTournament(t);
+      } catch (error) {
+        console.error('Failed to load tournament:', error);
+      }
+    };
+    loadTournament();
+  }, [tournamentId]);
 
   // Generate a temporary team ID for logo upload (before team exists)
   const tempTeamId = useMemo(() => crypto.randomUUID(), []);
@@ -100,12 +117,13 @@ export function TeamCreationModal({
       // Import TeamService dynamically
       const { TeamService } = await import('@/lib/services/tournamentService');
       
-      // Create team with logo
+      // Create team with logo and division
       const newTeam = await TeamService.createTeam({
         name: teamName.trim(),
         coach: coachName.trim() || undefined,
         logo: logoUrl || undefined, // Include logo URL if uploaded
         tournamentId: tournamentId,
+        division: selectedDivision || undefined, // Include division if selected
       });
 
       setCreatedTeamId(newTeam.id);
@@ -147,6 +165,9 @@ export function TeamCreationModal({
             onTeamNameChange={setTeamName}
             onCoachNameChange={setCoachName}
             logoUpload={logoUpload}
+            tournament={tournament}
+            selectedDivision={selectedDivision}
+            onDivisionChange={setSelectedDivision}
           />
         );
 

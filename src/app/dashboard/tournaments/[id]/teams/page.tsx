@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TournamentService, TeamService } from '@/lib/services/tournamentService';
@@ -25,10 +25,11 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 
@@ -55,6 +56,7 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'full' | 'open'>('all');
+  const [selectedDivision, setSelectedDivision] = useState<string | null>(null);
   
   // ✅ NEW: Inline player management state
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -162,6 +164,31 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
   const approvedTeams = teams.filter(team => !team.approval_status || team.approval_status === 'approved');
   const rejectedTeams = teams.filter(team => team.approval_status === 'rejected'); // Track but don't display
 
+  // Calculate division statistics
+  const divisionStats = useMemo(() => {
+    if (!tournament?.has_divisions || !tournament.division_names) {
+      return null;
+    }
+    
+    const stats: Record<string, { count: number; teams: Team[] }> = {};
+    tournament.division_names.forEach(divName => {
+      stats[divName] = { count: 0, teams: [] };
+    });
+    stats['unassigned'] = { count: 0, teams: [] };
+    
+    approvedTeams.forEach(team => {
+      if (team.division && stats[team.division]) {
+        stats[team.division].count++;
+        stats[team.division].teams.push(team);
+      } else {
+        stats['unassigned'].count++;
+        stats['unassigned'].teams.push(team);
+      }
+    });
+    
+    return stats;
+  }, [tournament, approvedTeams]);
+
   const filteredTeams = approvedTeams.filter(team => {
     const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          team.players.some(player => player.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -171,6 +198,15 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
       matchesFilter = team.players.length >= 12;
     } else if (filterStatus === 'open') {
       matchesFilter = team.players.length < 12;
+    }
+    
+    // Division filter
+    if (selectedDivision) {
+      if (selectedDivision === 'unassigned') {
+        matchesFilter = matchesFilter && (!team.division || team.division === '');
+      } else {
+        matchesFilter = matchesFilter && team.division === selectedDivision;
+      }
     }
     
     return matchesSearch && matchesFilter;
@@ -302,6 +338,21 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
               <option value="open">Open for Players</option>
               <option value="full">Full Teams</option>
             </select>
+            {tournament.has_divisions && tournament.division_names && tournament.division_names.length > 0 && (
+              <select
+                value={selectedDivision || 'all'}
+                onChange={(e) => setSelectedDivision(e.target.value === 'all' ? null : e.target.value)}
+                className="px-4 py-2.5 bg-white border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">All Divisions</option>
+                {tournament.division_names.map(div => (
+                  <option key={div} value={div}>Division {div}</option>
+                ))}
+                {divisionStats && divisionStats['unassigned']?.count > 0 && (
+                  <option value="unassigned">Unassigned ({divisionStats['unassigned'].count})</option>
+                )}
+              </select>
+            )}
           </div>
 
           <button
@@ -312,6 +363,85 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
             Create Team
           </button>
         </div>
+
+        {/* Division Overview Section */}
+        {tournament.has_divisions && divisionStats && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="w-5 h-5 text-orange-600" />
+              <h2 className="text-xl font-bold text-gray-900">Division Overview</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {tournament.division_names?.map((divName) => {
+                const stats = divisionStats[divName];
+                return (
+                  <div
+                    key={divName}
+                    onClick={() => setSelectedDivision(selectedDivision === divName ? null : divName)}
+                    className={`bg-white border-2 rounded-xl p-4 cursor-pointer transition-all hover:shadow-lg ${
+                      selectedDivision === divName
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-border hover:border-orange-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-gray-900">Division {divName}</h3>
+                      <Badge variant={stats.count > 0 ? 'default' : 'secondary'} className="text-xs">
+                        {stats.count} {stats.count === 1 ? 'team' : 'teams'}
+                      </Badge>
+                    </div>
+                    {stats.count > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {stats.teams.slice(0, 3).map((team) => (
+                          <div key={team.id} className="text-sm text-muted-foreground truncate">
+                            {team.name}
+                          </div>
+                        ))}
+                        {stats.teams.length > 3 && (
+                          <div className="text-xs text-muted-foreground">
+                            +{stats.teams.length - 3} more
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {stats.count === 0 && (
+                      <p className="text-xs text-muted-foreground mt-2">No teams assigned</p>
+                    )}
+                  </div>
+                );
+              })}
+              {divisionStats['unassigned'] && divisionStats['unassigned'].count > 0 && (
+                <div
+                  onClick={() => setSelectedDivision(selectedDivision === 'unassigned' ? null : 'unassigned')}
+                  className={`bg-white border-2 rounded-xl p-4 cursor-pointer transition-all hover:shadow-lg ${
+                    selectedDivision === 'unassigned'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-orange-200 hover:border-orange-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-orange-900">Unassigned</h3>
+                    <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+                      {divisionStats['unassigned'].count} {divisionStats['unassigned'].count === 1 ? 'team' : 'teams'}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {divisionStats['unassigned'].teams.slice(0, 3).map((team) => (
+                      <div key={team.id} className="text-sm text-muted-foreground truncate">
+                        {team.name}
+                      </div>
+                    ))}
+                    {divisionStats['unassigned'].teams.length > 3 && (
+                      <div className="text-xs text-muted-foreground">
+                        +{divisionStats['unassigned'].teams.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Pending Teams Section */}
         {pendingTeams.length > 0 && (
@@ -624,8 +754,43 @@ function TeamEditModal({ team, userId, onClose, onTeamUpdated }: {
   onTeamUpdated: () => void;
 }) {
   const [teamName, setTeamName] = useState(team.name);
+  const [selectedDivision, setSelectedDivision] = useState<string>(team.division || '');
+  const [tournament, setTournament] = useState<Tournament | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logoRemoved, setLogoRemoved] = useState(false); // Track if logo was explicitly removed
+
+  // Reset removal state when modal opens or team changes
+  useEffect(() => {
+    setLogoRemoved(false);
+  }, [team.id]);
+
+  // Fetch tournament to check if divisions are enabled
+  useEffect(() => {
+    const loadTournament = async () => {
+      try {
+        const t = await TournamentService.getTournament(team.tournamentId);
+        setTournament(t);
+      } catch (error) {
+        console.error('Failed to load tournament:', error);
+      }
+    };
+    loadTournament();
+  }, [team.tournamentId]);
+
+  // Generate division options
+  const divisionOptions = useMemo(() => {
+    if (!tournament?.has_divisions) return [];
+    
+    if (tournament.division_names && tournament.division_names.length > 0) {
+      return tournament.division_names;
+    }
+    
+    const count = tournament.division_count || 2;
+    return Array.from({ length: count }, (_, i) => 
+      String.fromCharCode(65 + i)
+    );
+  }, [tournament]);
 
   const logoUpload = usePhotoUpload({
     userId: userId,
@@ -634,12 +799,37 @@ function TeamEditModal({ team, userId, onClose, onTeamUpdated }: {
     currentPhotoUrl: team.logo || null,
     onSuccess: (url) => {
       console.log('✅ Team logo updated:', url);
+      setLogoRemoved(false); // Reset removal flag when new logo is uploaded
     },
     onError: (err) => {
       console.error('❌ Logo upload error:', err);
       setError(`Logo upload failed: ${err}`);
     },
   });
+
+  // Custom remove handler that tracks removal intent and cleans up storage
+  const handleLogoRemove = async () => {
+    try {
+      // Clear preview first
+      logoUpload.clearPreview();
+      setLogoRemoved(true);
+      
+      // Delete from storage if there's an existing logo
+      if (team.logo) {
+        try {
+          const { deleteTeamLogo } = await import('@/lib/services/imageUploadService');
+          await deleteTeamLogo(team.logo);
+          console.log('✅ Old team logo deleted from storage');
+        } catch (deleteErr) {
+          // Don't block removal if delete fails - just log it
+          console.warn('⚠️ Failed to delete old logo from storage (continuing with removal):', deleteErr);
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error removing logo:', err);
+      setError('Failed to remove logo. Please try again.');
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -651,11 +841,28 @@ function TeamEditModal({ team, userId, onClose, onTeamUpdated }: {
         return;
       }
 
-      // Update team via service
-      await TeamService.updateTeam(team.id, {
+      // Determine logo value based on removal intent and upload state
+      const updateData: { name: string; logo?: string | null; division?: string } = {
         name: teamName,
-        logo: logoUpload.previewUrl || team.logo
-      });
+      };
+
+      // Handle logo updates
+      if (logoRemoved) {
+        // Logo was explicitly removed - send null to clear it
+        updateData.logo = null;
+      } else if (logoUpload.previewUrl) {
+        // New logo was uploaded - use the new URL
+        updateData.logo = logoUpload.previewUrl;
+      }
+      // If neither removed nor new upload, don't include logo in update (keeps existing)
+
+      // Include division if tournament uses divisions
+      if (tournament?.has_divisions) {
+        updateData.division = selectedDivision || null;
+      }
+
+      // Update team via service
+      await TeamService.updateTeam(team.id, updateData);
 
       onTeamUpdated();
     } catch (err) {
@@ -671,6 +878,9 @@ function TeamEditModal({ team, userId, onClose, onTeamUpdated }: {
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Team</DialogTitle>
+          <DialogDescription>
+            Update team information and division assignment
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
@@ -679,12 +889,13 @@ function TeamEditModal({ team, userId, onClose, onTeamUpdated }: {
             <Label>Team Logo</Label>
             <PhotoUploadField
               label="Upload Team Logo"
-              previewUrl={logoUpload.previewUrl || team.logo}
+              value={logoRemoved ? null : (team.logo || null)} // Existing logo (null if removed)
+              previewUrl={logoUpload.previewUrl} // New upload preview (separate from existing)
               uploading={logoUpload.uploading}
               progress={logoUpload.progress}
               error={logoUpload.error}
               onFileSelect={logoUpload.handleFileSelect}
-              onRemove={logoUpload.clearPreview}
+              onRemove={handleLogoRemove} // Custom handler with cleanup
               onClearError={logoUpload.clearError}
             />
           </div>
@@ -697,8 +908,35 @@ function TeamEditModal({ team, userId, onClose, onTeamUpdated }: {
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
               placeholder="e.g., Warriors, Lakers"
+              className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
             />
           </div>
+
+          {/* Division Selector (only if tournament uses divisions) */}
+          {tournament?.has_divisions && divisionOptions.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="team-division">Division</Label>
+              <Select 
+                value={selectedDivision ? selectedDivision : 'none'} 
+                onValueChange={(value) => setSelectedDivision(value === 'none' ? '' : value)}
+              >
+                <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
+                  <SelectValue placeholder="Select division (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Division</SelectItem>
+                  {divisionOptions.map((div) => (
+                    <SelectItem key={div} value={div}>
+                      Division {div}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Select which division this team belongs to (optional)
+              </p>
+            </div>
+          )}
 
           {/* Error */}
           {error && (

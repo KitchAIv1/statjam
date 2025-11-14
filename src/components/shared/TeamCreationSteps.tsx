@@ -14,10 +14,12 @@ import React from 'react';
 import { Users, UserPlus, Check } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IPlayerManagementService, GenericPlayer } from '@/lib/types/playerManagement';
 import { PlayerSelectionList } from './PlayerSelectionList';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
 import { UsePhotoUploadReturn } from '@/hooks/usePhotoUpload';
+import { Tournament } from '@/lib/types/tournament';
 
 type Step = 'info' | 'players' | 'confirm';
 
@@ -67,6 +69,9 @@ interface TeamInfoStepProps {
   onTeamNameChange: (value: string) => void;
   onCoachNameChange: (value: string) => void;
   logoUpload?: UsePhotoUploadReturn; // Optional logo upload hook
+  tournament?: Tournament | null; // Tournament data to check for divisions
+  selectedDivision?: string;
+  onDivisionChange?: (value: string) => void;
 }
 
 export function TeamInfoStep({
@@ -74,8 +79,27 @@ export function TeamInfoStep({
   coachName,
   onTeamNameChange,
   onCoachNameChange,
-  logoUpload
+  logoUpload,
+  tournament,
+  selectedDivision,
+  onDivisionChange
 }: TeamInfoStepProps) {
+  // Generate division options based on tournament settings
+  const divisionOptions = React.useMemo(() => {
+    if (!tournament?.has_divisions) return [];
+    
+    // Use custom names if available, otherwise generate A, B, C, etc.
+    if (tournament.division_names && tournament.division_names.length > 0) {
+      return tournament.division_names;
+    }
+    
+    // Generate default names (A, B, C, etc.)
+    const count = tournament.division_count || 2;
+    return Array.from({ length: count }, (_, i) => 
+      String.fromCharCode(65 + i)
+    );
+  }, [tournament]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-4">
@@ -111,6 +135,28 @@ export function TeamInfoStep({
           required
         />
       </div>
+
+      {/* Division Selector (only if tournament uses divisions) */}
+      {tournament?.has_divisions && divisionOptions.length > 0 && onDivisionChange && (
+        <div className="space-y-2">
+          <Label htmlFor="team-division">Division *</Label>
+          <Select value={selectedDivision || ''} onValueChange={onDivisionChange}>
+            <SelectTrigger id="team-division">
+              <SelectValue placeholder="Select division" />
+            </SelectTrigger>
+            <SelectContent>
+              {divisionOptions.map((div) => (
+                <SelectItem key={div} value={div}>
+                  Division {div}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Select which division this team belongs to
+          </p>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="coach-name">Coach Name (Optional)</Label>
