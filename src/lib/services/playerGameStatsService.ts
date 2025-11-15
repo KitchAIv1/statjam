@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase';
+import { ensureSupabaseSession } from '@/lib/supabase';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 
 // Types for game stats aggregation
@@ -73,6 +74,12 @@ export class PlayerGameStatsService {
    */
   static async getPlayerGameStats(userId: string): Promise<GameStatsSummary[]> {
     try {
+      // ✅ CRITICAL: Ensure authenticated session before querying
+      // This ensures RLS policies work correctly in both local dev and production
+      if (typeof window !== 'undefined') {
+        await ensureSupabaseSession();
+      }
+
       // ⚡ Check cache first (5 min TTL)
       const cacheKey = CacheKeys.playerGameStats(userId);
       const cached = cache.get<GameStatsSummary[]>(cacheKey);
@@ -100,13 +107,20 @@ export class PlayerGameStatsService {
 
       // Step 2: Get unique game IDs
       const gameIds = [...new Set(rawStats.map(s => s.game_id))];
+      
+      console.log('🔍 PlayerGameStatsService: Found', gameIds.length, 'unique game IDs from stats');
+      console.log('🔍 PlayerGameStatsService: Game IDs:', gameIds);
 
       // ⚡ OPTIMIZATION: Parallel queries (Step 3 & 4 run simultaneously)
+      // ✅ CRITICAL: Ensure authenticated session for RLS to work correctly
+      // RLS will filter games based on player_has_game_stats_official() function
+      // This respects is_official_team flags (practice games filtered, official games shown)
       const [gamesResult, teamPlayersResult] = await Promise.all([
         // Step 3: Fetch game info for all games
-        // ✅ PLAYER DASHBOARD: Include ALL games (completed + in_progress) for personal stats
-        // Note: Players should see cumulative stats from all games they've participated in,
-        // including coach-tracked games that may remain 'in_progress'
+        // ✅ RLS POLICY: games_player_view_official_only filters based on:
+        // - Tournament games (always shown)
+        // - Coach games from official teams only (practice teams filtered)
+        // This ensures consistency between local dev and production
         supabase
           .from('games')
           .select(`
@@ -123,7 +137,8 @@ export class PlayerGameStatsService {
             team_b:teams!team_b_id (id, name)
           `)
           .in('id', gameIds),
-          // ✅ Removed status filter - players should see stats from ALL their games
+          // ✅ RLS will automatically filter based on player_has_game_stats_official()
+          // Local dev MUST respect RLS - if showing all games, check auth session
         
         // Step 4: Get player's team assignments to determine home/away
         supabase
@@ -136,6 +151,16 @@ export class PlayerGameStatsService {
       const { data: teamPlayers, error: teamError } = teamPlayersResult;
 
       console.log('🔍 PlayerGameStatsService: Fetched', games?.length || 0, 'games from database');
+      console.log('🔍 PlayerGameStatsService: Requested', gameIds.length, 'games, received', games?.length || 0);
+      
+      // ✅ DEBUG: Log missing game IDs (RLS might be filtering them)
+      if (games && games.length < gameIds.length) {
+        const fetchedGameIds = new Set(games.map(g => g.id));
+        const missingGameIds = gameIds.filter(id => !fetchedGameIds.has(id));
+        console.warn('⚠️ PlayerGameStatsService: RLS may be filtering games. Missing game IDs:', missingGameIds);
+        console.warn('⚠️ This could be due to RLS policies restricting game access in production');
+      }
+      
       console.log('🔍 PlayerGameStatsService: Games data:', games);
 
       if (gamesError) {
