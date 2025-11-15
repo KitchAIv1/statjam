@@ -26,6 +26,10 @@ interface MobileStatGridV3Props {
   gameId?: string;
   teamAPlayers?: Player[];
   teamBPlayers?: Player[];
+  teamAId?: string;
+  teamBId?: string;
+  teamAName?: string;
+  teamBName?: string;
 }
 
 export function MobileStatGridV3({
@@ -41,7 +45,11 @@ export function MobileStatGridV3({
   // ✅ Stat Edit Modal
   gameId,
   teamAPlayers = [],
-  teamBPlayers = []
+  teamBPlayers = [],
+  teamAId,
+  teamBId,
+  teamAName = 'Team A',
+  teamBName = 'Team B'
 }: MobileStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
@@ -305,7 +313,7 @@ export function MobileStatGridV3({
       </div>
 
       {/* Last Action - ✅ OPTION A: Show for ALL stats regardless of selected player */}
-      {lastAction && (
+      {lastAction ? (
         <div 
           className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 mt-4"
           style={{ 
@@ -376,6 +384,25 @@ export function MobileStatGridV3({
             </button>
           </div>
         </div>
+      ) : (
+        <div 
+          className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 mt-4"
+          style={{ 
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          <div className="text-gray-400 text-xs">
+            No recent actions to display
+          </div>
+          {/* ✅ Edit button always visible, even when no last action */}
+          <button
+            onClick={() => setShowStatEditModal(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 hover:scale-110 active:scale-95 transition-all duration-200"
+            title="Edit Game Stats"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+        </div>
       )}
 
       {/* Stat Edit Modal */}
@@ -386,6 +413,10 @@ export function MobileStatGridV3({
           gameId={gameId}
           teamAPlayers={teamAPlayers}
           teamBPlayers={teamBPlayers}
+          teamAId={teamAId}
+          teamBId={teamBId}
+          teamAName={teamAName}
+          teamBName={teamBName}
         />
       )}
     </div>

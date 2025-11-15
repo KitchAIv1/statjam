@@ -121,9 +121,11 @@ export function GameStatsTable({ userId }: GameStatsTableProps) {
                         ? 'bg-green-500/20 text-green-600 dark:text-green-400' 
                         : game.result === 'L'
                         ? 'bg-red-500/20 text-red-600 dark:text-red-400'
+                        : game.result === 'LIVE'
+                        ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 animate-pulse'
                         : 'bg-gray-500/20 text-gray-600 dark:text-gray-400'
                     }`}>
-                      {game.result} {game.finalScore}
+                      {game.result === 'LIVE' ? '🔴 LIVE' : `${game.result} ${game.finalScore}`}
                     </span>
                   </td>
                   <td className="py-3 px-2 text-center text-card-foreground">{game.minutesPlayed}</td>
@@ -182,11 +184,15 @@ export function GameStatsTable({ userId }: GameStatsTableProps) {
                       ? 'bg-green-500/20 text-green-600 dark:text-green-400' 
                       : game.result === 'L'
                       ? 'bg-red-500/20 text-red-600 dark:text-red-400'
+                      : game.result === 'LIVE'
+                      ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 animate-pulse'
                       : 'bg-gray-500/20 text-gray-600 dark:text-gray-400'
                   }`}>
-                    {game.result}
+                    {game.result === 'LIVE' ? '🔴 LIVE' : game.result}
                   </span>
-                  <div className="text-xs text-muted-foreground mt-1">{game.finalScore}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {game.result === 'LIVE' ? 'In Progress' : game.finalScore}
+                  </div>
                 </div>
               </div>
 
@@ -264,6 +270,11 @@ export function GameStatsTable({ userId }: GameStatsTableProps) {
               <TrendingUp className="w-4 h-4" />
               <span>
                 Season Record: {gameStats.filter(g => g.result === 'W').length}-{gameStats.filter(g => g.result === 'L').length}
+                {gameStats.filter(g => g.result === 'LIVE').length > 0 && (
+                  <span className="ml-2 text-orange-600 dark:text-orange-400">
+                    ({gameStats.filter(g => g.result === 'LIVE').length} LIVE)
+                  </span>
+                )}
               </span>
             </div>
           </div>

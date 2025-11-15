@@ -149,9 +149,11 @@ export class PlayerDashboardService {
     const cacheKey = CacheKeys.user(userId);
     const cachedIdentity = cache.get<PlayerIdentity>(cacheKey);
     if (cachedIdentity) {
+      console.log('⚡ PlayerDashboardService.getIdentity: Using cached data for', userId.substring(0, 8));
       return cachedIdentity;
     }
     
+    console.log('🔍 PlayerDashboardService.getIdentity: Fetching from database for', userId.substring(0, 8));
     const { data, error } = await supabase
       .from('users')
       .select('id, name, jersey_number, position, age, height, weight, country, profile_photo_url, pose_photo_url')
@@ -181,9 +183,21 @@ export class PlayerDashboardService {
     
     const identity = toIdentity(data);
     
+    console.log('📥 PlayerDashboardService.getIdentity: Database data received:', {
+      name: data?.name,
+      jersey_number: data?.jersey_number,
+      position: data?.position,
+      age: data?.age,
+      height: data?.height,
+      weight: data?.weight,
+      country: data?.country,
+    });
+    console.log('📤 PlayerDashboardService.getIdentity: Transformed identity:', JSON.stringify(identity, null, 2));
+    
     // Cache the identity data
     if (identity) {
       cache.set(cacheKey, identity, CacheTTL.USER_DATA);
+      console.log('💾 PlayerDashboardService.getIdentity: Cached with key', cacheKey, 'TTL:', CacheTTL.USER_DATA, 'minutes');
     }
     
     return identity;
@@ -194,6 +208,8 @@ export class PlayerDashboardService {
       return null;
     }
     
+    console.log('🔍 PlayerDashboardService.getSeasonAverages: Fetching for', userId.substring(0, 8));
+    
     // PHASE 2: Try backend-aggregated table first (fast path)
     // Note: Suppressing 406 errors as the table is expected to be empty (using frontend calculation)
     const { data, error } = await supabase
@@ -203,11 +219,15 @@ export class PlayerDashboardService {
       .maybeSingle(); // Use maybeSingle() to avoid 406 errors when table is empty
     
     if (data && !error) {
+      console.log('📥 PlayerDashboardService.getSeasonAverages: Using backend table data');
       return toSeasonAverages(data);
     }
     
+    console.log('📥 PlayerDashboardService.getSeasonAverages: Backend table empty, calculating from game_stats');
     // PHASE 1: Fallback to frontend calculation from game_stats (primary method for now)
-    return await this.calculateSeasonAveragesFromGameStats(userId);
+    const calculated = await this.calculateSeasonAveragesFromGameStats(userId);
+    console.log('📤 PlayerDashboardService.getSeasonAverages: Calculated result:', JSON.stringify(calculated, null, 2));
+    return calculated;
   }
 
   /**

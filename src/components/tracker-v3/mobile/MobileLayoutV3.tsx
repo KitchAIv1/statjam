@@ -279,6 +279,10 @@ export function MobileLayoutV3({
           gameId={gameData.id}
           teamAPlayers={teamAPlayers}
           teamBPlayers={teamBPlayers}
+          teamAId={gameData.team_a_id}
+          teamBId={isCoachMode ? 'opponent-team' : gameData.team_b_id}
+          teamAName={gameData.team_a?.name || 'Team A'}
+          teamBName={isCoachMode ? (opponentName || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
         />
 
         {/* End Game Button / Status - Clean Design */}

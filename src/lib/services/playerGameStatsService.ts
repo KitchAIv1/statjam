@@ -10,8 +10,9 @@ export interface GameStatsSummary {
   opponentId: string;
   tournamentName: string;
   isHome: boolean;
-  result: 'W' | 'L' | 'N/A';
-  finalScore: string; // "85-78"
+  result: 'W' | 'L' | 'N/A' | 'LIVE';
+  finalScore: string; // "85-78" or "LIVE" for ongoing games
+  gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   minutesPlayed: number;
   points: number;
   rebounds: number;
@@ -47,6 +48,7 @@ interface GameInfo {
   home_score: number;
   away_score: number;
   tournament_id: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   tournaments: {
     name: string;
   };
@@ -174,10 +176,28 @@ export class PlayerGameStatsService {
         const playerScore = isTeamA ? gameInfo.home_score : gameInfo.away_score;
         const opponentScore = isTeamA ? gameInfo.away_score : gameInfo.home_score;
 
-        // Calculate result
-        let result: 'W' | 'L' | 'N/A' = 'N/A';
-        if (playerScore > opponentScore) result = 'W';
-        else if (playerScore < opponentScore) result = 'L';
+        // ✅ Calculate result based on game status
+        let result: 'W' | 'L' | 'N/A' | 'LIVE' = 'N/A';
+        let finalScore: string = `${playerScore}-${opponentScore}`;
+        
+        if (gameInfo.status === 'in_progress') {
+          // Game is ongoing - show LIVE
+          result = 'LIVE';
+          finalScore = 'LIVE';
+        } else if (gameInfo.status === 'completed') {
+          // Game is finished - calculate W/L
+          if (playerScore > opponentScore) result = 'W';
+          else if (playerScore < opponentScore) result = 'L';
+          else result = 'N/A'; // Tie
+        } else if (gameInfo.status === 'scheduled') {
+          // Game hasn't started - show N/A
+          result = 'N/A';
+          finalScore = '-';
+        } else {
+          // Cancelled or other status
+          result = 'N/A';
+          finalScore = '-';
+        }
 
         // Aggregate stats
         const stats = this.aggregateGameStats(gameStats);
@@ -190,7 +210,8 @@ export class PlayerGameStatsService {
           tournamentName: gameInfo.tournaments?.name || 'Unknown Tournament',
           isHome,
           result,
-          finalScore: `${playerScore}-${opponentScore}`,
+          finalScore,
+          gameStatus: gameInfo.status,
           ...stats
         } as GameStatsSummary;
       }).filter(Boolean) as GameStatsSummary[];

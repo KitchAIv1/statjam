@@ -7,6 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
 import { PlayerDashboardService } from '@/lib/services/playerDashboardService';
 import { getCountryName } from '@/data/countries';
+import { PlayerDataDebug } from '@/lib/utils/playerDataDebug';
 import { X, ExternalLink } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -88,6 +89,22 @@ export function PlayerProfileModal({ isOpen, onClose, playerId }: PlayerProfileM
         setIdentity(identityData);
         setSeasonAverages(seasonData);
         setCareerHighs(careerData);
+
+        // ✅ DEBUG: Log modal data for comparison
+        if (identityData) {
+          console.group('📊 Player Profile Modal - RAW DATA');
+          console.log('Player ID:', playerId);
+          console.log('Identity:', JSON.stringify(identityData, null, 2));
+          console.log('Season Averages:', JSON.stringify(seasonData, null, 2));
+          console.log('Career Highs:', JSON.stringify(careerData, null, 2));
+          console.groupEnd();
+
+          PlayerDataDebug.logSnapshot('modal', playerId, {
+            identity: identityData,
+            seasonAverages: seasonData,
+            careerHighs: careerData,
+          });
+        }
       } catch (error) {
         console.error('Failed to load player profile:', error);
       } finally {
@@ -172,6 +189,39 @@ export function PlayerProfileModal({ isOpen, onClose, playerId }: PlayerProfileM
               </div>
             ) : identity ? (
               <>
+                {/* ✅ DEBUG: Log what modal is displaying */}
+                {(() => {
+                  const displayedName = identity.name || 'Player Name';
+                  const displayedJersey = identity.jerseyNumber;
+                  const displayedPosition = identity.position;
+                  const displayedHeight = identity.height ? formatHeight(identity.height) : '--';
+                  const displayedWeight = identity.weight ? formatWeight(identity.weight) : '--';
+                  const displayedAge = identity.age;
+                  const displayedLocation = identity.location ? getCountryName(identity.location) : undefined;
+                  
+                  console.group('📊 Player Profile Modal - DISPLAYED VALUES');
+                  console.log('Name:', displayedName);
+                  console.log('Jersey:', displayedJersey);
+                  console.log('Position:', displayedPosition);
+                  console.log('Height:', displayedHeight);
+                  console.log('Weight:', displayedWeight);
+                  console.log('Age:', displayedAge);
+                  console.log('Location:', displayedLocation);
+                  console.log('Season PTS:', seasonAverages?.pointsPerGame);
+                  console.log('Season REB:', seasonAverages?.reboundsPerGame);
+                  console.log('Season AST:', seasonAverages?.assistsPerGame);
+                  console.log('Season FG%:', seasonAverages?.fieldGoalPct);
+                  console.log('Season 3PT%:', seasonAverages?.threePointPct);
+                  console.log('Season FT%:', seasonAverages?.freeThrowPct);
+                  console.log('Season MPG:', seasonAverages?.minutesPerGame);
+                  console.log('Career PTS:', careerHighs?.points);
+                  console.log('Career REB:', careerHighs?.rebounds);
+                  console.log('Career AST:', careerHighs?.assists);
+                  console.groupEnd();
+                  
+                  return null;
+                })()}
+
                 {/* Player Name & Basic Info */}
                 <div className="space-y-2">
                   <h1 className="text-3xl lg:text-5xl font-bold tracking-tight drop-shadow-lg">

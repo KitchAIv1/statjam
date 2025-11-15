@@ -34,11 +34,19 @@ export function usePlayerDashboardData(user: { id: string } | null) {
       const cachedDashboard = cache.get<PlayerDashboardData>(dashboardCacheKey);
       
       if (cachedDashboard) {
+        console.log('⚡ usePlayerDashboardData: Using cached dashboard data for', userId.substring(0, 8));
+        console.log('📦 Cached data:', JSON.stringify({
+          identity: cachedDashboard.identity,
+          season: cachedDashboard.season,
+          careerHighs: cachedDashboard.careerHighs,
+        }, null, 2));
         // Cache hit: instant load, no loading state
         setData(cachedDashboard);
         setLoading(false);
         return;
       }
+      
+      console.log('🔍 usePlayerDashboardData: Cache miss, fetching fresh data for', userId.substring(0, 8));
       
       // Cache miss: show loading state
       setLoading(true);

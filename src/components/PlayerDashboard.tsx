@@ -18,9 +18,11 @@ import { NotificationBell } from "./NotificationBell";
 import { GameStatsTable } from "./GameStatsTable";
 import { PersonalStatTracker } from "./player-dashboard/PersonalStatTracker";
 import { usePlayerDashboardData } from "@/hooks/usePlayerDashboardData";
+import { usePlayerTournaments } from "@/hooks/usePlayerTournaments";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { PlayerDataDebug } from "@/lib/utils/playerDataDebug";
 import { supabase } from "@/lib/supabase";
-import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3 } from "lucide-react";
+import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3, Clock, MapPin } from "lucide-react";
 import { Skeleton, SkeletonStat } from "@/components/ui/skeleton";
 import { getCountryName } from "@/data/countries";
 import { SocialFooter } from "./shared/SocialFooter";
@@ -54,6 +56,7 @@ export function PlayerDashboard() {
   const router = useRouter();
   const { user } = useAuthContext(); // ✅ Use centralized auth
   const { data, loading, refetch } = usePlayerDashboardData(user);
+  const { tournaments, schedules, loading: tournamentsLoading } = usePlayerTournaments(user?.id || '');
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [currentPlayerData, setCurrentPlayerData] = useState(defaultPlayerData);
@@ -209,6 +212,45 @@ export function PlayerDashboard() {
       });
     }
   }, [data.identity, data.careerHighs, data.seasonAverages]);
+
+  // ✅ DEBUG: Log dashboard data for comparison
+  useEffect(() => {
+    if (user?.id && data.identity) {
+      // Log what's actually being displayed (after fallback logic)
+      console.group('📊 Player Dashboard - DISPLAYED VALUES');
+      console.log('Name:', identityName);
+      console.log('Jersey:', jerseyNumber);
+      console.log('Position:', position);
+      console.log('Height:', height);
+      console.log('Weight:', weight);
+      console.log('Age:', age);
+      console.log('Location:', location ? getCountryName(location) : location);
+      console.log('Season PTS:', seasonPts);
+      console.log('Season REB:', seasonReb);
+      console.log('Season AST:', seasonAst);
+      console.log('Season FG%:', seasonFg);
+      console.log('Season 3PT%:', season3Pt);
+      console.log('Season FT%:', seasonFt);
+      console.log('Season MPG:', seasonMin);
+      console.log('Career PTS:', careerPts);
+      console.log('Career REB:', careerReb);
+      console.log('Career AST:', careerAst);
+      console.log('---');
+      console.log('Raw data.identity:', JSON.stringify(data.identity, null, 2));
+      console.log('Raw data.season:', JSON.stringify(data.season, null, 2));
+      console.log('Raw data.careerHighs:', JSON.stringify(data.careerHighs, null, 2));
+      console.log('currentPlayerData:', JSON.stringify(currentPlayerData, null, 2));
+      console.groupEnd();
+
+      PlayerDataDebug.logSnapshot('dashboard', user.id, {
+        identity: data.identity,
+        seasonAverages: data.season,
+        careerHighs: data.careerHighs,
+      });
+    }
+    // ✅ FIX: Only depend on raw data, not computed display values (prevents infinite loop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, data.identity, data.season, data.careerHighs]);
 
   // Helper function to check if data is meaningful (not null/empty/default)
   const hasValidData = (value: any, defaultCheck?: any) => {
@@ -656,26 +698,157 @@ export function PlayerDashboard() {
                 {/* My Tournaments */}
                 <Card className="glass-card">
                   <CardHeader>
-                    <CardTitle className="text-card-foreground flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-primary" />
-                      My Tournaments
-                      <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800">Coming Soon</Badge>
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-card-foreground flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-primary" />
+                        My Tournaments
+                        {tournaments.length > 0 && (
+                          <Badge variant="secondary" className="ml-2">
+                            {tournaments.length}
+                          </Badge>
+                        )}
+                      </CardTitle>
+                      {(tournaments.length > 0 || schedules.length > 0) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push('/dashboard/player/tournaments')}
+                          className="text-xs text-primary hover:text-primary/80"
+                        >
+                          View All
+                        </Button>
+                      )}
+                    </div>
                   </CardHeader>
-                  <CardContent className="text-center py-12">
-                    <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">Coming Soon</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Tournament registration and management features are coming soon.
-                    </p>
-                    <Button 
-                      variant="outline" 
-                      disabled
-                      className="cursor-not-allowed opacity-60"
-                    >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      View Tournaments
-                    </Button>
+                  <CardContent>
+                    {tournamentsLoading ? (
+                      <div className="text-center py-8">
+                        <div className="text-muted-foreground">Loading tournaments...</div>
+                      </div>
+                    ) : tournaments.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                        <p className="text-sm text-muted-foreground">
+                          You're not part of any tournaments yet.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {/* Tournament List */}
+                        {tournaments.map((tournament) => (
+                          <div
+                            key={tournament.id}
+                            className="p-4 rounded-lg border border-border/50 bg-card/50 hover:bg-accent/30 transition-colors cursor-pointer"
+                            onClick={() => router.push(`/tournament/${tournament.id}`)}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-card-foreground mb-1">
+                                  {tournament.name}
+                                </h4>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  {tournament.venue && (
+                                    <div className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3" />
+                                      {tournament.venue}
+                                    </div>
+                                  )}
+                                  {tournament.start_date && (
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {new Date(tournament.start_date).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge
+                                variant={
+                                  tournament.status === 'active'
+                                    ? 'default'
+                                    : tournament.status === 'completed'
+                                    ? 'secondary'
+                                    : 'outline'
+                                }
+                                className="text-xs"
+                              >
+                                {tournament.status}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-2">
+                              Team: {tournament.teamName}
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Upcoming Games */}
+                        {schedules.length > 0 && (
+                          <div className="mt-6 pt-4 border-t border-border/50">
+                            <h5 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                              <Clock className="w-4 h-4" />
+                              Upcoming Games
+                            </h5>
+                            <div className="space-y-2">
+                              {schedules.slice(0, 3).map((game) => (
+                                <div
+                                  key={game.id}
+                                  className="p-3 rounded-lg border border-border/30 bg-card/30 hover:bg-accent/20 transition-colors cursor-pointer"
+                                  onClick={() => router.push(`/game-viewer/${game.id}`)}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1">
+                                      <div className="text-sm font-medium text-card-foreground">
+                                        {game.isHome ? 'vs' : '@'} {game.opponent}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                        {game.start_time && (
+                                          <span>
+                                            {new Date(game.start_time).toLocaleDateString('en-US', {
+                                              month: 'short',
+                                              day: 'numeric',
+                                            })}{' '}
+                                            {new Date(game.start_time).toLocaleTimeString('en-US', {
+                                              hour: 'numeric',
+                                              minute: '2-digit',
+                                            })}
+                                          </span>
+                                        )}
+                                        {game.venue && (
+                                          <span className="flex items-center gap-1">
+                                            <MapPin className="w-3 h-3" />
+                                            {game.venue}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Badge
+                                      variant={game.status === 'in_progress' ? 'default' : 'outline'}
+                                      className={`text-xs ${
+                                        game.status === 'in_progress' ? 'animate-pulse' : ''
+                                      }`}
+                                    >
+                                      {game.status === 'in_progress' ? '🔴 LIVE' : game.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                              {schedules.length > 3 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full mt-2"
+                                  onClick={() => router.push('/dashboard/player/tournaments')}
+                                >
+                                  View All ({schedules.length} games)
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 {/* Hidden original tournament content */}

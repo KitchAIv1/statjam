@@ -293,10 +293,18 @@ export function DesktopStatGridV3({
             </div>
           </div>
         ) : (
-          <div className="text-center py-4">
+          <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50">
             <div className="text-gray-400 text-sm">
               No recent actions to display
             </div>
+            {/* ✅ Edit button always visible, even when no last action */}
+            <button
+              onClick={() => setShowStatEditModal(true)}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 hover:scale-110 active:scale-95 transition-all duration-200"
+              title="Edit Game Stats"
+            >
+              <Edit className="w-5 h-5" />
+            </button>
           </div>
         )}
       </div>
@@ -487,6 +495,10 @@ export function DesktopStatGridV3({
           gameId={gameId}
           teamAPlayers={teamAPlayers}
           teamBPlayers={teamBPlayers}
+          teamAId={teamAId}
+          teamBId={teamBId}
+          teamAName={teamAName}
+          teamBName={teamBName}
         />
       )}
     </div>

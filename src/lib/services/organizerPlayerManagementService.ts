@@ -64,61 +64,34 @@ export class OrganizerPlayerManagementService implements IPlayerManagementServic
       // Determine if there are more results
       const hasMore = count !== null ? (offset + limit < count) : playerUsers.length === limit;
       
-      // ✅ FIX: Get ALL players already assigned to teams in this tournament
+      // ✅ FIX: Only exclude players already on the SPECIFIC team being managed
+      // NOT all teams in the tournament (allows players on multiple teams)
       let assignedPlayerIds: Set<string> = new Set();
-      let tournamentId: string | null = null;
       
-      // Determine tournament ID from either direct tournament_id or team_id
-      if (request.tournament_id) {
-        // Team creation flow: tournament_id provided directly
-        tournamentId = request.tournament_id;
-      } else if (request.team_id && request.team_id !== 'temp') {
-        // Team management flow: query tournament from team_id
+      // Only check if we have a real team_id (not 'temp' for team creation)
+      if (request.team_id && request.team_id !== 'temp') {
         const isValidTeamId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.team_id);
         
         if (isValidTeamId) {
           try {
-            const { data: teamData } = await supabase
-              .from('teams')
-              .select('tournament_id')
-              .eq('id', request.team_id)
-              .single();
-            
-            tournamentId = teamData?.tournament_id || null;
-          } catch (error) {
-            console.error('❌ Error querying team tournament:', error);
-          }
-        }
-      }
-      
-      // If we have a tournament ID, get all assigned players
-      if (tournamentId) {
-        try {
-          // Get all teams in this tournament
-          const { data: tournamentTeams } = await supabase
-            .from('teams')
-            .select('id')
-            .eq('tournament_id', tournamentId);
-          
-          if (tournamentTeams && tournamentTeams.length > 0) {
-            const teamIds = tournamentTeams.map(t => t.id);
-            
-            // Get all players assigned to ANY team in this tournament
+            // ✅ FIX: Only get players on THIS specific team (not all teams in tournament)
             const { data: teamPlayers } = await supabase
               .from('team_players')
               .select('player_id')
-              .in('team_id', teamIds)
+              .eq('team_id', request.team_id)
               .not('player_id', 'is', null);
             
             if (teamPlayers) {
               assignedPlayerIds = new Set(teamPlayers.map(tp => tp.player_id));
-              console.log(`✅ Found ${assignedPlayerIds.size} players already assigned to teams in tournament ${tournamentId}`);
+              console.log(`✅ Found ${assignedPlayerIds.size} players already on team ${request.team_id}`);
             }
+          } catch (error) {
+            console.error('❌ Error checking assigned players:', error);
           }
-        } catch (error) {
-          console.error('❌ Error checking assigned players:', error);
         }
       }
+      // ✅ NOTE: For team creation (team_id === 'temp'), show ALL players
+      // They can be added to the new team even if they're on other teams
       
       // Map to GenericPlayer with is_on_team flag
       const players = playerUsers.map((user, index) => ({

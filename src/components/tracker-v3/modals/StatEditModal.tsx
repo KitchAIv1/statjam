@@ -18,10 +18,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Edit, Trash2, Filter } from 'lucide-react';
+import { X, Edit, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatEditService, GameStatRecord } from '@/lib/services/statEditService';
 import { StatEditForm } from './StatEditForm';
+import { StatEditTable } from './StatEditTable';
+import { TeamStatsTabLight } from './TeamStatsTabLight';
+import { cache, CacheKeys } from '@/lib/utils/cache';
 
 interface Player {
   id: string;
@@ -34,6 +38,10 @@ interface StatEditModalProps {
   gameId: string;
   teamAPlayers: Player[];
   teamBPlayers: Player[];
+  teamAId?: string;
+  teamBId?: string;
+  teamAName?: string;
+  teamBName?: string;
 }
 
 export function StatEditModal({
@@ -41,7 +49,11 @@ export function StatEditModal({
   onClose,
   gameId,
   teamAPlayers,
-  teamBPlayers
+  teamBPlayers,
+  teamAId,
+  teamBId,
+  teamAName = 'Team A',
+  teamBName = 'Team B'
 }: StatEditModalProps) {
   const [gameStats, setGameStats] = useState<GameStatRecord[]>([]);
   const [filteredStats, setFilteredStats] = useState<GameStatRecord[]>([]);
@@ -89,6 +101,14 @@ export function StatEditModal({
       await StatEditService.deleteStat(statId);
       setGameStats(prev => prev.filter(s => s.id !== statId));
       setDeletingStatId(null);
+      
+      // ✅ Invalidate team stats cache for both teams
+      if (teamAId) {
+        cache.delete(CacheKeys.teamStats(gameId, teamAId));
+      }
+      if (teamBId) {
+        cache.delete(CacheKeys.teamStats(gameId, teamBId));
+      }
     } catch (error) {
       console.error('Failed to delete stat:', error);
       alert('Failed to delete stat. Please try again.');
@@ -98,6 +118,14 @@ export function StatEditModal({
   const handleUpdateSuccess = () => {
     fetchStats();
     setEditingStat(null);
+    
+    // ✅ Invalidate team stats cache for both teams after edit
+    if (teamAId) {
+      cache.delete(CacheKeys.teamStats(gameId, teamAId));
+    }
+    if (teamBId) {
+      cache.delete(CacheKeys.teamStats(gameId, teamBId));
+    }
   };
 
   const getPlayerName = (stat: GameStatRecord): string => {
@@ -159,85 +187,93 @@ export function StatEditModal({
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center gap-3">
-            <Filter className="w-4 h-4 text-gray-500" />
-            <select
-              value={filterQuarter}
-              onChange={(e) => setFilterQuarter(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="all">All Quarters</option>
-              <option value="1">Q1</option>
-              <option value="2">Q2</option>
-              <option value="3">Q3</option>
-              <option value="4">Q4</option>
-              <option value="5">OT1</option>
-              <option value="6">OT2</option>
-            </select>
+        {/* Tabs */}
+        <Tabs defaultValue="stats" className="flex flex-col flex-1 min-h-0">
+          <div className="border-b border-gray-200 bg-gray-50 px-4">
+            <TabsList className="bg-transparent h-auto p-0">
+              <TabsTrigger 
+                value="stats" 
+                className="data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:border-b-2 data-[state=active]:border-purple-500 rounded-none border-b-2 border-transparent px-4 py-3"
+              >
+                Stats
+              </TabsTrigger>
+              {teamAId && (
+                <TabsTrigger 
+                  value="teamA" 
+                  className="data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:border-b-2 data-[state=active]:border-purple-500 rounded-none border-b-2 border-transparent px-4 py-3"
+                >
+                  {teamAName}
+                </TabsTrigger>
+              )}
+              {teamBId && (
+                <TabsTrigger 
+                  value="teamB" 
+                  className="data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:border-b-2 data-[state=active]:border-purple-500 rounded-none border-b-2 border-transparent px-4 py-3"
+                >
+                  {teamBName}
+                </TabsTrigger>
+              )}
+            </TabsList>
           </div>
-        </div>
 
-        {/* Table */}
-        <div className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="text-gray-500">Loading stats...</div>
+          {/* Stats Tab */}
+          <TabsContent value="stats" className="flex-1 overflow-y-auto mt-0">
+            {/* Filters */}
+            <div className="p-4 border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <select
+                  value={filterQuarter}
+                  onChange={(e) => setFilterQuarter(e.target.value)}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="all">All Quarters</option>
+                  <option value="1">Q1</option>
+                  <option value="2">Q2</option>
+                  <option value="3">Q3</option>
+                  <option value="4">Q4</option>
+                  <option value="5">OT1</option>
+                  <option value="6">OT2</option>
+                </select>
+              </div>
             </div>
-          ) : filteredStats.length === 0 ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="text-gray-500">No stats recorded yet</div>
+
+            {/* Table */}
+            <div className="flex-1 overflow-y-auto">
+              <StatEditTable
+                filteredStats={filteredStats}
+                loading={loading}
+                allPlayers={allPlayers}
+                onEdit={setEditingStat}
+                onDelete={setDeletingStatId}
+                getPlayerName={getPlayerName}
+                formatStatDisplay={formatStatDisplay}
+              />
             </div>
-          ) : (
-            <table className="w-full">
-              <thead className="bg-gray-100 border-b border-gray-200 sticky top-0">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Q</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Player</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Action</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Edit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredStats.map((stat, index) => (
-                  <tr 
-                    key={stat.id}
-                    className={`border-b border-gray-100 hover:bg-purple-50 transition-colors ${
-                      index === 0 ? 'bg-orange-50' : ''
-                    }`}
-                  >
-                    <td className="px-4 py-3 text-sm text-gray-900 font-mono">
-                      {String(stat.game_time_minutes).padStart(2, '0')}:{String(stat.game_time_seconds).padStart(2, '0')}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 font-semibold">{stat.quarter}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">{getPlayerName(stat)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{formatStatDisplay(stat)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setEditingStat(stat)}
-                          className="p-1.5 rounded hover:bg-purple-100 text-purple-600 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingStatId(stat.id)}
-                          className="p-1.5 rounded hover:bg-red-100 text-red-600 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          </TabsContent>
+
+          {/* Team A Tab */}
+          {teamAId && (
+            <TabsContent value="teamA" className="flex-1 overflow-y-auto mt-0">
+              <TeamStatsTabLight
+                gameId={gameId}
+                teamId={teamAId}
+                teamName={teamAName}
+              />
+            </TabsContent>
           )}
-        </div>
+
+          {/* Team B Tab */}
+          {teamBId && (
+            <TabsContent value="teamB" className="flex-1 overflow-y-auto mt-0">
+              <TeamStatsTabLight
+                gameId={gameId}
+                teamId={teamBId}
+                teamName={teamBName}
+              />
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
 
       {/* Edit Form Modal */}

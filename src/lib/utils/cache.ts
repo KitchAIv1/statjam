@@ -111,6 +111,8 @@ export const CacheKeys = {
   tournamentLeaders: (tournamentId: string, category: string, minGames: number) => `tournament_leaders:${tournamentId}:${category}:${minGames}`,
   tournamentStandings: (tournamentId: string) => `tournament_standings:${tournamentId}`,
   tournamentTeams: (tournamentId: string) => `tournament_teams:${tournamentId}`,
+  teamStats: (gameId: string, teamId: string) => `team_stats:${gameId}:${teamId}`,
+  playerTournaments: (userId: string) => `player_tournaments:${userId}`,
 } as const;
 
 // Cache TTL constants (in minutes)
@@ -131,6 +133,8 @@ export const CacheTTL = {
   tournamentLeaders: 2,
   tournamentStandings: 3,
   tournamentTeams: 10,
+  teamStats: 2, // Short TTL since stats change frequently during games
+  playerTournaments: 5, // Moderate TTL for player tournament data
 } as const;
 
 /**

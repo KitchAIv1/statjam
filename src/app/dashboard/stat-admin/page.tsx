@@ -653,7 +653,17 @@ const StatAdminDashboard = () => {
                         <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
                           <button
                             onClick={async () => {
-                              // ✅ PRE-FLIGHT CHECK: Show modal instead of direct launch
+                              // ✅ UX IMPROVEMENT: Skip pre-flight modal for completed games
+                              // Completed games don't need automation settings - go directly to tracker
+                              if (game.status === 'completed') {
+                                setLaunchingTracker(game.id);
+                                router.push(
+                                  `/stat-tracker-v3?gameId=${game.id}&teamAId=${game.teamAId}&teamBId=${game.teamBId}`
+                                );
+                                return;
+                              }
+                              
+                              // ✅ PRE-FLIGHT CHECK: Show modal for active/scheduled games
                               setSelectedGame(game);
                               setShowPreFlight(true);
                             }}
@@ -684,7 +694,11 @@ const StatAdminDashboard = () => {
                             }}
                           >
                             <Zap size={16} />
-                            {launchingTracker === game.id ? 'Launching...' : 'Launch Tracker'}
+                            {launchingTracker === game.id 
+                              ? 'Launching...' 
+                              : game.status === 'completed' 
+                                ? 'Review Game' 
+                                : 'Launch Tracker'}
                           </button>
                           
                           {/* Eye Viewer Button - Only for Demo Games */}
