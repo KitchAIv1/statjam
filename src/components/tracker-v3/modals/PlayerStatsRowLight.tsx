@@ -25,6 +25,7 @@ export interface PlayerStatsRowLightProps {
     assists: number;
     steals: number;
     blocks: number;
+    fouls: number;
     plusMinus: number;
   };
 }
@@ -40,7 +41,7 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
   }, []);
 
   const { name, position } = player;
-  const { minutes, points, rebounds, assists, steals, blocks, plusMinus } = stats;
+  const { minutes, points, rebounds, assists, steals, blocks, fouls, plusMinus } = stats;
 
   const formatPlusMinus = (value: number): { text: string; color: string } => {
     if (value > 0) {
@@ -67,7 +68,7 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
       </div>
 
       {/* Right: Stats Grid */}
-      <div className={`grid gap-2 ${isMobile ? 'grid-cols-7 min-w-[240px] gap-1' : 'grid-cols-7 min-w-[280px]'}`}>
+      <div className={`grid gap-2 ${isMobile ? 'grid-cols-8 min-w-[280px] gap-1' : 'grid-cols-8 min-w-[320px]'}`}>
         <div className="flex flex-col items-center min-w-[28px]">
           <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
             {minutes}
@@ -114,6 +115,14 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
           </div>
           <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
             BLK
+          </div>
+        </div>
+        <div className="flex flex-col items-center min-w-[28px]">
+          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
+            {fouls}
+          </div>
+          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
+            FOUL
           </div>
         </div>
         <div className="flex flex-col items-center min-w-[28px]">

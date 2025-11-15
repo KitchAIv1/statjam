@@ -137,7 +137,8 @@ export class PlayEngine {
       result.actions.push(`Prompt assist for made ${event.statType}`);
     }
 
-    // ✅ NBA SEQUENCE: Block → Rebound (sequential prompts for missed shots)
+    // ✅ MISSED SHOT SEQUENCE: Rebound prompt (blocks removed from auto-sequence)
+    // Note: Blocks can still be recorded manually via stat buttons
     const isMissedShot = this.shouldPromptRebound(event) || this.shouldPromptBlock(event);
     
     if (isMissedShot) {
@@ -148,22 +149,11 @@ export class PlayEngine {
         metadata: Record<string, any>;
       }> = [];
       
-      // Step 1: Block prompt (optional, appears first)
-      if (flags.promptBlocks && this.shouldPromptBlock(event)) {
-        promptQueue.push({
-          type: 'block',
-          sequenceId: sequenceId,
-          metadata: {
-            shotType: event.statType,
-            shooterId: this.getPlayerIdentifier(event), // ✅ FIX: Support custom players
-            shooterName: this.getPlayerIdentifier(event), // Will be populated by UI
-            shooterTeamId: event.teamId // ✅ FIX: Add shooterTeamId for opposing team logic
-          }
-        });
-        result.actions.push(`Prompt block for missed ${event.statType}`);
-      }
+      // ✅ REMOVED: Block prompt from auto-sequence
+      // Blocks can still be recorded manually via stat buttons, but are no longer
+      // part of the automatic missed shot sequence to improve UX and speed up stat entry
       
-      // Step 2: Rebound prompt (required, appears second)
+      // Rebound prompt (required, appears immediately after missed shot)
       if (flags.promptRebounds && this.shouldPromptRebound(event)) {
         promptQueue.push({
           type: 'rebound',
@@ -180,7 +170,7 @@ export class PlayEngine {
       // Set result with queue
       if (promptQueue.length > 0) {
         result.shouldPrompt = true;
-        result.promptType = promptQueue[0].type; // First prompt in queue
+        result.promptType = promptQueue[0].type; // First prompt in queue (rebound)
         result.sequenceId = sequenceId;
         result.metadata = promptQueue[0].metadata;
         result.promptQueue = promptQueue;

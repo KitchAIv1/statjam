@@ -141,6 +141,11 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
             <div style={styles.teamStatValue}>{teamStats.assists}</div>
             <div style={styles.teamStatLabel}>AST</div>
           </div>
+          
+          <div style={styles.teamStatItem}>
+            <div style={styles.teamStatValue}>{teamStats.teamFouls}</div>
+            <div style={styles.teamStatLabel}>FOULS</div>
+          </div>
         </div>
       </div>
 
@@ -164,6 +169,7 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                   assists: player.assists,
                   steals: player.steals,
                   blocks: player.blocks,
+                  fouls: player.fouls,
                   plusMinus: player.plusMinus
                 }}
               />
@@ -194,6 +200,7 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                   assists: player.assists,
                   steals: player.steals,
                   blocks: player.blocks,
+                  fouls: player.fouls,
                   plusMinus: player.plusMinus
                 }}
               />
@@ -261,7 +268,7 @@ const styles = {
   },
   teamStatsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(6, 1fr)',
+    gridTemplateColumns: 'repeat(7, 1fr)',
     gap: '16px'
   },
   teamStatsGridMobile: {

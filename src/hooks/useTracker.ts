@@ -3,6 +3,7 @@ import { StatRecord, RosterState, ScoreByTeam } from '@/lib/types/tracker';
 import { Ruleset } from '@/lib/types/ruleset';
 import { AutomationFlags, DEFAULT_AUTOMATION_FLAGS, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation';
 import { RulesetService } from '@/lib/config/rulesetService';
+import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 
 interface UseTrackerProps {
   initialGameId: string;
@@ -213,7 +214,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     metadata: null
   });
   
-  // ✅ SEQUENTIAL PROMPTS: Queue for multiple prompts (Block → Rebound)
+  // ✅ SEQUENTIAL PROMPTS: Queue for multiple prompts (Rebound, Free Throws, etc.)
+  // Note: Blocks removed from auto-sequence but can still be recorded manually
   const [promptQueue, setPromptQueue] = useState<Array<{
     type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw';
     sequenceId: string;
@@ -553,6 +555,34 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       clearInterval(scoreRefreshInterval);
     };
   }, [gameId, refreshScoresFromDatabase]);
+
+  // ✅ NEW: Real-time subscription to sync timeout state from database
+  useEffect(() => {
+    if (!gameId || gameId === 'unknown' || !teamAId || !teamBId) return;
+
+    console.log('🔌 useTracker: Setting up timeout subscription for game:', gameId);
+    
+    const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
+      if (table === 'games' && payload.new) {
+        const updatedGame = payload.new;
+        
+        // Sync timeout state when games table is updated
+        if (updatedGame.team_a_timeouts_remaining !== undefined || updatedGame.team_b_timeouts_remaining !== undefined) {
+          console.log('🔄 useTracker: Timeout state updated from database:', {
+            team_a: updatedGame.team_a_timeouts_remaining,
+            team_b: updatedGame.team_b_timeouts_remaining
+          });
+          
+          setTeamTimeouts({
+            [teamAId]: updatedGame.team_a_timeouts_remaining ?? 5,
+            [teamBId]: updatedGame.team_b_timeouts_remaining ?? 5
+          });
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [gameId, teamAId, teamBId]);
 
   // Clock Controls
   const startClock = useCallback(async () => {
@@ -1092,7 +1122,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           automationFlags.sequences
         );
         
-        // ✅ SEQUENTIAL PROMPTS: Handle prompt queue (Block → Rebound) + Free Throws
+        // ✅ SEQUENTIAL PROMPTS: Handle prompt queue (Rebound, Free Throws, etc.)
+        // Note: Blocks removed from auto-sequence but can still be recorded manually
         // ✅ FIX: Skip assist/rebound prompts if this stat is part of a foul sequence (has sequenceId)
         // This prevents assist/rebound modals from appearing during shooting foul sequences
         // When a stat has a sequenceId, it means it's linked to a foul, so skip prompts
@@ -1339,6 +1370,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       setTimeoutSecondsRemaining(duration);
       
       // Record timeout to database
+      // ✅ FIX: Always decrement by exactly 1, regardless of timeout type (60s or 30s)
+      // The real-time subscription will sync the state from the database, so we don't need manual local decrement
       const success = await GameServiceV3.recordTimeout({
         gameId,
         teamId,
@@ -1349,13 +1382,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       });
       
       if (success) {
-        // Decrement timeout count locally
-        setTeamTimeouts(prev => ({
-          ...prev,
-          [teamId]: Math.max(0, prev[teamId] - 1)
-        }));
+        // ✅ REMOVED: Manual local decrement - rely on real-time subscription for state sync
+        // This ensures single source of truth and prevents double decrement issues
         
-        console.log('✅ Timeout started successfully');
+        console.log('✅ Timeout started successfully - waiting for real-time sync');
         notify.success('Timeout started', `${type === 'full' ? '60' : '30'} second timeout`);
         setLastAction(`Timeout - ${type === 'full' ? 'Full' : '30s'}`);
         return true;

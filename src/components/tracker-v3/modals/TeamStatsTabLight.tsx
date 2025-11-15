@@ -71,7 +71,7 @@ export function TeamStatsTabLight({ gameId, teamId, teamName }: TeamStatsTabLigh
           <div className="text-lg font-semibold text-gray-900">{teamName}</div>
         </div>
         
-        <div className={`grid gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-6'}`}>
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-7'}`}>
           <div className="flex flex-col items-center">
             <div className="text-base font-semibold text-gray-900 mb-1">
               {teamStats.fieldGoalsMade}/{teamStats.fieldGoalsAttempted}
@@ -110,6 +110,11 @@ export function TeamStatsTabLight({ gameId, teamId, teamName }: TeamStatsTabLigh
             <div className="text-base font-semibold text-gray-900 mb-1">{teamStats.assists}</div>
             <div className="text-xs text-gray-500 uppercase">AST</div>
           </div>
+          
+          <div className="flex flex-col items-center">
+            <div className="text-base font-semibold text-gray-900 mb-1">{teamStats.teamFouls}</div>
+            <div className="text-xs text-gray-500 uppercase">FOULS</div>
+          </div>
         </div>
       </div>
 
@@ -135,6 +140,7 @@ export function TeamStatsTabLight({ gameId, teamId, teamName }: TeamStatsTabLigh
                   assists: player.assists,
                   steals: player.steals,
                   blocks: player.blocks,
+                  fouls: player.fouls,
                   plusMinus: player.plusMinus
                 }}
               />
@@ -167,6 +173,7 @@ export function TeamStatsTabLight({ gameId, teamId, teamName }: TeamStatsTabLigh
                   assists: player.assists,
                   steals: player.steals,
                   blocks: player.blocks,
+                  fouls: player.fouls,
                   plusMinus: player.plusMinus
                 }}
               />

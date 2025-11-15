@@ -21,6 +21,7 @@ export interface TeamStats {
   turnovers: number;
   rebounds: number;
   assists: number;
+  teamFouls: number;
   fieldGoalPercentage: number;
   threePointPercentage: number;
   freeThrowPercentage: number;
@@ -36,6 +37,7 @@ export interface PlayerStats {
   steals: number;
   blocks: number;
   turnovers: number;
+  fouls: number;
   plusMinus: number; // Simplified to 0 for MVP
 }
 
@@ -232,6 +234,28 @@ export class TeamStatsService {
         }
       });
 
+      // Fetch team fouls from games table
+      let teamFouls = 0;
+      try {
+        const gameData = await this.makeAuthenticatedRequest<any>('games', {
+          'select': 'team_a_id,team_b_id,team_a_fouls,team_b_fouls',
+          'id': `eq.${gameId}`
+        });
+
+        if (gameData.length > 0) {
+          const game = gameData[0];
+          // Determine which team's fouls to use
+          if (game.team_a_id === teamId) {
+            teamFouls = game.team_a_fouls || 0;
+          } else if (game.team_b_id === teamId) {
+            teamFouls = game.team_b_fouls || 0;
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ TeamStatsService: Could not fetch team fouls, defaulting to 0:', error);
+        teamFouls = 0;
+      }
+
       // Calculate percentages
       const fieldGoalPercentage = fieldGoalsAttempted > 0 
         ? Math.round((fieldGoalsMade / fieldGoalsAttempted) * 1000) / 10 
@@ -253,6 +277,7 @@ export class TeamStatsService {
         turnovers,
         rebounds,
         assists,
+        teamFouls,
         fieldGoalPercentage,
         threePointPercentage,
         freeThrowPercentage
@@ -639,6 +664,7 @@ export class TeamStatsService {
           steals: 0,
           blocks: 0,
           turnovers: 0,
+          fouls: 0,
           plusMinus: playerPlusMinusMap.get(playerId) || 0,
           quartersPlayed: new Set()
         });
@@ -692,6 +718,9 @@ export class TeamStatsService {
           case 'turnover':
             playerStats.turnovers += value;
             break;
+          case 'foul':
+            playerStats.fouls += value;
+            break;
         }
       });
 
@@ -707,6 +736,7 @@ export class TeamStatsService {
           steals: player.steals,
           blocks: player.blocks,
           turnovers: player.turnovers,
+          fouls: player.fouls,
           plusMinus: player.plusMinus // Will be calculated in next step
         };
       });

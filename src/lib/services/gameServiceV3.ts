@@ -550,9 +550,28 @@ export class GameServiceV3 {
 
       const isTeamA = currentGame.team_a_id === data.teamId;
       const timeoutField = isTeamA ? 'team_a_timeouts_remaining' : 'team_b_timeouts_remaining';
-      const currentCount = isTeamA ? (currentGame.team_a_timeouts_remaining || 5) : (currentGame.team_b_timeouts_remaining || 5);
+      // ✅ FIX: Use nullish coalescing (??) instead of || to preserve 0 values
+      const currentCount = isTeamA ? (currentGame.team_a_timeouts_remaining ?? 5) : (currentGame.team_b_timeouts_remaining ?? 5);
+      // ✅ IMPORTANT: Always decrement by exactly 1, regardless of timeout type (60s or 30s)
+      // Both timeout types count as ONE timeout deduction
+      const newCount = Math.max(0, currentCount - 1);
+
+      console.log(`⏰ GameServiceV3: Updating timeout count for ${isTeamA ? 'Team A' : 'Team B'}:`, {
+        gameId: data.gameId,
+        teamId: data.teamId,
+        timeoutField,
+        currentCount,
+        newCount,
+        timeoutType: data.timeoutType
+      });
 
       const gameUrl = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${data.gameId}`;
+      const updateBody = {
+        [timeoutField]: newCount
+      };
+
+      console.log(`⏰ GameServiceV3: PATCH request to ${gameUrl}`, { body: updateBody });
+
       const gameResponse = await fetch(gameUrl, {
         method: 'PATCH',
         headers: {
@@ -561,18 +580,30 @@ export class GameServiceV3 {
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal'
         },
-        body: JSON.stringify({
-          [timeoutField]: Math.max(0, currentCount - 1)
-        })
+        body: JSON.stringify(updateBody)
       });
 
       if (!gameResponse.ok) {
         const errorText = await gameResponse.text();
         console.error(`❌ GameServiceV3: Failed to update timeout count - HTTP ${gameResponse.status}:`, errorText);
-        throw new Error(`Failed to update timeout count: HTTP ${gameResponse.status}`);
+        console.error(`❌ GameServiceV3: Request details:`, { url: gameUrl, body: updateBody });
+        throw new Error(`Failed to update timeout count: HTTP ${gameResponse.status} - ${errorText}`);
       }
 
-      console.log('✅ GameServiceV3: Timeout count decremented successfully');
+      // Verify the update worked by fetching the game again
+      const verifyGame = await this.getGame(data.gameId);
+      const verifiedCount = isTeamA ? (verifyGame?.team_a_timeouts_remaining ?? null) : (verifyGame?.team_b_timeouts_remaining ?? null);
+      
+      console.log(`✅ GameServiceV3: Timeout count updated. Verified:`, {
+        expected: newCount,
+        actual: verifiedCount,
+        match: verifiedCount === newCount
+      });
+
+      if (verifiedCount !== newCount) {
+        console.warn(`⚠️ GameServiceV3: Timeout count mismatch! Expected ${newCount}, got ${verifiedCount}`);
+      }
+
       return true;
 
     } catch (error: any) {

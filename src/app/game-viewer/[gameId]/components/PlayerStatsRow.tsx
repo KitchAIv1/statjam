@@ -23,6 +23,7 @@ export interface PlayerStatsRowProps {
     assists: number;
     steals: number;
     blocks: number;
+    fouls: number;
     plusMinus: number;
   };
 }
@@ -40,7 +41,7 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   const { name, position } = player;
-  const { minutes, points, rebounds, assists, steals, blocks, plusMinus } = stats;
+  const { minutes, points, rebounds, assists, steals, blocks, fouls, plusMinus } = stats;
 
   // Format plus/minus with color coding
   const formatPlusMinus = (value: number): { text: string; color: string } => {
@@ -90,6 +91,10 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
         <div style={styles.statCell}>
           <div style={isMobile ? styles.statValueMobile : styles.statValue}>{blocks}</div>
           <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>BLK</div>
+        </div>
+        <div style={styles.statCell}>
+          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{fouls}</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FOUL</div>
         </div>
         <div style={styles.statCell}>
           <div style={{ 
@@ -149,17 +154,17 @@ const styles = {
   },
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
+    gridTemplateColumns: 'repeat(8, 1fr)',
     gap: '8px',
     alignItems: 'center',
-    minWidth: '280px'
+    minWidth: '320px'
   },
   statsGridMobile: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(7, minmax(28px, 1fr))',
+    gridTemplateColumns: 'repeat(8, minmax(28px, 1fr))',
     gap: '4px',
     alignItems: 'center',
-    minWidth: '240px'
+    minWidth: '280px'
   },
   statCell: {
     display: 'flex',
