@@ -481,11 +481,23 @@ export class GameServiceV3 {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`❌ GameServiceV3: Failed to record stat - HTTP ${response.status}:`, errorText);
+        
+        // ✅ DEBUG: Log foul-specific errors
+        if (statData.statType === 'foul') {
+          console.error('🔍 GameServiceV3: Foul recording failed - StatType:', statData.statType, 'Modifier:', statData.modifier, 'Error:', errorText);
+        }
+        
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
       console.log('✅ GameServiceV3: Stat recorded successfully via raw HTTP');
+      
+      // ✅ DEBUG: Log foul details for troubleshooting
+      if (statData.statType === 'foul') {
+        console.log('🔍 GameServiceV3: Foul recorded - Type:', statData.statType, 'Modifier:', statData.modifier, 'Result:', result);
+      }
+      
       return result;
 
     } catch (error: any) {

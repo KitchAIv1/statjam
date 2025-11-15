@@ -12,16 +12,31 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTeamStatsOptimized } from '@/hooks/useTeamStatsOptimized';
+import { useTeamStats } from '@/hooks/useTeamStats';
 import { PlayerStatsRowLight } from './PlayerStatsRowLight';
 
 export interface TeamStatsTabLightProps {
   gameId: string;
   teamId: string;
   teamName: string;
+  /**
+   * If true, uses useTeamStats (no cache, real-time updates)
+   * If false, uses useTeamStatsOptimized (cache-first, optimized for Edit Stats Modal)
+   * Default: false (cache-first)
+   */
+  useRealTime?: boolean;
 }
 
-export function TeamStatsTabLight({ gameId, teamId, teamName }: TeamStatsTabLightProps) {
-  const { teamStats, onCourtPlayers, benchPlayers, loading, error } = useTeamStatsOptimized(gameId, teamId);
+export function TeamStatsTabLight({ gameId, teamId, teamName, useRealTime = false }: TeamStatsTabLightProps) {
+  // ✅ FIX: Use useTeamStats for Score section (real-time), useTeamStatsOptimized for Edit Stats (cache-first)
+  // Conditionally call hooks based on useRealTime to avoid unnecessary subscriptions
+  const optimizedData = useTeamStatsOptimized(gameId, teamId);
+  const realTimeData = useTeamStats(gameId, teamId, { enabled: useRealTime });
+  
+  // Select data based on useRealTime prop
+  // When useRealTime=true, useTeamStats runs and useTeamStatsOptimized still runs but is ignored
+  // When useRealTime=false, useTeamStatsOptimized runs and useTeamStats is disabled
+  const { teamStats, onCourtPlayers, benchPlayers, loading, error } = useRealTime ? realTimeData : optimizedData;
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {

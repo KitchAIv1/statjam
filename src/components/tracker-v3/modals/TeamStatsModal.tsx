@@ -60,6 +60,7 @@ export function TeamStatsModal({
             gameId={gameId}
             teamId={teamId}
             teamName={teamName}
+            useRealTime={true} // ✅ FIX: Enable real-time updates for Score section modal
           />
         </div>
       </div>

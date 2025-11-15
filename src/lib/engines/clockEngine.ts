@@ -141,7 +141,7 @@ export class ClockEngine {
    */
   private static shouldPauseClocks(event: ClockEvent): boolean {
     // ✅ FIX: Steals are live ball events - clock should CONTINUE running
-    // ✅ FIX: Only dead ball turnovers should pause
+    // ✅ FIX: Turnovers should NOT stop clock - only ball possession changes stop it
     
     // Always pause for fouls and timeouts
     if (event.type === 'foul' || event.type === 'timeout') {
@@ -149,20 +149,11 @@ export class ClockEngine {
       return true;
     }
     
-    // Turnover: Distinguish live ball vs dead ball
+    // ✅ FIX: Turnovers should NOT pause clock - only ball possession changes stop it
+    // Turnovers are live ball events - clock continues running
     if (event.type === 'turnover') {
-      // Live ball turnovers (clock continues)
-      const liveBallModifiers = ['steal', 'bad_pass', 'lost_ball'];
-      const isLiveBall = event.modifier && liveBallModifiers.includes(event.modifier);
-      
-      if (isLiveBall) {
-        console.log(`🕐 ClockEngine: Live ball turnover (${event.modifier}) - clock CONTINUES`);
-        return false;
-      }
-      
-      // Dead ball turnovers (clock pauses)
-      console.log(`🕐 ClockEngine: Dead ball turnover (${event.modifier || 'unspecified'}) - clock PAUSES`);
-      return true;
+      console.log(`🕐 ClockEngine: Turnover (${event.modifier || 'unspecified'}) - clock CONTINUES (no pause)`);
+      return false;
     }
     
     // Steal: Always live ball - clock continues

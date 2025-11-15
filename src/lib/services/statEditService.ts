@@ -171,6 +171,13 @@ export class StatEditService {
       }
 
       const stats = await response.json();
+      
+      // ✅ DEBUG: Log foul stats for troubleshooting
+      const foulStats = stats.filter((s: any) => s.stat_type === 'foul');
+      if (foulStats.length > 0) {
+        console.log('🔍 StatEditService: Found', foulStats.length, 'foul stats');
+        console.log('🔍 StatEditService: Foul modifiers:', foulStats.map((f: any) => f.modifier));
+      }
 
       // Fetch actual timeout events from game_timeouts table
       const timeoutEvents = await this.getTimeoutEvents(gameId);

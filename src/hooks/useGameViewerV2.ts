@@ -138,6 +138,11 @@ function transformStatsToPlays(
       shootingFoulMap.set(stat.sequence_id, true);
       console.log('🔍 [AND-1 DEBUG] Found shooting foul with sequence_id:', stat.sequence_id);
     }
+    
+    // ✅ DEBUG: Log all fouls for troubleshooting
+    if (stat.stat_type === 'foul') {
+      console.log('🔍 useGameViewerV2: Found foul - Modifier:', stat.modifier, 'Player:', stat.player_name || stat.player_id);
+    }
   });
   
   console.log('🔍 [AND-1 DEBUG] Shooting foul map size:', shootingFoulMap.size);
@@ -227,12 +232,22 @@ function transformStatsToPlays(
         description = `${playerName} turnover`;
         break;
       case 'foul':
-        // ✅ FIX: Show "shooting foul" when modifier is 'shooting'
-        description = stat.modifier === 'shooting' 
-          ? `${playerName} shooting foul`
-          : stat.modifier 
-          ? `${playerName} ${stat.modifier} foul`
-          : `${playerName} foul`;
+        // ✅ FIX: Show foul types clearly (match Edit Stats Modal format)
+        if (stat.modifier === 'shooting') {
+          description = `${playerName} shooting foul`;
+        } else if (stat.modifier === 'personal') {
+          description = `${playerName} personal foul`;
+        } else if (stat.modifier === 'offensive') {
+          description = `${playerName} offensive foul`;
+        } else if (stat.modifier === 'technical') {
+          description = `${playerName} technical foul`;
+        } else if (stat.modifier === 'flagrant') {
+          description = `${playerName} flagrant foul`;
+        } else if (stat.modifier) {
+          description = `${playerName} ${stat.modifier} foul`;
+        } else {
+          description = `${playerName} foul`;
+        }
         break;
       default:
         description = `${playerName} ${stat.stat_type}`;

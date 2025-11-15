@@ -475,24 +475,37 @@ function StatTrackerV3Content() {
   
   // ✅ PHASE 5: Handle foul type selection
   const handleFoulTypeSelection = async (foulType: FoulType) => {
+    console.log('🔍 handleFoulTypeSelection: Foul type selected:', foulType);
+    console.log('🔍 handleFoulTypeSelection: foulerPlayerId:', foulerPlayerId, 'gameData:', !!gameData);
+    
     setShowFoulTypeModal(false);
     setSelectedFoulType(foulType);
     
     // Determine if we need victim selection
     const needsVictimSelection = ['shooting_2pt', 'shooting_3pt', 'bonus', 'technical', 'flagrant'].includes(foulType);
     
+    console.log('🔍 handleFoulTypeSelection: needsVictimSelection?', needsVictimSelection, 'foulType:', foulType);
+    
     if (needsVictimSelection) {
       // Show victim selection modal
+      console.log('🔍 handleFoulTypeSelection: Showing victim selection modal');
       setShowVictimSelectionModal(true);
     } else {
       // Personal or Offensive foul - record immediately
+      console.log('🔍 handleFoulTypeSelection: Recording foul without victim - Type:', foulType);
       await recordFoulWithoutVictim(foulType);
     }
   };
   
   // ✅ PHASE 5: Record foul without victim (Personal, Offensive)
   const recordFoulWithoutVictim = async (foulType: FoulType) => {
-    if (!foulerPlayerId || !gameData) return;
+    console.log('🔍 recordFoulWithoutVictim: Called with foulType:', foulType);
+    console.log('🔍 recordFoulWithoutVictim: foulerPlayerId:', foulerPlayerId, 'gameData:', !!gameData);
+    
+    if (!foulerPlayerId || !gameData) {
+      console.error('❌ recordFoulWithoutVictim: Early return - missing foulerPlayerId or gameData');
+      return;
+    }
     
     try {
       // Determine player type and team
@@ -526,6 +539,9 @@ function StatTrackerV3Content() {
       // Map foul type to modifier
       const modifier = foulType === 'offensive' ? 'offensive' : 'personal';
       
+      // ✅ DEBUG: Log personal foul recording
+      console.log('🔍 recordFoulWithoutVictim: Recording foul - Type:', foulType, 'Modifier:', modifier, 'PlayerId:', actualPlayerId, 'CustomPlayerId:', actualCustomPlayerId);
+      
       await tracker.recordStat({
         gameId: gameData.id,
         teamId: actualTeamId,
@@ -535,6 +551,9 @@ function StatTrackerV3Content() {
         statType: 'foul',
         modifier: modifier
       });
+      
+      // ✅ DEBUG: Log after recording
+      console.log('✅ recordFoulWithoutVictim: Foul recorded successfully - Modifier:', modifier);
       
       // If offensive foul, also record turnover
       if (foulType === 'offensive') {
@@ -1264,14 +1283,11 @@ function StatTrackerV3Content() {
           setFoulerPlayerId(null);
           setFoulerPlayerName('');
         }}
-        onSelectFoulType={(foulType) => {
-          setSelectedFoulType(foulType);
-          setShowFoulTypeModal(false);
-          
-          // If shooting foul, open victim selection modal
-          if (foulType === 'shooting_2pt' || foulType === 'shooting_3pt' || foulType === 'bonus' || foulType === 'technical' || foulType === 'flagrant') {
-            setShowVictimSelectionModal(true);
-          }
+        onSelectFoulType={async (foulType) => {
+          // ✅ FIX: Call handleFoulTypeSelection instead of duplicating logic
+          // This ensures personal/offensive fouls are properly recorded
+          console.log('🔍 FoulTypeSelectionModal: onSelectFoulType called with:', foulType);
+          await handleFoulTypeSelection(foulType);
         }}
         foulerName={foulerPlayerName}
       />

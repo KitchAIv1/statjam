@@ -188,10 +188,23 @@ export function StatEditModal({
       return `TIMEOUT (${timeoutType})`;
     }
     
-    // ✅ FIX: Show "SHOOTING FOUL" clearly for shooting fouls
-    if (stat.stat_type === 'foul' && stat.modifier === 'shooting') {
+    // ✅ FIX: Show foul types clearly (SHOOTING FOUL, PERSONAL FOUL, etc.)
+    if (stat.stat_type === 'foul') {
+      const foulType = stat.modifier?.toUpperCase() || 'FOUL';
       const value = stat.stat_value > 0 ? ` +${stat.stat_value}` : '';
-      return `SHOOTING FOUL${value}`;
+      if (stat.modifier === 'shooting') {
+        return `SHOOTING FOUL${value}`;
+      } else if (stat.modifier === 'personal') {
+        return `PERSONAL FOUL${value}`;
+      } else if (stat.modifier === 'offensive') {
+        return `OFFENSIVE FOUL${value}`;
+      } else if (stat.modifier === 'technical') {
+        return `TECHNICAL FOUL${value}`;
+      } else if (stat.modifier === 'flagrant') {
+        return `FLAGRANT FOUL${value}`;
+      } else {
+        return `${foulType} FOUL${value}`;
+      }
     }
     
     // ✅ FIX: Show rebound type clearly (OFFENSIVE/DEFENSIVE)

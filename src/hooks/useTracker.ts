@@ -912,15 +912,38 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       }
 
       // Prepare last action message
-      // ✅ Format stat type and modifier properly (no extra spaces for stats without modifiers)
-      const statTypeFormatted = stat.statType.replace('_', ' ').toUpperCase();
-      const modifierFormatted = stat.modifier ? ` (${stat.modifier})` : '';
+      // ✅ Format stat type and modifier properly (match Edit Stats Modal format)
+      let statTypeFormatted: string;
+      
+      // ✅ FIX: Special formatting for fouls to match Edit Stats Modal (PERSONAL FOUL, SHOOTING FOUL, etc.)
+      if (stat.statType === 'foul') {
+        const foulType = stat.modifier?.toUpperCase() || 'FOUL';
+        if (stat.modifier === 'shooting') {
+          statTypeFormatted = 'SHOOTING FOUL';
+        } else if (stat.modifier === 'personal') {
+          statTypeFormatted = 'PERSONAL FOUL';
+        } else if (stat.modifier === 'offensive') {
+          statTypeFormatted = 'OFFENSIVE FOUL';
+        } else if (stat.modifier === 'technical') {
+          statTypeFormatted = 'TECHNICAL FOUL';
+        } else if (stat.modifier === 'flagrant') {
+          statTypeFormatted = 'FLAGRANT FOUL';
+        } else {
+          statTypeFormatted = `${foulType} FOUL`;
+        }
+      } else {
+        // For other stats, use standard format
+        statTypeFormatted = stat.statType.replace('_', ' ').toUpperCase();
+        if (stat.modifier) {
+          statTypeFormatted += ` (${stat.modifier})`;
+        }
+      }
       
       if (stat.isOpponentStat) {
-        uiUpdates.lastAction = `Opponent Team: ${statTypeFormatted}${modifierFormatted}`;
+        uiUpdates.lastAction = `Opponent Team: ${statTypeFormatted}`;
         uiUpdates.lastActionPlayerId = null;
       } else {
-        uiUpdates.lastAction = `${statTypeFormatted}${modifierFormatted}`;
+        uiUpdates.lastAction = statTypeFormatted;
         uiUpdates.lastActionPlayerId = stat.playerId || stat.customPlayerId || null;
       }
 
@@ -1249,8 +1272,22 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
       }
 
+      // ✅ DEBUG: Log personal foul recording details
+      if (stat.statType === 'foul' && stat.modifier === 'personal') {
+        console.log('🔍 useTracker.recordStat: Recording PERSONAL FOUL -', {
+          gameId: stat.gameId,
+          playerId: stat.playerId,
+          customPlayerId: stat.customPlayerId,
+          teamId: stat.teamId,
+          modifier: stat.modifier,
+          quarter,
+          gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
+          gameTimeSeconds: clock.secondsRemaining % 60
+        });
+      }
+      
       // Record stat in database (V3 - raw HTTP, never hangs)
-      await GameServiceV3.recordStat({
+      const result = await GameServiceV3.recordStat({
         gameId: stat.gameId,
         playerId: stat.playerId,
         customPlayerId: stat.customPlayerId,
@@ -1268,8 +1305,18 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         eventMetadata: stat.eventMetadata
       });
       
+      // ✅ DEBUG: Log personal foul save result
+      if (stat.statType === 'foul' && stat.modifier === 'personal') {
+        console.log('✅ useTracker.recordStat: PERSONAL FOUL saved successfully -', result);
+      }
+      
     } catch (error) {
       console.error('❌ Error recording stat:', error);
+      
+      // ✅ DEBUG: Log foul-specific errors
+      if (stat.statType === 'foul') {
+        console.error('🔍 useTracker: Foul recording failed - StatType:', stat.statType, 'Modifier:', stat.modifier, 'Error:', error);
+      }
       
       // Import notification service for error display
       const { notify } = await import('@/lib/services/notificationService');
