@@ -136,7 +136,7 @@ const GameHeader: React.FC<GameHeaderProps> = ({ theme, onThemeToggle, game, isL
         <StatItem
           icon={Clock}
           label="Timeouts"
-          value={`${game.teamATimeouts || 7} - ${game.teamBTimeouts || 7}`}
+          value={`${game.teamATimeouts || 5} - ${game.teamBTimeouts || 5}`}
           isDark={isDark}
         />
       </div>

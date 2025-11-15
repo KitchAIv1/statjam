@@ -56,6 +56,10 @@ interface UseTrackerReturn {
   advanceIfNeeded: () => void;
   substitute: (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number }) => Promise<boolean>;
   closeGame: () => Promise<void>;
+  completeGameWithAwards: (awards: { playerOfTheGameId: string; hustlePlayerId: string }) => Promise<void>; // ✅ Complete game with awards
+  saveClockBeforeExit: () => Promise<void>; // ✅ Save clock state before navigation
+  showAwardsModal: boolean; // ✅ Awards modal visibility
+  setShowAwardsModal: (show: boolean) => void; // ✅ Control awards modal
   
   // State Setters
   setRosterA: (updater: (prev: RosterState) => RosterState) => void;
@@ -115,6 +119,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     isRunning: false,
     secondsRemaining: 12 * 60 // 12 minutes (will be adjusted based on quarter)
   });
+  
+  // ✅ CRITICAL: Ref to store current clock state for exit handlers (prevents stale closure)
+  const clockRef = useRef(clock);
+  
+  // ✅ Keep ref in sync with state
+  useEffect(() => {
+    clockRef.current = clock;
+  }, [clock]);
   // NEW: Shot Clock State
   // ✅ Load visibility preference from localStorage on initialization
   const getInitialShotClockVisibility = () => {
@@ -152,12 +164,15 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     [teamBId]: 0
   });
   const [teamTimeouts, setTeamTimeouts] = useState({
-    [teamAId]: 7,
-    [teamBId]: 7
+    [teamAId]: 5,
+    [teamBId]: 5
   });
   const [timeoutActive, setTimeoutActive] = useState(false);
   const [timeoutTeamId, setTimeoutTeamId] = useState<string | null>(null);
   const [timeoutSecondsRemaining, setTimeoutSecondsRemaining] = useState(60);
+  
+  // ✅ Awards modal state
+  const [showAwardsModal, setShowAwardsModal] = useState(false);
   const [timeoutType, setTimeoutType] = useState<'full' | '30_second'>('full');
   const [rosterA, setRosterA] = useState<RosterState>({
     teamId: teamAId,
@@ -261,21 +276,41 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             setQuarterState(game.quarter);
           }
           
-          // Initialize clock from DB
-          if (typeof game.game_clock_minutes === 'number' && typeof game.game_clock_seconds === 'number') {
-            const totalSeconds = (game.game_clock_minutes * 60) + game.game_clock_seconds;
-            setClock(prev => ({
-              ...prev,
-              secondsRemaining: totalSeconds
-            }));
+          // ✅ CRITICAL: Initialize clock from DB - ensure exact time is restored
+          // Check sessionStorage backup first (more recent than DB if page was just closed)
+          let clockMinutes = game.game_clock_minutes;
+          let clockSeconds = game.game_clock_seconds;
+          let clockIsRunning = game.is_clock_running;
+          
+          if (typeof window !== 'undefined') {
+            try {
+              const backupKey = `clock_backup_${gameId}`;
+              const backup = sessionStorage.getItem(backupKey);
+              if (backup) {
+                const backupData = JSON.parse(backup);
+                // Use backup if it's more recent (within last 5 minutes)
+                const backupAge = Date.now() - (backupData.timestamp || 0);
+                if (backupAge < 5 * 60 * 1000) { // 5 minutes
+                  console.log('✅ Restoring clock from sessionStorage backup');
+                  clockMinutes = backupData.minutes;
+                  clockSeconds = backupData.seconds;
+                  clockIsRunning = backupData.isRunning || false;
+                  // Clear backup after use
+                  sessionStorage.removeItem(backupKey);
+                }
+              }
+            } catch (error) {
+              console.warn('⚠️ Failed to read clock backup from sessionStorage:', error);
+            }
           }
           
-          // Initialize clock running state
-          if (typeof game.is_clock_running === 'boolean') {
-            setClock(prev => ({
-              ...prev,
-              isRunning: game.is_clock_running
-            }));
+          if (typeof clockMinutes === 'number' && typeof clockSeconds === 'number') {
+            const totalSeconds = (clockMinutes * 60) + clockSeconds;
+            setClock({
+              secondsRemaining: totalSeconds,
+              isRunning: clockIsRunning || false // ✅ Always start stopped to preserve exact time
+            });
+            console.log(`✅ Clock initialized: ${clockMinutes}:${clockSeconds.toString().padStart(2, '0')} (${clockIsRunning ? 'RUNNING' : 'STOPPED'})`);
           }
           
           // Load team fouls and timeouts from game data
@@ -290,8 +325,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             // ✅ FIX: Use nullish coalescing (??) instead of || to preserve 0 values
             // || treats 0 as falsy, causing timeouts to reset to 7 when all are used
             setTeamTimeouts({
-              [teamAId]: game.team_a_timeouts_remaining ?? 7,
-              [teamBId]: game.team_b_timeouts_remaining ?? 7
+              [teamAId]: game.team_a_timeouts_remaining ?? 5,
+              [teamBId]: game.team_b_timeouts_remaining ?? 5
             });
           }
           
@@ -1386,28 +1421,74 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   // Game Management
   const closeGame = useCallback(async () => {
     try {
-      // Import GameService dynamically to avoid circular dependencies
-      const { GameService } = await import('@/lib/services/gameService');
+      // ✅ CRITICAL: Check if game is tied (require OT)
+      const teamAScore = scores[teamAId] || 0;
+      const teamBScore = scores[teamBId] || 0;
       
-      // Stop the clock and update game status to completed
-      setClock(prev => ({ ...prev, isRunning: false }));
-      stopShotClock(); // ✅ Also stop shot clock
-      
-      const success = await GameService.updateGameStatus(gameId, 'completed');
-      
-      if (success) {
-        setGameStatus('completed'); // ✅ Update local state
-        console.log('✅ Game closed successfully');
-        setLastAction('Game ended');
-      } else {
-        console.error('❌ Failed to close game');
-        setLastAction('Error closing game');
+      if (teamAScore === teamBScore && gameStatus !== 'overtime') {
+        const { notify } = await import('@/lib/services/notificationService');
+        notify.warning('Tied Game', 'Complete overtime before selecting awards.');
+        console.warn('⚠️ Cannot complete tied game - overtime required');
+        return;
       }
+
+      // ✅ Skip awards for coach mode
+      if (isCoachMode) {
+        const { GameService } = await import('@/lib/services/gameService');
+        setClock(prev => ({ ...prev, isRunning: false }));
+        stopShotClock();
+        
+        const success = await GameService.updateGameStatus(gameId, 'completed');
+        if (success) {
+          setGameStatus('completed');
+          console.log('✅ Game closed successfully (coach mode - no awards)');
+          setLastAction('Game ended');
+        }
+        return;
+      }
+
+      // ✅ Show awards modal for regular games
+      setClock(prev => ({ ...prev, isRunning: false }));
+      stopShotClock();
+      setShowAwardsModal(true);
     } catch (error) {
       console.error('❌ Error closing game:', error);
       setLastAction('Error closing game');
     }
-  }, [gameId, stopShotClock]);
+  }, [gameId, scores, teamAId, teamBId, gameStatus, isCoachMode, stopShotClock]);
+
+  // ✅ Complete game with awards (called from awards modal)
+  const completeGameWithAwards = useCallback(async (awards: {
+    playerOfTheGameId: string;
+    hustlePlayerId: string;
+  }) => {
+    try {
+      const { GameAwardsService } = await import('@/lib/services/gameAwardsService');
+      const { GameService } = await import('@/lib/services/gameService');
+      
+      // Save awards
+      await GameAwardsService.saveGameAwards(gameId, {
+        playerOfTheGameId: awards.playerOfTheGameId,
+        hustlePlayerId: awards.hustlePlayerId
+      });
+
+      // Update game status to completed
+      const success = await GameService.updateGameStatus(gameId, 'completed');
+      
+      if (success) {
+        setGameStatus('completed');
+        setShowAwardsModal(false);
+        console.log('✅ Game completed with awards');
+        setLastAction('Game ended with awards');
+      } else {
+        throw new Error('Failed to update game status');
+      }
+    } catch (error) {
+      console.error('❌ Error completing game with awards:', error);
+      setLastAction('Error completing game');
+      throw error;
+    }
+  }, [gameId]);
 
   // ✅ PHASE 6: Manual possession control for edge cases
   const manualSetPossession = useCallback(async (teamId: string, reason: string = 'manual_override') => {
@@ -1434,6 +1515,143 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     setLastAction(`Possession manually set to ${teamId}`);
   }, [gameId, automationFlags.possession, setLastAction]);
 
+  // ✅ Auto-save game clock on page unload/navigation - CRITICAL: Stop clock and save exact time
+  useEffect(() => {
+    const saveClockState = async (forceStop: boolean = false) => {
+      try {
+        const { GameService } = await import('@/lib/services/gameService');
+        // ✅ CRITICAL: Use ref to get current clock state (not stale closure)
+        const currentClock = clockRef.current;
+        const finalIsRunning = forceStop ? false : currentClock.isRunning;
+        
+        await GameService.updateGameClock(gameId, {
+          minutes: Math.floor(currentClock.secondsRemaining / 60),
+          seconds: currentClock.secondsRemaining % 60,
+          isRunning: finalIsRunning
+        });
+        
+        // Also update local state if we're forcing stop
+        if (forceStop && currentClock.isRunning) {
+          setClock(prev => ({ ...prev, isRunning: false }));
+        }
+        
+        console.log(`✅ Clock state auto-saved: ${Math.floor(currentClock.secondsRemaining / 60)}:${(currentClock.secondsRemaining % 60).toString().padStart(2, '0')} (${finalIsRunning ? 'RUNNING' : 'STOPPED'})`);
+      } catch (error) {
+        console.error('❌ Error auto-saving clock state:', error);
+      }
+    };
+
+    // Debounce function to prevent excessive saves
+    let saveTimeout: NodeJS.Timeout | null = null;
+    const debouncedSave = (forceStop: boolean = false) => {
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        saveClockState(forceStop);
+      }, 100); // Reduced debounce for critical saves
+    };
+
+    // Save on beforeunload (page close/navigation) - CRITICAL: Stop clock and save exact time
+    const handleBeforeUnload = () => {
+      // ✅ CRITICAL: Use ref to get current clock state (not stale closure)
+      const currentClock = clockRef.current;
+      
+      // Stop clock immediately to preserve exact time
+      if (currentClock.isRunning) {
+        setClock(prev => ({ ...prev, isRunning: false }));
+        // Update ref immediately
+        clockRef.current = { ...currentClock, isRunning: false };
+      }
+      
+      // Save to sessionStorage as backup (synchronous) - use ref for current value
+      if (typeof window !== 'undefined') {
+        try {
+          const finalClock = clockRef.current;
+          sessionStorage.setItem(`clock_backup_${gameId}`, JSON.stringify({
+            minutes: Math.floor(finalClock.secondsRemaining / 60),
+            seconds: finalClock.secondsRemaining % 60,
+            isRunning: false, // Always stop on exit
+            timestamp: Date.now()
+          }));
+          console.log(`💾 Clock backup saved to sessionStorage: ${Math.floor(finalClock.secondsRemaining / 60)}:${(finalClock.secondsRemaining % 60).toString().padStart(2, '0')}`);
+        } catch (error) {
+          console.error('Error saving clock to sessionStorage:', error);
+        }
+      }
+      
+      // Attempt async save with forced stop (may not complete, but try anyway)
+      saveClockState(true);
+    };
+
+    // Save on visibility change (tab switch/minimize) - Stop clock if running
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // ✅ CRITICAL: Use ref to get current clock state
+        const currentClock = clockRef.current;
+        
+        // Tab became hidden - stop clock and save exact time
+        if (currentClock.isRunning) {
+          setClock(prev => ({ ...prev, isRunning: false }));
+          // Update ref immediately
+          clockRef.current = { ...currentClock, isRunning: false };
+        }
+        debouncedSave(true); // Force stop on tab switch
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (saveTimeout) clearTimeout(saveTimeout);
+    };
+  }, [gameId]); // ✅ CRITICAL: Only depend on gameId, not clock state (ref handles current value)
+
+  // ✅ CRITICAL: Function to save clock state before navigation (called explicitly on "Exit to Dashboard")
+  const saveClockBeforeExit = useCallback(async () => {
+    try {
+      const { GameService } = await import('@/lib/services/gameService');
+      // ✅ CRITICAL: Use ref to get current clock state (not stale closure)
+      const currentClock = clockRef.current;
+      
+      // Stop clock immediately to preserve exact time
+      if (currentClock.isRunning) {
+        setClock(prev => ({ ...prev, isRunning: false }));
+        // Update ref immediately
+        clockRef.current = { ...currentClock, isRunning: false };
+      }
+      
+      const finalClock = clockRef.current;
+      
+      // Save to sessionStorage as backup (synchronous)
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem(`clock_backup_${gameId}`, JSON.stringify({
+            minutes: Math.floor(finalClock.secondsRemaining / 60),
+            seconds: finalClock.secondsRemaining % 60,
+            isRunning: false, // Always stop on exit
+            timestamp: Date.now()
+          }));
+          console.log(`💾 Clock backup saved to sessionStorage (before exit): ${Math.floor(finalClock.secondsRemaining / 60)}:${(finalClock.secondsRemaining % 60).toString().padStart(2, '0')}`);
+        } catch (error) {
+          console.error('Error saving clock to sessionStorage:', error);
+        }
+      }
+      
+      // Save to database (await to ensure it completes before navigation)
+      await GameService.updateGameClock(gameId, {
+        minutes: Math.floor(finalClock.secondsRemaining / 60),
+        seconds: finalClock.secondsRemaining % 60,
+        isRunning: false
+      });
+      
+      console.log(`✅ Clock state saved before exit: ${Math.floor(finalClock.secondsRemaining / 60)}:${(finalClock.secondsRemaining % 60).toString().padStart(2, '0')} (STOPPED)`);
+    } catch (error) {
+      console.error('❌ Error saving clock state before exit:', error);
+      // Don't throw - allow navigation even if save fails
+    }
+  }, [gameId]);
 
   return {
     gameId,
@@ -1464,6 +1682,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     advanceIfNeeded,
     substitute,
     closeGame,
+    completeGameWithAwards,
+    saveClockBeforeExit,
+    showAwardsModal,
+    setShowAwardsModal,
     setRosterA,
     setRosterB,
     isLoading,

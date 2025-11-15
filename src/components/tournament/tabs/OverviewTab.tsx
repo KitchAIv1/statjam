@@ -6,11 +6,13 @@ import { PlayerLeader } from '@/lib/services/tournamentLeadersService';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User } from 'lucide-react';
+import { User, Trophy, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
 import { useTournamentLeaders } from '@/hooks/useTournamentLeaders';
+import { useTournamentAwards } from '@/hooks/useTournamentAwards';
+import { AwardDisplayCard } from '@/components/tournament/AwardDisplayCard';
 
 interface OverviewTabProps {
   data: TournamentPageData;
@@ -27,10 +29,13 @@ export function OverviewTab({ data }: OverviewTabProps) {
   const router = useRouter();
   const [topScorers, setTopScorers] = useState<PlayerLeader[]>([]);
   const [loadingLeaders, setLoadingLeaders] = useState(true);
-  const { isOpen, playerId, openModal, closeModal } = usePlayerProfileModal();
+  const { isOpen, playerId, gameStats, gameId, awardType, openModal, closeModal } = usePlayerProfileModal();
 
   // ✅ OPTIMIZED: Use custom hook with caching
   const { leaders: allLeaders, loading: leadersLoading } = useTournamentLeaders(data.tournament.id, 'points', 1);
+  
+  // ✅ Fetch tournament awards
+  const { awards: tournamentAwards, loading: awardsLoading } = useTournamentAwards(data.tournament.id, 3);
   
   // Update state when leaders change
   useEffect(() => {
@@ -123,6 +128,55 @@ export function OverviewTab({ data }: OverviewTabProps) {
         )}
       </Card>
 
+      {/* Game Awards */}
+      {tournamentAwards.length > 0 && (
+        <Card className="space-y-3 rounded-xl border border-white/10 bg-[#121212] p-3 sm:space-y-4 sm:rounded-2xl sm:p-4 md:space-y-6 md:p-6">
+          <header className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-white sm:text-lg md:text-xl">Recent Game Awards</h2>
+              <p className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">Player of the Game and Hustle Player highlights</p>
+            </div>
+          </header>
+          <div className="space-y-3 sm:space-y-4">
+            {tournamentAwards.map((award) => (
+              <div key={award.gameId} className="rounded-lg border border-white/10 bg-black/40 p-3 sm:rounded-xl sm:p-4">
+                <div className="text-[10px] text-[#B3B3B3] mb-2 sm:text-xs">
+                  {new Date(award.gameDate).toLocaleDateString()} • {award.teamAName} vs {award.teamBName} ({award.teamAScore}-{award.teamBScore})
+                </div>
+                <div className="grid gap-2 sm:gap-3 sm:grid-cols-2">
+                  {award.playerOfTheGame && (
+                    <AwardDisplayCard
+                      playerId={award.playerOfTheGame.id}
+                      playerName={award.playerOfTheGame.name}
+                      awardType="player_of_the_game"
+                      stats={award.playerOfTheGame.stats}
+                      onClick={() => openModal(award.playerOfTheGame!.id, {
+                        gameId: award.gameId,
+                        stats: award.playerOfTheGame!.stats,
+                        awardType: 'player_of_the_game'
+                      })}
+                    />
+                  )}
+                  {award.hustlePlayer && (
+                    <AwardDisplayCard
+                      playerId={award.hustlePlayer.id}
+                      playerName={award.hustlePlayer.name}
+                      awardType="hustle_player"
+                      stats={award.hustlePlayer.stats}
+                      onClick={() => openModal(award.hustlePlayer!.id, {
+                        gameId: award.gameId,
+                        stats: award.hustlePlayer!.stats,
+                        awardType: 'hustle_player'
+                      })}
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Bracket Preview */}
       <Card className="space-y-3 rounded-xl border border-white/10 bg-[#121212] p-3 sm:space-y-4 sm:rounded-2xl sm:p-4 md:space-y-6 md:p-6">
         <header className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -167,7 +221,14 @@ export function OverviewTab({ data }: OverviewTabProps) {
 
       {/* Player Profile Modal */}
       {playerId && (
-        <PlayerProfileModal isOpen={isOpen} onClose={closeModal} playerId={playerId} />
+        <PlayerProfileModal 
+          isOpen={isOpen} 
+          onClose={closeModal} 
+          playerId={playerId}
+          gameStats={gameStats || undefined}
+          gameId={gameId || undefined}
+          awardType={awardType || undefined}
+        />
       )}
     </div>
   );

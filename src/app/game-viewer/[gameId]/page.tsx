@@ -179,8 +179,8 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
             isClockRunning: game.is_clock_running || false,
             teamAFouls: game.team_a_fouls || 0,
             teamBFouls: game.team_b_fouls || 0,
-            teamATimeouts: game.team_a_timeouts_remaining || 7,
-            teamBTimeouts: game.team_b_timeouts_remaining || 7,
+            teamATimeouts: game.team_a_timeouts_remaining || 5,
+            teamBTimeouts: game.team_b_timeouts_remaining || 5,
           }}
           isLive={isLive}
           lastUpdated={game.updated_at || ''}
@@ -224,7 +224,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               <div className={`grid grid-cols-3 gap-4 pt-4 text-sm ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>
                 <div><span className="font-semibold">Status:</span> {game.status}</div><div><span className="font-semibold">Q:</span> {game.quarter}</div><div><span className="font-semibold">Time:</span> {String(game.game_clock_minutes||0).padStart(2,'0')}:{String(game.game_clock_seconds||0).padStart(2,'0')}</div>
               </div>
-              <div className={`grid grid-cols-2 gap-4 text-sm ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}><div><span className="font-semibold">Fouls:</span> {game.team_a_fouls||0}-{game.team_b_fouls||0}</div><div><span className="font-semibold">TOs:</span> {game.team_a_timeouts_remaining||7}-{game.team_b_timeouts_remaining||7}</div></div>
+              <div className={`grid grid-cols-2 gap-4 text-sm ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}><div><span className="font-semibold">Fouls:</span> {game.team_a_fouls||0}-{game.team_b_fouls||0}</div><div><span className="font-semibold">TOs:</span> {game.team_a_timeouts_remaining||5}-{game.team_b_timeouts_remaining||5}</div></div>
             </div>
           </TabsContent>
 

@@ -97,6 +97,48 @@ export function StatEditModal({
   };
 
   const handleDelete = async (statId: string) => {
+    const stat = gameStats.find(s => s.id === statId);
+    
+    // Handle timeout events (from game_timeouts table)
+    if (stat?.stat_type === 'timeout') {
+      // Extract the actual timeout ID from the synthetic ID
+      const actualTimeoutId = statId.replace('timeout_', '');
+      try {
+        const accessToken = localStorage.getItem('sb-access-token');
+        if (!accessToken) {
+          throw new Error('Not authenticated');
+        }
+
+        const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/game_timeouts?id=eq.${actualTimeoutId}`;
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete timeout: ${response.status}`);
+        }
+
+        // Refresh stats after deletion
+        fetchStats();
+        setDeletingStatId(null);
+        
+        // ✅ Invalidate team stats cache
+        if (teamAId) cache.delete(CacheKeys.teamStats(gameId, teamAId));
+        if (teamBId) cache.delete(CacheKeys.teamStats(gameId, teamBId));
+      } catch (error) {
+        console.error('Failed to delete timeout:', error);
+        alert('Failed to delete timeout. Please try again.');
+        setDeletingStatId(null);
+      }
+      return;
+    }
+
+    // Regular stat deletion
     try {
       await StatEditService.deleteStat(statId);
       setGameStats(prev => prev.filter(s => s.id !== statId));
@@ -129,12 +171,23 @@ export function StatEditModal({
   };
 
   const getPlayerName = (stat: GameStatRecord): string => {
+    // Handle timeout events (team-level events)
+    if (stat.stat_type === 'timeout') {
+      return stat.team_side === 'A' ? teamAName : teamBName;
+    }
+    
     if (stat.is_opponent_stat) return 'Opponent Team';
     const player = allPlayers.find(p => p.id === stat.player_id || p.id === stat.custom_player_id);
     return player?.name || 'Unknown Player';
   };
 
   const formatStatDisplay = (stat: GameStatRecord): string => {
+    // Handle timeout events (from game_timeouts table)
+    if (stat.stat_type === 'timeout') {
+      const timeoutType = stat.modifier === '30_second' ? '30-SECOND' : 'FULL';
+      return `TIMEOUT (${timeoutType})`;
+    }
+    
     // ✅ FIX: Show "SHOOTING FOUL" clearly for shooting fouls
     if (stat.stat_type === 'foul' && stat.modifier === 'shooting') {
       const value = stat.stat_value > 0 ? ` +${stat.stat_value}` : '';

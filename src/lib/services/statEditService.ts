@@ -31,6 +31,10 @@ export interface GameStatRecord {
   is_opponent_stat: boolean;
   // Joined data
   player_name?: string;
+  // Synthetic entries for game-level stats (fouls/timeouts)
+  is_game_level_stat?: boolean;
+  game_level_type?: 'team_fouls' | 'team_timeouts';
+  team_side?: 'A' | 'B';
 }
 
 export class StatEditService {
@@ -43,7 +47,105 @@ export class StatEditService {
   }
 
   /**
-   * Fetch all stats for a game with player names
+   * Fetch game data for fouls/timeouts
+   */
+  static async getGameData(gameId: string): Promise<{
+    team_a_fouls: number;
+    team_b_fouls: number;
+    team_a_timeouts_remaining: number;
+    team_b_timeouts_remaining: number;
+    team_a_id: string;
+    team_b_id: string;
+  }> {
+    try {
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('Not authenticated');
+      }
+
+      const url = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${gameId}&select=team_a_fouls,team_b_fouls,team_a_timeouts_remaining,team_b_timeouts_remaining,team_a_id,team_b_id`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch game data: ${response.status}`);
+      }
+
+      const games = await response.json();
+      if (games.length === 0) {
+        throw new Error('Game not found');
+      }
+
+      return games[0];
+    } catch (error: any) {
+      console.error('❌ StatEditService: Failed to fetch game data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch timeout events from game_timeouts table
+   */
+  static async getTimeoutEvents(gameId: string): Promise<GameStatRecord[]> {
+    try {
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('Not authenticated');
+      }
+
+      const url = `${this.SUPABASE_URL}/rest/v1/game_timeouts?game_id=eq.${gameId}&select=*&order=created_at.desc`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch timeout events: ${response.status}`);
+      }
+
+      const timeouts = await response.json();
+      
+      // Fetch game data to get team IDs
+      const gameData = await this.getGameData(gameId);
+
+      // Convert timeout events to GameStatRecord format
+      return timeouts.map((timeout: any) => ({
+        id: `timeout_${timeout.id}`,
+        game_id: gameId,
+        player_id: null,
+        custom_player_id: null,
+        team_id: timeout.team_id,
+        stat_type: 'timeout',
+        modifier: timeout.timeout_type || 'full',
+        stat_value: 1,
+        quarter: timeout.quarter,
+        game_time_minutes: timeout.game_clock_minutes || 0,
+        game_time_seconds: timeout.game_clock_seconds || 0,
+        created_at: timeout.created_at,
+        is_opponent_stat: false,
+        is_game_level_stat: false, // These are actual events, not synthetic
+        team_side: timeout.team_id === gameData.team_a_id ? 'A' : 'B'
+      }));
+    } catch (error: any) {
+      console.error('❌ StatEditService: Failed to fetch timeout events:', error);
+      return []; // Return empty array on error, don't break the whole list
+    }
+  }
+
+  /**
+   * Fetch all stats for a game with player names, including actual timeout events
    */
   static async getGameStats(gameId: string): Promise<GameStatRecord[]> {
     try {
@@ -52,6 +154,7 @@ export class StatEditService {
         throw new Error('Not authenticated');
       }
 
+      // Fetch regular stats (includes fouls as they're already recorded)
       const url = `${this.SUPABASE_URL}/rest/v1/game_stats?game_id=eq.${gameId}&select=*&order=created_at.desc`;
       
       const response = await fetch(url, {
@@ -67,9 +170,55 @@ export class StatEditService {
         throw new Error(`Failed to fetch stats: ${response.status}`);
       }
 
-      return await response.json();
+      const stats = await response.json();
+
+      // Fetch actual timeout events from game_timeouts table
+      const timeoutEvents = await this.getTimeoutEvents(gameId);
+
+      // Combine stats and timeout events, sort by created_at (most recent first)
+      const allEvents = [...stats, ...timeoutEvents];
+      allEvents.sort((a, b) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        return timeB - timeA; // Descending order (most recent first)
+      });
+
+      return allEvents;
     } catch (error: any) {
       console.error('❌ StatEditService: Failed to fetch stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update game-level stats (fouls/timeouts)
+   */
+  static async updateGameLevelStat(gameId: string, updates: {
+    team_a_fouls?: number;
+    team_b_fouls?: number;
+    team_a_timeouts_remaining?: number;
+    team_b_timeouts_remaining?: number;
+  }): Promise<void> {
+    try {
+      const { GameService } = await import('@/lib/services/gameService');
+      
+      // Get current game state (we only need clock/quarter for the update)
+      const gameData = await this.getGameData(gameId);
+      
+      // Update game state with fouls/timeouts
+      await GameService.updateGameState(gameId, {
+        quarter: 1, // Will be preserved by updateGameState
+        game_clock_minutes: 0,
+        game_clock_seconds: 0,
+        is_clock_running: false,
+        home_score: 0,
+        away_score: 0,
+        ...updates
+      });
+
+      console.log('✅ StatEditService: Game-level stat updated successfully');
+    } catch (error: any) {
+      console.error('❌ StatEditService: Failed to update game-level stat:', error);
       throw error;
     }
   }

@@ -126,7 +126,7 @@ export const NBA_RULESET: Ruleset = {
     disableOnFreeThrows: true
   },
   timeoutRules: {
-    fullTimeouts: 7,
+    fullTimeouts: 5,
     shortTimeouts: 0,
     fullDurationSeconds: 75,
     shortDurationSeconds: 0,

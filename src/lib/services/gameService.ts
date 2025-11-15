@@ -17,22 +17,34 @@ export class GameService {
     is_clock_running: boolean;
     home_score: number;
     away_score: number;
+    team_a_fouls?: number;
+    team_b_fouls?: number;
+    team_a_timeouts_remaining?: number;
+    team_b_timeouts_remaining?: number;
   }): Promise<boolean> {
     try {
       console.log('🔄 GameService: Updating game state for:', gameId);
       console.log('🔄 GameService: State data:', gameStateData);
 
+      const updateData: any = {
+        quarter: gameStateData.quarter,
+        game_clock_minutes: gameStateData.game_clock_minutes,
+        game_clock_seconds: gameStateData.game_clock_seconds,
+        is_clock_running: gameStateData.is_clock_running,
+        home_score: gameStateData.home_score,
+        away_score: gameStateData.away_score,
+        updated_at: new Date().toISOString()
+      };
+
+      // Add optional fouls/timeouts if provided
+      if (gameStateData.team_a_fouls !== undefined) updateData.team_a_fouls = gameStateData.team_a_fouls;
+      if (gameStateData.team_b_fouls !== undefined) updateData.team_b_fouls = gameStateData.team_b_fouls;
+      if (gameStateData.team_a_timeouts_remaining !== undefined) updateData.team_a_timeouts_remaining = gameStateData.team_a_timeouts_remaining;
+      if (gameStateData.team_b_timeouts_remaining !== undefined) updateData.team_b_timeouts_remaining = gameStateData.team_b_timeouts_remaining;
+
       const { error } = await supabase
         .from('games')
-        .update({
-          quarter: gameStateData.quarter,
-          game_clock_minutes: gameStateData.game_clock_minutes,
-          game_clock_seconds: gameStateData.game_clock_seconds,
-          is_clock_running: gameStateData.is_clock_running,
-          home_score: gameStateData.home_score,
-          away_score: gameStateData.away_score,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', gameId);
 
       if (error) {

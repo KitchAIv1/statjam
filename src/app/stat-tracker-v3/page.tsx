@@ -36,6 +36,7 @@ import { notify } from '@/lib/services/notificationService';
 import { FeatureTour } from '@/components/onboarding/FeatureTour';
 import { CompletionNudge } from '@/components/onboarding/CompletionNudge';
 import { coachFeatureTourSteps } from '@/config/onboarding/coachOnboarding';
+import { GameCompletionModal } from '@/components/tracker-v3/modals/GameCompletionModal';
 
 interface GameData {
   id: string;
@@ -910,7 +911,12 @@ function StatTrackerV3Content() {
         <Card className="w-full max-w-md" style={{ background: 'var(--dashboard-card)', borderColor: 'var(--dashboard-border)' }}>
           <CardContent className="p-6 text-center">
             <p className="text-red-500 mb-4">{error}</p>
-            <Button onClick={() => {
+            <Button onClick={async () => {
+              // ✅ CRITICAL: Save clock state before navigating (if tracker is available)
+              if (tracker?.saveClockBeforeExit) {
+                await tracker.saveClockBeforeExit();
+              }
+              
               // ✅ FIX: Role-based dashboard routing
               if (coachMode || userRole === 'coach') {
                 router.push('/dashboard/coach');
@@ -935,7 +941,12 @@ function StatTrackerV3Content() {
         <Card className="w-full max-w-md" style={{ background: 'var(--dashboard-card)', borderColor: 'var(--dashboard-border)' }}>
           <CardContent className="p-6 text-center">
             <p style={{ color: 'var(--dashboard-text-primary)' }} className="mb-4">No game data found</p>
-            <Button onClick={() => {
+            <Button onClick={async () => {
+              // ✅ CRITICAL: Save clock state before navigating (if tracker is available)
+              if (tracker?.saveClockBeforeExit) {
+                await tracker.saveClockBeforeExit();
+              }
+              
               // ✅ FIX: Role-based dashboard routing
               if (coachMode || userRole === 'coach') {
                 router.push('/dashboard/coach');
@@ -1504,7 +1515,10 @@ function StatTrackerV3Content() {
         
         {/* Top Scoreboard & Clock with Integrated Shot Clock */}
         <TopScoreboardV3
-          onBack={() => {
+          onBack={async () => {
+            // ✅ CRITICAL: Save clock state before navigating
+            await tracker.saveClockBeforeExit();
+            
             // ✅ FIX: Role-based dashboard routing
             if (coachMode || userRole === 'coach') {
               router.push('/dashboard/coach');
@@ -1529,8 +1543,8 @@ function StatTrackerV3Content() {
           // NBA Standard: Team fouls and timeouts (placeholder values for now)
           teamAFouls={tracker.teamFouls[gameData.team_a_id] || 0}
           teamBFouls={tracker.teamFouls[gameData.team_b_id] || 0}
-          teamATimeouts={tracker.teamTimeouts[gameData.team_a_id] ?? 7}
-          teamBTimeouts={tracker.teamTimeouts[gameData.team_b_id] ?? 7}
+          teamATimeouts={tracker.teamTimeouts[gameData.team_a_id] ?? 5}
+          teamBTimeouts={tracker.teamTimeouts[gameData.team_b_id] ?? 5}
           // Shot Clock Props
           shotClockSeconds={tracker.shotClock.secondsRemaining ?? 24}
           shotClockIsRunning={tracker.shotClock.isRunning}
@@ -1542,6 +1556,9 @@ function StatTrackerV3Content() {
           onToggleShotClockVisibility={tracker.toggleShotClockVisibility}
           gameStatus={tracker.gameStatus}
           isDemo={gameData.is_demo}
+          gameId={gameData.id}
+          teamAId={gameData.team_a_id}
+          teamBId={gameData.team_b_id}
         />
 
         {coachMode && tracker.gameStatus === 'in_progress' && !dismissedCompletionReminder && (
@@ -1654,6 +1671,21 @@ function StatTrackerV3Content() {
         {sharedModals}
         {featureTour}
 
+        {/* Game Completion Modal with Awards */}
+        {!coachMode && gameData && (
+          <GameCompletionModal
+            isOpen={tracker.showAwardsModal}
+            onClose={() => tracker.setShowAwardsModal(false)}
+            onComplete={tracker.completeGameWithAwards}
+            gameId={gameData.id}
+            teamAId={gameData.team_a_id}
+            teamBId={gameData.team_b_id}
+            teamAName={gameData.team_a?.name || 'Team A'}
+            teamBName={gameData.team_b?.name || 'Team B'}
+            teamAScore={tracker.scores[gameData.team_a_id] || 0}
+            teamBScore={tracker.scores[gameData.team_b_id] || 0}
+          />
+        )}
       </div>
       </div>
     </ErrorBoundary>

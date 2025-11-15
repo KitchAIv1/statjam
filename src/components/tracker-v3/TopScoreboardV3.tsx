@@ -5,6 +5,7 @@ import { Play, Pause, RotateCcw, Edit3, Check, X, ArrowLeft, Eye, EyeOff } from 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { TeamStatsModal } from './modals/TeamStatsModal';
 
 interface TopScoreboardV3Props {
   teamAName: string;
@@ -39,6 +40,10 @@ interface TopScoreboardV3Props {
   gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime';
   // ✅ Demo Flag
   isDemo?: boolean;
+  // ✅ Team Stats Modal Props
+  gameId?: string;
+  teamAId?: string;
+  teamBId?: string;
 }
 
 export function TopScoreboardV3({
@@ -56,8 +61,8 @@ export function TopScoreboardV3({
   onSetCustomTime,
   teamAFouls = 0,
   teamBFouls = 0,
-  teamATimeouts = 7,
-  teamBTimeouts = 7,
+  teamATimeouts = 5,
+  teamBTimeouts = 5,
   // Shot Clock Props
   shotClockSeconds = 24,
   shotClockIsRunning = false,
@@ -72,7 +77,11 @@ export function TopScoreboardV3({
   // ✅ Game Status
   gameStatus = 'in_progress',
   // ✅ Demo Flag
-  isDemo = false
+  isDemo = false,
+  // ✅ Team Stats Modal Props
+  gameId,
+  teamAId,
+  teamBId
 }: TopScoreboardV3Props) {
 
   // NEW: Edit mode state
@@ -83,6 +92,10 @@ export function TopScoreboardV3({
   // Shot Clock Edit mode state
   const [isShotClockEditMode, setIsShotClockEditMode] = useState(false);
   const [editShotClockSeconds, setEditShotClockSeconds] = useState(shotClockSeconds || 24);
+  
+  // Team Stats Modal state
+  const [teamStatsModalOpen, setTeamStatsModalOpen] = useState(false);
+  const [selectedTeamForStats, setSelectedTeamForStats] = useState<'A' | 'B' | null>(null);
   
   const formatTime = (mins: number, secs: number) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -200,12 +213,26 @@ export function TopScoreboardV3({
         {/* Team A Section */}
         <div className="text-center">
           <div 
-            className="text-lg md:text-xl lg:text-2xl font-bold mb-2"
+            className={`text-lg md:text-xl lg:text-2xl font-bold mb-2 ${gameId && teamAId ? 'cursor-pointer hover:underline' : ''}`}
             style={{ color: 'var(--dashboard-text-primary)' }}
+            onClick={() => {
+              if (gameId && teamAId) {
+                setSelectedTeamForStats('A');
+                setTeamStatsModalOpen(true);
+              }
+            }}
           >
             {teamAName}
           </div>
-          <div className="text-3xl md:text-4xl lg:text-5xl font-black text-orange-500 leading-none mb-3">
+          <div 
+            className={`text-3xl md:text-4xl lg:text-5xl font-black text-orange-500 leading-none mb-3 ${gameId && teamAId ? 'cursor-pointer hover:opacity-80' : ''}`}
+            onClick={() => {
+              if (gameId && teamAId) {
+                setSelectedTeamForStats('A');
+                setTeamStatsModalOpen(true);
+              }
+            }}
+          >
             {teamAScore}
           </div>
           
@@ -226,7 +253,7 @@ export function TopScoreboardV3({
             <div className="flex items-center justify-center gap-2">
               <span className="text-xs font-semibold text-gray-600">TO</span>
               <div className="flex gap-1">
-                {Array.from({ length: 7 }, (_, i) => (
+                {Array.from({ length: 5 }, (_, i) => (
                   <div
                     key={i}
                     className={`w-3 h-3 rounded-full ${
@@ -536,12 +563,26 @@ export function TopScoreboardV3({
         {/* Team B Section */}
         <div className="text-center">
           <div 
-            className="text-lg md:text-xl lg:text-2xl font-bold mb-2"
+            className={`text-lg md:text-xl lg:text-2xl font-bold mb-2 ${gameId && teamBId ? 'cursor-pointer hover:underline' : ''}`}
             style={{ color: 'var(--dashboard-text-primary)' }}
+            onClick={() => {
+              if (gameId && teamBId) {
+                setSelectedTeamForStats('B');
+                setTeamStatsModalOpen(true);
+              }
+            }}
           >
             {teamBName}
           </div>
-          <div className="text-3xl md:text-4xl lg:text-5xl font-black text-blue-500 leading-none mb-3">
+          <div 
+            className={`text-3xl md:text-4xl lg:text-5xl font-black text-blue-500 leading-none mb-3 ${gameId && teamBId ? 'cursor-pointer hover:opacity-80' : ''}`}
+            onClick={() => {
+              if (gameId && teamBId) {
+                setSelectedTeamForStats('B');
+                setTeamStatsModalOpen(true);
+              }
+            }}
+          >
             {teamBScore}
           </div>
           
@@ -562,7 +603,7 @@ export function TopScoreboardV3({
             <div className="flex items-center justify-center gap-2">
               <span className="text-xs font-semibold text-gray-600">TO</span>
               <div className="flex gap-1">
-                {Array.from({ length: 7 }, (_, i) => (
+                {Array.from({ length: 5 }, (_, i) => (
                   <div
                     key={i}
                     className={`w-3 h-3 rounded-full ${
@@ -576,6 +617,20 @@ export function TopScoreboardV3({
         </div>
 
       </div>
+
+      {/* Team Stats Modal */}
+      {teamStatsModalOpen && gameId && selectedTeamForStats && (
+        <TeamStatsModal
+          isOpen={teamStatsModalOpen}
+          onClose={() => {
+            setTeamStatsModalOpen(false);
+            setSelectedTeamForStats(null);
+          }}
+          gameId={gameId}
+          teamId={selectedTeamForStats === 'A' ? (teamAId || '') : (teamBId || '')}
+          teamName={selectedTeamForStats === 'A' ? teamAName : teamBName}
+        />
+      )}
     </div>
   );
 }

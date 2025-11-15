@@ -23,6 +23,8 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { PlayerDataDebug } from "@/lib/utils/playerDataDebug";
 import { supabase } from "@/lib/supabase";
 import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3, Clock, MapPin } from "lucide-react";
+import { GameAwardsService } from "@/lib/services/gameAwardsService";
+import { AwardDisplayCard } from "@/components/tournament/AwardDisplayCard";
 import { Skeleton, SkeletonStat } from "@/components/ui/skeleton";
 import { getCountryName } from "@/data/countries";
 import { SocialFooter } from "./shared/SocialFooter";
@@ -62,6 +64,20 @@ export function PlayerDashboard() {
   const [currentPlayerData, setCurrentPlayerData] = useState(defaultPlayerData);
   const [currentTab, setCurrentTab] = useState("dashboard");
   const [showCardGeneration, setShowCardGeneration] = useState(false);
+  const [playerAwards, setPlayerAwards] = useState<Array<{
+    gameId: string;
+    gameDate: string;
+    opponentName: string;
+    awardType: 'player_of_the_game' | 'hustle_player';
+    stats: {
+      points: number;
+      rebounds: number;
+      assists: number;
+      steals: number;
+      blocks: number;
+    };
+  }>>([]);
+  const [loadingAwards, setLoadingAwards] = useState(true);
 
   const handlePremiumFeatureClick = (e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -251,6 +267,27 @@ export function PlayerDashboard() {
     // ✅ FIX: Only depend on raw data, not computed display values (prevents infinite loop)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, data.identity, data.season, data.careerHighs]);
+
+  // Fetch player awards
+  useEffect(() => {
+    if (!user?.id) {
+      setLoadingAwards(false);
+      return;
+    }
+
+    const loadAwards = async () => {
+      try {
+        const awards = await GameAwardsService.getPlayerAwards(user.id);
+        setPlayerAwards(awards);
+      } catch (error) {
+        console.error('Failed to load player awards:', error);
+      } finally {
+        setLoadingAwards(false);
+      }
+    };
+
+    loadAwards();
+  }, [user?.id]);
 
   // Helper function to check if data is meaningful (not null/empty/default)
   const hasValidData = (value: any, defaultCheck?: any) => {
@@ -957,7 +994,35 @@ export function PlayerDashboard() {
 
           {/* Personal Stats Content */}
           <TabsContent value="personal-stats">
-            <PersonalStatTracker />
+            <div className="space-y-6">
+              <PersonalStatTracker />
+              
+              {/* Awards Section */}
+              {playerAwards.length > 0 && (
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-primary" />
+                      Awards
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {playerAwards.map((award) => (
+                        <AwardDisplayCard
+                          key={award.gameId}
+                          playerId={user?.id || ''}
+                          playerName={identityName}
+                          awardType={award.awardType}
+                          stats={award.stats}
+                          onClick={() => router.push(`/game-viewer/${award.gameId}`)}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           {/* AI Coaching Content - Temporarily Disabled */}

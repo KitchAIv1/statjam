@@ -40,7 +40,10 @@ export function StatEditForm({
   const [quarter, setQuarter] = useState(stat.quarter);
   const [minutes, setMinutes] = useState(stat.game_time_minutes);
   const [seconds, setSeconds] = useState(stat.game_time_seconds);
+  const [value, setValue] = useState(stat.stat_value); // For game-level stats
   const [saving, setSaving] = useState(false);
+  
+  const isGameLevelStat = stat.is_game_level_stat || false;
 
   const statTypes = [
     { value: 'field_goal', label: '2PT Field Goal' },
@@ -75,6 +78,36 @@ export function StatEditForm({
     try {
       setSaving(true);
 
+      // Handle timeout events (read-only, can only be deleted)
+      if (stat.stat_type === 'timeout') {
+        alert('Timeout events cannot be edited. Use Delete to remove them.');
+        setSaving(false);
+        return;
+      }
+
+      // Handle game-level stats (fouls/timeouts) - removed, no longer using synthetic entries
+      if (isGameLevelStat) {
+        const updates: any = {};
+        if (stat.game_level_type === 'team_fouls') {
+          if (stat.team_side === 'A') {
+            updates.team_a_fouls = value;
+          } else {
+            updates.team_b_fouls = value;
+          }
+        } else if (stat.game_level_type === 'team_timeouts') {
+          if (stat.team_side === 'A') {
+            updates.team_a_timeouts_remaining = value;
+          } else {
+            updates.team_b_timeouts_remaining = value;
+          }
+        }
+        
+        await StatEditService.updateGameLevelStat(stat.game_id, updates);
+        onSuccess();
+        return;
+      }
+
+      // Regular stat update
       // Determine if this is regular player or custom player
       const isCustomPlayer = !players.find(p => p.id === playerId && !p.id.startsWith('custom-'));
       
@@ -119,23 +152,48 @@ export function StatEditForm({
         {/* Form */}
         <div className="p-6 space-y-4">
           
-          {/* Player Selection */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Player
-            </label>
-            <select
-              value={playerId}
-              onChange={(e) => setPlayerId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              {players.map(player => (
-                <option key={player.id} value={player.id}>
-                  {player.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Timeout events: Read-only display */}
+          {stat.stat_type === 'timeout' ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-600 mb-2">Timeout events cannot be edited.</p>
+              <p className="text-xs text-gray-500">Use Delete to remove this timeout event.</p>
+            </div>
+          ) : isGameLevelStat ? (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {stat.game_level_type === 'team_fouls' ? 'Team Fouls' : 'Timeouts Remaining'}
+              </label>
+              <input
+                type="number"
+                min="0"
+                max={stat.game_level_type === 'team_timeouts' ? "10" : "20"}
+                value={value}
+                onChange={(e) => setValue(parseInt(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {stat.team_side === 'A' ? 'Team A' : 'Team B'} - {stat.game_level_type === 'team_fouls' ? 'Total team fouls' : 'Timeouts remaining'}
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Player Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Player
+                </label>
+                <select
+                  value={playerId}
+                  onChange={(e) => setPlayerId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {players.map(player => (
+                    <option key={player.id} value={player.id}>
+                      {player.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
           {/* Stat Type */}
           <div>
@@ -184,8 +242,8 @@ export function StatEditForm({
             </div>
           )}
 
-          {/* Quarter and Time */}
-          <div className="grid grid-cols-3 gap-3">
+              {/* Quarter and Time */}
+              <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Quarter
@@ -230,6 +288,8 @@ export function StatEditForm({
               />
             </div>
           </div>
+            </>
+          )}
         </div>
 
         {/* Actions */}

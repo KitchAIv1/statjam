@@ -550,7 +550,7 @@ export class GameServiceV3 {
 
       const isTeamA = currentGame.team_a_id === data.teamId;
       const timeoutField = isTeamA ? 'team_a_timeouts_remaining' : 'team_b_timeouts_remaining';
-      const currentCount = isTeamA ? (currentGame.team_a_timeouts_remaining || 7) : (currentGame.team_b_timeouts_remaining || 7);
+      const currentCount = isTeamA ? (currentGame.team_a_timeouts_remaining || 5) : (currentGame.team_b_timeouts_remaining || 5);
 
       const gameUrl = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${data.gameId}`;
       const gameResponse = await fetch(gameUrl, {
