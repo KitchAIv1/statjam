@@ -7,6 +7,7 @@ import LiveGameCard from '@/components/LiveGameCard';
 import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Shield } from 'lucide-react';
+import { TournamentOrganizerCard } from './TournamentOrganizerCard';
 
 interface TournamentRightRailProps {
   data: TournamentPageData;
@@ -190,6 +191,9 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
               ))}
         </div>
       </section>
+
+      {/* Section 5: Organizer Card */}
+      <TournamentOrganizerCard organizerId={data.tournament.organizerId} />
     </div>
   );
 }

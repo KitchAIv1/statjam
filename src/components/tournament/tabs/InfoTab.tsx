@@ -1,5 +1,8 @@
+"use client";
+
 import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { Card } from '@/components/ui/card';
+import { useOrganizerProfile } from '@/hooks/useOrganizerProfile';
 
 interface InfoTabProps {
   data: TournamentPageData;
@@ -7,6 +10,7 @@ interface InfoTabProps {
 
 export function InfoTab({ data }: InfoTabProps) {
   const { tournament } = data;
+  const { organizer, loading: organizerLoading } = useOrganizerProfile(tournament.organizerId);
 
   return (
     <div className="space-y-3 sm:space-y-4 md:space-y-6">
@@ -18,7 +22,10 @@ export function InfoTab({ data }: InfoTabProps) {
           <InfoRow label="End Date" value={formatDate(tournament.endDate)} />
           <InfoRow label="Location" value={tournament.location || 'TBA'} />
           <InfoRow label="Venue" value={tournament.venue || 'TBA'} />
-          <InfoRow label="Organizer" value="Elite Sports Federation" />
+          <InfoRow 
+            label="Organizer" 
+            value={organizerLoading ? 'Loading...' : (organizer?.name || 'TBA')} 
+          />
         </div>
       </Card>
 

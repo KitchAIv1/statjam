@@ -1,99 +1,59 @@
-// ============================================================================
-// USE ORGANIZER PROFILE HOOK
-// ============================================================================
-// Purpose: Custom hook for organizer profile data and actions
-// Follows .cursorrules: <100 lines, single responsibility
-// ============================================================================
+"use client";
 
 import { useState, useEffect } from 'react';
-import { OrganizerProfile, ProfileUpdateRequest } from '@/lib/types/profile';
-import { ProfileService } from '@/lib/services/profileService';
+import { getOrganizerBasicInfo, OrganizerBasicInfo } from '@/lib/services/organizerService';
 
 interface UseOrganizerProfileReturn {
-  profileData: OrganizerProfile | null;
+  organizer: OrganizerBasicInfo | null;
   loading: boolean;
-  error: string | null;
-  updateProfile: (updates: ProfileUpdateRequest) => Promise<boolean>;
-  refreshProfile: () => Promise<void>;
+  error: Error | null;
 }
 
-export function useOrganizerProfile(userId: string): UseOrganizerProfileReturn {
-  const [profileData, setProfileData] = useState<OrganizerProfile | null>(null);
+/**
+ * useOrganizerProfile - Hook for fetching organizer profile data
+ * 
+ * Purpose: Fetch and cache organizer information
+ * Follows .cursorrules: <100 lines, single responsibility
+ */
+export function useOrganizerProfile(organizerId: string | null | undefined): UseOrganizerProfileReturn {
+  const [organizer, setOrganizer] = useState<OrganizerBasicInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
-  // Fetch profile data
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const fetchedProfile = await ProfileService.getOrganizerProfile(userId);
-      
-      if (fetchedProfile) {
-        setProfileData(fetchedProfile);
-      } else {
-        setError('Failed to load profile');
-      }
-    } catch (err) {
-      console.error('❌ Error fetching organizer profile:', err);
-      setError('Failed to load profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Update profile with optimistic updates
-  const updateProfile = async (updates: ProfileUpdateRequest): Promise<boolean> => {
-    try {
-      // ⚡ OPTIMIZATION: Update local state immediately (optimistic update)
-      if (profileData) {
-        setProfileData({
-          ...profileData,
-          name: updates.name,
-          bio: updates.bio,
-          location: updates.location,
-          socialLinks: updates.socialLinks,
-          profilePhotoUrl: updates.profilePhotoUrl
-          // Note: Stats remain unchanged - no need to re-fetch
-        });
-      }
-
-      // Save to database in background
-      const success = await ProfileService.updateProfile(userId, updates);
-      
-      if (!success) {
-        // Rollback on failure - re-fetch to get correct data
-        await fetchProfile();
-      }
-      
-      return success;
-    } catch (err) {
-      console.error('❌ Error updating profile:', err);
-      // Rollback on error
-      await fetchProfile();
-      return false;
-    }
-  };
-
-  // Refresh profile data
-  const refreshProfile = async () => {
-    await fetchProfile();
-  };
-
-  // Initial fetch
   useEffect(() => {
-    if (userId) {
-      fetchProfile();
+    if (!organizerId) {
+      setOrganizer(null);
+      setLoading(false);
+      return;
     }
-  }, [userId]);
 
-  return {
-    profileData,
-    loading,
-    error,
-    updateProfile,
-    refreshProfile
-  };
+    let mounted = true;
+
+    const fetchOrganizer = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getOrganizerBasicInfo(organizerId);
+        if (mounted) {
+          setOrganizer(data);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err : new Error('Failed to fetch organizer'));
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchOrganizer();
+
+    return () => {
+      mounted = false;
+    };
+  }, [organizerId]);
+
+  return { organizer, loading, error };
 }
-

@@ -4,11 +4,11 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { TournamentHero } from './TournamentHero';
 import { TournamentPrimaryNav } from './TournamentPrimaryNav';
 import { TournamentRightRail } from './TournamentRightRail';
+import { TournamentSocialFooter } from '@/components/shared/TournamentSocialFooter';
 import { OverviewTab } from './tabs/OverviewTab';
 import { ScheduleTab } from './tabs/ScheduleTab';
 import { BracketTab } from './tabs/BracketTab';
@@ -305,24 +305,7 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
         </aside>
       </main>
 
-      <footer className="border-t border-white/10 bg-[#121212] py-4 sm:py-6 md:py-10">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-3 px-3 sm:gap-4 sm:px-4 md:gap-6 md:px-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-white/40 sm:text-xs md:text-sm">Organizer</div>
-            <div className="mt-0.5 text-sm font-semibold text-white/90 sm:mt-1 sm:text-base md:text-lg">Elite Sports Federation</div>
-            <div className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">15 prior tournaments • Verified</div>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[#B3B3B3] sm:gap-2 sm:text-xs md:gap-3 md:text-sm">
-            <a href="#" className="transition hover:text-white">Privacy</a>
-            <Separator orientation="vertical" className="h-3 bg-white/20 sm:h-4" />
-            <a href="#" className="transition hover:text-white">Terms</a>
-            <Separator orientation="vertical" className="h-3 bg-white/20 sm:h-4" />
-            <a href="#" className="transition hover:text-white">Contact</a>
-            <Separator orientation="vertical" className="h-3 bg-white/20 sm:h-4" />
-            <span>© {new Date().getFullYear()} StatJam</span>
-          </div>
-        </div>
-      </footer>
+      <TournamentSocialFooter organizerId={data.tournament.organizerId} />
     </div>
   );
 }
