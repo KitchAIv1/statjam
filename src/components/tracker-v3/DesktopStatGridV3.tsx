@@ -173,7 +173,6 @@ export function DesktopStatGridV3({
       icon: RotateCcw, 
       onClick: onSubstitution,
       variant: 'outline' as const,
-      disabled: !onSubstitution,
       color: 'gray'
     }
   ];
@@ -414,9 +413,15 @@ export function DesktopStatGridV3({
           const Icon = action.icon;
           const isRecordingThis = isRecording === `foul-${action.id === 'foul' ? 'personal' : 'technical'}`;
           
+          // ✅ SUB button is always available (independent of clock state)
+          const isSubButton = action.id === 'sub';
+          const shouldDisable = isSubButton 
+            ? (!selectedPlayer || action.disabled) // SUB only needs selected player
+            : (isDisabled || action.disabled); // Other buttons need clock running
+          
           // Color schemes for each button
           const getColorClasses = () => {
-            if (isDisabled || action.disabled) {
+            if (shouldDisable) {
               return 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400';
             }
             
@@ -442,7 +447,7 @@ export function DesktopStatGridV3({
             <Button
               key={action.id}
               onClick={action.onClick}
-              disabled={isDisabled || action.disabled}
+              disabled={shouldDisable}
               variant={action.variant}
               className={`h-16 flex items-center justify-center gap-3 text-base font-semibold transition-all duration-200 rounded-xl border-2 shadow-md ${getColorClasses()}`}
               style={{

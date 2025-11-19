@@ -71,14 +71,14 @@ export interface FreeThrowSequence {
 
 export interface PlayEngineResult {
   shouldPrompt: boolean;
-  promptType: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
+  promptType: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | 'missed_shot_type' | null;
   sequenceId?: string;
   linkedEventId?: string;
   metadata?: Record<string, any>;
   actions: string[];
   // ✅ SEQUENTIAL PROMPTS: Support multiple prompts for one event
   promptQueue?: Array<{
-    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw';
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | 'missed_shot_type';
     sequenceId: string;
     metadata: Record<string, any>;
   }>;
@@ -175,6 +175,21 @@ export class PlayEngine {
         result.metadata = promptQueue[0].metadata;
         result.promptQueue = promptQueue;
       }
+    }
+
+    // ✅ BLOCK → MISSED SHOT SEQUENCE
+    // When a block is recorded manually, prompt for shot type, then trigger rebound sequence
+    if (event.statType === 'block') {
+      const sequenceId = uuidv4();
+      result.shouldPrompt = true;
+      result.promptType = 'missed_shot_type';
+      result.sequenceId = sequenceId;
+      result.metadata = {
+        blockerId: this.getPlayerIdentifier(event),
+        blockerTeamId: event.teamId,
+        shotType: null // Will be determined by user selection
+      };
+      result.actions.push(`Prompt for missed shot type after block by player ${this.getPlayerIdentifier(event)}`);
     }
 
     // ✅ AUTO-GENERATE TURNOVER FOR STEAL

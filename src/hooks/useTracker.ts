@@ -97,7 +97,7 @@ interface UseTrackerReturn {
   // ✅ PHASE 4 & 5: Play Sequence Prompts
   playPrompt: {
     isOpen: boolean;
-    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | 'missed_shot_type' | null;
     sequenceId: string | null;
     primaryEventId: string | null;
     metadata: Record<string, any> | null;
@@ -105,7 +105,7 @@ interface UseTrackerReturn {
   clearPlayPrompt: () => void;
   setPlayPrompt: (prompt: {
     isOpen: boolean;
-    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | 'missed_shot_type' | null;
     sequenceId: string | null;
     primaryEventId: string | null;
     metadata: Record<string, any> | null;
@@ -1155,7 +1155,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         const shouldSkipReboundPrompt = isPartOfFoulSequence && playResult.promptType === 'rebound';
         
         if (playResult.shouldPrompt && playResult.promptType && 
-            (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block' || playResult.promptType === 'free_throw') &&
+            (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block' || playResult.promptType === 'free_throw' || playResult.promptType === 'missed_shot_type') &&
             !shouldSkipAssistPrompt && !shouldSkipReboundPrompt) {
           
           // ✅ COACH MODE FIX: Don't show prompts for opponent actions
@@ -1218,28 +1218,19 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               console.log('💡 Opponent turnover implied by steal (no individual player to attribute)');
             }
           } else {
-            // ✅ REGULAR MODE: Full auto-generation
-            const opponentTeamId = stat.teamId === teamAId ? teamBId : teamAId;
-            
-            // Generate turnover event
-            const turnoverEvent = PlayEngine.generateTurnoverForSteal(
-              gameEvent,
-              opponentTeamId
-            );
-            
-            // Record turnover immediately (no prompt needed)
-            // This will be executed after the steal is recorded in the database
-            setTimeout(async () => {
-              await recordStat({
-                gameId: stat.gameId,
-                playerId: turnoverEvent.playerId,
-                teamId: turnoverEvent.teamId,
-                statType: 'turnover',
-                modifier: 'steal', // ✅ FIX: Mark as 'steal' so clock continues (live ball)
-                sequenceId: playResult.sequenceId,
-                linkedEventId: undefined // Will link to steal after it's recorded
-              });
-            }, 100); // Small delay to ensure steal is recorded first
+            // ✅ REGULAR MODE: Show turnover prompt modal (same as coach mode)
+            // This allows tracker to select "who turned the ball over" for accurate team turnover tracking
+            setPlayPrompt({
+              isOpen: true,
+              type: 'turnover',
+              sequenceId: playResult.sequenceId || null,
+              primaryEventId: null,
+              metadata: {
+                stealerId: playResult.metadata?.stealerId || stat.playerId || stat.customPlayerId,
+                stealerName: 'Unknown', // Will be resolved by page.tsx from player list
+                stealerTeamId: stat.teamId
+              }
+            });
           }
         }
       }

@@ -26,6 +26,7 @@ import { AssistPromptModal } from '@/components/tracker-v3/modals/AssistPromptMo
 import { ReboundPromptModal } from '@/components/tracker-v3/modals/ReboundPromptModal';
 import { BlockPromptModal } from '@/components/tracker-v3/modals/BlockPromptModal';
 import { TurnoverPromptModal } from '@/components/tracker-v3/modals/TurnoverPromptModal';
+import { BlockedShotSelectionModal } from '@/components/tracker-v3/modals/BlockedShotSelectionModal';
 import { FreeThrowSequenceModal } from '@/components/tracker-v3/modals/FreeThrowSequenceModal';
 import { FoulTypeSelectionModal, FoulType } from '@/components/tracker-v3/modals/FoulTypeSelectionModal';
 import { VictimPlayerSelectionModal } from '@/components/tracker-v3/modals/VictimPlayerSelectionModal';
@@ -1219,6 +1220,83 @@ function StatTrackerV3Content() {
         />
       )}
 
+      {/* Blocked Shot Selection Modal - After block */}
+      {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'missed_shot_type' && (
+        <BlockedShotSelectionModal
+          isOpen={true}
+          onClose={tracker.clearPlayPrompt}
+          onSelect={async (shooterId, shotType) => {
+            try {
+              // Get blocker info from metadata
+              const blockerId = tracker.playPrompt.metadata?.blockerId;
+              const blockerTeamId = tracker.playPrompt.metadata?.blockerTeamId;
+              
+              // Determine shooter team (opposite of blocker)
+              const shooterTeamId = blockerTeamId === gameData.team_a_id 
+                ? gameData.team_b_id 
+                : gameData.team_a_id;
+              
+              // Find shooter player data (check both full lists for custom player detection)
+              const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === shooterId);
+              
+              if (!shooterData) {
+                console.error('❌ Shooter player not found');
+                tracker.clearPlayPrompt();
+                return;
+              }
+              
+              // Check if shooter is custom player
+              const isShooterCustom = shooterId.startsWith('custom-') || 
+                                     (shooterData.is_custom_player === true);
+              
+              // Record missed shot (this will trigger rebound prompt via PlayEngine)
+              await tracker.recordStat({
+                gameId: gameData.id,
+                playerId: isShooterCustom ? undefined : shooterId,
+                customPlayerId: isShooterCustom ? shooterId : undefined,
+                teamId: shooterTeamId,
+                statType: shotType,
+                modifier: 'missed',
+                sequenceId: tracker.playPrompt.sequenceId || undefined
+              });
+              
+              tracker.clearPlayPrompt();
+            } catch (error) {
+              console.error('❌ Error recording missed shot after block:', error);
+              notify.error(
+                'Failed to record missed shot',
+                error instanceof Error ? error.message : 'Please try again'
+              );
+              tracker.clearPlayPrompt();
+            }
+          }}
+          shooterTeamPlayers={(() => {
+            // Determine shooter team (opposite of blocker)
+            const blockerTeamId = tracker.playPrompt.metadata?.blockerTeamId || gameData.team_a_id;
+            const shooterTeamId = blockerTeamId === gameData.team_a_id 
+              ? gameData.team_b_id 
+              : gameData.team_a_id;
+            
+            // Return only on-court players (first 5) from shooter team
+            return shooterTeamId === gameData.team_a_id ? currentRosterA : currentRosterB;
+          })()}
+          shooterTeamName={(() => {
+            // Determine shooter team name
+            const blockerTeamId = tracker.playPrompt.metadata?.blockerTeamId || gameData.team_a_id;
+            const shooterTeamId = blockerTeamId === gameData.team_a_id 
+              ? gameData.team_b_id 
+              : gameData.team_a_id;
+            
+            return shooterTeamId === gameData.team_a_id ? gameData.team_a_name : gameData.team_b_name;
+          })()}
+          blockerName={(() => {
+            const blockerId = tracker.playPrompt.metadata?.blockerId;
+            const blockerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === blockerId);
+            return blockerData?.name || 'Unknown';
+          })()}
+        />
+      )}
+
       {/* Turnover Prompt Modal - After steals */}
       {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'turnover' && (
         <TurnoverPromptModal
@@ -1269,7 +1347,14 @@ function StatTrackerV3Content() {
               return teamAPlayers; // Stealer from Team B → turnover by Team A
             }
           })()}
-          stealerName={tracker.playPrompt.metadata?.stealerName || 'Unknown'}
+          stealerName={(() => {
+            // Resolve stealer name from player list
+            const stealerId = tracker.playPrompt.metadata?.stealerId;
+            if (!stealerId) return 'Unknown';
+            
+            const stealerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === stealerId);
+            return stealerData?.name || 'Unknown';
+          })()}
         />
       )}
 
