@@ -34,7 +34,7 @@ export function CoachPlayerManagementModal({
   onClose, 
   onUpdate 
 }: CoachPlayerManagementModalProps) {
-  const { isOpen, playerId, openModal, closeModal } = usePlayerProfileModal();
+  const { isOpen, playerId, isCustomPlayer, openModal, closeModal } = usePlayerProfileModal();
   // State
   const [currentPlayers, setCurrentPlayers] = useState<CoachPlayer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +144,7 @@ export function CoachPlayerManagementModal({
                   {currentPlayers.map((player) => (
                     <div 
                       key={player.id}
-                      onClick={() => openModal(player.id)}
+                      onClick={() => openModal(player.id, { isCustomPlayer: player.is_custom_player || false })}
                       className="flex items-center gap-3 p-3 border rounded-lg bg-green-50 border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
                     >
                       <Avatar className="w-10 h-10 border-2 border-green-200">
@@ -199,7 +199,7 @@ export function CoachPlayerManagementModal({
                 
                 {/* Player Profile Modal */}
                 {playerId && (
-                  <PlayerProfileModal isOpen={isOpen} onClose={closeModal} playerId={playerId} />
+                  <PlayerProfileModal isOpen={isOpen} onClose={closeModal} playerId={playerId || ''} isCustomPlayer={isCustomPlayer || false} />
                 )}
               </>
             ) : (

@@ -40,12 +40,12 @@ export function PlayerListItem({
   processingPlayer,
   onToggle
 }: PlayerListItemProps) {
-  const { isOpen, playerId, openModal, closeModal } = usePlayerProfileModal();
+  const { isOpen, playerId, isCustomPlayer, openModal, closeModal } = usePlayerProfileModal();
 
   return (
     <>
       <div 
-        onClick={() => openModal(player.id)}
+        onClick={() => openModal(player.id, { isCustomPlayer: player.is_custom_player || false })}
         className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
       >
         {/* Avatar */}
@@ -117,7 +117,7 @@ export function PlayerListItem({
       
       {/* Player Profile Modal */}
       {playerId && (
-        <PlayerProfileModal isOpen={isOpen} onClose={closeModal} playerId={playerId} />
+        <PlayerProfileModal isOpen={isOpen} onClose={closeModal} playerId={playerId || ''} isCustomPlayer={isCustomPlayer || false} />
       )}
     </>
   );

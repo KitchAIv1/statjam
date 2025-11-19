@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use, useMemo } from 'react';
+import { useState, useEffect, use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TournamentService, TeamService } from '@/lib/services/tournamentService';
@@ -10,19 +10,21 @@ import { OrganizerPlayerManagementService } from '@/lib/services/organizerPlayer
 import { PlayerRosterList } from '@/components/shared/PlayerRosterList';
 import { PlayerSelectionList } from '@/components/shared/PlayerSelectionList';
 import { TeamCreationModal } from '@/components/shared/TeamCreationModal';
+import { TeamDeleteConfirmModal } from '@/components/shared/TeamDeleteConfirmModal';
+import { useTeamManagement } from '@/hooks/useTeamManagement';
 import { 
   Users, 
   Plus, 
   UserPlus, 
   Search, 
-  Filter,
   Edit,
   Trash2,
   ArrowLeft,
   Trophy,
   Shield,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Unlink
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -64,6 +66,13 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
   const [removingPlayer, setRemovingPlayer] = useState<string | null>(null);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // ✅ Team delete/disconnect state
+  const [teamToDelete, setTeamToDelete] = useState<{ id: string; name: string; coach_id?: string } | null>(null);
+  const [isTeamDeleteModalOpen, setIsTeamDeleteModalOpen] = useState(false);
+  
+  // ✅ Team management hook
+  const teamManagement = useTeamManagement(tournamentId, user);
   
   // Logo loading states per team
   const [teamLogosLoaded, setTeamLogosLoaded] = useState<Record<string, boolean>>({});
@@ -563,10 +572,14 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <div className="flex items-center gap-2 w-full sm:w-auto relative z-10">
                         <button
-                          onClick={() => handleSelectTeam(team)}
-                          className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectTeam(team);
+                          }}
+                          className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm cursor-pointer ${
                             isCoachOwned
                               ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                               : 'bg-orange-50 text-orange-600 hover:bg-orange-100'
@@ -579,7 +592,9 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                           {isSelected ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
                         <button 
-                          onClick={() => {
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             if (!isCoachOwned) {
                               setEditingTeam(team);
                               setShowEditModal(true);
@@ -589,12 +604,47 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                           className={`p-2 rounded-lg transition-colors ${
                             isCoachOwned
                               ? 'text-gray-300 cursor-not-allowed'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer'
                           }`}
                           title={isCoachOwned ? 'Coach-managed teams cannot be edited' : 'Edit team'}
                         >
                           <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
+                        {isCoachOwned ? (
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('🔍 Disconnect button clicked for team:', team.id, team.name);
+                              console.log('🔍 Setting teamToDelete:', { id: team.id, name: team.name, coach_id: team.coach_id });
+                              console.log('🔍 teamManagement available:', !!teamManagement);
+                              setTeamToDelete({ id: team.id, name: team.name, coach_id: team.coach_id });
+                              setIsTeamDeleteModalOpen(true);
+                              console.log('🔍 Modal state set - isTeamDeleteModalOpen should be true');
+                            }}
+                            className="p-2 rounded-lg transition-colors hover:bg-orange-600/10 hover:text-orange-600 text-muted-foreground cursor-pointer"
+                            title="Disconnect Team"
+                          >
+                            <Unlink className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </button>
+                        ) : (
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('🔍 Delete button clicked for team:', team.id, team.name);
+                              console.log('🔍 Setting teamToDelete:', { id: team.id, name: team.name, coach_id: undefined });
+                              console.log('🔍 teamManagement available:', !!teamManagement);
+                              setTeamToDelete({ id: team.id, name: team.name, coach_id: undefined });
+                              setIsTeamDeleteModalOpen(true);
+                              console.log('🔍 Modal state set - isTeamDeleteModalOpen should be true');
+                            }}
+                            className="p-2 rounded-lg transition-colors hover:bg-destructive/10 hover:text-destructive text-muted-foreground cursor-pointer"
+                            title="Delete Team"
+                          >
+                            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -742,6 +792,47 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
           setEditingTeam(null);
         }}
       />}
+
+      {/* Delete/Disconnect Team Modal */}
+      {teamToDelete && (
+        <TeamDeleteConfirmModal
+          open={isTeamDeleteModalOpen}
+          onClose={() => {
+            console.log('🔍 Modal onClose called');
+            setIsTeamDeleteModalOpen(false);
+            setTeamToDelete(null);
+          }}
+          onConfirm={async () => {
+            console.log('🔍 Modal onConfirm called for team:', teamToDelete.id);
+            if (!teamToDelete || !teamManagement) {
+              console.error('❌ Missing teamToDelete or teamManagement:', { teamToDelete, teamManagement });
+              return;
+            }
+            const isCoachTeam = !!teamToDelete.coach_id;
+            console.log('🔍 Action type:', isCoachTeam ? 'disconnect' : 'delete');
+            try {
+              if (isCoachTeam) {
+                await teamManagement.disconnectTeam(teamToDelete.id);
+              } else {
+                await teamManagement.deleteTeam(teamToDelete.id);
+              }
+              // Refresh teams list
+              const teamsData = await TeamService.getTeamsByTournament(tournamentId);
+              setTeams(teamsData);
+              setIsTeamDeleteModalOpen(false);
+              setTeamToDelete(null);
+              console.log('✅ Team action completed successfully');
+            } catch (error) {
+              console.error('❌ Error in team action:', error);
+              throw error;
+            }
+          }}
+          teamId={teamToDelete.id}
+          teamName={teamToDelete.name}
+          action={teamToDelete.coach_id ? 'disconnect' : 'delete'}
+          isCoachTeam={!!teamToDelete.coach_id}
+        />
+      )}
     </div>
   );
 };

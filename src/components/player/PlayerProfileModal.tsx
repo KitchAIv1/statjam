@@ -19,6 +19,7 @@ interface PlayerProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   playerId: string;
+  isCustomPlayer?: boolean;
   gameStats?: {
     points: number;
     rebounds: number;
@@ -51,7 +52,7 @@ interface GameAwardDetails {
   };
 }
 
-export function PlayerProfileModal({ isOpen, onClose, playerId, gameStats, gameId, awardType }: PlayerProfileModalProps) {
+export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer = false, gameStats, gameId, awardType }: PlayerProfileModalProps) {
   const [loading, setLoading] = useState(true);
   const [identity, setIdentity] = useState<PlayerIdentity | null>(null);
   const [seasonAverages, setSeasonAverages] = useState<SeasonAverages | null>(null);
@@ -115,10 +116,11 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, gameStats, gameI
       setLoading(true);
       try {
         // Load data in parallel for faster loading
+        // Pass isCustomPlayer flag to service methods
         const [identityData, seasonData, careerData] = await Promise.all([
-          PlayerDashboardService.getIdentity(playerId),
-          PlayerDashboardService.getSeasonAverages(playerId),
-          PlayerDashboardService.getCareerHighs(playerId),
+          PlayerDashboardService.getIdentity(playerId, isCustomPlayer),
+          PlayerDashboardService.getSeasonAverages(playerId, isCustomPlayer),
+          PlayerDashboardService.getCareerHighs(playerId, isCustomPlayer),
         ]);
 
         setIdentity(identityData);
@@ -132,7 +134,7 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, gameStats, gameI
     };
 
     loadPlayerData();
-  }, [isOpen, playerId]);
+  }, [isOpen, playerId, isCustomPlayer]);
 
   // Load award game details when gameId and awardType are provided
   useEffect(() => {
@@ -187,13 +189,20 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, gameStats, gameI
 
         const playerStat = playerStats.find(p => p.playerId === playerId);
 
-        // Fetch shooting stats
-        const { data: shootingStats } = await supabase
+        // Fetch shooting stats - check both player_id and custom_player_id
+        const shootingStatsQuery = supabase
           .from('game_stats')
           .select('stat_type, stat_value, modifier')
           .eq('game_id', gameId)
-          .eq('player_id', playerId)
           .in('stat_type', ['field_goal', 'two_pointer', 'three_pointer', 'free_throw']);
+
+        if (isCustomPlayer) {
+          shootingStatsQuery.eq('custom_player_id', playerId);
+        } else {
+          shootingStatsQuery.eq('player_id', playerId);
+        }
+
+        const { data: shootingStats } = await shootingStatsQuery;
 
         // Calculate shooting percentages
         let fgMade = 0, fgAttempted = 0;
@@ -250,7 +259,7 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, gameStats, gameI
     };
 
     loadAwardDetails();
-  }, [isOpen, gameId, awardType, playerId]);
+  }, [isOpen, gameId, awardType, playerId, isCustomPlayer]);
 
   const handleViewFullProfile = () => {
     window.open(`/player-dashboard`, '_blank');
@@ -665,27 +674,29 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, gameStats, gameI
                   <div className="pt-6 border-t border-white/10">
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            disabled
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            className="bg-white/10 text-white/50 hover:bg-white/10 border border-white/20 backdrop-blur-sm transition-all cursor-not-allowed opacity-60"
+                        {!isCustomPlayer && (
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleViewFullProfile}
+                              className="bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2 opacity-50" />
+                              View Full Profile
+                            </Button>
+                          </TooltipTrigger>
+                        )}
+                        {!isCustomPlayer && (
+                          <TooltipContent 
+                            side="top" 
+                            className="bg-[#121212] border border-white/20 text-white shadow-lg rounded-lg px-3 py-2 text-xs font-medium"
                           >
-                            <ExternalLink className="w-4 h-4 mr-2 opacity-50" />
-                            View Full Profile
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent 
-                          side="top" 
-                          className="bg-[#121212] border border-white/20 text-white shadow-lg rounded-lg px-3 py-2 text-xs font-medium"
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <span>Coming Soon</span>
-                          </span>
-                        </TooltipContent>
+                            <span className="flex items-center gap-1.5">
+                              <span>View full player dashboard</span>
+                            </span>
+                          </TooltipContent>
+                        )}
                       </Tooltip>
                     </TooltipProvider>
                   </div>

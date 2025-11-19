@@ -652,16 +652,46 @@ export class TeamService {
     try {
       console.log('🔍 TeamService: Deleting team:', teamId);
       
-      // First, get the team to know which tournament it belongs to for count update
+      // First, get the team to verify it's an organizer team and get tournament info
       const { data: teamData, error: teamFetchError } = await supabase
         .from('teams')
-        .select('tournament_id')
+        .select('tournament_id, name, coach_id')
         .eq('id', teamId)
         .single();
 
       if (teamFetchError) {
         console.error('❌ TeamService: Error fetching team for deletion:', teamFetchError);
         throw new Error(`Failed to fetch team: ${teamFetchError.message}`);
+      }
+
+      // ✅ VALIDATION: Only allow deletion of organizer-created teams
+      if (teamData.coach_id !== null) {
+        throw new Error(
+          `Cannot delete team "${teamData.name}". This is a coach-managed team. ` +
+          `Only coaches can delete their own teams. Use disconnect to remove it from the tournament.`
+        );
+      }
+
+      // ✅ VALIDATION: Check for active or scheduled games
+      const { data: activeGames, error: gamesError } = await supabase
+        .from('games')
+        .select('id, status, start_time')
+        .or(`team_a_id.eq.${teamId},team_b_id.eq.${teamId}`)
+        .in('status', ['in_progress', 'scheduled']);
+
+      if (gamesError) {
+        console.error('❌ TeamService: Error checking games:', gamesError);
+        throw new Error(`Failed to check team games: ${gamesError.message}`);
+      }
+
+      if (activeGames && activeGames.length > 0) {
+        const activeCount = activeGames.filter(g => g.status === 'in_progress').length;
+        const scheduledCount = activeGames.filter(g => g.status === 'scheduled').length;
+        
+        throw new Error(
+          `Cannot delete team "${teamData.name}". Team has ${activeCount} active game(s) and ${scheduledCount} scheduled game(s). ` +
+          `Please cancel or complete all games before deleting the team.`
+        );
       }
 
       // ✅ FIX: Delete all team_players relationships first to avoid foreign key constraint violation
@@ -695,6 +725,80 @@ export class TeamService {
     } catch (error) {
       console.error('❌ TeamService: Error in deleteTeam:', error);
       throw error instanceof Error ? error : new Error('Failed to delete team');
+    }
+  }
+
+  /**
+   * Disconnect a coach team from tournament (set tournament_id to NULL)
+   * Only organizers can disconnect coach teams from their tournaments
+   * Coach teams cannot be deleted by organizers, only disconnected
+   */
+  static async disconnectCoachTeam(teamId: string): Promise<void> {
+    try {
+      console.log('🔍 TeamService: Disconnecting coach team:', teamId);
+      
+      // First, get the team to verify it's a coach team and get tournament info
+      const { data: teamData, error: teamFetchError } = await supabase
+        .from('teams')
+        .select('tournament_id, name, coach_id')
+        .eq('id', teamId)
+        .single();
+
+      if (teamFetchError) {
+        console.error('❌ TeamService: Error fetching team for disconnect:', teamFetchError);
+        throw new Error(`Failed to fetch team: ${teamFetchError.message}`);
+      }
+
+      // ✅ VALIDATION: Only allow disconnecting coach teams
+      if (teamData.coach_id === null) {
+        throw new Error(
+          `Cannot disconnect team "${teamData.name}". This is an organizer-created team. ` +
+          `Use delete to permanently remove it from the tournament.`
+        );
+      }
+
+      // ✅ VALIDATION: Check for active or scheduled games
+      const { data: activeGames, error: gamesError } = await supabase
+        .from('games')
+        .select('id, status, start_time')
+        .or(`team_a_id.eq.${teamId},team_b_id.eq.${teamId}`)
+        .in('status', ['in_progress', 'scheduled']);
+
+      if (gamesError) {
+        console.error('❌ TeamService: Error checking games:', gamesError);
+        throw new Error(`Failed to check team games: ${gamesError.message}`);
+      }
+
+      if (activeGames && activeGames.length > 0) {
+        const activeCount = activeGames.filter(g => g.status === 'in_progress').length;
+        const scheduledCount = activeGames.filter(g => g.status === 'scheduled').length;
+        
+        throw new Error(
+          `Cannot disconnect team "${teamData.name}". Team has ${activeCount} active game(s) and ${scheduledCount} scheduled game(s). ` +
+          `Please cancel or complete all games before disconnecting the team.`
+        );
+      }
+
+      // Disconnect the team by setting tournament_id to NULL
+      const { error: updateError } = await supabase
+        .from('teams')
+        .update({ tournament_id: null })
+        .eq('id', teamId);
+
+      if (updateError) {
+        console.error('❌ TeamService: Error disconnecting team:', updateError);
+        throw new Error(`Failed to disconnect team: ${updateError.message}`);
+      }
+
+      // Update the tournament's current_teams count
+      if (teamData?.tournament_id) {
+        await this.updateTournamentTeamCount(teamData.tournament_id);
+      }
+
+      console.log('✅ TeamService: Coach team disconnected successfully:', teamId);
+    } catch (error) {
+      console.error('❌ TeamService: Error in disconnectCoachTeam:', error);
+      throw error instanceof Error ? error : new Error('Failed to disconnect team');
     }
   }
 
@@ -907,6 +1011,7 @@ export class TeamService {
                 isPremium: false,
                 country: 'US',
                 createdAt: new Date().toISOString(),
+                is_custom_player: true, // Mark as custom player
               };
             });
 

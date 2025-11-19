@@ -38,7 +38,7 @@ export function CoachPlayerSelectionList({
   onPlayerRemove, 
   className = '' 
 }: CoachPlayerSelectionListProps) {
-  const { isOpen, playerId, openModal, closeModal } = usePlayerProfileModal();
+  const { isOpen, playerId, isCustomPlayer, openModal, closeModal } = usePlayerProfileModal();
   // Mode state
   const [mode, setMode] = useState<'search' | 'create'>('search');
   
@@ -234,7 +234,7 @@ export function CoachPlayerSelectionList({
             {players.map((player) => (
               <div 
                 key={player.id}
-                onClick={() => openModal(player.id)}
+                onClick={() => openModal(player.id, { isCustomPlayer: player.is_custom_player || false })}
                 className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
               >
               {/* Avatar */}

@@ -50,7 +50,7 @@ export function CustomPlayerForm({
   
   const [formData, setFormData] = useState({
     name: '',
-    jersey_number: undefined as number | undefined,
+    jersey_number: '' as string, // Store as string to preserve leading zeros (00, 001, etc.)
     position: undefined as string | undefined
   });
 
@@ -74,10 +74,15 @@ export function CustomPlayerForm({
       }
 
       // Create custom player via service
+      // Convert jersey_number string to number (empty string becomes undefined)
+      const jerseyNumber = formData.jersey_number.trim() === '' 
+        ? undefined 
+        : parseInt(formData.jersey_number, 10);
+      
       const response = await service.createCustomPlayer({
         team_id: teamId,
         name: formData.name.trim(),
-        jersey_number: formData.jersey_number,
+        jersey_number: jerseyNumber,
         position: formData.position
       });
       
@@ -122,14 +127,23 @@ export function CustomPlayerForm({
           <Label htmlFor="jersey-number">Jersey Number (Optional)</Label>
           <Input
             id="jersey-number"
-            type="number"
-            min="0"
-            max="99"
-            value={formData.jersey_number || ''}
-            onChange={(e) => updateFormData({ 
-              jersey_number: e.target.value ? parseInt(e.target.value) : undefined 
-            })}
-            placeholder="e.g., 23"
+            type="text"
+            value={formData.jersey_number}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty or numeric values with leading zeros (00, 000, 001, etc.)
+              if (value === '') {
+                updateFormData({ jersey_number: '' });
+              } else if (/^\d+$/.test(value) && value.length <= 3) {
+                const num = parseInt(value, 10);
+                // Validate range 0-999, but preserve string format (00, 000, 001, etc.)
+                if (num >= 0 && num <= 999) {
+                  updateFormData({ jersey_number: value });
+                }
+              }
+            }}
+            placeholder="e.g., 0, 00, 000, 001, 23, 999"
+            maxLength={3}
           />
         </div>
 

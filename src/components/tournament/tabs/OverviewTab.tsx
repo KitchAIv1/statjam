@@ -29,7 +29,7 @@ export function OverviewTab({ data }: OverviewTabProps) {
   const router = useRouter();
   const [topScorers, setTopScorers] = useState<PlayerLeader[]>([]);
   const [loadingLeaders, setLoadingLeaders] = useState(true);
-  const { isOpen, playerId, gameStats, gameId, awardType, openModal, closeModal } = usePlayerProfileModal();
+  const { isOpen, playerId, isCustomPlayer, gameStats, gameId, awardType, openModal, closeModal } = usePlayerProfileModal();
 
   // ✅ OPTIMIZED: Use custom hook with caching
   const { leaders: allLeaders, loading: leadersLoading } = useTournamentLeaders(data.tournament.id, 'points', 1);
@@ -103,7 +103,7 @@ export function OverviewTab({ data }: OverviewTabProps) {
               return (
                 <div 
                   key={leader.playerId}
-                  onClick={() => openModal(leader.playerId)}
+                  onClick={() => openModal(leader.playerId, { isCustomPlayer: leader.isCustomPlayer || false })}
                   className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-2.5 py-2 transition hover:border-white/20 hover:bg-black/50 sm:gap-3 sm:rounded-xl sm:px-3 sm:py-2.5 md:gap-4 md:px-4 md:py-3"
                 >
                   <Avatar className="h-8 w-8 border-2 border-white/10 sm:h-10 sm:w-10 md:h-14 md:w-14">
@@ -153,7 +153,8 @@ export function OverviewTab({ data }: OverviewTabProps) {
                       onClick={() => openModal(award.playerOfTheGame!.id, {
                         gameId: award.gameId,
                         stats: award.playerOfTheGame!.stats,
-                        awardType: 'player_of_the_game'
+                        awardType: 'player_of_the_game',
+                        isCustomPlayer: (award.playerOfTheGame as any)?.isCustomPlayer || false
                       })}
                     />
                   )}
@@ -166,7 +167,8 @@ export function OverviewTab({ data }: OverviewTabProps) {
                       onClick={() => openModal(award.hustlePlayer!.id, {
                         gameId: award.gameId,
                         stats: award.hustlePlayer!.stats,
-                        awardType: 'hustle_player'
+                        awardType: 'hustle_player',
+                        isCustomPlayer: (award.hustlePlayer as any)?.isCustomPlayer || false
                       })}
                     />
                   )}
@@ -224,7 +226,8 @@ export function OverviewTab({ data }: OverviewTabProps) {
         <PlayerProfileModal 
           isOpen={isOpen} 
           onClose={closeModal} 
-          playerId={playerId}
+          playerId={playerId || ''}
+          isCustomPlayer={isCustomPlayer || false}
           gameStats={gameStats || undefined}
           gameId={gameId || undefined}
           awardType={awardType || undefined}

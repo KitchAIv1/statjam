@@ -13,6 +13,7 @@ export interface PlayerLeader {
   teamId: string;
   teamName: string;
   profilePhotoUrl?: string;
+  isCustomPlayer?: boolean; // Flag to identify custom players
   gamesPlayed: number;
   // Per-game averages
   pointsPerGame: number;
@@ -146,12 +147,14 @@ export class TournamentLeadersService {
       // Process each stat
       allStats.forEach(stat => {
         const playerId = stat.player_id || stat.custom_player_id;
+        const isCustomPlayer = !!stat.custom_player_id; // true if custom_player_id exists
         if (!playerId) return;
 
         // Initialize player if not exists
         if (!playerStatsMap.has(playerId)) {
           playerStatsMap.set(playerId, {
             playerId,
+            isCustomPlayer,
             teamId: stat.team_id,
             gamesPlayed: new Set(),
             points: 0,
@@ -227,18 +230,27 @@ export class TournamentLeadersService {
         }
       });
 
-      // Get player info (name, photo) for regular players
-      const regularPlayerIds = Array.from(playerStatsMap.keys()).filter(id => !id.includes('custom'));
-      const playerInfoMap = new Map<string, { name: string; profilePhotoUrl?: string }>();
+      // Get player info (name, photo) for both regular and custom players
+      const regularPlayerIds: string[] = [];
+      const customPlayerIds: string[] = [];
+      
+      // Separate regular and custom players
+      playerStatsMap.forEach((stats, playerId) => {
+        if (stats.isCustomPlayer) {
+          customPlayerIds.push(playerId);
+        } else {
+          regularPlayerIds.push(playerId);
+        }
+      });
+      
+      const playerInfoMap = new Map<string, { name: string; profilePhotoUrl?: string; isCustomPlayer: boolean }>();
 
+      // Fetch regular players from users table
       if (regularPlayerIds.length > 0) {
-        // Fetch players in batches to avoid query length limits
         const batchSize = 50;
         for (let i = 0; i < regularPlayerIds.length; i += batchSize) {
           const batch = regularPlayerIds.slice(i, i + batchSize);
-          const idFilter = batch.map(id => `eq.${id}`).join(',');
           
-          // Use multiple queries for each ID (hybridSupabaseService doesn't support complex in() syntax)
           const playerPromises = batch.map(playerId =>
             hybridSupabaseService.query<{ id: string; name: string; profile_photo_url?: string }>(
               'users',
@@ -253,6 +265,34 @@ export class TournamentLeadersService {
               playerInfoMap.set(player.id, {
                 name: player.name || 'Unknown Player',
                 profilePhotoUrl: player.profile_photo_url || undefined,
+                isCustomPlayer: false,
+              });
+            });
+          });
+        }
+      }
+
+      // Fetch custom players from custom_players table
+      if (customPlayerIds.length > 0) {
+        const batchSize = 50;
+        for (let i = 0; i < customPlayerIds.length; i += batchSize) {
+          const batch = customPlayerIds.slice(i, i + batchSize);
+          
+          const customPlayerPromises = batch.map(customPlayerId =>
+            hybridSupabaseService.query<{ id: string; name: string }>(
+              'custom_players',
+              'id, name',
+              { id: `eq.${customPlayerId}` }
+            )
+          );
+          
+          const customPlayerResults = await Promise.all(customPlayerPromises);
+          customPlayerResults.forEach(customPlayers => {
+            customPlayers.forEach(customPlayer => {
+              playerInfoMap.set(customPlayer.id, {
+                name: customPlayer.name || 'Custom Player',
+                profilePhotoUrl: undefined, // Custom players don't have profile photos
+                isCustomPlayer: true,
               });
             });
           });
@@ -285,6 +325,7 @@ export class TournamentLeadersService {
             teamId: player.teamId,
             teamName: teamInfo?.name || 'Unknown Team',
             profilePhotoUrl: playerInfo?.profilePhotoUrl,
+            isCustomPlayer: player.isCustomPlayer || playerInfo?.isCustomPlayer || false,
             gamesPlayed,
             pointsPerGame: gamesPlayed > 0 ? Math.round((player.points / gamesPlayed) * 10) / 10 : 0,
             reboundsPerGame: gamesPlayed > 0 ? Math.round((player.rebounds / gamesPlayed) * 10) / 10 : 0,

@@ -399,13 +399,32 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
               </Label>
               <Input
                 id="jersey"
-                type="number"
-                value={formData.jerseyNumber}
-                onChange={(e) => handleInputChange('jerseyNumber', e.target.value)}
-                onBlur={() => handleBlur('jerseyNumber')}
-                placeholder="0-999"
-                min="0"
-                max="999"
+                type="text"
+                value={formData.jerseyNumber?.toString() || ''}
+                onChange={(e) => {
+                  const value = e.target.value.trim();
+                  // Allow empty, numeric values, and leading zeros (001, 002, etc.)
+                  if (value === '') {
+                    handleInputChange('jerseyNumber', '');
+                  } else if (/^\d+$/.test(value)) {
+                    const num = parseInt(value, 10);
+                    if (num >= 0 && num <= 999) {
+                      handleInputChange('jerseyNumber', value); // Keep as string to preserve leading zeros
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  // Convert to number for validation, but preserve display format
+                  if (formData.jerseyNumber) {
+                    const num = typeof formData.jerseyNumber === 'string' 
+                      ? parseInt(formData.jerseyNumber, 10) 
+                      : formData.jerseyNumber;
+                    handleInputChange('jerseyNumber', num.toString());
+                  }
+                  handleBlur('jerseyNumber');
+                }}
+                placeholder="e.g., 0, 001, 23, 999"
+                maxLength={3}
                 className={`bg-input-background ${validationErrors.jerseyNumber ? 'border-destructive' : ''}`}
                 aria-invalid={!!validationErrors.jerseyNumber}
               />

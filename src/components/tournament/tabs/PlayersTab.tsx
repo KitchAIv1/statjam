@@ -26,7 +26,7 @@ interface PlayerWithTeam {
 export function PlayersTab({ tournamentId }: PlayersTabProps) {
   // ✅ OPTIMIZED: Use custom hook with cache-first loading (prevents flash)
   const { teams, loading } = useTournamentTeams(tournamentId);
-  const { isOpen, playerId, openModal, closeModal } = usePlayerProfileModal();
+  const { isOpen, playerId, isCustomPlayer, openModal, closeModal } = usePlayerProfileModal();
 
   const players = useMemo(() => {
     const allPlayers: PlayerWithTeam[] = [];
@@ -86,7 +86,7 @@ export function PlayersTab({ tournamentId }: PlayersTabProps) {
               return (
                 <div
                   key={`${player.teamId}-${player.id}`}
-                  onClick={() => openModal(player.id)}
+                  onClick={() => openModal(player.id, { isCustomPlayer: (player as any).is_custom_player || false })}
                   className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 transition hover:border-white/30 hover:bg-black/40 sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-3 md:gap-4 md:rounded-3xl md:px-5 md:py-4"
                 >
                   <Avatar className="h-8 w-8 border-2 border-white/10 sm:h-10 sm:w-10 md:h-14 md:w-14">
@@ -119,7 +119,7 @@ export function PlayersTab({ tournamentId }: PlayersTabProps) {
 
       {/* Player Profile Modal */}
       {playerId && (
-        <PlayerProfileModal isOpen={isOpen} onClose={closeModal} playerId={playerId} />
+        <PlayerProfileModal isOpen={isOpen} onClose={closeModal} playerId={playerId || ''} isCustomPlayer={isCustomPlayer || false} />
       )}
     </div>
   );

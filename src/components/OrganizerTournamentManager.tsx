@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2, UserCheck, UserX, Target, CalendarDays, ExternalLink } from "lucide-react";
+import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2, UserCheck, UserX, Target, CalendarDays, ExternalLink, Unlink } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,6 +26,7 @@ import { usePhotoUpload } from "@/hooks/usePhotoUpload";
 import { TournamentTableRow } from "@/components/TournamentTableRow";
 import { Tournament } from "@/lib/types/tournament";
 import { TeamCreationModal } from "@/components/shared/TeamCreationModal";
+import { TeamDeleteConfirmModal } from "@/components/shared/TeamDeleteConfirmModal";
 import { OrganizerPlayerManagementService } from "@/lib/services/organizerPlayerManagementService";
 import { TeamService, TournamentService } from "@/lib/services/tournamentService";
 import { useRouter } from 'next/navigation';
@@ -345,6 +346,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   // Delete confirmation states
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tournamentToDelete, setTournamentToDelete] = useState<Tournament | null>(null);
+  
+  // Team delete/disconnect confirmation states
+  const [isTeamDeleteModalOpen, setIsTeamDeleteModalOpen] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState<{ id: string; name: string; coach_id?: string } | null>(null);
   
   // Stat admin management states
   const [statAdmins, setStatAdmins] = useState<{ id: string; name: string; email: string }[]>([]);
@@ -1247,15 +1252,33 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                                   <span className="text-sm font-medium">players</span>
                                 </div>
                                 <div className="flex gap-1">
-                                  <Button 
-                                     size="sm" 
-                                     variant="ghost" 
-                                     className="hover:bg-destructive/10 hover:text-destructive"
-                                     onClick={() => teamManagement?.deleteTeam(team.id)}
-                                     title="Delete Team"
-                                   >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
+                                  {team.coach_id ? (
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      className="hover:bg-orange-600/10 hover:text-orange-600"
+                                      onClick={() => {
+                                        setTeamToDelete({ id: team.id, name: team.name, coach_id: team.coach_id });
+                                        setIsTeamDeleteModalOpen(true);
+                                      }}
+                                      title="Disconnect Team"
+                                    >
+                                      <Unlink className="w-4 h-4" />
+                                    </Button>
+                                  ) : (
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      className="hover:bg-destructive/10 hover:text-destructive"
+                                      onClick={() => {
+                                        setTeamToDelete({ id: team.id, name: team.name, coach_id: undefined });
+                                        setIsTeamDeleteModalOpen(true);
+                                      }}
+                                      title="Delete Team"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </CardContent>
@@ -1870,6 +1893,34 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Team Delete/Disconnect Confirmation Modal */}
+      {teamToDelete && (
+        <TeamDeleteConfirmModal
+          open={isTeamDeleteModalOpen}
+          onClose={() => {
+            setIsTeamDeleteModalOpen(false);
+            setTeamToDelete(null);
+          }}
+          onConfirm={async () => {
+            if (!teamToDelete || !teamManagement) {
+              return;
+            }
+            const isCoachTeam = !!teamToDelete.coach_id;
+            if (isCoachTeam) {
+              await teamManagement.disconnectTeam(teamToDelete.id);
+            } else {
+              await teamManagement.deleteTeam(teamToDelete.id);
+            }
+            setIsTeamDeleteModalOpen(false);
+            setTeamToDelete(null);
+          }}
+          teamId={teamToDelete.id}
+          teamName={teamToDelete.name}
+          action={teamToDelete.coach_id ? 'disconnect' : 'delete'}
+          isCoachTeam={!!teamToDelete.coach_id}
+        />
+      )}
     </div>
   );
 }

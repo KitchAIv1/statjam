@@ -118,6 +118,25 @@ export function useTeamManagement(tournamentId: string, user: { id: string } | n
     }
   }, [user?.id, fetchTeams]);
 
+  const disconnectTeam = useCallback(async (teamId: string) => {
+    if (!user?.id) {
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      console.log('🔍 useTeamManagement: Disconnecting team:', teamId);
+      await TeamService.disconnectCoachTeam(teamId);
+      
+      // Refresh teams list to reflect the disconnect
+      await fetchTeams();
+      
+      console.log('✅ useTeamManagement: Team disconnected successfully');
+    } catch (error) {
+      console.error('❌ useTeamManagement: Error disconnecting team:', error);
+      throw error;
+    }
+  }, [user?.id, fetchTeams]);
+
   const addPlayerToTeam = useCallback(async (teamId: string, playerId: string) => {
     if (!user?.id) {
       throw new Error('User not authenticated');
@@ -168,6 +187,7 @@ export function useTeamManagement(tournamentId: string, user: { id: string } | n
     refetch: fetchTeams,
     createTeam,
     deleteTeam,
+    disconnectTeam,
     addPlayerToTeam,
     removePlayerFromTeam
   };

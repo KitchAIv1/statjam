@@ -27,7 +27,7 @@ const CATEGORIES: Array<{ key: LeaderCategory; label: string; valueKey: keyof Pl
 export function LeadersTab({ tournamentId }: LeadersTabProps) {
   const [selectedCategory, setSelectedCategory] = useState<LeaderCategory>('points');
   const [minGames, setMinGames] = useState(1);
-  const { isOpen, playerId, openModal, closeModal } = usePlayerProfileModal();
+  const { isOpen, playerId, isCustomPlayer, openModal, closeModal } = usePlayerProfileModal();
 
   // ✅ OPTIMIZED: Use custom hook with batching and caching
   const { leaders: allLeaders, loading } = useTournamentLeaders(tournamentId, selectedCategory, minGames);
@@ -117,7 +117,7 @@ export function LeadersTab({ tournamentId }: LeadersTabProps) {
                 return (
                   <div
                     key={`${leader.playerId}-${selectedCategory}`}
-                    onClick={() => openModal(leader.playerId)}
+                    onClick={() => openModal(leader.playerId, { isCustomPlayer: leader.isCustomPlayer || false })}
                     className="flex cursor-pointer items-center justify-between gap-1.5 rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 transition hover:border-white/20 hover:bg-black/40 sm:gap-2 sm:rounded-xl sm:px-3 sm:py-2.5 md:rounded-2xl md:px-5 md:py-4"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2 md:gap-4">
@@ -157,7 +157,7 @@ export function LeadersTab({ tournamentId }: LeadersTabProps) {
 
       {/* Player Profile Modal */}
       {playerId && (
-        <PlayerProfileModal isOpen={isOpen} onClose={closeModal} playerId={playerId} />
+        <PlayerProfileModal isOpen={isOpen} onClose={closeModal} playerId={playerId || ''} isCustomPlayer={isCustomPlayer || false} />
       )}
     </Card>
   );

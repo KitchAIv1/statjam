@@ -66,13 +66,14 @@ interface GameInfo {
 export class PlayerGameStatsService {
   /**
    * Fetch all game stats for a player and aggregate by game
+   * Supports both regular players (from users table) and custom players (from custom_players table)
    * 
    * ⚡ PERFORMANCE OPTIMIZATION:
    * - Caches results for 5 minutes to avoid duplicate queries
    * - Limits to last 50 games for faster queries
    * - Uses efficient query ordering
    */
-  static async getPlayerGameStats(userId: string): Promise<GameStatsSummary[]> {
+  static async getPlayerGameStats(playerId: string, isCustomPlayer: boolean = false): Promise<GameStatsSummary[]> {
     try {
       // ✅ CRITICAL: Ensure authenticated session before querying
       // This ensures RLS policies work correctly in both local dev and production
@@ -80,8 +81,10 @@ export class PlayerGameStatsService {
         await ensureSupabaseSession();
       }
 
-      // ⚡ Check cache first (5 min TTL)
-      const cacheKey = CacheKeys.playerGameStats(userId);
+      // ⚡ Check cache first (5 min TTL) - use separate cache key for custom players
+      const cacheKey = isCustomPlayer 
+        ? `custom_player_game_stats_${playerId}` 
+        : CacheKeys.playerGameStats(playerId);
       const cached = cache.get<GameStatsSummary[]>(cacheKey);
       if (cached) {
         return cached;
@@ -89,12 +92,20 @@ export class PlayerGameStatsService {
 
       // Step 1: Get all raw stats for this player from game_stats table
       // ⚡ OPTIMIZATION: Limit to last 50 games for faster queries
-      const { data: rawStats, error: statsError } = await supabase
+      // Query by player_id for regular players, custom_player_id for custom players
+      const statsQuery = supabase
         .from('game_stats')
         .select('game_id, stat_type, stat_value, modifier, quarter')
-        .eq('player_id', userId)
         .order('created_at', { ascending: false })
         .limit(2000); // ⚡ Limit: ~40 stats per game × 50 games
+
+      if (isCustomPlayer) {
+        statsQuery.eq('custom_player_id', playerId);
+      } else {
+        statsQuery.eq('player_id', playerId);
+      }
+
+      const { data: rawStats, error: statsError } = await statsQuery;
 
       if (statsError) {
         console.error('❌ PlayerGameStatsService: Error fetching game_stats:', statsError);
@@ -108,7 +119,7 @@ export class PlayerGameStatsService {
       // Step 2: Get unique game IDs
       const gameIds = [...new Set(rawStats.map(s => s.game_id))];
       
-      console.log('🔍 PlayerGameStatsService: Found', gameIds.length, 'unique game IDs from stats');
+      console.log('🔍 PlayerGameStatsService: Found', gameIds.length, 'unique game IDs from stats', isCustomPlayer ? '(custom player)' : '(regular player)');
       console.log('🔍 PlayerGameStatsService: Game IDs:', gameIds);
 
       // ⚡ OPTIMIZATION: Parallel queries (Step 3 & 4 run simultaneously)
@@ -141,10 +152,16 @@ export class PlayerGameStatsService {
           // Local dev MUST respect RLS - if showing all games, check auth session
         
         // Step 4: Get player's team assignments to determine home/away
-        supabase
-          .from('team_players')
-          .select('team_id')
-          .eq('player_id', userId)
+        // For custom players, query team_players by custom_player_id
+        isCustomPlayer
+          ? supabase
+              .from('team_players')
+              .select('team_id')
+              .eq('custom_player_id', playerId)
+          : supabase
+              .from('team_players')
+              .select('team_id')
+              .eq('player_id', playerId)
       ]);
 
       const { data: games, error: gamesError } = gamesResult;

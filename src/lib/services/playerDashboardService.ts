@@ -140,30 +140,37 @@ function toNotification(row: Record<string, unknown>): NotificationItem {
 }
 
 export class PlayerDashboardService {
-  static async getIdentity(userId: string): Promise<PlayerIdentity | null> {
-    if (!userId) {
+  /**
+   * Get player identity - supports both regular and custom players
+   */
+  static async getIdentity(playerId: string, isCustomPlayer: boolean = false): Promise<PlayerIdentity | null> {
+    if (!playerId) {
       return null;
     }
     
+    if (isCustomPlayer) {
+      return this.getCustomPlayerIdentity(playerId);
+    }
+    
     // Check cache first
-    const cacheKey = CacheKeys.user(userId);
+    const cacheKey = CacheKeys.user(playerId);
     const cachedIdentity = cache.get<PlayerIdentity>(cacheKey);
     if (cachedIdentity) {
-      console.log('⚡ PlayerDashboardService.getIdentity: Using cached data for', userId.substring(0, 8));
+      console.log('⚡ PlayerDashboardService.getIdentity: Using cached data for', playerId.substring(0, 8));
       return cachedIdentity;
     }
     
-    console.log('🔍 PlayerDashboardService.getIdentity: Fetching from database for', userId.substring(0, 8));
+    console.log('🔍 PlayerDashboardService.getIdentity: Fetching from database for', playerId.substring(0, 8));
     const { data, error } = await supabase
       .from('users')
       .select('id, name, jersey_number, position, age, height, weight, country, profile_photo_url, pose_photo_url')
-      .eq('id', userId)
+      .eq('id', playerId)
       .single();
     if (error) {
       if (error.code === 'PGRST116') {
         // Return a basic identity object for new users
         return {
-          playerId: userId,
+          playerId: playerId,
           name: '',
           jerseyNumber: undefined,
           position: '',
@@ -203,19 +210,116 @@ export class PlayerDashboardService {
     return identity;
   }
 
-  static async getSeasonAverages(userId: string): Promise<SeasonAverages | null> {
-    if (!userId) {
+  /**
+   * Get custom player identity from custom_players table
+   */
+  static async getCustomPlayerIdentity(customPlayerId: string): Promise<PlayerIdentity | null> {
+    if (!customPlayerId) {
       return null;
     }
     
-    console.log('🔍 PlayerDashboardService.getSeasonAverages: Fetching for', userId.substring(0, 8));
+    // Check cache first (use separate cache key for custom players)
+    const cacheKey = `custom_player_${customPlayerId}`;
+    const cachedIdentity = cache.get<PlayerIdentity>(cacheKey);
+    if (cachedIdentity) {
+      console.log('⚡ PlayerDashboardService.getCustomPlayerIdentity: Using cached data for', customPlayerId.substring(0, 8));
+      return cachedIdentity;
+    }
+    
+    console.log('🔍 PlayerDashboardService.getCustomPlayerIdentity: Fetching from database for', customPlayerId.substring(0, 8));
+    
+    // Fetch custom player data
+    const { data: customPlayerData, error: customPlayerError } = await supabase
+      .from('custom_players')
+      .select('id, name, jersey_number, position, team_id')
+      .eq('id', customPlayerId)
+      .single();
+    
+    if (customPlayerError) {
+      console.error('❌ PlayerDashboard: Custom player identity fetch error:', customPlayerError);
+      console.error('❌ Error details:', {
+        code: customPlayerError.code,
+        message: customPlayerError.message,
+        details: customPlayerError.details,
+        hint: customPlayerError.hint
+      });
+      return null;
+    }
+    
+    if (!customPlayerData) {
+      console.error('❌ PlayerDashboard: Custom player not found:', customPlayerId);
+      return null;
+    }
+    
+    // Fetch team name separately if team_id exists
+    let teamName = 'N/A';
+    if (customPlayerData.team_id) {
+      const { data: teamData, error: teamError } = await supabase
+        .from('teams')
+        .select('name')
+        .eq('id', customPlayerData.team_id)
+        .single();
+      
+      if (!teamError && teamData) {
+        teamName = teamData.name || 'N/A';
+      } else {
+        console.warn('⚠️ PlayerDashboard: Could not fetch team name:', teamError?.message);
+      }
+    }
+    
+    // Map custom player data to PlayerIdentity format
+    const identity: PlayerIdentity = {
+      playerId: customPlayerData.id,
+      name: customPlayerData.name || 'Custom Player',
+      jerseyNumber: customPlayerData.jersey_number ?? undefined,
+      position: customPlayerData.position || 'N/A',
+      teamId: customPlayerData.team_id ?? undefined,
+      teamName: teamName,
+      age: undefined, // Custom players don't have age
+      height: '', // Custom players don't have height
+      weight: '', // Custom players don't have weight
+      location: undefined, // Custom players don't have country
+      profilePhotoUrl: undefined, // Custom players don't have profile photos
+      posePhotoUrl: undefined, // Custom players don't have pose photos
+    };
+    
+    console.log('📥 PlayerDashboardService.getCustomPlayerIdentity: Database data received:', {
+      name: customPlayerData?.name,
+      jersey_number: customPlayerData?.jersey_number,
+      position: customPlayerData?.position,
+      team_id: customPlayerData?.team_id,
+      team_name: teamName,
+    });
+    console.log('📤 PlayerDashboardService.getCustomPlayerIdentity: Transformed identity:', JSON.stringify(identity, null, 2));
+    
+    // Cache the identity data
+    cache.set(cacheKey, identity, CacheTTL.USER_DATA);
+    console.log('💾 PlayerDashboardService.getCustomPlayerIdentity: Cached with key', cacheKey, 'TTL:', CacheTTL.USER_DATA, 'minutes');
+    
+    return identity;
+  }
+
+  static async getSeasonAverages(playerId: string, isCustomPlayer: boolean = false): Promise<SeasonAverages | null> {
+    if (!playerId) {
+      return null;
+    }
+    
+    console.log('🔍 PlayerDashboardService.getSeasonAverages: Fetching for', playerId.substring(0, 8), isCustomPlayer ? '(custom)' : '(regular)');
+    
+    // Custom players don't have backend aggregated tables, always calculate from game_stats
+    if (isCustomPlayer) {
+      console.log('📥 PlayerDashboardService.getSeasonAverages: Custom player, calculating from game_stats');
+      const calculated = await this.calculateSeasonAveragesFromGameStats(playerId, true);
+      console.log('📤 PlayerDashboardService.getSeasonAverages: Calculated result:', JSON.stringify(calculated, null, 2));
+      return calculated;
+    }
     
     // PHASE 2: Try backend-aggregated table first (fast path)
     // Note: Suppressing 406 errors as the table is expected to be empty (using frontend calculation)
     const { data, error } = await supabase
       .from('player_season_averages')
       .select('*')
-      .eq('player_id', userId)
+      .eq('player_id', playerId)
       .maybeSingle(); // Use maybeSingle() to avoid 406 errors when table is empty
     
     if (data && !error) {
@@ -225,7 +329,7 @@ export class PlayerDashboardService {
     
     console.log('📥 PlayerDashboardService.getSeasonAverages: Backend table empty, calculating from game_stats');
     // PHASE 1: Fallback to frontend calculation from game_stats (primary method for now)
-    const calculated = await this.calculateSeasonAveragesFromGameStats(userId);
+    const calculated = await this.calculateSeasonAveragesFromGameStats(playerId, false);
     console.log('📤 PlayerDashboardService.getSeasonAverages: Calculated result:', JSON.stringify(calculated, null, 2));
     return calculated;
   }
@@ -234,10 +338,10 @@ export class PlayerDashboardService {
    * PHASE 1: Calculate season averages from raw game_stats
    * This is a fallback when backend aggregation tables are empty
    */
-  private static async calculateSeasonAveragesFromGameStats(userId: string): Promise<SeasonAverages | null> {
+  private static async calculateSeasonAveragesFromGameStats(playerId: string, isCustomPlayer: boolean = false): Promise<SeasonAverages | null> {
     try {
       // Use existing PlayerGameStatsService to get aggregated game data
-      const games = await PlayerGameStatsService.getPlayerGameStats(userId);
+      const games = await PlayerGameStatsService.getPlayerGameStats(playerId, isCustomPlayer);
       
       if (!games || games.length === 0) {
         return null;
@@ -279,9 +383,14 @@ export class PlayerDashboardService {
     }
   }
 
-  static async getCareerHighs(userId: string): Promise<CareerHighs | null> {
-    if (!userId) {
+  static async getCareerHighs(playerId: string, isCustomPlayer: boolean = false): Promise<CareerHighs | null> {
+    if (!playerId) {
       return null;
+    }
+    
+    // Custom players don't have backend aggregated tables, always calculate from game_stats
+    if (isCustomPlayer) {
+      return this.calculateCareerHighsFromGameStats(playerId, true);
     }
     
     // ⚠️ TEMPORARY FIX: Backend table has outdated data, always use frontend calculation
@@ -291,24 +400,24 @@ export class PlayerDashboardService {
     // const { data, error } = await supabase
     //   .from('player_career_highs')
     //   .select('*')
-    //   .eq('player_id', userId)
+    //   .eq('player_id', playerId)
     //   .single();
     // 
     // if (data && !error) {
     //   return toCareerHighs(data);
     // }
     
-    return this.calculateCareerHighsFromGameStats(userId);
+    return this.calculateCareerHighsFromGameStats(playerId, false);
   }
 
   /**
    * PHASE 1: Calculate career highs from raw game_stats
    * This is a fallback when backend aggregation tables are empty
    */
-  private static async calculateCareerHighsFromGameStats(userId: string): Promise<CareerHighs | null> {
+  private static async calculateCareerHighsFromGameStats(playerId: string, isCustomPlayer: boolean = false): Promise<CareerHighs | null> {
     try {
       // Use existing PlayerGameStatsService to get aggregated game data
-      const games = await PlayerGameStatsService.getPlayerGameStats(userId);
+      const games = await PlayerGameStatsService.getPlayerGameStats(playerId, isCustomPlayer);
       
       if (!games || games.length === 0) {
         return null;
