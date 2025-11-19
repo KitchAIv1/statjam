@@ -48,6 +48,7 @@ export interface CoachPlayer {
   premium_status?: boolean;
   created_at: string;
   profile_photo_url?: string | null; // Player avatar from profile (matches GenericPlayer interface)
+  pose_photo_url?: string | null; // Player pose/action photo
   photo_url?: string | null; // Deprecated: kept for backwards compatibility, use profile_photo_url
   
   // Team-specific data
@@ -231,6 +232,16 @@ export interface CreateCustomPlayerRequest {
   name: string;
   jersey_number?: number;
   position?: string;
+  profile_photo_url?: string | null;
+  pose_photo_url?: string | null;
+}
+
+export interface UpdateCustomPlayerRequest {
+  name?: string;
+  jersey_number?: number;
+  position?: string;
+  profile_photo_url?: string | null;
+  pose_photo_url?: string | null;
 }
 
 export interface PlayerManagementResponse {

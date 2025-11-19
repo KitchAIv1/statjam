@@ -13,9 +13,9 @@
 import React, { useState } from 'react';
 import { UserPlus, Save } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CustomPlayerPhotoUpload } from '@/components/shared/CustomPlayerPhotoUpload';
+import { CustomPlayerFormFields } from '@/components/shared/CustomPlayerFormFields';
 import { IPlayerManagementService, GenericPlayer } from '@/lib/types/playerManagement';
 
 interface CustomPlayerFormProps {
@@ -47,6 +47,11 @@ export function CustomPlayerForm({
   // Form state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [customPlayerId, setCustomPlayerId] = useState<string | null>(null);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [posePhotoUrl, setPosePhotoUrl] = useState<string | null>(null);
+  const [pendingProfileFile, setPendingProfileFile] = useState<File | null>(null);
+  const [pendingPoseFile, setPendingPoseFile] = useState<File | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -73,24 +78,113 @@ export function CustomPlayerForm({
         return;
       }
 
-      // Create custom player via service
       // Convert jersey_number string to number (empty string becomes undefined)
       const jerseyNumber = formData.jersey_number.trim() === '' 
         ? undefined 
         : parseInt(formData.jersey_number, 10);
       
+      // Step 1: Create custom player (without photos first)
       const response = await service.createCustomPlayer({
         team_id: teamId,
         name: formData.name.trim(),
         jersey_number: jerseyNumber,
-        position: formData.position
+        position: formData.position,
+        profile_photo_url: null, // Will be updated after photo upload
+        pose_photo_url: null
       });
       
-      if (response.success && response.data) {
-        onPlayerCreated(response.data);
-      } else {
+      if (!response.success || !response.data) {
         setError(response.message || response.error || 'Failed to create player');
+        return;
       }
+
+      // Step 2: Set custom player ID (enables photo upload)
+      setCustomPlayerId(response.data.id);
+
+      // Step 3: Upload pending photos if any were selected before creation
+      const photoUpdates: { profile_photo_url?: string | null; pose_photo_url?: string | null } = {};
+      
+      if (pendingProfileFile || pendingPoseFile) {
+        const { uploadCustomPlayerPhoto } = await import('@/lib/services/imageUploadService');
+        
+        // Upload profile photo if pending
+        if (pendingProfileFile) {
+          try {
+            const profileUrl = await uploadCustomPlayerPhoto(
+              pendingProfileFile,
+              response.data.id,
+              'profile'
+            );
+            // Only use uploaded URL (not blob URL)
+            if (profileUrl.publicUrl && !profileUrl.publicUrl.startsWith('blob:')) {
+              photoUpdates.profile_photo_url = profileUrl.publicUrl;
+              setProfilePhotoUrl(profileUrl.publicUrl);
+            }
+            setPendingProfileFile(null);
+          } catch (err) {
+            console.error('❌ Failed to upload profile photo:', err);
+            // Clear blob URL on error
+            setProfilePhotoUrl(null);
+          }
+        }
+
+        // Upload pose photo if pending
+        if (pendingPoseFile) {
+          try {
+            const poseUrl = await uploadCustomPlayerPhoto(
+              pendingPoseFile,
+              response.data.id,
+              'pose'
+            );
+            // Only use uploaded URL (not blob URL)
+            if (poseUrl.publicUrl && !poseUrl.publicUrl.startsWith('blob:')) {
+              photoUpdates.pose_photo_url = poseUrl.publicUrl;
+              setPosePhotoUrl(poseUrl.publicUrl);
+            }
+            setPendingPoseFile(null);
+          } catch (err) {
+            console.error('❌ Failed to upload pose photo:', err);
+            // Clear blob URL on error
+            setPosePhotoUrl(null);
+          }
+        }
+      }
+
+      // Step 4: Update player record with photo URLs if photos were uploaded
+      const finalProfileUrl = photoUpdates.profile_photo_url || 
+                             (profilePhotoUrl && !profilePhotoUrl.startsWith('blob:') ? profilePhotoUrl : null);
+      const finalPoseUrl = photoUpdates.pose_photo_url || 
+                          (posePhotoUrl && !posePhotoUrl.startsWith('blob:') ? posePhotoUrl : null);
+      
+      if (finalProfileUrl || finalPoseUrl) {
+        // Update player record with photo URLs
+        try {
+          const { supabase } = await import('@/lib/supabase');
+          const updateData: { profile_photo_url?: string | null; pose_photo_url?: string | null } = {};
+          if (finalProfileUrl) updateData.profile_photo_url = finalProfileUrl;
+          if (finalPoseUrl) updateData.pose_photo_url = finalPoseUrl;
+          
+          const { error: updateError } = await supabase
+            .from('custom_players')
+            .update(updateData)
+            .eq('id', response.data.id);
+          
+          if (updateError) {
+            console.warn('⚠️ Player created but photos not saved to database:', updateError.message);
+          }
+        } catch (err) {
+          console.warn('⚠️ Failed to update player with photo URLs:', err);
+        }
+      }
+      
+      // Step 5: Return final player with photo URLs
+      const finalPlayer: GenericPlayer = {
+        ...response.data,
+        profile_photo_url: finalProfileUrl || response.data.profile_photo_url || null,
+        pose_photo_url: finalPoseUrl || (response.data as any).pose_photo_url || null
+      };
+      
+      onPlayerCreated(finalPlayer);
       
     } catch (error) {
       console.error('❌ Error creating custom player:', error);
@@ -110,62 +204,36 @@ export function CustomPlayerForm({
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Player Name */}
-        <div className="space-y-2">
-          <Label htmlFor="player-name">Player Name *</Label>
-          <Input
-            id="player-name"
-            value={formData.name}
-            onChange={(e) => updateFormData({ name: e.target.value })}
-            placeholder="e.g., John Smith"
-            required
-          />
-        </div>
+        {/* Form Fields */}
+        <CustomPlayerFormFields
+          formData={formData}
+          onFormDataChange={updateFormData}
+        />
 
-        {/* Jersey Number */}
+        {/* Photo Upload */}
         <div className="space-y-2">
-          <Label htmlFor="jersey-number">Jersey Number (Optional)</Label>
-          <Input
-            id="jersey-number"
-            type="text"
-            value={formData.jersey_number}
-            onChange={(e) => {
-              const value = e.target.value;
-              // Allow empty or numeric values with leading zeros (00, 000, 001, etc.)
-              if (value === '') {
-                updateFormData({ jersey_number: '' });
-              } else if (/^\d+$/.test(value) && value.length <= 3) {
-                const num = parseInt(value, 10);
-                // Validate range 0-999, but preserve string format (00, 000, 001, etc.)
-                if (num >= 0 && num <= 999) {
-                  updateFormData({ jersey_number: value });
-                }
-              }
+          <Label>Photos (Optional)</Label>
+          <CustomPlayerPhotoUpload
+            customPlayerId={customPlayerId}
+            profilePhotoUrl={profilePhotoUrl}
+            posePhotoUrl={posePhotoUrl}
+            onProfilePhotoChange={setProfilePhotoUrl}
+            onPosePhotoChange={setPosePhotoUrl}
+            onProfileFileSelect={(file) => {
+              setPendingProfileFile(file);
+              // Create preview URL
+              const previewUrl = URL.createObjectURL(file);
+              setProfilePhotoUrl(previewUrl);
             }}
-            placeholder="e.g., 0, 00, 000, 001, 23, 999"
-            maxLength={3}
+            onPoseFileSelect={(file) => {
+              setPendingPoseFile(file);
+              // Create preview URL
+              const previewUrl = URL.createObjectURL(file);
+              setPosePhotoUrl(previewUrl);
+            }}
+            allowFileSelectionBeforeCreation={true}
+            disabled={loading}
           />
-        </div>
-
-        {/* Position */}
-        <div className="space-y-2">
-          <Label>Position (Optional)</Label>
-          <Select
-            value={formData.position || 'none'}
-            onValueChange={(value) => updateFormData({ position: value === 'none' ? undefined : value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select position" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No Position</SelectItem>
-              <SelectItem value="PG">Point Guard (PG)</SelectItem>
-              <SelectItem value="SG">Shooting Guard (SG)</SelectItem>
-              <SelectItem value="SF">Small Forward (SF)</SelectItem>
-              <SelectItem value="PF">Power Forward (PF)</SelectItem>
-              <SelectItem value="C">Center (C)</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Error Message */}

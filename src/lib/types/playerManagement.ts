@@ -83,6 +83,8 @@ export interface CreateCustomPlayerRequest {
   jersey_number?: number;
   position?: string;
   notes?: string;
+  profile_photo_url?: string | null;
+  pose_photo_url?: string | null;
 }
 
 /**

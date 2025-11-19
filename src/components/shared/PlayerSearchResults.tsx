@@ -109,21 +109,21 @@ export function PlayerSearchResults({
   }
 
   if (searchQuery) {
-    // No results
+    // No results - flexible height
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="text-center py-12 text-muted-foreground min-h-[200px] flex flex-col items-center justify-center">
         <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p className="text-sm">No players found for "{searchQuery}"</p>
+        <p className="text-sm font-medium">No players found for "{searchQuery}"</p>
         <p className="text-xs mt-1">Try a different search term</p>
       </div>
     );
   }
 
-  // Initial state
+  // Initial state - flexible height
   return (
-    <div className="text-center py-8 text-muted-foreground">
+    <div className="text-center py-12 text-muted-foreground min-h-[200px] flex flex-col items-center justify-center">
       <User className="w-12 h-12 mx-auto mb-3 opacity-50" />
-      <p className="text-sm">Search for players to add to your team</p>
+      <p className="text-sm font-medium">Search for players to add to your team</p>
       <p className="text-xs mt-1">Start typing a name or email above</p>
     </div>
   );

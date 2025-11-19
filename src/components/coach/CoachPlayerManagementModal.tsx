@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Users, UserPlus, Trash2 } from 'lucide-react';
+import { X, Users, UserPlus, Trash2, Edit } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { CoachPlayerSelectionList } from './CoachPlayerSelectionList';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
+import { EditCustomPlayerModal } from '@/components/shared/EditCustomPlayerModal';
 
 interface CoachPlayerManagementModalProps {
   team: CoachTeam;
@@ -40,6 +41,8 @@ export function CoachPlayerManagementModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removingPlayer, setRemovingPlayer] = useState<string | null>(null);
+  const [editingPlayer, setEditingPlayer] = useState<CoachPlayer | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Load current team players
   useEffect(() => {
@@ -101,8 +104,8 @@ export function CoachPlayerManagementModal({
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
             Manage Players - {team.name}
@@ -112,7 +115,53 @@ export function CoachPlayerManagementModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-6 overflow-y-auto flex-1">
+        <div 
+          className="flex flex-col gap-6 overflow-y-auto flex-1 min-h-0 pr-2 dialog-scroll"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            // Don't interfere with input field navigation
+            const target = e.target as HTMLElement;
+            const isInputField = target.tagName === 'INPUT' || 
+                                target.tagName === 'TEXTAREA' || 
+                                target.tagName === 'SELECT' ||
+                                target.closest('input, textarea, select, button');
+            
+            // Only handle scroll keys when NOT in an input field or button
+            if (isInputField) {
+              return;
+            }
+            
+            const element = e.currentTarget;
+            const scrollAmount = 50;
+            
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              element.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              element.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+            } else if (e.key === 'PageDown') {
+              e.preventDefault();
+              element.scrollBy({ top: element.clientHeight * 0.9, behavior: 'smooth' });
+            } else if (e.key === 'PageUp') {
+              e.preventDefault();
+              element.scrollBy({ top: -(element.clientHeight * 0.9), behavior: 'smooth' });
+            } else if (e.key === 'Home') {
+              e.preventDefault();
+              element.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (e.key === 'End') {
+              e.preventDefault();
+              element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
+            }
+          }}
+          onClick={(e) => {
+            // Focus scrollable area if clicking on non-interactive elements
+            const target = e.target as HTMLElement;
+            if (!target.closest('button, input, textarea, select, a')) {
+              e.currentTarget.focus();
+            }
+          }}
+        >
           {/* Current Roster */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -141,60 +190,87 @@ export function CoachPlayerManagementModal({
               // Current players list
               <>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {currentPlayers.map((player) => (
-                    <div 
-                      key={player.id}
-                      onClick={() => openModal(player.id, { isCustomPlayer: player.is_custom_player || false })}
-                      className="flex items-center gap-3 p-3 border rounded-lg bg-green-50 border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
-                    >
-                      <Avatar className="w-10 h-10 border-2 border-green-200">
-                        {(player.profile_photo_url || player.photo_url) && (
-                          <AvatarImage 
-                            src={player.profile_photo_url || player.photo_url || ''} 
-                            alt={player.name} 
-                            className="object-cover" 
-                          />
-                        )}
-                        <AvatarFallback className="bg-green-100 text-green-600">
-                          <Users className="w-4 h-4" />
-                        </AvatarFallback>
-                      </Avatar>
+                  {currentPlayers.map((player) => {
+                    return (
+                      <div 
+                        key={player.id}
+                        onClick={() => openModal(player.id, { isCustomPlayer: player.is_custom_player || false })}
+                        className="flex items-center gap-3 p-3 border rounded-lg bg-green-50 border-green-200 cursor-pointer hover:bg-green-100 transition-colors relative"
+                      >
+                        <Avatar className="w-10 h-10 border-2 border-green-200 flex-shrink-0">
+                          {(player.profile_photo_url || player.photo_url) && (
+                            <AvatarImage 
+                              src={player.profile_photo_url || player.photo_url || ''} 
+                              alt={player.name} 
+                              className="object-cover" 
+                            />
+                          )}
+                          <AvatarFallback className="bg-green-100 text-green-600">
+                            <Users className="w-4 h-4" />
+                          </AvatarFallback>
+                        </Avatar>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-sm">{player.name}</h4>
-                          {player.is_custom_player && (
-                            <Badge variant="outline" className="text-xs">Custom</Badge>
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-sm truncate">{player.name}</h4>
+                            {player.is_custom_player && (
+                              <Badge variant="outline" className="text-xs flex-shrink-0">Custom</Badge>
+                            )}
+                          </div>
+                          {player.email ? (
+                            <p className="text-xs text-muted-foreground truncate">{player.email}</p>
+                          ) : player.jersey_number !== undefined && player.jersey_number !== null ? (
+                            <p className="text-xs text-muted-foreground">#{player.jersey_number}</p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Team-specific player</p>
                           )}
                         </div>
-                        {player.email ? (
-                          <p className="text-xs text-muted-foreground truncate">{player.email}</p>
-                        ) : player.jersey_number ? (
-                          <p className="text-xs text-muted-foreground">#{player.jersey_number}</p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">Team-specific player</p>
+
+                        {player.premium_status && (
+                          <Badge variant="secondary" className="text-xs flex-shrink-0">Premium</Badge>
                         )}
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Edit button - only for custom players */}
+                          {player.is_custom_player === true ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                console.log('✏️ Edit button clicked for custom player:', player.id);
+                                setEditingPlayer(player);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="gap-1.5 hover:bg-primary/10 hover:text-primary hover:border-primary/50 whitespace-nowrap"
+                              title="Edit Player"
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span className="text-xs">Edit</span>
+                            </Button>
+                          ) : null}
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              handleRemovePlayer(player);
+                            }}
+                            disabled={removingPlayer === player.id}
+                            className="gap-1.5 whitespace-nowrap"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {removingPlayer === player.id ? 'Removing...' : 'Remove'}
+                          </Button>
+                        </div>
                       </div>
-
-                      {player.premium_status && (
-                        <Badge variant="secondary" className="text-xs">Premium</Badge>
-                      )}
-
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemovePlayer(player);
-                        }}
-                        disabled={removingPlayer === player.id}
-                        className="gap-1"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        {removingPlayer === player.id ? 'Removing...' : 'Remove'}
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 
                 {/* Player Profile Modal */}
@@ -241,6 +317,33 @@ export function CoachPlayerManagementModal({
           )}
         </div>
       </DialogContent>
+
+      {/* Edit Custom Player Modal */}
+      {editingPlayer && (
+        <EditCustomPlayerModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingPlayer(null);
+          }}
+          customPlayer={{
+            id: editingPlayer.id,
+            name: editingPlayer.name,
+            jersey_number: editingPlayer.jersey_number,
+            position: editingPlayer.position,
+            profile_photo_url: editingPlayer.profile_photo_url || null,
+            pose_photo_url: (editingPlayer as any).pose_photo_url || null
+          }}
+          onSave={async (updatedPlayer) => {
+            // Refresh players list
+            const players = await CoachPlayerService.getCoachTeamPlayers(team.id);
+            setCurrentPlayers(players);
+            onUpdate(); // Notify parent component
+            setIsEditModalOpen(false);
+            setEditingPlayer(null);
+          }}
+        />
+      )}
     </Dialog>
   );
 }

@@ -250,33 +250,45 @@ export function PlayerSelectionList({
               variant={mode === 'search' ? 'default' : 'ghost'}
               onClick={() => setMode('search')}
               className="gap-2 h-9"
+              title="Search players"
             >
               <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Search</span>
+              <span>Search</span>
             </Button>
             <Button
               size="sm"
               variant={mode === 'create' ? 'default' : 'ghost'}
               onClick={() => setMode('create')}
               className="gap-2 h-9"
+              title="Create custom player"
             >
               <UserPlus className="w-4 h-4" />
-              <span className="hidden sm:inline">Create</span>
+              <span>Create</span>
             </Button>
           </div>
         )}
       </div>
 
-      {/* Error Message */}
+      {/* Error Message - dismissible */}
       {error && (
-        <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-          {error}
+        <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md border border-destructive/20 flex items-center justify-between gap-2">
+          <span>{error}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setError(null)}
+            className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+            aria-label="Dismiss error"
+          >
+            ×
+          </Button>
         </div>
       )}
 
       {/* Content Area */}
       {mode === 'search' ? (
-        <div className="space-y-2 min-h-[320px] max-h-[400px] overflow-y-auto pr-2 game-viewer-scroll border rounded-lg p-3">
+        <div className="space-y-2 min-h-[200px] max-h-[400px] overflow-y-auto pr-2 game-viewer-scroll border rounded-lg p-3">
           <PlayerSearchResults
             players={players}
             loading={loading}

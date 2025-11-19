@@ -394,6 +394,68 @@ export async function uploadPlayerPhoto(
 }
 
 /**
+ * Upload custom player photo to Supabase Storage
+ * Path: custom-players/{customPlayerId}/{photoType}.jpg
+ */
+export async function uploadCustomPlayerPhoto(
+  file: File,
+  customPlayerId: string,
+  photoType: 'profile' | 'pose'
+): Promise<ImageUploadResult> {
+  // Get file extension
+  const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+  const fileExt = validExtensions.includes(extension) ? extension : 'jpg';
+  
+  // Fixed filename: profile.jpg or pose.jpg
+  const fileName = `${photoType}.${fileExt}`;
+  
+  // Construct path: custom-players/{customPlayerId}/profile.jpg
+  const filePath = `custom-players/${customPlayerId}/${fileName}`;
+  
+  // Upload directly (bypass uploadImage to use fixed filename)
+  if (!supabase) {
+    throw new Error('Supabase client not available');
+  }
+  
+  const { data, error } = await supabase.storage
+    .from('player-images')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true // Allow overwriting existing photos
+    });
+  
+  if (error) {
+    throw new Error(`Upload failed: ${error.message}`);
+  }
+  
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('player-images')
+    .getPublicUrl(filePath);
+  
+  return {
+    publicUrl,
+    path: filePath,
+    fileName
+  };
+}
+
+/**
+ * Delete old custom player photo when replacing
+ */
+export async function deleteCustomPlayerPhoto(publicUrl: string): Promise<void> {
+  const filePath = extractFilePathFromUrl(publicUrl, 'player-images');
+  if (!filePath) {
+    console.warn('⚠️ Could not extract file path from URL:', publicUrl);
+    return;
+  }
+  
+  await deleteImage('player-images', filePath);
+  console.log('✅ Custom player photo deleted:', filePath);
+}
+
+/**
  * Delete old player photo when replacing
  */
 export async function deletePlayerPhoto(publicUrl: string): Promise<void> {

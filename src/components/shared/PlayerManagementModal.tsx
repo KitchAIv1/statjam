@@ -117,8 +117,8 @@ export function PlayerManagementModal({
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
             Manage Players - {team.name}
@@ -128,7 +128,53 @@ export function PlayerManagementModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-6 overflow-y-auto flex-1">
+        <div 
+          className="flex flex-col gap-6 overflow-y-auto flex-1 min-h-0 pr-2 dialog-scroll"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            // Don't interfere with input field navigation
+            const target = e.target as HTMLElement;
+            const isInputField = target.tagName === 'INPUT' || 
+                                target.tagName === 'TEXTAREA' || 
+                                target.tagName === 'SELECT' ||
+                                target.closest('input, textarea, select, button');
+            
+            // Only handle scroll keys when NOT in an input field or button
+            if (isInputField) {
+              return;
+            }
+            
+            const element = e.currentTarget;
+            const scrollAmount = 50;
+            
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              element.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              element.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+            } else if (e.key === 'PageDown') {
+              e.preventDefault();
+              element.scrollBy({ top: element.clientHeight * 0.9, behavior: 'smooth' });
+            } else if (e.key === 'PageUp') {
+              e.preventDefault();
+              element.scrollBy({ top: -(element.clientHeight * 0.9), behavior: 'smooth' });
+            } else if (e.key === 'Home') {
+              e.preventDefault();
+              element.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (e.key === 'End') {
+              e.preventDefault();
+              element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
+            }
+          }}
+          onClick={(e) => {
+            // Focus scrollable area if clicking on non-interactive elements
+            const target = e.target as HTMLElement;
+            if (!target.closest('button, input, textarea, select, a')) {
+              e.currentTarget.focus();
+            }
+          }}
+        >
           {/* Current Roster */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -144,11 +190,25 @@ export function PlayerManagementModal({
               loading={loading}
               removingPlayer={removingPlayer}
               onRemovePlayer={handleRemovePlayer}
+              showEditButton={true}
+              onEditPlayer={async (updatedPlayer) => {
+                // Refresh players list after edit
+                try {
+                  const players = await service.getTeamPlayers(team.id);
+                  setCurrentPlayers(players);
+                  onUpdate();
+                } catch (error) {
+                  console.error('❌ Error refreshing players after edit:', error);
+                }
+              }}
             />
           </div>
 
           {/* Add Players Section */}
-          <div className="border-t pt-4">
+          <div className="border-t-2 pt-6 mt-2">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Add Players</h3>
+            </div>
             <PlayerSelectionList
               key={currentPlayers.map(p => p.id).join(',')}
               teamId={team.id}
@@ -156,28 +216,44 @@ export function PlayerManagementModal({
               service={service}
               onPlayerAdd={handlePlayerAdd}
               onPlayerRemove={handlePlayerRemove}
-              showCustomPlayerOption={false}
+              showCustomPlayerOption={true}
             />
           </div>
+
+          {/* Error - moved inside scrollable area */}
+          {error && (
+            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md border border-destructive/20 flex items-center justify-between gap-2">
+              <span>{error}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setError(null)}
+                className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                aria-label="Dismiss error"
+              >
+                ×
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-            {error}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3 pt-4 border-t">
+        {/* Actions - prevent layout shift */}
+        <div className="flex gap-3 pt-4 border-t flex-shrink-0">
           <Button variant="outline" onClick={onClose} className="flex-1">
             Close
           </Button>
-          {currentPlayers.length >= minPlayers && (
-            <Button onClick={onClose} className="flex-1">
-              Done - Ready to Track!
-            </Button>
-          )}
+          <div className="flex-1">
+            {currentPlayers.length >= minPlayers ? (
+              <Button onClick={onClose} className="w-full">
+                Done - Ready to Track!
+              </Button>
+            ) : (
+              <div className="h-10 flex items-center justify-center text-xs text-muted-foreground">
+                Need {minPlayers - currentPlayers.length} more player{minPlayers - currentPlayers.length !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

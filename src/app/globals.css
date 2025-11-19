@@ -197,8 +197,7 @@
 }
 
 .dialog-scroll:focus {
-  outline: 2px solid rgba(234, 88, 12, 0.3);
-  outline-offset: -2px;
+  outline: none;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -221,7 +220,7 @@
   }
   
   .dialog-scroll:focus {
-    outline-color: rgba(234, 88, 12, 0.4);
+    outline: none;
   }
 }
 
@@ -440,6 +439,32 @@
   
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Remove focus outlines/rings globally */
+  *:focus,
+  *:focus-visible,
+  *:focus-within {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Remove Tailwind focus ring utilities - override ring utilities */
+  button:focus,
+  button:focus-visible,
+  input:focus,
+  input:focus-visible,
+  textarea:focus,
+  textarea:focus-visible,
+  select:focus,
+  select:focus-visible,
+  a:focus,
+  a:focus-visible,
+  [class*="focus:ring"],
+  [class*="focus-visible:ring"] {
+    outline: none !important;
+    box-shadow: none !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
   }
 }
 

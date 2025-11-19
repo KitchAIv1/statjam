@@ -231,7 +231,7 @@ export class PlayerDashboardService {
     // Fetch custom player data
     const { data: customPlayerData, error: customPlayerError } = await supabase
       .from('custom_players')
-      .select('id, name, jersey_number, position, team_id')
+      .select('id, name, jersey_number, position, team_id, profile_photo_url, pose_photo_url')
       .eq('id', customPlayerId)
       .single();
     
@@ -279,8 +279,8 @@ export class PlayerDashboardService {
       height: '', // Custom players don't have height
       weight: '', // Custom players don't have weight
       location: undefined, // Custom players don't have country
-      profilePhotoUrl: undefined, // Custom players don't have profile photos
-      posePhotoUrl: undefined, // Custom players don't have pose photos
+      profilePhotoUrl: (customPlayerData as any).profile_photo_url ?? undefined,
+      posePhotoUrl: (customPlayerData as any).pose_photo_url ?? undefined,
     };
     
     console.log('📥 PlayerDashboardService.getCustomPlayerIdentity: Database data received:', {

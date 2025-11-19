@@ -12,6 +12,7 @@ import {
   RemovePlayerFromTeamRequest,
   SearchPlayersRequest,
   CreateCustomPlayerRequest,
+  UpdateCustomPlayerRequest,
   PlayerManagementResponse
 } from '../types/coach';
 
@@ -91,7 +92,9 @@ export class CoachPlayerService {
                 name,
                 jersey_number,
                 position,
-                created_at
+                created_at,
+                profile_photo_url,
+                pose_photo_url
               )
             `)
             .eq('team_id', teamId)
@@ -106,10 +109,13 @@ export class CoachPlayerService {
                 id: tp.custom_players.id,
                 name: tp.custom_players.name,
                 jersey_number: tp.custom_players.jersey_number,
+                position: tp.custom_players.position,
                 is_custom_player: true,
                 created_at: tp.custom_players.created_at,
                 team_player_id: tp.id,
-                is_on_team: true
+                is_on_team: true,
+                profile_photo_url: (tp.custom_players as any).profile_photo_url || null,
+                pose_photo_url: (tp.custom_players as any).pose_photo_url || null
               });
             });
             console.log('✅ Loaded', customPlayersResult.data?.length || 0, 'custom players');
@@ -268,7 +274,9 @@ export class CoachPlayerService {
           coach_id: user.id,
           name: request.name,
           jersey_number: request.jersey_number,
-          position: request.position
+          position: request.position,
+          profile_photo_url: request.profile_photo_url || null,
+          pose_photo_url: request.pose_photo_url || null
         })
         .select()
         .single();
@@ -308,9 +316,12 @@ export class CoachPlayerService {
         id: customPlayer.id,
         name: customPlayer.name,
         jersey_number: customPlayer.jersey_number,
+        position: customPlayer.position,
         is_custom_player: true,
         created_at: customPlayer.created_at,
-        is_on_team: true
+        is_on_team: true,
+        profile_photo_url: (customPlayer as any).profile_photo_url || null,
+        pose_photo_url: (customPlayer as any).pose_photo_url || null
       };
 
       return {
@@ -323,6 +334,87 @@ export class CoachPlayerService {
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to create custom player'
+      };
+    }
+  }
+
+  /**
+   * Update custom player details and photos
+   */
+  static async updateCustomPlayer(
+    customPlayerId: string,
+    updates: UpdateCustomPlayerRequest
+  ): Promise<PlayerManagementResponse> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Verify coach owns this custom player
+      const { data: customPlayer, error: fetchError } = await supabase
+        .from('custom_players')
+        .select('coach_id')
+        .eq('id', customPlayerId)
+        .single();
+
+      if (fetchError || !customPlayer) {
+        return {
+          success: false,
+          message: 'Custom player not found'
+        };
+      }
+
+      if (customPlayer.coach_id !== user.id) {
+        return {
+          success: false,
+          message: 'Permission denied'
+        };
+      }
+
+      // Update custom player
+      const updateData: Record<string, any> = {};
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.jersey_number !== undefined) updateData.jersey_number = updates.jersey_number;
+      if (updates.position !== undefined) updateData.position = updates.position;
+      if (updates.profile_photo_url !== undefined) updateData.profile_photo_url = updates.profile_photo_url;
+      if (updates.pose_photo_url !== undefined) updateData.pose_photo_url = updates.pose_photo_url;
+
+      const { data: updatedPlayer, error: updateError } = await supabase
+        .from('custom_players')
+        .update(updateData)
+        .eq('id', customPlayerId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ Error updating custom player:', updateError);
+        return {
+          success: false,
+          message: `Failed to update player: ${updateError.message}`
+        };
+      }
+
+      const player: CoachPlayer = {
+        id: updatedPlayer.id,
+        name: updatedPlayer.name,
+        jersey_number: updatedPlayer.jersey_number,
+        position: updatedPlayer.position,
+        is_custom_player: true,
+        created_at: updatedPlayer.created_at,
+        is_on_team: true,
+        profile_photo_url: (updatedPlayer as any).profile_photo_url || null,
+        pose_photo_url: (updatedPlayer as any).pose_photo_url || null
+      };
+
+      return {
+        success: true,
+        message: 'Custom player updated successfully',
+        player
+      };
+    } catch (error) {
+      console.error('❌ Error updating custom player:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to update custom player'
       };
     }
   }

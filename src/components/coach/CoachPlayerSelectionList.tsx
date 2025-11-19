@@ -321,9 +321,55 @@ export function CoachPlayerSelectionList({
         </div>
       ) : (
         /* Create Mode - Custom Player Form */
-        <div className="space-y-4">
+        <div 
+          className="space-y-4 max-h-[calc(90vh-200px)] overflow-y-auto pr-2 dialog-scroll"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            // Don't interfere with input field navigation
+            const target = e.target as HTMLElement;
+            const isInputField = target.tagName === 'INPUT' || 
+                                target.tagName === 'TEXTAREA' || 
+                                target.tagName === 'SELECT' ||
+                                target.closest('input, textarea, select, button');
+            
+            // Only handle scroll keys when NOT in an input field or button
+            if (isInputField) {
+              return;
+            }
+            
+            const element = e.currentTarget;
+            const scrollAmount = 50;
+            
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              element.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              element.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+            } else if (e.key === 'PageDown') {
+              e.preventDefault();
+              element.scrollBy({ top: element.clientHeight * 0.9, behavior: 'smooth' });
+            } else if (e.key === 'PageUp') {
+              e.preventDefault();
+              element.scrollBy({ top: -(element.clientHeight * 0.9), behavior: 'smooth' });
+            } else if (e.key === 'Home') {
+              e.preventDefault();
+              element.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (e.key === 'End') {
+              e.preventDefault();
+              element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
+            }
+          }}
+          onClick={(e) => {
+            // Focus scrollable area if clicking on non-interactive elements
+            const target = e.target as HTMLElement;
+            if (!target.closest('button, input, textarea, select, a')) {
+              e.currentTarget.focus();
+            }
+          }}
+        >
           {migrationStatus && !migrationStatus.isComplete && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4 flex-shrink-0">
               <div className="flex items-center gap-2 text-orange-800 text-sm">
                 <AlertCircle className="w-4 h-4" />
                 <strong>Migration Required</strong>
