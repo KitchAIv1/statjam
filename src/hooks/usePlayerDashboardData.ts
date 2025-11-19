@@ -76,6 +76,14 @@ export function usePlayerDashboardData(user: { id: string } | null) {
       setData(essentialData);
       setLoading(false);
 
+      // ⚡ OPTIMIZATION: Preload avatar images in background for instant loading
+      if (identity?.profilePhotoUrl || identity?.posePhotoUrl) {
+        import('@/lib/utils/avatarCache').then(({ avatarCache }) => {
+          if (identity.profilePhotoUrl) avatarCache.preloadAvatar(identity.profilePhotoUrl).catch(() => {});
+          if (identity.posePhotoUrl) avatarCache.preloadAvatar(identity.posePhotoUrl).catch(() => {});
+        });
+      }
+
       // Load non-critical data in background
       Promise.all([
         PlayerDashboardService.getAchievements(userId),
