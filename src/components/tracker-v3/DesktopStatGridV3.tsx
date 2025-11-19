@@ -413,10 +413,11 @@ export function DesktopStatGridV3({
           const Icon = action.icon;
           const isRecordingThis = isRecording === `foul-${action.id === 'foul' ? 'personal' : 'technical'}`;
           
-          // ✅ SUB button is always available (independent of clock state)
+          // ✅ SUB and TIMEOUT buttons are always available (no requirements)
           const isSubButton = action.id === 'sub';
-          const shouldDisable = isSubButton 
-            ? (!selectedPlayer || action.disabled) // SUB only needs selected player
+          const isTimeoutButton = action.id === 'timeout';
+          const shouldDisable = (isSubButton || isTimeoutButton)
+            ? action.disabled // SUB/TIMEOUT always available (no requirements)
             : (isDisabled || action.disabled); // Other buttons need clock running
           
           // Color schemes for each button

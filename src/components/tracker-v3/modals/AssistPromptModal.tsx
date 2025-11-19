@@ -107,6 +107,10 @@ export function AssistPromptModal({
             Who assisted on this shot?
           </p>
           
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            (On Court)
+          </h3>
+          
           <div className="space-y-2">
             {players.map((player) => (
               <button

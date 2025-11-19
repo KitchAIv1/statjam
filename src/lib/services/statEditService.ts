@@ -145,7 +145,61 @@ export class StatEditService {
   }
 
   /**
-   * Fetch all stats for a game with player names, including actual timeout events
+   * Fetch substitution events from game_substitutions table
+   */
+  static async getSubstitutionEvents(gameId: string): Promise<GameStatRecord[]> {
+    try {
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('Not authenticated');
+      }
+
+      const url = `${this.SUPABASE_URL}/rest/v1/game_substitutions?game_id=eq.${gameId}&select=*&order=created_at.desc`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch substitution events: ${response.status}`);
+      }
+
+      const substitutions = await response.json();
+      
+      // Fetch game data to get team IDs
+      const gameData = await this.getGameData(gameId);
+
+      // Convert substitution events to GameStatRecord format
+      return substitutions.map((sub: any) => ({
+        id: `substitution_${sub.id}`,
+        game_id: gameId,
+        player_id: sub.player_out_id, // Use player_out_id as primary player_id
+        custom_player_id: null, // Substitutions don't use custom_player_id
+        team_id: sub.team_id,
+        stat_type: 'substitution',
+        modifier: sub.player_in_id, // Store player_in_id in modifier field
+        stat_value: 1,
+        quarter: sub.quarter,
+        game_time_minutes: sub.game_time_minutes || 0,
+        game_time_seconds: sub.game_time_seconds || 0,
+        created_at: sub.created_at,
+        is_opponent_stat: false,
+        is_game_level_stat: false,
+        team_side: sub.team_id === gameData.team_a_id ? 'A' : 'B'
+      }));
+    } catch (error: any) {
+      console.error('❌ StatEditService: Failed to fetch substitution events:', error);
+      return []; // Return empty array on error, don't break the whole list
+    }
+  }
+
+  /**
+   * Fetch all stats for a game with player names, including actual timeout events and substitutions
    */
   static async getGameStats(gameId: string): Promise<GameStatRecord[]> {
     try {
@@ -181,9 +235,12 @@ export class StatEditService {
 
       // Fetch actual timeout events from game_timeouts table
       const timeoutEvents = await this.getTimeoutEvents(gameId);
+      
+      // ✅ Fetch substitution events from game_substitutions table
+      const substitutionEvents = await this.getSubstitutionEvents(gameId);
 
-      // Combine stats and timeout events, sort by created_at (most recent first)
-      const allEvents = [...stats, ...timeoutEvents];
+      // Combine stats, timeout events, and substitution events, sort by created_at (most recent first)
+      const allEvents = [...stats, ...timeoutEvents, ...substitutionEvents];
       allEvents.sort((a, b) => {
         const timeA = new Date(a.created_at).getTime();
         const timeB = new Date(b.created_at).getTime();

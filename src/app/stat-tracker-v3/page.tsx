@@ -18,7 +18,7 @@ import { TopScoreboardV3 } from '@/components/tracker-v3/TopScoreboardV3';
 import { TeamRosterV3 } from '@/components/tracker-v3/TeamRosterV3';
 import { OpponentTeamPanel } from '@/components/tracker-v3/OpponentTeamPanel';
 import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
-import { SubstitutionModalV3 } from '@/components/tracker-v3/SubstitutionModalV3';
+import { SubstitutionModalV4 } from '@/components/tracker-v3/SubstitutionModalV4';
 import { TimeoutModalV3 } from '@/components/tracker-v3/TimeoutModalV3';
 import { PossessionIndicator } from '@/components/tracker-v3/PossessionIndicator';
 // ✅ PHASE 4 & 5: Play Sequence Modals
@@ -817,81 +817,153 @@ function StatTrackerV3Content() {
 
 
 
-  // Substitution (unified logic for both mobile and desktop)
-  const handleSubstitution = (playerOutId: string) => {
-    setSubOutPlayer(playerOutId);
+  // ✅ Substitution - Now works without requiring a selected player
+  const handleSubstitution = (playerOutId?: string) => {
+    // playerOutId is optional - if provided, can be used as hint, but user will select team/player in modal
+    setSubOutPlayer(playerOutId || null);
     setShowSubModal(true);
   };
 
-  const handleSubConfirm = async (playerInId: string) => {
-    if (!subOutPlayer || !gameData) return;
+  // ✅ Handle jersey update callback
+  const handlePlayerJerseyUpdate = (playerId: string, updatedPlayer: Player) => {
+    // Update player in team arrays
+    setTeamAPlayers(prev => prev.map(p => p.id === playerId ? updatedPlayer : p));
+    setTeamBPlayers(prev => prev.map(p => p.id === playerId ? updatedPlayer : p));
+    
+    // Update current rosters and benches
+    setCurrentRosterA(prev => prev.map(p => p.id === playerId ? updatedPlayer : p));
+    setCurrentRosterB(prev => prev.map(p => p.id === playerId ? updatedPlayer : p));
+    setCurrentBenchA(prev => prev.map(p => p.id === playerId ? updatedPlayer : p));
+    setCurrentBenchB(prev => prev.map(p => p.id === playerId ? updatedPlayer : p));
+  };
 
-    // Determine which team the player being substituted belongs to
-    const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
-    const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-    const currentRoster = isTeamAPlayer ? currentRosterA : currentRosterB;
-    const currentBench = isTeamAPlayer ? currentBenchA : currentBenchB;
+  // ✅ Handle single or multiple substitutions (new format: array of pairs)
+  const handleSubConfirm = async (substitutions: Array<{ playerOutId: string; playerInId: string }>) => {
+    if (!gameData || substitutions.length === 0) return;
 
-    // Find the players in current roster and bench
-    const subbingOutPlayerData = currentRoster.find(p => p.id === subOutPlayer);
-    const subbingInPlayerData = currentBench.find(p => p.id === playerInId);
+    setIsSubstituting(true);
+    
+    try {
+      // Group substitutions by team
+      const teamASubs: Array<{ playerOutId: string; playerInId: string }> = [];
+      const teamBSubs: Array<{ playerOutId: string; playerInId: string }> = [];
 
-    if (subbingOutPlayerData && subbingInPlayerData) {
-      setIsSubstituting(true);
-      
-      try {
-        // Record substitution to database
-        const success = await tracker.substitute({
-          gameId: gameData.id,
-          teamId,
-          playerOutId: subOutPlayer,
-          playerInId,
-          quarter: tracker.quarter,
-          gameTimeSeconds: tracker.clock.secondsRemaining
-        });
-
-        if (success) {
-          // Swap players between roster and bench
-          const newRoster = currentRoster.map(player => 
-            player.id === subOutPlayer ? subbingInPlayerData : player
-          );
-          const newBench = currentBench.map(player => 
-            player.id === playerInId ? subbingOutPlayerData : player
-          );
-
-          // Update the appropriate team's roster and bench
-          if (isTeamAPlayer) {
-            setCurrentRosterA(newRoster);
-            setCurrentBenchA(newBench);
-            
-            // Update main state - rebuild teamAPlayers with new order
-            const updatedTeamAPlayers = [...newRoster, ...newBench];
-            setTeamAPlayers(updatedTeamAPlayers);
-          } else {
-            setCurrentRosterB(newRoster);
-            setCurrentBenchB(newBench);
-            
-            // Update main state - rebuild teamBPlayers with new order
-            const updatedTeamBPlayers = [...newRoster, ...newBench];
-            setTeamBPlayers(updatedTeamBPlayers);
-          }
-
-          // Update selected player if it was the subbed out player
-          if (selectedPlayer === subbingOutPlayerData.id) {
-            setSelectedPlayer(subbingInPlayerData.id);
-          }
-
-          // Force roster refresh
-          setRosterRefreshKey(Date.now());
-
-          setShowSubModal(false);
-          setSubOutPlayer(null);
+      for (const sub of substitutions) {
+        const isTeamAPlayer = teamAPlayers.some(p => p.id === sub.playerOutId);
+        if (isTeamAPlayer) {
+          teamASubs.push(sub);
+        } else {
+          teamBSubs.push(sub);
         }
-      } catch (error) {
-        console.error('❌ Substitution failed:', error);
-      } finally {
-        setIsSubstituting(false);
       }
+
+      // Process Team A substitutions
+      if (teamASubs.length > 0) {
+        let currentRoster = [...currentRosterA];
+        let currentBench = [...currentBenchA];
+
+        for (const sub of teamASubs) {
+          const subbingOutPlayerData = currentRoster.find(p => p.id === sub.playerOutId);
+          const subbingInPlayerData = currentBench.find(p => p.id === sub.playerInId);
+
+          if (!subbingOutPlayerData || !subbingInPlayerData) {
+            console.warn(`⚠️ Team A substitution skipped: player not found`);
+            continue;
+          }
+
+          const success = await tracker.substitute({
+            gameId: gameData.id,
+            teamId: gameData.team_a_id,
+            playerOutId: sub.playerOutId,
+            playerInId: sub.playerInId,
+            quarter: tracker.quarter,
+            gameTimeSeconds: tracker.clock.secondsRemaining,
+            playerOutName: subbingOutPlayerData.name,
+            playerInName: subbingInPlayerData.name
+          });
+
+          if (success) {
+            currentRoster = currentRoster.map(player => 
+              player.id === sub.playerOutId ? subbingInPlayerData : player
+            );
+            currentBench = currentBench.map(player => 
+              player.id === sub.playerInId ? subbingOutPlayerData : player
+            );
+          }
+        }
+
+        setCurrentRosterA(currentRoster);
+        setCurrentBenchA(currentBench);
+        const updatedTeamAPlayers = [...currentRoster, ...currentBench];
+        setTeamAPlayers(updatedTeamAPlayers);
+      }
+
+      // Process Team B substitutions
+      if (teamBSubs.length > 0) {
+        let currentRoster = [...currentRosterB];
+        let currentBench = [...currentBenchB];
+
+        for (const sub of teamBSubs) {
+          const subbingOutPlayerData = currentRoster.find(p => p.id === sub.playerOutId);
+          const subbingInPlayerData = currentBench.find(p => p.id === sub.playerInId);
+
+          if (!subbingOutPlayerData || !subbingInPlayerData) {
+            console.warn(`⚠️ Team B substitution skipped: player not found`);
+            continue;
+          }
+
+          const success = await tracker.substitute({
+            gameId: gameData.id,
+            teamId: gameData.team_b_id,
+            playerOutId: sub.playerOutId,
+            playerInId: sub.playerInId,
+            quarter: tracker.quarter,
+            gameTimeSeconds: tracker.clock.secondsRemaining,
+            playerOutName: subbingOutPlayerData.name,
+            playerInName: subbingInPlayerData.name
+          });
+
+          if (success) {
+            currentRoster = currentRoster.map(player => 
+              player.id === sub.playerOutId ? subbingInPlayerData : player
+            );
+            currentBench = currentBench.map(player => 
+              player.id === sub.playerInId ? subbingOutPlayerData : player
+            );
+          }
+        }
+
+        setCurrentRosterB(currentRoster);
+        setCurrentBenchB(currentBench);
+        const updatedTeamBPlayers = [...currentRoster, ...currentBench];
+        setTeamBPlayers(updatedTeamBPlayers);
+      }
+
+      // ✅ Update selected player if it was subbed out
+      const allSubsOut = substitutions.map(s => s.playerOutId);
+      if (allSubsOut.includes(selectedPlayer || '')) {
+        const firstSub = substitutions.find(s => s.playerOutId === selectedPlayer);
+        if (firstSub) {
+          const isTeamAPlayer = teamAPlayers.some(p => p.id === firstSub.playerOutId);
+          const bench = isTeamAPlayer ? currentBenchA : currentBenchB;
+          const newSelected = bench.find(p => p.id === firstSub.playerInId);
+          if (newSelected) {
+            setSelectedPlayer(newSelected.id);
+          }
+        }
+      }
+
+      // Force roster refresh
+      setRosterRefreshKey(Date.now());
+
+      setShowSubModal(false);
+      setSubOutPlayer(null);
+      notify.success('Substitution Complete', `${substitutions.length} player(s) substituted successfully`);
+    } catch (error) {
+      console.error('❌ Substitution failed:', error);
+      notify.error('Substitution Failed', 'An error occurred during substitution');
+    } finally {
+      setIsSubstituting(false);
     }
   };
 
@@ -999,23 +1071,27 @@ function StatTrackerV3Content() {
   const sharedModals = (
     <>
       {/* Substitution Modal - Unified for both mobile and desktop */}
-      <SubstitutionModalV3
+      <SubstitutionModalV4
         isOpen={showSubModal}
         onClose={() => {
           setShowSubModal(false);
           setSubOutPlayer(null);
         }}
-        playerOutId={subOutPlayer}
-        playerOutData={(() => {
-          if (!subOutPlayer) return null;
-          return [...teamAPlayers, ...teamBPlayers].find(p => p.id === subOutPlayer) || null;
-        })()}
-        benchPlayers={(() => {
-          if (!subOutPlayer) return [];
-          const isTeamAPlayer = teamAPlayers.some(p => p.id === subOutPlayer);
-          return isTeamAPlayer ? currentBenchA : currentBenchB;
-        })()}
+        teamAName={gameData.team_a?.name || 'Team A'}
+        teamBName={gameData.team_b?.name || 'Team B'}
+        teamAOnCourt={currentRosterA}
+        teamABench={currentBenchA}
+        teamBOnCourt={currentRosterB}
+        teamBBench={currentBenchB}
         onConfirm={handleSubConfirm}
+        onPlayerUpdate={handlePlayerJerseyUpdate}
+        initialTeam={(() => {
+          // Determine initial team based on subOutPlayer if available
+          if (subOutPlayer) {
+            return teamAPlayers.some(p => p.id === subOutPlayer) ? 'teamA' : 'teamB';
+          }
+          return null;
+        })()}
       />
 
       {/* Timeout Modal - Enhanced UX with countdown */}
@@ -1080,11 +1156,12 @@ function StatTrackerV3Content() {
           }}
           players={(() => {
             // Get players from the SCORING team (not shooter's team, but their teammates)
+            // ✅ Only show on-court players (first 5)
             const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
             if (shooterTeamId === gameData.team_a_id) {
-              return teamAPlayers;
+              return currentRosterA;
             } else {
-              return teamBPlayers;
+              return currentRosterB;
             }
           })()}
           shooterName={tracker.playPrompt.metadata?.shooterName || 'Unknown'}
@@ -1155,8 +1232,8 @@ function StatTrackerV3Content() {
             console.log('⏭️ Skipping rebound prompt');
             tracker.clearPlayPrompt();
           }}
-          teamAPlayers={teamAPlayers}
-          teamBPlayers={teamBPlayers}
+          teamAPlayers={currentRosterA} // ✅ Only on-court players (first 5)
+          teamBPlayers={currentRosterB} // ✅ Only on-court players (first 5)
           teamAId={gameData.team_a_id} // ✅ FIX: Pass actual team IDs for proper comparison
           teamBId={gameData.team_b_id} // ✅ FIX: Pass actual team IDs for proper comparison
           shooterTeamId={tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id} // ✅ FIX: Pass shooter team ID
@@ -1208,11 +1285,12 @@ function StatTrackerV3Content() {
           }}
           defensivePlayers={(() => {
             // Get DEFENSIVE team players (opposite of shooter's team)
+            // ✅ Only show on-court players (first 5)
             const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
             if (shooterTeamId === gameData.team_a_id) {
-              return teamBPlayers; // Shooter from Team A → defenders from Team B
+              return currentRosterB; // Shooter from Team A → defenders from Team B
             } else {
-              return teamAPlayers; // Shooter from Team B → defenders from Team A
+              return currentRosterA; // Shooter from Team B → defenders from Team A
             }
           })()}
           shooterName={tracker.playPrompt.metadata?.shooterName || 'Unknown'}
@@ -1340,11 +1418,12 @@ function StatTrackerV3Content() {
           }}
           homePlayers={(() => {
             // Get players from the OPPOSITE team (who lost the ball)
+            // ✅ Only show on-court players (first 5)
             const stealerTeamId = tracker.playPrompt.metadata?.stealerTeamId;
             if (stealerTeamId === gameData.team_a_id) {
-              return teamBPlayers; // Stealer from Team A → turnover by Team B
+              return currentRosterB; // Stealer from Team A → turnover by Team B
             } else {
-              return teamAPlayers; // Stealer from Team B → turnover by Team A
+              return currentRosterA; // Stealer from Team B → turnover by Team A
             }
           })()}
           stealerName={(() => {
@@ -1390,9 +1469,10 @@ function StatTrackerV3Content() {
           }}
           players={(() => {
             // Get players from OPPOSITE team (victim team)
+            // ✅ Only show on-court players (first 5)
             if (!foulerPlayerId) return [];
             const isFoulerTeamA = teamAPlayers.some(p => p.id === foulerPlayerId);
-            return isFoulerTeamA ? teamBPlayers : teamAPlayers;
+            return isFoulerTeamA ? currentRosterB : currentRosterA;
           })()}
           teamName={(() => {
             if (!foulerPlayerId) return 'Unknown';
@@ -1718,7 +1798,7 @@ function StatTrackerV3Content() {
                 onStatRecord={handleStatRecord}
                 onFoulRecord={handleFoulRecord}
                 onTimeOut={handleTimeoutClick}
-                onSubstitution={() => selectedPlayer && handleSubstitution(selectedPlayer)}
+                onSubstitution={() => handleSubstitution()}
                 onGameEnd={tracker.closeGame}
                 lastAction={tracker.lastAction}
                 lastActionPlayerId={tracker.lastActionPlayerId}

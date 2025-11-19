@@ -176,6 +176,15 @@ export function StatEditModal({
       return stat.team_side === 'A' ? teamAName : teamBName;
     }
     
+    // ✅ Handle substitution events (show both players)
+    if (stat.stat_type === 'substitution') {
+      const playerOut = allPlayers.find(p => p.id === stat.player_id);
+      const playerIn = allPlayers.find(p => p.id === stat.modifier); // modifier stores player_in_id
+      const playerOutName = playerOut?.name || 'Unknown Player';
+      const playerInName = playerIn?.name || 'Unknown Player';
+      return `${playerOutName} → ${playerInName}`;
+    }
+    
     if (stat.is_opponent_stat) return 'Opponent Team';
     const player = allPlayers.find(p => p.id === stat.player_id || p.id === stat.custom_player_id);
     return player?.name || 'Unknown Player';
@@ -186,6 +195,11 @@ export function StatEditModal({
     if (stat.stat_type === 'timeout') {
       const timeoutType = stat.modifier === '30_second' ? '30-SECOND' : 'FULL';
       return `TIMEOUT (${timeoutType})`;
+    }
+    
+    // ✅ Handle substitution events (from game_substitutions table)
+    if (stat.stat_type === 'substitution') {
+      return 'SUBSTITUTION';
     }
     
     // ✅ FIX: Show foul types clearly (SHOOTING FOUL, PERSONAL FOUL, etc.)

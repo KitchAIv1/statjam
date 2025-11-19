@@ -104,6 +104,10 @@ export function TurnoverPromptModal({
             Who lost possession?
           </p>
           
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            (On Court)
+          </h3>
+          
           <div className="space-y-2">
             {homePlayers.map((player) => (
               <button

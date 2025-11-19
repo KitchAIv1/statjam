@@ -72,6 +72,9 @@ export function VictimPlayerSelectionModal({
 
           {/* Player List */}
           <div className="space-y-2 max-h-96 overflow-y-auto">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              {teamName} (On Court)
+            </h3>
             {players.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 No players available

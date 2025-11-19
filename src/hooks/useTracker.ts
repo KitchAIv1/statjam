@@ -1320,7 +1320,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   }, [quarter, clock.secondsRemaining, gameStatus]);
 
   // Substitution
-  const substitute = useCallback(async (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number }): Promise<boolean> => {
+  const substitute = useCallback(async (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number; playerOutName?: string; playerInName?: string }): Promise<boolean> => {
     // ✅ BLOCK: Don't allow substitutions if game is ended
     if (gameStatus === 'completed' || gameStatus === 'cancelled') {
       const { notify } = await import('@/lib/services/notificationService');
@@ -1345,7 +1345,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
 
       if (success) {
         console.log('✅ Substitution recorded successfully in database');
-        setLastAction(`Substitution: Player ${sub.playerOutId} → ${sub.playerInId}`);
+        // ✅ Use player names if provided, otherwise fallback to IDs
+        const playerOutDisplay = sub.playerOutName || `Player ${sub.playerOutId}`;
+        const playerInDisplay = sub.playerInName || `Player ${sub.playerInId}`;
+        setLastAction(`Substitution: ${playerOutDisplay} → ${playerInDisplay}`);
+        setLastActionPlayerId(sub.playerInId); // Set to player coming in
         
         // Update rosters locally for immediate UI feedback
         const updateRoster = (roster: RosterState) => {

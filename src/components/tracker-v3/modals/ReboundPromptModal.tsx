@@ -181,7 +181,7 @@ export function ReboundPromptModal({
             {/* Team A Players */}
             <div>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                Team A {teamAPlayers[0]?.teamId === shooterTeamId && '(Offense)'}
+                Team A (On Court) {teamAPlayers[0]?.teamId === shooterTeamId && '(Offense)'}
               </h3>
               <div className="space-y-2">
                 {teamAPlayers.map((player) => (
@@ -221,7 +221,7 @@ export function ReboundPromptModal({
             {/* Team B Players */}
             <div>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                Team B {teamBPlayers[0]?.teamId === shooterTeamId && '(Offense)'}
+                Team B (On Court) {teamBPlayers[0]?.teamId === shooterTeamId && '(Offense)'}
               </h3>
               <div className="space-y-2">
                 {teamBPlayers.map((player) => (

@@ -79,8 +79,8 @@ export function StatEditTable({
             <td className="px-4 py-3 text-sm text-gray-900">{formatStatDisplay(stat)}</td>
             <td className="px-4 py-3 text-right">
               <div className="flex items-center justify-end gap-2">
-                {/* Hide edit button for timeout events (read-only) */}
-                {stat.stat_type !== 'timeout' && (
+                {/* Hide edit button for timeout events and substitutions (read-only) */}
+                {stat.stat_type !== 'timeout' && stat.stat_type !== 'substitution' && (
                   <button
                     onClick={() => onEdit(stat)}
                     className="p-1.5 rounded hover:bg-purple-100 text-purple-600 transition-colors"
@@ -89,8 +89,8 @@ export function StatEditTable({
                     <Edit className="w-4 h-4" />
                   </button>
                 )}
-                {/* Hide delete button for game-level stats, but allow deletion of timeout events */}
-                {!stat.is_game_level_stat && (
+                {/* Hide delete button for game-level stats, timeouts, and substitutions */}
+                {!stat.is_game_level_stat && stat.stat_type !== 'timeout' && stat.stat_type !== 'substitution' && (
                   <button
                     onClick={() => onDelete(stat.id)}
                     className="p-1.5 rounded hover:bg-red-100 text-red-600 transition-colors"
