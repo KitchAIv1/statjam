@@ -17,6 +17,7 @@ The Coach Team Card System provides coaches with comprehensive team management c
 - **Team Management**: Create, edit, delete, and manage non-tournament teams
 - **Official vs Practice Team Types**: Toggle defines whether games impact player dashboards
 - **Player Management**: Add existing StatJam users or create custom players
+- **Custom Player Photos**: Upload profile and pose photos for custom players (January 2025)
 - **Quick Track Integration**: Reuse Stat Tracker V3 for coach-specific games
 - **Mixed Rosters**: Support both StatJam users and custom players
 - **Team Visibility**: Public/private team controls

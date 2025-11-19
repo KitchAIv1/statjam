@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.1] - 2025-01-XX
+
+### 📸 Custom Player Photo Upload & Player Management UI Enhancements
+
+#### Custom Player Photo Upload
+- **Added**: Profile and pose photo upload for custom players in Player Management Modal
+- **Added**: `CustomPlayerPhotoUpload` reusable component for photo uploads
+- **Added**: Photo upload support in `CustomPlayerForm` (shared component)
+- **Added**: Edit button for custom players in `PlayerRosterList`
+- **Added**: `EditCustomPlayerModal` and `EditCustomPlayerForm` components
+- **Updated**: `CreateCustomPlayerRequest` interface to include `profile_photo_url` and `pose_photo_url`
+- **Updated**: Photo upload flow allows file selection before player creation (preview)
+- **Files**: `CustomPlayerForm.tsx`, `CustomPlayerPhotoUpload.tsx`, `EditCustomPlayerModal.tsx`, `EditCustomPlayerForm.tsx`, `CustomPlayerFormFields.tsx`
+
+#### Player Management Modal UI Improvements
+- **Fixed**: Error messages now inside scrollable area with dismiss functionality
+- **Fixed**: Flexible height containers (changed from `min-h-[320px]` to `min-h-[200px]`)
+- **Fixed**: Button consistency (Edit and Remove buttons both show icon + text)
+- **Fixed**: Mobile mode toggle always shows text (removed `hidden sm:inline`)
+- **Improved**: Visual hierarchy with `border-t-2` and "Add Players" heading
+- **Improved**: Empty states with flexible heights and proper centering
+- **Fixed**: Action buttons layout shift prevention (reserved space)
+- **Added**: Keyboard scrolling support (arrow keys, PageUp/Down, Home/End)
+- **Files**: `PlayerManagementModal.tsx`, `PlayerRosterList.tsx`, `PlayerSelectionList.tsx`, `PlayerSearchResults.tsx`
+
+#### Global UI Improvements
+- **Removed**: Orange focus outlines globally (accessibility improvement)
+- **Updated**: `globals.css` to remove all focus rings and outlines
+- **Updated**: `input.tsx` component to remove focus ring classes
+- **Files**: `globals.css`, `input.tsx`
+
+#### Component Refactoring
+- **Created**: `CustomPlayerFormFields.tsx` (101 lines) - extracted form fields for `.cursorrules` compliance
+- **Refactored**: `CustomPlayerForm.tsx` (275 lines) - now orchestrates form fields and photo upload
+- **Result**: All components comply with `.cursorrules` file size limits
+
+#### Documentation
+- **Updated**: `CUSTOM_PLAYER_PHOTO_UPLOAD_IMPLEMENTATION.md` - marked as completed
+- **Created**: `PLAYER_MANAGEMENT_MODAL_UI_IMPROVEMENTS.md` - comprehensive UI improvements documentation
+- **Updated**: `CHANGELOG.md` - added this entry
+
+### 📄 Database Migrations
+- **Migration 018**: Custom player photo storage RLS policies (FIX version applied)
+
+---
+
 ## [0.16.0] - 2025-11-14
 
 ### 🏆 Bracket Builder Phase 4 & 5 Complete

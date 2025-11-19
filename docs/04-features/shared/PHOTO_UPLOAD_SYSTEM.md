@@ -16,6 +16,7 @@ This document describes the modular photo upload system built for StatJam. The s
 - ✅ **Upload Progress** - Loading states and error handling
 - ✅ **Optimized Performance** - URLs instead of base64, lazy loading
 - ✅ **Secure** - User-scoped storage with proper policies
+- ✅ **Custom Player Support** - Profile and pose photos for custom players (January 2025)
 
 ---
 
@@ -26,15 +27,22 @@ This document describes the modular photo upload system built for StatJam. The s
 src/
 ├── lib/services/
 │   └── imageUploadService.ts       # Business logic (upload, validation, delete)
+│       ├── uploadPlayerPhoto()     # Regular player photos
+│       ├── uploadCustomPlayerPhoto() # Custom player photos (NEW)
+│       └── deleteCustomPlayerPhoto() # Custom player photo deletion (NEW)
 ├── hooks/
-│   └── usePhotoUpload.ts           # State management hook
+│   └── usePhotoUpload.ts           # State management hook (supports custom players)
 ├── components/ui/
 │   └── PhotoUploadField.tsx        # Reusable UI component
+├── components/shared/
+│   └── CustomPlayerPhotoUpload.tsx # Custom player photo upload component (NEW)
 └── components/
-    └── EditProfileModal.tsx        # Example usage
+    ├── EditProfileModal.tsx        # Regular player profile editing
+    └── EditCustomPlayerModal.tsx   # Custom player editing (NEW)
 
 database/storage/
-└── 003_player_images_bucket.sql    # Bucket setup & policies
+├── 003_player_images_bucket.sql    # Bucket setup & policies
+└── migrations/018_add_custom_player_photo_storage_policy_FIX.sql # Custom player RLS (NEW)
 
 scripts/
 └── setup-player-images-bucket.js   # Automated bucket creation

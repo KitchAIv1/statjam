@@ -41,6 +41,10 @@
 - **TEAM_FOULS_TIMEOUTS_ANALYSIS.md** - Team fouls and timeouts analysis
 
 ### **2. Development Guides** (`02-development/`)
+- **JANUARY_2025_PLAYER_MANAGEMENT_UPDATES.md** - Complete summary of January 2025 player management updates
+- **CUSTOM_PLAYER_PHOTO_UPLOAD_IMPLEMENTATION.md** - Custom player photo upload feature (✅ COMPLETED)
+- **PLAYER_MANAGEMENT_MODAL_UI_IMPROVEMENTS.md** - Player Management Modal UI/UX improvements
+- **ORGANIZER_PLAYER_MANAGEMENT_REFACTOR.md** - Organizer player management refactor (context)
 - **PERSONAL_STAT_TRACKER_IMPLEMENTATION_SUMMARY.md** - Personal stat tracker implementation
 - **COACH_TRACKER_PERFORMANCE_AUDIT.md** - Phase-by-phase performance roadmap for coach tracker
 - **COACH_SCALABILITY_ASSESSMENT.md** - Scale readiness report (handles 10K users)
@@ -76,7 +80,7 @@
 - **Personal-stat-tracker** - Personal stat tracker documentation
 - **Player-cards** - Player cards documentation
 - **Stat-tracker** - Stat tracker documentation
-- **shared/PHOTO_UPLOAD_SYSTEM.md** - Reusable photo upload system
+- **shared/PHOTO_UPLOAD_SYSTEM.md** - Reusable photo upload system (includes custom player support)
 
 ### **5. Fixes** (`04-fixes/`)
 - **AUTH_SESSION_ISSUES_FIX.md** - Auth session fixes
@@ -181,6 +185,12 @@
 
 ---
 
-**Last Updated**: November 9, 2025  
+**Last Updated**: January 2025  
 **Maintained By**: Development Team  
 **Status**: ✅ Complete and Current
+
+### **Recent Updates (January 2025)**
+- ✅ Custom player photo upload feature completed
+- ✅ Player Management Modal UI improvements
+- ✅ Global focus outline removal
+- ✅ Component refactoring for `.cursorrules` compliance
