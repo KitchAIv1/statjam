@@ -929,7 +929,9 @@ export class TeamService {
               id,
               name,
               jersey_number,
-              position
+              position,
+              profile_photo_url,
+              pose_photo_url
             )
           )
         `)
@@ -1002,6 +1004,10 @@ export class TeamService {
             .map((tp, index) => {
               const customPlayer = Array.isArray(tp.custom_players) ? tp.custom_players[0] : tp.custom_players;
               
+              // ✅ FIX: Ensure profile_photo_url and pose_photo_url are properly extracted
+              const profilePhotoUrl = customPlayer?.profile_photo_url || (customPlayer as any)?.profile_photo_url || undefined;
+              const posePhotoUrl = customPlayer?.pose_photo_url || (customPlayer as any)?.pose_photo_url || undefined;
+              
               return {
                 id: customPlayer.id,
                 name: customPlayer.name || `Custom Player ${index + 1}`,
@@ -1012,6 +1018,8 @@ export class TeamService {
                 country: 'US',
                 createdAt: new Date().toISOString(),
                 is_custom_player: true, // Mark as custom player
+                profilePhotoUrl: profilePhotoUrl,
+                posePhotoUrl: posePhotoUrl, // ✅ FIX: Include pose photo URL
               };
             });
 

@@ -63,6 +63,7 @@ export interface Player {
   createdAt: string;
   is_custom_player?: boolean; // ✅ FIX: Flag to distinguish custom players from regular players
   profilePhotoUrl?: string; // Player profile photo URL
+  posePhotoUrl?: string; // Player pose photo URL (for custom players)
 }
 
 export interface Team {

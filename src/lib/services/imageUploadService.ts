@@ -418,21 +418,57 @@ export async function uploadCustomPlayerPhoto(
     throw new Error('Supabase client not available');
   }
   
-  const { data, error } = await supabase.storage
+  console.log('📤 Uploading custom player photo:', {
+    customPlayerId,
+    photoType,
+    filePath,
+    fileName: file.name,
+    fileSize: file.size
+  });
+  
+  const { data: uploadData, error: uploadError } = await supabase.storage
     .from('player-images')
     .upload(filePath, file, {
       cacheControl: '3600',
       upsert: true // Allow overwriting existing photos
     });
   
-  if (error) {
-    throw new Error(`Upload failed: ${error.message}`);
+  if (uploadError) {
+    console.error('❌ Storage upload error:', {
+      message: uploadError.message,
+      statusCode: uploadError.statusCode,
+      error: uploadError
+    });
+    throw new Error(`Upload failed: ${uploadError.message} (Status: ${uploadError.statusCode || 'unknown'})`);
+  }
+  
+  if (!uploadData) {
+    throw new Error('Upload failed: No data returned from storage');
+  }
+  
+  console.log('✅ File uploaded to storage:', uploadData.path);
+  
+  // Verify file exists by trying to get its metadata
+  const { data: fileMetadata, error: verifyError } = await supabase.storage
+    .from('player-images')
+    .list(filePath.split('/').slice(0, -1).join('/'), {
+      search: filePath.split('/').pop()
+    });
+  
+  if (verifyError) {
+    console.warn('⚠️ Could not verify uploaded file:', verifyError.message);
+  } else if (!fileMetadata || fileMetadata.length === 0) {
+    console.warn('⚠️ Uploaded file not found in storage listing');
+  } else {
+    console.log('✅ Uploaded file verified in storage:', fileMetadata[0].name);
   }
   
   // Get public URL
   const { data: { publicUrl } } = supabase.storage
     .from('player-images')
     .getPublicUrl(filePath);
+  
+  console.log('✅ Generated public URL:', publicUrl);
   
   return {
     publicUrl,

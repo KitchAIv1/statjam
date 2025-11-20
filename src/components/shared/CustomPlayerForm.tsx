@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { UserPlus, Save } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { Label } from "@/components/ui/label";
@@ -52,6 +52,9 @@ export function CustomPlayerForm({
   const [posePhotoUrl, setPosePhotoUrl] = useState<string | null>(null);
   const [pendingProfileFile, setPendingProfileFile] = useState<File | null>(null);
   const [pendingPoseFile, setPendingPoseFile] = useState<File | null>(null);
+  // ✅ FIX: Use refs to avoid closure issues
+  const pendingProfileFileRef = useRef<File | null>(null);
+  const pendingPoseFileRef = useRef<File | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -63,6 +66,21 @@ export function CustomPlayerForm({
   const updateFormData = (updates: Partial<typeof formData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   };
+
+  // ✅ FIX: Stabilize callbacks with useCallback
+  const handleProfileFileSelect = useCallback((file: File) => {
+    setPendingProfileFile(file);
+    pendingProfileFileRef.current = file;
+    const previewUrl = URL.createObjectURL(file);
+    setProfilePhotoUrl(previewUrl);
+  }, []);
+
+  const handlePoseFileSelect = useCallback((file: File) => {
+    setPendingPoseFile(file);
+    pendingPoseFileRef.current = file;
+    const previewUrl = URL.createObjectURL(file);
+    setPosePhotoUrl(previewUrl);
+  }, []);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,59 +111,90 @@ export function CustomPlayerForm({
         pose_photo_url: null
       });
       
-      if (!response.success || !response.data) {
-        setError(response.message || response.error || 'Failed to create player');
+      // ✅ FIX: CoachPlayerService returns response.player, not response.data
+      const createdPlayer = response.player || (response as any).data;
+      
+      if (!response.success || !createdPlayer) {
+        setError(response.message || (response as any).error || 'Failed to create player');
         return;
       }
 
       // Step 2: Set custom player ID (enables photo upload)
-      setCustomPlayerId(response.data.id);
+      setCustomPlayerId(createdPlayer.id);
 
       // Step 3: Upload pending photos if any were selected before creation
+      // ✅ FIX: Use refs to get files (avoids closure/stale state issues)
+      const profileFileToUpload = pendingProfileFileRef.current || pendingProfileFile;
+      const poseFileToUpload = pendingPoseFileRef.current || pendingPoseFile;
+      
       const photoUpdates: { profile_photo_url?: string | null; pose_photo_url?: string | null } = {};
       
-      if (pendingProfileFile || pendingPoseFile) {
+      if (profileFileToUpload || poseFileToUpload) {
         const { uploadCustomPlayerPhoto } = await import('@/lib/services/imageUploadService');
         
         // Upload profile photo if pending
-        if (pendingProfileFile) {
+        if (profileFileToUpload) {
           try {
             const profileUrl = await uploadCustomPlayerPhoto(
-              pendingProfileFile,
-              response.data.id,
+              profileFileToUpload,
+              createdPlayer.id,
               'profile'
             );
-            // Only use uploaded URL (not blob URL)
-            if (profileUrl.publicUrl && !profileUrl.publicUrl.startsWith('blob:')) {
+            // Only use uploaded URL (not blob URL) and verify it's a valid Supabase URL
+            if (profileUrl?.publicUrl && 
+                !profileUrl.publicUrl.startsWith('blob:') &&
+                profileUrl.publicUrl.includes('supabase.co/storage')) {
+              console.log('✅ Profile photo uploaded successfully:', profileUrl.publicUrl);
               photoUpdates.profile_photo_url = profileUrl.publicUrl;
               setProfilePhotoUrl(profileUrl.publicUrl);
+            } else {
+              console.error('❌ Invalid profile photo URL returned:', profileUrl);
+              throw new Error('Invalid photo URL returned from upload');
             }
             setPendingProfileFile(null);
+            pendingProfileFileRef.current = null;
           } catch (err) {
             console.error('❌ Failed to upload profile photo:', err);
-            // Clear blob URL on error
+            console.error('❌ Error details:', {
+              message: err instanceof Error ? err.message : 'Unknown error',
+              stack: err instanceof Error ? err.stack : undefined
+            });
+            // Clear blob URL on error and DON'T save URL to database
             setProfilePhotoUrl(null);
+            // Don't add to photoUpdates - upload failed
           }
         }
 
         // Upload pose photo if pending
-        if (pendingPoseFile) {
+        if (poseFileToUpload) {
           try {
             const poseUrl = await uploadCustomPlayerPhoto(
-              pendingPoseFile,
-              response.data.id,
+              poseFileToUpload,
+              createdPlayer.id,
               'pose'
             );
-            // Only use uploaded URL (not blob URL)
-            if (poseUrl.publicUrl && !poseUrl.publicUrl.startsWith('blob:')) {
+            // Only use uploaded URL (not blob URL) and verify it's a valid Supabase URL
+            if (poseUrl?.publicUrl && 
+                !poseUrl.publicUrl.startsWith('blob:') &&
+                poseUrl.publicUrl.includes('supabase.co/storage')) {
+              console.log('✅ Pose photo uploaded successfully:', poseUrl.publicUrl);
               photoUpdates.pose_photo_url = poseUrl.publicUrl;
               setPosePhotoUrl(poseUrl.publicUrl);
+            } else {
+              console.error('❌ Invalid pose photo URL returned:', poseUrl);
+              throw new Error('Invalid photo URL returned from upload');
             }
             setPendingPoseFile(null);
+            pendingPoseFileRef.current = null;
           } catch (err) {
             console.error('❌ Failed to upload pose photo:', err);
-            // Clear blob URL on error
+            console.error('❌ Error details:', {
+              message: err instanceof Error ? err.message : 'Unknown error',
+              stack: err instanceof Error ? err.stack : undefined
+            });
+            // Clear blob URL on error and DON'T save URL to database
             setPosePhotoUrl(null);
+            // Don't add to photoUpdates - upload failed
           }
         }
       }
@@ -164,24 +213,39 @@ export function CustomPlayerForm({
           if (finalProfileUrl) updateData.profile_photo_url = finalProfileUrl;
           if (finalPoseUrl) updateData.pose_photo_url = finalPoseUrl;
           
-          const { error: updateError } = await supabase
+          const { data: updatedData, error: updateError } = await supabase
             .from('custom_players')
             .update(updateData)
-            .eq('id', response.data.id);
+            .eq('id', createdPlayer.id)
+            .select('profile_photo_url, pose_photo_url')
+            .single();
           
           if (updateError) {
-            console.warn('⚠️ Player created but photos not saved to database:', updateError.message);
+            console.error('❌ Player created but photos not saved to database:', updateError.message);
+            console.error('❌ Update error details:', {
+              code: updateError.code,
+              details: updateError.details,
+              hint: updateError.hint
+            });
+            console.error('❌ Photo updates attempted:', updateData);
+          } else {
+            // Update createdPlayer with the saved URLs
+            if (updatedData) {
+              createdPlayer.profile_photo_url = updatedData.profile_photo_url;
+              (createdPlayer as any).pose_photo_url = updatedData.pose_photo_url;
+            }
           }
         } catch (err) {
-          console.warn('⚠️ Failed to update player with photo URLs:', err);
+          console.error('❌ Failed to update player with photo URLs:', err);
+          console.error('❌ Error details:', err);
         }
       }
       
       // Step 5: Return final player with photo URLs
       const finalPlayer: GenericPlayer = {
-        ...response.data,
-        profile_photo_url: finalProfileUrl || response.data.profile_photo_url || null,
-        pose_photo_url: finalPoseUrl || (response.data as any).pose_photo_url || null
+        ...createdPlayer,
+        profile_photo_url: finalProfileUrl || createdPlayer.profile_photo_url || null,
+        pose_photo_url: finalPoseUrl || (createdPlayer as any).pose_photo_url || null
       };
       
       onPlayerCreated(finalPlayer);
@@ -219,18 +283,8 @@ export function CustomPlayerForm({
             posePhotoUrl={posePhotoUrl}
             onProfilePhotoChange={setProfilePhotoUrl}
             onPosePhotoChange={setPosePhotoUrl}
-            onProfileFileSelect={(file) => {
-              setPendingProfileFile(file);
-              // Create preview URL
-              const previewUrl = URL.createObjectURL(file);
-              setProfilePhotoUrl(previewUrl);
-            }}
-            onPoseFileSelect={(file) => {
-              setPendingPoseFile(file);
-              // Create preview URL
-              const previewUrl = URL.createObjectURL(file);
-              setPosePhotoUrl(previewUrl);
-            }}
+            onProfileFileSelect={handleProfileFileSelect}
+            onPoseFileSelect={handlePoseFileSelect}
             allowFileSelectionBeforeCreation={true}
             disabled={loading}
           />

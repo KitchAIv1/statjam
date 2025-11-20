@@ -118,8 +118,9 @@ export class CoachPlayerManagementService implements IPlayerManagementService {
     
     const response = await CoachPlayerService.createCustomPlayer(request);
     
-    if (response.success && response.data) {
-      const player = response.data;
+    // ✅ FIX: CoachPlayerService returns response.player, not response.data
+    if (response.success && response.player) {
+      const player = response.player;
       return {
         success: true,
         data: {
@@ -128,7 +129,9 @@ export class CoachPlayerManagementService implements IPlayerManagementService {
           jersey_number: player.jersey_number,
           position: player.position,
           is_custom_player: true,
-          created_at: player.created_at
+          created_at: player.created_at,
+          profile_photo_url: player.profile_photo_url || null,
+          pose_photo_url: player.pose_photo_url || null
         },
         message: response.message
       };

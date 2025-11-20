@@ -68,22 +68,56 @@ export function CustomPlayerPhotoUpload({
 
   // Handle file selection - use callback if provided (before creation), otherwise use upload hook
   const handleProfileFileSelect = async (file: File) => {
+    console.log('📸 CustomPlayerPhotoUpload: Profile file selected', {
+      fileName: file.name,
+      fileSize: file.size,
+      allowFileSelectionBeforeCreation,
+      hasCustomPlayerId: !!customPlayerId,
+      hasOnProfileFileSelect: !!onProfileFileSelect
+    });
+    
     if (allowFileSelectionBeforeCreation && !customPlayerId && onProfileFileSelect) {
       // File selection before creation - store file and create preview
-      onProfileFileSelect(file);
+      console.log('✅ Using file selection callback (before creation)');
+      try {
+        onProfileFileSelect(file);
+        console.log('✅ Profile file callback executed successfully');
+      } catch (error) {
+        console.error('❌ Error in profile file callback:', error);
+      }
     } else if (customPlayerId) {
       // Normal upload flow after creation
+      console.log('✅ Using upload hook (after creation)');
       await profilePhotoUpload.handleFileSelect(file);
+    } else {
+      console.warn('⚠️ No handler available for profile file selection');
     }
   };
 
   const handlePoseFileSelect = async (file: File) => {
+    console.log('📸 CustomPlayerPhotoUpload: Pose file selected', {
+      fileName: file.name,
+      fileSize: file.size,
+      allowFileSelectionBeforeCreation,
+      hasCustomPlayerId: !!customPlayerId,
+      hasOnPoseFileSelect: !!onPoseFileSelect
+    });
+    
     if (allowFileSelectionBeforeCreation && !customPlayerId && onPoseFileSelect) {
       // File selection before creation - store file and create preview
-      onPoseFileSelect(file);
+      console.log('✅ Using file selection callback (before creation)');
+      try {
+        onPoseFileSelect(file);
+        console.log('✅ Pose file callback executed successfully');
+      } catch (error) {
+        console.error('❌ Error in pose file callback:', error);
+      }
     } else if (customPlayerId) {
       // Normal upload flow after creation
+      console.log('✅ Using upload hook (after creation)');
       await posePhotoUpload.handleFileSelect(file);
+    } else {
+      console.warn('⚠️ No handler available for pose file selection');
     }
   };
 

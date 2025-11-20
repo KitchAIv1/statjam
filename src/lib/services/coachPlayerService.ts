@@ -6,6 +6,7 @@
 // ============================================================================
 
 import { supabase } from '../supabase';
+import { cache } from '../utils/cache';
 import {
   CoachPlayer,
   AddPlayerToTeamRequest,
@@ -266,36 +267,84 @@ export class CoachPlayerService {
         };
       }
 
-      // Step 1: Create custom player record
+      // Step 1: Validate and sanitize input data
+      const insertData: Record<string, any> = {
+        team_id: request.team_id,
+        coach_id: user.id,
+        name: request.name,
+      };
+
+      // Handle jersey_number: only include if valid number
+      if (request.jersey_number !== undefined && request.jersey_number !== null) {
+        const jerseyNum = typeof request.jersey_number === 'number' 
+          ? request.jersey_number 
+          : parseInt(String(request.jersey_number), 10);
+        if (!isNaN(jerseyNum) && jerseyNum >= 0 && jerseyNum <= 99) {
+          insertData.jersey_number = jerseyNum;
+        }
+        // If invalid, omit jersey_number (allows NULL in database)
+      }
+
+      // Handle position: only include if valid value
+      if (request.position && request.position.trim() !== '' && request.position !== 'none') {
+        insertData.position = request.position;
+      }
+      // If undefined/empty, omit position (allows NULL in database)
+
+      // Handle photo URLs
+      insertData.profile_photo_url = request.profile_photo_url || null;
+      insertData.pose_photo_url = request.pose_photo_url || null;
+
+      console.log('📤 Creating custom player with data:', {
+        team_id: insertData.team_id,
+        coach_id: insertData.coach_id?.substring(0, 8),
+        name: insertData.name,
+        jersey_number: insertData.jersey_number,
+        position: insertData.position,
+        has_profile_photo: !!insertData.profile_photo_url,
+        has_pose_photo: !!insertData.pose_photo_url
+      });
+
+      // Step 2: Create custom player record
       const { data: customPlayer, error: customPlayerError } = await supabase
         .from('custom_players')
-        .insert({
-          team_id: request.team_id,
-          coach_id: user.id,
-          name: request.name,
-          jersey_number: request.jersey_number,
-          position: request.position,
-          profile_photo_url: request.profile_photo_url || null,
-          pose_photo_url: request.pose_photo_url || null
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (customPlayerError) {
+        console.error('❌ Custom player creation error:', {
+          code: customPlayerError.code,
+          message: customPlayerError.message,
+          details: customPlayerError.details,
+          hint: customPlayerError.hint,
+          insertData: insertData
+        });
+        
         if (customPlayerError.code === '23505') { // Unique constraint violation
           return {
             success: false,
             message: 'Jersey number already taken on this team'
           };
         }
-        console.error('❌ Custom player creation error:', customPlayerError);
+        
+        // Provide more detailed error message
+        const errorMessage = customPlayerError.details 
+          ? `${customPlayerError.message}: ${customPlayerError.details}`
+          : customPlayerError.message || 'Unknown database error';
+        
         return {
           success: false,
-          message: `Database error: ${customPlayerError.message}`
+          message: `Database error: ${errorMessage}`
         };
       }
 
-      // Step 2: Add to team_players table
+      // Step 3: Add to team_players table
+      console.log('📤 Adding custom player to team_players:', {
+        team_id: request.team_id,
+        custom_player_id: customPlayer.id.substring(0, 8)
+      });
+      
       const { error: teamPlayerError } = await supabase
         .from('team_players')
         .insert({
@@ -304,12 +353,19 @@ export class CoachPlayerService {
         });
 
       if (teamPlayerError) {
-        console.error('❌ Team player insertion error:', teamPlayerError);
+        console.error('❌ Team player insertion error:', {
+          code: teamPlayerError.code,
+          message: teamPlayerError.message,
+          details: teamPlayerError.details,
+          hint: teamPlayerError.hint
+        });
         return {
           success: false,
-          message: `Failed to add player to team: ${teamPlayerError.message}`
+          message: `Failed to add player to team: ${teamPlayerError.message || 'Unknown error'}`
         };
       }
+      
+      console.log('✅ Custom player added to team_players successfully');
 
       // Step 3: Return success with player data
       const player: CoachPlayer = {
@@ -404,6 +460,12 @@ export class CoachPlayerService {
         profile_photo_url: (updatedPlayer as any).profile_photo_url || null,
         pose_photo_url: (updatedPlayer as any).pose_photo_url || null
       };
+
+      // ✅ FIX: Invalidate cache to ensure fresh data on next fetch
+      // This fixes Issue 2: Photos display on cards but not profile modal
+      const cacheKey = `custom_player_${customPlayerId}`;
+      cache.delete(cacheKey);
+      console.log('🔄 Invalidated custom player cache for:', customPlayerId.substring(0, 8));
 
       return {
         success: true,

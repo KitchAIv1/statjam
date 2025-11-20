@@ -221,6 +221,8 @@ export function CoachPlayerManagementModal({
                             <p className="text-xs text-muted-foreground truncate">{player.email}</p>
                           ) : player.jersey_number !== undefined && player.jersey_number !== null ? (
                             <p className="text-xs text-muted-foreground">#{player.jersey_number}</p>
+                          ) : player.is_custom_player ? (
+                            <p className="text-xs text-muted-foreground">&nbsp;</p>
                           ) : (
                             <p className="text-xs text-muted-foreground">Team-specific player</p>
                           )}
