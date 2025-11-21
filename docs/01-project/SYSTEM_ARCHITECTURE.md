@@ -1,10 +1,10 @@
 # 🏗️ StatJam System Architecture
 
-**Version**: 0.15.0+  
-**Date**: December 2025  
-**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - Production Ready with Refactored Modular Architecture + Marketing Homepage + Performance Optimizations  
+**Version**: 0.16.1  
+**Date**: November 21, 2025  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - Production Ready with Refactored Modular Architecture + Marketing Homepage + Performance Optimizations + Bracket Builder + Custom Player Photos  
 **Live Site**: [www.statjam.net](https://www.statjam.net) ✅  
-**Major Updates**: Frontend Modularity Guardrails + Marketing Homepage + SEO Optimization
+**Major Updates**: Frontend Modularity Guardrails + Marketing Homepage + SEO Optimization + Bracket Builder + Custom Player Photos + Features Page
 
 ---
 
@@ -12,8 +12,8 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        STATJAM MVP v0.9.9                        │
-│    🏀 Refactored Modular Architecture + Tier 2 Enhancements      │
+│                        STATJAM MVP v0.16.1                        │
+│    🏀 Refactored Modular Architecture + Bracket Builder + Custom Player Photos      │
 │                                                                   │
 │  ┌───────────┐      ┌───────────┐      ┌───────────┐           │
 │  │ ORGANIZER │      │STAT ADMIN │      │  PLAYER   │           │
@@ -23,7 +23,7 @@
 │        │                   │                   │                 │
 │        ▼                   ▼                   ▼                 │
 │  ┌───────────────────────────────────────────────────┐         │
-│  │      FRONTEND (Next.js 15.4.5 + TypeScript)       │         │
+│  │      FRONTEND (Next.js 15.5.6 + TypeScript)       │         │
 │  │           🛡️ Modularity Guardrails Active           │         │
 │  │                                                     │         │
 │  │  • Modular Components (<200 lines each)           │         │

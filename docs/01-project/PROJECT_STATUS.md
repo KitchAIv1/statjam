@@ -1,9 +1,9 @@
 # 🎯 StatJam MVP: Current Status
 
-**Date**: January 2025  
-**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE  
-**Version**: 0.14.5+ (Player Profile Complete + Features Page + Performance Optimizations)  
-**Branch**: `main` (latest: `58d7916`)  
+**Date**: November 21, 2025  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS  
+**Version**: 0.16.1 (Bracket Builder + Custom Player Photos + Features Page + Performance Optimizations)  
+**Branch**: `main`  
 **Live Site**: [www.statjam.net](https://www.statjam.net) ✅
 
 ---
@@ -20,14 +20,16 @@
 - Code quality is high with TypeScript throughout
 
 **Recent Achievements** ✅:
-1. **🎨 FEATURES PAGE COMPLETE (Jan 2025)**: Premium dark-themed marketing page showcasing all user roles (Player, Stat Admin, Coach, Organizer). Auto-rotating carousels, device mockups, scroll animations. Authentication guard (signed-out only). Professional NBA-level design matching Mobile Advantage section.
-2. **📊 PLAYER DASHBOARD PERFORMANCE (Jan 2025)**: Aggressive client-side caching (5min TTL), parallel data fetching, query limits (2000 records), skeleton loading with accurate dimensions. ~50% reduction in load time, improved perceived performance.
-3. **📸 PHOTO UPLOAD SYSTEM (Jan 2025)**: Complete Supabase Storage migration. Reusable `PhotoUploadField` component, `usePhotoUpload` hook, `imageUploadService`. File validation (size, type, MIME), image compression, instant UI updates. 98% database size reduction for images.
-4. **✏️ EDIT PROFILE ENHANCEMENTS (Jan 2025)**: Dual-input height system (feet + inches), relaxed jersey number (0-999), profile data pre-population, instant photo updates on dashboard. All UX issues resolved.
-5. **🖼️ SQUARE AVATARS (Jan 2025)**: Unified square avatar display across tracker, live viewer, navigation header. Profile photos from Supabase Storage. Consistent design language.
-6. **🛡️ COMPREHENSIVE ERROR HANDLING (Jan 2025)**: Complete error handling for all stat recording paths with toast notifications. All 10 stat paths protected (direct stats, automation modals, foul flow, FTs, violations). Mobile inherits desktop error handling via props architecture. Zero silent failures, production-ready.
-7. **🏀 CUSTOM PLAYER SUPPORT COMPLETE (Jan 2025)**: Fixed HTTP 409 foreign key violations for custom players. Dual detection method (ID prefix + flag check) across all automation modals. Rebound modal shows correct offense/defense teams. Free throw sequences work for custom players. Complete coverage across all flows.
-8. **📱 MOBILE ARCHITECTURE REFACTORING (Jan 2025)**: Mobile now uses desktop game engine logic via props (single source of truth). Reduced code duplication, easier maintenance. Removed unused props. Phase 1 complete, fallback logic retained for testing safety.
+1. **🏆 BRACKET BUILDER (Nov 2025)**: NBA-style bracket visualization with division support, championship brackets, auto-progression, real-time updates, and regeneration safety checks. Complete bracket builder system for tournament management.
+2. **📸 CUSTOM PLAYER PHOTOS (Nov 2025)**: Profile and pose photo upload for custom players. Reusable `CustomPlayerPhotoUpload` component, edit functionality, and comprehensive UI improvements to Player Management Modal.
+3. **🎨 FEATURES PAGE (Nov 2025)**: Premium dark-themed marketing page showcasing all user roles (Player, Stat Admin, Coach, Organizer). Auto-rotating carousels, device mockups, scroll animations. Authentication guard (signed-out only). Professional NBA-level design matching Mobile Advantage section.
+4. **📊 PLAYER DASHBOARD PERFORMANCE (Nov 2025)**: Aggressive client-side caching (5min TTL), parallel data fetching, query limits (2000 records), skeleton loading with accurate dimensions. ~50% reduction in load time, improved perceived performance.
+5. **📸 PHOTO UPLOAD SYSTEM (Nov 2025)**: Complete Supabase Storage migration. Reusable `PhotoUploadField` component, `usePhotoUpload` hook, `imageUploadService`. File validation (size, type, MIME), image compression, instant UI updates. 98% database size reduction for images.
+6. **✏️ EDIT PROFILE ENHANCEMENTS (Nov 2025)**: Dual-input height system (feet + inches), relaxed jersey number (0-999), profile data pre-population, instant photo updates on dashboard. All UX issues resolved.
+7. **🖼️ SQUARE AVATARS (Nov 2025)**: Unified square avatar display across tracker, live viewer, navigation header. Profile photos from Supabase Storage. Consistent design language.
+8. **🛡️ COMPREHENSIVE ERROR HANDLING (Nov 2025)**: Complete error handling for all stat recording paths with toast notifications. All 10 stat paths protected (direct stats, automation modals, foul flow, FTs, violations). Mobile inherits desktop error handling via props architecture. Zero silent failures, production-ready.
+9. **🏀 CUSTOM PLAYER SUPPORT COMPLETE (Nov 2025)**: Fixed HTTP 409 foreign key violations for custom players. Dual detection method (ID prefix + flag check) across all automation modals. Rebound modal shows correct offense/defense teams. Free throw sequences work for custom players. Complete coverage across all flows.
+10. **📱 MOBILE ARCHITECTURE REFACTORING (Nov 2025)**: Mobile now uses desktop game engine logic via props (single source of truth). Reduced code duplication, easier maintenance. Removed unused props. Phase 1 complete, fallback logic retained for testing safety.
 9. **🎨 MARKETING HOMEPAGE + PERFORMANCE (Dec 2025)**: Professional marketing homepage with NBA-level messaging, SEO optimization, lazy loading, WebP images. 40% bundle size reduction, comprehensive meta tags, Open Graph support. All sections optimized for MVP conversion.
 10. **🏠 HOMEPAGE UI POLISH (Dec 2025)**: Enhanced typography hierarchy, improved CTA layouts, gradient icons, hover effects, consistent spacing rhythm. Professional premium feel throughout.
 11. **🤖 COMPLETE AUTOMATION SUITE (Oct 29)**: Phases 2-6 fully deployed - Clock automation, possession tracking, play sequences, free throw flow, foul possession logic, manual control. All features tested and production-ready.
@@ -62,6 +64,8 @@
 - 🟢 **Team Stats Tab**: 100% functional (team/player stats, real-time minutes, mobile responsive, +/- calculation)
 - 🟢 **Player Dashboard**: 100% functional (profile, stats, tournaments, game log, validation, **photo upload**, **performance optimization**, **skeleton loading**)
 - 🟢 **Features Page**: 100% functional (premium dark theme, interactive carousels, device mockups, authentication guard)
+- 🟢 **Bracket Builder**: 100% functional (NBA-style visualization, division support, championship brackets, auto-progression, real-time updates)
+- 🟢 **Custom Player Photos**: 100% functional (profile and pose photo upload, edit functionality, Player Management Modal improvements)
 - 🟢 **Authentication V2**: 100% functional (modular architecture, Tier 2 validation, auto-refresh, XSS protection)
 - 🟢 **Live Game Cards**: 100% functional (automatic status updates)
 - 🟢 **Input Validation**: 100% functional (real-time feedback, password strength, name validation, email validation)

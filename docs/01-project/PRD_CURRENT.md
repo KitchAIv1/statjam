@@ -1,8 +1,8 @@
 # StatJam Product Requirements Document (PRD) - Current Version
 
-**Version**: 2.1  
-**Date**: November 9, 2025  
-**Status**: Production Ready (v0.15.1)  
+**Version**: 2.2  
+**Date**: November 21, 2025  
+**Status**: Production Ready (v0.16.1)  
 **Previous Version**: [LEGACY_PRD_ORIGINAL.md](../08-archive/LEGACY_PRD_ORIGINAL.md)
 
 ---
@@ -22,6 +22,9 @@ StatJam is a professional-grade sports tournament management platform built for 
 - Team and player roster management
 - Assign statisticians to games
 - Tournament scheduling and bracket management
+- Division-based tournament support (A, B, C divisions)
+- NBA-style bracket visualization with auto-progression
+- Championship bracket for cross-division games
 - Public/private tournament visibility controls
 - Comprehensive organizer guide system
 
@@ -34,17 +37,23 @@ StatJam is a professional-grade sports tournament management platform built for 
 
 ### 3. **Coaches** 
 - Team management and player rosters
-- Custom player creation and management
+- Custom player creation and management with photo uploads
 - Quick Track integration for non-tournament games
 - Opponent stat tracking
 - Mixed roster support (existing users + custom players)
+- Official vs Practice team classification
+- Custom player photo management (profile and pose photos)
 
 ### 4. **Players** 
 - Personal dashboard with performance analytics
 - Game statistics and career tracking
 - Team membership and tournament participation
-- Profile management with photo uploads
+- Profile management with photo uploads (Supabase Storage)
+- Dual-input height system (feet + inches)
+- Enhanced jersey number support (0-999)
+- Instant photo updates on dashboard
 - Real-time validation and error handling
+- Performance-optimized dashboard with caching
 
 ### 5. **Fans** 
 - Public tournament viewing
@@ -106,6 +115,25 @@ StatJam is a professional-grade sports tournament management platform built for 
 
 ---
 
+### ✅ **Features Page** (Marketing & Showcase)
+
+#### **Premium Marketing Page**
+- **Location**: `/features` route with authentication guard
+- **Design**: Premium dark theme matching Mobile Advantage section
+- **Visual Elements**: Auto-rotating carousels, device mockups, gradient icons
+- **Profile Sections**: Player, Stat Admin, Coach, Organizer role showcases
+- **Interactive Elements**: Scroll-triggered animations, clickable carousel indicators
+- **Responsive Design**: Mobile, tablet, desktop optimized
+- **Access Control**: Only visible to signed-out users (redirects authenticated users)
+
+#### **Section Highlights**
+- **Player Section**: 4-image carousel (3.5s intervals) showcasing dashboard features
+- **Stat Admin Section**: Layered device mockups (iPad + iPhone) with hover effects
+- **Coach Section**: Large gradient icon with team management features
+- **Organizer Section**: Tournament management and bracket builder highlights
+
+---
+
 ### ✅ **Marketing Homepage** (MVP1 Production Ready)
 
 #### **Hero Section**
@@ -152,8 +180,11 @@ StatJam is a professional-grade sports tournament management platform built for 
 - Mixed roster support (StatJam users + custom players)
 - Search and add existing users
 - Create custom players for team-specific rosters
+- Custom player photo upload (profile and pose photos)
+- Edit custom player profiles and photos
 - Player removal and roster management
 - Minimum 5 players validation
+- Enhanced UI with flexible containers and keyboard navigation
 
 #### **Quick Track Integration**
 - Reuses Stat Tracker V3 interface
@@ -177,8 +208,23 @@ StatJam is a professional-grade sports tournament management platform built for 
 - Country selection across UI
 - Tournament visibility controls
 - Game scheduling with date/time/venue
-- Bracket builder and pool play scheduler
+- Division-based tournament support (A, B, C divisions)
+- NBA-style bracket visualization with auto-progression
+- Championship bracket for cross-division games
+- Bracket builder with regeneration safety checks
+- Real-time bracket updates via WebSocket subscriptions
 - Games list with advanced filtering
+
+#### **Bracket Builder System** (v0.16.0)
+- **NBA-Style Visualization**: Professional bracket display with match cards and connectors
+- **Division Support**: Separate brackets per division (A, B, C, etc.)
+- **Championship Bracket**: Cross-division games for tournament finals
+- **Auto-Progression**: Winners automatically populate next round slots
+- **Real-Time Updates**: WebSocket subscriptions refresh brackets on game changes
+- **Regeneration Safety**: Eligibility checks prevent accidental bracket regeneration
+- **Tooltips**: Venue, schedule, live/completed status, and winner details
+- **Mobile Responsive**: Vertical layout on mobile, horizontal on desktop
+- **Cascade Deletion**: Game deletion cascades to stats, substitutions, and timeouts
 
 #### **Guide System**
 - 3-surface guide implementation
@@ -221,16 +267,24 @@ StatJam is a professional-grade sports tournament management platform built for 
 ### ✅ **Player Dashboard System**
 
 #### **Profile Management**
-- Editable profiles with photo uploads
+- Editable profiles with photo uploads (Supabase Storage)
+- Dual-input height system (feet + inches, 4'0" - 8'0")
+- Enhanced jersey number support (0-999 range)
+- Profile and pose photo uploads with compression
+- Instant photo updates on dashboard after save
 - Real-time validation with inline errors
 - Type conversion (height/weight parsing)
-- Jersey number and personal information
+- Profile data pre-population in edit modal
 
 #### **Performance Analytics**
 - Game statistics table (NBA-style box scores)
 - Season averages and career highs
 - Upcoming games display
 - Achievement tracking
+- Performance-optimized dashboard with 5-minute caching
+- Parallel data fetching for faster load times
+- Skeleton loading with accurate dimensions
+- Query limits (2000 records) for scalability
 
 #### **Team Integration**
 - Team membership display
@@ -280,8 +334,8 @@ StatJam is a professional-grade sports tournament management platform built for 
 - Fouls: 0-6 per player (hard limit)
 
 #### **Profile Validation**
-- Jersey Number: 0-99
-- Height: 48-96 inches (4'0" - 8'0")
+- Jersey Number: 0-999 (enhanced range)
+- Height: 48-96 inches (4'0" - 8'0") with dual-input system (feet + inches)
 - Weight: 50-400 lbs
 - Age: 10-99 years
 
@@ -290,12 +344,13 @@ StatJam is a professional-grade sports tournament management platform built for 
 ## 🏗️ Technical Architecture
 
 ### **Frontend Stack**
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 15.5.6 (App Router)
 - **Language**: TypeScript (strict mode)
-- **UI Library**: React 18
+- **UI Library**: React 19.1.0
 - **Styling**: Tailwind CSS
 - **State Management**: React Hooks (useState, useEffect, useCallback)
 - **Icons**: Lucide React
+- **Notifications**: Sonner (toast notifications)
 
 ### **Backend Stack**
 - **Database**: Supabase (PostgreSQL)
@@ -309,12 +364,15 @@ StatJam is a professional-grade sports tournament management platform built for 
 - **TeamServiceV3**: Team and player data management
 - **AuthServiceV2**: Centralized authentication
 - **CoachTeamService**: Coach-specific team management
+- **BracketService**: Bracket calculation and visualization
+- **ImageUploadService**: Photo upload with Supabase Storage
 - **NotificationService**: Platform-abstracted notifications
 
 ### **Database Schema**
 - **Core Tables**: games, game_stats, game_substitutions, game_timeouts, game_possessions
 - **User Tables**: users, teams, team_players, custom_players
-- **Tournament Tables**: tournaments, tournament_teams
+- **Tournament Tables**: tournaments, tournament_teams (with division support)
+- **Storage**: Supabase Storage buckets for player images (profile and pose photos)
 - **RLS Policies**: Comprehensive row-level security
 - **Indexes**: Optimized for performance
 
@@ -560,11 +618,11 @@ StatJam is a professional-grade sports tournament management platform built for 
 
 ---
 
-**StatJam v2.0 PRD** - Complete, current, and production-ready. This PRD reflects the actual implemented features as of October 30, 2025, representing a mature, enterprise-grade sports tournament management platform.
+**StatJam v2.2 PRD** - Complete, current, and production-ready. This PRD reflects the actual implemented features as of November 21, 2025, representing a mature, enterprise-grade sports tournament management platform with bracket visualization, custom player photos, and performance optimizations.
 
 ---
 
-**Last Updated**: October 30, 2025  
+**Last Updated**: November 21, 2025  
 **Maintained By**: Development Team  
-**Status**: ✅ Production Ready (v0.15.0+)  
+**Status**: ✅ Production Ready (v0.16.1)  
 **Next Review**: Q1 2026
