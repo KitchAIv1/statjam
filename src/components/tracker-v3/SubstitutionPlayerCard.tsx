@@ -58,16 +58,37 @@ export function SubstitutionPlayerCard({
     }
   };
 
+  // ✅ Different styling for selected on-court vs bench players
+  const getSelectedStyle = () => {
+    if (!isSelected) return '';
+    // On-court players: blue highlight (coming out)
+    if (isOnCourt) {
+      return 'bg-blue-500/30 border-blue-500 scale-105';
+    }
+    // Bench players: green highlight (coming in)
+    return 'bg-green-500/30 border-green-500 scale-105';
+  };
+
+  const getHoverStyle = () => {
+    if (isOnCourt) {
+      // On-court players: blue hover
+      return multiSelectMode
+        ? 'bg-slate-800 border-slate-600 hover:bg-blue-500/10 hover:border-blue-500 cursor-pointer'
+        : 'bg-slate-800 border-slate-600 hover:bg-blue-500/20 hover:border-blue-500 hover:scale-102 cursor-pointer';
+    } else {
+      // Bench players: green hover
+      return multiSelectMode
+        ? 'bg-slate-800 border-slate-600 hover:bg-green-500/10 hover:border-green-500 cursor-pointer'
+        : 'bg-slate-800 border-slate-600 hover:bg-green-500/20 hover:border-green-500 hover:scale-102 cursor-pointer';
+    }
+  };
+
   return (
     <div
       onClick={handleClick}
       onMouseDown={(e) => e.stopPropagation()} // Prevent any parent click handlers
       className={`w-full h-auto p-4 rounded-xl border-2 transition-all duration-200 ${
-        isSelected
-          ? 'bg-green-500/30 border-green-500 scale-105'
-          : multiSelectMode
-          ? 'bg-slate-800 border-slate-600 hover:bg-green-500/10 hover:border-green-500 cursor-pointer'
-          : 'bg-slate-800 border-slate-600 hover:bg-green-500/20 hover:border-green-500 hover:scale-102 cursor-pointer'
+        isSelected ? getSelectedStyle() : getHoverStyle()
       }`}
     >
       <div className="flex items-center gap-4">
@@ -75,7 +96,7 @@ export function SubstitutionPlayerCard({
         {multiSelectMode && (
           <div className="flex-shrink-0" onClick={handleCheckboxClick}>
             {isSelected ? (
-              <CheckSquare className="w-6 h-6 text-green-500 cursor-pointer" />
+              <CheckSquare className={`w-6 h-6 cursor-pointer ${isOnCourt ? 'text-blue-500' : 'text-green-500'}`} />
             ) : (
               <Square className="w-6 h-6 text-gray-400 cursor-pointer" />
             )}
@@ -110,7 +131,7 @@ export function SubstitutionPlayerCard({
                 <X className="w-4 h-4 text-red-400" />
               </button>
             ) : (
-              <Check className="w-5 h-5 text-green-500" />
+              <Check className={`w-5 h-5 ${isOnCourt ? 'text-blue-500' : 'text-green-500'}`} />
             )}
           </div>
         ) : null}

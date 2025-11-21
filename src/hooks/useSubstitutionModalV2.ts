@@ -116,8 +116,9 @@ export function useSubstitutionModalV2({
           // Add to preview - pair with next unpaired on-court player
           setPreviewSubstitutions(prevMap => {
             const nextMap = new Map(prevMap);
+            // ✅ FIX: Check if on-court player (KEY) is already paired, not if bench player (VALUE) exists
             const unpairedOut = Array.from(selectedPlayersOut).find(
-              outId => !Array.from(prevMap.values()).includes(outId)
+              outId => !prevMap.has(outId)
             );
             if (unpairedOut) {
               nextMap.set(unpairedOut, playerId);

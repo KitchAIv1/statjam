@@ -132,8 +132,6 @@ export class TeamStatsService {
     const queryString = new URLSearchParams(params).toString();
     const url = `${this.SUPABASE_URL}/rest/v1/${table}${queryString ? `?${queryString}` : ''}`;
 
-    console.log(`🌐 TeamStatsService: Public HTTP request to ${table}`, { url, params });
-
     // ✅ FIX: Use same public access pattern as Play by Play feed
     const response = await fetch(url, {
       method: 'GET',

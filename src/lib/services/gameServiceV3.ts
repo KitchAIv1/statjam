@@ -76,8 +76,6 @@ export class GameServiceV3 {
     const queryString = new URLSearchParams(params).toString();
     const url = `${this.SUPABASE_URL}/rest/v1/${table}${queryString ? `?${queryString}` : ''}`;
 
-    console.log(`🌐 GameServiceV3: Raw HTTP request to ${table}`, { url, params });
-
     const response = await fetch(url, {
       method: 'GET',
       headers: {
