@@ -12,6 +12,10 @@ interface FreeThrowSequenceModalProps {
   shooterName: string;
   totalShots: number; // 1, 2, or 3
   foulType: '1-and-1' | 'shooting' | 'technical' | 'flagrant';
+  initialCurrentShot?: number; // ✅ NEW: For auto-sequence mode
+  showProgress?: boolean; // ✅ NEW: Show progress indicator (e.g., "1 of 3")
+  autoSequenceMode?: boolean; // ✅ NEW: Call onComplete after each shot (for auto-sequence)
+  previousResults?: { made: boolean; shouldRebound: boolean }[]; // ✅ NEW: Previous shots' results (for progress bar)
 }
 
 export function FreeThrowSequenceModal({
@@ -20,24 +24,39 @@ export function FreeThrowSequenceModal({
   onComplete,
   shooterName,
   totalShots,
-  foulType
+  foulType,
+  initialCurrentShot = 1,
+  showProgress = false,
+  autoSequenceMode = false,
+  previousResults = [] // ✅ NEW: Previous shots' results for progress bar
 }: FreeThrowSequenceModalProps) {
-  const [currentShot, setCurrentShot] = useState(1);
+  const [currentShot, setCurrentShot] = useState(initialCurrentShot);
   const [results, setResults] = useState<{ made: boolean; shouldRebound: boolean }[]>([]);
 
   // ✅ FIX: Reset modal state when it closes (prevents flash/rerender)
+  // ✅ NEW: Update currentShot when initialCurrentShot changes (for auto-sequence)
   useEffect(() => {
     if (!isOpen) {
       // Reset state after modal closes
       setCurrentShot(1);
       setResults([]);
+    } else if (initialCurrentShot !== currentShot && isOpen) {
+      // Update currentShot for auto-sequence mode (only when modal is open)
+      setCurrentShot(initialCurrentShot);
+      setResults([]); // Reset current modal's results (previousResults prop handles history)
     }
-  }, [isOpen]);
+  }, [isOpen, initialCurrentShot]);
+
+  // ✅ NEW: Combine previous results with current modal results for progress bar
+  const allResults = [...previousResults, ...results];
 
   if (!isOpen) return null;
 
   const handleShotResult = async (made: boolean) => {
-    const newResults = [...results, { made, shouldRebound: !made }];
+    // ✅ FIX: Rebound should only be true if it's the LAST shot AND it's missed
+    const isLastShot = currentShot >= totalShots;
+    const shouldRebound = !made && isLastShot;
+    const newResults = [...results, { made, shouldRebound }];
     setResults(newResults);
 
     // Check if sequence should continue
@@ -61,6 +80,13 @@ export function FreeThrowSequenceModal({
       }
     } else {
       // Regular shooting fouls: All shots must be taken
+      // ✅ NEW: Auto-sequence mode - call onComplete after each shot
+      if (autoSequenceMode) {
+        await onComplete(newResults);
+        return;
+      }
+      
+      // Normal mode: Continue until all shots are taken
       if (currentShot < totalShots) {
         setCurrentShot(currentShot + 1);
         return;
@@ -121,52 +147,50 @@ export function FreeThrowSequenceModal({
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-400">Progress</span>
               <span className="text-sm text-white font-medium">
-                Shot {currentShot} of {foulType === '1-and-1' ? '2 (max)' : totalShots}
+                {showProgress && totalShots > 1
+                  ? `Free Throw ${currentShot} of ${totalShots}`
+                  : foulType === '1-and-1'
+                  ? `Shot ${currentShot} of 2 (max)`
+                  : `Shot ${currentShot} of ${totalShots}`}
               </span>
             </div>
             <div className="flex gap-2">
-              {Array.from({ length: totalShots }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className={`h-2 flex-1 rounded-full transition-all ${
-                    idx < results.length
-                      ? results[idx].made
-                        ? 'bg-green-500'
-                        : 'bg-red-500'
-                      : idx === currentShot - 1
-                      ? 'bg-orange-500'
-                      : 'bg-gray-700'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Previous Results */}
-          {results.length > 0 && (
-            <div className="mb-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
-              <p className="text-xs text-gray-400 mb-2">Previous Shots:</p>
-              <div className="flex gap-2">
-                {results.map((result, idx) => (
+              {Array.from({ length: totalShots }).map((_, idx) => {
+                // ✅ FIX: Determine bar color based on shot status
+                const shotIndex = idx + 1; // 1-indexed
+                const isCompleted = idx < allResults.length;
+                const isCurrent = shotIndex === currentShot && !isCompleted;
+                const isFuture = shotIndex > currentShot;
+                
+                let barColor = 'bg-gray-700'; // Default: not started
+                
+                if (isCompleted) {
+                  // ✅ Completed shot: green if made, red if missed (stays colored)
+                  barColor = allResults[idx].made ? 'bg-green-500' : 'bg-red-500';
+                } else if (isCurrent) {
+                  // ✅ Current shot: orange (waiting for result)
+                  barColor = 'bg-orange-500';
+                } else if (isFuture) {
+                  // ✅ Future shot: gray (not started)
+                  barColor = 'bg-gray-700';
+                }
+                
+                return (
                   <div
                     key={idx}
-                    className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
-                      result.made
-                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    }`}
-                  >
-                    {result.made ? (
-                      <CheckCircle2 className="w-4 h-4" />
-                    ) : (
-                      <XCircle className="w-4 h-4" />
-                    )}
-                    Shot {idx + 1}: {result.made ? 'Made' : 'Missed'}
-                  </div>
-                ))}
-              </div>
+                    className={`h-2 flex-1 rounded-full transition-all duration-300 ${barColor}`}
+                    title={
+                      isCompleted
+                        ? `Shot ${shotIndex}: ${allResults[idx].made ? 'Made' : 'Missed'}`
+                        : isCurrent
+                        ? `Shot ${shotIndex}: In progress`
+                        : `Shot ${shotIndex}: Not started`
+                    }
+                  />
+                );
+              })}
             </div>
-          )}
+          </div>
 
           {/* Current Shot Question */}
           <div className="mb-6 text-center">

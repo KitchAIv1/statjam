@@ -5,12 +5,13 @@
  * Single responsibility: Render photo upload UI with preview and validation.
  */
 
-import { useRef, DragEvent } from 'react';
+import { useRef, DragEvent, useState } from 'react';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
 import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ImageCropModal } from './ImageCropModal';
 
 // ============================================================================
 // TYPES
@@ -29,6 +30,8 @@ export interface PhotoUploadFieldProps {
   onFileSelect: (file: File) => void;
   onRemove: () => void;
   className?: string;
+  enableCrop?: boolean; // ✅ NEW: Enable image cropping before upload
+  cropAspectRatio?: 'square' | 'portrait' | 'landscape'; // ✅ NEW: Aspect ratio for crop (defaults to aspectRatio)
 }
 
 // ============================================================================
@@ -47,9 +50,13 @@ export function PhotoUploadField({
   aspectRatio = 'square',
   onFileSelect,
   onRemove,
-  className
+  className,
+  enableCrop = false, // ✅ NEW: Crop disabled by default
+  cropAspectRatio // ✅ NEW: Uses aspectRatio if not specified
 }: PhotoUploadFieldProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileForCrop, setSelectedFileForCrop] = useState<File | null>(null);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
 
   // Aspect ratio classes
   const aspectRatioClasses = {
@@ -64,8 +71,36 @@ export function PhotoUploadField({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0];
     if (file) {
-      onFileSelect(file);
+      if (enableCrop) {
+        // Show crop modal instead of directly selecting file
+        setSelectedFileForCrop(file);
+        setIsCropModalOpen(true);
+      } else {
+        // Direct upload (existing behavior)
+        onFileSelect(file);
+      }
     }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  /**
+   * Handle crop completion
+   */
+  const handleCropComplete = (croppedFile: File): void => {
+    setIsCropModalOpen(false);
+    setSelectedFileForCrop(null);
+    onFileSelect(croppedFile);
+  };
+
+  /**
+   * Handle crop cancellation
+   */
+  const handleCropCancel = (): void => {
+    setIsCropModalOpen(false);
+    setSelectedFileForCrop(null);
   };
 
   /**
@@ -89,7 +124,14 @@ export function PhotoUploadField({
 
     const file = event.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      onFileSelect(file);
+      if (enableCrop) {
+        // Show crop modal instead of directly selecting file
+        setSelectedFileForCrop(file);
+        setIsCropModalOpen(true);
+      } else {
+        // Direct upload (existing behavior)
+        onFileSelect(file);
+      }
     }
   };
 
@@ -223,6 +265,17 @@ export function PhotoUploadField({
         <p className="text-xs text-muted-foreground text-center">
           Supported: JPEG, PNG, WebP, GIF
         </p>
+      )}
+
+      {/* Image Crop Modal */}
+      {enableCrop && (
+        <ImageCropModal
+          isOpen={isCropModalOpen}
+          imageFile={selectedFileForCrop}
+          aspectRatio={cropAspectRatio || aspectRatio}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
       )}
     </div>
   );

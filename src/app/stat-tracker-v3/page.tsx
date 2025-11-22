@@ -28,6 +28,7 @@ import { BlockPromptModal } from '@/components/tracker-v3/modals/BlockPromptModa
 import { TurnoverPromptModal } from '@/components/tracker-v3/modals/TurnoverPromptModal';
 import { BlockedShotSelectionModal } from '@/components/tracker-v3/modals/BlockedShotSelectionModal';
 import { FreeThrowSequenceModal } from '@/components/tracker-v3/modals/FreeThrowSequenceModal';
+import { FreeThrowCountModal } from '@/components/tracker-v3/modals/FreeThrowCountModal';
 import { FoulTypeSelectionModal, FoulType } from '@/components/tracker-v3/modals/FoulTypeSelectionModal';
 import { VictimPlayerSelectionModal } from '@/components/tracker-v3/modals/VictimPlayerSelectionModal';
 import { ShotMadeMissedModal } from '@/components/tracker-v3/modals/ShotMadeMissedModal';
@@ -114,6 +115,18 @@ function StatTrackerV3Content() {
   const [rosterRefreshKey, setRosterRefreshKey] = useState<string | number>(0);
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
   const [dismissedCompletionReminder, setDismissedCompletionReminder] = useState(false);
+  
+  // ✅ NEW: FT Made Auto-Sequence State (FULL auto mode only)
+  const [showFTCountModal, setShowFTCountModal] = useState(false);
+  const [ftAutoSequence, setFtAutoSequence] = useState<{
+    isActive: boolean;
+    totalShots: number;
+    currentShot: number;
+    results: { made: boolean; shouldRebound: boolean }[];
+    shooterId: string;
+    shooterName: string;
+    shooterTeamId: string;
+  } | null>(null);
   
   // ✅ PHASE 5: Foul Flow State
   const [showFoulTypeModal, setShowFoulTypeModal] = useState(false);
@@ -399,6 +412,23 @@ function StatTrackerV3Content() {
   const handleStatRecord = async (statType: string, modifier?: string) => {
     if (!selectedPlayer || !gameData) return;
     
+    // ✅ NEW: Intercept FT Made in FULL auto mode - show count modal first
+    if (statType === 'free_throw' && modifier === 'made') {
+      const isFullAutoMode = tracker.automationFlags?.sequences?.enabled === true;
+      
+      if (isFullAutoMode) {
+        // Get shooter info
+        const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+        const shooterName = shooterData?.name || 'Player';
+        const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+        const shooterTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+        
+        // Show FT count selection modal
+        setShowFTCountModal(true);
+        return; // Don't record stat yet - wait for count selection
+      }
+    }
+    
     try {
       // Handle different player types in coach mode
       let actualPlayerId: string | undefined = undefined;
@@ -452,6 +482,95 @@ function StatTrackerV3Content() {
       );
     }
   };
+  
+  // ✅ NEW: Handle FT count selection - start auto-sequence
+  const handleFTCountSelect = (count: 1 | 2 | 3) => {
+    if (!selectedPlayer || !gameData) return;
+    
+    setShowFTCountModal(false);
+    
+    // Get shooter info
+    const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+    const shooterName = shooterData?.name || 'Player';
+    const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+    const shooterTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+    
+    // Start auto-sequence
+    setFtAutoSequence({
+      isActive: true,
+      totalShots: count,
+      currentShot: 1,
+      results: [],
+      shooterId: selectedPlayer,
+      shooterName,
+      shooterTeamId
+    });
+  };
+  
+  // ✅ NEW: Handle FT sequence completion - auto-advance or finish
+  const handleFTSequenceComplete = async (results: { made: boolean; shouldRebound: boolean }[]) => {
+    if (!ftAutoSequence || !gameData) return;
+    
+    // ✅ FIX: Capture all values BEFORE clearing state to prevent race conditions
+    const currentSequence = { ...ftAutoSequence };
+    const currentResult = results[results.length - 1]; // Get the last result (current shot)
+    const newResults = [...currentSequence.results, currentResult];
+    const isLastShot = currentSequence.currentShot >= currentSequence.totalShots;
+    const isMissed = !currentResult.made;
+    
+    // ✅ FIX: Clear sequence state IMMEDIATELY if last shot to prevent modal reopening
+    if (isLastShot) {
+      setFtAutoSequence(null);
+    }
+    
+    try {
+      // Record current shot (using captured values)
+      const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === currentSequence.shooterId);
+      const isCustomPlayer = currentSequence.shooterId.startsWith('custom-') || 
+                            (shooterData && shooterData.is_custom_player === true);
+      
+      // ✅ FIX: Pass skipRebound flag to prevent rebound prompt for non-last missed shots
+      // Rebound should only appear on the LAST missed free throw
+      await tracker.recordStat({
+        gameId: gameData.id,
+        playerId: isCustomPlayer ? undefined : currentSequence.shooterId,
+        customPlayerId: isCustomPlayer ? currentSequence.shooterId : undefined,
+        teamId: currentSequence.shooterTeamId,
+        statType: 'free_throw',
+        modifier: currentResult.made ? 'made' : 'missed',
+        // ✅ FIX: Use eventMetadata to pass skipRebound flag for non-last missed shots
+        eventMetadata: isMissed && !isLastShot ? { skipRebound: true } : undefined
+      });
+      
+      // Check if sequence should continue (only if not last shot)
+      if (!isLastShot) {
+        // Continue to next shot - auto-advance (use captured values)
+        setFtAutoSequence({
+          ...currentSequence,
+          currentShot: currentSequence.currentShot + 1,
+          results: newResults
+        });
+        // Modal will automatically reopen with new currentShot value
+      } else {
+        // Sequence complete - show success notification
+        notify.success('Free Throws Recorded', `${newResults.length} free throw(s) recorded successfully`);
+      }
+    } catch (error) {
+      console.error('❌ Error recording free throw:', error);
+      notify.error(
+        'Failed to record free throw',
+        error instanceof Error ? error.message : 'Please try again'
+      );
+      // Only clear if not already cleared
+      setFtAutoSequence(null);
+    }
+  };
+  
+  // ✅ NEW: Cancel FT auto-sequence
+  const handleFTAutoSequenceCancel = () => {
+    setFtAutoSequence(null);
+    setShowFTCountModal(false);
+  };
 
   // ✅ PHASE 5: Handle foul recording with new flow
   const handleFoulRecord = async (foulType: 'personal' | 'technical') => {
@@ -482,8 +601,8 @@ function StatTrackerV3Content() {
     setShowFoulTypeModal(false);
     setSelectedFoulType(foulType);
     
-    // Determine if we need victim selection
-    const needsVictimSelection = ['shooting_2pt', 'shooting_3pt', 'bonus', 'technical', 'flagrant'].includes(foulType);
+    // ✅ UI IMPROVEMENT: Only shooting fouls need victim selection (bonus, technical, flagrant removed)
+    const needsVictimSelection = ['shooting_2pt', 'shooting_3pt'].includes(foulType);
     
     console.log('🔍 handleFoulTypeSelection: needsVictimSelection?', needsVictimSelection, 'foulType:', foulType);
     
@@ -1236,6 +1355,8 @@ function StatTrackerV3Content() {
           teamBPlayers={currentRosterB} // ✅ Only on-court players (first 5)
           teamAId={gameData.team_a_id} // ✅ FIX: Pass actual team IDs for proper comparison
           teamBId={gameData.team_b_id} // ✅ FIX: Pass actual team IDs for proper comparison
+          teamAName={gameData.team_a?.name || gameData.team_a_name || 'Team A'} // ✅ UI FIX: Pass team names
+          teamBName={coachMode ? (opponentName || 'Opponent Team') : (gameData.team_b?.name || gameData.team_b_name || 'Team B')} // ✅ UI FIX: Pass team names
           shooterTeamId={tracker.playPrompt.metadata?.shooterTeamId || gameData.team_a_id} // ✅ FIX: Pass shooter team ID
           shooterName={tracker.playPrompt.metadata?.shooterName || 'Unknown'}
           shotType={tracker.playPrompt.metadata?.shotType || 'shot'}
@@ -1327,18 +1448,21 @@ function StatTrackerV3Content() {
               const isShooterCustom = shooterId.startsWith('custom-') || 
                                      (shooterData.is_custom_player === true);
               
-              // Record missed shot (this will trigger rebound prompt via PlayEngine)
+              // ✅ BLOCK SEQUENCE: Record missed shot (this will trigger rebound prompt via PlayEngine)
+              // Don't pass sequenceId - let PlayEngine create new sequence for rebound (prevents skip logic)
               await tracker.recordStat({
                 gameId: gameData.id,
                 playerId: isShooterCustom ? undefined : shooterId,
                 customPlayerId: isShooterCustom ? shooterId : undefined,
                 teamId: shooterTeamId,
                 statType: shotType,
-                modifier: 'missed',
-                sequenceId: tracker.playPrompt.sequenceId || undefined
+                modifier: 'missed'
+                // ✅ Note: No sequenceId - PlayEngine will create new sequence for rebound prompt
               });
               
-              tracker.clearPlayPrompt();
+              // ✅ FIX: Don't clear prompt here - PlayEngine sets rebound prompt automatically inside recordStat()
+              // The rebound prompt will replace the missed_shot_type prompt via React re-render
+              // (BlockedShotSelectionModal closes when type !== 'missed_shot_type', ReboundPromptModal opens when type === 'rebound')
             } catch (error) {
               console.error('❌ Error recording missed shot after block:', error);
               notify.error(
@@ -1497,8 +1621,34 @@ function StatTrackerV3Content() {
         />
       )}
 
-      {/* Free Throw Sequence Modal */}
-      {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'free_throw' && (
+      {/* ✅ NEW: FT Count Selection Modal (FULL auto mode only) */}
+      {showFTCountModal && selectedPlayer && (
+        <FreeThrowCountModal
+          isOpen={showFTCountModal}
+          onClose={handleFTAutoSequenceCancel}
+          onSelectCount={handleFTCountSelect}
+          shooterName={[...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer)?.name || 'Player'}
+        />
+      )}
+
+      {/* ✅ NEW: FT Auto-Sequence Modal (FULL auto mode only) */}
+      {ftAutoSequence && ftAutoSequence.isActive && ftAutoSequence.currentShot <= ftAutoSequence.totalShots && (
+        <FreeThrowSequenceModal
+          isOpen={true}
+          onClose={handleFTAutoSequenceCancel}
+          onComplete={handleFTSequenceComplete}
+          shooterName={ftAutoSequence.shooterName}
+          totalShots={ftAutoSequence.totalShots}
+          foulType="shooting"
+          initialCurrentShot={ftAutoSequence.currentShot}
+          showProgress={true}
+          autoSequenceMode={true}
+          previousResults={ftAutoSequence.results}
+        />
+      )}
+
+      {/* Free Throw Sequence Modal (from foul sequences) */}
+      {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'free_throw' && !ftAutoSequence && (
         <FreeThrowSequenceModal
           isOpen={true}
           onClose={tracker.clearPlayPrompt}

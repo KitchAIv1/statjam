@@ -1151,8 +1151,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         // This prevents assist/rebound modals from appearing during shooting foul sequences
         // When a stat has a sequenceId, it means it's linked to a foul, so skip prompts
         const isPartOfFoulSequence = !!stat.sequenceId;
+        // ✅ FIX: Skip rebound prompt if explicitly requested (e.g., non-last FT in auto-sequence)
+        const shouldSkipReboundFromMetadata = stat.eventMetadata?.skipRebound === true;
         const shouldSkipAssistPrompt = isPartOfFoulSequence && playResult.promptType === 'assist';
-        const shouldSkipReboundPrompt = isPartOfFoulSequence && playResult.promptType === 'rebound';
+        const shouldSkipReboundPrompt = (isPartOfFoulSequence && playResult.promptType === 'rebound') ||
+                                        (shouldSkipReboundFromMetadata && playResult.promptType === 'rebound');
         
         if (playResult.shouldPrompt && playResult.promptType && 
             (playResult.promptType === 'assist' || playResult.promptType === 'rebound' || playResult.promptType === 'block' || playResult.promptType === 'free_throw' || playResult.promptType === 'missed_shot_type') &&

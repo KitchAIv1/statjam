@@ -170,6 +170,7 @@ export function EditCustomPlayerModal({
               posePhotoUrl={posePhotoUrl}
               onProfilePhotoChange={setProfilePhotoUrl}
               onPosePhotoChange={setPosePhotoUrl}
+              enableCrop={true} // ✅ Enable image cropping before upload
               disabled={loading}
             />
           </div>

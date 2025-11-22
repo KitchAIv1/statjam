@@ -22,48 +22,31 @@ export function FoulTypeSelectionModal({
 }: FoulTypeSelectionModalProps) {
   if (!isOpen) return null;
 
+  // ✅ UI IMPROVEMENT: Only show 4 foul types in a 2x2 grid
   const foulTypes: { type: FoulType; label: string; description: string; color: string }[] = [
     {
+      type: 'offensive',
+      label: 'Offensive',
+      description: 'Turnover, no free throws',
+      color: 'bg-yellow-600 hover:bg-yellow-700'
+    },
+    {
       type: 'personal',
-      label: 'Personal Foul',
-      description: 'No free throws',
+      label: 'Defensive',
+      description: 'Personal foul, no free throws',
       color: 'bg-gray-600 hover:bg-gray-700'
     },
     {
       type: 'shooting_2pt',
-      label: 'Shooting Foul (2PT)',
+      label: 'Shooting Foul 2 pts',
       description: '2 free throws',
       color: 'bg-blue-600 hover:bg-blue-700'
     },
     {
       type: 'shooting_3pt',
-      label: 'Shooting Foul (3PT)',
+      label: 'Shooting Foul 3 pts',
       description: '3 free throws',
       color: 'bg-purple-600 hover:bg-purple-700'
-    },
-    {
-      type: 'bonus',
-      label: '1-and-1 / Bonus',
-      description: 'Up to 2 free throws',
-      color: 'bg-indigo-600 hover:bg-indigo-700'
-    },
-    {
-      type: 'technical',
-      label: 'Technical Foul',
-      description: '1 free throw + possession',
-      color: 'bg-orange-600 hover:bg-orange-700'
-    },
-    {
-      type: 'flagrant',
-      label: 'Flagrant Foul',
-      description: '2 free throws + possession',
-      color: 'bg-red-600 hover:bg-red-700'
-    },
-    {
-      type: 'offensive',
-      label: 'Offensive Foul',
-      description: 'Turnover, no free throws',
-      color: 'bg-yellow-600 hover:bg-yellow-700'
     }
   ];
 
@@ -90,20 +73,19 @@ export function FoulTypeSelectionModal({
             </button>
           </div>
 
-          {/* Foul Type Options */}
-          <div className="space-y-3">
+          {/* Foul Type Options - 2x2 Grid */}
+          <div className="grid grid-cols-2 gap-3">
             {foulTypes.map((foul) => (
               <button
                 key={foul.type}
                 onClick={() => onSelectFoulType(foul.type)}
-                className={`w-full p-4 rounded-lg text-left transition-all ${foul.color} text-white`}
+                className={`p-4 rounded-lg text-left transition-all ${foul.color} text-white h-full`}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col justify-between h-full">
                   <div>
                     <div className="font-bold text-lg">{foul.label}</div>
-                    <div className="text-sm opacity-90">{foul.description}</div>
+                    <div className="text-sm opacity-90 mt-1">{foul.description}</div>
                   </div>
-                  <div className="text-2xl opacity-50">→</div>
                 </div>
               </button>
             ))}

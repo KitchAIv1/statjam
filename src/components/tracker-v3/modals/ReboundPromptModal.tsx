@@ -33,6 +33,8 @@ interface ReboundPromptModalProps {
   teamBPlayers: Player[];
   teamAId: string; // ✅ FIX: Add actual team IDs for proper comparison
   teamBId: string; // ✅ FIX: Add actual team IDs for proper comparison
+  teamAName: string; // ✅ UI FIX: Add team names for display
+  teamBName: string; // ✅ UI FIX: Add team names for display
   shooterTeamId: string;
   shooterName: string;
   shotType: string;
@@ -47,6 +49,8 @@ export function ReboundPromptModal({
   teamBPlayers,
   teamAId, // ✅ FIX: Add actual team IDs
   teamBId, // ✅ FIX: Add actual team IDs
+  teamAName, // ✅ UI FIX: Team names for display
+  teamBName, // ✅ UI FIX: Team names for display
   shooterTeamId,
   shooterName,
   shotType
@@ -181,7 +185,7 @@ export function ReboundPromptModal({
             {/* Team A Players */}
             <div>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                Team A (On Court) {teamAPlayers[0]?.teamId === shooterTeamId && '(Offense)'}
+                {teamAName} (On Court) {teamAId === shooterTeamId ? '(Offense)' : '(Defense)'}
               </h3>
               <div className="space-y-2">
                 {teamAPlayers.map((player) => (
@@ -221,7 +225,7 @@ export function ReboundPromptModal({
             {/* Team B Players */}
             <div>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                Team B (On Court) {teamBPlayers[0]?.teamId === shooterTeamId && '(Offense)'}
+                {teamBName} (On Court) {teamBId === shooterTeamId ? '(Offense)' : '(Defense)'}
               </h3>
               <div className="space-y-2">
                 {teamBPlayers.map((player) => (
@@ -260,10 +264,13 @@ export function ReboundPromptModal({
           </div>
 
           {/* Rebound Type Indicator */}
-          {reboundType && (
+          {reboundType && selectedPlayerId && (
             <div className="mt-4 p-3 rounded-lg bg-orange-50 border border-orange-200">
               <p className="text-sm font-medium text-orange-900">
-                {reboundType === 'offensive' ? '⚡ Offensive Rebound' : '🛡️ Defensive Rebound'}
+                {reboundType === 'offensive' 
+                  ? `⚡ Offensive Rebound (${teamAPlayers.some(p => p.id === selectedPlayerId) ? teamAName : teamBName})`
+                  : `🛡️ Defensive Rebound (${teamAPlayers.some(p => p.id === selectedPlayerId) ? teamAName : teamBName})`
+                }
               </p>
             </div>
           )}

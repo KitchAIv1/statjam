@@ -364,6 +364,7 @@ export function CreateCustomPlayerForm({
             posePhotoUrl={posePhotoUrl}
             onProfileFileSelect={handleProfileFileSelect}
             onPoseFileSelect={handlePoseFileSelect}
+            enableCrop={true} // ✅ Enable image cropping before upload
             onProfilePhotoChange={async (url) => {
               setProfilePhotoUrl(url);
               // ✅ FIX: Use ref instead of state to avoid race condition

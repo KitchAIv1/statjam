@@ -23,6 +23,7 @@ interface CustomPlayerPhotoUploadProps {
   onPoseFileSelect?: (file: File) => void; // Optional: for file selection before creation
   disabled?: boolean;
   allowFileSelectionBeforeCreation?: boolean; // Allow file selection even when customPlayerId is null
+  enableCrop?: boolean; // ✅ NEW: Enable image cropping before upload (optional, defaults to false)
 }
 
 /**
@@ -46,7 +47,8 @@ export function CustomPlayerPhotoUpload({
   onProfileFileSelect,
   onPoseFileSelect,
   disabled = false,
-  allowFileSelectionBeforeCreation = false
+  allowFileSelectionBeforeCreation = false,
+  enableCrop = false // ✅ NEW: Crop disabled by default for backward compatibility
 }: CustomPlayerPhotoUploadProps) {
   // Profile photo upload hook (only active if customPlayerId exists)
   const profilePhotoUpload = usePhotoUpload({
@@ -135,6 +137,8 @@ export function CustomPlayerPhotoUpload({
         error={profilePhotoUpload.error}
         aspectRatio="square"
         disabled={isDisabled}
+        enableCrop={enableCrop} // ✅ NEW: Pass crop enable flag
+        cropAspectRatio="square" // ✅ NEW: Crop to square for profile photos
         onFileSelect={handleProfileFileSelect}
         onRemove={() => {
           profilePhotoUpload.clearPreview();
@@ -151,6 +155,8 @@ export function CustomPlayerPhotoUpload({
         error={posePhotoUpload.error}
         aspectRatio="portrait"
         disabled={isDisabled}
+        enableCrop={enableCrop} // ✅ NEW: Pass crop enable flag
+        cropAspectRatio="portrait" // ✅ NEW: Crop to portrait for pose photos
         onFileSelect={handlePoseFileSelect}
         onRemove={() => {
           posePhotoUpload.clearPreview();

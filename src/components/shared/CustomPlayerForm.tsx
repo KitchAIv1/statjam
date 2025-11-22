@@ -286,6 +286,7 @@ export function CustomPlayerForm({
             onProfileFileSelect={handleProfileFileSelect}
             onPoseFileSelect={handlePoseFileSelect}
             allowFileSelectionBeforeCreation={true}
+            enableCrop={true} // ✅ Enable image cropping before upload
             disabled={loading}
           />
         </div>
