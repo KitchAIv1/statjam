@@ -432,8 +432,9 @@ StatJam is a professional-grade sports tournament management platform built for 
 
 ### **Phase 4: Play Sequences** ✅ **COMPLETE**
 - Assist prompts after made shots
-- Rebound prompts after missed shots
+- Rebound prompts after missed shots (only on last missed FT in sequences)
 - Block prompts after missed shots
+- Rebound suppression for non-last missed free throws (prevents premature rebound modals)
 - Event linking with sequence_id
 
 ### **Phase 5: Free Throw Sequences** ✅ **COMPLETE**

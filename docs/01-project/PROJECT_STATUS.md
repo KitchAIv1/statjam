@@ -1,8 +1,8 @@
 # 🎯 StatJam MVP: Current Status
 
 **Date**: November 21, 2025  
-**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS  
-**Version**: 0.16.1 (Bracket Builder + Custom Player Photos + Features Page + Performance Optimizations)  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS + FT AUTO-SEQUENCE + SECURITY FIXES  
+**Version**: 0.16.1 (Bracket Builder + Custom Player Photos + Features Page + Performance Optimizations + FT Auto-Sequence + Security Updates)  
 **Branch**: `main`  
 **Live Site**: [www.statjam.net](https://www.statjam.net) ✅
 
@@ -20,8 +20,10 @@
 - Code quality is high with TypeScript throughout
 
 **Recent Achievements** ✅:
-1. **🏆 BRACKET BUILDER (Nov 2025)**: NBA-style bracket visualization with division support, championship brackets, auto-progression, real-time updates, and regeneration safety checks. Complete bracket builder system for tournament management.
-2. **📸 CUSTOM PLAYER PHOTOS (Nov 2025)**: Profile and pose photo upload for custom players. Reusable `CustomPlayerPhotoUpload` component, edit functionality, and comprehensive UI improvements to Player Management Modal.
+1. **🏀 FT AUTO-SEQUENCE (Nov 2025)**: Manual FT Made button triggers auto-sequence in FULL automation mode. FT count selection (1-3 shots), progress bar with color indicators, auto-advance between shots, rebound modal only on last missed shot. Smooth UI transitions with immediate modal closing.
+2. **🛡️ SECURITY FIXES (Nov 2025)**: Fixed npm vulnerabilities - glob (10.4.5→10.5.0, HIGH: command injection), js-yaml (4.1.0→4.1.1, MODERATE: prototype pollution). All vulnerabilities resolved (0 remaining).
+3. **🏆 BRACKET BUILDER (Nov 2025)**: NBA-style bracket visualization with division support, championship brackets, auto-progression, real-time updates, and regeneration safety checks. Complete bracket builder system for tournament management.
+4. **📸 CUSTOM PLAYER PHOTOS (Nov 2025)**: Profile and pose photo upload for custom players. Reusable `CustomPlayerPhotoUpload` component, edit functionality, and comprehensive UI improvements to Player Management Modal.
 3. **🎨 FEATURES PAGE (Nov 2025)**: Premium dark-themed marketing page showcasing all user roles (Player, Stat Admin, Coach, Organizer). Auto-rotating carousels, device mockups, scroll animations. Authentication guard (signed-out only). Professional NBA-level design matching Mobile Advantage section.
 4. **📊 PLAYER DASHBOARD PERFORMANCE (Nov 2025)**: Aggressive client-side caching (5min TTL), parallel data fetching, query limits (2000 records), skeleton loading with accurate dimensions. ~50% reduction in load time, improved perceived performance.
 5. **📸 PHOTO UPLOAD SYSTEM (Nov 2025)**: Complete Supabase Storage migration. Reusable `PhotoUploadField` component, `usePhotoUpload` hook, `imageUploadService`. File validation (size, type, MIME), image compression, instant UI updates. 98% database size reduction for images.

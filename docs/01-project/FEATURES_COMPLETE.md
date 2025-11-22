@@ -2,7 +2,7 @@
 
 **Version**: 0.16.1  
 **Date**: November 21, 2025  
-**Status**: Production Ready - NBA-Standard Features Complete + Coach Team Card + Bracket Builder + Custom Player Photos + Features Page
+**Status**: Production Ready - NBA-Standard Features Complete + Coach Team Card + Bracket Builder + Custom Player Photos + Features Page + FT Auto-Sequence + Security Fixes
 
 ---
 
@@ -512,6 +512,21 @@ DATABASE
 - ✅ Player Management Modal UI improvements
 - ✅ Flexible height containers and keyboard navigation
 - ✅ Error messages in scrollable area with dismiss functionality
+
+### **Free Throw Auto-Sequence** (v0.16.1)
+- ✅ Manual FT Made button triggers auto-sequence in FULL automation mode
+- ✅ FT count selection modal (1, 2, or 3 shots)
+- ✅ Progress bar with color-coded indicators (green=made, red=missed, orange=current)
+- ✅ Auto-advance between shots with smooth UI transitions
+- ✅ Rebound modal only appears on LAST missed shot (prevents premature rebounds)
+- ✅ Immediate modal closing on sequence completion (no delay or reload)
+- ✅ Previous results tracking across modal instances for accurate progress display
+- ✅ Skip rebound flag in eventMetadata prevents premature rebound prompts
+
+### **Security Fixes** (v0.16.1)
+- ✅ Fixed glob vulnerability (10.4.5 → 10.5.0, HIGH: command injection)
+- ✅ Fixed js-yaml vulnerability (4.1.0 → 4.1.1, MODERATE: prototype pollution)
+- ✅ All npm vulnerabilities resolved (0 remaining)
 
 ### **Features Page** (v0.16.1)
 - ✅ Premium dark-themed marketing page

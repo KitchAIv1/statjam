@@ -19,7 +19,7 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 **Phase**: MVP1 Live - Production-Ready Platform with Advanced Automation  
 **Version**: 0.16.1  
 **Last Updated**: November 21, 2025  
-**Status**: ✅ **MVP1 LIVE** - Complete MVP with NBA-level automation, bracket builder, and custom player photos now in production
+**Status**: ✅ **MVP1 LIVE** - Complete MVP with NBA-level automation, bracket builder, custom player photos, FT auto-sequence, and security fixes now in production
 
 **Authentication**: ✅ Centralized Auth Context with JWT Auto-Refresh  
 **Live Tracking**: ✅ NBA-Grade V3 Engine with Real-time Sync  
