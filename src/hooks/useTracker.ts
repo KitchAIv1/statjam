@@ -1357,7 +1357,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   }, [quarter, clock.secondsRemaining, gameStatus]);
 
   // Substitution
-  const substitute = useCallback(async (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number; playerOutName?: string; playerInName?: string }): Promise<boolean> => {
+  const substitute = useCallback(async (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number; playerOutName?: string; playerInName?: string; isCustomPlayerOut?: boolean; isCustomPlayerIn?: boolean }): Promise<boolean> => {
     // ✅ BLOCK: Don't allow substitutions if game is ended
     if (gameStatus === 'completed' || gameStatus === 'cancelled') {
       const { notify } = await import('@/lib/services/notificationService');
@@ -1377,7 +1377,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         teamId: sub.teamId,
         quarter: sub.quarter,
         gameTimeMinutes: Math.floor(sub.gameTimeSeconds / 60),
-        gameTimeSeconds: sub.gameTimeSeconds % 60
+        gameTimeSeconds: sub.gameTimeSeconds % 60,
+        isCustomPlayerIn: sub.isCustomPlayerIn,
+        isCustomPlayerOut: sub.isCustomPlayerOut
       });
 
       if (success) {
@@ -1408,11 +1410,15 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         return true;
       } else {
         console.error('❌ Failed to record substitution in database');
+        const { notify } = await import('@/lib/services/notificationService');
+        notify.error('Substitution Failed', 'Could not save substitution to database. Please try again.');
         setLastAction('Error recording substitution');
         return false;
       }
     } catch (error) {
       console.error('❌ Error with substitution:', error);
+      const { notify } = await import('@/lib/services/notificationService');
+      notify.error('Substitution Error', error instanceof Error ? error.message : 'An unexpected error occurred');
       setLastAction('Error recording substitution');
       return false;
     }

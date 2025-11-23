@@ -270,9 +270,9 @@ export class TeamServiceV3 {
         return basePlayers;
       }
 
-      // Get substitutions for this game and team
+      // Get substitutions for this game and team (include both regular and custom player IDs)
       const substitutions = await this.makeRequest<any>('game_substitutions', {
-        'select': 'player_in_id,player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
+        'select': 'player_in_id,player_out_id,custom_player_in_id,custom_player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
         'game_id': `eq.${gameId}`,
         'team_id': `eq.${teamId}`,
         'order': 'created_at.asc' // Apply substitutions in chronological order
@@ -306,8 +306,9 @@ export class TeamServiceV3 {
       // Apply each substitution to update on-court status
       let substitutionCount = 0;
       for (const sub of substitutions) {
-        const playerOutId = sub.player_out_id;
-        const playerInId = sub.player_in_id;
+        // ✅ CUSTOM PLAYER SUPPORT: Use either regular or custom player ID
+        const playerOutId = sub.player_out_id || sub.custom_player_out_id;
+        const playerInId = sub.player_in_id || sub.custom_player_in_id;
 
         console.log(`🔄 Processing substitution ${substitutionCount + 1}: ${playerOutId} → ${playerInId}`);
 

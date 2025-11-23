@@ -81,18 +81,15 @@ export function EditCustomPlayerModal({
       setLoading(true);
       setError(null);
 
-      // Validate required fields
       if (!name.trim()) {
         setError('Player name is required');
         return;
       }
 
-      // Convert jersey_number string to number (empty string becomes undefined)
       const jerseyNumberValue = jerseyNumber.trim() === '' 
         ? undefined 
         : parseInt(jerseyNumber, 10);
 
-      // Prepare update data
       const updates: UpdateCustomPlayerRequest = {
         name: name.trim(),
         jersey_number: jerseyNumberValue,
@@ -101,7 +98,6 @@ export function EditCustomPlayerModal({
         pose_photo_url: posePhotoUrl
       };
 
-      // Update custom player
       const response = await CoachPlayerService.updateCustomPlayer(customPlayer.id, updates);
 
       if (!response.success || !response.player) {
@@ -109,12 +105,11 @@ export function EditCustomPlayerModal({
         return;
       }
 
-      // Call onSave callback
       onSave(response.player);
       onClose();
 
     } catch (error) {
-      console.error('❌ Error updating custom player:', error);
+      console.error('Error updating custom player:', error);
       setError(error instanceof Error ? error.message : 'Failed to update player');
     } finally {
       setLoading(false);
@@ -122,7 +117,6 @@ export function EditCustomPlayerModal({
   };
 
   const handleCancel = () => {
-    // Reset form to original values
     setName(customPlayer.name);
     setJerseyNumber(
       customPlayer.jersey_number !== undefined && customPlayer.jersey_number !== null
@@ -151,7 +145,6 @@ export function EditCustomPlayerModal({
         </DialogHeader>
 
         <div className="space-y-6 px-2">
-          {/* Form Fields */}
           <EditCustomPlayerForm
             name={name}
             jerseyNumber={jerseyNumber}
@@ -162,7 +155,6 @@ export function EditCustomPlayerModal({
             disabled={loading}
           />
 
-          {/* Photo Upload Section */}
           <div className="space-y-2">
             <CustomPlayerPhotoUpload
               customPlayerId={customPlayer.id}
@@ -170,12 +162,11 @@ export function EditCustomPlayerModal({
               posePhotoUrl={posePhotoUrl}
               onProfilePhotoChange={setProfilePhotoUrl}
               onPosePhotoChange={setPosePhotoUrl}
-              enableCrop={true} // ✅ Enable image cropping before upload
+              enableCrop={true}
               disabled={loading}
             />
           </div>
 
-          {/* Error Message */}
           {error && (
             <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
               {error}
@@ -205,4 +196,3 @@ export function EditCustomPlayerModal({
     </Dialog>
   );
 }
-

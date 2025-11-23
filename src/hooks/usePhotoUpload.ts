@@ -49,60 +49,53 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
   
   // Track current blob URL for cleanup (prevent memory leaks)
   const blobUrlRef = useRef<string | null>(null);
+  
+  // ✅ CRITICAL FIX: Capture currentPhotoUrl in a ref when upload starts
+  // This prevents the URL from changing if the component re-renders during upload
+  // Always initialize with the latest currentPhotoUrl from options
+  const currentPhotoUrlRef = useRef<string | null | undefined>(currentPhotoUrl);
+  
+  useEffect(() => {
+    currentPhotoUrlRef.current = currentPhotoUrl;
+  }, [currentPhotoUrl]);
 
   /**
    * Handle file selection and upload
    */
   const handleFileSelect = async (file: File): Promise<void> => {
+    const photoUrlToDeleteAtStart = currentPhotoUrlRef.current;
     let processedFile = file;
     
     try {
-      console.log('📤 Starting file upload process...');
-      console.log('📦 Original file:', { name: file.name, size: `${(file.size / 1024 / 1024).toFixed(2)}MB`, type: file.type });
       setError(null);
       setProgress(0);
 
-      // ✅ OPTIMIZATION: Compress image before validation (if needed)
-      if (file.size > 1024 * 1024) { // Only compress if > 1MB
+      // Compress image if > 1MB
+      if (file.size > 1024 * 1024) {
         try {
-          console.log('🗜️ Compressing image...');
           const options = {
-            maxSizeMB: 2, // Compress to max 2MB
-            maxWidthOrHeight: 1920, // Max dimension
+            maxSizeMB: 2,
+            maxWidthOrHeight: 1920,
             useWebWorker: true,
             fileType: file.type as any,
-            initialQuality: 0.8 // 80% quality
+            initialQuality: 0.8
           };
-          
           processedFile = await imageCompression(file, options);
-          console.log('✅ Compression complete:', { 
-            originalSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
-            compressedSize: `${(processedFile.size / 1024 / 1024).toFixed(2)}MB`,
-            reduction: `${(((file.size - processedFile.size) / file.size) * 100).toFixed(1)}%`
-          });
         } catch (compressionErr) {
-          // If compression fails, continue with original
-          console.warn('⚠️ Compression failed, using original file:', compressionErr);
           processedFile = file;
         }
-      } else {
-        console.log('ℹ️ File already small, skipping compression');
       }
 
-      // Validate file (✅ HARDENED: Now async to verify MIME type + dimensions)
-      console.log('🔍 Validating file...');
+      // Validate file
       const validation = await validateImageFile(processedFile, maxSizeMB);
       if (!validation.isValid) {
         const errorMessage = validation.error || 'Invalid file';
-        console.error('❌ Validation failed:', errorMessage);
         setError(errorMessage);
         onError?.(errorMessage);
         return;
       }
-      console.log('✅ Validation passed');
     } catch (err) {
       const errorMessage = `Processing error: ${err instanceof Error ? err.message : 'Unknown error'}`;
-      console.error('❌ Unexpected error during file processing:', err);
       setError(errorMessage);
       onError?.(errorMessage);
       return;
@@ -122,36 +115,27 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
       setUploading(true);
       setProgress(30); // Pre-upload progress
 
-      // ✅ CLEANUP: Delete old photo before uploading new one (saves storage)
-      if (currentPhotoUrl) {
+      // Delete old photo before uploading new one
+      if (photoUrlToDeleteAtStart) {
         try {
-          console.log('🗑️ Deleting old photo/logo...');
-          if (photoType === 'tournament_logo' && currentPhotoUrl.includes('tournament-logos')) {
-            await deleteTournamentLogo(currentPhotoUrl);
-            console.log('✅ Old tournament logo deleted');
-          } else if (photoType === 'team_logo' && currentPhotoUrl.includes('team-logos')) {
-            await deleteTeamLogo(currentPhotoUrl);
-            console.log('✅ Old team logo deleted');
-          } else if (currentPhotoUrl.includes('custom-players')) {
-            // Custom player photo deletion
-            if (customPlayerId) {
-              await deleteCustomPlayerPhoto(currentPhotoUrl);
-              console.log('✅ Old custom player photo deleted');
-            }
-          } else if (currentPhotoUrl.includes('player-images')) {
-            await deletePlayerPhoto(currentPhotoUrl);
-            console.log('✅ Old player photo deleted');
+          if (photoType === 'tournament_logo' && photoUrlToDeleteAtStart.includes('tournament-logos')) {
+            await deleteTournamentLogo(photoUrlToDeleteAtStart);
+          } else if (photoType === 'team_logo' && photoUrlToDeleteAtStart.includes('team-logos')) {
+            await deleteTeamLogo(photoUrlToDeleteAtStart);
+          } else if (photoUrlToDeleteAtStart.includes('custom-players') && customPlayerId) {
+            await deleteCustomPlayerPhoto(photoUrlToDeleteAtStart);
+          } else if (photoUrlToDeleteAtStart.includes('player-images')) {
+            await deletePlayerPhoto(photoUrlToDeleteAtStart);
           }
         } catch (deleteErr) {
           // Don't block upload if delete fails
-          console.warn('⚠️ Failed to delete old photo (continuing with upload):', deleteErr);
+          console.error('Failed to delete old photo:', deleteErr);
         }
       }
 
-      setProgress(50); // Upload progress
+      setProgress(50);
 
       // Upload to Supabase Storage
-      console.log('📤 Uploading to Supabase Storage...');
       let result;
       if (photoType === 'tournament_logo') {
         if (!tournamentId) {
@@ -164,16 +148,13 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
         }
         result = await uploadTeamLogo(processedFile, teamId, userId || '');
       } else if (customPlayerId) {
-        // Custom player photo upload
         result = await uploadCustomPlayerPhoto(processedFile, customPlayerId, photoType);
       } else {
-        // Regular player photo upload
         if (!userId) {
           throw new Error('User ID or Custom Player ID required for photo upload');
         }
         result = await uploadPlayerPhoto(processedFile, userId, photoType);
       }
-      console.log('✅ Upload successful:', result.publicUrl);
       
       setProgress(100);
       setPreviewUrl(result.publicUrl);
@@ -181,16 +162,10 @@ export function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadRe
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload failed - please try again';
-      console.error('❌ Upload error:', err);
-      console.error('❌ Error details:', { 
-        message: err instanceof Error ? err.message : 'Unknown', 
-        stack: err instanceof Error ? err.stack : undefined 
-      });
       setError(errorMessage);
       setPreviewUrl(null);
       onError?.(errorMessage);
       
-      // ✅ FIX: Cleanup blob URL on error
       if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
         URL.revokeObjectURL(blobUrlRef.current);
         blobUrlRef.current = null;

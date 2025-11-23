@@ -672,23 +672,58 @@ export class GameService {
     quarter: number;
     gameTimeMinutes: number;
     gameTimeSeconds: number;
+    isCustomPlayerIn?: boolean; // ✅ NEW: Flag to indicate if player coming in is custom
+    isCustomPlayerOut?: boolean; // ✅ NEW: Flag to indicate if player going out is custom
   }): Promise<boolean> {
     try {
+      // ✅ CUSTOM PLAYER SUPPORT: Determine which columns to use based on player type
+      const insertData: any = {
+        game_id: subData.gameId,
+        team_id: subData.teamId,
+        quarter: subData.quarter,
+        game_time_minutes: subData.gameTimeMinutes,
+        game_time_seconds: subData.gameTimeSeconds
+      };
+
+      // Handle player coming in (either regular or custom)
+      if (subData.isCustomPlayerIn) {
+        insertData.custom_player_in_id = subData.playerInId;
+        insertData.player_in_id = null;
+      } else {
+        insertData.player_in_id = subData.playerInId;
+        insertData.custom_player_in_id = null;
+      }
+
+      // Handle player going out (either regular or custom)
+      if (subData.isCustomPlayerOut) {
+        insertData.custom_player_out_id = subData.playerOutId;
+        insertData.player_out_id = null;
+      } else {
+        insertData.player_out_id = subData.playerOutId;
+        insertData.custom_player_out_id = null;
+      }
+
       const { error } = await supabase
         .from('game_substitutions')
-        .insert({
-          // V2: standardize on game_id only
-          game_id: subData.gameId,
-          player_in_id: subData.playerInId,
-          player_out_id: subData.playerOutId,
-          team_id: subData.teamId,
-          quarter: subData.quarter,
-          game_time_minutes: subData.gameTimeMinutes,
-          game_time_seconds: subData.gameTimeSeconds
-        });
+        .insert(insertData);
 
       if (error) {
-        console.error('Error recording substitution:', error);
+        console.error('❌ Error recording substitution:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          insertData: {
+            game_id: insertData.game_id,
+            team_id: insertData.team_id,
+            player_in_id: insertData.player_in_id || insertData.custom_player_in_id,
+            player_out_id: insertData.player_out_id || insertData.custom_player_out_id,
+            is_custom_in: !!insertData.custom_player_in_id,
+            is_custom_out: !!insertData.custom_player_out_id,
+            custom_player_in_id: insertData.custom_player_in_id,
+            custom_player_out_id: insertData.custom_player_out_id
+          }
+        });
         return false;
       }
 

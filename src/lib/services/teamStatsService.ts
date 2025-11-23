@@ -297,9 +297,9 @@ export class TeamStatsService {
     try {
       console.log('⏱️ TeamStatsService: Calculating actual player minutes from substitution times');
 
-      // Get all substitutions for this game and team
+      // Get all substitutions for this game and team (include both regular and custom player IDs)
       const substitutions = await this.makeRequest<any>('game_substitutions', {
-        'select': 'player_in_id,player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
+        'select': 'player_in_id,player_out_id,custom_player_in_id,custom_player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
         'game_id': `eq.${gameId}`,
         'team_id': `eq.${teamId}`,
         'order': 'created_at.asc'
@@ -382,14 +382,18 @@ export class TeamStatsService {
         for (const sub of substitutions) {
           const subGameTime = (sub.game_time_minutes * 60) + sub.game_time_seconds;
           
-          if (sub.player_in_id === playerId) {
+          // ✅ CUSTOM PLAYER SUPPORT: Check both regular and custom player IDs
+          const playerInId = sub.player_in_id || sub.custom_player_in_id;
+          const playerOutId = sub.player_out_id || sub.custom_player_out_id;
+          
+          if (playerInId === playerId) {
             // Player coming in
             if (!isOnCourt) {
               stintStartTime = subGameTime;
               isOnCourt = true;
               console.log(`🔄 Player ${playerId.substring(0, 8)} SUB IN at ${sub.game_time_minutes}:${sub.game_time_seconds.toString().padStart(2, '0')}`);
             }
-          } else if (sub.player_out_id === playerId) {
+          } else if (playerOutId === playerId) {
             // Player going out
             if (isOnCourt) {
               // Calculate minutes played in this stint
@@ -450,7 +454,7 @@ export class TeamStatsService {
       
       // Step 1: Get all substitutions to track when players were on court
       const substitutions = await this.makeRequest<any>('game_substitutions', {
-        'select': 'player_in_id,player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
+        'select': 'player_in_id,player_out_id,custom_player_in_id,custom_player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
         'game_id': `eq.${gameId}`,
         'order': 'created_at.asc'
       });
@@ -494,23 +498,27 @@ export class TeamStatsService {
       substitutions.forEach((sub: any) => {
         const subTime = this.convertGameTimeToSeconds(sub.quarter, sub.game_time_minutes, sub.game_time_seconds);
         
+        // ✅ CUSTOM PLAYER SUPPORT: Check both regular and custom player IDs
+        const playerInId = sub.player_in_id || sub.custom_player_in_id;
+        const playerOutId = sub.player_out_id || sub.custom_player_out_id;
+        
         // Player coming in
-        if (sub.player_in_id && playerIds.includes(sub.player_in_id)) {
-          const timeline = playerTimeline.get(sub.player_in_id) || [];
+        if (playerInId && playerIds.includes(playerInId)) {
+          const timeline = playerTimeline.get(playerInId) || [];
           timeline.push({ start: subTime, end: null });
-          playerTimeline.set(sub.player_in_id, timeline);
+          playerTimeline.set(playerInId, timeline);
         }
         
         // Player going out
-        if (sub.player_out_id && playerIds.includes(sub.player_out_id)) {
-          const timeline = playerTimeline.get(sub.player_out_id) || [];
+        if (playerOutId && playerIds.includes(playerOutId)) {
+          const timeline = playerTimeline.get(playerOutId) || [];
           if (timeline.length > 0) {
             const lastStint = timeline[timeline.length - 1];
             if (lastStint.end === null) {
               lastStint.end = subTime;
             }
           }
-          playerTimeline.set(sub.player_out_id, timeline);
+          playerTimeline.set(playerOutId, timeline);
         }
       });
 

@@ -9,21 +9,23 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
+import { deleteCustomPlayerPhoto } from '@/lib/services/imageUploadService';
+import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 
 interface CustomPlayerPhotoUploadProps {
-  customPlayerId: string | null; // null during creation, set after creation
+  customPlayerId: string | null;
   profilePhotoUrl?: string | null;
   posePhotoUrl?: string | null;
   onProfilePhotoChange: (url: string | null) => void;
   onPosePhotoChange: (url: string | null) => void;
-  onProfileFileSelect?: (file: File) => void; // Optional: for file selection before creation
-  onPoseFileSelect?: (file: File) => void; // Optional: for file selection before creation
+  onProfileFileSelect?: (file: File) => void;
+  onPoseFileSelect?: (file: File) => void;
   disabled?: boolean;
-  allowFileSelectionBeforeCreation?: boolean; // Allow file selection even when customPlayerId is null
-  enableCrop?: boolean; // ✅ NEW: Enable image cropping before upload (optional, defaults to false)
+  allowFileSelectionBeforeCreation?: boolean;
+  enableCrop?: boolean;
 }
 
 /**
@@ -32,11 +34,8 @@ interface CustomPlayerPhotoUploadProps {
  * Features:
  * - Profile photo upload (square aspect ratio)
  * - Pose photo upload (portrait aspect ratio)
- * - Uses existing usePhotoUpload hook
+ * - Immediate DB update after successful upload
  * - Handles upload state and errors
- * - Callbacks for parent form integration
- * 
- * Note: Photo uploads happen after custom player creation (need custom_player_id for storage path)
  */
 export function CustomPlayerPhotoUpload({
   customPlayerId,
@@ -48,87 +47,126 @@ export function CustomPlayerPhotoUpload({
   onPoseFileSelect,
   disabled = false,
   allowFileSelectionBeforeCreation = false,
-  enableCrop = false // ✅ NEW: Crop disabled by default for backward compatibility
+  enableCrop = false
 }: CustomPlayerPhotoUploadProps) {
-  // Profile photo upload hook (only active if customPlayerId exists)
-  const profilePhotoUpload = usePhotoUpload({
-    customPlayerId: customPlayerId || undefined,
-    photoType: 'profile',
-    currentPhotoUrl: profilePhotoUrl || undefined,
-    onSuccess: (url) => onProfilePhotoChange(url),
-    onError: (error) => console.error('Profile photo upload error:', error)
-  });
-
-  // Pose photo upload hook (only active if customPlayerId exists)
-  const posePhotoUpload = usePhotoUpload({
-    customPlayerId: customPlayerId || undefined,
-    photoType: 'pose',
-    currentPhotoUrl: posePhotoUrl || undefined,
-    onSuccess: (url) => onPosePhotoChange(url),
-    onError: (error) => console.error('Pose photo upload error:', error)
-  });
-
-  // Handle file selection - use callback if provided (before creation), otherwise use upload hook
-  const handleProfileFileSelect = async (file: File) => {
-    console.log('📸 CustomPlayerPhotoUpload: Profile file selected', {
-      fileName: file.name,
-      fileSize: file.size,
-      allowFileSelectionBeforeCreation,
-      hasCustomPlayerId: !!customPlayerId,
-      hasOnProfileFileSelect: !!onProfileFileSelect
-    });
+  // Profile photo success handler - updates DB immediately
+  const handleProfilePhotoSuccess = useCallback(async (url: string) => {
+    onProfilePhotoChange(url);
     
-    if (allowFileSelectionBeforeCreation && !customPlayerId && onProfileFileSelect) {
-      // File selection before creation - store file and create preview
-      console.log('✅ Using file selection callback (before creation)');
+    // Immediately update database with new photo URL
+    if (customPlayerId) {
       try {
-        onProfileFileSelect(file);
-        console.log('✅ Profile file callback executed successfully');
+        await CoachPlayerService.updateCustomPlayer(customPlayerId, {
+          profile_photo_url: url
+        });
       } catch (error) {
-        console.error('❌ Error in profile file callback:', error);
+        console.error('Failed to update database:', error);
       }
+    }
+  }, [customPlayerId, onProfilePhotoChange]);
+
+  const handleProfilePhotoError = useCallback((error: string) => {
+    console.error('Profile photo upload error:', error);
+  }, []);
+
+  // Pose photo success handler - updates DB immediately
+  const handlePosePhotoSuccess = useCallback(async (url: string) => {
+    onPosePhotoChange(url);
+    
+    // Immediately update database with new photo URL
+    if (customPlayerId) {
+      try {
+        await CoachPlayerService.updateCustomPlayer(customPlayerId, {
+          pose_photo_url: url
+        });
+      } catch (error) {
+        console.error('Failed to update database:', error);
+      }
+    }
+  }, [customPlayerId, onPosePhotoChange]);
+
+  const handlePosePhotoError = useCallback((error: string) => {
+    console.error('Pose photo upload error:', error);
+  }, []);
+
+  // Memoize hook options
+  const profilePhotoUploadOptions = useMemo(() => ({
+    customPlayerId: customPlayerId || undefined,
+    photoType: 'profile' as const,
+    currentPhotoUrl: profilePhotoUrl || undefined,
+    onSuccess: handleProfilePhotoSuccess,
+    onError: handleProfilePhotoError
+  }), [customPlayerId, profilePhotoUrl, handleProfilePhotoSuccess, handleProfilePhotoError]);
+
+  const posePhotoUploadOptions = useMemo(() => ({
+    customPlayerId: customPlayerId || undefined,
+    photoType: 'pose' as const,
+    currentPhotoUrl: posePhotoUrl || undefined,
+    onSuccess: handlePosePhotoSuccess,
+    onError: handlePosePhotoError
+  }), [customPlayerId, posePhotoUrl, handlePosePhotoSuccess, handlePosePhotoError]);
+
+  const profilePhotoUpload = usePhotoUpload(profilePhotoUploadOptions);
+  const posePhotoUpload = usePhotoUpload(posePhotoUploadOptions);
+
+  // Handle file selection
+  const handleProfileFileSelect = async (file: File) => {
+    if (allowFileSelectionBeforeCreation && !customPlayerId && onProfileFileSelect) {
+      onProfileFileSelect(file);
     } else if (customPlayerId) {
-      // Normal upload flow after creation
-      console.log('✅ Using upload hook (after creation)');
       await profilePhotoUpload.handleFileSelect(file);
-    } else {
-      console.warn('⚠️ No handler available for profile file selection');
     }
   };
 
   const handlePoseFileSelect = async (file: File) => {
-    console.log('📸 CustomPlayerPhotoUpload: Pose file selected', {
-      fileName: file.name,
-      fileSize: file.size,
-      allowFileSelectionBeforeCreation,
-      hasCustomPlayerId: !!customPlayerId,
-      hasOnPoseFileSelect: !!onPoseFileSelect
-    });
-    
     if (allowFileSelectionBeforeCreation && !customPlayerId && onPoseFileSelect) {
-      // File selection before creation - store file and create preview
-      console.log('✅ Using file selection callback (before creation)');
-      try {
-        onPoseFileSelect(file);
-        console.log('✅ Pose file callback executed successfully');
-      } catch (error) {
-        console.error('❌ Error in pose file callback:', error);
-      }
+      onPoseFileSelect(file);
     } else if (customPlayerId) {
-      // Normal upload flow after creation
-      console.log('✅ Using upload hook (after creation)');
       await posePhotoUpload.handleFileSelect(file);
-    } else {
-      console.warn('⚠️ No handler available for pose file selection');
     }
   };
 
-  // Determine if upload fields should be disabled
   const isDisabled = disabled || (!customPlayerId && !allowFileSelectionBeforeCreation);
+
+  // Handle photo removal
+  const handleProfilePhotoRemove = async () => {
+    if (profilePhotoUpload.uploading) return;
+    
+    if (profilePhotoUrl && customPlayerId) {
+      try {
+        await deleteCustomPlayerPhoto(profilePhotoUrl);
+        await CoachPlayerService.updateCustomPlayer(customPlayerId, {
+          profile_photo_url: null
+        });
+      } catch (error) {
+        console.error('Failed to remove profile photo:', error);
+      }
+    }
+    
+    profilePhotoUpload.clearPreview();
+    onProfilePhotoChange(null);
+  };
+
+  const handlePosePhotoRemove = async () => {
+    if (posePhotoUpload.uploading) return;
+    
+    if (posePhotoUrl && customPlayerId) {
+      try {
+        await deleteCustomPlayerPhoto(posePhotoUrl);
+        await CoachPlayerService.updateCustomPlayer(customPlayerId, {
+          pose_photo_url: null
+        });
+      } catch (error) {
+        console.error('Failed to remove pose photo:', error);
+      }
+    }
+    
+    posePhotoUpload.clearPreview();
+    onPosePhotoChange(null);
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Profile Photo */}
       <PhotoUploadField
         label="Profile Photo"
         value={profilePhotoUrl || null}
@@ -137,16 +175,12 @@ export function CustomPlayerPhotoUpload({
         error={profilePhotoUpload.error}
         aspectRatio="square"
         disabled={isDisabled}
-        enableCrop={enableCrop} // ✅ NEW: Pass crop enable flag
-        cropAspectRatio="square" // ✅ NEW: Crop to square for profile photos
+        enableCrop={enableCrop}
+        cropAspectRatio="square"
         onFileSelect={handleProfileFileSelect}
-        onRemove={() => {
-          profilePhotoUpload.clearPreview();
-          onProfilePhotoChange(null);
-        }}
+        onRemove={handleProfilePhotoRemove}
       />
 
-      {/* Pose Photo */}
       <PhotoUploadField
         label="Action/Pose Photo"
         value={posePhotoUrl || null}
@@ -155,15 +189,11 @@ export function CustomPlayerPhotoUpload({
         error={posePhotoUpload.error}
         aspectRatio="portrait"
         disabled={isDisabled}
-        enableCrop={enableCrop} // ✅ NEW: Pass crop enable flag
-        cropAspectRatio="portrait" // ✅ NEW: Crop to portrait for pose photos
+        enableCrop={enableCrop}
+        cropAspectRatio="portrait"
         onFileSelect={handlePoseFileSelect}
-        onRemove={() => {
-          posePhotoUpload.clearPreview();
-          onPosePhotoChange(null);
-        }}
+        onRemove={handlePosePhotoRemove}
       />
     </div>
   );
 }
-

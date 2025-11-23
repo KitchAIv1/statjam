@@ -5,7 +5,7 @@
  * Single responsibility: Render photo upload UI with preview and validation.
  */
 
-import { useRef, DragEvent, useState } from 'react';
+import { useRef, DragEvent, useState, useEffect } from 'react';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
 import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/label';
@@ -57,6 +57,19 @@ export function PhotoUploadField({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFileForCrop, setSelectedFileForCrop] = useState<File | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  
+  // ✅ Track the current image URL to detect changes and force reload
+  const [imageKey, setImageKey] = useState(0);
+  const previousImageUrlRef = useRef<string | null>(null);
+  
+  // ✅ Update key when image URL changes to force reload
+  useEffect(() => {
+    const currentUrl = previewUrl || value || null;
+    if (currentUrl && currentUrl !== previousImageUrlRef.current) {
+      setImageKey(prev => prev + 1);
+      previousImageUrlRef.current = currentUrl;
+    }
+  }, [previewUrl, value]);
 
   // Aspect ratio classes
   const aspectRatioClasses = {
@@ -178,6 +191,7 @@ export function PhotoUploadField({
         {hasPhoto && (
           <div className="relative w-full h-full">
             <ImageWithFallback
+              key={`photo-${imageKey}-${previewUrl || value || ''}`} // ✅ Force remount when URL changes
               src={previewUrl || value || ''}
               alt={label}
               className="w-full h-full object-cover"

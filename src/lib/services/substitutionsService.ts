@@ -6,8 +6,10 @@ export interface SubstitutionRow {
   id: string;
   game_id: string;
   team_id: string;
-  player_in_id: string;
-  player_out_id: string;
+  player_in_id: string | null; // ✅ Made nullable for custom player support
+  player_out_id: string | null; // ✅ Made nullable for custom player support
+  custom_player_in_id?: string | null; // ✅ NEW: Custom player coming in
+  custom_player_out_id?: string | null; // ✅ NEW: Custom player going out
   quarter: number | null;
   game_time_minutes: number | null;
   game_time_seconds: number | null;
@@ -19,7 +21,7 @@ export const SubstitutionsService = {
     const { data, error } = await supabase
       .from('game_substitutions')
       .select(
-        'id, game_id, team_id, player_in_id, player_out_id, quarter, game_time_minutes, game_time_seconds, created_at'
+        'id, game_id, team_id, player_in_id, player_out_id, custom_player_in_id, custom_player_out_id, quarter, game_time_minutes, game_time_seconds, created_at'
       )
       .eq('game_id', gameId)
       .order('created_at', { ascending: false });

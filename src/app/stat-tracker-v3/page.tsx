@@ -990,6 +990,10 @@ function StatTrackerV3Content() {
             continue;
           }
 
+          // ✅ CUSTOM PLAYER SUPPORT: Detect if players are custom
+          const isCustomPlayerOut = subbingOutPlayerData.is_custom_player === true;
+          const isCustomPlayerIn = subbingInPlayerData.is_custom_player === true;
+
           const success = await tracker.substitute({
             gameId: gameData.id,
             teamId: gameData.team_a_id,
@@ -998,7 +1002,9 @@ function StatTrackerV3Content() {
             quarter: tracker.quarter,
             gameTimeSeconds: tracker.clock.secondsRemaining,
             playerOutName: subbingOutPlayerData.name,
-            playerInName: subbingInPlayerData.name
+            playerInName: subbingInPlayerData.name,
+            isCustomPlayerOut,
+            isCustomPlayerIn
           });
 
           if (success) {
@@ -1031,6 +1037,10 @@ function StatTrackerV3Content() {
             continue;
           }
 
+          // ✅ CUSTOM PLAYER SUPPORT: Detect if players are custom
+          const isCustomPlayerOut = subbingOutPlayerData.is_custom_player === true;
+          const isCustomPlayerIn = subbingInPlayerData.is_custom_player === true;
+
           const success = await tracker.substitute({
             gameId: gameData.id,
             teamId: gameData.team_b_id,
@@ -1039,7 +1049,9 @@ function StatTrackerV3Content() {
             quarter: tracker.quarter,
             gameTimeSeconds: tracker.clock.secondsRemaining,
             playerOutName: subbingOutPlayerData.name,
-            playerInName: subbingInPlayerData.name
+            playerInName: subbingInPlayerData.name,
+            isCustomPlayerOut,
+            isCustomPlayerIn
           });
 
           if (success) {

@@ -351,13 +351,81 @@ export async function deleteImage(bucket: string, filePath: string): Promise<voi
     throw new Error('Supabase client not available');
   }
 
-  const { error } = await supabase.storage
+  console.log('🗑️ deleteImage: Attempting to delete file', {
+    bucket,
+    filePath,
+    fullPath: `${bucket}/${filePath}`
+  });
+
+  // ✅ VERIFICATION: Check if file exists before deletion
+  const { data: listData } = await supabase.storage
+    .from(bucket)
+    .list(filePath.split('/').slice(0, -1).join('/') || '', {
+      search: filePath.split('/').pop() || ''
+    });
+  
+  const fileExistsBefore = listData && listData.length > 0;
+  console.log('🔍 deleteImage: File existence check before deletion', {
+    bucket,
+    filePath,
+    fileExistsBefore,
+    listedFiles: listData?.map(f => f.name) || []
+  });
+
+  const { data, error } = await supabase.storage
     .from(bucket)
     .remove([filePath]);
 
+  console.log('🗑️ deleteImage: Deletion result', {
+    bucket,
+    filePath,
+    data,
+    error: error ? { message: error.message, statusCode: error.statusCode } : null,
+    success: !error
+  });
+
   if (error) {
+    console.error('❌ deleteImage: Deletion failed', {
+      bucket,
+      filePath,
+      error: error.message,
+      statusCode: error.statusCode
+    });
     throw new Error(`Delete failed: ${error.message}`);
   }
+
+  // ✅ VERIFICATION: Check if file still exists after deletion
+  const { data: listDataAfter } = await supabase.storage
+    .from(bucket)
+    .list(filePath.split('/').slice(0, -1).join('/') || '', {
+      search: filePath.split('/').pop() || ''
+    });
+  
+  const fileExistsAfter = listDataAfter && listDataAfter.length > 0;
+  console.log('🔍 deleteImage: File existence check after deletion', {
+    bucket,
+    filePath,
+    fileExistsAfter,
+    listedFiles: listDataAfter?.map(f => f.name) || [],
+    deletionVerified: !fileExistsAfter
+  });
+
+  if (fileExistsAfter) {
+    console.warn('⚠️ deleteImage: File still exists after deletion attempt!', {
+      bucket,
+      filePath,
+      fileExistsBefore,
+      fileExistsAfter
+    });
+  }
+
+  console.log('✅ deleteImage: File deletion completed', {
+    bucket,
+    filePath,
+    fileExistedBefore: fileExistsBefore,
+    fileExistsAfter: fileExistsAfter,
+    deletionVerified: !fileExistsAfter
+  });
 }
 
 /**
@@ -366,9 +434,11 @@ export async function deleteImage(bucket: string, filePath: string): Promise<voi
 export function extractFilePathFromUrl(publicUrl: string, bucket: string): string | null {
   try {
     const url = new URL(publicUrl);
-    const pathMatch = url.pathname.match(new RegExp(`/storage/v1/object/public/${bucket}/(.+)`));
+    const regex = new RegExp(`/storage/v1/object/public/${bucket}/(.+)`);
+    const pathMatch = url.pathname.match(regex);
     return pathMatch ? pathMatch[1] : null;
-  } catch {
+  } catch (error) {
+    console.error('Failed to extract file path from URL:', error);
     return null;
   }
 }
@@ -395,7 +465,8 @@ export async function uploadPlayerPhoto(
 
 /**
  * Upload custom player photo to Supabase Storage
- * Path: custom-players/{customPlayerId}/{photoType}.jpg
+ * Path: custom-players/{customPlayerId}/{photoType}-{timestamp}-{random}.jpg
+ * Uses unique filenames to avoid overwriting (allows old photos to persist)
  */
 export async function uploadCustomPlayerPhoto(
   file: File,
@@ -407,68 +478,37 @@ export async function uploadCustomPlayerPhoto(
   const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
   const fileExt = validExtensions.includes(extension) ? extension : 'jpg';
   
-  // Fixed filename: profile.jpg or pose.jpg
-  const fileName = `${photoType}.${fileExt}`;
+  // Generate unique filename: {photoType}-{timestamp}-{random}.{ext}
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 9);
+  const fileName = `${photoType}-${timestamp}-${random}.${fileExt}`;
   
-  // Construct path: custom-players/{customPlayerId}/profile.jpg
+  // Construct path: custom-players/{customPlayerId}/{photoType}-{timestamp}-{random}.{ext}
   const filePath = `custom-players/${customPlayerId}/${fileName}`;
   
-  // Upload directly (bypass uploadImage to use fixed filename)
   if (!supabase) {
     throw new Error('Supabase client not available');
   }
-  
-  console.log('📤 Uploading custom player photo:', {
-    customPlayerId,
-    photoType,
-    filePath,
-    fileName: file.name,
-    fileSize: file.size
-  });
   
   const { data: uploadData, error: uploadError } = await supabase.storage
     .from('player-images')
     .upload(filePath, file, {
       cacheControl: '3600',
-      upsert: true // Allow overwriting existing photos
+      upsert: false // Don't overwrite - use unique filenames
     });
   
   if (uploadError) {
-    console.error('❌ Storage upload error:', {
-      message: uploadError.message,
-      statusCode: uploadError.statusCode,
-      error: uploadError
-    });
-    throw new Error(`Upload failed: ${uploadError.message} (Status: ${uploadError.statusCode || 'unknown'})`);
+    throw new Error(`Upload failed: ${uploadError.message}`);
   }
   
   if (!uploadData) {
     throw new Error('Upload failed: No data returned from storage');
   }
   
-  console.log('✅ File uploaded to storage:', uploadData.path);
-  
-  // Verify file exists by trying to get its metadata
-  const { data: fileMetadata, error: verifyError } = await supabase.storage
-    .from('player-images')
-    .list(filePath.split('/').slice(0, -1).join('/'), {
-      search: filePath.split('/').pop()
-    });
-  
-  if (verifyError) {
-    console.warn('⚠️ Could not verify uploaded file:', verifyError.message);
-  } else if (!fileMetadata || fileMetadata.length === 0) {
-    console.warn('⚠️ Uploaded file not found in storage listing');
-  } else {
-    console.log('✅ Uploaded file verified in storage:', fileMetadata[0].name);
-  }
-  
   // Get public URL
   const { data: { publicUrl } } = supabase.storage
     .from('player-images')
     .getPublicUrl(filePath);
-  
-  console.log('✅ Generated public URL:', publicUrl);
   
   return {
     publicUrl,
@@ -483,12 +523,15 @@ export async function uploadCustomPlayerPhoto(
 export async function deleteCustomPlayerPhoto(publicUrl: string): Promise<void> {
   const filePath = extractFilePathFromUrl(publicUrl, 'player-images');
   if (!filePath) {
-    console.warn('⚠️ Could not extract file path from URL:', publicUrl);
     return;
   }
   
-  await deleteImage('player-images', filePath);
-  console.log('✅ Custom player photo deleted:', filePath);
+  try {
+    await deleteImage('player-images', filePath);
+  } catch (error) {
+    console.error('Failed to delete custom player photo:', error);
+    throw error;
+  }
 }
 
 /**

@@ -17,8 +17,12 @@ export function transformSubsToPlay(subs: SubstitutionRow[], team: TeamMapping):
     else if (sub.team_id === team.teamBId) teamName = team.teamBName;
     else teamName = `Team ${String(sub.team_id || '').substring(0, 8)}`;
 
-    const playerOutName = `Player ${String(sub.player_out_id || '').substring(0, 8)}`;
-    const playerInName = `Player ${String(sub.player_in_id || '').substring(0, 8)}`;
+    // ✅ CUSTOM PLAYER SUPPORT: Use either regular or custom player ID
+    const playerOutId = (sub as any).player_out_id || (sub as any).custom_player_out_id || '';
+    const playerInId = (sub as any).player_in_id || (sub as any).custom_player_in_id || '';
+    
+    const playerOutName = `Player ${String(playerOutId).substring(0, 8)}`;
+    const playerInName = `Player ${String(playerInId).substring(0, 8)}`;
 
     return {
       id: sub.id,

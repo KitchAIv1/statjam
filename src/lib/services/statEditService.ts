@@ -175,14 +175,15 @@ export class StatEditService {
       const gameData = await this.getGameData(gameId);
 
       // Convert substitution events to GameStatRecord format
+      // ✅ CUSTOM PLAYER SUPPORT: Handle both regular and custom player IDs
       return substitutions.map((sub: any) => ({
         id: `substitution_${sub.id}`,
         game_id: gameId,
-        player_id: sub.player_out_id, // Use player_out_id as primary player_id
-        custom_player_id: null, // Substitutions don't use custom_player_id
+        player_id: sub.player_out_id || null, // Regular player going out (null if custom)
+        custom_player_id: sub.custom_player_out_id || null, // Custom player going out (null if regular)
         team_id: sub.team_id,
         stat_type: 'substitution',
-        modifier: sub.player_in_id, // Store player_in_id in modifier field
+        modifier: sub.player_in_id || sub.custom_player_in_id || null, // Store player coming in (either type)
         stat_value: 1,
         quarter: sub.quarter,
         game_time_minutes: sub.game_time_minutes || 0,

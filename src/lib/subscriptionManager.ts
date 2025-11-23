@@ -85,6 +85,44 @@ class GameSubscriptionManager {
         }
       }
     };
+  }
+
+  /**
+   * Subscribe to custom player photo updates for a game
+   * Filters by team IDs to only receive updates for players in the game
+   */
+  subscribeToCustomPlayers(gameId: string, teamAId: string, teamBId: string, callback: Function): () => void {
+    if (!teamAId || !teamBId) {
+      console.warn('⚠️ SubscriptionManager: Cannot subscribe to custom players without team IDs');
+      return () => {}; // Return no-op unsubscribe
+    }
+
+    console.log('📸 SubscriptionManager: Setting up custom players photo subscription for game:', gameId, 'teams:', teamAId, teamBId);
+    
+    // Add callback to the set
+    if (!this.callbacks.has(gameId)) {
+      this.callbacks.set(gameId, new Set());
+    }
+    this.callbacks.get(gameId)!.add(callback);
+
+    // Subscribe to custom_players table filtered by team IDs
+    const customPlayersUnsub = hybridSupabaseService.subscribe(
+      'custom_players',
+      `team_id=in.(${teamAId},${teamBId})`, // Filter by both team IDs
+      (payload) => {
+        console.log('📸 SubscriptionManager: Custom player photo updated:', payload);
+        this.callbacks.get(gameId)?.forEach(cb => cb('custom_players', payload));
+      },
+      { fallbackToPolling: false } // Photos update rarely, no need for polling fallback
+    );
+
+    // Return unsubscribe function
+    return () => {
+      console.log('📸 SubscriptionManager: Unsubscribing from custom players for game:', gameId);
+      this.callbacks.get(gameId)?.delete(callback);
+      customPlayersUnsub();
+    };
+  }
 
     // ❌ DISABLED CODE BELOW - CAUSING WEBSOCKET SPAM
     /*
@@ -152,7 +190,6 @@ class GameSubscriptionManager {
       }
     };
     */
-  }
 }
 
 export const gameSubscriptionManager = new GameSubscriptionManager();

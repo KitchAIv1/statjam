@@ -11,7 +11,7 @@
  * - Team data enrichment
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 
 interface GameData {
@@ -316,6 +316,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // Store players map for photo updates
+  const playersMapRef = useRef<Map<string, { name: string; photoUrl: string | null }>>(new Map());
 
   const fetchGameData = useCallback(async (isUpdate: boolean = false) => {
     if (!gameId) {
@@ -437,9 +440,10 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       // ⚡ PHASE 3: Fetch ALL player names in parallel (for stats + subs, including custom players)
       const statsPlayerIds = [...new Set(gameStats.map(s => s.player_id).filter(Boolean))];
       const statsCustomPlayerIds = [...new Set((gameStats as any).map((s: any) => s.custom_player_id).filter(Boolean))];
+      // ✅ CUSTOM PLAYER SUPPORT: Include both regular and custom player IDs from substitutions
       const subPlayerIds = [...new Set([
-        ...gameSubstitutions.map(s => s.player_in_id).filter(Boolean),
-        ...gameSubstitutions.map(s => s.player_out_id).filter(Boolean)
+        ...gameSubstitutions.map(s => (s as any).player_in_id || (s as any).custom_player_in_id).filter(Boolean),
+        ...gameSubstitutions.map(s => (s as any).player_out_id || (s as any).custom_player_out_id).filter(Boolean)
       ])];
       const allPlayerIds = [...new Set([...statsPlayerIds, ...subPlayerIds])];
 
@@ -480,6 +484,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         });
       }
 
+      // Update ref for photo update subscriptions
+      playersMapRef.current = playersMap;
+
       // Enrich stats with player names and photo URLs (check both player_id and custom_player_id)
       gameStats = gameStats.map(stat => {
         const statWithCustomId = stat as any;
@@ -493,10 +500,13 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         };
       });
 
-      // Enrich substitutions with player names
+      // Enrich substitutions with player names (handle both regular and custom players)
       gameSubstitutions = gameSubstitutions.map(sub => {
-        const playerInInfo = playersMap.get(sub.player_in_id) || { name: `Player ${sub.player_in_id?.substring(0, 8)}`, photoUrl: null };
-        const playerOutInfo = playersMap.get(sub.player_out_id) || { name: `Player ${sub.player_out_id?.substring(0, 8)}`, photoUrl: null };
+        const subWithCustom = sub as any;
+        const playerInId = sub.player_in_id || subWithCustom.custom_player_in_id;
+        const playerOutId = sub.player_out_id || subWithCustom.custom_player_out_id;
+        const playerInInfo = playersMap.get(playerInId) || { name: `Player ${playerInId?.substring(0, 8)}`, photoUrl: null };
+        const playerOutInfo = playersMap.get(playerOutId) || { name: `Player ${playerOutId?.substring(0, 8)}`, photoUrl: null };
         return {
           ...sub,
           player_in_name: playerInInfo.name,
@@ -630,12 +640,66 @@ export function useGameViewerV2(gameId: string): GameViewerData {
     // Use the existing hybrid subscription system
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
       console.log('🔔 useGameViewerV2: Real-time update received:', table, payload);
-      // Silent update - no loading spinner
-      void fetchGameData(true);
+      
+      // Handle custom player photo updates
+      if (table === 'custom_players' && payload.new) {
+        const updatedPlayer = payload.new as any;
+        const playerId = updatedPlayer.id;
+        const newPhotoUrl = updatedPlayer.profile_photo_url || null;
+        
+        console.log('📸 useGameViewerV2: Custom player photo updated:', { playerId, newPhotoUrl });
+        
+        // Update players map
+        const currentPlayer = playersMapRef.current.get(playerId);
+        if (currentPlayer) {
+          playersMapRef.current.set(playerId, {
+            ...currentPlayer,
+            photoUrl: newPhotoUrl
+          });
+          
+          // Re-enrich stats with updated photo URLs
+          setStats(prevStats => {
+            return prevStats.map(stat => {
+              const statWithCustomId = stat as any;
+              const statPlayerId = stat.player_id || statWithCustomId.custom_player_id;
+              if (statPlayerId === playerId) {
+                const playerInfo = playersMapRef.current.get(playerId) || { name: currentPlayer.name, photoUrl: newPhotoUrl };
+                return {
+                  ...stat,
+                  player_photo_url: playerInfo.photoUrl
+                };
+              }
+              return stat;
+            });
+          });
+        }
+      } else {
+        // For other updates (games, game_stats, game_substitutions), refresh all data
+        void fetchGameData(true);
+      }
     });
 
     return unsubscribe;
   }, [gameId, fetchGameData]);
+
+  // 📸 Subscribe to custom player photo updates (after we have team IDs)
+  useEffect(() => {
+    if (!gameId || !game?.team_a_id || !game?.team_b_id) return;
+
+    console.log('📸 useGameViewerV2: Setting up custom players photo subscription for game:', gameId);
+    
+    const unsubscribeCustomPlayers = gameSubscriptionManager.subscribeToCustomPlayers(
+      gameId,
+      game.team_a_id,
+      game.team_b_id,
+      (table: string, payload: any) => {
+        console.log('📸 useGameViewerV2: Custom player photo update received:', table, payload);
+        // The main subscription handler above will process this
+      }
+    );
+
+    return unsubscribeCustomPlayers;
+  }, [gameId, game?.team_a_id, game?.team_b_id]);
 
   // ✅ DEDICATED CLOCK POLLING: Ensures clock updates every 5 seconds regardless of WebSocket status
   // This runs independently of subscriptions and only updates clock fields (lightweight)
