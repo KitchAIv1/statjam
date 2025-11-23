@@ -67,7 +67,7 @@ export function DualTeamPlayerGridV3({
                     : 'bg-blue-100 text-blue-700'
               }`}
             >
-              {player.jerseyNumber || '?'}
+              {player.jerseyNumber ?? '?'}
             </div>
 
             {/* Player Info */}

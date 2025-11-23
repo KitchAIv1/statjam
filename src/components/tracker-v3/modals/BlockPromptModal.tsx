@@ -130,7 +130,7 @@ export function BlockPromptModal({
                           : 'bg-gray-200 text-gray-700'
                       }`}
                     >
-                      #{player.jerseyNumber || '?'}
+                      #{player.jerseyNumber ?? '?'}
                     </div>
                     <span className="font-medium text-gray-900">
                       {player.name}

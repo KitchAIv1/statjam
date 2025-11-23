@@ -57,7 +57,7 @@ export function PlayerInSelectionStep({
               </p>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xs">
-                  #{playerOut.jerseyNumber || '?'}
+                  #{playerOut.jerseyNumber ?? '?'}
                 </div>
                 <span className="font-semibold text-white">
                   {playerOut.name}

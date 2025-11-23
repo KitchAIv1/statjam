@@ -147,7 +147,7 @@ export function HorizontalRosterV3({
                       color: '#ffffff'
                     }}
                   >
-                    #{player.jerseyNumber || '?'}
+                    #{player.jerseyNumber ?? '?'}
                   </div>
                 )}
               </div>
@@ -180,7 +180,7 @@ export function HorizontalRosterV3({
             className="text-sm font-medium"
             style={{ color: 'var(--dashboard-text-primary)' }}
           >
-            Selected: #{players.find(p => p.id === selectedPlayer)?.jerseyNumber || '?'} {players.find(p => p.id === selectedPlayer)?.name}
+            Selected: #{players.find(p => p.id === selectedPlayer)?.jerseyNumber ?? '?'} {players.find(p => p.id === selectedPlayer)?.name}
           </div>
         </div>
       )}

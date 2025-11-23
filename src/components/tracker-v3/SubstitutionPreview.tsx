@@ -51,7 +51,7 @@ export function SubstitutionPreview({
               {/* Player Out */}
               <div className="flex items-center gap-2 flex-1">
                 <div className="w-8 h-8 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center text-white font-bold text-xs">
-                  #{playerOut.jerseyNumber || '?'}
+                  #{playerOut.jerseyNumber ?? '?'}
                 </div>
                 <span className="text-sm font-semibold text-white">{playerOut.name}</span>
                 <span className="text-xs text-gray-400">(Out)</span>
@@ -63,7 +63,7 @@ export function SubstitutionPreview({
               {/* Player In */}
               <div className="flex items-center gap-2 flex-1">
                 <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-500 flex items-center justify-center text-white font-bold text-xs">
-                  #{playerIn.jerseyNumber || '?'}
+                  #{playerIn.jerseyNumber ?? '?'}
                 </div>
                 <span className="text-sm font-semibold text-white">{playerIn.name}</span>
                 <span className="text-xs text-gray-400">(In)</span>

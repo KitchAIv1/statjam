@@ -67,7 +67,7 @@ export function PlayerGridV3({
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
                     }`}
                   >
-                    {player.jerseyNumber || '?'}
+                    {player.jerseyNumber ?? '?'}
                   </div>
 
                   {/* Player Info */}
@@ -82,7 +82,7 @@ export function PlayerGridV3({
                       {player.name}
                     </div>
                     <div className="text-xs text-gray-500">
-                      #{player.jerseyNumber || 'N/A'}
+                      #{player.jerseyNumber ?? 'N/A'}
                     </div>
                   </div>
                 </div>

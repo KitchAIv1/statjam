@@ -181,7 +181,7 @@ export function TeamRosterV3({
                   <div className={`absolute bottom-0 left-0 right-0 px-2 py-1 text-center text-sm font-bold text-white ${
                     teamSide === 'left' ? 'bg-orange-600/90' : 'bg-blue-600/90'
                   }`}>
-                    #{player.jerseyNumber || '?'}
+                    #{player.jerseyNumber ?? '?'}
                   </div>
                 </div>
 

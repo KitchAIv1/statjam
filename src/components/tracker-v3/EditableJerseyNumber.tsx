@@ -110,7 +110,7 @@ export function EditableJerseyNumber({ player, onUpdate }: EditableJerseyNumberP
       }}
       title="Click to edit jersey number"
     >
-      #{player.jerseyNumber || '?'}
+      #{player.jerseyNumber ?? '?'}
       <Edit2 className="w-3 h-3 absolute -top-1 -right-1 opacity-70 group-hover:opacity-100 bg-blue-500 rounded-full p-0.5 transition-opacity" />
     </div>
   );

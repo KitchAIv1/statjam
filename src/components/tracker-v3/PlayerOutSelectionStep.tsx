@@ -61,7 +61,7 @@ export function PlayerOutSelectionStep({
                   return (
                     <>
                       <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xs">
-                        #{player?.jerseyNumber || '?'}
+                        #{player?.jerseyNumber ?? '?'}
                       </div>
                       <span className="font-semibold text-white">
                         {player?.name || 'Unknown'}

@@ -342,7 +342,7 @@ export function MobileStatGridV3({
               // Currently Selected Player
               <>
                 <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                  {selectedPlayerData.jerseyNumber || '?'}
+                  {selectedPlayerData.jerseyNumber ?? '?'}
                 </div>
                 <span className="text-sm font-medium text-gray-700">
                   {selectedPlayerData.name}

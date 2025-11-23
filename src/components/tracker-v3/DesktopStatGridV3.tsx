@@ -243,7 +243,7 @@ export function DesktopStatGridV3({
                 // Currently Selected Player (show their details)
                 <>
                   <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                    #{selectedPlayerData?.jerseyNumber || '?'}
+                    #{selectedPlayerData?.jerseyNumber ?? '?'}
                   </div>
                   <span className="text-base font-medium text-gray-700">
                     {selectedPlayerData?.name}

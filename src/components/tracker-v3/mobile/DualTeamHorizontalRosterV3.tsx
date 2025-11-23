@@ -202,7 +202,7 @@ export function DualTeamHorizontalRosterV3({
                             : 'bg-blue-600/90 text-white'
                       }`}
                     >
-                      #{player.jerseyNumber || '?'}
+                      #{player.jerseyNumber ?? '?'}
                     </div>
                   )}
                 </div>
