@@ -94,15 +94,41 @@ const GameHeader: React.FC<GameHeaderProps> = ({ theme, onThemeToggle, game, isL
           />
         </div>
 
-        {/* Center - Quarter & Status - Responsive */}
-        <div className="flex flex-col items-center gap-1 sm:gap-2 min-w-[60px] sm:min-w-[120px] text-center flex-shrink-0">
-          <div className="text-base sm:text-xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-            {game.quarter <= 4 ? `Q${game.quarter}` : `OT${game.quarter - 4}`}
-          </div>
-          {game.status === 'completed' && (
+        {/* Center - Game Clock, Quarter & Status - NBA-Style */}
+        <div className="flex flex-col items-center gap-1.5 sm:gap-2 min-w-[80px] sm:min-w-[140px] text-center flex-shrink-0">
+          {/* Game Clock - Prominent Display */}
+          {game.status === 'completed' ? (
             <div className="text-lg sm:text-2xl font-extrabold text-green-500">
               FINAL
             </div>
+          ) : (
+            <>
+              <div 
+                className={`text-2xl sm:text-3xl md:text-4xl font-mono font-black tabular-nums tracking-wider ${
+                  game.isClockRunning 
+                    ? 'text-green-500' 
+                    : 'text-red-500'
+                }`}
+              >
+                {String(game.gameClockMinutes || 0).padStart(2, '0')}:{String(game.gameClockSeconds || 0).padStart(2, '0')}
+              </div>
+              {/* Quarter Badge */}
+              <div className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-md text-xs sm:text-sm font-bold tracking-wider ${
+                isDark 
+                  ? 'bg-orange-500/20 text-orange-400' 
+                  : 'bg-orange-100 text-orange-600'
+              }`}>
+                {game.quarter <= 4 ? `Q${game.quarter}` : `OT${game.quarter - 4}`}
+              </div>
+              {/* Clock Status */}
+              <div className={`text-[10px] sm:text-xs font-semibold uppercase tracking-wide ${
+                game.isClockRunning 
+                  ? isDark ? 'text-green-400' : 'text-green-600'
+                  : isDark ? 'text-gray-400' : 'text-gray-500'
+              }`}>
+                {game.isClockRunning ? 'RUNNING' : 'STOPPED'}
+              </div>
+            </>
           )}
         </div>
 
@@ -120,13 +146,6 @@ const GameHeader: React.FC<GameHeaderProps> = ({ theme, onThemeToggle, game, isL
 
       {/* Stats Bar */}
       <div className={`flex flex-wrap items-center justify-center gap-6 sm:gap-8 px-5 py-4 border-t ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-orange-50/30 border-orange-200'}`}>
-        <StatItem
-          icon={Clock}
-          label="Clock"
-          value={game.isClockRunning ? 'RUNNING' : 'STOPPED'}
-          color={game.isClockRunning ? 'text-green-400' : 'text-gray-400'}
-          isDark={isDark}
-        />
         <StatItem
           icon={AlertCircle}
           label="Fouls"

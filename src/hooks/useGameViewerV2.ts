@@ -449,9 +449,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         allPlayerIds.length > 0 
           ? fetch(`${supabaseUrl}/rest/v1/users?select=id,name,email,profile_photo_url&id=in.(${allPlayerIds.join(',')})`, { headers })
           : Promise.resolve(null),
-        // Custom players from custom_players table
+        // Custom players from custom_players table (include profile_photo_url)
         statsCustomPlayerIds.length > 0
-          ? fetch(`${supabaseUrl}/rest/v1/custom_players?select=id,name&id=in.(${statsCustomPlayerIds.join(',')})`, { headers })
+          ? fetch(`${supabaseUrl}/rest/v1/custom_players?select=id,name,profile_photo_url&id=in.(${statsCustomPlayerIds.join(',')})`, { headers })
           : Promise.resolve(null)
       ]);
 
@@ -469,13 +469,13 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         });
       }
 
-      // Add custom players (no photos)
+      // Add custom players (with photos)
       if (customPlayersResponse && customPlayersResponse.ok) {
         const customPlayersData = await customPlayersResponse.json();
         customPlayersData.forEach((p: any) => {
           playersMap.set(p.id, {
             name: p.name || `Custom Player ${p.id.substring(0, 8)}`,
-            photoUrl: null
+            photoUrl: p.profile_photo_url || null
           });
         });
       }
@@ -636,6 +636,111 @@ export function useGameViewerV2(gameId: string): GameViewerData {
 
     return unsubscribe;
   }, [gameId, fetchGameData]);
+
+  // ✅ DEDICATED CLOCK POLLING: Ensures clock updates every 5 seconds regardless of WebSocket status
+  // This runs independently of subscriptions and only updates clock fields (lightweight)
+  useEffect(() => {
+    if (!gameId || !game) return;
+
+    // Only poll when game is live and clock is running
+    const isLive = game.status?.toLowerCase().includes('live') || 
+                  game.status?.toLowerCase().includes('progress') ||
+                  game.status?.toLowerCase().includes('overtime');
+    const isClockRunning = game.is_clock_running;
+
+    if (!isLive || !isClockRunning) {
+      return; // Don't poll if game isn't live or clock isn't running
+    }
+
+    console.log('⏱️ useGameViewerV2: Starting dedicated clock polling (every 5 seconds)');
+
+    // Lightweight function to fetch only clock data
+    const fetchClockOnly = async () => {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseKey) {
+          return;
+        }
+
+        // Get auth token if available
+        let authToken = supabaseKey;
+        if (typeof window !== 'undefined') {
+          const userToken = localStorage.getItem('sb-access-token');
+          if (userToken) {
+            authToken = userToken;
+          }
+        }
+
+        const headers = {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        };
+
+        // Fetch only clock-related fields (lightweight query)
+        const response = await fetch(
+          `${supabaseUrl}/rest/v1/games?select=game_clock_minutes,game_clock_seconds,is_clock_running,quarter&id=eq.${gameId}`,
+          { headers }
+        );
+
+        if (!response.ok) {
+          console.warn('⚠️ useGameViewerV2: Clock poll failed:', response.statusText);
+          return;
+        }
+
+        const gameData = await response.json();
+        if (!gameData || gameData.length === 0) {
+          return;
+        }
+
+        const clockData = gameData[0];
+
+        // Update only clock fields in game state (silent update, no re-render if unchanged)
+        setGame(prevGame => {
+          if (!prevGame) return prevGame;
+
+          // Only update if clock values actually changed
+          if (
+            prevGame.game_clock_minutes === clockData.game_clock_minutes &&
+            prevGame.game_clock_seconds === clockData.game_clock_seconds &&
+            prevGame.is_clock_running === clockData.is_clock_running &&
+            prevGame.quarter === clockData.quarter
+          ) {
+            return prevGame; // No change, return same reference
+          }
+
+          // Clock changed, update only clock fields
+          return {
+            ...prevGame,
+            game_clock_minutes: clockData.game_clock_minutes,
+            game_clock_seconds: clockData.game_clock_seconds,
+            is_clock_running: clockData.is_clock_running,
+            quarter: clockData.quarter
+          };
+        });
+      } catch (error) {
+        // Silent error - don't spam console, clock polling is best-effort
+        console.debug('⏱️ useGameViewerV2: Clock poll error (silent):', error);
+      }
+    };
+
+    // Initial poll after 5 seconds, then every 5 seconds
+    const initialTimeout = setTimeout(() => {
+      void fetchClockOnly();
+    }, 5000);
+
+    const pollInterval = setInterval(() => {
+      void fetchClockOnly();
+    }, 5000); // 5 seconds - matches tracker sync frequency
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(pollInterval);
+      console.log('⏱️ useGameViewerV2: Stopped dedicated clock polling');
+    };
+  }, [gameId, game?.status, game?.is_clock_running]); // Only re-run if game status or clock running state changes
 
   return {
     game,

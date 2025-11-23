@@ -128,6 +128,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   useEffect(() => {
     clockRef.current = clock;
   }, [clock]);
+
+  // ✅ Throttled DB sync: Track last sync time for clock updates
+  const lastClockSyncRef = useRef<number>(0);
+  const CLOCK_SYNC_INTERVAL = 5000; // 5 seconds
   // NEW: Shot Clock State
   // ✅ Load visibility preference from localStorage on initialization
   const getInitialShotClockVisibility = () => {
@@ -727,12 +731,42 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     console.log(`🏀 Shot clock set to ${validSeconds} seconds (synced with game clock: ${clock.isRunning ? 'RUNNING' : 'PAUSED'})`);
   }, [clock.isRunning]);
 
-  const tick = useCallback((seconds: number) => {
-    setClock(prev => ({
-      ...prev,
-      secondsRemaining: Math.max(0, prev.secondsRemaining - seconds)
-    }));
-  }, []);
+  const tick = useCallback(async (seconds: number) => {
+    setClock(prev => {
+      const newSecondsRemaining = Math.max(0, prev.secondsRemaining - seconds);
+      const newClock = {
+        ...prev,
+        secondsRemaining: newSecondsRemaining
+      };
+      
+      // ✅ Throttled DB sync: Update database every 5 seconds when clock is running
+      if (prev.isRunning) {
+        const now = Date.now();
+        const timeSinceLastSync = now - lastClockSyncRef.current;
+        
+        if (timeSinceLastSync >= CLOCK_SYNC_INTERVAL) {
+          lastClockSyncRef.current = now;
+          
+          // Sync to database asynchronously (don't block UI)
+          const minutes = Math.floor(newSecondsRemaining / 60);
+          const secondsRem = newSecondsRemaining % 60;
+          
+          // Use GameService to sync clock state
+          import('@/lib/services/gameService').then(({ GameService }) => {
+            GameService.updateGameClock(gameId, {
+              minutes,
+              seconds: secondsRem,
+              isRunning: true
+            }).catch((error) => {
+              console.error('❌ Error syncing clock tick to database:', error);
+            });
+          });
+        }
+      }
+      
+      return newClock;
+    });
+  }, [gameId]);
 
   // NEW: Shot Clock Tick
   const shotClockTick = useCallback((seconds: number) => {
