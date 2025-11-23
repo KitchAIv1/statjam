@@ -445,17 +445,29 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         ...gameSubstitutions.map(s => (s as any).player_in_id || (s as any).custom_player_in_id).filter(Boolean),
         ...gameSubstitutions.map(s => (s as any).player_out_id || (s as any).custom_player_out_id).filter(Boolean)
       ])];
-      const allPlayerIds = [...new Set([...statsPlayerIds, ...subPlayerIds])];
+      // ✅ FIX: Separate regular and custom player IDs from substitutions
+      const subRegularPlayerIds = [...new Set([
+        ...gameSubstitutions.map(s => (s as any).player_in_id).filter(Boolean),
+        ...gameSubstitutions.map(s => (s as any).player_out_id).filter(Boolean)
+      ])];
+      const subCustomPlayerIds = [...new Set([
+        ...gameSubstitutions.map(s => (s as any).custom_player_in_id).filter(Boolean),
+        ...gameSubstitutions.map(s => (s as any).custom_player_out_id).filter(Boolean)
+      ])];
+      // Combine all regular player IDs (from stats + substitutions)
+      const allRegularPlayerIds = [...new Set([...statsPlayerIds, ...subRegularPlayerIds])];
+      // Combine all custom player IDs (from stats + substitutions)
+      const allCustomPlayerIds = [...new Set([...statsCustomPlayerIds, ...subCustomPlayerIds])];
 
       // ✅ FIX: Query both users AND custom_players tables in parallel
       const [regularPlayersResponse, customPlayersResponse] = await Promise.all([
         // Regular players from users table (including profile photo)
-        allPlayerIds.length > 0 
-          ? fetch(`${supabaseUrl}/rest/v1/users?select=id,name,email,profile_photo_url&id=in.(${allPlayerIds.join(',')})`, { headers })
+        allRegularPlayerIds.length > 0 
+          ? fetch(`${supabaseUrl}/rest/v1/users?select=id,name,email,profile_photo_url&id=in.(${allRegularPlayerIds.join(',')})`, { headers })
           : Promise.resolve(null),
-        // Custom players from custom_players table (include profile_photo_url)
-        statsCustomPlayerIds.length > 0
-          ? fetch(`${supabaseUrl}/rest/v1/custom_players?select=id,name,profile_photo_url&id=in.(${statsCustomPlayerIds.join(',')})`, { headers })
+        // Custom players from custom_players table (include profile_photo_url) - NOW INCLUDES SUBSTITUTION CUSTOM PLAYERS
+        allCustomPlayerIds.length > 0
+          ? fetch(`${supabaseUrl}/rest/v1/custom_players?select=id,name,profile_photo_url&id=in.(${allCustomPlayerIds.join(',')})`, { headers })
           : Promise.resolve(null)
       ]);
 

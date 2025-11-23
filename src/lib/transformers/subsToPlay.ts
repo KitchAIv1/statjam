@@ -21,8 +21,9 @@ export function transformSubsToPlay(subs: SubstitutionRow[], team: TeamMapping):
     const playerOutId = (sub as any).player_out_id || (sub as any).custom_player_out_id || '';
     const playerInId = (sub as any).player_in_id || (sub as any).custom_player_in_id || '';
     
-    const playerOutName = `Player ${String(playerOutId).substring(0, 8)}`;
-    const playerInName = `Player ${String(playerInId).substring(0, 8)}`;
+    // ✅ FIX: Use enriched player names if available (from useGameViewerV2), otherwise fall back to ID pattern
+    const playerOutName = (sub as any).player_out_name || `Player ${String(playerOutId).substring(0, 8)}`;
+    const playerInName = (sub as any).player_in_name || `Player ${String(playerInId).substring(0, 8)}`;
 
     return {
       id: sub.id,

@@ -178,8 +178,13 @@ export function StatEditModal({
     
     // ✅ Handle substitution events (show both players)
     if (stat.stat_type === 'substitution') {
-      const playerOut = allPlayers.find(p => p.id === stat.player_id);
-      const playerIn = allPlayers.find(p => p.id === stat.modifier); // modifier stores player_in_id
+      // ✅ CUSTOM PLAYER SUPPORT: Check both player_id and custom_player_id for playerOut
+      const playerOutId = stat.player_id || stat.custom_player_id;
+      const playerOut = allPlayers.find(p => p.id === playerOutId);
+      // ✅ CUSTOM PLAYER SUPPORT: modifier stores player_in_id (could be regular or custom)
+      // Need to check if modifier is a custom player ID by checking custom_player_id field
+      // Since modifier is the player coming in, we need to find it in allPlayers
+      const playerIn = allPlayers.find(p => p.id === stat.modifier);
       const playerOutName = playerOut?.name || 'Unknown Player';
       const playerInName = playerIn?.name || 'Unknown Player';
       return `${playerOutName} → ${playerInName}`;

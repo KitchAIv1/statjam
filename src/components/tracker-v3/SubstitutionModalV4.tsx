@@ -91,7 +91,7 @@ export function SubstitutionModalV4({
       />
       
       <div 
-        className="relative w-full max-w-5xl mx-4 max-h-[90vh] overflow-hidden rounded-xl border shadow-2xl"
+        className="relative w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col rounded-xl border shadow-2xl"
         style={{ 
           backgroundColor: '#1e293b',
           borderColor: '#475569',
@@ -101,60 +101,62 @@ export function SubstitutionModalV4({
           e.stopPropagation();
         }}
       >
-        {/* Header */}
-        <SubstitutionModalHeader
-          onClose={onClose}
-          multiSelectMode={multiSelectMode}
-          isMultiSelectEnabled={true}
-          onMultiSelectToggle={(enabled) => {
-            setMultiSelectMode(enabled);
-            if (!enabled) {
-              // Clear selections when disabling multi-select
+        {/* Header - Fixed */}
+        <div className="flex-shrink-0">
+          <SubstitutionModalHeader
+            onClose={onClose}
+            multiSelectMode={multiSelectMode}
+            isMultiSelectEnabled={true}
+            onMultiSelectToggle={(enabled) => {
+              setMultiSelectMode(enabled);
+              if (!enabled) {
+                // Clear selections when disabling multi-select
+                setSelectedPlayersOut(new Set());
+                setSelectedPlayersIn(new Set());
+                setPreviewSubstitutions(new Map());
+              }
+            }}
+            selectedCount={selectedPlayersOut.size}
+            onSelectAllBench={() => {
+              // Not applicable in new flow
+            }}
+            onDeselectAll={() => {
               setSelectedPlayersOut(new Set());
               setSelectedPlayersIn(new Set());
               setPreviewSubstitutions(new Map());
-            }
-          }}
-          selectedCount={selectedPlayersOut.size}
-          onSelectAllBench={() => {
-            // Not applicable in new flow
-          }}
-          onDeselectAll={() => {
-            setSelectedPlayersOut(new Set());
-            setSelectedPlayersIn(new Set());
-            setPreviewSubstitutions(new Map());
-          }}
-        />
+            }}
+          />
 
-        {/* Team Selector */}
-        <div className="px-6 pt-4 pb-2 border-b border-slate-700">
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-400">Select Team:</span>
-            <button
-              onClick={() => handleTeamSwitch('teamA')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activeTeam === 'teamA'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-              }`}
-            >
-              {teamAName}
-            </button>
-            <button
-              onClick={() => handleTeamSwitch('teamB')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activeTeam === 'teamB'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-              }`}
-            >
-              {teamBName}
-            </button>
+          {/* Team Selector */}
+          <div className="px-6 pt-4 pb-2 border-b border-slate-700">
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-400">Select Team:</span>
+              <button
+                onClick={() => handleTeamSwitch('teamA')}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  activeTeam === 'teamA'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                }`}
+              >
+                {teamAName}
+              </button>
+              <button
+                onClick={() => handleTeamSwitch('teamB')}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  activeTeam === 'teamB'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                }`}
+              >
+                {teamBName}
+              </button>
+            </div>
           </div>
         </div>
         
-        {/* Content */}
-        <div className="space-y-6 max-h-[50vh] overflow-y-auto px-6 pb-6 pt-6">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-6 space-y-6 min-h-0">
           {/* Instructions */}
           <div className="text-center">
             <h3 className="text-lg font-semibold mb-2 text-white">
@@ -198,8 +200,8 @@ export function SubstitutionModalV4({
           />
         </div>
 
-        {/* Actions */}
-        <div className="border-t-2 border-slate-700 pt-4 px-6 pb-6 space-y-3">
+        {/* Actions - Fixed */}
+        <div className="flex-shrink-0 border-t-2 border-slate-700 pt-4 px-6 pb-6 space-y-3">
           <SubstitutionModalActions
             currentStep="player-in-selection"
             multiSelectMode={multiSelectMode}
