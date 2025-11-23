@@ -1,4 +1,19 @@
-# Stat Tracker V3 Mobile Fixes - August 2025
+# Stat Tracker V3 - Updates & Fixes
+
+## November 2025 Updates
+
+### Custom Player Substitutions Support
+- **Added**: Full support for substituting custom players in games
+- **Fixed**: Custom player names displaying correctly in substitutions (no more "UNKNOWN" or ID numbers)
+- **Fixed**: Custom player photos displaying in tracker roster
+- **Fixed**: Jersey numbers 0, 00, 000 displaying correctly (not as '?')
+- **Improved**: Substitution modal is now fully scrollable with proper flex layout
+- **Migration**: 008_game_substitutions_custom_players.sql applied
+- **Files**: See `docs/02-development/CUSTOM_PLAYER_SUBSTITUTIONS_FIX.md` for full details
+
+---
+
+## August 2025 Mobile Fixes
 
 ## Overview
 This document details the fixes and improvements made to the Stat Tracker V3 mobile interface based on user feedback for maximizing screen space, improving element sizing, and ensuring proper functionality.

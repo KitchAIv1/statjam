@@ -161,6 +161,52 @@ CREATE INDEX IF NOT EXISTS idx_team_players_custom_player_id ON team_players(cus
 - Updates constraints to allow coach teams without tournaments
 - Maintains data integrity for tournament teams
 
+#### `007_game_stats_custom_players.sql`
+**Purpose**: Add custom player support to game_stats table
+**Status**: ✅ Applied
+**Features**:
+- Added `custom_player_id` column to `game_stats`
+- Made `player_id` nullable to support either regular or custom players
+- Added CHECK constraints to ensure one player ID type is set
+- Updated RLS policies for custom player stats
+- Follows same pattern as `team_players` custom player support
+
+#### `008_game_substitutions_custom_players.sql`
+**Purpose**: Add custom player support to game_substitutions table
+**Status**: ✅ Applied (November 2025)
+**Features**:
+- Added `custom_player_in_id` and `custom_player_out_id` columns
+- Made `player_in_id` and `player_out_id` nullable
+- Added CHECK constraints to ensure either regular OR custom player IDs are set
+- Updated RLS policies to allow coaches and stat_admins to substitute custom players
+- Added indexes for performance on custom player ID columns
+- Follows same proven pattern as Migration 007
+
+**Key Components**:
+```sql
+-- Add custom player ID columns
+ALTER TABLE game_substitutions 
+ADD COLUMN IF NOT EXISTS custom_player_in_id UUID REFERENCES custom_players(id) ON DELETE CASCADE;
+
+ALTER TABLE game_substitutions 
+ADD COLUMN IF NOT EXISTS custom_player_out_id UUID REFERENCES custom_players(id) ON DELETE CASCADE;
+
+-- Make regular player ID columns nullable
+ALTER TABLE game_substitutions 
+ALTER COLUMN player_in_id DROP NOT NULL;
+
+ALTER TABLE game_substitutions 
+ALTER COLUMN player_out_id DROP NOT NULL;
+
+-- Add CHECK constraints (either regular OR custom, not both, not neither)
+ALTER TABLE game_substitutions 
+ADD CONSTRAINT game_substitutions_player_in_required 
+CHECK (
+  (player_in_id IS NOT NULL AND custom_player_in_id IS NULL) OR 
+  (player_in_id IS NULL AND custom_player_in_id IS NOT NULL)
+);
+```
+
 ---
 
 ## 🔒 RLS Policies

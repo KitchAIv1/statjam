@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.2] - 2025-11-23
+
+### 🔄 Custom Player Substitutions & UI Fixes
+
+#### Custom Player Substitutions Support
+- **Added**: Full support for substituting custom players in games
+- **Migration 008**: Added `custom_player_in_id` and `custom_player_out_id` columns to `game_substitutions` table
+- **Updated**: RLS policies to allow coaches and stat_admins to substitute custom players
+- **Fixed**: Custom player names showing as "UNKNOWN" in edit game stats modal
+- **Fixed**: Custom player names showing as ID numbers in game viewer
+- **Fixed**: Custom player photos not displaying in stat tracker
+- **Files**: `gameService.ts`, `teamServiceV3.ts`, `statEditService.ts`, `teamStatsService.ts`, `useTracker.ts`, `useGameViewerV2.ts`, `subsToPlay.ts`, `StatEditModal.tsx`
+
+#### Jersey Number Display Fix
+- **Fixed**: Jersey numbers displaying as '?' instead of '0', '00', or '000'
+- **Changed**: `jerseyNumber || '?'` to `jerseyNumber ?? '?'` in 16+ files
+- **Impact**: Correctly handles `0` as a valid jersey number value
+- **Files**: Multiple components and services updated
+
+#### Substitution Modal UI Improvements
+- **Fixed**: Made substitution modal fully scrollable with proper flex layout
+- **Improved**: Header and footer stay fixed while content scrolls
+- **Improved**: Better handling of long player lists
+- **Files**: `SubstitutionModalV4.tsx`
+
+#### Database & Backend
+- **Migration 008**: Custom player substitutions support with RLS policies
+- **Updated**: All services to handle both regular and custom player IDs in substitutions
+- **Updated**: Player name resolution to include custom players from `custom_players` table
+- **Updated**: Photo fetching to include `profile_photo_url` for custom players
+
+---
+
 ## [0.16.1] - 2025-01-XX
 
 ### 📸 Custom Player Photo Upload & Player Management UI Enhancements
