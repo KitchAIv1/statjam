@@ -624,18 +624,18 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       setLastAction(`Q${targetQuarter} clock reset (12 minutes)`);
     }
     
-    // Sync clock state to database
+    // ✅ FIX #3: Sync clock state to database with correct minutes (not always 12)
     try {
       const { GameService } = await import('@/lib/services/gameService');
       await GameService.updateGameClock(gameId, {
-        minutes: 12,
+        minutes: clockMinutes, // ✅ Use calculated value (12 or 5)
         seconds: 0,
         isRunning: false
       });
     } catch (error) {
       console.error('Error syncing clock reset to database:', error);
     }
-  }, [gameId]);
+  }, [gameId, quarter]);
 
   // NEW: Set custom time (for manual editing)
   const setCustomTime = useCallback(async (minutes: number, seconds: number) => {
@@ -794,6 +794,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       console.log('⚠️ Quarter change warning:', validation.warning);
     }
     
+    // ✅ FIX #2: Calculate new clock time BEFORE resetting (prevents race condition)
+    const isOvertime = newQuarter >= 5;
+    const newClockMinutes = isOvertime ? 5 : 12;
+    const newClockSeconds = 0;
+    
     // ✅ Update quarter state
     setQuarterState(newQuarter);
     
@@ -804,13 +809,13 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     const quarterDisplay = newQuarter <= 4 ? `Q${newQuarter}` : `OT${newQuarter - 4}`;
     setLastAction(`Changed to ${quarterDisplay}`);
     
-    // ✅ Sync quarter change to database
+    // ✅ FIX #2: Sync quarter change to database with calculated clock time (not stale state)
     try {
       const { GameService } = await import('@/lib/services/gameService');
       await GameService.updateGameState(gameId, {
         quarter: newQuarter,
-        game_clock_minutes: Math.floor(clock.secondsRemaining / 60),
-        game_clock_seconds: clock.secondsRemaining % 60,
+        game_clock_minutes: newClockMinutes, // ✅ Use calculated value (not stale clock state)
+        game_clock_seconds: newClockSeconds,  // ✅ Use calculated value
         is_clock_running: false, // ✅ Stop clock when quarter changes manually
         home_score: 0, // Scores are managed separately via stats
         away_score: 0  // Scores are managed separately via stats
@@ -821,25 +826,35 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       const { notify } = await import('@/lib/services/notificationService');
       notify.error('Sync Failed', 'Failed to sync quarter change to database');
     }
-  }, [gameId, clock, resetClock]);
+  }, [gameId, resetClock]);
 
   const advanceIfNeeded = useCallback(() => {
+    // ✅ FIX #5: Guard against multiple calls - only advance if clock reaches 0
+    // ✅ FIX #6: Ensure clock is stopped before advancing
     if (clock.secondsRemaining <= 0) {
+      // Stop clock if still running
+      if (clock.isRunning) {
+        setClock(prev => ({ ...prev, isRunning: false }));
+      }
+      
       if (quarter < 4) {
         // Regular quarters 1-4
         const nextQuarter = quarter + 1;
+        // ✅ FIX #1: setQuarter already calls resetClock internally - remove duplicate call
         setQuarter(nextQuarter);
-        resetClock(nextQuarter); // Pass the new quarter explicitly
       } else if (quarter === 4) {
         // End of 4th quarter - check if game should go to overtime
-        const teamAScore = scores.teamA;
-        const teamBScore = scores.teamB;
+        // ✅ FIX #4 & #7: Use correct score access (handle coach mode)
+        const teamAScore = scores[teamAId] || 0;
+        const teamBScore = teamAId === teamBId 
+          ? scores.opponent || 0  // Coach mode: opponent score
+          : scores[teamBId] || 0; // Tournament mode: team B score
         
         if (teamAScore === teamBScore) {
           // Tied game - go to overtime
           console.log(`🏀 End of regulation - TIED GAME (${teamAScore}-${teamBScore}) - advancing to overtime`);
+          // ✅ FIX #1: setQuarter already calls resetClock internally - remove duplicate call
           setQuarter(5); // Overtime starts at quarter 5
-          resetClock(5); // Explicitly reset for OT1 (5 minutes)
         } else {
           // Game has a winner - end the game
           const winner = teamAScore > teamBScore ? 'Team A' : 'Team B';
@@ -849,8 +864,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
       } else {
         // Already in overtime (quarter >= 5) - check for tie again
-        const teamAScore = scores.teamA;
-        const teamBScore = scores.teamB;
+        // ✅ FIX #4 & #7: Use correct score access (handle coach mode)
+        const teamAScore = scores[teamAId] || 0;
+        const teamBScore = teamAId === teamBId 
+          ? scores.opponent || 0  // Coach mode: opponent score
+          : scores[teamBId] || 0; // Tournament mode: team B score
         
         if (teamAScore === teamBScore) {
           // Still tied - continue to next OT period
@@ -858,8 +876,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           const nextOT = currentOT + 1;
           const nextQuarter = quarter + 1;
           console.log(`🏀 End of OT${currentOT} - STILL TIED (${teamAScore}-${teamBScore}) - advancing to OT${nextOT}`);
+          // ✅ FIX #1: setQuarter already calls resetClock internally - remove duplicate call
           setQuarter(nextQuarter);
-          resetClock(nextQuarter); // Pass the new OT quarter explicitly
         } else {
           // Overtime has a winner - end the game
           const winner = teamAScore > teamBScore ? 'Team A' : 'Team B';
@@ -870,7 +888,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
       }
     }
-  }, [clock.secondsRemaining, quarter, setQuarter, resetClock, scores]);
+  }, [clock.secondsRemaining, clock.isRunning, quarter, setQuarter, scores, teamAId, teamBId]);
 
   // Timeout Countdown Effect
   useEffect(() => {
@@ -900,8 +918,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     }
     
     // ✅ OPTIMIZATION: Skip heavy engine processing for follow-up stats (allows modals to close immediately)
-    // Assist, rebound, and turnover stats don't affect clock/possession/sequences - only need database write
-    const isFollowUpStat = stat.statType === 'assist' || stat.statType === 'rebound' || stat.statType === 'turnover';
+    // Assist, rebound, turnover, and free throw stats don't affect clock/possession/sequences - only need database write
+    // Free throws are part of sequences (foul → FT) but don't need engine processing
+    const isFollowUpStat = stat.statType === 'assist' || stat.statType === 'rebound' || stat.statType === 'turnover' || stat.statType === 'free_throw';
     
     // ✅ FIX #2: Track optimistic score update for potential rollback
     // ✅ CRITICAL FIX: Declare outside try block so it's accessible in catch block

@@ -518,52 +518,51 @@ function StatTrackerV3Content() {
     const isLastShot = currentSequence.currentShot >= currentSequence.totalShots;
     const isMissed = !currentResult.made;
     
-    // ✅ FIX: Clear sequence state IMMEDIATELY if last shot to prevent modal reopening
-    if (isLastShot) {
+    // ✅ OPTIMIZATION: Handle sequence continuation BEFORE database write (non-blocking)
+    if (!isLastShot) {
+      // Continue to next shot - auto-advance (use captured values)
+      setFtAutoSequence({
+        ...currentSequence,
+        currentShot: currentSequence.currentShot + 1,
+        results: newResults
+      });
+      // Modal will automatically reopen with new currentShot value
+    } else {
+      // ✅ OPTIMIZATION: Clear sequence state IMMEDIATELY (optimistic UI)
       setFtAutoSequence(null);
     }
     
-    try {
-      // Record current shot (using captured values)
-      const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === currentSequence.shooterId);
-      const isCustomPlayer = currentSequence.shooterId.startsWith('custom-') || 
-                            (shooterData && shooterData.is_custom_player === true);
-      
-      // ✅ FIX: Pass skipRebound flag to prevent rebound prompt for non-last missed shots
-      // Rebound should only appear on the LAST missed free throw
-      await tracker.recordStat({
-        gameId: gameData.id,
-        playerId: isCustomPlayer ? undefined : currentSequence.shooterId,
-        customPlayerId: isCustomPlayer ? currentSequence.shooterId : undefined,
-        teamId: currentSequence.shooterTeamId,
-        statType: 'free_throw',
-        modifier: currentResult.made ? 'made' : 'missed',
-        // ✅ FIX: Use eventMetadata to pass skipRebound flag for non-last missed shots
-        eventMetadata: isMissed && !isLastShot ? { skipRebound: true } : undefined
-      });
-      
-      // Check if sequence should continue (only if not last shot)
-      if (!isLastShot) {
-        // Continue to next shot - auto-advance (use captured values)
-        setFtAutoSequence({
-          ...currentSequence,
-          currentShot: currentSequence.currentShot + 1,
-          results: newResults
-        });
-        // Modal will automatically reopen with new currentShot value
-      } else {
-        // Sequence complete - show success notification
+    // Record current shot (using captured values)
+    const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === currentSequence.shooterId);
+    const isCustomPlayer = currentSequence.shooterId.startsWith('custom-') || 
+                          (shooterData && shooterData.is_custom_player === true);
+    
+    // ✅ OPTIMIZATION: Write to database in background (non-blocking)
+    tracker.recordStat({
+      gameId: gameData.id,
+      playerId: isCustomPlayer ? undefined : currentSequence.shooterId,
+      customPlayerId: isCustomPlayer ? currentSequence.shooterId : undefined,
+      teamId: currentSequence.shooterTeamId,
+      statType: 'free_throw',
+      modifier: currentResult.made ? 'made' : 'missed',
+      // ✅ FIX: Use eventMetadata to pass skipRebound flag for non-last missed shots
+      eventMetadata: isMissed && !isLastShot ? { skipRebound: true } : undefined
+    }).then(() => {
+      // Show success notification only after write completes
+      if (isLastShot) {
         notify.success('Free Throws Recorded', `${newResults.length} free throw(s) recorded successfully`);
       }
-    } catch (error) {
+    }).catch(error => {
       console.error('❌ Error recording free throw:', error);
       notify.error(
         'Failed to record free throw',
         error instanceof Error ? error.message : 'Please try again'
       );
-      // Only clear if not already cleared
-      setFtAutoSequence(null);
-    }
+      // Clear sequence on error if not already cleared
+      if (!isLastShot) {
+        setFtAutoSequence(null);
+      }
+    });
   };
   
   // ✅ NEW: Cancel FT auto-sequence
@@ -1652,32 +1651,43 @@ function StatTrackerV3Content() {
           isOpen={true}
           onClose={tracker.clearPlayPrompt}
           onComplete={async (results) => {
-            try {
-              // Record all FT results
-              // ✅ FIX: Use shooterId (not victimPlayerId) to match metadata
-              const shooterId = tracker.playPrompt.metadata?.shooterId;
-              if (!shooterId) {
-                throw new Error('Shooter ID not found in metadata');
-              }
-              
-              const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
-              if (!shooterTeamId) {
-                throw new Error('Shooter team ID not found in metadata');
-              }
-              
-              const isTeamAPlayer = teamAPlayers.some(p => p.id === shooterId);
-              const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-              
-              // ✅ FIX: Check if shooter is a custom player (TWO CHECKS)
-              const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === shooterId);
-              const isCustomPlayer = shooterId?.startsWith('custom-') || 
-                                    (shooterData && shooterData.is_custom_player === true);
-              
-              // ✅ FIX: Get sequenceId from playPrompt to link free throws to foul sequence
-              const sequenceId = tracker.playPrompt.sequenceId;
-              
-              for (const result of results) {
-                await tracker.recordStat({
+            // Record all FT results
+            // ✅ FIX: Use shooterId (not victimPlayerId) to match metadata
+            const shooterId = tracker.playPrompt.metadata?.shooterId;
+            if (!shooterId) {
+              console.error('❌ Shooter ID not found in metadata');
+              notify.error('Error', 'Shooter ID not found. Please try again.');
+              tracker.clearPlayPrompt();
+              return;
+            }
+            
+            const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
+            if (!shooterTeamId) {
+              console.error('❌ Shooter team ID not found in metadata');
+              notify.error('Error', 'Shooter team ID not found. Please try again.');
+              tracker.clearPlayPrompt();
+              return;
+            }
+            
+            const isTeamAPlayer = teamAPlayers.some(p => p.id === shooterId);
+            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+            
+            // ✅ FIX: Check if shooter is a custom player (TWO CHECKS)
+            const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === shooterId);
+            const isCustomPlayer = shooterId?.startsWith('custom-') || 
+                                  (shooterData && shooterData.is_custom_player === true);
+            
+            // ✅ FIX: Get sequenceId from playPrompt to link free throws to foul sequence
+            const sequenceId = tracker.playPrompt.sequenceId;
+            
+            // ✅ OPTIMIZATION: Close modal immediately (optimistic UI)
+            tracker.clearPlayPrompt();
+            
+            // ✅ OPTIMIZATION: Write all FTs to database in background (non-blocking)
+            // Record all free throws sequentially using Promise.all for parallel writes
+            Promise.all(
+              results.map(result =>
+                tracker.recordStat({
                   gameId: gameData.id,
                   playerId: isCustomPlayer ? undefined : shooterId, // ✅ Only for real players
                   customPlayerId: isCustomPlayer ? shooterId : undefined, // ✅ Only for custom players
@@ -1685,18 +1695,15 @@ function StatTrackerV3Content() {
                   statType: 'free_throw',
                   modifier: result.made ? 'made' : 'missed',
                   sequenceId: sequenceId // ✅ Link free throws to foul sequence
-                });
-              }
-              
-              tracker.clearPlayPrompt();
-            } catch (error) {
+                })
+              )
+            ).catch(error => {
               console.error('❌ Error recording free throws:', error);
               notify.error(
                 'Failed to record free throws',
                 error instanceof Error ? error.message : 'Please try again'
               );
-              tracker.clearPlayPrompt();
-            }
+            });
           }}
           shooterName={tracker.playPrompt.metadata?.shooterName || 'Unknown'}
           totalShots={tracker.playPrompt.metadata?.totalShots || 2}
