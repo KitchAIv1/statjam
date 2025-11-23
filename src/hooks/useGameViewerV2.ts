@@ -530,7 +530,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         };
       });
 
-      // 7. Calculate real-time scores from game_stats (fallback if DB scores are 0)
+      // 7. Calculate real-time scores from game_stats (always use calculated scores for accuracy)
       const calculateScoresFromStats = (stats: GameStats[], teamAId: string, teamBId: string) => {
         let homeScore = 0;
         let awayScore = 0;
@@ -561,9 +561,10 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         team_a_name: teamAName,
         team_b_name: teamBName,
         tournament_name: tournamentName,
-        // ✅ FIX: Use calculated scores if DB scores are 0 (real-time score tracking)
-        home_score: gameInfo.home_score || calculatedScores.homeScore,
-        away_score: gameInfo.away_score || calculatedScores.awayScore
+        // ✅ FIX: Always use calculated scores from game_stats for real-time accuracy
+        // This ensures scores match team tabs and reflect actual game state
+        home_score: calculatedScores.homeScore,
+        away_score: calculatedScores.awayScore
       };
 
       // 9. Transform stats, substitutions, AND timeouts into play-by-play entries
