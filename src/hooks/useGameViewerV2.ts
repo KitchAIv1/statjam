@@ -248,6 +248,7 @@ function transformStatsToPlays(
                      'Unknown Team';
     
     const description = `SUB: ${sub.player_in_name} in for ${sub.player_out_name}`;
+    const subWithCustom = sub as any;
     
     return {
       id: sub.id,
@@ -257,8 +258,9 @@ function transformStatsToPlays(
       gameTimeSeconds: sub.game_time_seconds || 0,
       description,
       statType: 'substitution',
-      playerId: sub.player_in_id,
+      playerId: sub.player_in_id || subWithCustom.custom_player_in_id || '', // ✅ FIX: Handle custom players
       playerName: sub.player_in_name,
+      playerPhotoUrl: subWithCustom.player_in_photo_url || null, // ✅ FIX: Include player photo for avatar display
       teamId: sub.team_id || '',
       teamName,
       modifier: null,
@@ -512,7 +514,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         };
       });
 
-      // Enrich substitutions with player names (handle both regular and custom players)
+      // Enrich substitutions with player names and photo URLs (handle both regular and custom players)
       gameSubstitutions = gameSubstitutions.map(sub => {
         const subWithCustom = sub as any;
         const playerInId = sub.player_in_id || subWithCustom.custom_player_in_id;
@@ -522,7 +524,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         return {
           ...sub,
           player_in_name: playerInInfo.name,
-          player_out_name: playerOutInfo.name
+          player_out_name: playerOutInfo.name,
+          player_in_photo_url: playerInInfo.photoUrl, // ✅ FIX: Add photo URL for player coming in
+          player_out_photo_url: playerOutInfo.photoUrl // ✅ FIX: Add photo URL for player going out
         };
       });
 
