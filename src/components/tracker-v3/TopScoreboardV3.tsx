@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Edit3, Check, X, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ interface TopScoreboardV3Props {
   onStop: () => void;
   onReset: () => void;
   onSetCustomTime?: (minutes: number, seconds: number) => void; // NEW: Manual time setting
+  onSetQuarter?: (quarter: number) => void; // ✅ NEW: Manual quarter setting
   // NBA Standard: Team fouls and timeouts
   teamAFouls?: number;
   teamBFouls?: number;
@@ -59,6 +60,7 @@ export function TopScoreboardV3({
   onStop,
   onReset,
   onSetCustomTime,
+  onSetQuarter,
   teamAFouls = 0,
   teamBFouls = 0,
   teamATimeouts = 5,
@@ -89,6 +91,10 @@ export function TopScoreboardV3({
   const [editMinutes, setEditMinutes] = useState(minutes);
   const [editSeconds, setEditSeconds] = useState(seconds);
   
+  // ✅ NEW: Quarter edit mode state
+  const [isQuarterEditMode, setIsQuarterEditMode] = useState(false);
+  const [editQuarter, setEditQuarter] = useState(quarter);
+  
   // Shot Clock Edit mode state
   const [isShotClockEditMode, setIsShotClockEditMode] = useState(false);
   const [editShotClockSeconds, setEditShotClockSeconds] = useState(shotClockSeconds || 24);
@@ -96,6 +102,13 @@ export function TopScoreboardV3({
   // Team Stats Modal state
   const [teamStatsModalOpen, setTeamStatsModalOpen] = useState(false);
   const [selectedTeamForStats, setSelectedTeamForStats] = useState<'A' | 'B' | null>(null);
+
+  // ✅ Sync editQuarter when quarter prop changes
+  useEffect(() => {
+    if (!isQuarterEditMode) {
+      setEditQuarter(quarter);
+    }
+  }, [quarter, isQuarterEditMode]);
   
   const formatTime = (mins: number, secs: number) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -104,6 +117,26 @@ export function TopScoreboardV3({
   const getQuarterDisplay = (q: number) => {
     if (q <= 4) return `Q${q}`;
     return `OT${q - 4}`;
+  };
+
+  // ✅ NEW: Handle quarter edit mode toggle
+  const handleQuarterEditToggle = () => {
+    if (isQuarterEditMode) {
+      // Cancel edit - reset to current quarter
+      setEditQuarter(quarter);
+    } else {
+      // Enter edit mode - initialize with current quarter
+      setEditQuarter(quarter);
+    }
+    setIsQuarterEditMode(!isQuarterEditMode);
+  };
+
+  // ✅ NEW: Handle quarter change
+  const handleSetQuarter = () => {
+    if (onSetQuarter && editQuarter !== quarter) {
+      onSetQuarter(editQuarter);
+    }
+    setIsQuarterEditMode(false);
   };
 
   // NEW: Handle edit mode toggle
@@ -273,17 +306,66 @@ export function TopScoreboardV3({
             {/* Left Container - Quarter + Game Clock + Start/Reset Buttons */}
             <div className="flex flex-col items-center justify-between gap-3 p-3 md:p-4 rounded-xl border-2 bg-white shadow-lg min-w-[240px] md:min-w-[280px]" style={{ borderColor: '#e5e7eb' }}>
               {/* Quarter Display */}
-              <div 
-                className="px-5 py-2 rounded-xl text-lg font-black border-2 shadow-lg"
-                style={{ 
-                  background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                  color: 'white',
-                  borderColor: '#fb923c',
-                  boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)'
-                }}
-              >
-                {getQuarterDisplay(quarter)}
-              </div>
+              {isQuarterEditMode ? (
+                // ✅ Quarter Edit Mode - Dropdown
+                <div className="flex flex-col items-center gap-2">
+                  <select
+                    value={editQuarter}
+                    onChange={(e) => setEditQuarter(parseInt(e.target.value))}
+                    className="px-4 py-2 rounded-xl text-lg font-black border-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                      color: 'white',
+                      borderColor: '#fb923c',
+                      boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="1">Q1</option>
+                    <option value="2">Q2</option>
+                    <option value="3">Q3</option>
+                    <option value="4">Q4</option>
+                    <option value="5">OT1</option>
+                    <option value="6">OT2</option>
+                    <option value="7">OT3</option>
+                    <option value="8">OT4</option>
+                  </select>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSetQuarter}
+                      size="sm"
+                      className="h-7 px-3 bg-green-500 hover:bg-green-600 text-white text-xs"
+                    >
+                      <Check className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      onClick={handleQuarterEditToggle}
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-3 text-xs"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // ✅ Quarter Display (Clickable to edit)
+                <div 
+                  className={`px-5 py-2 rounded-xl text-lg font-black border-2 shadow-lg ${
+                    onSetQuarter ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
+                  }`}
+                  onClick={onSetQuarter ? handleQuarterEditToggle : undefined}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                    color: 'white',
+                    borderColor: '#fb923c',
+                    boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)'
+                  }}
+                  title={onSetQuarter ? 'Click to edit quarter' : undefined}
+                >
+                  {getQuarterDisplay(quarter)}
+                </div>
+              )}
 
               {/* Game Clock Display */}
               <div className="text-center w-full">

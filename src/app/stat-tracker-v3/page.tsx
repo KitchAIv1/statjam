@@ -1248,38 +1248,36 @@ function StatTrackerV3Content() {
           isOpen={true}
           onClose={tracker.clearPlayPrompt}
           onSelectPlayer={async (playerId) => {
-            try {
-              // Record assist stat linked to the shot
-              // ✅ PHASE 5 FIX: Assists must have modifier IS NULL per database constraint
-              
-              // ✅ FIX: Check if assisting player is custom player (TWO CHECKS)
-              const assistingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
-              const isCustomPlayer = playerId.startsWith('custom-') || 
-                                    (assistingPlayer && assistingPlayer.is_custom_player === true);
-              const primaryEventId = tracker.playPrompt.primaryEventId;
-              
-              const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
-              const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-              
-              await tracker.recordStat({
-                gameId: gameData.id,
-                playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
-                customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
-                teamId,
-                statType: 'assist',
-                modifier: null, // ✅ NULL modifier for assists
-                metadata: primaryEventId ? { primaryEventId } : undefined
-              });
-              
-              tracker.clearPlayPrompt();
-            } catch (error) {
+            // ✅ FIX: Check if assisting player is custom player (TWO CHECKS)
+            const assistingPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+            const isCustomPlayer = playerId.startsWith('custom-') || 
+                                  (assistingPlayer && assistingPlayer.is_custom_player === true);
+            const primaryEventId = tracker.playPrompt.primaryEventId;
+            
+            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+            
+            // ✅ OPTIMIZATION: Close modal immediately (optimistic UI)
+            tracker.clearPlayPrompt();
+            
+            // ✅ OPTIMIZATION: Write to database in background (non-blocking)
+            // Record assist stat linked to the shot
+            // ✅ PHASE 5 FIX: Assists must have modifier IS NULL per database constraint
+            tracker.recordStat({
+              gameId: gameData.id,
+              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+              teamId,
+              statType: 'assist',
+              modifier: null, // ✅ NULL modifier for assists
+              metadata: primaryEventId ? { primaryEventId } : undefined
+            }).catch(error => {
               console.error('❌ Error recording assist:', error);
               notify.error(
                 'Failed to record assist',
                 error instanceof Error ? error.message : 'Please try again'
               );
-              tracker.clearPlayPrompt();
-            }
+            });
           }}
           onSkip={() => {
             console.log('⏭️ Skipping assist prompt');
@@ -1307,57 +1305,47 @@ function StatTrackerV3Content() {
           isOpen={true}
           onClose={tracker.clearPlayPrompt}
           onSelectPlayer={async (playerId, reboundType) => {
-            try {
-              // 🔍 DEBUG: Log rebound recording
-              console.log('🔍 [REBOUND RECORD DEBUG]', {
-                playerId,
-                reboundType,
-                shooterTeamId: tracker.playPrompt.metadata?.shooterTeamId,
-                teamAId: gameData.team_a_id,
-                teamBId: gameData.team_b_id
+            // ✅ FIX: Handle custom players properly
+            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+            const primaryEventId = tracker.playPrompt.primaryEventId;
+            
+            // Check if rebounder is a custom player
+            const rebounderData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+            const isCustomPlayer = playerId.startsWith('custom-') || 
+                                  (rebounderData && rebounderData.is_custom_player === true);
+            
+            // 🔍 DEBUG: Verify rebound type before recording
+            const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
+            const expectedReboundType = teamId === shooterTeamId ? 'offensive' : 'defensive';
+            if (reboundType !== expectedReboundType) {
+              console.warn('⚠️ [REBOUND TYPE MISMATCH]', {
+                recorded: reboundType,
+                expected: expectedReboundType,
+                rebounderTeamId: teamId,
+                shooterTeamId
               });
-              
-              // ✅ FIX: Handle custom players properly
-              const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
-              const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-              const primaryEventId = tracker.playPrompt.primaryEventId;
-              
-              // Check if rebounder is a custom player
-              const rebounderData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
-              const isCustomPlayer = playerId.startsWith('custom-') || 
-                                    (rebounderData && rebounderData.is_custom_player === true);
-              
-              // 🔍 DEBUG: Verify rebound type before recording
-              const shooterTeamId = tracker.playPrompt.metadata?.shooterTeamId;
-              const expectedReboundType = teamId === shooterTeamId ? 'offensive' : 'defensive';
-              if (reboundType !== expectedReboundType) {
-                console.warn('⚠️ [REBOUND TYPE MISMATCH]', {
-                  recorded: reboundType,
-                  expected: expectedReboundType,
-                  rebounderTeamId: teamId,
-                  shooterTeamId
-                });
-              }
-              
-              await tracker.recordStat({
-                gameId: gameData.id,
-                playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
-                customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
-                teamId,
-                statType: 'rebound',
-                modifier: reboundType, // ✅ Use the reboundType determined by the modal
-                metadata: primaryEventId ? { primaryEventId } : undefined
-              });
-              
-              tracker.clearPlayPrompt();
-            } catch (error) {
+            }
+            
+            // ✅ OPTIMIZATION: Close modal immediately (optimistic UI)
+            tracker.clearPlayPrompt();
+            
+            // ✅ OPTIMIZATION: Write to database in background (non-blocking)
+            tracker.recordStat({
+              gameId: gameData.id,
+              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+              teamId,
+              statType: 'rebound',
+              modifier: reboundType, // ✅ Use the reboundType determined by the modal
+              metadata: primaryEventId ? { primaryEventId } : undefined
+            }).catch(error => {
               console.error('❌ Error recording rebound:', error);
               notify.error(
                 'Failed to record rebound',
                 error instanceof Error ? error.message : 'Please try again'
               );
-              tracker.clearPlayPrompt();
-            }
+            });
           }}
           onSkip={() => {
             console.log('⏭️ Skipping rebound prompt');
@@ -1517,36 +1505,35 @@ function StatTrackerV3Content() {
           isOpen={true}
           onClose={tracker.clearPlayPrompt}
           onSelectPlayer={async (playerId) => {
-            try {
-              // Record turnover stat linked to the steal
-              const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
-              const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
-              const primaryEventId = tracker.playPrompt.primaryEventId;
-              
-              // ✅ FIX: Check if player is a custom player (TWO CHECKS)
-              const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
-              const isCustomPlayer = playerId.startsWith('custom-') || 
-                                    (playerData && playerData.is_custom_player === true);
-              
-              await tracker.recordStat({
-                gameId: gameData.id,
-                playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
-                customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
-                teamId,
-                statType: 'turnover',
-                modifier: 'steal',
-                metadata: primaryEventId ? { primaryEventId } : undefined
-              });
-              
-              tracker.clearPlayPrompt();
-            } catch (error) {
+            // Record turnover stat linked to the steal
+            const isTeamAPlayer = teamAPlayers.some(p => p.id === playerId);
+            const teamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+            const primaryEventId = tracker.playPrompt.primaryEventId;
+            
+            // ✅ FIX: Check if player is a custom player (TWO CHECKS)
+            const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
+            const isCustomPlayer = playerId.startsWith('custom-') || 
+                                  (playerData && playerData.is_custom_player === true);
+            
+            // ✅ OPTIMIZATION: Close modal immediately (optimistic UI)
+            tracker.clearPlayPrompt();
+            
+            // ✅ OPTIMIZATION: Write to database in background (non-blocking)
+            tracker.recordStat({
+              gameId: gameData.id,
+              playerId: isCustomPlayer ? undefined : playerId, // ✅ Only for real players
+              customPlayerId: isCustomPlayer ? playerId : undefined, // ✅ Only for custom players
+              teamId,
+              statType: 'turnover',
+              modifier: 'steal',
+              metadata: primaryEventId ? { primaryEventId } : undefined
+            }).catch(error => {
               console.error('❌ Error recording turnover:', error);
               notify.error(
                 'Failed to record turnover',
                 error instanceof Error ? error.message : 'Please try again'
               );
-              tracker.clearPlayPrompt();
-            }
+            });
           }}
           onSkip={() => {
             console.log('⏭️ Skipping turnover prompt');
@@ -1883,6 +1870,7 @@ function StatTrackerV3Content() {
           onStop={tracker.stopClock}
           onReset={tracker.resetClock}
           onSetCustomTime={tracker.setCustomTime} // NEW: Manual clock editing
+          onSetQuarter={tracker.setQuarter} // ✅ NEW: Manual quarter editing
           // NBA Standard: Team fouls and timeouts (placeholder values for now)
           teamAFouls={tracker.teamFouls[gameData.team_a_id] || 0}
           teamBFouls={tracker.teamFouls[gameData.team_b_id] || 0}

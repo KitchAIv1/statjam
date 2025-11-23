@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Play, Pause, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,7 @@ interface CompactScoreboardV3Props {
   onStopClock: () => void;
   onResetClock: () => void;
   onSetCustomTime?: (minutes: number, seconds: number) => void; // NEW: Manual time setting
+  onSetQuarter?: (quarter: number) => void; // ✅ NEW: Manual quarter setting
   // Shot Clock Props
   shotClockSeconds?: number;
   shotClockIsRunning?: boolean;
@@ -68,6 +69,7 @@ export function CompactScoreboardV3({
   onStopClock,
   onResetClock,
   onSetCustomTime,
+  onSetQuarter,
   shotClockSeconds = 24,
   shotClockIsRunning = false,
   shotClockIsVisible = true,
@@ -93,6 +95,42 @@ export function CompactScoreboardV3({
       return words[0].substring(0, 3).toUpperCase();
     }
     return words.map(w => w[0]).join('').substring(0, 3).toUpperCase();
+  };
+
+  // ✅ NEW: Quarter edit mode state
+  const [isQuarterEditMode, setIsQuarterEditMode] = useState(false);
+  const [editQuarter, setEditQuarter] = useState(quarter);
+
+  // ✅ Sync editQuarter when quarter prop changes
+  useEffect(() => {
+    if (!isQuarterEditMode) {
+      setEditQuarter(quarter);
+    }
+  }, [quarter, isQuarterEditMode]);
+
+  // ✅ NEW: Handle quarter edit mode toggle
+  const handleQuarterEditToggle = () => {
+    if (isQuarterEditMode) {
+      // Cancel edit - reset to current quarter
+      setEditQuarter(quarter);
+    } else {
+      // Enter edit mode - initialize with current quarter
+      setEditQuarter(quarter);
+    }
+    setIsQuarterEditMode(!isQuarterEditMode);
+  };
+
+  // ✅ NEW: Handle quarter change
+  const handleSetQuarter = () => {
+    if (onSetQuarter && editQuarter !== quarter) {
+      onSetQuarter(editQuarter);
+    }
+    setIsQuarterEditMode(false);
+  };
+
+  const getQuarterDisplay = (q: number) => {
+    if (q <= 4) return `Q${q}`;
+    return `OT${q - 4}`;
   };
 
   return (
@@ -124,12 +162,54 @@ export function CompactScoreboardV3({
         <div className="col-span-1 flex flex-col items-center justify-center gap-2">
           {/* Quarter Section */}
           <div className="flex flex-col items-center justify-center gap-1">
-            <Badge 
-              variant="outline"
-              className="text-orange-500 border-orange-500 bg-orange-500/10 px-2 py-1 text-xs font-bold"
-            >
-              Q{quarter}
-            </Badge>
+            {isQuarterEditMode ? (
+              // ✅ Quarter Edit Mode - Dropdown (Mobile)
+              <div className="flex flex-col items-center gap-1">
+                <select
+                  value={editQuarter}
+                  onChange={(e) => setEditQuarter(parseInt(e.target.value))}
+                  className="text-orange-500 border-orange-500 bg-orange-500/10 px-2 py-1 text-xs font-bold rounded border focus:outline-none focus:ring-1 focus:ring-orange-500"
+                >
+                  <option value="1">Q1</option>
+                  <option value="2">Q2</option>
+                  <option value="3">Q3</option>
+                  <option value="4">Q4</option>
+                  <option value="5">OT1</option>
+                  <option value="6">OT2</option>
+                  <option value="7">OT3</option>
+                  <option value="8">OT4</option>
+                </select>
+                <div className="flex gap-1">
+                  <Button
+                    onClick={handleSetQuarter}
+                    size="sm"
+                    className="h-6 px-2 bg-green-500 hover:bg-green-600 text-white text-[10px]"
+                  >
+                    <Check className="w-2.5 h-2.5" />
+                  </Button>
+                  <Button
+                    onClick={handleQuarterEditToggle}
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[10px]"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              // ✅ Quarter Display (Clickable to edit)
+              <Badge 
+                variant="outline"
+                className={`text-orange-500 border-orange-500 bg-orange-500/10 px-2 py-1 text-xs font-bold ${
+                  onSetQuarter ? 'cursor-pointer hover:bg-orange-500/20 transition-colors' : ''
+                }`}
+                onClick={onSetQuarter ? handleQuarterEditToggle : undefined}
+                title={onSetQuarter ? 'Click to edit quarter' : undefined}
+              >
+                {getQuarterDisplay(quarter)}
+              </Badge>
+            )}
             <div 
               className={`text-2xl font-black font-mono leading-none ${
                 isRunning ? 'text-green-500' : 'text-orange-500'

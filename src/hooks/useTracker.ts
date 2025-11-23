@@ -4,6 +4,7 @@ import { Ruleset } from '@/lib/types/ruleset';
 import { AutomationFlags, DEFAULT_AUTOMATION_FLAGS, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation';
 import { RulesetService } from '@/lib/config/rulesetService';
 import { gameSubscriptionManager } from '@/lib/subscriptionManager';
+import { validateQuarter } from '@/lib/validation/statValidation';
 
 interface UseTrackerProps {
   initialGameId: string;
@@ -164,6 +165,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     [teamAId]: 0,
     [teamBId]: 0
   });
+  
+  // ✅ FIX #1: Ref to store current scores state (prevents stale closure in refresh function)
+  const scoresRef = useRef<ScoreByTeam>(scores);
+  
+  // ✅ Keep ref in sync with state (matches clockRef pattern)
+  useEffect(() => {
+    scoresRef.current = scores;
+  }, [scores]);
   const [teamFouls, setTeamFouls] = useState({
     [teamAId]: 0,
     [teamBId]: 0
@@ -492,79 +501,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     }
   }, [gameId, teamAId, teamBId, initialGameData]);
 
-  // ✅ NEW: Function to refresh scores from database (matches viewer logic exactly)
-  const refreshScoresFromDatabase = useCallback(async () => {
-    try {
-      const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
-      const stats = await GameServiceV3.getGameStats(gameId);
-      
-      if (stats && stats.length > 0) {
-        let teamAScore = 0;
-        let teamBScore = 0;
-        
-        for (const stat of stats) {
-          // ✅ EXACT SAME LOGIC AS VIEWER: Use stat_value and only count 'made'
-          if (stat.modifier !== 'made') continue;
-          
-          const points = stat.stat_value || 0;
-          
-          // ✅ NEW: Check is_opponent_stat flag for coach mode
-          if (stat.is_opponent_stat) {
-            // Opponent stats go to team B score
-            teamBScore += points;
-          } else if (stat.team_id === teamAId) {
-            teamAScore += points;
-          } else if (stat.team_id === teamBId) {
-            teamBScore += points;
-          }
-        }
-        
-        // ✅ CHECK: Compare with current scores before updating
-        const currentScores = scores;
-        const newScores = { [teamAId]: teamAScore, [teamBId]: teamBScore };
-        
-        // Update scores to match database exactly
-        // Handle coach mode where both team IDs are the same
-        if (teamAId === teamBId) {
-          // Coach mode: opponent score is now correctly calculated via is_opponent_stat flag
-          // Since team A and B IDs are the same, we use the same key but calculate separately
-          // For opponent stats, we calculate them but store them separately if needed
-          setScores({ [teamAId]: teamAScore, opponent: teamBScore });
-        } else {
-          // Tournament mode: use both scores
-          setScores(newScores);
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error refreshing scores:', error);
-    }
-  }, [gameId, teamAId, teamBId]);
-
-  // ✅ NEW: Periodic score refresh to stay in sync with database/viewer
-  useEffect(() => {
-    if (!gameId || gameId === 'unknown') return;
-    
-    // Initial refresh after 5 seconds (for immediate testing)
-    const initialRefresh = setTimeout(() => {
-      refreshScoresFromDatabase();
-    }, 5000);
-    
-    // Then refresh every 15 seconds to stay in sync with viewer
-    const scoreRefreshInterval = setInterval(() => {
-      refreshScoresFromDatabase();
-    }, 15000); // 15 seconds
-    
-    return () => {
-      clearTimeout(initialRefresh);
-      clearInterval(scoreRefreshInterval);
-    };
-  }, [gameId, refreshScoresFromDatabase]);
-
-  // ✅ NEW: Real-time subscription to sync timeout state from database
+  // ✅ Real-time subscription to sync timeout state and scores from database
   useEffect(() => {
     if (!gameId || gameId === 'unknown' || !teamAId || !teamBId) return;
 
-    console.log('🔌 useTracker: Setting up timeout subscription for game:', gameId);
+    console.log('🔌 useTracker: Setting up real-time subscription for game:', gameId);
     
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
       if (table === 'games' && payload.new) {
@@ -582,6 +523,44 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             [teamBId]: updatedGame.team_b_timeouts_remaining ?? 5
           });
         }
+        
+        // ✅ DISABLED: WebSocket score sync - Database scores can be stale/incorrect
+        // Scores are calculated from game_stats (source of truth) during initialization
+        // WebSocket score updates were overwriting correctly calculated scores with stale database values
+        // Rely on calculated scores from stats instead of database home_score/away_score
+        // 
+        // NOTE: Database triggers update games.home_score/away_score, but these can lag behind
+        // or be incorrect due to trigger timing issues. Calculated scores from stats are always accurate.
+        /*
+        if (updatedGame.home_score !== undefined || updatedGame.away_score !== undefined) {
+          const currentScores = scoresRef.current;
+          const newHomeScore = updatedGame.home_score ?? 0;
+          const newAwayScore = updatedGame.away_score ?? 0;
+          
+          // Only update if scores have changed (prevents unnecessary re-renders)
+          let hasChanges = false;
+          if (teamAId === teamBId) {
+            // Coach mode: compare both team score and opponent score
+            hasChanges = (currentScores[teamAId] !== newHomeScore || currentScores.opponent !== newAwayScore);
+          } else {
+            // Tournament mode: compare both team scores
+            hasChanges = (currentScores[teamAId] !== newHomeScore || currentScores[teamBId] !== newAwayScore);
+          }
+          
+          if (hasChanges) {
+            console.log('🔄 useTracker: Scores updated from database via WebSocket:', {
+              home: newHomeScore,
+              away: newAwayScore
+            });
+            
+            if (teamAId === teamBId) {
+              setScores({ [teamAId]: newHomeScore, opponent: newAwayScore });
+            } else {
+              setScores({ [teamAId]: newHomeScore, [teamBId]: newAwayScore });
+            }
+          }
+        }
+        */
       }
     });
 
@@ -801,25 +780,48 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   }, [gameId]);
 
   const setQuarter = useCallback(async (newQuarter: number) => {
-    setQuarterState(newQuarter);
-    setLastAction(`Advanced to Quarter ${newQuarter}`);
+    // ✅ Validate quarter before changing
+    const validation = validateQuarter(newQuarter);
+    if (!validation.valid) {
+      const { notify } = await import('@/lib/services/notificationService');
+      notify.error('Invalid Quarter', validation.error || 'Quarter value is invalid');
+      console.error('❌ Invalid quarter:', validation.error);
+      return;
+    }
     
-    // Sync quarter change to database
+    // ✅ Show warning if moving to overtime
+    if (validation.warning) {
+      console.log('⚠️ Quarter change warning:', validation.warning);
+    }
+    
+    // ✅ Update quarter state
+    setQuarterState(newQuarter);
+    
+    // ✅ Reset clock for the new quarter (handles Q1-4 = 12 min, OT = 5 min)
+    resetClock(newQuarter);
+    
+    // ✅ Update last action message
+    const quarterDisplay = newQuarter <= 4 ? `Q${newQuarter}` : `OT${newQuarter - 4}`;
+    setLastAction(`Changed to ${quarterDisplay}`);
+    
+    // ✅ Sync quarter change to database
     try {
       const { GameService } = await import('@/lib/services/gameService');
       await GameService.updateGameState(gameId, {
         quarter: newQuarter,
         game_clock_minutes: Math.floor(clock.secondsRemaining / 60),
         game_clock_seconds: clock.secondsRemaining % 60,
-        is_clock_running: clock.isRunning,
+        is_clock_running: false, // ✅ Stop clock when quarter changes manually
         home_score: 0, // Scores are managed separately via stats
         away_score: 0  // Scores are managed separately via stats
       });
       console.log('✅ Quarter synced to database:', newQuarter);
     } catch (error) {
       console.error('❌ Error syncing quarter to database:', error);
+      const { notify } = await import('@/lib/services/notificationService');
+      notify.error('Sync Failed', 'Failed to sync quarter change to database');
     }
-  }, [gameId, clock]);
+  }, [gameId, clock, resetClock]);
 
   const advanceIfNeeded = useCallback(() => {
     if (clock.secondsRemaining <= 0) {
@@ -897,6 +899,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       return;
     }
     
+    // ✅ OPTIMIZATION: Skip heavy engine processing for follow-up stats (allows modals to close immediately)
+    // Assist, rebound, and turnover stats don't affect clock/possession/sequences - only need database write
+    const isFollowUpStat = stat.statType === 'assist' || stat.statType === 'rebound' || stat.statType === 'turnover';
+    
+    // ✅ FIX #2: Track optimistic score update for potential rollback
+    // ✅ CRITICAL FIX: Declare outside try block so it's accessible in catch block
+    let optimisticScoreUpdate: Record<string, number> | null = null;
+    
     try {
       const fullStat: StatRecord = {
         ...stat,
@@ -934,8 +944,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       // Prepare score update (optimistic UI)
       if (stat.modifier === 'made' && statValue > 0) {
         if (stat.isOpponentStat) {
+          optimisticScoreUpdate = { opponent: statValue };
           uiUpdates.scores = { opponent: statValue };
         } else {
+          optimisticScoreUpdate = { [stat.teamId]: statValue };
           uiUpdates.scores = { [stat.teamId]: statValue };
         }
       }
@@ -982,7 +994,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       }
 
       // ✅ OPTIMIZATION 2: Apply ALL UI updates at once (single re-render)
-      if (uiUpdates.scores) {
+      // ✅ FIX #2: Apply optimistic score update (will be rolled back if database write fails)
+      if (uiUpdates.scores && optimisticScoreUpdate) {
         setScores(prev => ({
           ...prev,
           ...(stat.isOpponentStat 
@@ -1002,9 +1015,13 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         setLastActionPlayerId(uiUpdates.lastActionPlayerId || null);
       }
 
-      // ✅ OPTIMIZATION 3: Process clock automation BEFORE database write (non-blocking)
-      // This provides instant visual feedback while the network request is in flight
-      if (ruleset && automationFlags.clock.enabled) {
+      // ✅ OPTIMIZATION: Skip heavy engine processing for follow-up stats (allows modals to close immediately)
+      // For assist/rebound/turnover stats, skip clock/possession/play engine processing (they don't affect these systems)
+      // Follow-up stats only need database write - this allows the modals to close immediately
+      if (!isFollowUpStat) {
+        // ✅ OPTIMIZATION 3: Process clock automation BEFORE database write (non-blocking)
+        // This provides instant visual feedback while the network request is in flight
+        if (ruleset && automationFlags.clock.enabled) {
         const { ClockEngine } = await import('@/lib/engines/clockEngine');
         
         // Map stat types to ClockEngine event types
@@ -1271,17 +1288,20 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           }
         }
       }
+      } // End of if (!isFollowUpStat) block - skip engine processing for follow-up stats (assist/rebound/turnover)
 
       // ✅ OPTIMIZATION 5: Database write happens AFTER UI updates (non-blocking)
       // Use Promise.all to load imports in parallel
       const [
         { GameServiceV3 },
         { validateStatValue, validateQuarter },
-        { notify }
+        { notify },
+        { statWriteQueueService }
       ] = await Promise.all([
         import('@/lib/services/gameServiceV3'),
         import('@/lib/validation/statValidation'),
-        import('@/lib/services/notificationService')
+        import('@/lib/services/notificationService'),
+        import('@/lib/services/statWriteQueueService')
       ]);
 
       // Validate quarter
@@ -1314,24 +1334,28 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         });
       }
       
-      // Record stat in database (V3 - raw HTTP, never hangs)
-      const result = await GameServiceV3.recordStat({
-        gameId: stat.gameId,
-        playerId: stat.playerId,
-        customPlayerId: stat.customPlayerId,
-        isOpponentStat: stat.isOpponentStat,
-        teamId: stat.teamId,
-        statType: stat.statType,
-        statValue: statValue,
-        modifier: stat.modifier || null,
-        quarter: quarter,
-        gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
-        gameTimeSeconds: clock.secondsRemaining % 60,
-        // ✅ FIX: Pass sequenceId and event linking fields to database
-        sequenceId: stat.sequenceId,
-        linkedEventId: stat.linkedEventId,
-        eventMetadata: stat.eventMetadata
-      });
+      // ✅ NEW: Queue database write to prevent concurrent writes and lock contention
+      // Writes are processed sequentially while UI remains responsive (optimistic updates)
+      const result = await statWriteQueueService.enqueue(
+        () => GameServiceV3.recordStat({
+          gameId: stat.gameId,
+          playerId: stat.playerId,
+          customPlayerId: stat.customPlayerId,
+          isOpponentStat: stat.isOpponentStat,
+          teamId: stat.teamId,
+          statType: stat.statType,
+          statValue: statValue,
+          modifier: stat.modifier || null,
+          quarter: quarter,
+          gameTimeMinutes: Math.floor(clock.secondsRemaining / 60),
+          gameTimeSeconds: clock.secondsRemaining % 60,
+          // ✅ FIX: Pass sequenceId and event linking fields to database
+          sequenceId: stat.sequenceId,
+          linkedEventId: stat.linkedEventId,
+          eventMetadata: stat.eventMetadata
+        }),
+        stat.statType
+      );
       
       // ✅ DEBUG: Log personal foul save result
       if (stat.statType === 'foul' && stat.modifier === 'personal') {
@@ -1340,6 +1364,22 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);
+      
+      // ✅ FIX #2: Rollback optimistic score update on database write failure
+      if (optimisticScoreUpdate) {
+        setScores(prev => {
+          const rolledBack = { ...prev };
+          if (stat.isOpponentStat && optimisticScoreUpdate!.opponent) {
+            // Rollback opponent score
+            rolledBack.opponent = Math.max(0, (prev.opponent || 0) - optimisticScoreUpdate!.opponent);
+          } else if (optimisticScoreUpdate![stat.teamId]) {
+            // Rollback team score
+            rolledBack[stat.teamId] = Math.max(0, (prev[stat.teamId] || 0) - optimisticScoreUpdate![stat.teamId]);
+          }
+          return rolledBack;
+        });
+        console.log('🔄 Rolled back optimistic score update due to database write failure');
+      }
       
       // ✅ DEBUG: Log foul-specific errors
       if (stat.statType === 'foul') {
