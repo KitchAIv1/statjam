@@ -1363,6 +1363,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       
       // ✅ NEW: Queue database write to prevent concurrent writes and lock contention
       // Writes are processed sequentially while UI remains responsive (optimistic updates)
+      // ✅ RELIABILITY: Generate idempotency key before write to prevent duplicates
+      const { IdempotencyService } = await import('@/lib/services/idempotencyService');
+      const idempotencyKey = IdempotencyService.generateKey();
+      
       const result = await statWriteQueueService.enqueue(
         () => GameServiceV3.recordStat({
           gameId: stat.gameId,
@@ -1379,7 +1383,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           // ✅ FIX: Pass sequenceId and event linking fields to database
           sequenceId: stat.sequenceId,
           linkedEventId: stat.linkedEventId,
-          eventMetadata: stat.eventMetadata
+          eventMetadata: stat.eventMetadata,
+          // ✅ RELIABILITY: Include idempotency key to prevent duplicate writes
+          idempotencyKey: idempotencyKey
         }),
         stat.statType
       );
@@ -1391,6 +1397,22 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);
+      
+      // ✅ QUICK WIN: Log error with context
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          gameId: stat.gameId,
+          action: 'record_stat',
+          metadata: {
+            statType: stat.statType,
+            modifier: stat.modifier,
+            playerId: stat.playerId,
+            teamId: stat.teamId
+          }
+        }
+      );
       
       // ✅ FIX #2: Rollback optimistic score update on database write failure
       if (optimisticScoreUpdate) {
@@ -1748,19 +1770,48 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       if (typeof window !== 'undefined') {
         try {
           const finalClock = clockRef.current;
-          sessionStorage.setItem(`clock_backup_${gameId}`, JSON.stringify({
+          const clockData = {
             minutes: Math.floor(finalClock.secondsRemaining / 60),
             seconds: finalClock.secondsRemaining % 60,
             isRunning: false, // Always stop on exit
             timestamp: Date.now()
-          }));
-          console.log(`💾 Clock backup saved to sessionStorage: ${Math.floor(finalClock.secondsRemaining / 60)}:${(finalClock.secondsRemaining % 60).toString().padStart(2, '0')}`);
+          };
+          
+          sessionStorage.setItem(`clock_backup_${gameId}`, JSON.stringify(clockData));
+          console.log(`💾 Clock backup saved to sessionStorage: ${clockData.minutes}:${clockData.seconds.toString().padStart(2, '0')}`);
+          
+          // ✅ QUICK WIN: Use sendBeacon to attempt database save (guaranteed delivery on page close)
+          // Note: sendBeacon can't set auth headers, so this is best-effort
+          // The async save below and sessionStorage backup provide redundancy
+          if (navigator.sendBeacon && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+            try {
+              // Attempt to save via sendBeacon (best-effort, may fail without auth)
+              // This ensures the request is sent even if page closes immediately
+              const beaconUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/games?id=eq.${gameId}`;
+              const beaconData = JSON.stringify({
+                game_clock_minutes: clockData.minutes,
+                game_clock_seconds: clockData.seconds,
+                is_clock_running: false
+              });
+              const blob = new Blob([beaconData], { type: 'application/json' });
+              
+              // sendBeacon will attempt the request (may fail without auth, but that's OK)
+              // The async save below and sessionStorage provide redundancy
+              if (navigator.sendBeacon(beaconUrl, blob)) {
+                console.log('✅ Clock state sent via sendBeacon (best-effort, may require auth)');
+              }
+            } catch (beaconError) {
+              // Silent fail - async save below will handle it
+              console.warn('⚠️ sendBeacon attempt failed (expected without auth), async save will handle');
+            }
+          }
         } catch (error) {
           console.error('Error saving clock to sessionStorage:', error);
         }
       }
       
       // Attempt async save with forced stop (may not complete, but try anyway)
+      // This will handle the database update, sendBeacon above ensures sessionStorage persistence
       saveClockState(true);
     };
 

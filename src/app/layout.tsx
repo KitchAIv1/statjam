@@ -6,6 +6,11 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { Toaster } from 'sonner'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 
+// Initialize Sentry for client-side
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SENTRY_DSN) {
+  require('../../sentry.client.config');
+}
+
 export const metadata: Metadata = {
   title: 'StatJam — NBA-Level Stats, Real-Time, Zero Friction',
   description: 'Professional basketball tournament platform with NBA-level automation, real-time stat tracking, and live game streaming. Built for tournaments, teams, and coaches who demand pro-level precision — anywhere, anytime.',

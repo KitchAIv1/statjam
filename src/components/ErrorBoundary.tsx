@@ -29,15 +29,9 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('🚨 ErrorBoundary caught an error:', error, errorInfo);
     this.setState({ error, errorInfo });
     
-    // In production, you could send this to an error reporting service
-    if (process.env.NODE_ENV === 'production') {
-      // TODO: Send to error reporting service (Sentry, LogRocket, etc.)
-      console.error('Production Error:', {
-        error: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack
-      });
-    }
+    // ✅ QUICK WIN: Use error logging service
+    const { errorLoggingService } = require('@/lib/services/errorLoggingService');
+    errorLoggingService.logReactError(error, errorInfo);
   }
 
   handleRefresh = () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { AlertTriangle, RotateCcw, Clock, Undo, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { PossessionIndicator } from './PossessionIndicator';
@@ -73,6 +73,10 @@ export function DesktopStatGridV3({
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
   const [showStatEditModal, setShowStatEditModal] = useState(false);
+  
+  // ✅ RELIABILITY: Double-tap prevention with debouncing
+  const lastClickTimeRef = useRef<Record<string, number>>({});
+  const DEBOUNCE_DELAY = 500; // 500ms debounce to prevent double-taps
 
   const handleStatClick = async (statType: string, modifier?: string) => {
     if (!selectedPlayer) {
@@ -89,13 +93,31 @@ export function DesktopStatGridV3({
 
     // ✅ Create unique identifier for this specific button
     const statId = `${statType}-${modifier || 'default'}`;
+    
+    // ✅ RELIABILITY: Check if button was clicked recently (double-tap prevention)
+    const now = Date.now();
+    const lastClickTime = lastClickTimeRef.current[statId] || 0;
+    if (now - lastClickTime < DEBOUNCE_DELAY) {
+      console.warn(`⚠️ Double-tap prevented for ${statId} (${now - lastClickTime}ms since last click)`);
+      return; // Ignore rapid clicks
+    }
+    
+    // Update last click time
+    lastClickTimeRef.current[statId] = now;
+    
     setIsRecording(statId);
     
     try {
       await onStatRecord(statType, modifier);
     } finally {
-      // ✅ Small delay to ensure smooth visual feedback
-      setTimeout(() => setIsRecording(null), 50);
+      // ✅ Keep button disabled for debounce period to prevent rapid clicks
+      setTimeout(() => {
+        setIsRecording(null);
+        // Clear last click time after debounce to allow next click
+        setTimeout(() => {
+          delete lastClickTimeRef.current[statId];
+        }, DEBOUNCE_DELAY);
+      }, DEBOUNCE_DELAY);
     }
   };
 
@@ -110,11 +132,27 @@ export function DesktopStatGridV3({
       return;
     }
 
-    setIsRecording(`foul-${foulType}`);
+    // ✅ RELIABILITY: Double-tap prevention for fouls
+    const foulId = `foul-${foulType}`;
+    const now = Date.now();
+    const lastClickTime = lastClickTimeRef.current[foulId] || 0;
+    if (now - lastClickTime < DEBOUNCE_DELAY) {
+      console.warn(`⚠️ Double-tap prevented for ${foulId} (${now - lastClickTime}ms since last click)`);
+      return;
+    }
+    
+    lastClickTimeRef.current[foulId] = now;
+
+    setIsRecording(foulId);
     try {
       await onFoulRecord(foulType);
     } finally {
-      setIsRecording(null);
+      setTimeout(() => {
+        setIsRecording(null);
+        setTimeout(() => {
+          delete lastClickTimeRef.current[foulId];
+        }, DEBOUNCE_DELAY);
+      }, DEBOUNCE_DELAY);
     }
   };
 

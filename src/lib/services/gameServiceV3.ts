@@ -436,6 +436,8 @@ export class GameServiceV3 {
     sequenceId?: string; // Links related events (assist→shot, rebound→miss)
     linkedEventId?: string; // Points to primary event (e.g., assist points to shot)
     eventMetadata?: Record<string, any>; // Additional context
+    // ✅ RELIABILITY: Idempotency key to prevent duplicate writes
+    idempotencyKey?: string; // Generated client-side before write
   }): Promise<any> {
     try {
       console.log('🚀 GameServiceV3: Recording stat via raw HTTP:', statData);
@@ -472,13 +474,53 @@ export class GameServiceV3 {
           // ✅ PHASE 4: Event linking fields
           sequence_id: statData.sequenceId || null,
           linked_event_id: statData.linkedEventId || null,
-          event_metadata: statData.eventMetadata || null
+          event_metadata: statData.eventMetadata || null,
+          // ✅ RELIABILITY: Idempotency key to prevent duplicate writes
+          idempotency_key: statData.idempotencyKey || null
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`❌ GameServiceV3: Failed to record stat - HTTP ${response.status}:`, errorText);
+        
+        // ✅ RELIABILITY: Check if this is a duplicate key error (idempotent operation)
+        if (response.status === 409 || errorText.includes('duplicate key') || errorText.includes('unique constraint')) {
+          // Import idempotency service dynamically
+          const { IdempotencyService } = await import('./idempotencyService');
+          const duplicateCheck = IdempotencyService.handleDuplicateError({ message: errorText });
+          
+          if (duplicateCheck.isDuplicate) {
+            console.log('✅ GameServiceV3: Duplicate write detected (idempotent operation already completed)');
+            // Return success - the write already succeeded, this is just a retry
+            // Try to fetch the existing record if possible
+            try {
+              // Attempt to fetch the existing record by idempotency key
+              const fetchUrl = `${this.SUPABASE_URL}/rest/v1/game_stats?idempotency_key=eq.${statData.idempotencyKey}&select=*&limit=1`;
+              const fetchResponse = await fetch(fetchUrl, {
+                headers: {
+                  'apikey': this.SUPABASE_ANON_KEY!,
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (fetchResponse.ok) {
+                const existingRecords = await fetchResponse.json();
+                if (existingRecords && existingRecords.length > 0) {
+                  console.log('✅ GameServiceV3: Returning existing record (idempotent operation)');
+                  return existingRecords[0];
+                }
+              }
+            } catch (fetchError) {
+              console.warn('⚠️ GameServiceV3: Could not fetch existing record, but duplicate detected - treating as success');
+            }
+            
+            // Return a success-like object even if we can't fetch the record
+            // The important thing is we don't throw an error for a duplicate
+            return { id: 'duplicate', idempotency_key: statData.idempotencyKey };
+          }
+        }
         
         // ✅ DEBUG: Log foul-specific errors
         if (statData.statType === 'foul') {

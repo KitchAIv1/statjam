@@ -183,8 +183,13 @@ export class AuthServiceV2 {
       return { data, error: null };
 
     } catch (error: any) {
-      console.error('❌ AuthServiceV2: Sign in error:', error.message);
-      return { data: null, error };
+      // ✅ RELIABILITY: Better error handling for aborted requests
+      const errorMessage = error.name === 'AbortError' 
+        ? 'Request timed out. Please check your connection and try again.'
+        : error.message || 'Sign in failed';
+      
+      console.error('❌ AuthServiceV2: Sign in error:', errorMessage);
+      return { data: null, error: new Error(errorMessage) };
     }
   }
 

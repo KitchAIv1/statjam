@@ -39,6 +39,7 @@ import { FeatureTour } from '@/components/onboarding/FeatureTour';
 import { CompletionNudge } from '@/components/onboarding/CompletionNudge';
 import { coachFeatureTourSteps } from '@/config/onboarding/coachOnboarding';
 import { GameCompletionModal } from '@/components/tracker-v3/modals/GameCompletionModal';
+import { NetworkStatusIndicator } from '@/components/ui/NetworkStatusIndicator';
 
 interface GameData {
   id: string;
@@ -2024,6 +2025,9 @@ function StatTrackerV3Content() {
             teamBScore={tracker.scores[gameData.team_b_id] || 0}
           />
         )}
+
+        {/* ✅ RELIABILITY: Network Status Indicator */}
+        <NetworkStatusIndicator position="top-right" autoHide={true} autoHideDelay={3000} />
       </div>
       </div>
     </ErrorBoundary>
