@@ -524,6 +524,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           });
         }
         
+        // ✅ Sync team fouls state when games table is updated
+        if (updatedGame.team_a_fouls !== undefined || updatedGame.team_b_fouls !== undefined) {
+          setTeamFouls({
+            [teamAId]: updatedGame.team_a_fouls ?? 0,
+            [teamBId]: updatedGame.team_b_fouls ?? 0
+          });
+        }
+        
         // ✅ DISABLED: WebSocket score sync - Database scores can be stale/incorrect
         // Scores are calculated from game_stats (source of truth) during initialization
         // WebSocket score updates were overwriting correctly calculated scores with stale database values

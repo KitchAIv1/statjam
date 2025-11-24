@@ -587,7 +587,9 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             prevGame.status === enrichedGame.status &&
             prevGame.quarter === enrichedGame.quarter &&
             prevGame.game_clock_minutes === enrichedGame.game_clock_minutes &&
-            prevGame.game_clock_seconds === enrichedGame.game_clock_seconds) {
+            prevGame.game_clock_seconds === enrichedGame.game_clock_seconds &&
+            prevGame.team_a_fouls === enrichedGame.team_a_fouls &&
+            prevGame.team_b_fouls === enrichedGame.team_b_fouls) {
           return prevGame;
         }
         return enrichedGame;
@@ -652,19 +654,13 @@ export function useGameViewerV2(gameId: string): GameViewerData {
   useEffect(() => {
     if (!gameId) return;
 
-    console.log('🔌 useGameViewerV2: Setting up hybrid subscriptions for game:', gameId);
-    
     // Use the existing hybrid subscription system
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
-      console.log('🔔 useGameViewerV2: Real-time update received:', table, payload);
-      
       // Handle custom player photo updates
       if (table === 'custom_players' && payload.new) {
         const updatedPlayer = payload.new as any;
         const playerId = updatedPlayer.id;
         const newPhotoUrl = updatedPlayer.profile_photo_url || null;
-        
-        console.log('📸 useGameViewerV2: Custom player photo updated:', { playerId, newPhotoUrl });
         
         // Update players map
         const currentPlayer = playersMapRef.current.get(playerId);

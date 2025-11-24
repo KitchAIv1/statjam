@@ -58,19 +58,14 @@ export function useTeamStats(
       }
       setError(null);
 
-      console.log('🏀 useTeamStats: Fetching team data for game:', gameId, 'team:', teamId);
-
       // ✅ PHASE 1 OPTIMIZATION: Parallel API calls (75% faster)
-      console.log('🚀 useTeamStats: Starting parallel data fetch...');
       
       // 1. First, get team roster to extract player IDs
       const teamRoster = await TeamServiceV3.getTeamPlayersWithSubstitutions(teamId, gameId);
-      console.log('✅ useTeamStats: Team roster loaded:', teamRoster.length, 'players');
 
       // 2. Extract player IDs
       const playerIds = teamRoster.map(player => player.id);
       if (playerIds.length === 0) {
-        console.log('📝 useTeamStats: No players found for team');
         setTeamStats(null);
         setOnCourtPlayers([]);
         setBenchPlayers([]);
@@ -82,9 +77,6 @@ export function useTeamStats(
         TeamStatsService.aggregateTeamStats(gameId, teamId),
         TeamStatsService.aggregatePlayerStats(gameId, teamId, playerIds)
       ]);
-      
-      console.log('✅ useTeamStats: Parallel fetch complete - Team stats + Player stats loaded');
-      console.log('📊 useTeamStats: Player stats loaded:', playerStatsData.length, 'players');
 
       // 5. Separate on-court vs bench players
       // First 5 players are on-court, rest are bench (based on TeamServiceV3 logic)
@@ -95,12 +87,6 @@ export function useTeamStats(
       setTeamStats(teamStatsData);
       setOnCourtPlayers(onCourtPlayerStats);
       setBenchPlayers(benchPlayerStats);
-
-      console.log('✅ useTeamStats: Team data updated successfully', {
-        teamStats: !!teamStatsData,
-        onCourt: onCourtPlayerStats.length,
-        bench: benchPlayerStats.length
-      });
 
     } catch (e: any) {
       console.error('❌ useTeamStats: Error fetching team data:', e);
@@ -133,17 +119,23 @@ export function useTeamStats(
   useEffect(() => {
     if (!gameId || !teamId) return;
 
-    console.log('🔌 useTeamStats: Setting up real-time subscriptions for game:', gameId, 'team:', teamId);
-    
     // Use the existing hybrid subscription system
+    // ✅ CRITICAL FIX: Always refresh on games table UPDATE (trigger completion signal)
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
-      console.log('🔔 useTeamStats: Real-time update received:', table, payload);
-      
-      // Only refresh if it's a stats-related update
-      if (table === 'game_stats' || table === 'game_substitutions') {
-        console.log('🔄 useTeamStats: Stats or substitution update, refreshing team data');
-        // Silent update - no loading spinner
+      // ✅ CRITICAL: Always refresh on games table UPDATE (trigger completion signal)
+      // This is the MOST RELIABLE approach - games UPDATE = trigger completed
+      if (table === 'games') {
         void fetchTeamData(true);
+        return;
+      }
+      
+      // Refresh for stats/substitution INSERT events (new stats added)
+      if (table === 'game_stats' || table === 'game_substitutions') {
+        const isInsertEvent = payload?.new && !payload?.old;
+        if (isInsertEvent) {
+          void fetchTeamData(true);
+        }
+        // For DELETE events, don't refresh - wait for games UPDATE (trigger completion)
       }
     });
 

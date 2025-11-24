@@ -80,7 +80,9 @@ export function DesktopStatGridV3({
       return;
     }
     
-    if (!isClockRunning) {
+    // ✅ FT Made can be recorded when clock stops (like SUB/TIMEOUT)
+    const isFTMade = statType === 'free_throw' && modifier === 'made';
+    if (!isClockRunning && !isFTMade) {
       alert('Clock must be running to record stats');
       return;
     }
@@ -322,15 +324,22 @@ export function DesktopStatGridV3({
           const statId = `${stat.statType}-${stat.modifier}`;
           const isThisButtonRecording = isRecording === statId;
           
+          // ✅ FT Made button is always enabled when clock stops (like SUB/TIMEOUT)
+          const isFTMadeButton = stat.id === 'ft-made';
+          const shouldDisableFTMade = !selectedPlayer || isThisButtonRecording;
+          const shouldDisable = isFTMadeButton 
+            ? shouldDisableFTMade 
+            : (isDisabled || isThisButtonRecording);
+          
           return (
             <Button
               key={stat.id}
               onClick={() => handleStatClick(stat.statType, stat.modifier)}
-              disabled={isDisabled || isThisButtonRecording}
+              disabled={shouldDisable}
               className={`h-20 flex flex-col justify-center items-center text-base font-bold transition-colors duration-150 rounded-xl border-2 shadow-md ${
                 isThisButtonRecording
                   ? 'bg-green-600 border-green-400 text-white shadow-xl' 
-                  : isDisabled
+                  : shouldDisable
                     ? 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400'
                     : 'bg-green-500 border-green-400 hover:bg-green-600 hover:border-green-300 text-white hover:shadow-lg active:scale-95'
               }`}

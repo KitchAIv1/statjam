@@ -50,7 +50,6 @@ export function useTeamStatsOptimized(gameId: string, teamId: string) {
       const cachedData = cache.get<TeamStatsOptimizedData>(cacheKey);
       
       if (cachedData) {
-        console.log('⚡ useTeamStatsOptimized: Using cached team stats data');
         // Set data immediately without loading state
         setState({ ...cachedData, loading: false });
         // ✅ IMPORTANT: Don't return early - subscription still needs to be set up
@@ -69,8 +68,6 @@ export function useTeamStatsOptimized(gameId: string, teamId: string) {
     }
 
     try {
-      console.log('🔍 useTeamStatsOptimized: Fetching team stats for game:', gameId, 'team:', teamId);
-
       // 1. Get team roster to extract player IDs
       const teamRoster = await TeamServiceV3.getTeamPlayersWithSubstitutions(teamId, gameId);
       const playerIds = teamRoster.map(player => player.id);
@@ -101,7 +98,6 @@ export function useTeamStatsOptimized(gameId: string, teamId: string) {
       // ✅ Cache the result
       const cacheKey = CacheKeys.teamStats(gameId, teamId);
       cache.set(cacheKey, result, CacheTTL.teamStats);
-      console.log('⚡ useTeamStatsOptimized: Team stats cached for', CacheTTL.teamStats, 'minutes');
 
       setState(result);
     } catch (error) {
@@ -136,24 +132,17 @@ export function useTeamStatsOptimized(gameId: string, teamId: string) {
 
     // ✅ FIX: Ensure ref is initialized before setting up subscription
     loadTeamStatsRef.current = loadTeamStats;
-
-    console.log('🔌 useTeamStatsOptimized: Setting up real-time subscriptions for game:', gameId, 'team:', teamId);
-    console.log('🔌 useTeamStatsOptimized: loadTeamStatsRef.current initialized:', !!loadTeamStatsRef.current);
     
     // Use the existing hybrid subscription system
+    // ✅ SIMPLIFIED APPROACH: Match play-by-play feed (which works correctly)
+    // Refresh immediately for ANY relevant update - let database queries handle correct state
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
-      console.log('🔔 useTeamStatsOptimized: Real-time update received:', table, payload);
-      console.log('🔔 useTeamStatsOptimized: loadTeamStatsRef.current available:', !!loadTeamStatsRef.current);
-      
-      // Only refresh if it's a stats-related update
-      if (table === 'game_stats' || table === 'game_substitutions') {
-        console.log('🔄 useTeamStatsOptimized: Stats or substitution update, refreshing team data (silent update)');
+      // Refresh for ANY relevant update (games, game_stats, game_substitutions)
+      // This matches the working play-by-play feed approach - simple and reliable
+      if (table === 'games' || table === 'game_stats' || table === 'game_substitutions') {
         // ✅ FIX: Use ref to access latest loadTeamStats function (avoids stale closure)
         if (loadTeamStatsRef.current) {
-          console.log('✅ useTeamStatsOptimized: Calling loadTeamStatsRef.current(true, true)');
           void loadTeamStatsRef.current(true, true); // skipCache=true, isRealTimeUpdate=true
-        } else {
-          console.warn('⚠️ useTeamStatsOptimized: loadTeamStatsRef.current is null, cannot refresh');
         }
       }
     });

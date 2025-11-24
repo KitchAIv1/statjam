@@ -32,10 +32,10 @@ useTeamStatsOptimized ❌ NO WebSocket subscriptions
 **Features:**
 - ✅ Cache-first loading (prevents loading flash)
 - ✅ Parallel data fetching (team stats + player stats)
-- ❌ **NO WebSocket subscriptions**
-- ❌ **NO real-time updates**
-- ✅ Only fetches on mount
-- ✅ Requires manual refresh (`refetch()` method available)
+- ✅ **WebSocket subscriptions** (added November 2024)
+- ✅ **Real-time updates** via `gameSubscriptionManager`
+- ✅ Automatically refreshes on `games`, `game_stats`, or `game_substitutions` changes
+- ✅ Silent updates (no loading spinner on refresh)
 
 **Code Evidence:**
 ```typescript
@@ -72,21 +72,25 @@ useTeamStats ✅ HAS WebSocket subscriptions
 
 **Code Evidence:**
 ```typescript
-// useTeamStats.ts - Lines 133-151
+// useTeamStats.ts - Lines 119-143
 useEffect(() => {
   if (!gameId || !teamId) return;
 
-  console.log('🔌 useTeamStats: Setting up real-time subscriptions');
-  
   // ✅ REAL-TIME SUBSCRIPTION
   const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
-    console.log('🔔 useTeamStats: Real-time update received:', table, payload);
-    
-    // Only refresh if it's a stats-related update
-    if (table === 'game_stats' || table === 'game_substitutions') {
-      console.log('🔄 useTeamStats: Stats or substitution update, refreshing team data');
-      // Silent update - no loading spinner
+    // ✅ CRITICAL: Always refresh on games table UPDATE (trigger completion signal)
+    if (table === 'games') {
       void fetchTeamData(true);
+      return;
+    }
+    
+    // Refresh for stats/substitution INSERT events (new stats added)
+    if (table === 'game_stats' || table === 'game_substitutions') {
+      const isInsertEvent = payload?.new && !payload?.old;
+      if (isInsertEvent) {
+        void fetchTeamData(true);
+      }
+      // For DELETE events, don't refresh - wait for games UPDATE (trigger completion)
     }
   });
 
@@ -103,19 +107,21 @@ useEffect(() => {
 | **Component** | `TeamStatsTabLight` | `TeamStatsTab` |
 | **Hook** | `useTeamStatsOptimized` | `useTeamStats` |
 | **Cache-First** | ✅ Yes | ❌ No |
-| **WebSocket Subscriptions** | ❌ **NO** | ✅ **YES** |
-| **Real-Time Updates** | ❌ **NO** | ✅ **YES** |
-| **Auto-Refresh** | ❌ Manual only | ✅ Automatic |
+| **WebSocket Subscriptions** | ✅ **YES** (added Nov 2024) | ✅ **YES** |
+| **Real-Time Updates** | ✅ **YES** (added Nov 2024) | ✅ **YES** |
+| **Auto-Refresh** | ✅ **Automatic** (added Nov 2024) | ✅ Automatic |
 | **Loading Flash Prevention** | ✅ Yes (cache-first) | ❌ No |
 | **Use Case** | Edit Stats Modal, Scoreboard Modal | Live Game Viewer |
 
 ---
 
-## 🐛 **Problem Identified**
+## ✅ **RESOLVED - November 2024**
 
-**Issue:** Score section team tabs (`TeamStatsTabLight` via `useTeamStatsOptimized`) do NOT have WebSocket subscriptions, so they don't update in real-time. Users must manually refresh or close/reopen the modal to see latest stats.
+**Status:** Issue has been resolved. Both Score section and OVER section team tabs now have real-time updates.
 
-**Root Cause:** `useTeamStatsOptimized` was designed for the Edit Stats Modal (where real-time updates aren't critical), but it's also used in the Score section modal where real-time updates ARE expected.
+**Solution:** Added WebSocket subscriptions to `useTeamStatsOptimized` to match `useTeamStats` behavior. Both hooks now refresh on `games` table UPDATE events (trigger completion signal) and `game_stats`/`game_substitutions` INSERT events.
+
+**Implementation:** Modified `useTeamStatsOptimized.ts` to include real-time subscription setup, matching the pattern used in `useTeamStats.ts`. Both hooks now handle deletions correctly by waiting for `games` table UPDATE events.
 
 ---
 
