@@ -79,6 +79,8 @@ interface MobileLayoutV3Props {
   gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'; // ✅ Game status
   onStatRecord?: (statType: string, modifier?: string) => Promise<void>; // ✅ USE DESKTOP LOGIC
   onFoulRecord?: (foulType: 'personal' | 'technical') => Promise<void>; // ✅ USE DESKTOP LOGIC
+  // ✅ STICKY BUTTON FIX: Callback to expose clear recording state function
+  onClearRecordingStateRef?: (clearFn: () => void) => void;
 }
 
 export function MobileLayoutV3({
@@ -98,7 +100,8 @@ export function MobileLayoutV3({
   onPossessionChange,
   gameStatus = 'in_progress', // ✅ Game status
   onStatRecord, // ✅ DESKTOP LOGIC
-  onFoulRecord // ✅ DESKTOP LOGIC
+  onFoulRecord, // ✅ DESKTOP LOGIC
+  onClearRecordingStateRef // ✅ STICKY BUTTON FIX
 }: MobileLayoutV3Props) {
   const [possessionTeam, setPossessionTeam] = useState<'A' | 'B'>('A');
 
@@ -284,6 +287,8 @@ export function MobileLayoutV3({
           teamBId={isCoachMode ? 'opponent-team' : gameData.team_b_id}
           teamAName={gameData.team_a?.name || 'Team A'}
           teamBName={isCoachMode ? (opponentName || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
+          // ✅ STICKY BUTTON FIX: Pass callback to expose clear recording state function
+          onClearRecordingStateRef={onClearRecordingStateRef}
         />
 
         {/* End Game Button / Status - Clean Design */}

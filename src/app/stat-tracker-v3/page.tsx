@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -116,6 +116,10 @@ function StatTrackerV3Content() {
   const [rosterRefreshKey, setRosterRefreshKey] = useState<string | number>(0);
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
   const [dismissedCompletionReminder, setDismissedCompletionReminder] = useState(false);
+  
+  // ✅ STICKY BUTTON FIX: Ref to store clear recording state function from stat grid components
+  const clearDesktopRecordingStateRef = useRef<(() => void) | null>(null);
+  const clearMobileRecordingStateRef = useRef<(() => void) | null>(null);
   
   // ✅ NEW: FT Made Auto-Sequence State (FULL auto mode only)
   const [showFTCountModal, setShowFTCountModal] = useState(false);
@@ -408,6 +412,16 @@ function StatTrackerV3Content() {
       });
     }
   }, [gameData, teamAParam, teamBParam, tracker.scores]);
+
+  // ✅ STICKY BUTTON FIX: Clear button recording state when modal opens
+  useEffect(() => {
+    if (tracker.playPrompt.isOpen) {
+      // Clear recording state when modal opens to prevent sticky buttons
+      // This ensures buttons re-enable immediately when modal appears
+      clearDesktopRecordingStateRef.current?.();
+      clearMobileRecordingStateRef.current?.();
+    }
+  }, [tracker.playPrompt.isOpen]);
 
   // Stat Recording
   const handleStatRecord = async (statType: string, modifier?: string) => {
@@ -1825,6 +1839,10 @@ function StatTrackerV3Content() {
           gameStatus={tracker.gameStatus}
           onStatRecord={handleStatRecord} // ✅ USE DESKTOP LOGIC
           onFoulRecord={handleFoulRecord} // ✅ USE DESKTOP LOGIC
+          // ✅ STICKY BUTTON FIX: Pass callback to expose clear recording state function
+          onClearRecordingStateRef={(clearFn) => {
+            clearMobileRecordingStateRef.current = clearFn;
+          }}
         />
         {/* ✅ MOBILE: Render shared modals */}
         {sharedModals}
@@ -1973,6 +1991,10 @@ function StatTrackerV3Content() {
                 gameId={gameData.id}
                 teamAPlayers={teamAPlayers}
                 teamBPlayers={teamBPlayers}
+                // ✅ STICKY BUTTON FIX: Pass callback to expose clear recording state function
+                onClearRecordingStateRef={(clearFn) => {
+                  clearDesktopRecordingStateRef.current = clearFn;
+                }}
               />
             </div>
           </div>

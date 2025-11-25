@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AlertTriangle, RotateCcw, Clock, Undo, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { PossessionIndicator } from './PossessionIndicator';
@@ -42,6 +42,8 @@ interface DesktopStatGridV3Props {
   gameId?: string;
   teamAPlayers?: Player[];
   teamBPlayers?: Player[];
+  // ✅ STICKY BUTTON FIX: Callback to expose clear recording state function
+  onClearRecordingStateRef?: (clearFn: () => void) => void;
 }
 
 export function DesktopStatGridV3({
@@ -68,7 +70,9 @@ export function DesktopStatGridV3({
   // ✅ Stat Edit Modal
   gameId,
   teamAPlayers = [],
-  teamBPlayers = []
+  teamBPlayers = [],
+  // ✅ STICKY BUTTON FIX: Callback to expose clear recording state function
+  onClearRecordingStateRef
 }: DesktopStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
@@ -77,6 +81,15 @@ export function DesktopStatGridV3({
   // ✅ RELIABILITY: Double-tap prevention with debouncing
   const lastClickTimeRef = useRef<Record<string, number>>({});
   const DEBOUNCE_DELAY = 500; // 500ms debounce to prevent double-taps
+
+  // ✅ STICKY BUTTON FIX: Expose clear recording state function to parent
+  useEffect(() => {
+    if (onClearRecordingStateRef) {
+      onClearRecordingStateRef(() => {
+        setIsRecording(null);
+      });
+    }
+  }, [onClearRecordingStateRef]);
 
   const handleStatClick = async (statType: string, modifier?: string) => {
     if (!selectedPlayer) {

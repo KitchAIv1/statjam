@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AlertTriangle, MoreHorizontal, RotateCcw, Clock, Undo, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { StatEditModal } from '../modals/StatEditModal';
@@ -30,6 +30,8 @@ interface MobileStatGridV3Props {
   teamBId?: string;
   teamAName?: string;
   teamBName?: string;
+  // ✅ STICKY BUTTON FIX: Callback to expose clear recording state function
+  onClearRecordingStateRef?: (clearFn: () => void) => void;
 }
 
 export function MobileStatGridV3({
@@ -49,7 +51,9 @@ export function MobileStatGridV3({
   teamAId,
   teamBId,
   teamAName = 'Team A',
-  teamBName = 'Team B'
+  teamBName = 'Team B',
+  // ✅ STICKY BUTTON FIX: Callback to expose clear recording state function
+  onClearRecordingStateRef
 }: MobileStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
@@ -58,6 +62,15 @@ export function MobileStatGridV3({
   // ✅ RELIABILITY: Double-tap prevention with debouncing
   const lastClickTimeRef = useRef<Record<string, number>>({});
   const DEBOUNCE_DELAY = 500; // 500ms debounce to prevent double-taps
+
+  // ✅ STICKY BUTTON FIX: Expose clear recording state function to parent
+  useEffect(() => {
+    if (onClearRecordingStateRef) {
+      onClearRecordingStateRef(() => {
+        setIsRecording(null);
+      });
+    }
+  }, [onClearRecordingStateRef]);
 
   const handleStatClick = async (statType: string, modifier?: string) => {
     if (!selectedPlayer) {
