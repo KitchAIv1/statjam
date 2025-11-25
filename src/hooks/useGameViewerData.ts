@@ -86,7 +86,7 @@ export const useGameViewerData = (gameId: string, user: { id: string } | null): 
   const { gameData, loading, error, isLive } = useGameStream(gameId, enableViewerV2); // Pass V2 flag to skip stats
   const { isMobile, isTablet, isDesktop } = useResponsive();
 
-  // TEMPORARY: Smart polling fallback since real-time subscriptions aren't working
+  // WebSocket-first with polling fallback (30s) for missed updates
   useEffect(() => {
     if (!gameId) return;
     
@@ -112,7 +112,7 @@ export const useGameViewerData = (gameId: string, user: { id: string } | null): 
           window.dispatchEvent(new CustomEvent('force-game-refresh', { detail: { gameId } }));
         }
       }
-    }, 2000); // Poll every 2 seconds for live games
+    }, 30000); // Poll every 30 seconds as WebSocket fallback (WebSocket handles real-time updates)
 
     return () => {
       console.log('🔄 GameViewerData: Stopping smart polling');

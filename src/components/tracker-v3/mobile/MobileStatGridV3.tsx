@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AlertTriangle, MoreHorizontal, RotateCcw, Clock, Undo, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { StatEditModal } from '../modals/StatEditModal';
+import { StatEditModalV2 } from '../modals/StatEditModalV2';
 
 interface Player {
   id: string;
@@ -473,7 +473,7 @@ export function MobileStatGridV3({
 
       {/* Stat Edit Modal */}
       {showStatEditModal && gameId && (
-        <StatEditModal
+        <StatEditModalV2
           isOpen={showStatEditModal}
           onClose={() => setShowStatEditModal(false)}
           gameId={gameId}
