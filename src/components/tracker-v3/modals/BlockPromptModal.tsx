@@ -46,11 +46,12 @@ export function BlockPromptModal({
 
   if (!isOpen) return null;
 
-  const handleConfirm = () => {
-    if (selectedPlayerId) {
-      onSelectPlayer(selectedPlayerId);
-      setSelectedPlayerId(null);
-    }
+  // ✅ AUTO-SAVE: Auto-save immediately when player is selected
+  const handlePlayerSelect = (playerId: string) => {
+    setSelectedPlayerId(playerId);
+    // Auto-save immediately (no confirmation button needed)
+    onSelectPlayer(playerId);
+    setSelectedPlayerId(null);
   };
 
   const handleSkip = () => {
@@ -114,7 +115,7 @@ export function BlockPromptModal({
             {defensivePlayers.map((player) => (
               <button
                 key={player.id}
-                onClick={() => setSelectedPlayerId(player.id)}
+                onClick={() => handlePlayerSelect(player.id)}
                 className={`w-full p-4 rounded-xl border-2 transition-all duration-200 ${
                   selectedPlayerId === player.id
                     ? 'border-red-500 bg-red-50 shadow-md'
@@ -145,7 +146,7 @@ export function BlockPromptModal({
           </div>
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer Actions - Only Skip button (auto-save on selection) */}
         <div className="flex gap-3 p-6 border-t border-gray-200">
           <Button
             onClick={handleSkip}
@@ -153,17 +154,6 @@ export function BlockPromptModal({
             className="flex-1 py-3 text-base font-semibold"
           >
             No Block
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={!selectedPlayerId}
-            className={`flex-1 py-3 text-base font-semibold ${
-              selectedPlayerId
-                ? 'bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white'
-                : 'opacity-50 cursor-not-allowed'
-            }`}
-          >
-            Record Block
           </Button>
         </div>
       </div>

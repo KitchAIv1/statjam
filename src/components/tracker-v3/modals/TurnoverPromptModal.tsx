@@ -44,11 +44,12 @@ export function TurnoverPromptModal({
 
   if (!isOpen) return null;
 
-  const handleConfirm = () => {
-    if (selectedPlayerId) {
-      onSelectPlayer(selectedPlayerId);
-      setSelectedPlayerId(null);
-    }
+  // ✅ AUTO-SAVE: Auto-save immediately when player is selected
+  const handlePlayerSelect = (playerId: string) => {
+    setSelectedPlayerId(playerId);
+    // Auto-save immediately (no confirmation button needed)
+    onSelectPlayer(playerId);
+    setSelectedPlayerId(null);
   };
 
   const handleSkip = () => {
@@ -112,7 +113,7 @@ export function TurnoverPromptModal({
             {homePlayers.map((player) => (
               <button
                 key={player.id}
-                onClick={() => setSelectedPlayerId(player.id)}
+                onClick={() => handlePlayerSelect(player.id)}
                 className={`w-full p-4 rounded-xl border-2 transition-all duration-200 ${
                   selectedPlayerId === player.id
                     ? 'border-orange-500 bg-orange-50 shadow-md'
@@ -143,7 +144,7 @@ export function TurnoverPromptModal({
           </div>
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer Actions - Only Skip button (auto-save on selection) */}
         <div className="flex gap-3 p-6 border-t border-gray-200">
           <Button
             onClick={handleSkip}
@@ -151,17 +152,6 @@ export function TurnoverPromptModal({
             className="flex-1 py-3 text-base font-semibold"
           >
             Skip
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={!selectedPlayerId}
-            className={`flex-1 py-3 text-base font-semibold ${
-              selectedPlayerId
-                ? 'bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white'
-                : 'opacity-50 cursor-not-allowed'
-            }`}
-          >
-            Record Turnover
           </Button>
         </div>
       </div>

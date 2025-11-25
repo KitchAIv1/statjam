@@ -102,7 +102,13 @@ export function ReboundPromptModal({
     
     // ✅ FIX: Compare actual team IDs (offensive = same team as shooter, defensive = different team)
     const isOffensiveRebound = actualPlayerTeamId === shooterTeamId;
-    setReboundType(isOffensiveRebound ? 'offensive' : 'defensive');
+    const determinedReboundType = isOffensiveRebound ? 'offensive' : 'defensive';
+    setReboundType(determinedReboundType);
+    
+    // ✅ AUTO-SAVE: Auto-save immediately when player is selected (reboundType already determined)
+    onSelectPlayer(playerId, determinedReboundType);
+    setSelectedPlayerId(null);
+    setReboundType(null);
     
     // 🔍 DEBUG: Log for troubleshooting
     console.log('🔍 [REBOUND DEBUG]', {
@@ -114,16 +120,8 @@ export function ReboundPromptModal({
       teamAId,
       teamBId,
       isOffensiveRebound,
-      reboundType: isOffensiveRebound ? 'offensive' : 'defensive'
+      reboundType: determinedReboundType
     });
-  };
-
-  const handleConfirm = () => {
-    if (selectedPlayerId && reboundType) {
-      onSelectPlayer(selectedPlayerId, reboundType);
-      setSelectedPlayerId(null);
-      setReboundType(null);
-    }
   };
 
   const handleSkip = () => {
@@ -276,7 +274,7 @@ export function ReboundPromptModal({
           )}
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer Actions - Only Skip button (auto-save on selection) */}
         <div className="flex gap-3 p-6 border-t border-gray-200">
           <Button
             onClick={handleSkip}
@@ -284,17 +282,6 @@ export function ReboundPromptModal({
             className="flex-1 py-3 text-base font-semibold"
           >
             No Rebound
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={!selectedPlayerId || !reboundType}
-            className={`flex-1 py-3 text-base font-semibold ${
-              selectedPlayerId && reboundType
-                ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white'
-                : 'opacity-50 cursor-not-allowed'
-            }`}
-          >
-            Record Rebound
           </Button>
         </div>
       </div>

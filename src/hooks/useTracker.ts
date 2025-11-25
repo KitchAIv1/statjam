@@ -173,6 +173,55 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   useEffect(() => {
     scoresRef.current = scores;
   }, [scores]);
+
+  // ✅ SCORE RECALCULATION: Helper function to calculate scores from game_stats
+  // Reused for initialization and WebSocket updates to ensure consistency
+  const calculateScoresFromStats = useCallback(async (gameId: string, teamAId: string, teamBId: string, isCoachMode: boolean): Promise<ScoreByTeam | null> => {
+    try {
+      const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
+      const stats = await GameServiceV3.getGameStats(gameId);
+      
+      if (!stats || stats.length === 0) {
+        return null; // Return null to indicate no stats found (don't default to 0-0)
+      }
+      
+      let teamAScore = 0;
+      let teamBScore = 0;
+      
+      for (const stat of stats) {
+        // Only count made shots
+        if (stat.modifier !== 'made') continue;
+        
+        // Use stat_value from database (already contains correct points)
+        const points = stat.stat_value || 0;
+        
+        // ✅ CRITICAL: Check is_opponent_stat flag for coach mode (MUST MATCH INITIALIZATION LOGIC)
+        if (stat.is_opponent_stat) {
+          // Opponent stats go to team B score
+          teamBScore += points;
+        } else if (stat.team_id === teamAId) {
+          teamAScore += points;
+        } else if (stat.team_id === teamBId) {
+          teamBScore += points;
+        }
+      }
+      
+      // Handle coach mode where both team IDs are the same
+      if (teamAId === teamBId) {
+        // Coach mode: Store opponent score separately
+        return { [teamAId]: teamAScore, opponent: teamBScore };
+      } else {
+        // Tournament mode: Use both team IDs
+        return {
+          [teamAId]: teamAScore,
+          [teamBId]: teamBScore
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error calculating scores from stats:', error);
+      return null; // Return null on error (don't update scores)
+    }
+  }, []);
   const [teamFouls, setTeamFouls] = useState({
     [teamAId]: 0,
     [teamBId]: 0
@@ -442,45 +491,16 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           console.warn('⚠️ Could not load game state from database');
         }
         
-        // FIXED: Load existing stats to calculate current scores (for refresh persistence)
-        const stats = await GameServiceV3.getGameStats(gameId);
+        // ✅ FIXED: Load existing stats to calculate current scores (for refresh persistence)
+        // Use extracted helper function for consistency with WebSocket updates
+        const calculatedScores = await calculateScoresFromStats(gameId, teamAId, teamBId, isCoachMode);
         
-        if (stats && stats.length > 0) {
-          let teamAScore = 0;
-          let teamBScore = 0;
-          
-          for (const stat of stats) {
-            // FIXED: Use stat_value directly and only count made shots
-            if (stat.modifier !== 'made') continue;
-            
-            // Use stat_value from database (already contains correct points)
-            const points = stat.stat_value || 0;
-            
-            // ✅ CRITICAL FIX: Check is_opponent_stat flag for coach mode (MUST MATCH REFRESH LOGIC)
-            if (stat.is_opponent_stat) {
-              // Opponent stats go to team B score
-              teamBScore += points;
-            } else if (stat.team_id === teamAId) {
-              teamAScore += points;
-            } else if (stat.team_id === teamBId) {
-              teamBScore += points;
-            }
-          }
-          
+        if (calculatedScores) {
           // Initialize scores with calculated totals
-          // Handle coach mode where both team IDs are the same
-          if (teamAId === teamBId) {
-            // Coach mode: Store opponent score separately
-            setScores({ [teamAId]: teamAScore, opponent: teamBScore });
-          } else {
-            // Tournament mode: Use both team IDs
-            setScores({
-              [teamAId]: teamAScore,
-              [teamBId]: teamBScore
-            });
-          }
+          setScores(calculatedScores);
         } else {
-          // Ensure scores start at 0 if no stats found
+          // Only default to 0-0 if stats fetch completed but returned empty (not if it failed)
+          // This prevents race condition where initialization completes before stats load
           setScores({
             [teamAId]: 0,
             [teamBId]: 0
@@ -499,13 +519,18 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     } else {
       setIsLoading(false);
     }
-  }, [gameId, teamAId, teamBId, initialGameData]);
+  }, [gameId, teamAId, teamBId, isCoachMode, initialGameData, calculateScoresFromStats]);
 
-  // ✅ Real-time subscription to sync timeout state and scores from database
+  // ✅ Real-time subscription to sync timeout state, fouls, and scores from database
   useEffect(() => {
     if (!gameId || gameId === 'unknown' || !teamAId || !teamBId) return;
 
     console.log('🔌 useTracker: Setting up real-time subscription for game:', gameId);
+    
+    // ✅ DEBOUNCING: Debounce score recalculation to batch rapid updates
+    // Use ref to persist timeout ID across re-renders and cleanup
+    const scoreRecalculationTimeoutRef = { current: null as NodeJS.Timeout | null };
+    const DEBOUNCE_DELAY = 300; // 300ms debounce window
     
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
       if (table === 'games' && payload.new) {
@@ -532,48 +557,72 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           });
         }
         
-        // ✅ DISABLED: WebSocket score sync - Database scores can be stale/incorrect
-        // Scores are calculated from game_stats (source of truth) during initialization
-        // WebSocket score updates were overwriting correctly calculated scores with stale database values
-        // Rely on calculated scores from stats instead of database home_score/away_score
-        // 
-        // NOTE: Database triggers update games.home_score/away_score, but these can lag behind
-        // or be incorrect due to trigger timing issues. Calculated scores from stats are always accurate.
-        /*
-        if (updatedGame.home_score !== undefined || updatedGame.away_score !== undefined) {
-          const currentScores = scoresRef.current;
-          const newHomeScore = updatedGame.home_score ?? 0;
-          const newAwayScore = updatedGame.away_score ?? 0;
-          
-          // Only update if scores have changed (prevents unnecessary re-renders)
-          let hasChanges = false;
-          if (teamAId === teamBId) {
-            // Coach mode: compare both team score and opponent score
-            hasChanges = (currentScores[teamAId] !== newHomeScore || currentScores.opponent !== newAwayScore);
-          } else {
-            // Tournament mode: compare both team scores
-            hasChanges = (currentScores[teamAId] !== newHomeScore || currentScores[teamBId] !== newAwayScore);
-          }
-          
-          if (hasChanges) {
-            console.log('🔄 useTracker: Scores updated from database via WebSocket:', {
-              home: newHomeScore,
-              away: newAwayScore
-            });
-            
-            if (teamAId === teamBId) {
-              setScores({ [teamAId]: newHomeScore, opponent: newAwayScore });
-            } else {
-              setScores({ [teamAId]: newHomeScore, [teamBId]: newAwayScore });
-            }
-          }
+        // ✅ DISABLED: WebSocket score sync from games table - Database scores can be stale/incorrect
+        // Scores are calculated from game_stats (source of truth) via game_stats subscription handler below
+        // Database triggers update games.home_score/away_score, but these can lag behind
+        // Calculated scores from stats are always accurate.
+      }
+      
+      // ✅ CRITICAL FIX: Recalculate scores when game_stats table is updated
+      // This ensures scores stay in sync when stats are recorded from other devices/sessions
+      if (table === 'game_stats') {
+        // Clear existing debounce timer
+        if (scoreRecalculationTimeoutRef.current) {
+          clearTimeout(scoreRecalculationTimeoutRef.current);
+          scoreRecalculationTimeoutRef.current = null;
         }
-        */
+        
+        // Debounce score recalculation to batch rapid updates
+        scoreRecalculationTimeoutRef.current = setTimeout(async () => {
+          try {
+            const calculatedScores = await calculateScoresFromStats(gameId, teamAId, teamBId, isCoachMode);
+            
+            if (calculatedScores) {
+              // ✅ ANTI-FLICKER: Only update if scores actually changed
+              const currentScores = scoresRef.current;
+              let hasChanges = false;
+              
+              if (teamAId === teamBId) {
+                // Coach mode: compare both team score and opponent score
+                hasChanges = (
+                  currentScores[teamAId] !== calculatedScores[teamAId] ||
+                  currentScores.opponent !== calculatedScores.opponent
+                );
+              } else {
+                // Tournament mode: compare both team scores
+                hasChanges = (
+                  currentScores[teamAId] !== calculatedScores[teamAId] ||
+                  currentScores[teamBId] !== calculatedScores[teamBId]
+                );
+              }
+              
+              if (hasChanges) {
+                console.log('🔄 useTracker: Scores recalculated from game_stats:', {
+                  previous: currentScores,
+                  calculated: calculatedScores
+                });
+                setScores(calculatedScores);
+              }
+            }
+          } catch (error) {
+            console.error('❌ Error recalculating scores from game_stats update:', error);
+            // Don't update scores on error (keep current state)
+          } finally {
+            scoreRecalculationTimeoutRef.current = null;
+          }
+        }, DEBOUNCE_DELAY);
       }
     });
 
-    return unsubscribe;
-  }, [gameId, teamAId, teamBId]);
+    return () => {
+      // Cleanup: Clear debounce timer on unmount
+      if (scoreRecalculationTimeoutRef.current) {
+        clearTimeout(scoreRecalculationTimeoutRef.current);
+        scoreRecalculationTimeoutRef.current = null;
+      }
+      unsubscribe();
+    };
+  }, [gameId, teamAId, teamBId, isCoachMode, calculateScoresFromStats]);
 
   // Clock Controls
   const startClock = useCallback(async () => {

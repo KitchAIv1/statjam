@@ -6,7 +6,7 @@ import { NavigationHeader } from '@/components/NavigationHeader';
 import { HeroSection } from '@/components/HeroSection';
 import { Differentiators } from '@/components/marketing/Differentiators';
 import { SmartSequencesCarousel } from '@/components/marketing/SmartSequencesCarousel';
-import { LiveTournamentSection } from '@/components/LiveTournamentSection';
+import { TournamentShowcaseCarousel } from '@/components/tournament/TournamentShowcaseCarousel';
 import { MobileAdvantageSection } from '@/components/marketing/MobileAdvantageSection';
 import { Footer } from '@/components/Footer';
 
@@ -32,10 +32,10 @@ export default function HomePage() {
     setCurrentView('landing');
   };
 
-  const scrollToLiveGames = () => {
-    const liveGamesSection = document.getElementById('live-games');
-    if (liveGamesSection) {
-      liveGamesSection.scrollIntoView({ behavior: 'smooth' });
+  const scrollToTournamentShowcase = () => {
+    const tournamentSection = document.getElementById('tournament-showcase');
+    if (tournamentSection) {
+      tournamentSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -97,7 +97,7 @@ export default function HomePage() {
         <NavigationHeader />
       </Suspense>
       <HeroSection 
-        onWatchLive={scrollToLiveGames} 
+        onWatchLive={scrollToTournamentShowcase} 
         onViewTournament={navigateToTournamentPage}
       />
       <Differentiators />
@@ -105,10 +105,7 @@ export default function HomePage() {
         onSlideChange={handleSequencesSlideChange}
         onSectionView={handleSequencesView}
       />
-      <LiveTournamentSection 
-        onWatchLive={navigateToTournament} 
-        onViewTournament={navigateToTournamentPage}
-      />
+      <TournamentShowcaseCarousel />
       <MobileAdvantageSection 
         onSectionView={handleMobileAdvantageView}
         onCtaClick={handleMobileAdvantageCtaClick}

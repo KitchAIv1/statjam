@@ -146,17 +146,7 @@ FROM pg_stat_user_functions
 WHERE funcname IN ('update_game_scores', 'update_game_scores_on_delete', 'update_game_scores_on_update')
 ORDER BY mean_exec_time DESC;
 
--- ============================================================================
--- STEP 8: Sample Trigger Function Code (For Manual Inspection)
--- ============================================================================
 
-SELECT 
-  p.proname as function_name,
-  pg_get_functiondef(p.oid) as full_function_code
-FROM pg_proc p
-JOIN pg_namespace n ON p.pronamespace = n.oid
-WHERE n.nspname = 'public'
-AND p.proname = 'update_game_scores';
 
 -- ============================================================================
 -- SUMMARY: Expected Results

@@ -53,9 +53,22 @@ export function BlockedShotSelectionModal({
 
   if (!isOpen) return null;
 
-  const handleConfirm = () => {
-    if (selectedShooterId && shotType) {
-      onSelect(selectedShooterId, shotType);
+  // ✅ AUTO-SAVE: Auto-save when BOTH shooterId AND shotType are selected
+  const handleShooterSelect = (shooterId: string) => {
+    setSelectedShooterId(shooterId);
+    // Auto-save if shotType is already selected
+    if (shotType) {
+      onSelect(shooterId, shotType);
+      setSelectedShooterId(null);
+      setShotType(null);
+    }
+  };
+
+  const handleShotTypeSelect = (type: 'field_goal' | 'three_pointer') => {
+    setShotType(type);
+    // Auto-save if shooterId is already selected
+    if (selectedShooterId) {
+      onSelect(selectedShooterId, type);
       setSelectedShooterId(null);
       setShotType(null);
     }
@@ -113,7 +126,7 @@ export function BlockedShotSelectionModal({
             </p>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => setShotType('field_goal')}
+                onClick={() => handleShotTypeSelect('field_goal')}
                 className={`p-4 rounded-xl border-2 transition-all ${
                   shotType === 'field_goal'
                     ? 'border-blue-500 bg-blue-50 shadow-md'
@@ -126,7 +139,7 @@ export function BlockedShotSelectionModal({
                 </div>
               </button>
               <button
-                onClick={() => setShotType('three_pointer')}
+                onClick={() => handleShotTypeSelect('three_pointer')}
                 className={`p-4 rounded-xl border-2 transition-all ${
                   shotType === 'three_pointer'
                     ? 'border-green-500 bg-green-50 shadow-md'
@@ -155,7 +168,7 @@ export function BlockedShotSelectionModal({
                   shooterTeamPlayers.map((player) => (
                     <button
                       key={player.id}
-                      onClick={() => setSelectedShooterId(player.id)}
+                      onClick={() => handleShooterSelect(player.id)}
                       className={`w-full p-3 rounded-xl border-2 transition-all duration-200 ${
                         selectedShooterId === player.id
                           ? 'border-orange-500 bg-orange-50 shadow-md'
@@ -193,7 +206,7 @@ export function BlockedShotSelectionModal({
           </div>
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer Actions - Only Cancel button (auto-save when both selections are made) */}
         <div className="flex gap-3 p-6 border-t border-gray-200">
           <Button
             onClick={handleClose}
@@ -201,17 +214,6 @@ export function BlockedShotSelectionModal({
             className="flex-1 py-3 text-base font-semibold"
           >
             Cancel
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={!selectedShooterId || !shotType}
-            className={`flex-1 py-3 text-base font-semibold ${
-              selectedShooterId && shotType
-                ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white'
-                : 'opacity-50 cursor-not-allowed'
-            }`}
-          >
-            Record Missed Shot
           </Button>
         </div>
       </div>
