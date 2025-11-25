@@ -658,7 +658,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
 
   // 🔄 DEBOUNCE: Prevent cascade of redundant API calls from rapid WebSocket events
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const DEBOUNCE_DELAY = 500; // 500ms debounce window
+  const DEBOUNCE_DELAY = 1000; // 1 second debounce window for fast tracking safety
 
   // 🏀 USE EXISTING HYBRID SYSTEM: WebSocket subscriptions via gameSubscriptionManager
   useEffect(() => {
