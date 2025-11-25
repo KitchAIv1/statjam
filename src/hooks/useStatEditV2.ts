@@ -5,6 +5,7 @@
  * - Caching layer (5 min TTL)
  * - Optimized filtering with useMemo
  * - Error handling with retry
+ * - Conditional fetching (only when modal is open)
  * 
  * Follows .cursorrules: <100 lines hook
  */
@@ -23,14 +24,15 @@ interface UseStatEditV2Return {
 
 export function useStatEditV2(
   gameId: string,
-  filterQuarter: string
+  filterQuarter: string,
+  enabled: boolean = true
 ): UseStatEditV2Return {
   const [gameStats, setGameStats] = useState<GameStatRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchStats = useCallback(async () => {
-    if (!gameId) return;
+    if (!gameId || !enabled) return;
     
     try {
       setLoading(true);
@@ -43,11 +45,18 @@ export function useStatEditV2(
     } finally {
       setLoading(false);
     }
-  }, [gameId]);
+  }, [gameId, enabled]);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    if (enabled) {
+      fetchStats();
+    } else {
+      // Reset state when disabled
+      setGameStats([]);
+      setLoading(false);
+      setError(null);
+    }
+  }, [fetchStats, enabled]);
 
   // ⚡ MEMOIZED FILTERING: Only recalculates when gameStats or filterQuarter changes
   const filteredStats = useMemo(() => {

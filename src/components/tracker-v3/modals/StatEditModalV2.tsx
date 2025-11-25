@@ -60,7 +60,8 @@ export function StatEditModalV2({
   const [deletingStatId, setDeletingStatId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('stats');
 
-  const { filteredStats, loading, error, refetch } = useStatEditV2(gameId, filterQuarter);
+  // ✅ FIX: Only fetch stats when modal is open to prevent background queries
+  const { filteredStats, loading, error, refetch } = useStatEditV2(gameId, filterQuarter, isOpen);
 
   // ⚡ MEMOIZED: Player map created once, reused for all stats
   const playerMap = useMemo(
