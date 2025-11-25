@@ -656,6 +656,10 @@ export function useGameViewerV2(gameId: string): GameViewerData {
     void fetchGameData(false); // Initial load
   }, [fetchGameData]);
 
+  // 🔄 DEBOUNCE: Prevent cascade of redundant API calls from rapid WebSocket events
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const DEBOUNCE_DELAY = 500; // 500ms debounce window
+
   // 🏀 USE EXISTING HYBRID SYSTEM: WebSocket subscriptions via gameSubscriptionManager
   useEffect(() => {
     if (!gameId) return;
@@ -693,12 +697,26 @@ export function useGameViewerV2(gameId: string): GameViewerData {
           });
         }
       } else {
-        // For other updates (games, game_stats, game_substitutions), refresh all data
-        void fetchGameData(true);
+        // ✅ DEBOUNCED: Batch multiple WebSocket events into single refresh
+        // Prevents cascade: stat INSERT → games UPDATE → 2 refreshes
+        if (debounceTimeoutRef.current) {
+          clearTimeout(debounceTimeoutRef.current);
+        }
+        debounceTimeoutRef.current = setTimeout(() => {
+          console.log('🔄 useGameViewerV2: Debounced refresh triggered');
+          void fetchGameData(true);
+          debounceTimeoutRef.current = null;
+        }, DEBOUNCE_DELAY);
       }
     });
 
-    return unsubscribe;
+    // Cleanup debounce timeout on unmount
+    return () => {
+      unsubscribe();
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
   }, [gameId, fetchGameData]);
 
   // 📸 Subscribe to custom player photo updates (after we have team IDs)
