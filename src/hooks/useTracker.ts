@@ -498,7 +498,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         if (calculatedScores) {
           // Initialize scores with calculated totals
           setScores(calculatedScores);
-        } else {
+          } else {
           // Only default to 0-0 if stats fetch completed but returned empty (not if it failed)
           // This prevents race condition where initialization completes before stats load
           setScores({
@@ -580,23 +580,23 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             if (calculatedScores) {
               // ✅ ANTI-FLICKER: Only update if scores actually changed
               const currentScores = scoresRef.current;
-              let hasChanges = false;
+          let hasChanges = false;
               
-              if (teamAId === teamBId) {
-                // Coach mode: compare both team score and opponent score
+          if (teamAId === teamBId) {
+            // Coach mode: compare both team score and opponent score
                 hasChanges = (
                   currentScores[teamAId] !== calculatedScores[teamAId] ||
                   currentScores.opponent !== calculatedScores.opponent
                 );
-              } else {
-                // Tournament mode: compare both team scores
+          } else {
+            // Tournament mode: compare both team scores
                 hasChanges = (
                   currentScores[teamAId] !== calculatedScores[teamAId] ||
                   currentScores[teamBId] !== calculatedScores[teamBId]
                 );
-              }
-              
-              if (hasChanges) {
+          }
+          
+          if (hasChanges) {
                 console.log('🔄 useTracker: Scores recalculated from game_stats:', {
                   previous: currentScores,
                   calculated: calculatedScores

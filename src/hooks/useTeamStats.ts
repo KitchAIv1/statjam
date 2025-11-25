@@ -118,7 +118,7 @@ export function useTeamStats(
    */
   useEffect(() => {
     if (!gameId || !teamId) return;
-
+    
     // Use the existing hybrid subscription system
     // ✅ CRITICAL FIX: Always refresh on games table UPDATE (trigger completion signal)
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
@@ -133,7 +133,7 @@ export function useTeamStats(
       if (table === 'game_stats' || table === 'game_substitutions') {
         const isInsertEvent = payload?.new && !payload?.old;
         if (isInsertEvent) {
-          void fetchTeamData(true);
+        void fetchTeamData(true);
         }
         // For DELETE events, don't refresh - wait for games UPDATE (trigger completion)
       }
