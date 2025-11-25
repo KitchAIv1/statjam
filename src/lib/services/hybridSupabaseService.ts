@@ -33,11 +33,37 @@ interface SubscriptionOptions {
   maxReconnectAttempts?: number;
 }
 
+// WebSocket Health Metrics
+interface WebSocketHealth {
+  totalConnections: number;
+  totalDisconnections: number;
+  totalErrors: number;
+  totalEventsReceived: number;
+  lastEventTime: Date | null;
+  lastErrorTime: Date | null;
+  lastError: string | null;
+  pollingFallbackCount: number;
+  startTime: Date;
+}
+
 export class HybridSupabaseService {
   private config: HybridConfig;
   private subscriptions = new Map<string, any>();
   private pollingIntervals = new Map<string, NodeJS.Timeout>();
   private connectionStatus = new Map<string, 'connected' | 'disconnected' | 'error'>();
+  
+  // 📊 WebSocket Health Tracking
+  private health: WebSocketHealth = {
+    totalConnections: 0,
+    totalDisconnections: 0,
+    totalErrors: 0,
+    totalEventsReceived: 0,
+    lastEventTime: null,
+    lastErrorTime: null,
+    lastError: null,
+    pollingFallbackCount: 0,
+    startTime: new Date()
+  };
 
   constructor() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -51,12 +77,13 @@ export class HybridSupabaseService {
       url,
       anonKey,
       enableRealtime: true,
-      pollingInterval: 2000, // 2 seconds (NBA-level frequency)
-      queryTimeout: 10000,   // 10 seconds
+      pollingInterval: 30000, // 30 seconds (fallback only - WebSocket is primary)
+      queryTimeout: 10000,    // 10 seconds
       maxRetries: 3
     };
 
-    console.log('🏀 HybridSupabaseService: NBA-level service initialized');
+    console.log('🏀 HybridSupabaseService: Initialized with WebSocket health tracking');
+    console.log('📊 WebSocket Health: Monitoring started at', this.health.startTime.toISOString());
   }
 
   /**
@@ -193,7 +220,7 @@ export class HybridSupabaseService {
     const subscriptionKey = `${table}-${filter}`;
     console.log(`🔌 HybridService: Setting up NBA-level subscription for ${subscriptionKey}`);
 
-    // Try WebSocket first (NBA primary method)
+    // Try WebSocket first (primary method)
     if (this.config.enableRealtime && supabase) {
       try {
         const channel = supabase
@@ -204,28 +231,64 @@ export class HybridSupabaseService {
             table: table,
             filter: filter
           }, (payload) => {
-            console.log(`🔔 HybridService: WebSocket event received for ${table}:`, payload);
+            // 📊 Track WebSocket event
+            this.health.totalEventsReceived++;
+            this.health.lastEventTime = new Date();
+            
+            console.log(`🔔 WS EVENT [${table}]: ${payload.eventType || 'unknown'}`, {
+              table,
+              eventType: payload.eventType,
+              totalEvents: this.health.totalEventsReceived,
+              timeSinceStart: this.getUptime()
+            });
+            
             this.connectionStatus.set(subscriptionKey, 'connected');
             callback(payload);
           })
           .subscribe((status) => {
-            console.log(`🔌 HybridService: WebSocket status for ${subscriptionKey}:`, status);
+            const timestamp = new Date().toISOString();
             
             if (status === 'SUBSCRIBED') {
-              console.log(`✅ HybridService: WebSocket connected for ${subscriptionKey}`);
+              // 📊 Track successful connection
+              this.health.totalConnections++;
+              console.log(`✅ WS CONNECTED [${subscriptionKey}]`, {
+                timestamp,
+                totalConnections: this.health.totalConnections,
+                activeSubscriptions: this.subscriptions.size
+              });
               this.connectionStatus.set(subscriptionKey, 'connected');
               // Clear any existing polling fallback
               this.clearPolling(subscriptionKey);
               
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              console.warn(`⚠️ HybridService: WebSocket failed for ${subscriptionKey}, status: ${status}`);
+              // 📊 Track error
+              this.health.totalErrors++;
+              this.health.lastErrorTime = new Date();
+              this.health.lastError = `${status} on ${subscriptionKey}`;
+              
+              console.error(`❌ WS ERROR [${subscriptionKey}]:`, {
+                status,
+                timestamp,
+                totalErrors: this.health.totalErrors,
+                lastError: this.health.lastError
+              });
               this.connectionStatus.set(subscriptionKey, 'error');
               
-              // NBA-level fallback: Switch to polling
+              // Fallback: Switch to polling (30s interval)
               if (fallbackToPolling) {
-                console.log(`🔄 HybridService: Switching to polling fallback for ${subscriptionKey}`);
+                this.health.pollingFallbackCount++;
+                console.warn(`🔄 POLLING FALLBACK [${subscriptionKey}]: Switching to ${pollingInterval}ms polling`, {
+                  fallbackCount: this.health.pollingFallbackCount
+                });
                 this.startPollingFallback(table, filter, callback, pollingInterval, subscriptionKey);
               }
+            } else if (status === 'CLOSED') {
+              // 📊 Track disconnection
+              this.health.totalDisconnections++;
+              console.warn(`🔌 WS CLOSED [${subscriptionKey}]:`, {
+                timestamp,
+                totalDisconnections: this.health.totalDisconnections
+              });
             }
           });
 
@@ -344,6 +407,69 @@ export class HybridSupabaseService {
    */
   getConnectionStatus(subscriptionKey: string): 'connected' | 'disconnected' | 'error' | 'unknown' {
     return this.connectionStatus.get(subscriptionKey) || 'unknown';
+  }
+
+  /**
+   * 📊 GET WEBSOCKET HEALTH REPORT
+   * Call this from browser console: hybridSupabaseService.getHealthReport()
+   */
+  getHealthReport(): WebSocketHealth & { uptime: string; eventsPerMinute: number; status: string } {
+    const uptimeMs = Date.now() - this.health.startTime.getTime();
+    const uptimeMinutes = uptimeMs / 60000;
+    const eventsPerMinute = uptimeMinutes > 0 ? this.health.totalEventsReceived / uptimeMinutes : 0;
+    
+    const status = this.health.totalErrors === 0 && this.health.pollingFallbackCount === 0
+      ? '✅ HEALTHY - WebSocket working'
+      : this.health.pollingFallbackCount > 0
+        ? '⚠️ DEGRADED - Using polling fallback'
+        : '❌ ISSUES - Errors detected';
+    
+    const report = {
+      ...this.health,
+      uptime: this.getUptime(),
+      eventsPerMinute: Math.round(eventsPerMinute * 100) / 100,
+      status
+    };
+    
+    console.log('📊 WEBSOCKET HEALTH REPORT:', report);
+    return report;
+  }
+
+  /**
+   * 📊 LOG HEALTH SUMMARY (call periodically or manually)
+   */
+  logHealthSummary(): void {
+    const report = this.getHealthReport();
+    console.log(`
+📊 ═══════════════════════════════════════════════════
+   WEBSOCKET HEALTH SUMMARY
+═══════════════════════════════════════════════════
+   Status: ${report.status}
+   Uptime: ${report.uptime}
+   
+   📈 Events Received: ${report.totalEventsReceived}
+   📈 Events/Minute: ${report.eventsPerMinute}
+   
+   ✅ Connections: ${report.totalConnections}
+   ❌ Errors: ${report.totalErrors}
+   🔌 Disconnections: ${report.totalDisconnections}
+   🔄 Polling Fallbacks: ${report.pollingFallbackCount}
+   
+   Last Event: ${report.lastEventTime?.toISOString() || 'None'}
+   Last Error: ${report.lastError || 'None'}
+═══════════════════════════════════════════════════
+    `);
+  }
+
+  /**
+   * ⏱️ GET UPTIME STRING
+   */
+  private getUptime(): string {
+    const ms = Date.now() - this.health.startTime.getTime();
+    const seconds = Math.floor(ms / 1000) % 60;
+    const minutes = Math.floor(ms / 60000) % 60;
+    const hours = Math.floor(ms / 3600000);
+    return `${hours}h ${minutes}m ${seconds}s`;
   }
 
   /**

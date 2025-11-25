@@ -22,39 +22,39 @@ class GameSubscriptionManager {
       // Set up multiple subscriptions for different tables
       const unsubscribeFunctions: (() => void)[] = [];
 
-      // 1. Game updates (score, clock, status)
+      // 1. Game updates (score, clock, status) - WebSocket primary, 30s polling fallback
       const gameUnsub = hybridSupabaseService.subscribe(
         'games',
-        `id=eq.${gameId}`, // ✅ Correct format: key=operator.value
+        `id=eq.${gameId}`,
         (payload) => {
-          console.log('🔄 SubscriptionManager: Game updated:', payload);
+          console.log('🔄 SubscriptionManager: Game updated via WebSocket');
           this.callbacks.get(gameId)?.forEach(cb => cb('games', payload));
         },
-        { fallbackToPolling: true, pollingInterval: 2000 }
+        { fallbackToPolling: true, pollingInterval: 30000 } // 30s fallback
       );
       unsubscribeFunctions.push(gameUnsub);
 
-      // 2. Game stats (points, fouls, etc.)
+      // 2. Game stats (points, fouls, etc.) - WebSocket primary, 30s polling fallback
       const statsUnsub = hybridSupabaseService.subscribe(
         'game_stats',
-        `game_id=eq.${gameId}`, // ✅ Correct format: key=operator.value
+        `game_id=eq.${gameId}`,
         (payload) => {
-          console.log('🔔 SubscriptionManager: New game_stats detected:', payload);
+          console.log('🔔 SubscriptionManager: New stat via WebSocket');
           this.callbacks.get(gameId)?.forEach(cb => cb('game_stats', payload));
         },
-        { fallbackToPolling: true, pollingInterval: 1000 } // Faster for stats
+        { fallbackToPolling: true, pollingInterval: 30000 } // 30s fallback
       );
       unsubscribeFunctions.push(statsUnsub);
 
-      // 3. Game substitutions
+      // 3. Game substitutions - WebSocket primary, 30s polling fallback
       const subsUnsub = hybridSupabaseService.subscribe(
         'game_substitutions',
-        `game_id=eq.${gameId}`, // ✅ Correct format: key=operator.value
+        `game_id=eq.${gameId}`,
         (payload) => {
-          console.log('🔄 SubscriptionManager: Substitution detected:', payload);
+          console.log('🔄 SubscriptionManager: Substitution via WebSocket');
           this.callbacks.get(gameId)?.forEach(cb => cb('game_substitutions', payload));
         },
-        { fallbackToPolling: true, pollingInterval: 3000 }
+        { fallbackToPolling: true, pollingInterval: 30000 } // 30s fallback
       );
       unsubscribeFunctions.push(subsUnsub);
 
