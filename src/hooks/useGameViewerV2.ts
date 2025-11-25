@@ -391,8 +391,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         gameInfo.tournament_id
           ? fetch(`${supabaseUrl}/rest/v1/tournaments?select=name&id=eq.${gameInfo.tournament_id}`, { headers })
           : Promise.resolve(null),
-        // Stats (include custom_player_id and sequence_id for custom players and and-1 detection)
-        fetch(`${supabaseUrl}/rest/v1/game_stats?select=id,game_id,player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at,sequence_id&game_id=eq.${gameId}&order=created_at.desc`, { headers }),
+        // Stats (include custom_player_id, sequence_id, and is_opponent_stat for custom players, and-1 detection, and coach mode)
+        fetch(`${supabaseUrl}/rest/v1/game_stats?select=id,game_id,player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at,sequence_id,is_opponent_stat&game_id=eq.${gameId}&order=created_at.desc`, { headers }),
         // Substitutions
         fetch(`${supabaseUrl}/rest/v1/game_substitutions?select=*&game_id=eq.${gameId}&order=created_at.asc`, { headers }),
         // Timeouts
@@ -531,6 +531,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       });
 
       // 7. Calculate real-time scores from game_stats (always use calculated scores for accuracy)
+      // ✅ FIX: Match Tracker logic - check is_opponent_stat for coach mode consistency
       const calculateScoresFromStats = (stats: GameStats[], teamAId: string, teamBId: string) => {
         let homeScore = 0;
         let awayScore = 0;
@@ -539,7 +540,12 @@ export function useGameViewerV2(gameId: string): GameViewerData {
           if (stat.modifier === 'made') {
             const points = stat.stat_value || 0;
             
-            if (stat.team_id === teamAId) {
+            // ✅ FIX: Check is_opponent_stat flag (matches Tracker logic for coach mode)
+            const statWithOpponent = stat as any;
+            if (statWithOpponent.is_opponent_stat) {
+              // Opponent stats go to away score (matches Tracker's teamBScore logic)
+              awayScore += points;
+            } else if (stat.team_id === teamAId) {
               homeScore += points;
             } else if (stat.team_id === teamBId) {
               awayScore += points;
