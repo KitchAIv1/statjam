@@ -1,6 +1,6 @@
 {
   "name": "statjam",
-  "version": "0.11.0",
+  "version": "0.16.3",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
