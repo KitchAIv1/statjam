@@ -514,36 +514,68 @@ export class TeamStatsService {
    * Calculate plus/minus for players (NBA-standard calculation)
    * 
    * CORRECT LOGIC: Plus/minus = team points scored while player is on court − opponent points scored while player is on court
+   * 
+   * ✅ v1.1.0 (Nov 27, 2025): 
+   * - Dynamic quarter length support (NBA/FIBA/NCAA/CUSTOM)
+   * - Coach Mode is_opponent_stat support
+   * - Game time ordering (not created_at)
+   * - Current game state cap for ongoing games
    */
   private static async calculatePlusMinusForPlayers(gameId: string, teamId: string, playerIds: string[]): Promise<Map<string, number>> {
     try {
-      console.log('📊 TeamStatsService: Calculating NBA-standard plus/minus');
+      console.log('📊 TeamStatsService: Calculating NBA-standard plus/minus (v1.1.0)');
 
       const playerPlusMinus = new Map<string, number>();
       
-      // Step 1: Get all substitutions to track when players were on court
+      // ✅ Step 1: Get dynamic quarter length (not hardcoded 12)
+      const quarterLengthMinutes = await this.getQuarterLengthMinutes(gameId);
+      const quarterLengthSeconds = quarterLengthMinutes * 60;
+      console.log(`📊 Plus/Minus: Using ${quarterLengthMinutes}-min quarters`);
+
+      // ✅ Step 2: Get current game state for capping "still on court" players
+      let currentGameTimeSeconds = Infinity; // Default to infinity (include all events)
+      try {
+        const gameState = await this.makeAuthenticatedRequest<any>('games', {
+          'select': 'quarter,game_clock_minutes,game_clock_seconds,status,team_a_id,team_b_id,is_coach_game',
+          'id': `eq.${gameId}`
+        });
+        if (gameState.length > 0) {
+          const g = gameState[0];
+          const currentQuarter = g.quarter || 1;
+          const clockMinutes = g.game_clock_minutes ?? quarterLengthMinutes;
+          const clockSeconds = g.game_clock_seconds ?? 0;
+          currentGameTimeSeconds = this.convertGameTimeToSecondsWithLength(
+            currentQuarter, clockMinutes, clockSeconds, quarterLengthSeconds
+          );
+          console.log(`📊 Plus/Minus: Current game time = ${currentGameTimeSeconds}s (Q${currentQuarter} ${clockMinutes}:${clockSeconds.toString().padStart(2, '0')})`);
+        }
+      } catch (e) {
+        console.warn('⚠️ Plus/Minus: Could not fetch current game state');
+      }
+      
+      // ✅ Step 3: Get all substitutions (ordered by game time, not created_at)
       const substitutions = await this.makeRequest<any>('game_substitutions', {
-        'select': 'player_in_id,player_out_id,custom_player_in_id,custom_player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
+        'select': 'player_in_id,player_out_id,custom_player_in_id,custom_player_out_id,quarter,game_time_minutes,game_time_seconds',
         'game_id': `eq.${gameId}`,
-        'order': 'created_at.asc'
+        'order': 'quarter.asc,game_time_minutes.desc,game_time_seconds.desc'
       });
 
-      console.log(`📊 TeamStatsService: Found ${substitutions.length} substitutions for plus/minus calculation`);
+      console.log(`📊 Plus/Minus: Found ${substitutions.length} substitutions`);
 
-      // Step 2: Get all scoring events with timestamps
-      const allScoringStats = await this.makeRequest<any>('game_stats', {
-        'select': 'player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at',
+      // ✅ Step 4: Get all scoring events (ordered by game time, include is_opponent_stat for Coach Mode)
+      const allScoringStats = await this.makeAuthenticatedRequest<any>('game_stats', {
+        'select': 'player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,is_opponent_stat',
         'game_id': `eq.${gameId}`,
-        'stat_type': 'in.(field_goal,two_pointer,3_pointer,free_throw)',
+        'stat_type': 'in.(field_goal,two_pointer,three_pointer,3_pointer,free_throw)',
         'modifier': 'eq.made',
-        'order': 'created_at.asc'
+        'order': 'quarter.asc,game_time_minutes.desc,game_time_seconds.desc'
       });
 
-      console.log(`📊 TeamStatsService: Found ${allScoringStats.length} scoring events`);
+      console.log(`📊 Plus/Minus: Found ${allScoringStats.length} scoring events`);
 
-      // Step 3: Get opponent team ID (use authenticated for coach games)
+      // ✅ Step 5: Get game teams (for opponent detection)
       const game = await this.makeAuthenticatedRequest<any>('games', {
-        'select': 'team_a_id,team_b_id',
+        'select': 'team_a_id,team_b_id,is_coach_game',
         'id': `eq.${gameId}`
       });
 
@@ -551,13 +583,14 @@ export class TeamStatsService {
         throw new Error('Game not found');
       }
 
+      const isCoachGame = game[0].is_coach_game || false;
       const opponentTeamId = game[0].team_a_id === teamId ? game[0].team_b_id : game[0].team_a_id;
-      console.log(`📊 TeamStatsService: Team ${teamId.substring(0, 8)} vs Opponent ${opponentTeamId.substring(0, 8)}`);
+      console.log(`📊 Plus/Minus: Team ${teamId.substring(0, 8)} vs Opponent ${opponentTeamId?.substring(0, 8) || 'N/A'} (Coach Mode: ${isCoachGame})`);
 
-      // Step 4: Build player on-court timeline
+      // ✅ Step 6: Build player on-court timeline with quarter-aware seconds
       const playerTimeline = new Map<string, Array<{ start: number; end: number | null }>>();
       
-      // Initialize all players (assume first 5 are starters)
+      // Initialize all players (assume first 5 are starters at game start = 0 seconds)
       playerIds.forEach((playerId, index) => {
         const isStarter = index < 5;
         playerTimeline.set(playerId, isStarter ? [{ start: 0, end: null }] : []);
@@ -565,7 +598,9 @@ export class TeamStatsService {
 
       // Process substitutions to build timeline
       substitutions.forEach((sub: any) => {
-        const subTime = this.convertGameTimeToSeconds(sub.quarter, sub.game_time_minutes, sub.game_time_seconds);
+        const subTime = this.convertGameTimeToSecondsWithLength(
+          sub.quarter, sub.game_time_minutes, sub.game_time_seconds, quarterLengthSeconds
+        );
         
         // ✅ CUSTOM PLAYER SUPPORT: Check both regular and custom player IDs
         const playerInId = sub.player_in_id || sub.custom_player_in_id;
@@ -591,7 +626,7 @@ export class TeamStatsService {
         }
       });
 
-      // Step 5: Calculate plus/minus for each player
+      // ✅ Step 7: Calculate plus/minus for each player
       for (const playerId of playerIds) {
         const timeline = playerTimeline.get(playerId) || [];
         let teamPoints = 0;
@@ -599,16 +634,38 @@ export class TeamStatsService {
 
         // For each scoring event, check if player was on court
         allScoringStats.forEach((stat: any) => {
-          const statTime = this.convertGameTimeToSeconds(stat.quarter, stat.game_time_minutes, stat.game_time_seconds);
-          const points = stat.stat_value || (stat.stat_type === '3_pointer' ? 3 : stat.stat_type === 'free_throw' ? 1 : 2);
+          const statTime = this.convertGameTimeToSecondsWithLength(
+            stat.quarter, stat.game_time_minutes, stat.game_time_seconds, quarterLengthSeconds
+          );
+          
+          // ✅ Cap to current game time (don't count future events for ongoing games)
+          if (statTime > currentGameTimeSeconds) return;
+          
+          // Determine point value
+          const statType = stat.stat_type;
+          let points = stat.stat_value;
+          if (!points) {
+            if (statType === '3_pointer' || statType === 'three_pointer') {
+              points = 3;
+            } else if (statType === 'free_throw') {
+              points = 1;
+            } else {
+              points = 2; // field_goal, two_pointer
+            }
+          }
           
           // Check if player was on court during this scoring event
-          const wasOnCourt = timeline.some(stint => 
-            statTime >= stint.start && (stint.end === null || statTime <= stint.end)
-          );
+          // ✅ Cap stint.end to current game time for "still on court" players
+          const wasOnCourt = timeline.some(stint => {
+            const stintEnd = stint.end === null ? currentGameTimeSeconds : stint.end;
+            return statTime >= stint.start && statTime <= stintEnd;
+          });
 
           if (wasOnCourt) {
-            if (stat.team_id === teamId) {
+            // ✅ Coach Mode: is_opponent_stat means opponent scored (count against team)
+            if (isCoachGame && stat.is_opponent_stat === true) {
+              opponentPoints += points;
+            } else if (stat.team_id === teamId) {
               teamPoints += points;
             } else if (stat.team_id === opponentTeamId) {
               opponentPoints += points;
@@ -619,7 +676,7 @@ export class TeamStatsService {
         const plusMinus = teamPoints - opponentPoints;
         playerPlusMinus.set(playerId, plusMinus);
         
-        console.log(`📊 TeamStatsService: Player ${playerId.substring(0, 8)} +/- = ${teamPoints} (team) - ${opponentPoints} (opp) = ${plusMinus}`);
+        console.log(`📊 Plus/Minus: ${playerId.substring(0, 8)} = ${teamPoints} (team) - ${opponentPoints} (opp) = ${plusMinus > 0 ? '+' : ''}${plusMinus}`);
       }
 
       console.log('✅ TeamStatsService: NBA-standard plus/minus calculated successfully');
@@ -637,13 +694,22 @@ export class TeamStatsService {
   }
 
   /**
-   * Helper: Convert game time to seconds for timeline comparison
+   * Helper: Convert game time to total elapsed seconds (dynamic quarter length)
+   * 
+   * Game clock counts down, so we invert to get elapsed time from game start.
+   * Example (12-min quarters): Q2 at 8:00 remaining = 12 + 4 = 16 minutes elapsed
    */
-  private static convertGameTimeToSeconds(quarter: number, minutes: number, seconds: number): number {
-    // Convert to total game seconds (game clock counts down, so we invert)
-    const quarterStartSeconds = (quarter - 1) * 12 * 60; // Each quarter is 12 minutes
-    const timeIntoQuarter = (12 * 60) - (minutes * 60 + seconds); // Invert because clock counts down
-    return quarterStartSeconds + timeIntoQuarter;
+  private static convertGameTimeToSecondsWithLength(
+    quarter: number, 
+    minutes: number, 
+    seconds: number, 
+    quarterLengthSeconds: number
+  ): number {
+    // Time elapsed in previous quarters
+    const previousQuartersSeconds = (quarter - 1) * quarterLengthSeconds;
+    // Time elapsed in current quarter (invert because clock counts down)
+    const currentQuarterElapsed = quarterLengthSeconds - (minutes * 60 + seconds);
+    return previousQuartersSeconds + currentQuarterElapsed;
   }
 
   /**
