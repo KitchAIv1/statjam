@@ -311,18 +311,18 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
           <DialogTitle>{isAwardView ? `${awardTitle} - Player Profile` : 'Player Profile'}</DialogTitle>
         </DialogHeader>
 
-        <div className="relative flex flex-col lg:flex-row min-h-[500px] lg:min-h-[650px]">
+        <div className="relative flex flex-row min-h-[400px] sm:min-h-[500px] lg:min-h-[650px]">
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-50 rounded-full bg-black/30 p-2 text-white hover:bg-black/50 transition-colors"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 z-50 rounded-full bg-black/30 p-1.5 sm:p-2 text-white hover:bg-black/50 transition-colors"
             aria-label="Close"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
 
-          {/* Player Info Section */}
-          <div className="flex-1 p-6 lg:p-8 space-y-6 lg:space-y-8 text-white overflow-y-auto lg:overflow-y-auto">
+          {/* Player Info Section - Left side, always visible */}
+          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 lg:space-y-8 text-white overflow-y-auto">
             {/* Award Badge with Integrated Game Context */}
             {isAwardView && (
               loadingAwardDetails ? (
@@ -399,22 +399,22 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
               <>
 
                 {/* Player Name & Basic Info */}
-                <div className="space-y-2">
-                  <h1 className="text-3xl lg:text-5xl font-bold tracking-tight drop-shadow-lg">
+                <div className="space-y-1 sm:space-y-2">
+                  <h1 className="text-xl sm:text-3xl lg:text-5xl font-bold tracking-tight drop-shadow-lg leading-tight">
                     {identity.name || 'Player Name'}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-2 lg:gap-3 text-orange-200 mb-2">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 lg:gap-3 text-orange-200 mb-1 sm:mb-2">
                     {identity.jerseyNumber && (
                       <>
-                        <span className="text-xl lg:text-3xl font-bold">#{identity.jerseyNumber}</span>
-                        <span className="text-lg">•</span>
+                        <span className="text-base sm:text-xl lg:text-3xl font-bold">#{identity.jerseyNumber}</span>
+                        <span className="text-sm sm:text-lg">•</span>
                       </>
                     )}
                     {identity.position && (
-                      <span className="text-base lg:text-xl font-semibold">{identity.position}</span>
+                      <span className="text-sm sm:text-base lg:text-xl font-semibold">{identity.position}</span>
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 text-orange-100 text-sm lg:text-base">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-orange-100 text-xs sm:text-sm lg:text-base">
                     {identity.height && formatHeight(identity.height) !== '--' && (
                       <>
                         <span className="font-medium">{formatHeight(identity.height)}</span>
@@ -442,62 +442,62 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                 {/* Game Stats (from Award) or Season Averages */}
                 {gameStats ? (
                   <div>
-                    <p className={`mb-4 text-sm font-medium uppercase tracking-wider ${
+                    <p className={`mb-2 sm:mb-4 text-xs sm:text-sm font-medium uppercase tracking-wider ${
                       isAwardView ? 'text-yellow-50' : 'text-orange-100'
                     }`}>Game Performance</p>
-                    <div className="flex flex-nowrap gap-4 sm:gap-6 lg:gap-8 mb-6 overflow-x-auto scrollbar-hide">
-                      <div className="flex-shrink-0 min-w-[70px] sm:min-w-[80px]">
-                        <div className={`text-2xl lg:text-3xl font-bold drop-shadow-lg ${
+                    <div className="flex flex-nowrap gap-4 sm:gap-6 lg:gap-8 mb-4 sm:mb-6 overflow-x-auto">
+                      <div className="flex-shrink-0">
+                        <div className={`text-2xl sm:text-2xl lg:text-3xl font-bold drop-shadow-lg ${
                           isAwardView ? 'text-yellow-50' : 'text-white'
                         }`}>
                           {gameStats.points}
                         </div>
-                        <div className={`text-sm mt-1 ${
+                        <div className={`text-xs sm:text-sm mt-0.5 sm:mt-1 ${
                           isAwardView ? 'text-yellow-100/90' : 'text-orange-200'
-                        }`}>Points</div>
+                        }`}>PTS</div>
                       </div>
-                      <div className="flex-shrink-0 min-w-[70px] sm:min-w-[80px]">
-                        <div className={`text-2xl lg:text-3xl font-bold drop-shadow-lg ${
+                      <div className="flex-shrink-0">
+                        <div className={`text-2xl sm:text-2xl lg:text-3xl font-bold drop-shadow-lg ${
                           isAwardView ? 'text-yellow-50' : 'text-white'
                         }`}>
                           {gameStats.rebounds}
                         </div>
-                        <div className={`text-sm mt-1 ${
+                        <div className={`text-xs sm:text-sm mt-0.5 sm:mt-1 ${
                           isAwardView ? 'text-yellow-100/90' : 'text-orange-200'
-                        }`}>Rebounds</div>
+                        }`}>REB</div>
                       </div>
-                      <div className="flex-shrink-0 min-w-[70px] sm:min-w-[80px]">
-                        <div className={`text-2xl lg:text-3xl font-bold drop-shadow-lg ${
+                      <div className="flex-shrink-0">
+                        <div className={`text-2xl sm:text-2xl lg:text-3xl font-bold drop-shadow-lg ${
                           isAwardView ? 'text-yellow-50' : 'text-white'
                         }`}>
                           {gameStats.assists}
                         </div>
-                        <div className={`text-sm mt-1 ${
+                        <div className={`text-xs sm:text-sm mt-0.5 sm:mt-1 ${
                           isAwardView ? 'text-yellow-100/90' : 'text-orange-200'
-                        }`}>Assists</div>
+                        }`}>AST</div>
                       </div>
                       {gameStats.steals > 0 && (
-                        <div className="flex-shrink-0 min-w-[70px] sm:min-w-[80px]">
-                          <div className={`text-2xl lg:text-3xl font-bold drop-shadow-lg ${
+                        <div className="flex-shrink-0">
+                          <div className={`text-2xl sm:text-2xl lg:text-3xl font-bold drop-shadow-lg ${
                             isAwardView ? 'text-yellow-50' : 'text-white'
                           }`}>
                             {gameStats.steals}
                           </div>
-                          <div className={`text-sm mt-1 ${
+                          <div className={`text-xs sm:text-sm mt-0.5 sm:mt-1 ${
                             isAwardView ? 'text-yellow-100/90' : 'text-orange-200'
-                          }`}>Steals</div>
+                          }`}>STL</div>
                         </div>
                       )}
                       {gameStats.blocks > 0 && (
-                        <div className="flex-shrink-0 min-w-[70px] sm:min-w-[80px]">
-                          <div className={`text-2xl lg:text-3xl font-bold drop-shadow-lg ${
+                        <div className="flex-shrink-0">
+                          <div className={`text-2xl sm:text-2xl lg:text-3xl font-bold drop-shadow-lg ${
                             isAwardView ? 'text-yellow-50' : 'text-white'
                           }`}>
                             {gameStats.blocks}
                           </div>
-                          <div className={`text-sm mt-1 ${
+                          <div className={`text-xs sm:text-sm mt-0.5 sm:mt-1 ${
                             isAwardView ? 'text-yellow-100/90' : 'text-orange-200'
-                          }`}>Blocks</div>
+                          }`}>BLK</div>
                         </div>
                       )}
                     </div>
@@ -505,27 +505,27 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                     {/* Shooting Efficiency - Award View */}
                     {gameAwardDetails && (gameAwardDetails.shootingStats.fgAttempted > 0 || gameAwardDetails.shootingStats.ftAttempted > 0) && (
                       <>
-                        <div className="flex items-center gap-2 mb-3 mt-6">
-                          <div className={`w-2 h-2 rounded-full ${
+                        <div className="flex items-center gap-2 mb-3 mt-4 sm:mt-6">
+                          <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
                             isAwardView ? 'bg-yellow-200' : 'bg-orange-300'
                           }`}></div>
-                          <p className={`text-xs font-medium uppercase tracking-wider ${
+                          <p className={`text-[10px] sm:text-xs font-medium uppercase tracking-wider ${
                             isAwardView ? 'text-yellow-100/90' : 'text-orange-200'
                           }`}>Shooting Efficiency</p>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 lg:gap-3">
+                        <div className="flex flex-wrap gap-2 sm:gap-3">
                           {gameAwardDetails.shootingStats.fgAttempted > 0 && (
-                            <div className={`text-center rounded-lg p-2 sm:p-2 lg:p-2.5 border min-w-0 w-full box-border ${
+                            <div className={`flex-1 min-w-[70px] text-center rounded-lg p-2 sm:p-2.5 border ${
                               isAwardView 
                                 ? 'bg-black/20 border-yellow-200/20' 
                                 : 'bg-white/5 border-white/10'
                             }`}>
-                              <div className={`text-sm sm:text-base lg:text-lg font-bold whitespace-nowrap ${
+                              <div className={`text-base sm:text-lg font-bold ${
                                 isAwardView ? 'text-yellow-50' : 'text-white'
                               }`}>
                                 {gameAwardDetails.shootingStats.fgPercentage.toFixed(1)}%
                               </div>
-                              <div className={`text-[9px] sm:text-[10px] lg:text-[11px] mt-1 leading-tight ${
+                              <div className={`text-[8px] sm:text-[10px] mt-0.5 leading-tight ${
                                 isAwardView ? 'text-yellow-100/80' : 'text-orange-300'
                               }`}>
                                 FG ({gameAwardDetails.shootingStats.fgMade}-{gameAwardDetails.shootingStats.fgAttempted})
@@ -533,17 +533,17 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                             </div>
                           )}
                           {gameAwardDetails.shootingStats.threePtAttempted > 0 && (
-                            <div className={`text-center rounded-lg p-2 sm:p-2 lg:p-2.5 border min-w-0 w-full box-border ${
+                            <div className={`flex-1 min-w-[70px] text-center rounded-lg p-2 sm:p-2.5 border ${
                               isAwardView 
                                 ? 'bg-black/20 border-yellow-200/20' 
                                 : 'bg-white/5 border-white/10'
                             }`}>
-                              <div className={`text-sm sm:text-base lg:text-lg font-bold whitespace-nowrap ${
+                              <div className={`text-base sm:text-lg font-bold ${
                                 isAwardView ? 'text-yellow-50' : 'text-white'
                               }`}>
                                 {gameAwardDetails.shootingStats.threePtPercentage.toFixed(1)}%
                               </div>
-                              <div className={`text-[9px] sm:text-[10px] lg:text-[11px] mt-1 leading-tight ${
+                              <div className={`text-[8px] sm:text-[10px] mt-0.5 leading-tight ${
                                 isAwardView ? 'text-yellow-100/80' : 'text-orange-300'
                               }`}>
                                 3PT ({gameAwardDetails.shootingStats.threePtMade}-{gameAwardDetails.shootingStats.threePtAttempted})
@@ -551,17 +551,17 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                             </div>
                           )}
                           {gameAwardDetails.shootingStats.ftAttempted > 0 && (
-                            <div className={`text-center rounded-lg p-2 sm:p-2 lg:p-2.5 border min-w-0 w-full box-border ${
+                            <div className={`flex-1 min-w-[70px] text-center rounded-lg p-2 sm:p-2.5 border ${
                               isAwardView 
                                 ? 'bg-black/20 border-yellow-200/20' 
                                 : 'bg-white/5 border-white/10'
                             }`}>
-                              <div className={`text-sm sm:text-base lg:text-lg font-bold whitespace-nowrap ${
+                              <div className={`text-base sm:text-lg font-bold ${
                                 isAwardView ? 'text-yellow-50' : 'text-white'
                               }`}>
                                 {gameAwardDetails.shootingStats.ftPercentage.toFixed(1)}%
                               </div>
-                              <div className={`text-[9px] sm:text-[10px] lg:text-[11px] mt-1 leading-tight ${
+                              <div className={`text-[8px] sm:text-[10px] mt-0.5 leading-tight ${
                                 isAwardView ? 'text-yellow-100/80' : 'text-orange-300'
                               }`}>
                                 FT ({gameAwardDetails.shootingStats.ftMade}-{gameAwardDetails.shootingStats.ftAttempted})
@@ -574,57 +574,57 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                   </div>
                 ) : (
                   <div>
-                    <p className="text-orange-100 mb-4 text-sm font-medium uppercase tracking-wider">Season Averages</p>
-                    <div className="flex flex-wrap gap-6 lg:gap-8 mb-6">
-                      <div className="min-w-[80px]">
-                        <div className="text-2xl lg:text-3xl font-bold text-white">
+                    <p className="text-orange-100 mb-2 sm:mb-4 text-xs sm:text-sm font-medium uppercase tracking-wider">Season Averages</p>
+                    <div className="flex flex-nowrap gap-4 sm:gap-6 lg:gap-8 mb-4 sm:mb-6">
+                      <div className="flex-shrink-0">
+                        <div className="text-2xl sm:text-2xl lg:text-3xl font-bold text-white">
                           {seasonAverages ? formatStat(seasonAverages.pointsPerGame) : '0.0'}
                         </div>
-                        <div className="text-orange-200 text-sm mt-1">Points</div>
+                        <div className="text-orange-200 text-xs sm:text-sm mt-0.5 sm:mt-1">PPG</div>
                       </div>
-                      <div className="min-w-[80px]">
-                        <div className="text-2xl lg:text-3xl font-bold text-white">
+                      <div className="flex-shrink-0">
+                        <div className="text-2xl sm:text-2xl lg:text-3xl font-bold text-white">
                           {seasonAverages ? formatStat(seasonAverages.reboundsPerGame) : '0.0'}
                         </div>
-                        <div className="text-orange-200 text-sm mt-1">Rebounds</div>
+                        <div className="text-orange-200 text-xs sm:text-sm mt-0.5 sm:mt-1">RPG</div>
                       </div>
-                      <div className="min-w-[80px]">
-                        <div className="text-2xl lg:text-3xl font-bold text-white">
+                      <div className="flex-shrink-0">
+                        <div className="text-2xl sm:text-2xl lg:text-3xl font-bold text-white">
                           {seasonAverages ? formatStat(seasonAverages.assistsPerGame) : '0.0'}
                         </div>
-                        <div className="text-orange-200 text-sm mt-1">Assists</div>
+                        <div className="text-orange-200 text-xs sm:text-sm mt-0.5 sm:mt-1">APG</div>
                       </div>
                     </div>
 
                     {/* Shooting Efficiency - Only show for season averages */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-2 h-2 bg-orange-300 rounded-full"></div>
-                      <p className="text-orange-200 text-xs font-medium uppercase tracking-wider">Shooting Efficiency</p>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-300 rounded-full"></div>
+                      <p className="text-orange-200 text-[10px] sm:text-xs font-medium uppercase tracking-wider">Shooting</p>
                     </div>
-                    <div className="grid grid-cols-4 gap-3 lg:gap-4">
-                      <div className="text-center bg-white/5 rounded-lg p-2 lg:p-3">
-                        <div className="text-lg lg:text-xl font-bold text-white">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4">
+                      <div className="text-center bg-white/5 rounded-md sm:rounded-lg p-2 sm:p-3 lg:p-3">
+                        <div className="text-base sm:text-xl lg:text-2xl font-bold text-white">
                           {seasonAverages ? formatStat(seasonAverages.fieldGoalPct, 1) : '0.0'}%
                         </div>
-                        <div className="text-orange-300 text-[10px] lg:text-xs mt-1">FG%</div>
+                        <div className="text-orange-300 text-[9px] sm:text-xs lg:text-sm mt-0.5">FG%</div>
                       </div>
-                      <div className="text-center bg-white/5 rounded-lg p-2 lg:p-3">
-                        <div className="text-lg lg:text-xl font-bold text-white">
+                      <div className="text-center bg-white/5 rounded-md sm:rounded-lg p-2 sm:p-3 lg:p-3">
+                        <div className="text-base sm:text-xl lg:text-2xl font-bold text-white">
                           {seasonAverages ? formatStat(seasonAverages.threePointPct, 1) : '0.0'}%
                         </div>
-                        <div className="text-orange-300 text-[10px] lg:text-xs mt-1">3PT%</div>
+                        <div className="text-orange-300 text-[9px] sm:text-xs lg:text-sm mt-0.5">3PT%</div>
                       </div>
-                      <div className="text-center bg-white/5 rounded-lg p-2 lg:p-3">
-                        <div className="text-lg lg:text-xl font-bold text-white">
+                      <div className="text-center bg-white/5 rounded-md sm:rounded-lg p-2 sm:p-3 lg:p-3">
+                        <div className="text-base sm:text-xl lg:text-2xl font-bold text-white">
                           {seasonAverages ? formatStat(seasonAverages.freeThrowPct, 1) : '0.0'}%
                         </div>
-                        <div className="text-orange-300 text-[10px] lg:text-xs mt-1">FT%</div>
+                        <div className="text-orange-300 text-[9px] sm:text-xs lg:text-sm mt-0.5">FT%</div>
                       </div>
-                      <div className="text-center bg-white/5 rounded-lg p-2 lg:p-3">
-                        <div className="text-lg lg:text-xl font-bold text-white">
+                      <div className="text-center bg-white/5 rounded-md sm:rounded-lg p-2 sm:p-3 lg:p-3">
+                        <div className="text-base sm:text-xl lg:text-2xl font-bold text-white">
                           {seasonAverages ? formatStat(seasonAverages.minutesPerGame, 1) : '0.0'}
                         </div>
-                        <div className="text-orange-300 text-[10px] lg:text-xs mt-1">MPG</div>
+                        <div className="text-orange-300 text-[9px] sm:text-xs lg:text-sm mt-0.5">MPG</div>
                       </div>
                     </div>
                   </div>
@@ -633,35 +633,35 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                 {/* Career Highs - Hide for award view to avoid redundancy */}
                 {!isAwardView && (
                   <div>
-                    <p className="text-orange-100 mb-3 text-sm font-medium uppercase tracking-wider">Career Highs</p>
-                    <div className="flex flex-wrap gap-4 lg:gap-6 text-sm">
-                      <div className="bg-white/5 rounded-lg px-3 py-2">
-                        <span className="text-orange-200">Points: </span>
+                    <p className="text-orange-100 mb-2 sm:mb-3 text-xs sm:text-sm font-medium uppercase tracking-wider">Career Highs</p>
+                    <div className="flex flex-wrap gap-2 sm:gap-4 lg:gap-6 text-xs sm:text-sm">
+                      <div className="bg-white/5 rounded-md sm:rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
+                        <span className="text-orange-200">PTS: </span>
                         <span className="font-bold text-white">
                           {careerHighs?.points ?? 0}
                         </span>
                       </div>
-                      <div className="bg-white/5 rounded-lg px-3 py-2">
-                        <span className="text-orange-200">Rebounds: </span>
+                      <div className="bg-white/5 rounded-md sm:rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
+                        <span className="text-orange-200">REB: </span>
                         <span className="font-bold text-white">
                           {careerHighs?.rebounds ?? 0}
                         </span>
                       </div>
-                      <div className="bg-white/5 rounded-lg px-3 py-2">
-                        <span className="text-orange-200">Assists: </span>
+                      <div className="bg-white/5 rounded-md sm:rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
+                        <span className="text-orange-200">AST: </span>
                         <span className="font-bold text-white">
                           {careerHighs?.assists ?? 0}
                         </span>
                       </div>
                       {careerHighs?.blocks !== undefined && (
-                        <div className="bg-white/5 rounded-lg px-3 py-2">
-                          <span className="text-orange-200">Blocks: </span>
+                        <div className="bg-white/5 rounded-md sm:rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
+                          <span className="text-orange-200">BLK: </span>
                           <span className="font-bold text-white">{careerHighs.blocks}</span>
                         </div>
                       )}
                       {careerHighs?.steals !== undefined && (
-                        <div className="bg-white/5 rounded-lg px-3 py-2">
-                          <span className="text-orange-200">Steals: </span>
+                        <div className="bg-white/5 rounded-md sm:rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
+                          <span className="text-orange-200">STL: </span>
                           <span className="font-bold text-white">{careerHighs.steals}</span>
                         </div>
                       )}
@@ -671,7 +671,7 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
 
                 {/* Action Button - Hidden for Award View */}
                 {!isAwardView && (
-                  <div className="pt-6 border-t border-white/10">
+                  <div className="pt-4 sm:pt-6 border-t border-white/10">
                     <TooltipProvider>
                       <Tooltip>
                         {!isCustomPlayer && (
@@ -680,9 +680,9 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                               variant="outline"
                               size="sm"
                               onClick={handleViewFullProfile}
-                              className="bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                              className="bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs sm:text-sm"
                             >
-                              <ExternalLink className="w-4 h-4 mr-2 opacity-50" />
+                              <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 opacity-50" />
                               View Full Profile
                             </Button>
                           </TooltipTrigger>
@@ -709,15 +709,15 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
             )}
           </div>
 
-          {/* Player Image Section - Always Show */}
-          <div className="relative w-full h-[280px] sm:h-[320px] lg:h-auto lg:flex-[0.7] lg:min-h-0 bg-gradient-to-br from-red-700/30 to-orange-700/30 overflow-hidden">
+          {/* Player Image Section - Right side, always visible */}
+          <div className="relative w-[35%] sm:w-[40%] lg:w-[45%] flex-shrink-0 bg-gradient-to-br from-red-700/30 to-orange-700/30 overflow-hidden">
             {identity?.posePhotoUrl ? (
               <>
-                {/* Mobile: Fill container completely, Desktop: Right align */}
+                {/* Image fills container, aligned to right */}
                 <ImageWithFallback
                   src={identity.posePhotoUrl}
                   alt={identity.name || 'Player'}
-                  className="absolute inset-0 h-full w-full object-cover object-center lg:right-0 lg:left-auto lg:w-auto lg:object-top transition-opacity duration-300"
+                  className="absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-300"
                   loading="lazy"
                   decoding="async"
                   onLoad={() => setImagesLoaded((prev) => ({ ...prev, pose: true }))}
@@ -725,16 +725,16 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                 />
                 {/* Jersey Number Overlay */}
                 {identity.jerseyNumber && (
-                  <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 text-3xl sm:text-4xl lg:text-6xl font-bold text-white opacity-50 drop-shadow-lg z-10">
+                  <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 lg:bottom-4 lg:right-4 text-2xl sm:text-3xl lg:text-6xl font-bold text-white opacity-50 drop-shadow-lg z-10">
                     #{identity.jerseyNumber}
                   </div>
                 )}
               </>
             ) : (
               /* Fallback when no pose photo */
-              <div className="absolute inset-0 flex items-center justify-center p-4">
+              <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-4">
                 <div className="text-center">
-                  <Avatar className="h-24 w-24 sm:h-32 sm:w-32 lg:h-40 lg:w-40 mx-auto mb-4 border-4 border-white/30">
+                  <Avatar className="h-16 w-16 sm:h-24 sm:w-24 lg:h-40 lg:w-40 mx-auto mb-2 sm:mb-4 border-2 sm:border-4 border-white/30">
                     {identity?.profilePhotoUrl ? (
                       <AvatarImage
                         src={identity.profilePhotoUrl}
@@ -746,12 +746,12 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                         onError={() => setImagesLoaded((prev) => ({ ...prev, profile: true }))}
                       />
                     ) : null}
-                    <AvatarFallback className="bg-gradient-to-br from-white/20 to-white/10 text-white text-3xl sm:text-4xl lg:text-5xl">
+                    <AvatarFallback className="bg-gradient-to-br from-white/20 to-white/10 text-white text-xl sm:text-3xl lg:text-5xl">
                       {identity?.name ? getInitials(identity.name) : 'P'}
                     </AvatarFallback>
                   </Avatar>
                   {identity?.jerseyNumber && (
-                    <div className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white/40 mt-4">
+                    <div className="text-2xl sm:text-4xl lg:text-7xl font-bold text-white/40 mt-2 sm:mt-4">
                       #{identity.jerseyNumber}
                     </div>
                   )}
@@ -760,8 +760,8 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
             )}
             {/* Team Badge - Only show if team exists */}
             {identity?.teamName && identity.teamName !== 'N/A' && (
-              <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/20">
-                <span className="text-orange-200 font-bold text-xs lg:text-sm">{String(identity.teamName).toUpperCase()}</span>
+              <div className="absolute top-2 right-2 sm:top-3 sm:right-3 lg:top-4 lg:right-4 bg-black/40 backdrop-blur-sm rounded-md sm:rounded-lg px-1.5 sm:px-3 py-0.5 sm:py-1.5 border border-white/20">
+                <span className="text-orange-200 font-bold text-[8px] sm:text-xs lg:text-sm">{String(identity.teamName).toUpperCase()}</span>
               </div>
             )}
           </div>
