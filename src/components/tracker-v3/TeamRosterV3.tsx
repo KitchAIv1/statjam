@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
-import { RefreshCw, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { RefreshCw, Users, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
+import { QuickSubModal } from './modals/QuickSubModal';
 
 interface Player {
   id: string;
@@ -19,6 +20,7 @@ interface TeamRosterV3Props {
   selectedPlayer: string | null;
   onPlayerSelect: (playerId: string) => void;
   onSubstitution?: (playerId: string) => void;
+  onQuickSubstitution?: (playerOutId: string, playerInId: string) => void; // ✅ NEW: Quick sub handler
   refreshKey?: string | number; // Add refresh key to force re-render
   isCoachMode?: boolean; // Add coach mode flag
 }
@@ -30,9 +32,14 @@ export function TeamRosterV3({
   selectedPlayer,
   onPlayerSelect,
   onSubstitution,
+  onQuickSubstitution,
   refreshKey = 0,
   isCoachMode = false
 }: TeamRosterV3Props) {
+  // ✅ Quick Sub Modal State
+  const [quickSubModalOpen, setQuickSubModalOpen] = useState(false);
+  const [playerOutId, setPlayerOutId] = useState<string | null>(null);
+  const [playerOutName, setPlayerOutName] = useState<string>('');
   
   // Generate player initials with proper fallback handling
   const getPlayerInitials = (name: string) => {
@@ -72,6 +79,23 @@ export function TeamRosterV3({
   // For coach teams, show all players since there's no strict on-court limit
   const onCourtPlayers = players.slice(0, 5);
   const benchPlayers = players.slice(5);
+
+  // ✅ Quick Sub Handlers
+  const handleOpenQuickSub = (playerId: string, playerName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent player selection
+    setPlayerOutId(playerId);
+    setPlayerOutName(playerName);
+    setQuickSubModalOpen(true);
+  };
+
+  const handleQuickSubSelect = (playerInId: string) => {
+    if (playerOutId && onQuickSubstitution) {
+      onQuickSubstitution(playerOutId, playerInId);
+    }
+    setQuickSubModalOpen(false);
+    setPlayerOutId(null);
+    setPlayerOutName('');
+  };
   
   // Always display only first 5 players (on-court)
   // Bench players are accessible via substitution modal
@@ -193,11 +217,41 @@ export function TeamRosterV3({
                     </span>
                   </div>
                 </div>
+
+                {/* ✅ Quick Sub Button - Desktop Only */}
+                {onQuickSubstitution && benchPlayers.length > 0 && (
+                  <button
+                    onClick={(e) => handleOpenQuickSub(player.id, player.name, e)}
+                    className={`flex-shrink-0 px-2 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 flex items-center gap-1 ${
+                      teamSide === 'left'
+                        ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 hover:scale-105'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:scale-105'
+                    }`}
+                    title="Quick substitution"
+                  >
+                    <ArrowRightLeft className="w-3.5 h-3.5" />
+                    SUB
+                  </button>
+                )}
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* ✅ Quick Sub Modal */}
+      <QuickSubModal
+        isOpen={quickSubModalOpen}
+        onClose={() => {
+          setQuickSubModalOpen(false);
+          setPlayerOutId(null);
+          setPlayerOutName('');
+        }}
+        benchPlayers={benchPlayers}
+        teamSide={teamSide}
+        playerOutName={playerOutName}
+        onPlayerSelect={handleQuickSubSelect}
+      />
     </div>
   );
 }

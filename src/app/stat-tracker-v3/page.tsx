@@ -1113,6 +1113,11 @@ function StatTrackerV3Content() {
     }
   };
 
+  // ✅ Quick Substitution Handler (single player, immediate execution)
+  const handleQuickSubstitution = async (playerOutId: string, playerInId: string) => {
+    await handleSubConfirm([{ playerOutId, playerInId }]);
+  };
+
   // Team players update callback for mobile layout
   const handleTeamPlayersUpdate = (updatedTeamAPlayers: Player[], updatedTeamBPlayers: Player[]) => {
     setTeamAPlayers(updatedTeamAPlayers);
@@ -1963,6 +1968,7 @@ function StatTrackerV3Content() {
                 selectedPlayer={selectedPlayer}
                 onPlayerSelect={setSelectedPlayer}
                 onSubstitution={handleSubstitution}
+                onQuickSubstitution={handleQuickSubstitution}
                 refreshKey={rosterRefreshKey}
                 isCoachMode={coachMode}
               />
@@ -2027,6 +2033,7 @@ function StatTrackerV3Content() {
                   selectedPlayer={selectedPlayer}
                   onPlayerSelect={setSelectedPlayer}
                   onSubstitution={handleSubstitution}
+                  onQuickSubstitution={handleQuickSubstitution}
                   refreshKey={rosterRefreshKey}
                   isCoachMode={coachMode}
                 />
