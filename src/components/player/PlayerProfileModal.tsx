@@ -14,6 +14,7 @@ import type { PlayerIdentity, SeasonAverages, CareerHighs } from '@/lib/types/pl
 import { GameService } from '@/lib/services/gameService';
 import { TeamStatsService } from '@/lib/services/teamStatsService';
 import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
+import { cache, CacheTTL } from '@/lib/utils/cache';
 
 interface PlayerProfileModalProps {
   isOpen: boolean;
@@ -145,6 +146,16 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
     }
 
     const loadAwardDetails = async () => {
+      // ⚡ OPTIMIZATION: Check cache first (5 min TTL)
+      const cacheKey = `game_award_details_${gameId}_${playerId}_${isCustomPlayer ? 'custom' : 'regular'}`;
+      const cached = cache.get<GameAwardDetails>(cacheKey);
+      if (cached) {
+        console.log('⚡ PlayerProfileModal: Using cached award details for', playerId.substring(0, 8));
+        setGameAwardDetails(cached);
+        setLoadingAwardDetails(false);
+        return;
+      }
+
       setLoadingAwardDetails(true);
       try {
         // Fetch game details
@@ -230,7 +241,7 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
         const threePtPercentage = threePtAttempted > 0 ? Math.round((threePtMade / threePtAttempted) * 1000) / 10 : 0;
         const ftPercentage = ftAttempted > 0 ? Math.round((ftMade / ftAttempted) * 1000) / 10 : 0;
 
-        setGameAwardDetails({
+        const awardDetails: GameAwardDetails = {
           gameDate: game.start_time || game.created_at,
           teamAName: game.team_a?.name || 'Team A',
           teamBName: game.team_b?.name || 'Team B',
@@ -249,7 +260,13 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
             ftAttempted,
             ftPercentage,
           },
-        });
+        };
+
+        // ⚡ Cache the result (5 min TTL)
+        cache.set(cacheKey, awardDetails, CacheTTL.playerGameStats);
+        console.log('💾 PlayerProfileModal: Cached award details for', playerId.substring(0, 8));
+
+        setGameAwardDetails(awardDetails);
       } catch (error) {
         // Silently handle errors - award details are optional
         setGameAwardDetails(null);

@@ -304,6 +304,16 @@ export class PlayerDashboardService {
       return null;
     }
     
+    // ⚡ OPTIMIZATION: Check cache first (5 min TTL)
+    const cacheKey = isCustomPlayer 
+      ? `custom_player_season_avg_${playerId}` 
+      : `player_season_avg_${playerId}`;
+    const cached = cache.get<SeasonAverages>(cacheKey);
+    if (cached) {
+      console.log('⚡ PlayerDashboardService.getSeasonAverages: Using cached data for', playerId.substring(0, 8));
+      return cached;
+    }
+    
     console.log('🔍 PlayerDashboardService.getSeasonAverages: Fetching for', playerId.substring(0, 8), isCustomPlayer ? '(custom)' : '(regular)');
     
     // Custom players don't have backend aggregated tables, always calculate from game_stats
@@ -311,6 +321,10 @@ export class PlayerDashboardService {
       console.log('📥 PlayerDashboardService.getSeasonAverages: Custom player, calculating from game_stats');
       const calculated = await this.calculateSeasonAveragesFromGameStats(playerId, true);
       console.log('📤 PlayerDashboardService.getSeasonAverages: Calculated result:', JSON.stringify(calculated, null, 2));
+      // ⚡ Cache the result
+      if (calculated) {
+        cache.set(cacheKey, calculated, CacheTTL.playerGameStats);
+      }
       return calculated;
     }
     
@@ -324,13 +338,22 @@ export class PlayerDashboardService {
     
     if (data && !error) {
       console.log('📥 PlayerDashboardService.getSeasonAverages: Using backend table data');
-      return toSeasonAverages(data);
+      const result = toSeasonAverages(data);
+      // ⚡ Cache the result
+      if (result) {
+        cache.set(cacheKey, result, CacheTTL.playerGameStats);
+      }
+      return result;
     }
     
     console.log('📥 PlayerDashboardService.getSeasonAverages: Backend table empty, calculating from game_stats');
     // PHASE 1: Fallback to frontend calculation from game_stats (primary method for now)
     const calculated = await this.calculateSeasonAveragesFromGameStats(playerId, false);
     console.log('📤 PlayerDashboardService.getSeasonAverages: Calculated result:', JSON.stringify(calculated, null, 2));
+    // ⚡ Cache the result
+    if (calculated) {
+      cache.set(cacheKey, calculated, CacheTTL.playerGameStats);
+    }
     return calculated;
   }
 
@@ -388,9 +411,24 @@ export class PlayerDashboardService {
       return null;
     }
     
+    // ⚡ OPTIMIZATION: Check cache first (5 min TTL)
+    const cacheKey = isCustomPlayer 
+      ? `custom_player_career_highs_${playerId}` 
+      : `player_career_highs_${playerId}`;
+    const cached = cache.get<CareerHighs>(cacheKey);
+    if (cached) {
+      console.log('⚡ PlayerDashboardService.getCareerHighs: Using cached data for', playerId.substring(0, 8));
+      return cached;
+    }
+    
     // Custom players don't have backend aggregated tables, always calculate from game_stats
     if (isCustomPlayer) {
-      return this.calculateCareerHighsFromGameStats(playerId, true);
+      const calculated = await this.calculateCareerHighsFromGameStats(playerId, true);
+      // ⚡ Cache the result
+      if (calculated) {
+        cache.set(cacheKey, calculated, CacheTTL.playerGameStats);
+      }
+      return calculated;
     }
     
     // ⚠️ TEMPORARY FIX: Backend table has outdated data, always use frontend calculation
@@ -407,7 +445,12 @@ export class PlayerDashboardService {
     //   return toCareerHighs(data);
     // }
     
-    return this.calculateCareerHighsFromGameStats(playerId, false);
+    const calculated = await this.calculateCareerHighsFromGameStats(playerId, false);
+    // ⚡ Cache the result
+    if (calculated) {
+      cache.set(cacheKey, calculated, CacheTTL.playerGameStats);
+    }
+    return calculated;
   }
 
   /**
