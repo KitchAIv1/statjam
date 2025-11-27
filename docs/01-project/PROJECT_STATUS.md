@@ -1,8 +1,8 @@
 # 🎯 StatJam MVP: Current Status
 
-**Date**: November 25, 2025  
-**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS + FT AUTO-SEQUENCE + SECURITY FIXES + DATABASE PERFORMANCE OPTIMIZATION  
-**Version**: 0.16.3 (Database Timeout Resolution + WebSocket Health Monitoring + Game Viewer Performance)  
+**Date**: November 27, 2025  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS + FT AUTO-SEQUENCE + SECURITY FIXES + DATABASE PERFORMANCE OPTIMIZATION + PLAYER PROFILE UI REFINEMENTS + ACCURATE MINUTES CALCULATION  
+**Version**: 0.16.4 (Player Profile Modal UI Refinements + Dynamic Quarter Length Minutes Calculation)  
 **Branch**: `main`  
 **Live Site**: [www.statjam.net](https://www.statjam.net) ✅
 
@@ -20,7 +20,9 @@
 - Code quality is high with TypeScript throughout
 
 **Recent Achievements** ✅:
-1. **⚡ DATABASE PERFORMANCE OPTIMIZATION (Nov 25, 2025)**: Disabled redundant database triggers causing lock contention. Eliminated timeout errors (code 57014). Stat writes now process in 0ms (instant) vs 4-13 seconds before. 50% write load reduction. Added WebSocket health monitoring. Optimized Game Viewer with 1s debounce. Fixed coach mode score calculation.
+1. **🎨 PLAYER PROFILE UI REFINEMENTS (Nov 27, 2025)**: Fixed player photo always on right side (mobile + desktop), prevented stat wrapping, fixed shooting efficiency overlap (2x2 grid on mobile), fixed game award percentage overflow. Consistent responsive UI across all screen sizes.
+2. **⏱️ ACCURATE MINUTES CALCULATION (Nov 27, 2025)**: Dynamic quarter length support (NBA/FIBA/NCAA/CUSTOM), cross-quarter stint calculation fix, "still on court" bug resolved using current game state. Respects stat admin's custom quarter clock edits. Accurate minutes for all game types.
+3. **⚡ DATABASE PERFORMANCE OPTIMIZATION (Nov 25, 2025)**: Disabled redundant database triggers causing lock contention. Eliminated timeout errors (code 57014). Stat writes now process in 0ms (instant) vs 4-13 seconds before. 50% write load reduction. Added WebSocket health monitoring. Optimized Game Viewer with 1s debounce. Fixed coach mode score calculation.
 2. **🏀 FT AUTO-SEQUENCE (Nov 2025)**: Manual FT Made button triggers auto-sequence in FULL automation mode. FT count selection (1-3 shots), progress bar with color indicators, auto-advance between shots, rebound modal only on last missed shot. Smooth UI transitions with immediate modal closing.
 3. **🛡️ SECURITY FIXES (Nov 2025)**: Fixed npm vulnerabilities - glob (10.4.5→10.5.0, HIGH: command injection), js-yaml (4.1.0→4.1.1, MODERATE: prototype pollution). All vulnerabilities resolved (0 remaining).
 3. **🏆 BRACKET BUILDER (Nov 2025)**: NBA-style bracket visualization with division support, championship brackets, auto-progression, real-time updates, and regeneration safety checks. Complete bracket builder system for tournament management.

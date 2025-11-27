@@ -225,46 +225,101 @@ interface PlayerStatsRowProps {
 
 ### **Logic Overview**
 
-Player minutes are calculated based on **actual floor time**, not game clock time, following NBA standards.
+Player minutes are calculated based on **actual floor time**, not game clock time, following NBA standards. The calculation now supports **dynamic quarter lengths** from tournament rulesets (NBA=12min, FIBA=10min, NCAA=20min, CUSTOM=configurable) and respects stat admin's custom quarter clock edits.
+
+### **Quarter Length Detection**
+
+The system determines quarter length using this priority order:
+1. **Tournament's `ruleset_config.clockRules.quarterLengthMinutes`** (CUSTOM ruleset overrides)
+2. **Tournament's ruleset** (NBA=12, FIBA=10, NCAA=20)
+3. **Game's `game_clock_minutes`** (stat admin's edited clock setting)
+4. **Fallback**: 12 minutes (NBA default)
 
 ### **Calculation Methods**
 
 #### **Method 1: Using Substitutions** (Primary)
 ```typescript
-// Track player stints on court
+// Get dynamic quarter length (not hardcoded 12)
+quarterLengthMinutes = await getQuarterLengthMinutes(gameId)
+quarterLengthSeconds = quarterLengthMinutes * 60
+
+// Track player stints on court with quarter awareness
 for each substitution:
   if player_in:
+    stintStartQuarter = sub.quarter
     stintStartTime = game_time_minutes * 60 + game_time_seconds
     isOnCourt = true
   
   if player_out:
+    stintEndQuarter = sub.quarter
     stintEndTime = game_time_minutes * 60 + game_time_seconds
-    stintMinutes = (stintStartTime - stintEndTime) / 60 // Game clock counts down
-    totalMinutes += stintMinutes
+    // Calculate cross-quarter stints correctly
+    stintSeconds = calculateStintSeconds(
+      stintStartQuarter, stintStartTime,
+      stintEndQuarter, stintEndTime,
+      quarterLengthSeconds
+    )
+    totalSeconds += stintSeconds
     isOnCourt = false
 
-// Handle players still on court
+// Handle players still on court using CURRENT game state
 if isOnCourt:
-  finalStintMinutes = stintStartTime / 60
-  totalMinutes += finalStintMinutes
+  currentGameState = await getCurrentGameState(gameId)
+  stintSeconds = calculateStintSeconds(
+    stintStartQuarter, stintStartTime,
+    currentGameState.quarter, currentGameState.clock,
+    quarterLengthSeconds
+  )
+  totalSeconds += stintSeconds
 
-minutes = Math.round(totalMinutes) // Whole numbers only
+minutes = Math.round(totalSeconds / 60) // Whole numbers only
 ```
 
 #### **Method 2: Using Game Clock** (Fallback when no substitutions)
 ```typescript
-// Calculate elapsed game time
-quarterTimeElapsed = (12 * 60) - (game_clock_minutes * 60 + game_clock_seconds)
-totalTimeElapsed = ((currentQuarter - 1) * 12 * 60) + quarterTimeElapsed
+// Get dynamic quarter length
+quarterLengthMinutes = await getQuarterLengthMinutes(gameId)
+quarterLengthSeconds = quarterLengthMinutes * 60
+
+// Calculate elapsed game time using dynamic quarter length
+quarterTimeElapsed = quarterLengthSeconds - (game_clock_minutes * 60 + game_clock_seconds)
+totalTimeElapsed = ((currentQuarter - 1) * quarterLengthSeconds) + quarterTimeElapsed
 minutesElapsed = totalTimeElapsed / 60
 
 // Starters get elapsed time, bench gets 0
 minutes = isStarter ? Math.round(minutesElapsed) : 0
 ```
 
+#### **Cross-Quarter Stint Calculation**
+```typescript
+function calculateStintSeconds(
+  startQuarter, startGameClock,  // seconds remaining when stint started
+  endQuarter, endGameClock,      // seconds remaining when stint ended
+  quarterLengthSeconds
+) {
+  if (startQuarter === endQuarter) {
+    // Same quarter: simple subtraction (clock counts down)
+    return startGameClock - endGameClock
+  }
+  
+  // Cross-quarter calculation:
+  // 1. Time remaining in start quarter
+  const startQuarterTime = startGameClock
+  
+  // 2. Full quarters between start and end
+  const fullQuarters = endQuarter - startQuarter - 1
+  const fullQuartersTime = fullQuarters * quarterLengthSeconds
+  
+  // 3. Time elapsed in end quarter
+  const endQuarterTime = quarterLengthSeconds - endGameClock
+  
+  return startQuarterTime + fullQuartersTime + endQuarterTime
+}
+```
+
 ### **Example Scenarios**
 
-**Scenario 1: Player with substitutions**
+**Scenario 1: Player with substitutions (NBA 12-min quarters)**
 ```
 Game Start: 12:00 Q1 (720 seconds)
 Player subs out: 8:30 Q1 (510 seconds)
@@ -279,10 +334,41 @@ Total: 3.5 + 4.0 = 7.5 → 8 minutes (rounded)
 
 **Scenario 2: Starter with no substitutions (live game)**
 ```
-Current State: Q1, 8:45 remaining
+Current State: Q1, 8:45 remaining (12-min quarters)
 Elapsed: 12:00 - 8:45 = 3:15
 Minutes: 3.25 → 3 minutes (rounded)
 ```
+
+**Scenario 3: Cross-quarter stint (NBA 12-min quarters)**
+```
+Player starts: Q1 12:00 (720 seconds)
+Player subs out: Q3 5:00 (300 seconds)
+
+Calculation:
+- Q1 remaining: 720 seconds (12 minutes)
+- Full Q2: 720 seconds (12 minutes)
+- Q3 elapsed: 720 - 300 = 420 seconds (7 minutes)
+- Total: 720 + 720 + 420 = 1860 seconds = 31 minutes ✅
+```
+
+**Scenario 4: Custom quarter length (8-min quarters)**
+```
+Stat admin sets clock to 8:00 before game start
+Player plays entire Q1 + Q2
+Calculation: (8 * 60) + (8 * 60) = 960 seconds = 16 minutes ✅
+(Not 24 minutes as hardcoded 12-min would calculate)
+```
+
+**Scenario 5: FIBA ruleset (10-min quarters)**
+```
+Tournament uses FIBA ruleset
+Player plays Q1 + Q2
+Calculation: (10 * 60) + (10 * 60) = 1200 seconds = 20 minutes ✅
+```
+
+### **Version History**
+- **v1.0.0** (October 22, 2025): Initial implementation with hardcoded 12-minute quarters
+- **v1.0.1** (November 27, 2025): ✅ Dynamic quarter length support, cross-quarter fix, custom clock respect
 
 ---
 

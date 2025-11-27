@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.4] - 2025-11-27
+
+### 🎨 **Player Profile Modal UI Refinements & Minutes Calculation Fix**
+
+#### Player Profile Modal UI Improvements
+- **Fixed**: Player photo now always displays on right side (mobile + desktop)
+  - Changed main container from `flex-col lg:flex-row` to `flex-row` for consistent horizontal layout
+  - Image section uses proportional width (`w-[35%] sm:w-[40%] lg:w-[45%]`) with minimum heights
+  - Responsive padding and font sizes adjusted for mobile horizontal layout
+- **Fixed**: Game performance stats prevent 2-row wrapping
+  - Added `flex-nowrap` and `flex-shrink-0` to stat items
+  - Stats now stay in single row across all screen sizes
+- **Fixed**: Season averages shooting efficiency overlap
+  - Changed from `grid-cols-4` to `grid-cols-2 sm:grid-cols-4` (2x2 grid on mobile, 4 columns on desktop)
+  - Reduced font size and added `whitespace-nowrap` to prevent percentage overlap
+- **Fixed**: Game award shooting efficiency container overflow
+  - Changed from `grid grid-cols-3` to `flex flex-wrap` layout
+  - Added `flex-1 min-w-[70px]` to stat items to accommodate "100.0%" values without overflow
+- **Result**: Consistent UI across all screen sizes, no text overlap, proper responsive behavior
+
+#### Player Minutes Calculation - Dynamic Quarter Length Support
+- **Fixed**: Hardcoded 12-minute quarter assumption
+  - Added `getQuarterLengthMinutes()` helper to fetch quarter length from tournament ruleset
+  - Supports NBA (12min), FIBA (10min), NCAA (20min), and CUSTOM configurations
+  - Respects stat admin's custom quarter clock edits via `game_clock_minutes`
+- **Fixed**: Cross-quarter stint calculation bug
+  - Added `calculateStintSeconds()` helper for accurate multi-quarter math
+  - Correctly calculates minutes when player plays across quarter boundaries
+  - Example: Player from Q1 12:00 → Q3 5:00 now shows ~28 minutes (not 12)
+- **Fixed**: "Still on court" minutes calculation
+  - Now fetches current game state (quarter + clock) when player is still on court
+  - Calculates remaining time in current quarter correctly
+  - Handles players who play entire game without substitutions accurately
+- **Priority Order for Quarter Length**:
+  1. Tournament's `ruleset_config.clockRules.quarterLengthMinutes` (CUSTOM)
+  2. Tournament's ruleset (NBA=12, FIBA=10, NCAA=20)
+  3. Game's `game_clock_minutes` (stat admin edits)
+  4. Fallback: 12 minutes
+- **Impact**: Accurate minutes display for all game types, supports future quarter length customization
+
+#### Technical Details
+- **Files Modified**:
+  - `src/components/player/PlayerProfileModal.tsx` - UI layout fixes
+  - `src/lib/services/teamStatsService.ts` - Minutes calculation logic
+- **New Methods**:
+  - `getQuarterLengthMinutes(gameId)` - Fetches quarter length from ruleset
+  - `calculateStintSeconds()` - Cross-quarter stint duration calculation
+- **Build**: ✅ Passing (zero linter errors)
+- **Breaking Changes**: None - all changes backward compatible
+
+#### Testing Results
+- ✅ Player profile modal displays correctly on all screen sizes
+- ✅ Shooting efficiency percentages no longer overlap
+- ✅ Minutes calculation accurate for NBA, FIBA, NCAA games
+- ✅ Custom quarter lengths respected when stat admin edits clock
+- ✅ Cross-quarter stints calculate correctly
+- ✅ Players who play entire game show accurate total minutes
+
+#### Documentation Updates
+- **Updated**: `CHANGELOG.md` - This entry
+- **Updated**: `docs/04-features/live-viewer/TEAM_STATS_TAB.md` - Minutes calculation section
+
+---
+
 ## [0.16.3] - 2025-11-25
 
 ### ⚡ **CRITICAL PERFORMANCE FIXES - DATABASE TIMEOUT RESOLUTION**
