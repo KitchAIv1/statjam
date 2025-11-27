@@ -28,6 +28,13 @@ interface PlayerStats {
   threePointerAttempts: number;
   freeThrowMade: number;
   freeThrowAttempts: number;
+  // ✅ Non-scoring stats
+  assists: number;
+  rebounds: number;
+  blocks: number;
+  steals: number;
+  turnovers: number;
+  fouls: number;
 }
 
 interface PlayEntryProps {
@@ -105,6 +112,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
         gameTimeMinutes={play.gameTimeMinutes}
         gameTimeSeconds={play.gameTimeSeconds}
         timestamp={play.timestamp}
+        isLatest={isLatest}
       />
 
       {/* Main Content - Three-column layout: Avatar | Content | Points Badge */}
@@ -229,61 +237,82 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
               MISS
             </div>
           ) : play.statType === 'rebound' ? (
-            // Rebounds: Orange (offensive) or Blue (defensive)
-            // ✅ FIX: Explicitly check for both 'offensive' and 'defensive' modifiers with robust checking
+            // Rebounds: Orange (offensive) or Blue (defensive) with running total - POSITIVE STAT (larger)
             (() => {
               const modifier = play.modifier?.toString().toLowerCase().trim();
               const isOffensive = modifier === 'offensive';
-              const isDefensive = modifier === 'defensive';
-              
-              // ✅ FIX: Only default to defensive if modifier is explicitly 'defensive' or missing
-              // If modifier is 'offensive', always show as offensive
-              const displayType = isOffensive ? 'offensive' : (isDefensive ? 'defensive' : 'defensive');
-              
-              // 🔍 DEBUG: Log if modifier is unexpected (remove after testing)
-              if (modifier && !isOffensive && !isDefensive) {
-                console.warn('⚠️ Unexpected rebound modifier:', modifier, 'Defaulting to defensive');
-              }
+              const displayType = isOffensive ? 'offensive' : 'defensive';
+              const reboundTotal = playerStats?.rebounds || 0;
               
               return (
                 <div className="flex flex-col items-end">
-                  <div className={`text-xs sm:text-sm font-extrabold uppercase leading-none
+                  <div className={`text-2xl sm:text-3xl font-extrabold leading-none
                     ${displayType === 'offensive' ? 'text-orange-600' : 'text-blue-600'}
                   `}>
-                    {displayType === 'offensive' ? 'OFF' : 'DEF'}
+                    {reboundTotal}
                   </div>
-                  <div className={`text-[10px] sm:text-xs font-bold uppercase tracking-tight
+                  <div className={`text-xs sm:text-sm font-bold uppercase tracking-tight
                     ${displayType === 'offensive' ? 'text-orange-500' : 'text-blue-500'}
                   `}>
                     REB
+                  </div>
+                  <div className={`text-[9px] sm:text-xs font-semibold uppercase
+                    ${displayType === 'offensive' ? 'text-orange-400' : 'text-blue-400'}
+                  `}>
+                    {displayType === 'offensive' ? 'OFF' : 'DEF'}
                   </div>
                 </div>
               );
             })()
           ) : play.statType === 'assist' ? (
-            // Assists: Purple text
-            <div className="text-base sm:text-lg font-extrabold uppercase text-purple-600">
-              AST
+            // Assists: Purple text with running total - POSITIVE STAT (larger)
+            <div className="flex flex-col items-end">
+              <div className="text-2xl sm:text-3xl font-extrabold text-purple-600 leading-none">
+                {playerStats?.assists || 0}
+              </div>
+              <div className="text-xs sm:text-sm font-bold uppercase tracking-tight text-purple-500">
+                AST
+              </div>
             </div>
           ) : play.statType === 'block' ? (
-            // Blocks: Red text
-            <div className="text-base sm:text-lg font-extrabold uppercase text-red-600">
-              BLK
+            // Blocks: Red text with running total - POSITIVE STAT (larger)
+            <div className="flex flex-col items-end">
+              <div className="text-2xl sm:text-3xl font-extrabold text-red-600 leading-none">
+                {playerStats?.blocks || 0}
+              </div>
+              <div className="text-xs sm:text-sm font-bold uppercase tracking-tight text-red-500">
+                BLK
+              </div>
             </div>
           ) : play.statType === 'steal' ? (
-            // Steals: Teal text
-            <div className="text-base sm:text-lg font-extrabold uppercase text-teal-600">
-              STL
+            // Steals: Teal text with running total - POSITIVE STAT (larger)
+            <div className="flex flex-col items-end">
+              <div className="text-2xl sm:text-3xl font-extrabold text-teal-600 leading-none">
+                {playerStats?.steals || 0}
+              </div>
+              <div className="text-xs sm:text-sm font-bold uppercase tracking-tight text-teal-500">
+                STL
+              </div>
             </div>
           ) : play.statType === 'turnover' ? (
-            // Turnovers: Amber text
-            <div className="text-sm sm:text-base font-extrabold uppercase text-amber-600">
-              TO
+            // Turnovers: Amber text with running total - NEGATIVE STAT (smaller)
+            <div className="flex flex-col items-end">
+              <div className="text-lg sm:text-xl font-bold text-amber-600 leading-none">
+                {playerStats?.turnovers || 0}
+              </div>
+              <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-tight text-amber-500">
+                TO
+              </div>
             </div>
           ) : play.statType === 'foul' ? (
-            // Fouls: Yellow text
-            <div className={`text-base sm:text-lg font-extrabold uppercase ${isDark ? 'text-yellow-500' : 'text-yellow-600'}`}>
-              FOUL
+            // Fouls: Yellow text with running total - NEGATIVE STAT (smaller)
+            <div className="flex flex-col items-end">
+              <div className={`text-lg sm:text-xl font-bold leading-none ${isDark ? 'text-yellow-500' : 'text-yellow-600'}`}>
+                {playerStats?.fouls || 0}
+              </div>
+              <div className={`text-[10px] sm:text-xs font-semibold uppercase tracking-tight ${isDark ? 'text-yellow-400' : 'text-yellow-500'}`}>
+                FOUL
+              </div>
             </div>
           ) : null}
         </div>

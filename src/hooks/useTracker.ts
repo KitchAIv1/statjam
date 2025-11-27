@@ -1003,10 +1003,6 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       return;
     }
     
-    // ✅ OPTIMIZATION: Skip heavy engine processing for follow-up stats (allows modals to close immediately)
-    // Assist, rebound, turnover, and free throw stats don't affect clock/possession/sequences - only need database write
-    // Free throws are part of sequences (foul → FT) but don't need engine processing
-    const isFollowUpStat = stat.statType === 'assist' || stat.statType === 'rebound' || stat.statType === 'turnover' || stat.statType === 'free_throw';
     
     // ✅ FIX #2: Track optimistic score update for potential rollback
     // ✅ CRITICAL FIX: Declare outside try block so it's accessible in catch block
@@ -1120,10 +1116,12 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         setLastActionPlayerId(uiUpdates.lastActionPlayerId || null);
       }
 
-      // ✅ OPTIMIZATION: Skip heavy engine processing for follow-up stats (allows modals to close immediately)
-      // For assist/rebound/turnover stats, skip clock/possession/play engine processing (they don't affect these systems)
-      // Follow-up stats only need database write - this allows the modals to close immediately
-      if (!isFollowUpStat) {
+      // ✅ OPTIMIZATION: Skip clock/play sequence processing for follow-up stats (allows modals to close immediately)
+      // Note: Possession processing is NOT skipped - rebound/turnover MUST trigger possession changes
+      // Only assist truly doesn't affect any engine (the made shot already handled everything)
+      const skipClockAndSequences = stat.statType === 'assist';
+      
+      if (!skipClockAndSequences) {
         // ✅ OPTIMIZATION 3: Process clock automation BEFORE database write (non-blocking)
         // This provides instant visual feedback while the network request is in flight
         if (ruleset && automationFlags.clock.enabled) {
@@ -1195,8 +1193,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           });
         }
       }
+      } // End of skipClockAndSequences block for clock processing
 
-      // ✅ PHASE 3: Process possession automation
+      // ✅ PHASE 3: Process possession automation (ALWAYS runs for rebound/turnover/free_throw)
+      // This is OUTSIDE skipClockAndSequences because these stats MUST trigger possession changes
       if (ruleset && automationFlags.possession?.enabled) {
         const { PossessionEngine } = await import('@/lib/engines/possessionEngine');
         
@@ -1280,8 +1280,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
       }
 
-      // ✅ PHASE 4: Process play sequence automation
-      if (ruleset && automationFlags.sequences?.enabled) {
+      // ✅ PHASE 4: Process play sequence automation (skip for assists - they don't trigger sequences)
+      if (!skipClockAndSequences && ruleset && automationFlags.sequences?.enabled) {
         const { PlayEngine } = await import('@/lib/engines/playEngine');
         
         const gameEvent = {
@@ -1393,7 +1393,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           }
         }
       }
-      } // End of if (!isFollowUpStat) block - skip engine processing for follow-up stats (assist/rebound/turnover)
+      // ✅ End of play sequence processing
 
       // ✅ OPTIMIZATION 5: Database write happens AFTER UI updates (non-blocking)
       // Use Promise.all to load imports in parallel

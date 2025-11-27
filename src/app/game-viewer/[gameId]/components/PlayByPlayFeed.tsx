@@ -24,6 +24,13 @@ interface PlayerStats {
   threePointerAttempts: number;
   freeThrowMade: number;
   freeThrowAttempts: number;
+  // ✅ Non-scoring stats
+  assists: number;
+  rebounds: number;
+  blocks: number;
+  steals: number;
+  turnovers: number;
+  fouls: number;
 }
 
 interface PlayByPlayFeedProps {

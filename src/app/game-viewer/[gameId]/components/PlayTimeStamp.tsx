@@ -21,6 +21,7 @@ interface PlayTimeStampProps {
   gameTimeSeconds: number;
   timestamp: string;
   compact?: boolean;
+  isLatest?: boolean; // ✅ Reserve space for "Latest" badge
 }
 
 /**
@@ -37,7 +38,8 @@ export const PlayTimeStamp: React.FC<PlayTimeStampProps> = ({
   gameTimeMinutes,
   gameTimeSeconds,
   timestamp,
-  compact = false
+  compact = false,
+  isLatest = false
 }) => {
   
   if (compact) {
@@ -54,7 +56,7 @@ export const PlayTimeStamp: React.FC<PlayTimeStampProps> = ({
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-3 mb-2"
+      className={`flex items-center gap-3 mb-2 ${isLatest ? 'pr-20' : ''}`}
     >
       {/* Quarter Badge */}
       <div className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded-md text-xs font-bold tracking-wider">

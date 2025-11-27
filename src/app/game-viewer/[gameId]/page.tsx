@@ -101,13 +101,15 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
     return pts > 0 ? pts : undefined;
   }, [plays]);
 
-  // Calculate cumulative player shooting stats (for NBA-style display)
+  // Calculate cumulative player stats (shooting + non-scoring stats for NBA-style display)
   const calculatePlayerStats = useCallback((idx: number, id?: string) => {
     if (!id || !plays) return undefined;
     
     let fgMade = 0, fgAttempts = 0;
     let threeMade = 0, threeAttempts = 0;
     let ftMade = 0, ftAttempts = 0;
+    // ✅ Non-scoring stats
+    let assists = 0, rebounds = 0, blocks = 0, steals = 0, turnovers = 0, fouls = 0;
     
     // Count all plays from end to current index (chronological order)
     for (let i = plays.length - 1; i >= idx; i--) {
@@ -127,23 +129,38 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
         } else if (play.statType === 'free_throw') {
           ftAttempts++;
           if (play.modifier === 'made') ftMade++;
+        } else if (play.statType === 'assist') {
+          assists++;
+        } else if (play.statType === 'rebound') {
+          rebounds++;
+        } else if (play.statType === 'block') {
+          blocks++;
+        } else if (play.statType === 'steal') {
+          steals++;
+        } else if (play.statType === 'turnover') {
+          turnovers++;
+        } else if (play.statType === 'foul') {
+          fouls++;
         }
       }
     }
     
-    // Only return if player has attempted any shots
-    if (fgAttempts > 0 || ftAttempts > 0) {
-      return {
-        fieldGoalMade: fgMade,
-        fieldGoalAttempts: fgAttempts,
-        threePointerMade: threeMade,
-        threePointerAttempts: threeAttempts,
-        freeThrowMade: ftMade,
-        freeThrowAttempts: ftAttempts
-      };
-    }
-    
-    return undefined;
+    // Return stats object (always return for non-scoring stat totals)
+    return {
+      fieldGoalMade: fgMade,
+      fieldGoalAttempts: fgAttempts,
+      threePointerMade: threeMade,
+      threePointerAttempts: threeAttempts,
+      freeThrowMade: ftMade,
+      freeThrowAttempts: ftAttempts,
+      // ✅ Non-scoring stats
+      assists,
+      rebounds,
+      blocks,
+      steals,
+      turnovers,
+      fouls
+    };
   }, [plays]);
 
   const isLive = game?.status?.toLowerCase().includes('live') || 
