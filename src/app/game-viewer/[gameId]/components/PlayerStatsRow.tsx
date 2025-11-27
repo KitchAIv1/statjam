@@ -37,6 +37,7 @@ export interface PlayerStatsRowProps {
 
 export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -73,8 +74,20 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
 
   const plusMinusFormatted = formatPlusMinus(plusMinus);
 
+  // ✅ Hover highlight: subtle background change for interactivity
+  const rowStyle = {
+    ...(isMobile ? styles.playerRowMobile : styles.playerRow),
+    backgroundColor: isHovered ? '#1f2937' : '#111827', // gray-800 on hover, gray-900 default
+    transition: 'background-color 150ms ease-in-out',
+    cursor: 'default'
+  };
+
   return (
-    <div style={isMobile ? styles.playerRowMobile : styles.playerRow}>
+    <div 
+      style={rowStyle}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {/* Left Section: Player Info (Compact - No Avatar) */}
       <div style={isMobile ? styles.playerInfoMobile : styles.playerInfo}>
         <div style={styles.playerName}>
