@@ -25,6 +25,13 @@ export interface PlayerStatsRowProps {
     blocks: number;
     fouls: number;
     plusMinus: number;
+    // ✅ NBA-style shooting stats
+    fieldGoalsMade?: number;
+    fieldGoalsAttempted?: number;
+    threePointersMade?: number;
+    threePointersAttempted?: number;
+    freeThrowsMade?: number;
+    freeThrowsAttempted?: number;
   };
 }
 
@@ -41,7 +48,17 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   const { name, position } = player;
-  const { minutes, points, rebounds, assists, steals, blocks, fouls, plusMinus } = stats;
+  const { 
+    minutes, points, rebounds, assists, steals, blocks, fouls, plusMinus,
+    fieldGoalsMade = 0, fieldGoalsAttempted = 0,
+    threePointersMade = 0, threePointersAttempted = 0,
+    freeThrowsMade = 0, freeThrowsAttempted = 0
+  } = stats;
+
+  // Format shooting stats as "made/attempted"
+  const fgDisplay = `${fieldGoalsMade}/${fieldGoalsAttempted}`;
+  const threePtDisplay = `${threePointersMade}/${threePointersAttempted}`;
+  const ftDisplay = `${freeThrowsMade}/${freeThrowsAttempted}`;
 
   // Format plus/minus with color coding
   const formatPlusMinus = (value: number): { text: string; color: string } => {
@@ -66,36 +83,59 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
         </div>
       </div>
 
-      {/* Right Section: Stats Grid */}
+      {/* Right Section: Stats Grid - NBA box score order */}
       <div style={isMobile ? styles.statsGridMobile : styles.statsGrid}>
+        {/* MIN */}
         <div style={styles.statCell}>
           <div style={isMobile ? styles.statValueMobile : styles.statValue}>{minutes}</div>
           <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>MIN</div>
         </div>
+        {/* FG */}
+        <div style={styles.statCellWide}>
+          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{fgDisplay}</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FG</div>
+        </div>
+        {/* 3P */}
+        <div style={styles.statCellWide}>
+          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{threePtDisplay}</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>3P</div>
+        </div>
+        {/* FT */}
+        <div style={styles.statCellWide}>
+          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{ftDisplay}</div>
+          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FT</div>
+        </div>
+        {/* PTS */}
         <div style={styles.statCell}>
-          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{points}</div>
+          <div style={{ ...(isMobile ? styles.statValueMobile : styles.statValue), color: '#a855f7' }}>{points}</div>
           <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>PTS</div>
         </div>
+        {/* REB */}
         <div style={styles.statCell}>
           <div style={isMobile ? styles.statValueMobile : styles.statValue}>{rebounds}</div>
           <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>REB</div>
         </div>
+        {/* AST */}
         <div style={styles.statCell}>
           <div style={isMobile ? styles.statValueMobile : styles.statValue}>{assists}</div>
           <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>AST</div>
         </div>
+        {/* STL */}
         <div style={styles.statCell}>
           <div style={isMobile ? styles.statValueMobile : styles.statValue}>{steals}</div>
           <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>STL</div>
         </div>
+        {/* BLK */}
         <div style={styles.statCell}>
           <div style={isMobile ? styles.statValueMobile : styles.statValue}>{blocks}</div>
           <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>BLK</div>
         </div>
+        {/* FOUL */}
         <div style={styles.statCell}>
           <div style={isMobile ? styles.statValueMobile : styles.statValue}>{fouls}</div>
           <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FOUL</div>
         </div>
+        {/* +/- */}
         <div style={styles.statCell}>
           <div style={{ 
             ...(isMobile ? styles.statValueMobile : styles.statValue), 
@@ -154,23 +194,30 @@ const styles = {
   },
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(8, 1fr)',
-    gap: '8px',
+    gridTemplateColumns: 'repeat(11, 1fr)',
+    gap: '6px',
     alignItems: 'center',
-    minWidth: '320px'
+    minWidth: '440px'
   },
   statsGridMobile: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(8, minmax(28px, 1fr))',
-    gap: '4px',
+    gridTemplateColumns: 'repeat(11, minmax(28px, 1fr))',
+    gap: '3px',
     alignItems: 'center',
-    minWidth: '280px'
+    minWidth: '360px'
   },
   statCell: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
     minWidth: '28px',
+    textAlign: 'center' as const
+  },
+  statCellWide: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    minWidth: '36px',
     textAlign: 'center' as const
   },
   statValue: {

@@ -47,6 +47,8 @@ interface TrackerData {
   setShotClockTime: (seconds: number) => void;
   lastAction: string | null;
   lastActionPlayerId: string | null;
+  lastRecordedStat: any; // ✅ UNDO: Last recorded stat
+  undoLastAction: () => Promise<void>; // ✅ UNDO: Undo function
   closeGame: () => Promise<void>;
   recordStat: (stat: any) => Promise<void>;
   substitute: (sub: any) => Promise<boolean>;
@@ -280,6 +282,8 @@ export function MobileLayoutV3({
           onSubstitution={() => selectedPlayer && onSubstitution(selectedPlayer)}
           lastAction={tracker.lastAction}
           lastActionPlayerId={tracker.lastActionPlayerId}
+          onUndoLastAction={tracker.undoLastAction}
+          canUndo={!!tracker.lastRecordedStat}
           gameId={gameData.id}
           teamAPlayers={teamAPlayers}
           teamBPlayers={teamBPlayers}

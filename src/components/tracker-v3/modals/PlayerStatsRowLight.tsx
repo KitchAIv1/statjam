@@ -27,6 +27,16 @@ export interface PlayerStatsRowLightProps {
     blocks: number;
     fouls: number;
     plusMinus: number;
+    // ✅ NBA-style shooting stats
+    fieldGoalsMade?: number;
+    fieldGoalsAttempted?: number;
+    fieldGoalPercentage?: number;
+    threePointersMade?: number;
+    threePointersAttempted?: number;
+    threePointPercentage?: number;
+    freeThrowsMade?: number;
+    freeThrowsAttempted?: number;
+    freeThrowPercentage?: number;
   };
 }
 
@@ -41,7 +51,17 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
   }, []);
 
   const { name, position } = player;
-  const { minutes, points, rebounds, assists, steals, blocks, fouls, plusMinus } = stats;
+  const { 
+    minutes, points, rebounds, assists, steals, blocks, fouls, plusMinus,
+    fieldGoalsMade = 0, fieldGoalsAttempted = 0,
+    threePointersMade = 0, threePointersAttempted = 0,
+    freeThrowsMade = 0, freeThrowsAttempted = 0
+  } = stats;
+
+  // Format shooting stats as "made/attempted"
+  const fgDisplay = `${fieldGoalsMade}/${fieldGoalsAttempted}`;
+  const threePtDisplay = `${threePointersMade}/${threePointersAttempted}`;
+  const ftDisplay = `${freeThrowsMade}/${freeThrowsAttempted}`;
 
   const formatPlusMinus = (value: number): { text: string; color: string } => {
     if (value > 0) {
@@ -67,8 +87,9 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
         </div>
       </div>
 
-      {/* Right: Stats Grid */}
-      <div className={`grid gap-2 ${isMobile ? 'grid-cols-8 min-w-[280px] gap-1' : 'grid-cols-8 min-w-[320px]'}`}>
+      {/* Right: Stats Grid - NBA box score order */}
+      <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-11 min-w-[360px]' : 'grid-cols-11 min-w-[440px]'}`}>
+        {/* MIN */}
         <div className="flex flex-col items-center min-w-[28px]">
           <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
             {minutes}
@@ -77,14 +98,43 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
             MIN
           </div>
         </div>
-        <div className="flex flex-col items-center min-w-[28px]">
+        {/* FG (made/attempted) */}
+        <div className="flex flex-col items-center min-w-[36px]">
           <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
+            {fgDisplay}
+          </div>
+          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
+            FG
+          </div>
+        </div>
+        {/* 3P (made/attempted) */}
+        <div className="flex flex-col items-center min-w-[36px]">
+          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
+            {threePtDisplay}
+          </div>
+          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
+            3P
+          </div>
+        </div>
+        {/* FT (made/attempted) */}
+        <div className="flex flex-col items-center min-w-[36px]">
+          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
+            {ftDisplay}
+          </div>
+          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
+            FT
+          </div>
+        </div>
+        {/* PTS */}
+        <div className="flex flex-col items-center min-w-[28px]">
+          <div className={`text-sm font-semibold text-purple-700 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
             {points}
           </div>
           <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
             PTS
           </div>
         </div>
+        {/* REB */}
         <div className="flex flex-col items-center min-w-[28px]">
           <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
             {rebounds}
@@ -93,6 +143,7 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
             REB
           </div>
         </div>
+        {/* AST */}
         <div className="flex flex-col items-center min-w-[28px]">
           <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
             {assists}
@@ -101,6 +152,7 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
             AST
           </div>
         </div>
+        {/* STL */}
         <div className="flex flex-col items-center min-w-[28px]">
           <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
             {steals}
@@ -109,6 +161,7 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
             STL
           </div>
         </div>
+        {/* BLK */}
         <div className="flex flex-col items-center min-w-[28px]">
           <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
             {blocks}
@@ -117,6 +170,7 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
             BLK
           </div>
         </div>
+        {/* FOUL */}
         <div className="flex flex-col items-center min-w-[28px]">
           <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
             {fouls}
@@ -125,6 +179,7 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
             FOUL
           </div>
         </div>
+        {/* +/- */}
         <div className="flex flex-col items-center min-w-[28px]">
           <div 
             className={`text-sm font-semibold mb-0.5 ${isMobile ? 'text-xs' : ''}`}

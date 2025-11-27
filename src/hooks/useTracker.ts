@@ -76,6 +76,19 @@ interface UseTrackerReturn {
   playerSeconds: Record<string, number>;
   gameStatus: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'; // ✅ Game status tracking
   
+  // ✅ UNDO: Last recorded stat for undo functionality
+  lastRecordedStat: {
+    id: string;
+    statType: string;
+    modifier: string | null;
+    statValue: number;
+    teamId: string;
+    playerId: string | null;
+    customPlayerId: string | null;
+    isOpponentStat: boolean;
+  } | null;
+  undoLastAction: () => Promise<void>;
+  
   // Team Fouls & Timeouts
   teamFouls: { [teamId: string]: number };
   teamTimeouts: { [teamId: string]: number };
@@ -256,6 +269,18 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   const [lastActionPlayerId, setLastActionPlayerId] = useState<string | null>(null);
   const [playerSeconds] = useState<Record<string, number>>({});
   const [gameStatus, setGameStatus] = useState<'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'>('scheduled'); // ✅ Game status state
+  
+  // ✅ UNDO: Track last recorded stat for undo functionality
+  const [lastRecordedStat, setLastRecordedStat] = useState<{
+    id: string;
+    statType: string;
+    modifier: string | null;
+    statValue: number;
+    teamId: string;
+    playerId: string | null;
+    customPlayerId: string | null;
+    isOpponentStat: boolean;
+  } | null>(null);
   
   // ✅ PHASE 3: Possession State
   const [possession, setPossession] = useState({
@@ -1448,6 +1473,23 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         console.log('✅ useTracker.recordStat: PERSONAL FOUL saved successfully -', result);
       }
       
+      // ✅ UNDO: Capture last recorded stat for undo functionality
+      // Note: Supabase REST API returns an array, so we need result[0]
+      const savedStat = Array.isArray(result) ? result[0] : result;
+      if (savedStat && savedStat.id) {
+        setLastRecordedStat({
+          id: savedStat.id,
+          statType: stat.statType,
+          modifier: stat.modifier || null,
+          statValue: statValue,
+          teamId: stat.teamId,
+          playerId: stat.playerId || null,
+          customPlayerId: stat.customPlayerId || null,
+          isOpponentStat: stat.isOpponentStat || false
+        });
+        console.log('✅ useTracker: Captured stat for undo:', savedStat.id);
+      }
+      
     } catch (error) {
       console.error('❌ Error recording stat:', error);
       
@@ -1674,6 +1716,57 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       });
     }
   }, [promptQueue]);
+
+  // ✅ UNDO: Undo last recorded stat
+  const undoLastAction = useCallback(async () => {
+    if (!lastRecordedStat) {
+      const { notify } = await import('@/lib/services/notificationService');
+      notify.warning('Nothing to Undo', 'No recent action to undo.');
+      return;
+    }
+
+    try {
+      const { notify } = await import('@/lib/services/notificationService');
+      const { StatEditServiceV2 } = await import('@/lib/services/statEditServiceV2');
+      
+      console.log('🔄 useTracker: Undoing stat:', lastRecordedStat.id);
+      
+      // Delete the stat from database
+      await StatEditServiceV2.deleteStat(lastRecordedStat.id, gameId);
+      
+      // Reverse score if it was a scoring stat
+      if (lastRecordedStat.modifier === 'made' && lastRecordedStat.statValue > 0) {
+        setScores(prev => {
+          if (lastRecordedStat.isOpponentStat) {
+            return { ...prev, opponent: Math.max(0, (prev.opponent || 0) - lastRecordedStat.statValue) };
+          } else {
+            return { ...prev, [lastRecordedStat.teamId]: Math.max(0, (prev[lastRecordedStat.teamId] || 0) - lastRecordedStat.statValue) };
+          }
+        });
+      }
+      
+      // Reverse foul count if it was a foul
+      if (lastRecordedStat.statType === 'foul') {
+        setTeamFouls(prev => ({
+          ...prev,
+          [lastRecordedStat.teamId]: Math.max(0, (prev[lastRecordedStat.teamId] || 0) - 1)
+        }));
+      }
+      
+      // Clear the last action display and recorded stat
+      setLastAction(null);
+      setLastActionPlayerId(null);
+      setLastRecordedStat(null);
+      
+      notify.success('Undo Successful', 'Last action has been undone.');
+      console.log('✅ useTracker: Stat undone successfully');
+      
+    } catch (error) {
+      console.error('❌ useTracker: Failed to undo stat:', error);
+      const { notify } = await import('@/lib/services/notificationService');
+      notify.error('Undo Failed', 'Could not undo the last action. Please try again.');
+    }
+  }, [lastRecordedStat, gameId]);
 
   // Game Management
   const closeGame = useCallback(async () => {
@@ -1993,6 +2086,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     lastActionPlayerId,
     playerSeconds,
     gameStatus, // ✅ Game status
+    lastRecordedStat, // ✅ UNDO: Last recorded stat
+    undoLastAction, // ✅ UNDO: Undo function
     teamFouls,
     teamTimeouts,
     timeoutActive,

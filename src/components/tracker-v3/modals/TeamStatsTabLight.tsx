@@ -156,7 +156,14 @@ export function TeamStatsTabLight({ gameId, teamId, teamName, useRealTime = fals
                   steals: player.steals,
                   blocks: player.blocks,
                   fouls: player.fouls,
-                  plusMinus: player.plusMinus
+                  plusMinus: player.plusMinus,
+                  // ✅ NBA-style shooting stats
+                  fieldGoalsMade: player.fieldGoalsMade,
+                  fieldGoalsAttempted: player.fieldGoalsAttempted,
+                  threePointersMade: player.threePointersMade,
+                  threePointersAttempted: player.threePointersAttempted,
+                  freeThrowsMade: player.freeThrowsMade,
+                  freeThrowsAttempted: player.freeThrowsAttempted
                 }}
               />
             ))
@@ -189,7 +196,14 @@ export function TeamStatsTabLight({ gameId, teamId, teamName, useRealTime = fals
                   steals: player.steals,
                   blocks: player.blocks,
                   fouls: player.fouls,
-                  plusMinus: player.plusMinus
+                  plusMinus: player.plusMinus,
+                  // ✅ NBA-style shooting stats
+                  fieldGoalsMade: player.fieldGoalsMade,
+                  fieldGoalsAttempted: player.fieldGoalsAttempted,
+                  threePointersMade: player.threePointersMade,
+                  threePointersAttempted: player.threePointersAttempted,
+                  freeThrowsMade: player.freeThrowsMade,
+                  freeThrowsAttempted: player.freeThrowsAttempted
                 }}
               />
             ))

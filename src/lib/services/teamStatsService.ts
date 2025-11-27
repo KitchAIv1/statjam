@@ -38,7 +38,17 @@ export interface PlayerStats {
   blocks: number;
   turnovers: number;
   fouls: number;
-  plusMinus: number; // Simplified to 0 for MVP
+  plusMinus: number;
+  // ✅ NBA-style shooting stats
+  fieldGoalsMade: number;
+  fieldGoalsAttempted: number;
+  fieldGoalPercentage: number;
+  threePointersMade: number;
+  threePointersAttempted: number;
+  threePointPercentage: number;
+  freeThrowsMade: number;
+  freeThrowsAttempted: number;
+  freeThrowPercentage: number;
 }
 
 export class TeamStatsService {
@@ -672,7 +682,14 @@ export class TeamStatsService {
           turnovers: 0,
           fouls: 0,
           plusMinus: playerPlusMinusMap.get(playerId) || 0,
-          quartersPlayed: new Set()
+          quartersPlayed: new Set(),
+          // ✅ NBA-style shooting stats
+          fieldGoalsMade: 0,
+          fieldGoalsAttempted: 0,
+          threePointersMade: 0,
+          threePointersAttempted: 0,
+          freeThrowsMade: 0,
+          freeThrowsAttempted: 0
         });
       });
 
@@ -695,18 +712,28 @@ export class TeamStatsService {
         switch (statType) {
           case 'field_goal':
           case 'two_pointer':
+            // FG includes 2PT (and historically field_goal)
+            playerStats.fieldGoalsAttempted += 1;
             if (modifier === 'made') {
               playerStats.points += 2;
+              playerStats.fieldGoalsMade += 1;
             }
             break;
           case 'three_pointer':
+            // 3PT counts as both 3PT and FG attempted
+            playerStats.threePointersAttempted += 1;
+            playerStats.fieldGoalsAttempted += 1;
             if (modifier === 'made') {
               playerStats.points += 3;
+              playerStats.threePointersMade += 1;
+              playerStats.fieldGoalsMade += 1;
             }
             break;
           case 'free_throw':
+            playerStats.freeThrowsAttempted += 1;
             if (modifier === 'made') {
               playerStats.points += 1;
+              playerStats.freeThrowsMade += 1;
             }
             break;
           case 'rebound':
@@ -732,10 +759,21 @@ export class TeamStatsService {
 
       // Finalize stats (minutes already calculated from substitutions)
       const playerStats: PlayerStats[] = Array.from(playerStatsMap.values()).map(player => {
+        // Calculate shooting percentages (avoid division by zero)
+        const fgPct = player.fieldGoalsAttempted > 0 
+          ? (player.fieldGoalsMade / player.fieldGoalsAttempted) * 100 
+          : 0;
+        const threePct = player.threePointersAttempted > 0 
+          ? (player.threePointersMade / player.threePointersAttempted) * 100 
+          : 0;
+        const ftPct = player.freeThrowsAttempted > 0 
+          ? (player.freeThrowsMade / player.freeThrowsAttempted) * 100 
+          : 0;
+
         return {
           playerId: player.playerId,
           playerName: player.playerName,
-          minutes: player.minutes, // Already calculated from substitutions
+          minutes: player.minutes,
           points: player.points,
           rebounds: player.rebounds,
           assists: player.assists,
@@ -743,7 +781,17 @@ export class TeamStatsService {
           blocks: player.blocks,
           turnovers: player.turnovers,
           fouls: player.fouls,
-          plusMinus: player.plusMinus // Will be calculated in next step
+          plusMinus: player.plusMinus,
+          // ✅ NBA-style shooting stats
+          fieldGoalsMade: player.fieldGoalsMade,
+          fieldGoalsAttempted: player.fieldGoalsAttempted,
+          fieldGoalPercentage: Math.round(fgPct * 10) / 10, // Round to 1 decimal
+          threePointersMade: player.threePointersMade,
+          threePointersAttempted: player.threePointersAttempted,
+          threePointPercentage: Math.round(threePct * 10) / 10,
+          freeThrowsMade: player.freeThrowsMade,
+          freeThrowsAttempted: player.freeThrowsAttempted,
+          freeThrowPercentage: Math.round(ftPct * 10) / 10
         };
       });
 

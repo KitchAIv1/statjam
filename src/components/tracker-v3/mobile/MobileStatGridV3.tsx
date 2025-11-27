@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AlertTriangle, MoreHorizontal, RotateCcw, Clock, Undo, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { StatEditModalV2 } from '../modals/StatEditModalV2';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface Player {
   id: string;
@@ -22,6 +23,8 @@ interface MobileStatGridV3Props {
   onSubstitution?: () => void;
   lastAction?: string | null;
   lastActionPlayerId?: string | null;
+  onUndoLastAction?: () => Promise<void>; // ✅ UNDO: Undo callback
+  canUndo?: boolean; // ✅ UNDO: Whether undo is available
   // ✅ Stat Edit Modal
   gameId?: string;
   teamAPlayers?: Player[];
@@ -44,6 +47,8 @@ export function MobileStatGridV3({
   onSubstitution,
   lastAction,
   lastActionPlayerId,
+  onUndoLastAction, // ✅ UNDO
+  canUndo = false, // ✅ UNDO
   // ✅ Stat Edit Modal
   gameId,
   teamAPlayers = [],
@@ -388,39 +393,57 @@ export function MobileStatGridV3({
         >
           {/* Left: Player/Team Indicator */}
           <div className="flex items-center gap-2">
-            {lastActionPlayerId === null && lastAction.includes('Opponent Team') ? (
-              // Opponent Team
-              <>
-                <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                  VS
-                </div>
-                <span className="text-sm font-medium text-gray-700">
-                  Opponent
-                </span>
-              </>
-            ) : lastActionPlayerId && selectedPlayerData && selectedPlayer === lastActionPlayerId ? (
-              // Currently Selected Player
-              <>
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                  {selectedPlayerData.jerseyNumber ?? '?'}
-                </div>
-                <span className="text-sm font-medium text-gray-700">
-                  {selectedPlayerData.name}
-                </span>
-              </>
-            ) : (
-              // Different Player
-              <>
-                <div className="w-6 h-6 bg-gray-500 rounded-full flex items-center justify-center text-white">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <span className="text-sm font-medium text-gray-700">
-                  Last Action
-                </span>
-              </>
-            )}
+            {(() => {
+              // Find the player who performed the last action
+              const lastActionPlayer = lastActionPlayerId 
+                ? [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastActionPlayerId)
+                : null;
+              
+              if (lastActionPlayerId === null && lastAction.includes('Opponent Team')) {
+                // Opponent Team
+                return (
+                  <>
+                    <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                      VS
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      Opponent
+                    </span>
+                  </>
+                );
+              } else if (lastActionPlayer) {
+                // Show player with photo and name
+                return (
+                  <>
+                    <Avatar className="w-8 h-8 rounded-full">
+                      {lastActionPlayer.photo_url ? (
+                        <AvatarImage src={lastActionPlayer.photo_url} alt={lastActionPlayer.name} className="rounded-full object-cover" />
+                      ) : null}
+                      <AvatarFallback className="bg-blue-500 text-white font-bold text-xs rounded-full">
+                        #{lastActionPlayer.jerseyNumber ?? '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium text-gray-700 truncate max-w-[80px]">
+                      {lastActionPlayer.name}
+                    </span>
+                  </>
+                );
+              } else {
+                // Fallback: Unknown player
+                return (
+                  <>
+                    <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      Player
+                    </span>
+                  </>
+                );
+              }
+            })()}
           </div>
           
           {/* Center: Action Text */}
@@ -432,11 +455,17 @@ export function MobileStatGridV3({
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
-                // TODO: Implement undo functionality
-                console.log('🔄 Undo last action:', lastAction);
-                alert('Undo functionality will be implemented');
+                if (onUndoLastAction && canUndo) {
+                  onUndoLastAction();
+                }
               }}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-orange-100 text-orange-600 hover:bg-orange-200 hover:scale-110 active:scale-95 transition-all duration-200"
+              disabled={!canUndo}
+              className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 ${
+                canUndo 
+                  ? 'bg-orange-100 text-orange-600 hover:bg-orange-200 hover:scale-110 active:scale-95 cursor-pointer' 
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+              title={canUndo ? 'Undo last action' : 'Nothing to undo'}
             >
               <Undo className="w-4 h-4" />
             </button>

@@ -1132,12 +1132,16 @@ function StatTrackerV3Content() {
     );
   }
 
-  if (isLoading) {
+  // ✅ FIX: Combined loading check - wait for BOTH game data AND tracker scores
+  // This prevents the 0-0 score flash caused by tracker initializing with placeholder team IDs
+  if (isLoading || tracker.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--dashboard-bg)' }}>
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4 mx-auto"></div>
-          <p style={{ color: 'var(--dashboard-text-primary)' }}>Loading game data...</p>
+          <p style={{ color: 'var(--dashboard-text-primary)' }}>
+            {isLoading ? 'Loading game data...' : 'Initializing scores...'}
+          </p>
         </div>
       </div>
     );
@@ -1979,6 +1983,8 @@ function StatTrackerV3Content() {
                 onGameEnd={tracker.closeGame}
                 lastAction={tracker.lastAction}
                 lastActionPlayerId={tracker.lastActionPlayerId}
+                onUndoLastAction={tracker.undoLastAction}
+                canUndo={!!tracker.lastRecordedStat}
                 // ✅ REFINEMENT 1: Pass possession indicator props
                 possession={tracker.possession}
                 teamAId={gameData.team_a_id}
