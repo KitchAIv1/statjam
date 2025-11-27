@@ -20,6 +20,8 @@ import { PlayTimeStamp } from './PlayTimeStamp';
 import { PlayerAvatarCard } from './PlayerAvatarCard';
 import { PlayScoreCard } from './PlayScoreCard';
 import { Heart, MessageCircle, Share2 } from 'lucide-react';
+import { MilestoneBadge } from './MilestoneBadge';
+import { detectNewMilestones, PlayerStatsForMilestone } from '@/lib/engines/milestoneEngine';
 
 interface PlayerStats {
   fieldGoalMade: number;
@@ -72,6 +74,31 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   const isSubstitution = play.statType === 'substitution';
   const isTimeout = play.statType === 'timeout';
   const isScoring = scoringInfo !== null;
+
+  // Calculate milestones achieved on this specific play
+  const milestones = React.useMemo(() => {
+    if (!playerStats) return [];
+    
+    // Calculate what the stats were BEFORE this play
+    const prevStats: PlayerStatsForMilestone = {
+      points: (playerPoints || 0) - (scoringInfo?.points || 0),
+      rebounds: (playerStats.rebounds || 0) - (play.statType === 'rebound' ? 1 : 0),
+      assists: (playerStats.assists || 0) - (play.statType === 'assist' ? 1 : 0),
+      steals: (playerStats.steals || 0) - (play.statType === 'steal' ? 1 : 0),
+      blocks: (playerStats.blocks || 0) - (play.statType === 'block' ? 1 : 0),
+    };
+    
+    // Current stats (after this play)
+    const currentStats: PlayerStatsForMilestone = {
+      points: playerPoints || 0,
+      rebounds: playerStats.rebounds || 0,
+      assists: playerStats.assists || 0,
+      steals: playerStats.steals || 0,
+      blocks: playerStats.blocks || 0,
+    };
+    
+    return detectNewMilestones(prevStats, currentStats, play.statType);
+  }, [playerStats, playerPoints, scoringInfo, play.statType]);
 
   // Determine card styling based on play type and theme
   const getCardClasses = () => {
@@ -139,7 +166,7 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
         <div className="flex-1 space-y-0.5 sm:space-y-1 min-w-0">
           {/* Play Description with Icon - Responsive gap */}
           <div className="flex items-start gap-2 sm:gap-3">
-            <ActionIcon type={play.statType} size="md" animate={false} />
+            <ActionIcon type={play.statType || 'unknown'} size="md" animate={false} />
             <div className="flex-1 min-w-0">
               <p className={`text-sm sm:text-base font-bold leading-tight ${isDark ? 'text-foreground' : 'text-gray-900'}`}>
                 {getEnhancedPlayDescription(play.description, play.statType, play.modifier, playerStats)}
@@ -207,8 +234,8 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
           </div>
         </div>
 
-        {/* RIGHT: Indicator Text - Clean text-only indicators */}
-        <div className="flex-shrink-0 flex items-center">
+        {/* RIGHT: Indicator Text + Milestone - Stacked vertically */}
+        <div className="flex-shrink-0 flex flex-col items-end">
           {scoringInfo ? (
             // Scoring plays: Colorful points text
             <div className="flex flex-col items-end">
@@ -315,6 +342,13 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
               </div>
             </div>
           ) : null}
+          
+          {/* Milestone Badge - Below stat indicator */}
+          {milestones.length > 0 && (
+            <div className="mt-1">
+              <MilestoneBadge milestones={milestones} isDark={isDark} />
+            </div>
+          )}
         </div>
       </div>
 

@@ -148,6 +148,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   // ✅ Throttled DB sync: Track last sync time for clock updates
   const lastClockSyncRef = useRef<number>(0);
   const CLOCK_SYNC_INTERVAL = 5000; // 5 seconds
+  
+  // ✅ FIX: Guard to prevent subscription from overwriting foul updates during recording
+  const foulUpdateInProgressRef = useRef<boolean>(false);
   // NEW: Shot Clock State
   // ✅ Load visibility preference from localStorage on initialization
   const getInitialShotClockVisibility = () => {
@@ -579,7 +582,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
         
         // ✅ Sync team fouls state when games table is updated
-        if (updatedGame.team_a_fouls !== undefined || updatedGame.team_b_fouls !== undefined) {
+        // ✅ FIX: Guard to prevent overwriting local state during foul recording
+        if ((updatedGame.team_a_fouls !== undefined || updatedGame.team_b_fouls !== undefined) && !foulUpdateInProgressRef.current) {
           setTeamFouls({
             [teamAId]: updatedGame.team_a_fouls ?? 0,
             [teamBId]: updatedGame.team_b_fouls ?? 0
@@ -891,11 +895,19 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     // ✅ Reset clock for the new quarter (handles Q1-4 = 12 min, OT = 5 min)
     resetClock(newQuarter);
     
+    // ✅ FIX: Reset team fouls on quarter change (NBA rule: fouls reset each quarter)
+    setTeamFouls({
+      [teamAId]: 0,
+      [teamBId]: 0
+    });
+    console.log('🏀 Team fouls reset for new quarter');
+    
     // ✅ Update last action message
     const quarterDisplay = newQuarter <= 4 ? `Q${newQuarter}` : `OT${newQuarter - 4}`;
     setLastAction(`Changed to ${quarterDisplay}`);
     
     // ✅ FIX #2: Sync quarter change to database with calculated clock time (not stale state)
+    // ✅ FIX: Also reset team fouls in database
     try {
       const { GameService } = await import('@/lib/services/gameService');
       await GameService.updateGameState(gameId, {
@@ -904,15 +916,17 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         game_clock_seconds: newClockSeconds,  // ✅ Use calculated value
         is_clock_running: false, // ✅ Stop clock when quarter changes manually
         home_score: 0, // Scores are managed separately via stats
-        away_score: 0  // Scores are managed separately via stats
+        away_score: 0,  // Scores are managed separately via stats
+        team_a_fouls: 0, // ✅ Reset team fouls in database
+        team_b_fouls: 0  // ✅ Reset team fouls in database
       });
-      console.log('✅ Quarter synced to database:', newQuarter);
+      console.log('✅ Quarter synced to database:', newQuarter, '(fouls reset)');
     } catch (error) {
       console.error('❌ Error syncing quarter to database:', error);
       const { notify } = await import('@/lib/services/notificationService');
       notify.error('Sync Failed', 'Failed to sync quarter change to database');
     }
-  }, [gameId, resetClock]);
+  }, [gameId, resetClock, teamAId, teamBId]);
 
   const advanceIfNeeded = useCallback(() => {
     // ✅ FIX #5: Guard against multiple calls - only advance if clock reaches 0
@@ -1106,10 +1120,42 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }));
       }
       if (uiUpdates.teamFouls) {
+        // ✅ FIX: Set guard to prevent subscription from overwriting during update
+        foulUpdateInProgressRef.current = true;
+        
+        const newFoulCount = (teamFouls[stat.teamId] || 0) + 1;
         setTeamFouls(prev => ({
           ...prev,
-          [stat.teamId]: (prev[stat.teamId] || 0) + 1
+          [stat.teamId]: newFoulCount
         }));
+        
+        // ✅ FIX: Persist team fouls to database (async, non-blocking)
+        (async () => {
+          try {
+            const { GameService } = await import('@/lib/services/gameService');
+            const isTeamA = stat.teamId === teamAId;
+            await GameService.updateGameState(gameId, {
+              quarter: quarter,
+              game_clock_minutes: Math.floor(clock.secondsRemaining / 60),
+              game_clock_seconds: clock.secondsRemaining % 60,
+              is_clock_running: clock.isRunning,
+              home_score: 0, // Scores managed separately
+              away_score: 0,
+              ...(isTeamA 
+                ? { team_a_fouls: newFoulCount }
+                : { team_b_fouls: newFoulCount }
+              )
+            });
+            console.log(`✅ Team fouls persisted to DB: Team ${isTeamA ? 'A' : 'B'} = ${newFoulCount}`);
+          } catch (error) {
+            console.error('❌ Failed to persist team fouls:', error);
+          } finally {
+            // ✅ Clear guard after DB update completes (with small delay to handle race conditions)
+            setTimeout(() => {
+              foulUpdateInProgressRef.current = false;
+            }, 500);
+          }
+        })();
       }
       if (uiUpdates.lastAction) {
         setLastAction(uiUpdates.lastAction);
@@ -1747,10 +1793,32 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       
       // Reverse foul count if it was a foul
       if (lastRecordedStat.statType === 'foul') {
+        const newFoulCount = Math.max(0, (teamFouls[lastRecordedStat.teamId] || 0) - 1);
         setTeamFouls(prev => ({
           ...prev,
-          [lastRecordedStat.teamId]: Math.max(0, (prev[lastRecordedStat.teamId] || 0) - 1)
+          [lastRecordedStat.teamId]: newFoulCount
         }));
+        
+        // ✅ FIX: Persist foul decrement to database
+        try {
+          const { GameService } = await import('@/lib/services/gameService');
+          const isTeamA = lastRecordedStat.teamId === teamAId;
+          await GameService.updateGameState(gameId, {
+            quarter: quarter,
+            game_clock_minutes: Math.floor(clock.secondsRemaining / 60),
+            game_clock_seconds: clock.secondsRemaining % 60,
+            is_clock_running: clock.isRunning,
+            home_score: 0,
+            away_score: 0,
+            ...(isTeamA 
+              ? { team_a_fouls: newFoulCount }
+              : { team_b_fouls: newFoulCount }
+            )
+          });
+          console.log(`✅ Foul undo persisted to DB: Team ${isTeamA ? 'A' : 'B'} = ${newFoulCount}`);
+        } catch (error) {
+          console.error('❌ Failed to persist foul undo:', error);
+        }
       }
       
       // Clear the last action display and recorded stat

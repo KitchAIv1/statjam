@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { PlayerLeader } from '@/lib/services/tournamentLeadersService';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User, Trophy, Sparkles } from 'lucide-react';
+import { User, Trophy, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
@@ -34,8 +34,18 @@ export function OverviewTab({ data }: OverviewTabProps) {
   // ✅ OPTIMIZED: Use custom hook with caching
   const { leaders: allLeaders, loading: leadersLoading } = useTournamentLeaders(data.tournament.id, 'points', 1);
   
-  // ✅ Fetch tournament awards
-  const { awards: tournamentAwards, loading: awardsLoading } = useTournamentAwards(data.tournament.id, 3);
+  // ✅ Fetch tournament awards (fetch 10, show 3 by default)
+  const { awards: tournamentAwards, loading: awardsLoading } = useTournamentAwards(data.tournament.id, 10);
+  const [awardsExpanded, setAwardsExpanded] = useState(false);
+  
+  // Show 3 awards by default, all when expanded (latest first - already sorted by gameDate DESC)
+  const COLLAPSED_AWARDS_COUNT = 3;
+  const visibleAwards = useMemo(() => {
+    if (awardsExpanded) return tournamentAwards;
+    return tournamentAwards.slice(0, COLLAPSED_AWARDS_COUNT);
+  }, [tournamentAwards, awardsExpanded]);
+  
+  const hasMoreAwards = tournamentAwards.length > COLLAPSED_AWARDS_COUNT;
   
   // Update state when leaders change
   useEffect(() => {
@@ -136,9 +146,22 @@ export function OverviewTab({ data }: OverviewTabProps) {
               <h2 className="text-base font-semibold text-white sm:text-lg md:text-xl">Recent Game Awards</h2>
               <p className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">Player of the Game and Hustle Player highlights</p>
             </div>
+            {hasMoreAwards && (
+              <Button
+                variant="outline"
+                onClick={() => setAwardsExpanded(!awardsExpanded)}
+                className="w-full rounded-full border-white/10 bg-[#121212] text-[10px] text-white/70 hover:border-white/30 hover:text-white sm:w-auto sm:text-xs md:text-sm"
+              >
+                {awardsExpanded ? (
+                  <>Show Less <ChevronUp className="ml-1 h-3 w-3 sm:h-4 sm:w-4" /></>
+                ) : (
+                  <>View All ({tournamentAwards.length}) <ChevronDown className="ml-1 h-3 w-3 sm:h-4 sm:w-4" /></>
+                )}
+              </Button>
+            )}
           </header>
           <div className="space-y-3 sm:space-y-4">
-            {tournamentAwards.map((award) => (
+            {visibleAwards.map((award) => (
               <div key={award.gameId} className="rounded-lg border border-white/10 bg-black/40 p-3 sm:rounded-xl sm:p-4">
                 <div className="text-[10px] text-[#B3B3B3] mb-2 sm:text-xs">
                   {new Date(award.gameDate).toLocaleDateString()} • {award.teamAName} vs {award.teamBName} ({award.teamAScore}-{award.teamBScore})

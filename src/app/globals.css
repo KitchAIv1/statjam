@@ -98,6 +98,25 @@
   }
 }
 
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background-size: 200% 100%;
+}
+
+/* 🏆 WINNER GLOW: Subtle pulsating glow for winning team (completed games only) */
+@keyframes winner-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5), 0 0 16px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.7), 0 0 32px rgba(245, 158, 11, 0.5);
+  }
+}
+
+.animate-winner-glow {
+  animation: winner-glow 2.5s ease-in-out infinite;
+}
+
 /* ✨ PULSE GLOW: Inviting button glow animation */
 @keyframes pulse-glow {
   0%, 100% {

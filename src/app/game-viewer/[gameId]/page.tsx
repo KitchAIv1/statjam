@@ -14,11 +14,13 @@ import React, { use, useMemo, useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameViewerV2 } from '@/hooks/useGameViewerV2';
 import { useTeamStats } from '@/hooks/useTeamStats';
+import { useGameAwards } from '@/hooks/useGameAwards';
 import { useGameViewerTheme } from './hooks/useGameViewerTheme';
 import GameHeader from './components/GameHeader';
 import PlayByPlayFeed from './components/PlayByPlayFeed';
 import { TeamStatsTab } from './components/TeamStatsTab';
 import { LiveIndicator } from './components/LiveIndicator';
+import { GameAwardsSection } from './components/GameAwardsSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { TeamService } from '@/lib/services/tournamentService';
@@ -81,6 +83,15 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   const teamBPrefetch = useTeamStats(gameId, game?.team_b_id || '', { 
     prefetch: true, 
     enabled: !!game?.team_b_id 
+  });
+
+  // ✅ Game completion state (needed for prefetch conditions)
+  const isCompleted = game?.status?.toLowerCase() === 'completed';
+
+  // ✅ Prefetch game awards for completed games
+  const gameAwardsPrefetch = useGameAwards(gameId, {
+    prefetch: true,
+    enabled: isCompleted
   });
 
   // Memoized game object
@@ -233,16 +244,46 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
           </TabsContent>
 
           {/* Box Score Tab */}
-          <TabsContent value="game" className={`mt-0 p-6 ${isDark ? 'bg-slate-900' : 'bg-gradient-to-br from-orange-50/30 to-background'}`}>
+          <TabsContent value="game" className={`mt-0 p-6 space-y-4 ${isDark ? 'bg-slate-900' : 'bg-gradient-to-br from-orange-50/30 to-background'}`}>
+            {/* Game Summary Card */}
             <div className={`rounded-lg p-6 space-y-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-orange-200 shadow-sm'} border`}>
               <h3 className={`text-xl font-bold pb-3 border-b ${isDark ? 'text-foreground border-slate-700' : 'text-gray-900 border-orange-200'}`}>Game Summary</h3>
-              <div className={`flex justify-between py-3 border-b ${isDark ? 'border-slate-700' : 'border-orange-200'}`}><span className={`text-lg font-semibold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.team_a_name}</span><span className={`text-2xl font-extrabold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.home_score}</span></div>
-              <div className={`flex justify-between py-3 border-b ${isDark ? 'border-slate-700' : 'border-orange-200'}`}><span className={`text-lg font-semibold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.team_b_name}</span><span className={`text-2xl font-extrabold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.away_score}</span></div>
-              <div className={`grid grid-cols-3 gap-4 pt-4 text-sm ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>
-                <div><span className="font-semibold">Status:</span> {game.status}</div><div><span className="font-semibold">Q:</span> {game.quarter}</div><div><span className="font-semibold">Time:</span> {String(game.game_clock_minutes||0).padStart(2,'0')}:{String(game.game_clock_seconds||0).padStart(2,'0')}</div>
+              
+              {/* Team A Score Row */}
+              <div className={`flex justify-between items-center py-3 border-b ${isDark ? 'border-slate-700' : 'border-orange-200'}`}>
+                <span className={`text-lg font-semibold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.team_a_name}</span>
+                <span className={`text-2xl font-extrabold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.home_score}</span>
               </div>
-              <div className={`grid grid-cols-2 gap-4 text-sm ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}><div><span className="font-semibold">Fouls:</span> {game.team_a_fouls||0}-{game.team_b_fouls||0}</div><div><span className="font-semibold">TOs:</span> {game.team_a_timeouts_remaining||5}-{game.team_b_timeouts_remaining||5}</div></div>
+              
+              {/* Team B Score Row */}
+              <div className={`flex justify-between items-center py-3 border-b ${isDark ? 'border-slate-700' : 'border-orange-200'}`}>
+                <span className={`text-lg font-semibold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.team_b_name}</span>
+                <span className={`text-2xl font-extrabold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.away_score}</span>
+              </div>
+              
+              {/* Game Info Grid */}
+              <div className={`grid grid-cols-3 gap-4 pt-4 text-sm ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>
+                <div><span className="font-semibold">Status:</span> {game.status}</div>
+                <div><span className="font-semibold">Q:</span> {game.quarter}</div>
+                <div><span className="font-semibold">Time:</span> {String(game.game_clock_minutes||0).padStart(2,'0')}:{String(game.game_clock_seconds||0).padStart(2,'0')}</div>
+              </div>
+              <div className={`grid grid-cols-2 gap-4 text-sm ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>
+                <div><span className="font-semibold">Fouls:</span> {game.team_a_fouls||0}-{game.team_b_fouls||0}</div>
+                <div><span className="font-semibold">TOs:</span> {game.team_a_timeouts_remaining||5}-{game.team_b_timeouts_remaining||5}</div>
+              </div>
             </div>
+
+            {/* Game Awards Section - Only for completed games */}
+            {isCompleted && (
+              <GameAwardsSection 
+                isDark={isDark}
+                loading={gameAwardsPrefetch.loading}
+                prefetchedData={!gameAwardsPrefetch.loading ? {
+                  playerOfTheGame: gameAwardsPrefetch.playerOfTheGame,
+                  hustlePlayer: gameAwardsPrefetch.hustlePlayer
+                } : undefined}
+              />
+            )}
           </TabsContent>
 
           {/* Team A Tab */}
