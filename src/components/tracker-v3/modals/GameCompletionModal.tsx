@@ -5,6 +5,7 @@
  * - Shows winning team stats (reuses TeamStatsTab)
  * - Two award selection sections with auto-suggest
  * - Blocks completion until both awards selected
+ * - ✅ SUPPORTS CUSTOM PLAYERS (Nov 2025)
  * 
  * Follows .cursorrules: <200 lines component
  */
@@ -22,10 +23,16 @@ import { TeamStatsService, PlayerStats } from '@/lib/services/teamStatsService';
 import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { Loader2 } from 'lucide-react';
 
+// ✅ Updated interface to include custom player flags
 export interface GameCompletionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (awards: { playerOfTheGameId: string; hustlePlayerId: string }) => Promise<void>;
+  onComplete: (awards: { 
+    playerOfTheGameId: string; 
+    hustlePlayerId: string;
+    isPlayerOfGameCustom?: boolean;  // ✅ NEW
+    isHustlePlayerCustom?: boolean;  // ✅ NEW
+  }) => Promise<void>;
   gameId: string;
   teamAId: string;
   teamBId: string;
@@ -52,6 +59,8 @@ export function GameCompletionModal({
   const [suggestedPlayerOfGame, setSuggestedPlayerOfGame] = useState<string | null>(null);
   const [suggestedHustlePlayer, setSuggestedHustlePlayer] = useState<string | null>(null);
   const [winningTeamPlayers, setWinningTeamPlayers] = useState<PlayerStats[]>([]);
+  // ✅ NEW: Store roster with custom player info
+  const [rosterWithCustomInfo, setRosterWithCustomInfo] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
@@ -68,6 +77,7 @@ export function GameCompletionModal({
       setSuggestedPlayerOfGame(null);
       setSuggestedHustlePlayer(null);
       setWinningTeamPlayers([]);
+      setRosterWithCustomInfo(new Map());
       return;
     }
 
@@ -78,6 +88,13 @@ export function GameCompletionModal({
         const teamRoster = await TeamServiceV3.getTeamPlayersWithSubstitutions(winningTeamId, gameId);
         const playerIds = teamRoster.map(p => p.id);
         const playerStats = await TeamStatsService.aggregatePlayerStats(gameId, winningTeamId, playerIds);
+        
+        // ✅ Build map of player ID → is_custom_player
+        const customInfoMap = new Map<string, boolean>();
+        teamRoster.forEach(player => {
+          customInfoMap.set(player.id, player.is_custom_player === true);
+        });
+        setRosterWithCustomInfo(customInfoMap);
         
         setWinningTeamPlayers(playerStats);
 
@@ -112,9 +129,22 @@ export function GameCompletionModal({
 
     setSaving(true);
     try {
+      // ✅ Look up if selected players are custom
+      const isPlayerOfGameCustom = rosterWithCustomInfo.get(selectedPlayerOfGame) || false;
+      const isHustlePlayerCustom = rosterWithCustomInfo.get(selectedHustlePlayer) || false;
+      
+      console.log('🏆 GameCompletionModal: Completing with awards', {
+        playerOfGame: selectedPlayerOfGame,
+        isPlayerOfGameCustom,
+        hustlePlayer: selectedHustlePlayer,
+        isHustlePlayerCustom
+      });
+
       await onComplete({
         playerOfTheGameId: selectedPlayerOfGame,
-        hustlePlayerId: selectedHustlePlayer
+        hustlePlayerId: selectedHustlePlayer,
+        isPlayerOfGameCustom,
+        isHustlePlayerCustom
       });
       onClose();
     } catch (error) {

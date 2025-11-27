@@ -154,7 +154,7 @@ export function OverviewTab({ data }: OverviewTabProps) {
                         gameId: award.gameId,
                         stats: award.playerOfTheGame!.stats,
                         awardType: 'player_of_the_game',
-                        isCustomPlayer: (award.playerOfTheGame as any)?.isCustomPlayer || false
+                        isCustomPlayer: award.playerOfTheGame?.isCustomPlayer || false
                       })}
                     />
                   )}
@@ -168,7 +168,7 @@ export function OverviewTab({ data }: OverviewTabProps) {
                         gameId: award.gameId,
                         stats: award.hustlePlayer!.stats,
                         awardType: 'hustle_player',
-                        isCustomPlayer: (award.hustlePlayer as any)?.isCustomPlayer || false
+                        isCustomPlayer: award.hustlePlayer?.isCustomPlayer || false
                       })}
                     />
                   )}

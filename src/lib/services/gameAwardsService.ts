@@ -5,6 +5,7 @@
  * - Save awards when game is completed
  * - Fetch awards for display in various components
  * - Support retroactive award assignment
+ * - ✅ SUPPORTS CUSTOM PLAYERS (Nov 2025)
  * 
  * Follows .cursorrules: <200 lines service
  */
@@ -14,6 +15,9 @@ import { authServiceV2 } from './authServiceV2';
 export interface GameAwards {
   playerOfTheGameId: string | null;
   hustlePlayerId: string | null;
+  // ✅ NEW: Custom player support
+  customPlayerOfTheGameId: string | null;
+  customHustlePlayerId: string | null;
   awardsSelectedAt: string | null;
   awardsSelectedBy: string | null;
 }
@@ -32,6 +36,9 @@ export interface PlayerAward {
   };
 }
 
+// Default stats object
+const DEFAULT_STATS = { points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0 };
+
 export class GameAwardsService {
   private static readonly SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   private static readonly SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -46,14 +53,26 @@ export class GameAwardsService {
     return session.user?.id || null;
   }
 
+  private static getHeaders(accessToken?: string | null): Record<string, string> {
+    const headers: Record<string, string> = {
+      'apikey': this.SUPABASE_ANON_KEY!,
+      'Content-Type': 'application/json'
+    };
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    return headers;
+  }
+
   /**
    * Save awards for a game
+   * ✅ UPDATED: Supports both regular and custom players
    */
   static async saveGameAwards(
     gameId: string,
     awards: {
       playerOfTheGameId: string;
       hustlePlayerId: string;
+      isPlayerOfGameCustom?: boolean;  // ✅ NEW: Flag for custom player
+      isHustlePlayerCustom?: boolean;  // ✅ NEW: Flag for custom player
       isAutoSuggested?: boolean;
     }
   ): Promise<boolean> {
@@ -73,6 +92,35 @@ export class GameAwardsService {
         throw new Error('User ID not found - please ensure you are logged in');
       }
 
+      // ✅ Build update payload based on player types
+      const gameUpdatePayload: Record<string, any> = {
+        awards_selected_at: new Date().toISOString(),
+        awards_selected_by: userId,
+        // Clear all award columns first to ensure clean state
+        player_of_the_game_id: null,
+        custom_player_of_the_game_id: null,
+        hustle_player_of_the_game_id: null,
+        custom_hustle_player_of_the_game_id: null
+      };
+
+      // Set Player of the Game in correct column
+      if (awards.isPlayerOfGameCustom) {
+        gameUpdatePayload.custom_player_of_the_game_id = awards.playerOfTheGameId;
+        console.log('📝 GameAwardsService: Player of Game is CUSTOM player');
+      } else {
+        gameUpdatePayload.player_of_the_game_id = awards.playerOfTheGameId;
+        console.log('📝 GameAwardsService: Player of Game is REGULAR player');
+      }
+
+      // Set Hustle Player in correct column
+      if (awards.isHustlePlayerCustom) {
+        gameUpdatePayload.custom_hustle_player_of_the_game_id = awards.hustlePlayerId;
+        console.log('📝 GameAwardsService: Hustle Player is CUSTOM player');
+      } else {
+        gameUpdatePayload.hustle_player_of_the_game_id = awards.hustlePlayerId;
+        console.log('📝 GameAwardsService: Hustle Player is REGULAR player');
+      }
+
       // Update games table
       const gameUrl = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${gameId}`;
       const gameResponse = await fetch(gameUrl, {
@@ -83,12 +131,7 @@ export class GameAwardsService {
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal'
         },
-        body: JSON.stringify({
-          player_of_the_game_id: awards.playerOfTheGameId,
-          hustle_player_of_the_game_id: awards.hustlePlayerId,
-          awards_selected_at: new Date().toISOString(),
-          awards_selected_by: userId
-        })
+        body: JSON.stringify(gameUpdatePayload)
       });
 
       if (!gameResponse.ok) {
@@ -96,19 +139,21 @@ export class GameAwardsService {
         throw new Error(`Failed to save awards: ${gameResponse.status} - ${errorText}`);
       }
 
-      // Insert into history table
+      // ✅ Insert into history table (with custom player support)
       const historyUrl = `${this.SUPABASE_URL}/rest/v1/game_awards_history`;
       const historyData = [
         {
           game_id: gameId,
-          player_id: awards.playerOfTheGameId,
+          player_id: awards.isPlayerOfGameCustom ? null : awards.playerOfTheGameId,
+          custom_player_id: awards.isPlayerOfGameCustom ? awards.playerOfTheGameId : null,
           award_type: 'player_of_the_game',
           selected_by: userId,
           is_auto_suggested: awards.isAutoSuggested || false
         },
         {
           game_id: gameId,
-          player_id: awards.hustlePlayerId,
+          player_id: awards.isHustlePlayerCustom ? null : awards.hustlePlayerId,
+          custom_player_id: awards.isHustlePlayerCustom ? awards.hustlePlayerId : null,
           award_type: 'hustle_player',
           selected_by: userId,
           is_auto_suggested: awards.isAutoSuggested || false
@@ -141,6 +186,7 @@ export class GameAwardsService {
 
   /**
    * Get awards for a specific game
+   * ✅ UPDATED: Returns both regular and custom player IDs
    */
   static async getGameAwards(gameId: string): Promise<GameAwards | null> {
     try {
@@ -149,7 +195,8 @@ export class GameAwardsService {
         throw new Error('Missing Supabase configuration');
       }
 
-      const url = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${gameId}&select=player_of_the_game_id,hustle_player_of_the_game_id,awards_selected_at,awards_selected_by`;
+      // ✅ Include custom player columns
+      const url = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${gameId}&select=player_of_the_game_id,hustle_player_of_the_game_id,custom_player_of_the_game_id,custom_hustle_player_of_the_game_id,awards_selected_at,awards_selected_by`;
 
       const headers: Record<string, string> = {
         'apikey': this.SUPABASE_ANON_KEY,
@@ -175,6 +222,9 @@ export class GameAwardsService {
       return {
         playerOfTheGameId: game.player_of_the_game_id,
         hustlePlayerId: game.hustle_player_of_the_game_id,
+        // ✅ NEW: Custom player IDs
+        customPlayerOfTheGameId: game.custom_player_of_the_game_id,
+        customHustlePlayerId: game.custom_hustle_player_of_the_game_id,
         awardsSelectedAt: game.awards_selected_at,
         awardsSelectedBy: game.awards_selected_by
       };
@@ -186,6 +236,7 @@ export class GameAwardsService {
 
   /**
    * Get recent game awards for a tournament
+   * ✅ UPDATED: Supports both regular and custom players
    */
   static async getTournamentAwards(tournamentId: string, limit: number = 5): Promise<Array<{
     gameId: string;
@@ -197,6 +248,7 @@ export class GameAwardsService {
     playerOfTheGame: {
       id: string;
       name: string;
+      isCustomPlayer?: boolean;
       stats: {
         points: number;
         rebounds: number;
@@ -208,6 +260,7 @@ export class GameAwardsService {
     hustlePlayer: {
       id: string;
       name: string;
+      isCustomPlayer?: boolean;
       stats: {
         points: number;
         rebounds: number;
@@ -223,8 +276,8 @@ export class GameAwardsService {
         throw new Error('Missing Supabase configuration');
       }
 
-      // Query completed games with awards for this tournament
-      const url = `${this.SUPABASE_URL}/rest/v1/games?tournament_id=eq.${tournamentId}&status=eq.completed&or=(player_of_the_game_id.not.is.null,hustle_player_of_the_game_id.not.is.null)&select=id,start_time,home_score,away_score,team_a_id,team_b_id,player_of_the_game_id,hustle_player_of_the_game_id&order=start_time.desc&limit=${limit}`;
+      // ✅ Query includes both regular AND custom player award columns
+      const url = `${this.SUPABASE_URL}/rest/v1/games?tournament_id=eq.${tournamentId}&status=eq.completed&or=(player_of_the_game_id.not.is.null,hustle_player_of_the_game_id.not.is.null,custom_player_of_the_game_id.not.is.null,custom_hustle_player_of_the_game_id.not.is.null)&select=id,start_time,home_score,away_score,team_a_id,team_b_id,player_of_the_game_id,hustle_player_of_the_game_id,custom_player_of_the_game_id,custom_hustle_player_of_the_game_id&order=start_time.desc&limit=${limit}`;
 
       const headers: Record<string, string> = {
         'apikey': this.SUPABASE_ANON_KEY,
@@ -247,113 +300,129 @@ export class GameAwardsService {
         return [];
       }
 
-      // Fetch team names and player names
+      // Fetch team names
       const teamIds = [...new Set([
         ...games.map((g: any) => g.team_a_id),
         ...games.map((g: any) => g.team_b_id)
       ].filter(Boolean))];
       
-      const playerIds = [...new Set([
+      // ✅ Separate regular player IDs and custom player IDs
+      const regularPlayerIds = [...new Set([
         ...games.map((g: any) => g.player_of_the_game_id).filter(Boolean),
         ...games.map((g: any) => g.hustle_player_of_the_game_id).filter(Boolean)
       ].filter(Boolean))];
 
-      // Fetch teams and players in parallel
-      const [teamsResponse, playersResponse] = await Promise.all([
+      const customPlayerIds = [...new Set([
+        ...games.map((g: any) => g.custom_player_of_the_game_id).filter(Boolean),
+        ...games.map((g: any) => g.custom_hustle_player_of_the_game_id).filter(Boolean)
+      ].filter(Boolean))];
+
+      // ✅ Fetch teams, regular players, AND custom players in parallel
+      const [teamsResponse, playersResponse, customPlayersResponse] = await Promise.all([
         teamIds.length > 0 ? fetch(
           `${this.SUPABASE_URL}/rest/v1/teams?id=in.(${teamIds.join(',')})&select=id,name`,
           { headers }
         ).then(r => r.json()) : Promise.resolve([]),
-        playerIds.length > 0 ? fetch(
-          `${this.SUPABASE_URL}/rest/v1/users?id=in.(${playerIds.join(',')})&select=id,name`,
+        regularPlayerIds.length > 0 ? fetch(
+          `${this.SUPABASE_URL}/rest/v1/users?id=in.(${regularPlayerIds.join(',')})&select=id,name`,
+          { headers }
+        ).then(r => r.json()) : Promise.resolve([]),
+        customPlayerIds.length > 0 ? fetch(
+          `${this.SUPABASE_URL}/rest/v1/custom_players?id=in.(${customPlayerIds.join(',')})&select=id,name`,
           { headers }
         ).then(r => r.json()) : Promise.resolve([])
       ]);
 
       const teamsMap = new Map((teamsResponse || []).map((t: any) => [t.id, t.name]));
       const playersMap = new Map((playersResponse || []).map((p: any) => [p.id, p.name]));
+      const customPlayersMap = new Map((customPlayersResponse || []).map((p: any) => [p.id, p.name]));
 
-      // ✅ Fetch game-specific stats for each award winner
-      const { TeamStatsService } = await import('./teamStatsService');
-      const { TeamServiceV3 } = await import('./teamServiceV3');
+      // ✅ FIX: Fetch game_stats to calculate accurate scores (source of truth)
+      const gameIds = games.map((g: any) => g.id);
+      let gameStatsData: any[] = [];
+      
+      if (gameIds.length > 0) {
+        try {
+          const statsUrl = `${this.SUPABASE_URL}/rest/v1/game_stats?game_id=in.(${gameIds.join(',')})&select=game_id,team_id,stat_value,modifier,is_opponent_stat`;
+          const statsResponse = await fetch(statsUrl, { headers });
+          if (statsResponse.ok) {
+            gameStatsData = await statsResponse.json();
+          }
+        } catch (e) {
+          console.warn('Failed to fetch game_stats for score calculation:', e);
+        }
+      }
 
-      const awardsWithStats = await Promise.all(games.map(async (game: any) => {
-        // Determine winning team
-        const teamAScore = game.home_score || 0;
-        const teamBScore = game.away_score || 0;
-        const winningTeamId = teamAScore > teamBScore ? game.team_a_id : game.team_b_id;
-
-        // Fetch team roster and aggregate stats for the winning team
-        let playerOfTheGameStats = {
-          points: 0,
-          rebounds: 0,
-          assists: 0,
-          steals: 0,
-          blocks: 0
-        };
-        let hustlePlayerStats = {
-          points: 0,
-          rebounds: 0,
-          assists: 0,
-          steals: 0,
-          blocks: 0
-        };
-
-        if (winningTeamId && (game.player_of_the_game_id || game.hustle_player_of_the_game_id)) {
-          try {
-            const teamRoster = await TeamServiceV3.getTeamPlayersWithSubstitutions(winningTeamId, game.id);
-            const rosterPlayerIds = teamRoster.map(p => p.id);
-            const playerStats = await TeamStatsService.aggregatePlayerStats(game.id, winningTeamId, rosterPlayerIds);
-
-            // Find stats for Player of the Game
-            if (game.player_of_the_game_id) {
-              const potgStats = playerStats.find(p => p.playerId === game.player_of_the_game_id);
-              if (potgStats) {
-                playerOfTheGameStats = {
-                  points: potgStats.points,
-                  rebounds: potgStats.rebounds,
-                  assists: potgStats.assists,
-                  steals: potgStats.steals,
-                  blocks: potgStats.blocks
-                };
-              }
-            }
-
-            // Find stats for Hustle Player
-            if (game.hustle_player_of_the_game_id) {
-              const hustleStats = playerStats.find(p => p.playerId === game.hustle_player_of_the_game_id);
-              if (hustleStats) {
-                hustlePlayerStats = {
-                  points: hustleStats.points,
-                  rebounds: hustleStats.rebounds,
-                  assists: hustleStats.assists,
-                  steals: hustleStats.steals,
-                  blocks: hustleStats.blocks
-                };
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch stats for game ${game.id}:`, error);
-            // Continue with default stats if fetch fails
+      // Group stats by game_id and calculate scores
+      const scoresByGameId = new Map<string, { teamAScore: number; teamBScore: number }>();
+      for (const game of games) {
+        const gameStats = gameStatsData.filter((s: any) => s.game_id === game.id);
+        let teamAScore = 0, teamBScore = 0;
+        
+        for (const stat of gameStats) {
+          if (stat.modifier !== 'made') continue;
+          const points = stat.stat_value || 0;
+          
+          if (stat.team_id === game.team_a_id) {
+            teamAScore += points;
+          } else if (stat.team_id === game.team_b_id) {
+            teamBScore += points;
           }
         }
+        
+        scoresByGameId.set(game.id, { teamAScore, teamBScore });
+      }
+
+      // ✅ Fetch game-specific stats using PlayerGameStatsService (proven to work for custom players)
+      const { PlayerGameStatsService } = await import('./playerGameStatsService');
+
+      // Helper to get stats for a specific player and game
+      const getPlayerStatsForGame = async (playerId: string, gameId: string, isCustom: boolean) => {
+        try {
+          const allGameStats = await PlayerGameStatsService.getPlayerGameStats(playerId, isCustom);
+          const gameStats = allGameStats.find(g => g.gameId === gameId);
+          if (gameStats) {
+            return {
+              points: gameStats.points,
+              rebounds: gameStats.rebounds,
+              assists: gameStats.assists,
+              steals: gameStats.steals,
+              blocks: gameStats.blocks
+            };
+          }
+        } catch (e) { console.error(`Stats fetch failed for player ${playerId}:`, e); }
+        return { ...DEFAULT_STATS };
+      };
+
+      const awardsWithStats = await Promise.all(games.map(async (game: any) => {
+        // ✅ FIX: Use calculated scores from game_stats (source of truth)
+        const calculatedScores = scoresByGameId.get(game.id) || { teamAScore: 0, teamBScore: 0 };
+        const { teamAScore, teamBScore } = calculatedScores;
+        const potgId = game.player_of_the_game_id || game.custom_player_of_the_game_id;
+        const isPotgCustom = !!game.custom_player_of_the_game_id;
+        const hustleId = game.hustle_player_of_the_game_id || game.custom_hustle_player_of_the_game_id;
+        const isHustleCustom = !!game.custom_hustle_player_of_the_game_id;
+
+        // Fetch stats for awarded players using the proven PlayerGameStatsService
+        const [potgStats, hustleStats] = await Promise.all([
+          potgId ? getPlayerStatsForGame(potgId, game.id, isPotgCustom) : Promise.resolve({ ...DEFAULT_STATS }),
+          hustleId ? getPlayerStatsForGame(hustleId, game.id, isHustleCustom) : Promise.resolve({ ...DEFAULT_STATS })
+        ]);
 
         return {
-          gameId: game.id,
-          gameDate: game.start_time,
+          gameId: game.id, gameDate: game.start_time,
           teamAName: teamsMap.get(game.team_a_id) || 'Team A',
           teamBName: teamsMap.get(game.team_b_id) || 'Team B',
-          teamAScore: teamAScore,
-          teamBScore: teamBScore,
-          playerOfTheGame: game.player_of_the_game_id ? {
-            id: game.player_of_the_game_id,
-            name: playersMap.get(game.player_of_the_game_id) || 'Unknown Player',
-            stats: playerOfTheGameStats
+          teamAScore, teamBScore,
+          playerOfTheGame: potgId ? {
+            id: potgId,
+            name: isPotgCustom ? (customPlayersMap.get(potgId) || 'Custom Player') : (playersMap.get(potgId) || 'Unknown Player'),
+            isCustomPlayer: isPotgCustom, stats: potgStats
           } : null,
-          hustlePlayer: game.hustle_player_of_the_game_id ? {
-            id: game.hustle_player_of_the_game_id,
-            name: playersMap.get(game.hustle_player_of_the_game_id) || 'Unknown Player',
-            stats: hustlePlayerStats
+          hustlePlayer: hustleId ? {
+            id: hustleId,
+            name: isHustleCustom ? (customPlayersMap.get(hustleId) || 'Custom Player') : (playersMap.get(hustleId) || 'Unknown Player'),
+            isCustomPlayer: isHustleCustom, stats: hustleStats
           } : null
         };
       }));
@@ -367,16 +436,22 @@ export class GameAwardsService {
 
   /**
    * Get all awards for a specific player
+   * ✅ UPDATED: Supports both regular and custom players
    */
-  static async getPlayerAwards(playerId: string): Promise<PlayerAward[]> {
+  static async getPlayerAwards(playerId: string, isCustomPlayer: boolean = false): Promise<PlayerAward[]> {
     try {
       const accessToken = this.getAccessToken();
       if (!this.SUPABASE_URL || !this.SUPABASE_ANON_KEY) {
         throw new Error('Missing Supabase configuration');
       }
 
-      // Query games where player won an award
-      const url = `${this.SUPABASE_URL}/rest/v1/games?or=(player_of_the_game_id.eq.${playerId},hustle_player_of_the_game_id.eq.${playerId})&select=id,start_time,team_a_id,team_b_id,home_score,away_score,player_of_the_game_id,hustle_player_of_the_game_id&order=start_time.desc`;
+      // ✅ Query games where player won an award (check both regular and custom columns)
+      let url: string;
+      if (isCustomPlayer) {
+        url = `${this.SUPABASE_URL}/rest/v1/games?or=(custom_player_of_the_game_id.eq.${playerId},custom_hustle_player_of_the_game_id.eq.${playerId})&select=id,start_time,team_a_id,team_b_id,home_score,away_score,custom_player_of_the_game_id,custom_hustle_player_of_the_game_id&order=start_time.desc`;
+      } else {
+        url = `${this.SUPABASE_URL}/rest/v1/games?or=(player_of_the_game_id.eq.${playerId},hustle_player_of_the_game_id.eq.${playerId})&select=id,start_time,team_a_id,team_b_id,home_score,away_score,player_of_the_game_id,hustle_player_of_the_game_id&order=start_time.desc`;
+      }
 
       const headers: Record<string, string> = {
         'apikey': this.SUPABASE_ANON_KEY,
@@ -399,78 +474,38 @@ export class GameAwardsService {
         return [];
       }
 
-      // ✅ Fetch game-specific stats for each award
-      const { TeamStatsService } = await import('./teamStatsService');
-      const { TeamServiceV3 } = await import('./teamServiceV3');
+      const { PlayerGameStatsService } = await import('./playerGameStatsService');
+
+      // Fetch all player game stats once (cached, efficient)
+      const allPlayerGameStats = await PlayerGameStatsService.getPlayerGameStats(playerId, isCustomPlayer);
 
       const awardsWithStats = await Promise.all(games.map(async (game: any) => {
-        // Determine which team the player was on
         const teamIds = [game.team_a_id, game.team_b_id].filter(Boolean);
-        let playerTeamId: string | null = null;
-        let opponentName = 'Opponent';
 
         // Fetch team names
-        const teamNamesResponse = await fetch(
-          `${this.SUPABASE_URL}/rest/v1/teams?id=in.(${teamIds.join(',')})&select=id,name`,
-          { headers }
-        ).then(r => r.json());
-        const teamNamesMap = new Map((teamNamesResponse || []).map((t: any) => [t.id, t.name]));
+        const teamsResp = await fetch(`${this.SUPABASE_URL}/rest/v1/teams?id=in.(${teamIds.join(',')})&select=id,name`, { headers }).then(r => r.json());
+        const teamNames = new Map<string, string>((teamsResp || []).map((t: any) => [t.id, t.name]));
 
-        // Determine player's team and opponent
-        for (const teamId of teamIds) {
-          try {
-            const teamRoster = await TeamServiceV3.getTeamPlayersWithSubstitutions(teamId, game.id);
-            if (teamRoster.some(p => p.id === playerId)) {
-              playerTeamId = teamId;
-              // Set opponent name
-              const opponentTeamId = teamIds.find(id => id !== teamId);
-              opponentName = teamNamesMap.get(opponentTeamId || '') || 'Opponent';
-              break;
-            }
-          } catch (error) {
-            console.error(`Failed to check team ${teamId} for player:`, error);
-          }
+        // Determine opponent from game stats (already has opponentId)
+        const gameStats = allPlayerGameStats.find(g => g.gameId === game.id);
+        const opponentName = gameStats?.opponent || teamNames.get(teamIds[1]) || 'Opponent';
+
+        // Get stats for this specific game
+        let stats = { ...DEFAULT_STATS };
+        if (gameStats) {
+          stats = {
+            points: gameStats.points,
+            rebounds: gameStats.rebounds,
+            assists: gameStats.assists,
+            steals: gameStats.steals,
+            blocks: gameStats.blocks
+          };
         }
 
-        // Fetch player stats for this game
-        let gameStats = {
-          points: 0,
-          rebounds: 0,
-          assists: 0,
-          steals: 0,
-          blocks: 0
-        };
+        const potgCol = isCustomPlayer ? 'custom_player_of_the_game_id' : 'player_of_the_game_id';
+        const awardType: 'player_of_the_game' | 'hustle_player' = game[potgCol] === playerId ? 'player_of_the_game' : 'hustle_player';
 
-        if (playerTeamId) {
-          try {
-            const teamRoster = await TeamServiceV3.getTeamPlayersWithSubstitutions(playerTeamId, game.id);
-            const rosterPlayerIds = teamRoster.map(p => p.id);
-            const playerStats = await TeamStatsService.aggregatePlayerStats(game.id, playerTeamId, rosterPlayerIds);
-            const playerStat = playerStats.find(p => p.playerId === playerId);
-            
-            if (playerStat) {
-              gameStats = {
-                points: playerStat.points,
-                rebounds: playerStat.rebounds,
-                assists: playerStat.assists,
-                steals: playerStat.steals,
-                blocks: playerStat.blocks
-              };
-            }
-          } catch (error) {
-            console.error(`Failed to fetch stats for game ${game.id}:`, error);
-          }
-        }
-
-        return {
-          gameId: game.id,
-          gameDate: game.start_time,
-          opponentName: opponentName,
-          awardType: game.player_of_the_game_id === playerId 
-            ? 'player_of_the_game' as const 
-            : 'hustle_player' as const,
-          stats: gameStats
-        };
+        return { gameId: game.id, gameDate: game.start_time, opponentName, awardType, stats };
       }));
 
       return awardsWithStats;

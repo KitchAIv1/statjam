@@ -53,7 +53,7 @@ export function AwardSelectionSection({
         Select from {teamName}
       </div>
 
-      <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+      <div className="space-y-2 max-h-[280px] overflow-y-auto border border-gray-200 rounded-lg">
         {players.length === 0 ? (
           <div className="p-4 text-center text-gray-500 text-sm">
             No players available

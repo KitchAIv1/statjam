@@ -43,6 +43,9 @@ async function calculateScoresFromStats(
   let homeScore = 0;
   let awayScore = 0;
   
+  // Debug: Log what we're processing
+  console.log(`🔍 calculateScoresFromStats: gameId=${gameId}, teamA=${teamAId}, teamB=${teamBId}, statsCount=${stats.length}`);
+  
   for (const stat of stats) {
     // Only count made shots
     if (stat.modifier !== 'made') continue;
@@ -50,16 +53,18 @@ async function calculateScoresFromStats(
     // Use stat_value from database (already contains correct points)
     const points = stat.stat_value || 0;
     
-    // Check is_opponent_stat flag for coach mode
-    if (stat.is_opponent_stat) {
-      // Opponent stats go to team B score
-      awayScore += points;
-    } else if (stat.team_id === teamAId) {
+    // Match by team_id
+    if (stat.team_id === teamAId) {
       homeScore += points;
     } else if (stat.team_id === teamBId) {
       awayScore += points;
+    } else {
+      // Debug: Log unmatched stats
+      console.warn(`⚠️ Stat team_id ${stat.team_id} doesn't match teamA=${teamAId} or teamB=${teamBId}`);
     }
   }
+  
+  console.log(`📊 calculateScoresFromStats: gameId=${gameId} → home=${homeScore}, away=${awayScore}`);
   
   return { homeScore, awayScore };
 }
@@ -128,60 +133,35 @@ export function useLiveGamesHybrid() {
       const teamsMap = new Map(teamsData.map(t => [t.id, t.name]));
       const tournamentsMap = new Map(tournamentsData.map(t => [t.id, t.name]));
 
-      // Step 5: ✅ CRITICAL FIX: Calculate scores from game_stats (source of truth)
-      // Fetch stats for all games in parallel for efficiency
-      const gameIds = gamesData.map(g => g.id);
-      let allStats: any[] = [];
-      
-      if (gameIds.length > 0) {
-        try {
-          // Batch fetch all stats for all games in a single query
-          const statsData = await hybridSupabaseService.query<any>(
-            'game_stats',
-            'game_id,team_id,stat_type,stat_value,modifier,is_opponent_stat',
-            {
-              'game_id': `in.(${gameIds.join(',')})`,
-              'order': 'created_at.asc'
-            }
-          );
-          
-          allStats = statsData || [];
-          console.log(`✅ useLiveGamesHybrid: Fetched ${allStats.length} stats for ${gameIds.length} games`);
-        } catch (statsError) {
-          console.error('❌ useLiveGamesHybrid: Error fetching stats for score calculation:', statsError);
-          // Continue with database scores as fallback
-        }
-      }
-      
-      // Group stats by game_id for efficient lookup
-      const statsByGameId = new Map<string, any[]>();
-      for (const stat of allStats) {
-        if (!statsByGameId.has(stat.game_id)) {
-          statsByGameId.set(stat.game_id, []);
-        }
-        statsByGameId.get(stat.game_id)!.push(stat);
-      }
-
-      // Step 6: Enrich games with calculated scores
+      // Step 5: ✅ SCALABLE FIX: Fetch stats per-game to avoid Supabase 1000 row limit
+      // Each game's stats are fetched individually in parallel (bypasses 1000 limit)
+      console.log(`🏀 useLiveGamesHybrid: Fetching stats for ${gamesData.length} games (per-game queries)`);
       const enrichedGames: LiveGame[] = await Promise.all(
         gamesData.map(async (game) => {
-          const gameStats = statsByGameId.get(game.id) || [];
-          
-          // Calculate scores from stats (source of truth)
           let calculatedScores = { homeScore: game.home_score || 0, awayScore: game.away_score || 0 };
           
-          if (gameStats.length > 0 && game.team_a_id && game.team_b_id) {
-            try {
+          try {
+            // Fetch stats for THIS specific game only
+            const gameStats = await hybridSupabaseService.query<any>(
+              'game_stats',
+              'game_id,team_id,stat_type,stat_value,modifier,is_opponent_stat',
+              {
+                'game_id': `eq.${game.id}`,
+                'order': 'created_at.asc'
+              }
+            );
+            
+            if (gameStats && gameStats.length > 0 && game.team_a_id && game.team_b_id) {
               calculatedScores = await calculateScoresFromStats(
                 game.id,
                 game.team_a_id,
                 game.team_b_id,
                 gameStats
               );
-            } catch (error) {
-              console.error(`❌ useLiveGamesHybrid: Error calculating scores for game ${game.id}:`, error);
-              // Fallback to database scores on error
             }
+          } catch (statsError) {
+            console.error(`❌ useLiveGamesHybrid: Error fetching stats for game ${game.id}:`, statsError);
+            // Fallback to database scores on error
           }
           
           return {

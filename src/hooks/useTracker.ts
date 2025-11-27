@@ -58,10 +58,12 @@ interface UseTrackerReturn {
   advanceIfNeeded: () => void;
   substitute: (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number }) => Promise<boolean>;
   closeGame: () => Promise<void>;
-  completeGameWithAwards: (awards: { playerOfTheGameId: string; hustlePlayerId: string }) => Promise<void>; // ✅ Complete game with awards
+  completeGameWithAwards: (awards: { playerOfTheGameId: string; hustlePlayerId: string; isPlayerOfGameCustom?: boolean; isHustlePlayerCustom?: boolean }) => Promise<void>; // ✅ Complete game with awards (supports custom players)
   saveClockBeforeExit: () => Promise<void>; // ✅ Save clock state before navigation
   showAwardsModal: boolean; // ✅ Awards modal visibility
   setShowAwardsModal: (show: boolean) => void; // ✅ Control awards modal
+  showGameOverModal: boolean; // ✅ Game over modal visibility
+  setShowGameOverModal: (show: boolean) => void; // ✅ Control game over modal
   
   // State Setters
   setRosterA: (updater: (prev: RosterState) => RosterState) => void;
@@ -236,6 +238,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   
   // ✅ Awards modal state
   const [showAwardsModal, setShowAwardsModal] = useState(false);
+  // ✅ Game over modal state (shown when clock reaches 0 with a winner)
+  const [showGameOverModal, setShowGameOverModal] = useState(false);
   const [timeoutType, setTimeoutType] = useState<'full' | '30_second'>('full');
   const [rosterA, setRosterA] = useState<RosterState>({
     teamId: teamAId,
@@ -913,11 +917,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           // ✅ FIX #1: setQuarter already calls resetClock internally - remove duplicate call
           setQuarter(5); // Overtime starts at quarter 5
         } else {
-          // Game has a winner - end the game
+          // Game has a winner - show game over modal
           const winner = teamAScore > teamBScore ? 'Team A' : 'Team B';
           console.log(`🏀 End of regulation - GAME OVER! Winner: ${winner} (${teamAScore}-${teamBScore})`);
           setLastAction(`Game Over! ${winner} wins ${teamAScore}-${teamBScore}`);
-          // Don't advance quarter - game is complete
+          setShowGameOverModal(true); // ✅ Trigger game over modal
         }
       } else {
         // Already in overtime (quarter >= 5) - check for tie again
@@ -936,12 +940,12 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           // ✅ FIX #1: setQuarter already calls resetClock internally - remove duplicate call
           setQuarter(nextQuarter);
         } else {
-          // Overtime has a winner - end the game
+          // Overtime has a winner - show game over modal
           const winner = teamAScore > teamBScore ? 'Team A' : 'Team B';
           const currentOT = quarter - 4;
           console.log(`🏀 End of OT${currentOT} - GAME OVER! Winner: ${winner} (${teamAScore}-${teamBScore})`);
           setLastAction(`Game Over in OT${currentOT}! ${winner} wins ${teamAScore}-${teamBScore}`);
-          // Don't advance quarter - game is complete
+          setShowGameOverModal(true); // ✅ Trigger game over modal
         }
       }
     }
@@ -1711,18 +1715,30 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   }, [gameId, scores, teamAId, teamBId, gameStatus, isCoachMode, stopShotClock]);
 
   // ✅ Complete game with awards (called from awards modal)
+  // ✅ UPDATED: Supports custom players (Nov 2025)
   const completeGameWithAwards = useCallback(async (awards: {
     playerOfTheGameId: string;
     hustlePlayerId: string;
+    isPlayerOfGameCustom?: boolean;
+    isHustlePlayerCustom?: boolean;
   }) => {
     try {
       const { GameAwardsService } = await import('@/lib/services/gameAwardsService');
       const { GameService } = await import('@/lib/services/gameService');
       
-      // Save awards
+      console.log('🏆 useTracker: Saving awards with custom player support', {
+        playerOfTheGameId: awards.playerOfTheGameId,
+        isPlayerOfGameCustom: awards.isPlayerOfGameCustom,
+        hustlePlayerId: awards.hustlePlayerId,
+        isHustlePlayerCustom: awards.isHustlePlayerCustom
+      });
+      
+      // Save awards (with custom player flags)
       await GameAwardsService.saveGameAwards(gameId, {
         playerOfTheGameId: awards.playerOfTheGameId,
-        hustlePlayerId: awards.hustlePlayerId
+        hustlePlayerId: awards.hustlePlayerId,
+        isPlayerOfGameCustom: awards.isPlayerOfGameCustom,
+        isHustlePlayerCustom: awards.isHustlePlayerCustom
       });
 
       // Update game status to completed
@@ -1731,7 +1747,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       if (success) {
         setGameStatus('completed');
         setShowAwardsModal(false);
-        console.log('✅ Game completed with awards');
+        console.log('✅ Game completed with awards (custom player support enabled)');
         setLastAction('Game ended with awards');
       } else {
         throw new Error('Failed to update game status');
@@ -1968,6 +1984,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     saveClockBeforeExit,
     showAwardsModal,
     setShowAwardsModal,
+    showGameOverModal,
+    setShowGameOverModal,
     setRosterA,
     setRosterB,
     isLoading,

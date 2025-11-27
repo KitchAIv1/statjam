@@ -20,6 +20,7 @@ export interface TournamentAward {
   playerOfTheGame: {
     id: string;
     name: string;
+    isCustomPlayer?: boolean;  // ✅ Custom player support
     stats: {
       points: number;
       rebounds: number;
@@ -31,6 +32,7 @@ export interface TournamentAward {
   hustlePlayer: {
     id: string;
     name: string;
+    isCustomPlayer?: boolean;  // ✅ Custom player support
     stats: {
       points: number;
       rebounds: number;
@@ -52,8 +54,8 @@ export function useTournamentAwards(tournamentId: string | null, limit: number =
     }
 
     const loadAwards = async () => {
-      // Check cache first
-      const cacheKey = `tournament_awards_${tournamentId}_${limit}`;
+      // Check cache first (v3 includes accurate score calculation from game_stats)
+      const cacheKey = `tournament_awards_v3_${tournamentId}_${limit}`;
       const cached = cache.get<TournamentAward[]>(cacheKey);
       
       if (cached) {

@@ -39,6 +39,7 @@ import { FeatureTour } from '@/components/onboarding/FeatureTour';
 import { CompletionNudge } from '@/components/onboarding/CompletionNudge';
 import { coachFeatureTourSteps } from '@/config/onboarding/coachOnboarding';
 import { GameCompletionModal } from '@/components/tracker-v3/modals/GameCompletionModal';
+import { GameOverModal } from '@/components/tracker-v3/modals/GameOverModal';
 import { NetworkStatusIndicator } from '@/components/ui/NetworkStatusIndicator';
 
 interface GameData {
@@ -2031,6 +2032,28 @@ function StatTrackerV3Content() {
         {/* ✅ DESKTOP: Render shared modals */}
         {sharedModals}
         {featureTour}
+
+        {/* Game Over Modal - Auto shown when clock reaches 0 with a winner */}
+        {gameData && (
+          <GameOverModal
+            isOpen={tracker.showGameOverModal}
+            teamAName={gameData.team_a?.name || 'Team A'}
+            teamBName={gameData.team_b?.name || 'Team B'}
+            teamAScore={tracker.scores[gameData.team_a_id] || 0}
+            teamBScore={tracker.scores[gameData.team_b_id] || 0}
+            isOvertime={tracker.quarter > 4}
+            overtimeNumber={tracker.quarter > 4 ? tracker.quarter - 4 : undefined}
+            onEditStats={() => {
+              // Close modal to let user edit stats using existing UI
+              tracker.setShowGameOverModal(false);
+            }}
+            onCompleteGame={() => {
+              // Close this modal and trigger the standard closeGame flow
+              tracker.setShowGameOverModal(false);
+              tracker.closeGame();
+            }}
+          />
+        )}
 
         {/* Game Completion Modal with Awards */}
         {!coachMode && gameData && (
