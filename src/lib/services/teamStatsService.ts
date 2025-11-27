@@ -301,13 +301,96 @@ export class TeamStatsService {
   }
 
   /**
+   * Get quarter length from game's tournament ruleset (supports custom quarter lengths)
+   * Defaults: NBA=12min, FIBA=10min, NCAA=20min (halves)
+   */
+  private static async getQuarterLengthMinutes(gameId: string): Promise<number> {
+    try {
+      // Fetch game with tournament's ruleset config
+      const gameData = await this.makeAuthenticatedRequest<any>('games', {
+        'select': 'tournament_id,game_clock_minutes,tournaments(ruleset,ruleset_config)',
+        'id': `eq.${gameId}`
+      });
+
+      if (gameData.length > 0) {
+        const game = gameData[0];
+        
+        // ✅ Priority 1: Use game's initial clock setting (editable by stat admin)
+        // If game_clock_minutes was set to something other than standard, respect it
+        const gameClock = game.game_clock_minutes;
+        
+        if (game.tournaments) {
+          const ruleset = game.tournaments.ruleset || 'NBA';
+          const rulesetConfig = game.tournaments.ruleset_config || {};
+          
+          // ✅ Priority 2: Custom ruleset override
+          if (rulesetConfig?.clockRules?.quarterLengthMinutes) {
+            return rulesetConfig.clockRules.quarterLengthMinutes;
+          }
+          
+          // ✅ Priority 3: Standard ruleset defaults
+          switch (ruleset) {
+            case 'FIBA': return 10;
+            case 'NCAA': return 20;
+            case 'NBA':
+            default: return 12;
+          }
+        }
+        
+        // Fallback to game clock if no tournament
+        return gameClock || 12;
+      }
+      
+      return 12; // Default fallback
+    } catch (error) {
+      console.warn('⚠️ TeamStatsService: Could not fetch quarter length, defaulting to 12');
+      return 12;
+    }
+  }
+
+  /**
+   * Calculate stint duration in seconds (handles cross-quarter stints correctly)
+   */
+  private static calculateStintSeconds(
+    startQuarter: number,
+    startGameClock: number,  // seconds remaining when stint started
+    endQuarter: number,
+    endGameClock: number,    // seconds remaining when stint ended
+    quarterLengthSeconds: number
+  ): number {
+    if (startQuarter === endQuarter) {
+      // Same quarter: simple subtraction (clock counts down)
+      return Math.max(0, startGameClock - endGameClock);
+    }
+    
+    // Cross-quarter calculation:
+    // 1. Time remaining in start quarter (from stint start to end of quarter)
+    const startQuarterTime = startGameClock;
+    
+    // 2. Full quarters between start and end
+    const fullQuarters = Math.max(0, endQuarter - startQuarter - 1);
+    const fullQuartersTime = fullQuarters * quarterLengthSeconds;
+    
+    // 3. Time elapsed in end quarter (from start of quarter to current clock)
+    const endQuarterTime = quarterLengthSeconds - endGameClock;
+    
+    return startQuarterTime + fullQuartersTime + endQuarterTime;
+  }
+
+  /**
    * Calculate actual player minutes on floor using substitution game clock times
+   * ✅ FIX: Now uses dynamic quarter length and handles cross-quarter stints
    */
   private static async calculatePlayerMinutes(gameId: string, teamId: string, playerIds: string[]): Promise<Map<string, number>> {
     try {
       console.log('⏱️ TeamStatsService: Calculating actual player minutes from substitution times');
 
-      // Get all substitutions for this game and team (include both regular and custom player IDs)
+      // ✅ NEW: Get dynamic quarter length from ruleset (not hardcoded 12)
+      const quarterLengthMinutes = await this.getQuarterLengthMinutes(gameId);
+      const quarterLengthSeconds = quarterLengthMinutes * 60;
+      console.log(`📊 TeamStatsService: Using quarter length: ${quarterLengthMinutes} minutes`);
+
+      // Get all substitutions for this game and team
       const substitutions = await this.makeRequest<any>('game_substitutions', {
         'select': 'player_in_id,player_out_id,custom_player_in_id,custom_player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
         'game_id': `eq.${gameId}`,
@@ -318,113 +401,101 @@ export class TeamStatsService {
       console.log(`📊 TeamStatsService: Found ${substitutions.length} substitutions for minutes calculation`);
 
       const playerMinutes = new Map<string, number>();
-      
-      // Initialize all players with 0 minutes
-      playerIds.forEach(playerId => {
-        playerMinutes.set(playerId, 0);
-      });
+      playerIds.forEach(playerId => playerMinutes.set(playerId, 0));
+
+      // ✅ NEW: Always fetch current game state for accurate "still on court" calculation
+      let currentGameState = { quarter: 1, clockMinutes: quarterLengthMinutes, clockSeconds: 0 };
+      try {
+        const gameData = await this.makeAuthenticatedRequest<any>('games', {
+          'select': 'quarter,game_clock_minutes,game_clock_seconds,status',
+          'id': `eq.${gameId}`
+        });
+        if (gameData.length > 0) {
+          currentGameState = {
+            quarter: gameData[0].quarter || 1,
+            clockMinutes: gameData[0].game_clock_minutes ?? quarterLengthMinutes,
+            clockSeconds: gameData[0].game_clock_seconds ?? 0
+          };
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not fetch current game state for minutes calculation');
+      }
 
       if (substitutions.length === 0) {
-        // No substitutions - need to get current game state to calculate realistic minutes
+        // No substitutions - calculate from current game clock
         console.log('📝 TeamStatsService: No substitutions found, calculating from game clock');
         
-        try {
-          // Get current game state to determine how much time has elapsed (use authenticated for coach games)
-          const gameData = await this.makeAuthenticatedRequest<any>('games', {
-            'select': 'quarter,game_clock_minutes,game_clock_seconds',
-            'id': `eq.${gameId}`
-          });
-
-          if (gameData.length > 0) {
-            const game = gameData[0];
-            const currentQuarter = game.quarter || 1;
-            const clockMinutes = game.game_clock_minutes || 12;
-            const clockSeconds = game.game_clock_seconds || 0;
-            
-            // Calculate elapsed time
-            // Each quarter is 12 minutes, game clock counts down
-            const quarterTimeElapsed = (12 * 60) - (clockMinutes * 60 + clockSeconds); // seconds
-            const totalTimeElapsed = ((currentQuarter - 1) * 12 * 60) + quarterTimeElapsed; // seconds
-            const minutesElapsed = totalTimeElapsed / 60;
-            
-            console.log(`📊 TeamStatsService: Game in Q${currentQuarter}, clock ${clockMinutes}:${clockSeconds.toString().padStart(2, '0')}, elapsed: ${minutesElapsed.toFixed(1)} minutes`);
-            
-            playerIds.forEach((playerId, index) => {
-              // Assume first 5 players are starters who have been playing since start
-              // Bench players have 0 minutes (no substitutions = no bench time)
-              const minutes = index < 5 ? Math.round(minutesElapsed) : 0;
-              playerMinutes.set(playerId, minutes);
-            });
-          } else {
-            // Fallback if game data not found
-            console.log('⚠️ TeamStatsService: Game data not found, using minimal fallback');
-            playerIds.forEach((playerId, index) => {
-              const minutes = index < 5 ? 5 : 0; // Minimal fallback
-              playerMinutes.set(playerId, minutes);
-            });
-          }
-        } catch (error) {
-          console.error('❌ TeamStatsService: Error getting game state:', error);
-          // Final fallback
-          playerIds.forEach((playerId, index) => {
-            const minutes = index < 5 ? 5 : 0; // Conservative fallback
-            playerMinutes.set(playerId, minutes);
-          });
-        }
+        const { quarter, clockMinutes, clockSeconds } = currentGameState;
+        
+        // Calculate elapsed time using dynamic quarter length
+        const quarterTimeElapsed = quarterLengthSeconds - (clockMinutes * 60 + clockSeconds);
+        const totalTimeElapsed = ((quarter - 1) * quarterLengthSeconds) + quarterTimeElapsed;
+        const minutesElapsed = totalTimeElapsed / 60;
+        
+        console.log(`📊 TeamStatsService: Q${quarter}, clock ${clockMinutes}:${clockSeconds.toString().padStart(2, '0')}, elapsed: ${minutesElapsed.toFixed(1)} min`);
+        
+        playerIds.forEach((playerId, index) => {
+          // First 5 are starters, bench has 0 minutes without subs
+          const minutes = index < 5 ? Math.round(minutesElapsed) : 0;
+          playerMinutes.set(playerId, minutes);
+        });
         
         return playerMinutes;
       }
 
-      // ✅ CORRECT: Calculate actual floor time using game clock timestamps
+      // ✅ FIX: Calculate floor time with quarter-aware logic
       for (const playerId of playerIds) {
-        let totalMinutes = 0;
+        let totalSeconds = 0;
         let isOnCourt = false;
-        let stintStartTime = 0; // Game clock time when player entered (in seconds)
+        let stintStartQuarter = 1;
+        let stintStartGameClock = quarterLengthSeconds; // Game clock when stint started
 
-        // Assume starting 5 (first 5 players) start on court
+        // Assume starting 5 start on court at Q1 start
         const isStarter = playerIds.indexOf(playerId) < 5;
         if (isStarter) {
           isOnCourt = true;
-          stintStartTime = 12 * 60; // Start of game (12:00 = 720 seconds)
+          stintStartQuarter = 1;
+          stintStartGameClock = quarterLengthSeconds;
         }
 
         // Process substitutions chronologically
         for (const sub of substitutions) {
-          const subGameTime = (sub.game_time_minutes * 60) + sub.game_time_seconds;
+          const subQuarter = sub.quarter || 1;
+          const subGameClock = (sub.game_time_minutes * 60) + sub.game_time_seconds;
           
-          // ✅ CUSTOM PLAYER SUPPORT: Check both regular and custom player IDs
           const playerInId = sub.player_in_id || sub.custom_player_in_id;
           const playerOutId = sub.player_out_id || sub.custom_player_out_id;
           
-          if (playerInId === playerId) {
+          if (playerInId === playerId && !isOnCourt) {
             // Player coming in
-            if (!isOnCourt) {
-              stintStartTime = subGameTime;
-              isOnCourt = true;
-              console.log(`🔄 Player ${playerId.substring(0, 8)} SUB IN at ${sub.game_time_minutes}:${sub.game_time_seconds.toString().padStart(2, '0')}`);
-            }
-          } else if (playerOutId === playerId) {
-            // Player going out
-            if (isOnCourt) {
-              // Calculate minutes played in this stint
-              const stintMinutes = (stintStartTime - subGameTime) / 60; // Game clock counts down
-              totalMinutes += stintMinutes;
-              isOnCourt = false;
-              console.log(`🔄 Player ${playerId.substring(0, 8)} SUB OUT at ${sub.game_time_minutes}:${sub.game_time_seconds.toString().padStart(2, '0')}, played ${stintMinutes.toFixed(1)} minutes this stint`);
-            }
+            stintStartQuarter = subQuarter;
+            stintStartGameClock = subGameClock;
+            isOnCourt = true;
+          } else if (playerOutId === playerId && isOnCourt) {
+            // Player going out - calculate this stint
+            const stintSeconds = this.calculateStintSeconds(
+              stintStartQuarter, stintStartGameClock,
+              subQuarter, subGameClock,
+              quarterLengthSeconds
+            );
+            totalSeconds += stintSeconds;
+            isOnCourt = false;
           }
         }
 
-        // Handle case where player is still on court at end of available data
+        // ✅ FIX: Handle player still on court using CURRENT game state
         if (isOnCourt) {
-          // Assume game clock is at 0:00 if player still on court
-          const stintMinutes = stintStartTime / 60;
-          totalMinutes += stintMinutes;
-          console.log(`🔄 Player ${playerId.substring(0, 8)} still on court, played ${stintMinutes.toFixed(1)} minutes in final stint`);
+          const currentClock = currentGameState.clockMinutes * 60 + currentGameState.clockSeconds;
+          const stintSeconds = this.calculateStintSeconds(
+            stintStartQuarter, stintStartGameClock,
+            currentGameState.quarter, currentClock,
+            quarterLengthSeconds
+          );
+          totalSeconds += stintSeconds;
         }
 
-        playerMinutes.set(playerId, Math.round(totalMinutes)); // Whole numbers only
-        console.log(`📊 TeamStatsService: Player ${playerId.substring(0, 8)} total minutes: ${totalMinutes.toFixed(1)}`);
+        const totalMinutes = Math.round(totalSeconds / 60);
+        playerMinutes.set(playerId, totalMinutes);
       }
 
       console.log('✅ TeamStatsService: Player minutes calculated successfully');
@@ -432,21 +503,9 @@ export class TeamStatsService {
 
     } catch (error: any) {
       console.error('❌ TeamStatsService: Failed to calculate player minutes:', error);
-      // Return fallback minutes based on quarters played
+      // Fallback: 0 minutes for all
       const fallbackMinutes = new Map<string, number>();
-      for (const playerId of playerIds) {
-        try {
-          const playerStats = await this.makeRequest<any>('game_stats', {
-            'select': 'quarter',
-            'game_id': `eq.${gameId}`,
-            'player_id': `eq.${playerId}`
-          });
-          const quartersPlayed = new Set(playerStats.map((s: any) => s.quarter)).size;
-          fallbackMinutes.set(playerId, quartersPlayed * 10);
-        } catch {
-          fallbackMinutes.set(playerId, 10); // Final fallback
-        }
-      }
+      playerIds.forEach(playerId => fallbackMinutes.set(playerId, 0));
       return fallbackMinutes;
     }
   }
