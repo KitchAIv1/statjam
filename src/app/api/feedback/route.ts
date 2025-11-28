@@ -2,14 +2,73 @@
  * Feedback API Route
  * Purpose: Receive feedback submissions and send to Discord webhook
  * Method: POST /api/feedback
+ * 
+ * SECURITY: Requires authentication (enforced by middleware + token check)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 
+/**
+ * Verify JWT token from request
+ */
+function verifyAuth(request: NextRequest): { userId: string; email: string } | null {
+  try {
+    const authHeader = request.headers.get('authorization');
+    let token: string | null = null;
+
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
+    }
+
+    // Also check cookies
+    const cookieToken = request.cookies.get('sb-access-token')?.value ||
+                        request.cookies.get('sb-auth-token')?.value;
+    if (!token && cookieToken) {
+      token = cookieToken;
+    }
+
+    if (!token) {
+      return null;
+    }
+
+    // Decode JWT payload
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+
+    const payload = JSON.parse(atob(parts[1]));
+    
+    // Check expiration
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      return null;
+    }
+
+    return {
+      userId: payload.sub,
+      email: payload.email || 'unknown'
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // ✅ SECURITY: Verify authentication
+    const user = verifyAuth(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
-    const { feedback, email, page, userAgent, timestamp } = body;
+    const { feedback, page, userAgent, timestamp } = body;
+
+    // Use authenticated user's email
+    const email = user.email;
 
     // Validate required fields
     if (!feedback || typeof feedback !== 'string' || feedback.trim().length === 0) {

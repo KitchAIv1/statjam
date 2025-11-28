@@ -19,6 +19,7 @@ import { GenericPlayer } from '@/lib/types/playerManagement';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { EditCustomPlayerModal } from '@/components/shared/EditCustomPlayerModal';
+import { GenerateClaimLinkButton } from '@/components/shared/GenerateClaimLinkButton';
 
 interface PlayerRosterListProps {
   players: GenericPlayer[];
@@ -27,6 +28,7 @@ interface PlayerRosterListProps {
   onRemovePlayer: (player: GenericPlayer) => void;
   onEditPlayer?: (player: GenericPlayer) => void; // Optional: for custom player editing
   showEditButton?: boolean; // Optional: show edit button for custom players
+  showClaimButton?: boolean; // Optional: show claim link button for custom players
 }
 
 /**
@@ -46,7 +48,8 @@ export function PlayerRosterList({
   removingPlayer,
   onRemovePlayer,
   onEditPlayer,
-  showEditButton = false
+  showEditButton = false,
+  showClaimButton = false
 }: PlayerRosterListProps) {
   const { isOpen, playerId, isCustomPlayer, openModal, closeModal } = usePlayerProfileModal();
   const [editingPlayer, setEditingPlayer] = useState<GenericPlayer | null>(null);
@@ -126,6 +129,14 @@ export function PlayerRosterList({
             )}
 
             <div className="flex items-center gap-2 flex-shrink-0 relative z-10">
+              {/* Claim Link button - only for custom players when showClaimButton is true */}
+              {showClaimButton && player.is_custom_player === true && (
+                <GenerateClaimLinkButton
+                  customPlayerId={player.id}
+                  playerName={player.name}
+                />
+              )}
+
               {/* Edit button - only for custom players when showEditButton is true */}
               {showEditButton && player.is_custom_player === true ? (
                 <Button

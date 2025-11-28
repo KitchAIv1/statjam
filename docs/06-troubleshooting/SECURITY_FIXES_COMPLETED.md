@@ -197,5 +197,27 @@ For security-related questions or incident response:
 
 ---
 
-**Last Updated**: October 21, 2025  
-**Next Review**: November 21, 2025
+---
+
+## ✅ **ADDITIONAL SECURITY ENHANCEMENTS (November 28, 2025)**
+
+### 4. **🔐 Server-Side Admin Operations with Service Role Key**
+- **Action**: Implemented server-side Supabase admin client for secure admin operations
+- **Purpose**: Custom player claiming feature requires RLS bypass for data transfer
+- **Implementation**:
+  - Created `src/lib/supabaseAdmin.ts` with service_role key
+  - API route `/api/claim/execute` uses admin client server-side only
+  - Service role key stored in `.env.local` (never exposed to client)
+- **Security Measures**:
+  - Service role key **NEVER** sent to client-side code
+  - All admin operations run server-side only
+  - API route validates tokens before executing operations
+  - One-time use tokens with expiration (7 days)
+- **Result**: ✅ Secure admin operations without exposing service_role key
+- **Impact**: Enables secure data transfer operations while maintaining security best practices
+- **Risk**: ELIMINATED (key never exposed, operations server-side only)
+
+---
+
+**Last Updated**: November 28, 2025  
+**Next Review**: December 28, 2025

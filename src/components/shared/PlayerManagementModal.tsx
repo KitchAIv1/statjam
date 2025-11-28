@@ -191,6 +191,7 @@ export function PlayerManagementModal({
               removingPlayer={removingPlayer}
               onRemovePlayer={handleRemovePlayer}
               showEditButton={true}
+              showClaimButton={true}
               onEditPlayer={async (updatedPlayer) => {
                 // Refresh players list after edit
                 try {

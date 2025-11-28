@@ -12,6 +12,7 @@ import { CoachPlayerSelectionList } from './CoachPlayerSelectionList';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { EditCustomPlayerModal } from '@/components/shared/EditCustomPlayerModal';
+import { GenerateClaimLinkButton } from '@/components/shared/GenerateClaimLinkButton';
 
 interface CoachPlayerManagementModalProps {
   team: CoachTeam;
@@ -233,6 +234,14 @@ export function CoachPlayerManagementModal({
                         )}
 
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Claim Link button - only for custom players */}
+                          {player.is_custom_player === true && (
+                            <GenerateClaimLinkButton
+                              customPlayerId={player.id}
+                              playerName={player.name}
+                            />
+                          )}
+
                           {/* Edit button - only for custom players */}
                           {player.is_custom_player === true ? (
                             <Button

@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.5] - 2025-11-28
+
+### 🔐 **Custom Player Claiming Feature - Complete Implementation**
+
+#### Custom Player Account Claiming System
+- **NEW**: Complete custom player claiming flow allowing players to claim their profiles and become full StatJam users
+- **NEW**: Server-side API route (`/api/claim/execute`) using service_role key to bypass RLS restrictions
+- **NEW**: Supabase admin client (`supabaseAdmin.ts`) for server-side operations with elevated privileges
+- **NEW**: Claim token generation system for coaches to create secure claim links
+- **NEW**: Claim validation and preview system showing player stats before claiming
+- **NEW**: Inline sign-up form on claim page for seamless account creation
+- **NEW**: Complete data transfer system:
+  - Profile data (name, jersey, position, photos) copied to `users` table
+  - Game stats transferred from `custom_player_id` to `player_id`
+  - Team references updated in `team_players` table
+  - Custom player marked as claimed with timestamp
+- **Result**: Custom players can now become full StatJam users with all historical data preserved
+
+#### Security Improvements
+- **NEW**: Server-side Supabase admin client with service_role key (never exposed to client)
+- **NEW**: API route protection for claim execution (server-side only)
+- **NEW**: Secure token-based claim system with expiration (7 days)
+- **NEW**: One-time use claim tokens (invalidated after successful claim)
+- **Impact**: Secure admin operations without exposing service_role key to client-side code
+
+#### Technical Details
+- **Files Created**:
+  - `src/lib/supabaseAdmin.ts` - Server-side Supabase client with service_role
+  - `src/app/api/claim/execute/route.ts` - Claim execution API route
+  - `src/lib/services/claimService.ts` - Claim service (updated to use API route)
+  - `src/hooks/usePlayerClaim.ts` - Claim flow state management
+  - `src/app/claim/[token]/page.tsx` - Claim page UI
+  - `src/app/claim/[token]/ClaimPreviewCard.tsx` - Preview component
+  - `src/app/claim/[token]/ClaimSignUpForm.tsx` - Inline sign-up form
+  - `src/components/shared/GenerateClaimLinkButton.tsx` - Coach UI for generating links
+- **Files Modified**:
+  - `src/lib/services/claimService.ts` - Now calls API route instead of direct DB
+  - `src/components/shared/PlayerRosterList.tsx` - Added claim link button
+  - `src/components/shared/PlayerManagementModal.tsx` - Enabled claim button display
+  - `src/components/coach/CoachPlayerManagementModal.tsx` - Enabled claim button
+- **Database Migrations**:
+  - `019_add_custom_player_claim.sql` - Added claim fields to `custom_players` table
+- **Environment Variables**:
+  - `SUPABASE_SERVICE_ROLE_KEY` - Required for server-side admin operations
+
+#### Testing Results
+- ✅ Claim token generation works correctly
+- ✅ Claim validation shows accurate preview data
+- ✅ Profile data transfers correctly to new user account
+- ✅ Game stats transfer successfully (verified with SQL queries)
+- ✅ Team references update correctly
+- ✅ Claimed players no longer show "CUSTOM" badge in team management
+- ✅ Inline sign-up form creates account and claims profile in one step
+- ✅ Claimed players appear as regular players in roster
+
+#### Documentation Updates
+- **Updated**: `CHANGELOG.md` - This entry
+- **Updated**: `PROJECT_STATUS.md` - Added claiming feature to recent achievements
+
+---
+
 ## [0.16.4] - 2025-11-27
 
 ### 🎨 **Player Profile Modal UI Refinements & Minutes Calculation Fix**

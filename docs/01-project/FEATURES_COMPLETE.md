@@ -458,6 +458,7 @@ DATABASE
 - List-based UI for player selection (modern, not card-based)
 - Player removal and roster management
 - Minimum 5 players validation before Quick Track
+- **Custom Player Claiming** (v0.16.5): Generate claim links for custom players, secure token-based system, complete data transfer to regular user accounts
 
 **Quick Track Integration**:
 - Reuses Stat Tracker V3 interface for coach teams
@@ -521,6 +522,17 @@ DATABASE
 - ✅ Rebound modal only appears on LAST missed shot (prevents premature rebounds)
 - ✅ Immediate modal closing on sequence completion (no delay or reload)
 - ✅ Previous results tracking across modal instances for accurate progress display
+
+### **Custom Player Claiming** (v0.16.5)
+- ✅ Complete custom player claiming system allowing players to become full StatJam users
+- ✅ Secure token-based claim links (24-char tokens, 7-day expiration, one-time use)
+- ✅ Server-side API route with service_role key for secure admin operations
+- ✅ Inline sign-up form for seamless account creation during claim process
+- ✅ Complete data transfer: profile data, game stats, team references
+- ✅ Claim preview showing player stats before claiming
+- ✅ Claimed players automatically appear as regular players in team management
+- ✅ All historical stats preserved and visible on player dashboard
+- ✅ Server-side security (service_role key never exposed to client)
 - ✅ Skip rebound flag in eventMetadata prevents premature rebound prompts
 
 ### **Security Fixes** (v0.16.1)

@@ -1,8 +1,8 @@
 # 🎯 StatJam MVP: Current Status
 
-**Date**: November 27, 2025  
-**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS + FT AUTO-SEQUENCE + SECURITY FIXES + DATABASE PERFORMANCE OPTIMIZATION + PLAYER PROFILE UI REFINEMENTS + ACCURATE MINUTES CALCULATION  
-**Version**: 0.16.4 (Player Profile Modal UI Refinements + Dynamic Quarter Length Minutes Calculation)  
+**Date**: November 28, 2025  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS + FT AUTO-SEQUENCE + SECURITY FIXES + DATABASE PERFORMANCE OPTIMIZATION + PLAYER PROFILE UI REFINEMENTS + ACCURATE MINUTES CALCULATION + CUSTOM PLAYER CLAIMING  
+**Version**: 0.16.5 (Custom Player Claiming Feature + Server-Side Security Improvements)  
 **Branch**: `main`  
 **Live Site**: [www.statjam.net](https://www.statjam.net) ✅
 
@@ -20,8 +20,9 @@
 - Code quality is high with TypeScript throughout
 
 **Recent Achievements** ✅:
-1. **🎨 PLAYER PROFILE UI REFINEMENTS (Nov 27, 2025)**: Fixed player photo always on right side (mobile + desktop), prevented stat wrapping, fixed shooting efficiency overlap (2x2 grid on mobile), fixed game award percentage overflow. Consistent responsive UI across all screen sizes.
-2. **⏱️ ACCURATE MINUTES CALCULATION (Nov 27, 2025)**: Dynamic quarter length support (NBA/FIBA/NCAA/CUSTOM), cross-quarter stint calculation fix, "still on court" bug resolved using current game state. Respects stat admin's custom quarter clock edits. Accurate minutes for all game types.
+1. **🔐 CUSTOM PLAYER CLAIMING (Nov 28, 2025)**: Complete custom player claiming system allowing players to claim their profiles and become full StatJam users. Server-side API route with service_role key for secure admin operations. Inline sign-up form for seamless account creation. Complete data transfer (profile, stats, team references). Claimed players appear as regular players in team management. Secure token-based system with expiration and one-time use.
+2. **🎨 PLAYER PROFILE UI REFINEMENTS (Nov 27, 2025)**: Fixed player photo always on right side (mobile + desktop), prevented stat wrapping, fixed shooting efficiency overlap (2x2 grid on mobile), fixed game award percentage overflow. Consistent responsive UI across all screen sizes.
+3. **⏱️ ACCURATE MINUTES CALCULATION (Nov 27, 2025)**: Dynamic quarter length support (NBA/FIBA/NCAA/CUSTOM), cross-quarter stint calculation fix, "still on court" bug resolved using current game state. Respects stat admin's custom quarter clock edits. Accurate minutes for all game types.
 3. **⚡ DATABASE PERFORMANCE OPTIMIZATION (Nov 25, 2025)**: Disabled redundant database triggers causing lock contention. Eliminated timeout errors (code 57014). Stat writes now process in 0ms (instant) vs 4-13 seconds before. 50% write load reduction. Added WebSocket health monitoring. Optimized Game Viewer with 1s debounce. Fixed coach mode score calculation.
 2. **🏀 FT AUTO-SEQUENCE (Nov 2025)**: Manual FT Made button triggers auto-sequence in FULL automation mode. FT count selection (1-3 shots), progress bar with color indicators, auto-advance between shots, rebound modal only on last missed shot. Smooth UI transitions with immediate modal closing.
 3. **🛡️ SECURITY FIXES (Nov 2025)**: Fixed npm vulnerabilities - glob (10.4.5→10.5.0, HIGH: command injection), js-yaml (4.1.0→4.1.1, MODERATE: prototype pollution). All vulnerabilities resolved (0 remaining).
@@ -75,13 +76,13 @@
 - 🟢 **Live Game Cards**: 100% functional (automatic status updates)
 - 🟢 **Input Validation**: 100% functional (real-time feedback, password strength, name validation, email validation)
 - 🟢 **Error Handling**: 100% functional (comprehensive try-catch blocks, toast notifications, state cleanup, all 10 stat paths protected)
-- 🟢 **Custom Player Support**: 100% functional (dual detection method, all automation modals, complete flow coverage)
+- 🟢 **Custom Player Support**: 100% functional (dual detection method, all automation modals, complete flow coverage, **claiming system**)
 - 🟢 **Team Fouls**: 100% functional (auto-tracking, bonus indicator, database trigger)
 - 🟢 **Timeouts**: 100% functional (interactive modal, countdown, play-by-play integration)
 - 🟢 **Tournament Deletion**: 100% functional (RLS policy fix, cascade deletion, foreign key constraints resolved)
 - 🟢 **Coach Team Card**: 100% functional (team management, player management, Quick Track, custom players)
 - 🟢 **Code Quality**: 100% functional (ESLint guardrails, .cursorrules enforcement, 337 violations identified)
-- 🟢 **Security**: A- rating (Next.js 15.5.6, CSP/HSTS headers, 0 vulnerabilities, XSS protection)
+- 🟢 **Security**: A- rating (Next.js 15.5.6, CSP/HSTS headers, 0 vulnerabilities, XSS protection, **server-side admin operations with service_role key**)
 
 ---
 
