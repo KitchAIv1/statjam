@@ -1907,6 +1907,7 @@ function StatTrackerV3Content() {
           onReset={tracker.resetClock}
           onSetCustomTime={tracker.setCustomTime} // NEW: Manual clock editing
           onSetQuarter={tracker.setQuarter} // ✅ NEW: Manual quarter editing
+          maxClockMinutes={tracker.originalQuarterLength} // ✅ Max for clock edit
           // NBA Standard: Team fouls and timeouts (placeholder values for now)
           teamAFouls={tracker.teamFouls[gameData.team_a_id] || 0}
           teamBFouls={tracker.teamFouls[gameData.team_b_id] || 0}

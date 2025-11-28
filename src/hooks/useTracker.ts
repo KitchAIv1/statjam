@@ -44,6 +44,7 @@ interface UseTrackerReturn {
   stopClock: () => void;
   resetClock: (forQuarter?: number) => void;
   setCustomTime: (minutes: number, seconds: number) => Promise<void>; // NEW: Manual clock editing
+  originalQuarterLength: number; // ✅ For clock edit UI max validation
   tick: (seconds: number) => void;
   // NEW: Shot Clock Actions
   startShotClock: () => void;
@@ -137,11 +138,16 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     secondsRemaining: 12 * 60 // 12 minutes (will be adjusted based on quarter)
   });
   
+  // ✅ Original quarter length (set at game start, used to validate clock edits)
+  const [originalQuarterLength, setOriginalQuarterLength] = useState(12);
+  
   // ✅ CRITICAL: Ref to store current clock state for exit handlers (prevents stale closure)
   const clockRef = useRef(clock);
   
   // ✅ Keep ref in sync with state
   useEffect(() => {
+    const minutes = Math.floor(clock.secondsRemaining / 60);
+    console.log(`🔍 DEBUG clockRef sync: ${minutes}:${(clock.secondsRemaining % 60).toString().padStart(2, '0')} (${clock.isRunning ? 'RUNNING' : 'STOPPED'})`);
     clockRef.current = clock;
   }, [clock]);
 
@@ -151,6 +157,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   
   // ✅ FIX: Guard to prevent subscription from overwriting foul updates during recording
   const foulUpdateInProgressRef = useRef<boolean>(false);
+  
+  // ✅ FIX: Guard to prevent saving initial hardcoded clock (12 min) before DB data loads
+  const gameDataLoadedRef = useRef<boolean>(false);
   // NEW: Shot Clock State
   // ✅ Load visibility preference from localStorage on initialization
   const getInitialShotClockVisibility = () => {
@@ -378,27 +387,68 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           let clockSeconds = game.game_clock_seconds;
           let clockIsRunning = game.is_clock_running;
           
+          // 🔍 DEBUG: Log DB values
+          console.log('🔍 DEBUG Clock Init - DB values:', {
+            game_clock_minutes: game.game_clock_minutes,
+            game_clock_seconds: game.game_clock_seconds,
+            is_clock_running: game.is_clock_running
+          });
+          
           if (typeof window !== 'undefined') {
             try {
               const backupKey = `clock_backup_${gameId}`;
               const backup = sessionStorage.getItem(backupKey);
+              
+              // 🔍 DEBUG: Log sessionStorage backup
+              console.log('🔍 DEBUG Clock Init - sessionStorage backup:', backup ? JSON.parse(backup) : 'NO BACKUP EXISTS');
+              
               if (backup) {
                 const backupData = JSON.parse(backup);
                 // Use backup if it's more recent (within last 5 minutes)
                 const backupAge = Date.now() - (backupData.timestamp || 0);
+                console.log('🔍 DEBUG Clock Init - backup age:', Math.round(backupAge / 1000), 'seconds');
+                
                 if (backupAge < 5 * 60 * 1000) { // 5 minutes
-                  console.log('✅ Restoring clock from sessionStorage backup');
+                  console.log('✅ Restoring clock from sessionStorage backup:', backupData);
                   clockMinutes = backupData.minutes;
                   clockSeconds = backupData.seconds;
                   clockIsRunning = backupData.isRunning || false;
                   // Clear backup after use
                   sessionStorage.removeItem(backupKey);
+                } else {
+                  console.log('🔍 DEBUG Clock Init - backup TOO OLD, using DB value');
                 }
               }
             } catch (error) {
               console.warn('⚠️ Failed to read clock backup from sessionStorage:', error);
             }
           }
+          
+          // ✅ FIX: Check localStorage for authoritative quarter length BEFORE setting clock
+          // This handles the case where DB has stale 12 min but pre-flight set 8 min
+          const storageKey = `quarterLength_${gameId}`;
+          let quarterLen = 12;
+          if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+              quarterLen = parseInt(stored, 10) || 12;
+              console.log(`🔍 DEBUG Clock Init - localStorage quarterLength: ${quarterLen} min`);
+              
+              // ✅ CRITICAL FIX: If clock is at full default quarter (12:00) but localStorage 
+              // has a different setting, trust localStorage (pre-flight override)
+              if (clockSeconds === 0 && clockMinutes === 12 && quarterLen !== 12) {
+                console.log(`⚠️ DB has stale 12:00, using localStorage ${quarterLen}:00 instead`);
+                clockMinutes = quarterLen;
+              }
+            }
+          }
+          
+          // 🔍 DEBUG: Log final clock values
+          console.log('🔍 DEBUG Clock Init - FINAL values:', {
+            clockMinutes,
+            clockSeconds,
+            clockIsRunning
+          });
           
           if (typeof clockMinutes === 'number' && typeof clockSeconds === 'number') {
             const totalSeconds = (clockMinutes * 60) + clockSeconds;
@@ -407,6 +457,21 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               isRunning: clockIsRunning || false // ✅ Always start stopped to preserve exact time
             });
             console.log(`✅ Clock initialized: ${clockMinutes}:${clockSeconds.toString().padStart(2, '0')} (${clockIsRunning ? 'RUNNING' : 'STOPPED'})`);
+            
+            // ✅ Set original quarter length (already calculated above)
+            // If localStorage didn't have a value but clock is valid, save it
+            if (typeof window !== 'undefined') {
+              const stored = localStorage.getItem(storageKey);
+              if (!stored && [5, 6, 8, 10, 12].includes(clockMinutes)) {
+                quarterLen = clockMinutes;
+                localStorage.setItem(storageKey, String(quarterLen));
+              }
+            }
+            setOriginalQuarterLength(quarterLen);
+            console.log(`✅ Original quarter length set: ${quarterLen} min`);
+            
+            // ✅ Mark game data as loaded - prevents saving hardcoded 12 min during mount
+            gameDataLoadedRef.current = true;
           }
           
           // Load team fouls and timeouts from game data
@@ -697,10 +762,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     const targetQuarter = forQuarter || quarter;
     
     // Determine clock duration based on quarter
-    // Regular quarters (1-4): 12 minutes
+    // Regular quarters (1-4): Use original quarter length from pre-flight
     // Overtime periods (5+): 5 minutes
     const isOvertimePeriod = targetQuarter >= 5;
-    const clockMinutes = isOvertimePeriod ? 5 : 12;
+    const clockMinutes = isOvertimePeriod ? 5 : originalQuarterLength;
     const newSeconds = clockMinutes * 60;
     
     console.log(`🕐 Resetting clock for quarter ${targetQuarter}: ${clockMinutes} minutes (${newSeconds} seconds)`);
@@ -725,12 +790,16 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     } catch (error) {
       console.error('Error syncing clock reset to database:', error);
     }
-  }, [gameId, quarter]);
+  }, [gameId, quarter, originalQuarterLength]);
 
   // NEW: Set custom time (for manual editing)
   const setCustomTime = useCallback(async (minutes: number, seconds: number) => {
+    // ✅ Use original quarter length as max (overtime uses 5 min)
+    const isOvertime = quarter >= 5;
+    const maxMinutes = isOvertime ? 5 : originalQuarterLength;
+    
     // Validate input ranges
-    const validMinutes = Math.max(0, Math.min(15, Math.floor(minutes))); // 0-15 minutes max
+    const validMinutes = Math.max(0, Math.min(maxMinutes, Math.floor(minutes)));
     const validSeconds = Math.max(0, Math.min(59, Math.floor(seconds))); // 0-59 seconds
     
     const totalSeconds = validMinutes * 60 + validSeconds;
@@ -739,7 +808,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     setClock({ isRunning: false, secondsRemaining: totalSeconds });
     setLastAction(`Clock set to ${validMinutes}:${validSeconds.toString().padStart(2, '0')}`);
     
-    console.log(`🕐 Manual clock set: ${validMinutes}:${validSeconds.toString().padStart(2, '0')} (${totalSeconds} seconds)`);
+    console.log(`🕐 Manual clock set: ${validMinutes}:${validSeconds.toString().padStart(2, '0')} (max: ${maxMinutes} min)`);
     
     // Sync to database using existing updateGameClock method
     try {
@@ -753,7 +822,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     } catch (error) {
       console.error('❌ Error syncing custom clock time to database:', error);
     }
-  }, [gameId]);
+  }, [gameId, quarter, originalQuarterLength]);
 
   // NEW: Shot Clock Controls
   const startShotClock = useCallback(() => {
@@ -1948,15 +2017,32 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   // ✅ Auto-save game clock on page unload/navigation - CRITICAL: Stop clock and save exact time
   useEffect(() => {
     const saveClockState = async (forceStop: boolean = false) => {
+      // ✅ GUARD: Don't save if game data hasn't loaded yet (prevents saving hardcoded 12 min)
+      if (!gameDataLoadedRef.current) {
+        console.log('⏭️ Skipping clock save - game data not loaded yet');
+        return;
+      }
+      
       try {
         const { GameService } = await import('@/lib/services/gameService');
         // ✅ CRITICAL: Use ref to get current clock state (not stale closure)
         const currentClock = clockRef.current;
         const finalIsRunning = forceStop ? false : currentClock.isRunning;
         
+        const minutes = Math.floor(currentClock.secondsRemaining / 60);
+        const seconds = currentClock.secondsRemaining % 60;
+        
+        console.log('🔍 DEBUG saveClockState - About to save:', {
+          secondsRemaining: currentClock.secondsRemaining,
+          minutes,
+          seconds,
+          forceStop,
+          gameDataLoaded: gameDataLoadedRef.current
+        });
+        
         await GameService.updateGameClock(gameId, {
-          minutes: Math.floor(currentClock.secondsRemaining / 60),
-          seconds: currentClock.secondsRemaining % 60,
+          minutes,
+          seconds,
           isRunning: finalIsRunning
         });
         
@@ -1982,8 +2068,21 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
 
     // Save on beforeunload (page close/navigation) - CRITICAL: Stop clock and save exact time
     const handleBeforeUnload = () => {
+      // ✅ GUARD: Don't save if game data hasn't loaded yet (prevents saving hardcoded 12 min)
+      if (!gameDataLoadedRef.current) {
+        console.log('⏭️ Skipping beforeunload save - game data not loaded yet');
+        return;
+      }
+      
       // ✅ CRITICAL: Use ref to get current clock state (not stale closure)
       const currentClock = clockRef.current;
+      
+      console.log('🔍 DEBUG handleBeforeUnload - Clock ref value:', {
+        secondsRemaining: currentClock.secondsRemaining,
+        minutes: Math.floor(currentClock.secondsRemaining / 60),
+        isRunning: currentClock.isRunning,
+        gameDataLoaded: gameDataLoadedRef.current
+      });
       
       // Stop clock immediately to preserve exact time
       if (currentClock.isRunning) {
@@ -2127,6 +2226,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     stopClock,
     resetClock,
     setCustomTime, // NEW: Manual clock editing
+    originalQuarterLength, // ✅ For clock edit UI max validation
     tick,
     // NEW: Shot Clock Actions
     startShotClock,

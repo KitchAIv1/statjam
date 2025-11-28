@@ -14,6 +14,7 @@ interface ClockControlsV3Props {
   onStop: () => void;
   onReset: () => void;
   onSetCustomTime?: (minutes: number, seconds: number) => void; // NEW: Manual time setting
+  maxClockMinutes?: number; // ✅ Max minutes for clock edit (from quarter length)
 }
 
 export function ClockControlsV3({
@@ -23,7 +24,8 @@ export function ClockControlsV3({
   onStart,
   onStop,
   onReset,
-  onSetCustomTime
+  onSetCustomTime,
+  maxClockMinutes = 12
 }: ClockControlsV3Props) {
   // NEW: Edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
@@ -83,9 +85,9 @@ export function ClockControlsV3({
                   <Input
                     type="number"
                     min="0"
-                    max="15"
+                    max={maxClockMinutes}
                     value={editMinutes}
-                    onChange={(e) => setEditMinutes(Math.max(0, Math.min(15, parseInt(e.target.value) || 0)))}
+                    onChange={(e) => setEditMinutes(Math.max(0, Math.min(maxClockMinutes, parseInt(e.target.value) || 0)))}
                     className="w-20 text-center text-2xl font-bold"
                     style={{ 
                       background: 'var(--dashboard-card)',

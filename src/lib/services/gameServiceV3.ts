@@ -418,6 +418,54 @@ export class GameServiceV3 {
   }
 
   /**
+   * ✅ PRE-FLIGHT CHECK: Update initial game clock (quarter length)
+   * Uses authenticated raw HTTP to properly update DB via RLS
+   */
+  static async updateInitialClock(
+    gameId: string,
+    clockData: { minutes: number; seconds: number; isRunning: boolean }
+  ): Promise<boolean> {
+    try {
+      console.log('⏱️ GameServiceV3: Updating initial game clock via raw HTTP:', { gameId, clockData });
+
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('No access token found - user not authenticated');
+      }
+
+      const url = `${this.SUPABASE_URL}/rest/v1/games?id=eq.${gameId}`;
+      
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'apikey': this.SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          game_clock_minutes: clockData.minutes,
+          game_clock_seconds: clockData.seconds,
+          is_clock_running: clockData.isRunning
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ GameServiceV3: Failed to update initial clock - HTTP ${response.status}:`, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      console.log('✅ GameServiceV3: Initial game clock updated successfully:', clockData.minutes, 'min');
+      return true;
+
+    } catch (error: any) {
+      console.error('❌ GameServiceV3: Failed to update initial game clock:', error);
+      return false;
+    }
+  }
+
+  /**
    * Record a stat using raw HTTP requests
    */
   static async recordStat(statData: {

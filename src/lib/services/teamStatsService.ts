@@ -314,10 +314,14 @@ export class TeamStatsService {
 
       if (gameData.length > 0) {
         const game = gameData[0];
-        
-        // ✅ Priority 1: Use game's initial clock setting (editable by stat admin)
-        // If game_clock_minutes was set to something other than standard, respect it
         const gameClock = game.game_clock_minutes;
+        
+        // ✅ Priority 1: Use game's clock setting if explicitly set by stat admin
+        // Valid custom values: 5, 6, 8, 10, 12 (not null, not 0)
+        if (gameClock && gameClock > 0 && [5, 6, 8, 10, 12].includes(gameClock)) {
+          console.log(`📊 TeamStatsService: Using game-level clock setting: ${gameClock} min`);
+          return gameClock;
+        }
         
         if (game.tournaments) {
           const ruleset = game.tournaments.ruleset || 'NBA';

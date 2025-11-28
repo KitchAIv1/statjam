@@ -29,6 +29,7 @@ interface CompactScoreboardV3Props {
   onResetClock: () => void;
   onSetCustomTime?: (minutes: number, seconds: number) => void; // NEW: Manual time setting
   onSetQuarter?: (quarter: number) => void; // ✅ NEW: Manual quarter setting
+  maxClockMinutes?: number; // ✅ Max minutes for clock edit (from quarter length)
   // Shot Clock Props
   shotClockSeconds?: number;
   shotClockIsRunning?: boolean;
@@ -70,6 +71,7 @@ export function CompactScoreboardV3({
   onResetClock,
   onSetCustomTime,
   onSetQuarter,
+  maxClockMinutes = 12,
   shotClockSeconds = 24,
   shotClockIsRunning = false,
   shotClockIsVisible = true,
@@ -252,9 +254,9 @@ export function CompactScoreboardV3({
                   <input
                     type="number"
                     min="0"
-                    max="20"
+                    max={maxClockMinutes}
                     value={editMinutes}
-                    onChange={(e) => setEditMinutes(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
+                    onChange={(e) => setEditMinutes(Math.max(0, Math.min(maxClockMinutes, parseInt(e.target.value) || 0)))}
                     className="w-10 h-6 text-center text-orange-500 border-orange-500 bg-orange-500/10 rounded border text-sm font-bold focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
                   <span className="text-orange-500 font-bold">:</span>
@@ -493,4 +495,4 @@ export function CompactScoreboardV3({
 
     </div>
   );
-}
+} 

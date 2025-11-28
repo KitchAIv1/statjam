@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { GameService } from '@/lib/services/gameService';
 import { GameServiceV3 } from '@/lib/services/gameServiceV3';
 import { StatAdminDashboardService } from '@/lib/services/statAdminDashboardService';
 import { TeamService } from '@/lib/services/tournamentService';
@@ -12,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar, Eye, Lightbulb, BookOpen } from 'lucide-react';
-import { PreFlightCheckModal } from '@/components/tracker-v3/modals/PreFlightCheckModal';
+import { PreFlightCheckModal, PreFlightSettings } from '@/components/tracker-v3/modals/PreFlightCheckModal';
 import { AutomationFlags } from '@/lib/types/automation';
 import { ProfileCard, ProfileCardSkeleton } from '@/components/profile/ProfileCard';
 import { ProfileEditModal } from '@/components/profile/ProfileEditModal';
@@ -771,22 +770,53 @@ const StatAdminDashboard = () => {
             setShowPreFlight(false);
             setSelectedGame(null);
           }}
-          onStartTracking={async (settings: AutomationFlags) => {
+          onStartTracking={async (settings: PreFlightSettings) => {
             setLaunchingTracker(selectedGame.id);
             
             // ✅ CRITICAL: Save settings to database BEFORE launching tracker
             try {
-              console.log('💾 Saving automation settings to database:', settings);
-              const success = await GameServiceV3.updateGameAutomation(selectedGame.id, settings);
-              if (success) {
+              console.log('💾 Saving automation settings to database:', settings.automation);
+              console.log('💾 Saving quarter length:', settings.quarterLengthMinutes, 'minutes');
+              
+              // Save automation settings
+              const automationSuccess = await GameServiceV3.updateGameAutomation(selectedGame.id, settings.automation);
+              if (automationSuccess) {
                 console.log('✅ Game automation settings saved successfully');
               } else {
-                console.error('❌ Failed to save automation settings - updateGameAutomation returned false');
+                console.error('❌ Failed to save automation settings');
+              }
+              
+              // Save quarter length to game_clock_minutes (sets initial clock)
+              // ✅ ONLY save for scheduled games - don't overwrite in-progress games!
+              if (selectedGame.status === 'scheduled' || !selectedGame.status) {
+                // ✅ Use GameServiceV3 for authenticated raw HTTP (old GameService had RLS issues)
+                const clockSuccess = await GameServiceV3.updateInitialClock(selectedGame.id, {
+                  minutes: settings.quarterLengthMinutes,
+                  seconds: 0,
+                  isRunning: false
+                });
+                if (clockSuccess) {
+                  console.log('✅ Quarter length saved successfully:', settings.quarterLengthMinutes, 'min');
+                  
+                  // ✅ Clear stale caches and update localStorage with new quarter length
+                  if (typeof window !== 'undefined') {
+                    sessionStorage.removeItem(`clock_backup_${selectedGame.id}`);
+                    localStorage.setItem(`quarterLength_${selectedGame.id}`, String(settings.quarterLengthMinutes));
+                    console.log('🧹 Cleared stale clock backup, updated localStorage quarter length');
+                  }
+                } else {
+                  console.error('❌ Failed to save quarter length');
+                }
+              } else {
+                console.log('⏭️ Skipping quarter length save - game already in progress');
+                // ✅ Still clear sessionStorage backup for in-progress games
+                if (typeof window !== 'undefined') {
+                  sessionStorage.removeItem(`clock_backup_${selectedGame.id}`);
+                }
               }
             } catch (error) {
-              console.error('❌ Failed to save automation settings:', error);
-              // Don't block tracker launch, but warn user
-              alert('Warning: Failed to save automation settings. Using tournament defaults.');
+              console.error('❌ Failed to save pre-flight settings:', error);
+              alert('Warning: Failed to save settings. Using defaults.');
             }
             
             // Close modal
@@ -797,11 +827,12 @@ const StatAdminDashboard = () => {
               router.push(
                 `/stat-tracker-v3?gameId=${selectedGame.id}&teamAId=${selectedGame.teamAId}&teamBId=${selectedGame.teamBId}`
               );
-            }, 300); // Increased from 100ms to 300ms
+            }, 300);
           }}
           gameId={selectedGame.id}
           gameName={`${selectedGame.teamA} vs ${selectedGame.teamB}`}
           tournamentName={selectedGame.tournamentName}
+          gameStatus={selectedGame.status || 'scheduled'}
           tournamentDefaults={selectedGame.tournament?.automation_flags || {
             clock: { enabled: true, autoPause: true, autoReset: true, ftMode: true, madeBasketStop: false },
             possession: { enabled: true, autoFlip: true, persistState: true, jumpBallArrow: false },
@@ -809,6 +840,7 @@ const StatAdminDashboard = () => {
             fouls: { enabled: false, bonusFreeThrows: false, foulOutEnforcement: false, technicalEjection: false },
             undo: { enabled: false, maxHistorySize: 50 }
           }}
+          defaultQuarterLength={12} // NBA default, can be overridden in modal
           userRole="stat_admin"
         />
       )}

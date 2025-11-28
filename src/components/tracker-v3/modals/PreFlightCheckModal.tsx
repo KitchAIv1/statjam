@@ -1,23 +1,39 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Settings, CheckCircle2, Info, Zap } from 'lucide-react';
+import { X, Settings, CheckCircle2, Info, Zap, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { AutomationFlags } from '@/lib/types/automation';
 
+// Quarter length options for different rulesets
+const QUARTER_LENGTH_OPTIONS = [
+  { value: 12, label: '12 min', description: 'NBA Standard' },
+  { value: 10, label: '10 min', description: 'FIBA Standard' },
+  { value: 8, label: '8 min', description: 'Youth/Rec' },
+  { value: 6, label: '6 min', description: 'Short Game' },
+  { value: 5, label: '5 min', description: 'Practice' },
+] as const;
+
+export interface PreFlightSettings {
+  automation: AutomationFlags;
+  quarterLengthMinutes: number;
+}
+
 interface PreFlightCheckModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onStartTracking: (settings: AutomationFlags) => void;
+  onStartTracking: (settings: PreFlightSettings) => void;
   
   // Game Info
   gameId: string;
   gameName: string; // e.g., "Lakers vs Warriors"
   tournamentName?: string;
+  gameStatus?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   
   // Settings Sources
   tournamentDefaults: AutomationFlags; // From tournament.automation_flags
+  defaultQuarterLength?: number; // From tournament ruleset (12=NBA, 10=FIBA, etc.)
   lastUsedSettings?: AutomationFlags; // From user's previous game (future)
   
   // User Info
@@ -74,13 +90,18 @@ export function PreFlightCheckModal({
   gameId,
   gameName,
   tournamentName,
+  gameStatus = 'scheduled',
   tournamentDefaults,
+  defaultQuarterLength = 12,
   lastUsedSettings,
   userRole
 }: PreFlightCheckModalProps) {
+  // Quarter length can only be changed before game starts
+  const canEditQuarterLength = gameStatus === 'scheduled';
   const [selectedPreset, setSelectedPreset] = useState<PresetType>('balanced');
   const [customSettings, setCustomSettings] = useState<AutomationFlags>(tournamentDefaults);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [quarterLengthMinutes, setQuarterLengthMinutes] = useState(defaultQuarterLength);
 
   // Initialize with tournament defaults or last used settings
   useEffect(() => {
@@ -101,8 +122,9 @@ export function PreFlightCheckModal({
       
       setCustomSettings(tournamentDefaults);
       setShowAdvanced(false);
+      setQuarterLengthMinutes(defaultQuarterLength);
     }
-  }, [isOpen, tournamentDefaults]);
+  }, [isOpen, tournamentDefaults, defaultQuarterLength]);
 
   if (!isOpen) return null;
 
@@ -114,7 +136,11 @@ export function PreFlightCheckModal({
   };
 
   const handleStartTracking = () => {
-    const finalSettings = selectedPreset === 'custom' ? customSettings : PRESETS[selectedPreset].settings;
+    const finalAutomation = selectedPreset === 'custom' ? customSettings : PRESETS[selectedPreset].settings;
+    const finalSettings: PreFlightSettings = {
+      automation: finalAutomation,
+      quarterLengthMinutes
+    };
     console.log('🚀 Starting tracking with settings:', finalSettings);
     onStartTracking(finalSettings);
   };
@@ -175,6 +201,41 @@ export function PreFlightCheckModal({
                 </Badge>
               </div>
             </div>
+          </div>
+
+          {/* Quarter Length Setting */}
+          <div className={`rounded-xl p-4 border ${canEditQuarterLength ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className={`w-5 h-5 ${canEditQuarterLength ? 'text-orange-500' : 'text-gray-400'}`} />
+              <p className="font-semibold text-gray-900 text-sm">Quarter Length</p>
+              {!canEditQuarterLength && (
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Locked</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {QUARTER_LENGTH_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => canEditQuarterLength && setQuarterLengthMinutes(option.value)}
+                  disabled={!canEditQuarterLength}
+                  className={`px-4 py-2 rounded-lg border-2 transition-all text-sm font-medium ${
+                    !canEditQuarterLength
+                      ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : quarterLengthMinutes === option.value
+                        ? 'border-orange-500 bg-orange-100 text-orange-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="font-semibold">{option.label}</span>
+                  <span className="text-xs ml-1 opacity-75">({option.description})</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {canEditQuarterLength 
+                ? '⚠️ Set this before starting — affects player minutes calculation'
+                : '🔒 Quarter length cannot be changed after game has started'}
+            </p>
           </div>
 
           {/* Preset Selection */}

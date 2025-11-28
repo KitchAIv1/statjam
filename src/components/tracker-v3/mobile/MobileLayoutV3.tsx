@@ -239,6 +239,7 @@ export function MobileLayoutV3({
           onResetClock={tracker.resetClock}
           onSetCustomTime={tracker.setCustomTime} // NEW: Manual clock editing
           onSetQuarter={tracker.setQuarter} // ✅ NEW: Manual quarter editing
+          maxClockMinutes={tracker.originalQuarterLength} // ✅ Max for clock edit
           shotClockSeconds={tracker.shotClock.secondsRemaining ?? 24}
           shotClockIsRunning={tracker.shotClock.isRunning ?? false}
           shotClockIsVisible={tracker.shotClock.isVisible ?? true}

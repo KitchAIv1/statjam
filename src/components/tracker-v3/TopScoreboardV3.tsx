@@ -21,6 +21,7 @@ interface TopScoreboardV3Props {
   onReset: () => void;
   onSetCustomTime?: (minutes: number, seconds: number) => void; // NEW: Manual time setting
   onSetQuarter?: (quarter: number) => void; // ✅ NEW: Manual quarter setting
+  maxClockMinutes?: number; // ✅ Max minutes for clock edit (from quarter length)
   // NBA Standard: Team fouls and timeouts
   teamAFouls?: number;
   teamBFouls?: number;
@@ -61,6 +62,7 @@ export function TopScoreboardV3({
   onReset,
   onSetCustomTime,
   onSetQuarter,
+  maxClockMinutes = 12,
   teamAFouls = 0,
   teamBFouls = 0,
   teamATimeouts = 5,
@@ -375,9 +377,9 @@ export function TopScoreboardV3({
                     <Input
                       type="number"
                       min="0"
-                      max="15"
+                      max={maxClockMinutes}
                       value={editMinutes}
-                      onChange={(e) => setEditMinutes(Math.max(0, Math.min(15, parseInt(e.target.value) || 0)))}
+                      onChange={(e) => setEditMinutes(Math.max(0, Math.min(maxClockMinutes, parseInt(e.target.value) || 0)))}
                       className="w-14 h-9 text-center text-sm font-bold p-1"
                       style={{ 
                         background: 'var(--dashboard-card)',
