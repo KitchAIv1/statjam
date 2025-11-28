@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Play, Pause, RotateCcw, Eye, EyeOff, Check, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Play, Pause, RotateCcw, Eye, EyeOff, Check, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { PossessionIndicator } from '../PossessionIndicator';
@@ -101,12 +101,25 @@ export function CompactScoreboardV3({
   const [isQuarterEditMode, setIsQuarterEditMode] = useState(false);
   const [editQuarter, setEditQuarter] = useState(quarter);
 
+  // ✅ NEW: Clock edit mode state
+  const [isClockEditMode, setIsClockEditMode] = useState(false);
+  const [editMinutes, setEditMinutes] = useState(minutes);
+  const [editSeconds, setEditSeconds] = useState(seconds);
+
   // ✅ Sync editQuarter when quarter prop changes
   useEffect(() => {
     if (!isQuarterEditMode) {
       setEditQuarter(quarter);
     }
   }, [quarter, isQuarterEditMode]);
+
+  // ✅ Sync editMinutes/editSeconds when clock props change
+  useEffect(() => {
+    if (!isClockEditMode) {
+      setEditMinutes(minutes);
+      setEditSeconds(seconds);
+    }
+  }, [minutes, seconds, isClockEditMode]);
 
   // ✅ NEW: Handle quarter edit mode toggle
   const handleQuarterEditToggle = () => {
@@ -126,6 +139,28 @@ export function CompactScoreboardV3({
       onSetQuarter(editQuarter);
     }
     setIsQuarterEditMode(false);
+  };
+
+  // ✅ NEW: Handle clock edit mode toggle
+  const handleClockEditToggle = () => {
+    if (isClockEditMode) {
+      // Cancel edit - reset to current values
+      setEditMinutes(minutes);
+      setEditSeconds(seconds);
+    } else {
+      // Enter edit mode - initialize with current values
+      setEditMinutes(minutes);
+      setEditSeconds(seconds);
+    }
+    setIsClockEditMode(!isClockEditMode);
+  };
+
+  // ✅ NEW: Handle clock time set
+  const handleSetCustomTime = () => {
+    if (onSetCustomTime) {
+      onSetCustomTime(editMinutes, editSeconds);
+    }
+    setIsClockEditMode(false);
   };
 
   const getQuarterDisplay = (q: number) => {
@@ -210,16 +245,61 @@ export function CompactScoreboardV3({
                 {getQuarterDisplay(quarter)}
               </Badge>
             )}
-            <div 
-              className={`text-2xl font-black font-mono leading-none ${
-                isRunning ? 'text-green-500' : 'text-orange-500'
-              }`}
-            >
-              {formatTime(minutes, seconds)}
-            </div>
+            {isClockEditMode ? (
+              // ✅ Clock Edit Mode - Number inputs
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    value={editMinutes}
+                    onChange={(e) => setEditMinutes(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
+                    className="w-10 h-6 text-center text-orange-500 border-orange-500 bg-orange-500/10 rounded border text-sm font-bold focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                  <span className="text-orange-500 font-bold">:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={editSeconds}
+                    onChange={(e) => setEditSeconds(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
+                    className="w-10 h-6 text-center text-orange-500 border-orange-500 bg-orange-500/10 rounded border text-sm font-bold focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    onClick={handleSetCustomTime}
+                    size="sm"
+                    className="h-6 px-2 bg-green-500 hover:bg-green-600 text-white text-[10px]"
+                  >
+                    <Check className="w-2.5 h-2.5" />
+                  </Button>
+                  <Button
+                    onClick={handleClockEditToggle}
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[10px]"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              // ✅ Clock Display (Clickable to edit when onSetCustomTime is provided)
+              <div 
+                className={`text-2xl font-black font-mono leading-none ${
+                  isRunning ? 'text-green-500' : 'text-orange-500'
+                } ${onSetCustomTime ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                onClick={onSetCustomTime && !isRunning ? handleClockEditToggle : undefined}
+                title={onSetCustomTime && !isRunning ? 'Click to edit time' : undefined}
+              >
+                {formatTime(minutes, seconds)}
+              </div>
+            )}
           </div>
 
-          {/* Start/Reset Buttons */}
+          {/* Start/Reset/Edit Buttons */}
           <div className="flex flex-col gap-1">
             <Button
               onClick={isRunning ? onStopClock : onStartClock}
@@ -234,15 +314,28 @@ export function CompactScoreboardV3({
               {isRunning ? 'Stop' : 'Start'}
             </Button>
             
-            <Button
-              onClick={onResetClock}
-              variant="outline"
-              size="sm"
-              className="h-8 px-3 flex items-center gap-2 text-[10px] font-bold hover:border-orange-500 hover:text-orange-500"
-            >
-              <RotateCcw className="w-3 h-3" />
-              Reset
-            </Button>
+            {/* Reset + Edit buttons side by side */}
+            <div className="flex gap-1">
+              <Button
+                onClick={onResetClock}
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 flex-1 flex items-center justify-center gap-1 text-[10px] font-bold hover:border-orange-500 hover:text-orange-500"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </Button>
+              {onSetCustomTime && (
+                <Button
+                  onClick={handleClockEditToggle}
+                  variant="outline"
+                  size="sm"
+                  disabled={isRunning}
+                  className="h-8 px-2 flex-1 flex items-center justify-center gap-1 text-[10px] font-bold hover:border-orange-500 hover:text-orange-500 disabled:opacity-50"
+                >
+                  <Pencil className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
