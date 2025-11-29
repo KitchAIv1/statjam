@@ -75,120 +75,131 @@ export function PlayerStatsRowLight({ player, stats }: PlayerStatsRowLightProps)
 
   const plusMinusFormatted = formatPlusMinus(plusMinus);
 
+  // ✅ Compact font sizes for mobile/embedded views
+  const statFontSize = isMobile ? 'text-[10px]' : 'text-xs';
+  const labelFontSize = isMobile ? 'text-[7px]' : 'text-[8px]';
+  const colWidth = isMobile ? 'min-w-[24px]' : 'min-w-[28px]';
+  const shootingColWidth = isMobile ? 'min-w-[30px]' : 'min-w-[36px]';
+
   return (
-    <div className={`flex items-center justify-between px-4 py-2.5 border-b border-gray-100 hover:bg-purple-50 transition-colors ${
-      isMobile ? 'py-2' : ''
+    <div className={`flex items-center border-b border-gray-100 hover:bg-purple-50 transition-colors ${
+      isMobile ? 'py-1.5' : 'py-2.5'
     }`}>
-      {/* Left: Player Info */}
-      <div className={`flex items-center flex-1 ${isMobile ? 'min-w-[80px]' : 'min-w-[100px]'}`}>
-        <div className="text-sm font-semibold text-gray-900 leading-tight">
+      {/* Left: Player Info - STICKY */}
+      <div className={`flex items-center bg-white z-10 pl-2 pr-1 ${
+        isMobile ? 'min-w-[70px] max-w-[70px]' : 'min-w-[100px]'
+      }`}>
+        <div className={`font-semibold text-gray-900 leading-tight truncate ${
+          isMobile ? 'text-[10px]' : 'text-sm'
+        }`}>
           {name}
-          {position && <span className="text-xs text-gray-500 font-normal ml-1">({position})</span>}
         </div>
       </div>
 
-      {/* Right: Stats Grid - NBA box score order */}
-      <div className={`grid gap-1.5 ${isMobile ? 'grid-cols-11 min-w-[360px]' : 'grid-cols-11 min-w-[440px]'}`}>
-        {/* MIN */}
-        <div className="flex flex-col items-center min-w-[28px]">
-          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
-            {minutes}
+      {/* Right: Stats Grid - SCROLLABLE */}
+      <div className="overflow-x-auto flex-1 scrollbar-hide">
+        <div className={`grid gap-1 ${isMobile ? 'grid-cols-11' : 'grid-cols-11'}`} style={{ minWidth: isMobile ? '300px' : '400px' }}>
+          {/* MIN */}
+          <div className={`flex flex-col items-center ${colWidth}`}>
+            <div className={`${statFontSize} font-semibold text-gray-900 mb-0.5`}>
+              {minutes}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              MIN
+            </div>
           </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            MIN
+          {/* FG */}
+          <div className={`flex flex-col items-center ${shootingColWidth}`}>
+            <div className={`${statFontSize} font-semibold text-gray-900 mb-0.5`}>
+              {fgDisplay}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              FG
+            </div>
           </div>
-        </div>
-        {/* FG (made/attempted) */}
-        <div className="flex flex-col items-center min-w-[36px]">
-          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
-            {fgDisplay}
+          {/* 3P */}
+          <div className={`flex flex-col items-center ${shootingColWidth}`}>
+            <div className={`${statFontSize} font-semibold text-gray-900 mb-0.5`}>
+              {threePtDisplay}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              3P
+            </div>
           </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            FG
+          {/* FT */}
+          <div className={`flex flex-col items-center ${shootingColWidth}`}>
+            <div className={`${statFontSize} font-semibold text-gray-900 mb-0.5`}>
+              {ftDisplay}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              FT
+            </div>
           </div>
-        </div>
-        {/* 3P (made/attempted) */}
-        <div className="flex flex-col items-center min-w-[36px]">
-          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
-            {threePtDisplay}
+          {/* PTS */}
+          <div className={`flex flex-col items-center ${colWidth}`}>
+            <div className={`${statFontSize} font-semibold text-purple-700 mb-0.5`}>
+              {points}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              PTS
+            </div>
           </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            3P
+          {/* REB */}
+          <div className={`flex flex-col items-center ${colWidth}`}>
+            <div className={`${statFontSize} font-semibold text-gray-900 mb-0.5`}>
+              {rebounds}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              REB
+            </div>
           </div>
-        </div>
-        {/* FT (made/attempted) */}
-        <div className="flex flex-col items-center min-w-[36px]">
-          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
-            {ftDisplay}
+          {/* AST */}
+          <div className={`flex flex-col items-center ${colWidth}`}>
+            <div className={`${statFontSize} font-semibold text-gray-900 mb-0.5`}>
+              {assists}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              AST
+            </div>
           </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            FT
+          {/* STL */}
+          <div className={`flex flex-col items-center ${colWidth}`}>
+            <div className={`${statFontSize} font-semibold text-gray-900 mb-0.5`}>
+              {steals}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              STL
+            </div>
           </div>
-        </div>
-        {/* PTS */}
-        <div className="flex flex-col items-center min-w-[28px]">
-          <div className={`text-sm font-semibold text-purple-700 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
-            {points}
+          {/* BLK */}
+          <div className={`flex flex-col items-center ${colWidth}`}>
+            <div className={`${statFontSize} font-semibold text-gray-900 mb-0.5`}>
+              {blocks}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              BLK
+            </div>
           </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            PTS
+          {/* FOUL */}
+          <div className={`flex flex-col items-center ${colWidth}`}>
+            <div className={`${statFontSize} font-semibold text-gray-900 mb-0.5`}>
+              {fouls}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              PF
+            </div>
           </div>
-        </div>
-        {/* REB */}
-        <div className="flex flex-col items-center min-w-[28px]">
-          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
-            {rebounds}
-          </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            REB
-          </div>
-        </div>
-        {/* AST */}
-        <div className="flex flex-col items-center min-w-[28px]">
-          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
-            {assists}
-          </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            AST
-          </div>
-        </div>
-        {/* STL */}
-        <div className="flex flex-col items-center min-w-[28px]">
-          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
-            {steals}
-          </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            STL
-          </div>
-        </div>
-        {/* BLK */}
-        <div className="flex flex-col items-center min-w-[28px]">
-          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
-            {blocks}
-          </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            BLK
-          </div>
-        </div>
-        {/* FOUL */}
-        <div className="flex flex-col items-center min-w-[28px]">
-          <div className={`text-sm font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : ''}`}>
-            {fouls}
-          </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            FOUL
-          </div>
-        </div>
-        {/* +/- */}
-        <div className="flex flex-col items-center min-w-[28px]">
-          <div 
-            className={`text-sm font-semibold mb-0.5 ${isMobile ? 'text-xs' : ''}`}
-            style={{ color: plusMinusFormatted.color }}
-          >
-            {plusMinusFormatted.text}
-          </div>
-          <div className={`text-[9px] text-gray-500 uppercase tracking-wide ${isMobile ? 'text-[8px]' : ''}`}>
-            +/-
+          {/* +/- */}
+          <div className={`flex flex-col items-center ${colWidth}`}>
+            <div 
+              className={`${statFontSize} font-semibold mb-0.5`}
+              style={{ color: plusMinusFormatted.color }}
+            >
+              {plusMinusFormatted.text}
+            </div>
+            <div className={`${labelFontSize} text-gray-500 uppercase`}>
+              +/-
+            </div>
           </div>
         </div>
       </div>

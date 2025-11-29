@@ -122,7 +122,15 @@ export function OpponentStatsPanel({
                   assists: player.assists,
                   steals: player.steals,
                   blocks: player.blocks,
-                  plusMinus: player.plusMinus
+                  fouls: player.fouls,
+                  plusMinus: player.plusMinus,
+                  // ✅ FIX: Pass shooting stats (was missing, showing 0/0)
+                  fieldGoalsMade: player.fieldGoalsMade,
+                  fieldGoalsAttempted: player.fieldGoalsAttempted,
+                  threePointersMade: player.threePointersMade,
+                  threePointersAttempted: player.threePointersAttempted,
+                  freeThrowsMade: player.freeThrowsMade,
+                  freeThrowsAttempted: player.freeThrowsAttempted
                 }}
               />
             ))
@@ -134,44 +142,48 @@ export function OpponentStatsPanel({
 
       {/* Fixed Team Aggregates at Bottom */}
       <div style={styles.fixedAggregatesContainer}>
-        {/* Coach's Team Summary - Compact Row */}
+        {/* Coach's Team Summary - Compact Row with horizontal scroll */}
         {teamStats && (
           <div style={styles.teamSummaryRow}>
             <div style={styles.teamRowLabel}>{teamName}</div>
-            <div style={styles.teamRowStats}>
-              <span style={styles.statCompact}>
-                {teamStats.fieldGoalsMade}/{teamStats.fieldGoalsAttempted} FG ({teamStats.fieldGoalPercentage}%)
-              </span>
-              <span style={styles.statCompact}>
-                {teamStats.threePointersMade}/{teamStats.threePointersAttempted} 3PT ({teamStats.threePointPercentage}%)
-              </span>
-              <span style={styles.statCompact}>
-                {teamStats.freeThrowsMade}/{teamStats.freeThrowsAttempted} FT ({teamStats.freeThrowPercentage}%)
-              </span>
-              <span style={styles.statCompact}>{teamStats.rebounds} REB</span>
-              <span style={styles.statCompact}>{teamStats.assists} AST</span>
-              <span style={styles.statCompact}>{teamStats.turnovers} TO</span>
+            <div style={styles.teamRowStatsScroll} className="scrollbar-hide">
+              <div style={styles.teamRowStatsInner}>
+                <span style={styles.statCompact}>
+                  {teamStats.fieldGoalsMade}/{teamStats.fieldGoalsAttempted} FG
+                </span>
+                <span style={styles.statCompact}>
+                  {teamStats.threePointersMade}/{teamStats.threePointersAttempted} 3P
+                </span>
+                <span style={styles.statCompact}>
+                  {teamStats.freeThrowsMade}/{teamStats.freeThrowsAttempted} FT
+                </span>
+                <span style={styles.statCompact}>{teamStats.rebounds} REB</span>
+                <span style={styles.statCompact}>{teamStats.assists} AST</span>
+                <span style={styles.statCompact}>{teamStats.turnovers} TO</span>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Opponent Summary - Compact Row */}
+        {/* Opponent Summary - Compact Row with horizontal scroll */}
         {opponentTeamStats && (
           <div style={styles.opponentSummaryRow}>
             <div style={styles.opponentRowLabel}>{opponentName}</div>
-            <div style={styles.teamRowStats}>
-              <span style={styles.statCompact}>
-                {opponentTeamStats.fieldGoalsMade}/{opponentTeamStats.fieldGoalsAttempted} FG ({opponentTeamStats.fieldGoalPercentage}%)
-              </span>
-              <span style={styles.statCompact}>
-                {opponentTeamStats.threePointersMade}/{opponentTeamStats.threePointersAttempted} 3PT ({opponentTeamStats.threePointPercentage}%)
-              </span>
-              <span style={styles.statCompact}>
-                {opponentTeamStats.freeThrowsMade}/{opponentTeamStats.freeThrowsAttempted} FT ({opponentTeamStats.freeThrowPercentage}%)
-              </span>
-              <span style={styles.statCompact}>{opponentTeamStats.rebounds} REB</span>
-              <span style={styles.statCompact}>{opponentTeamStats.assists} AST</span>
-              <span style={styles.statCompact}>{opponentTeamStats.turnovers} TO</span>
+            <div style={styles.teamRowStatsScroll} className="scrollbar-hide">
+              <div style={styles.teamRowStatsInner}>
+                <span style={styles.statCompact}>
+                  {opponentTeamStats.fieldGoalsMade}/{opponentTeamStats.fieldGoalsAttempted} FG
+                </span>
+                <span style={styles.statCompact}>
+                  {opponentTeamStats.threePointersMade}/{opponentTeamStats.threePointersAttempted} 3P
+                </span>
+                <span style={styles.statCompact}>
+                  {opponentTeamStats.freeThrowsMade}/{opponentTeamStats.freeThrowsAttempted} FT
+                </span>
+                <span style={styles.statCompact}>{opponentTeamStats.rebounds} REB</span>
+                <span style={styles.statCompact}>{opponentTeamStats.assists} AST</span>
+                <span style={styles.statCompact}>{opponentTeamStats.turnovers} TO</span>
+              </div>
             </div>
           </div>
         )}
@@ -185,7 +197,7 @@ const styles = {
     backgroundColor: '#111827',
     color: '#ffffff',
     borderRadius: '12px',
-    overflow: 'hidden',
+    overflow: 'hidden', // Keep for rounded corners
     height: '100%',
     display: 'flex',
     flexDirection: 'column' as const
@@ -215,7 +227,7 @@ const styles = {
   scrollableContent: {
     flex: 1,
     overflowY: 'auto' as const,
-    overflowX: 'hidden' as const,
+    overflowX: 'auto' as const, // ✅ FIX: Allow horizontal scroll for player stats
     // Custom scrollbar styling
     scrollbarWidth: 'thin' as const,
     scrollbarColor: '#4b5563 #1f2937',
@@ -269,11 +281,15 @@ const styles = {
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px'
   },
-  teamRowStats: {
+  teamRowStatsScroll: {
+    overflowX: 'auto' as const,
+    overflowY: 'hidden' as const,
+    WebkitOverflowScrolling: 'touch' as const
+  },
+  teamRowStatsInner: {
     display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: '6px',
-    fontSize: '9px'
+    gap: '8px',
+    minWidth: 'max-content'
   },
   statCompact: {
     color: '#e5e7eb',

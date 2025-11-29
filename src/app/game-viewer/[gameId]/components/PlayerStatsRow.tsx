@@ -88,75 +88,79 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Left Section: Player Info (Compact - No Avatar) */}
+      {/* Left Section: Player Info - STICKY */}
       <div style={isMobile ? styles.playerInfoMobile : styles.playerInfo}>
-        <div style={styles.playerName}>
+        <div style={isMobile ? styles.playerNameMobile : styles.playerName}>
           {name}
-          {position && <span style={styles.playerPosition}> ({position})</span>}
         </div>
       </div>
 
-      {/* Right Section: Stats Grid - NBA box score order */}
-      <div style={isMobile ? styles.statsGridMobile : styles.statsGrid}>
-        {/* MIN */}
-        <div style={styles.statCell}>
-          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{minutes}</div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>MIN</div>
-        </div>
-        {/* FG */}
-        <div style={styles.statCellWide}>
-          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{fgDisplay}</div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FG</div>
-        </div>
-        {/* 3P */}
-        <div style={styles.statCellWide}>
-          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{threePtDisplay}</div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>3P</div>
-        </div>
-        {/* FT */}
-        <div style={styles.statCellWide}>
-          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{ftDisplay}</div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FT</div>
-        </div>
-        {/* PTS */}
-        <div style={styles.statCell}>
-          <div style={{ ...(isMobile ? styles.statValueMobile : styles.statValue), color: '#a855f7' }}>{points}</div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>PTS</div>
-        </div>
-        {/* REB */}
-        <div style={styles.statCell}>
-          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{rebounds}</div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>REB</div>
-        </div>
-        {/* AST */}
-        <div style={styles.statCell}>
-          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{assists}</div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>AST</div>
-        </div>
-        {/* STL */}
-        <div style={styles.statCell}>
-          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{steals}</div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>STL</div>
-        </div>
-        {/* BLK */}
-        <div style={styles.statCell}>
-          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{blocks}</div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>BLK</div>
-        </div>
-        {/* FOUL */}
-        <div style={styles.statCell}>
-          <div style={isMobile ? styles.statValueMobile : styles.statValue}>{fouls}</div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FOUL</div>
-        </div>
-        {/* +/- */}
-        <div style={styles.statCell}>
-          <div style={{ 
-            ...(isMobile ? styles.statValueMobile : styles.statValue), 
-            color: plusMinusFormatted.color 
-          }}>
-            {plusMinusFormatted.text}
+      {/* Right Section: Stats Grid - SCROLLABLE on mobile */}
+      <div 
+        style={isMobile ? styles.statsScrollContainer : undefined}
+        className={isMobile ? 'scrollbar-hide' : undefined}
+      >
+        <div style={isMobile ? styles.statsGridMobile : styles.statsGrid}>
+          {/* MIN */}
+          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
+            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{minutes}</div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>MIN</div>
           </div>
-          <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>+/-</div>
+          {/* FG */}
+          <div style={isMobile ? styles.statCellWideMobile : styles.statCellWide}>
+            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{fgDisplay}</div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FG</div>
+          </div>
+          {/* 3P */}
+          <div style={isMobile ? styles.statCellWideMobile : styles.statCellWide}>
+            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{threePtDisplay}</div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>3P</div>
+          </div>
+          {/* FT */}
+          <div style={isMobile ? styles.statCellWideMobile : styles.statCellWide}>
+            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{ftDisplay}</div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FT</div>
+          </div>
+          {/* PTS */}
+          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
+            <div style={{ ...(isMobile ? styles.statValueMobile : styles.statValue), color: '#a855f7' }}>{points}</div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>PTS</div>
+          </div>
+          {/* REB */}
+          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
+            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{rebounds}</div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>REB</div>
+          </div>
+          {/* AST */}
+          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
+            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{assists}</div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>AST</div>
+          </div>
+          {/* STL */}
+          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
+            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{steals}</div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>STL</div>
+          </div>
+          {/* BLK */}
+          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
+            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{blocks}</div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>BLK</div>
+          </div>
+          {/* PF */}
+          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
+            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{fouls}</div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>PF</div>
+          </div>
+          {/* +/- */}
+          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
+            <div style={{ 
+              ...(isMobile ? styles.statValueMobile : styles.statValue), 
+              color: plusMinusFormatted.color 
+            }}>
+              {plusMinusFormatted.text}
+            </div>
+            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>+/-</div>
+          </div>
         </div>
       </div>
     </div>
@@ -169,18 +173,17 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '10px 12px',
-    borderBottom: '1px solid #374151', // gray-700
-    backgroundColor: '#111827', // gray-900
+    borderBottom: '1px solid #374151',
+    backgroundColor: '#111827',
     minHeight: '48px'
   },
   playerRowMobile: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '8px 8px',
-    borderBottom: '1px solid #374151', // gray-700
-    backgroundColor: '#111827', // gray-900
-    minHeight: '44px'
+    padding: '6px 6px',
+    borderBottom: '1px solid #374151',
+    backgroundColor: '#111827',
+    minHeight: '36px'
   },
   playerInfo: {
     display: 'flex',
@@ -191,8 +194,10 @@ const styles = {
   playerInfoMobile: {
     display: 'flex',
     alignItems: 'center',
-    flex: 1,
-    minWidth: '80px'
+    minWidth: '60px',
+    maxWidth: '60px',
+    flexShrink: 0,
+    paddingRight: '4px'
   },
   playerName: {
     color: '#ffffff',
@@ -200,10 +205,26 @@ const styles = {
     fontWeight: '600',
     lineHeight: '1.3'
   },
+  playerNameMobile: {
+    color: '#ffffff',
+    fontSize: '10px',
+    fontWeight: '600',
+    lineHeight: '1.2',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const
+  },
   playerPosition: {
-    color: '#9ca3af', // gray-400
+    color: '#9ca3af',
     fontSize: '12px',
     fontWeight: '400'
+  },
+  // ✅ Horizontal scroll container for mobile
+  statsScrollContainer: {
+    flex: 1,
+    overflowX: 'auto' as const,
+    overflowY: 'hidden' as const,
+    WebkitOverflowScrolling: 'touch' as const
   },
   statsGrid: {
     display: 'grid',
@@ -214,10 +235,10 @@ const styles = {
   },
   statsGridMobile: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(11, minmax(28px, 1fr))',
-    gap: '3px',
+    gridTemplateColumns: 'repeat(11, 1fr)',
+    gap: '2px',
     alignItems: 'center',
-    minWidth: '360px'
+    minWidth: '280px'
   },
   statCell: {
     display: 'flex',
@@ -226,11 +247,25 @@ const styles = {
     minWidth: '28px',
     textAlign: 'center' as const
   },
+  statCellMobile: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    minWidth: '22px',
+    textAlign: 'center' as const
+  },
   statCellWide: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
     minWidth: '36px',
+    textAlign: 'center' as const
+  },
+  statCellWideMobile: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    minWidth: '28px',
     textAlign: 'center' as const
   },
   statValue: {
@@ -242,23 +277,23 @@ const styles = {
   },
   statValueMobile: {
     color: '#ffffff',
-    fontSize: '12px',
+    fontSize: '10px',
     fontWeight: '600',
-    lineHeight: '1.2',
-    marginBottom: '2px'
+    lineHeight: '1.1',
+    marginBottom: '1px'
   },
   statLabel: {
-    color: '#9ca3af', // gray-400
+    color: '#9ca3af',
     fontSize: '9px',
     fontWeight: '400',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px'
   },
   statLabelMobile: {
-    color: '#9ca3af', // gray-400
-    fontSize: '8px',
+    color: '#9ca3af',
+    fontSize: '7px',
     fontWeight: '400',
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px'
+    letterSpacing: '0.3px'
   }
 };

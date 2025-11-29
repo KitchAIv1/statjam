@@ -81,61 +81,66 @@ export function TeamStatsTabLight({ gameId, teamId, teamName, useRealTime = fals
   return (
     <div className="bg-white">
       {/* Team Performance Summary */}
-      <div className={`p-4 border-b border-gray-200 ${isMobile ? 'p-3' : ''}`}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-lg font-semibold text-gray-900">{teamName}</div>
+      <div className={`border-b border-gray-200 ${isMobile ? 'p-2' : 'p-4'}`}>
+        <div className={`flex items-center justify-between ${isMobile ? 'mb-2' : 'mb-4'}`}>
+          <div className={`font-semibold text-gray-900 ${isMobile ? 'text-sm' : 'text-lg'}`}>{teamName}</div>
         </div>
         
-        <div className={`grid gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-7'}`}>
-          <div className="flex flex-col items-center">
-            <div className="text-base font-semibold text-gray-900 mb-1">
-              {teamStats.fieldGoalsMade}/{teamStats.fieldGoalsAttempted}
+        {/* ✅ MOBILE: Horizontal scroll for team stats */}
+        <div className={`${isMobile ? 'overflow-x-auto scrollbar-hide' : ''}`}>
+          <div className={`grid gap-3 ${isMobile ? 'grid-cols-7' : 'grid-cols-7'}`} style={isMobile ? { minWidth: '320px' } : undefined}>
+            <div className="flex flex-col items-center">
+              <div className={`font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : 'text-base'}`}>
+                {teamStats.fieldGoalsMade}/{teamStats.fieldGoalsAttempted}
+              </div>
+              <div className={`text-gray-500 uppercase ${isMobile ? 'text-[8px]' : 'text-xs'}`}>FG</div>
+              <div className={`text-gray-400 ${isMobile ? 'text-[8px]' : 'text-xs'}`}>{teamStats.fieldGoalPercentage}%</div>
             </div>
-            <div className="text-xs text-gray-500 uppercase">FG</div>
-            <div className="text-xs text-gray-400 mt-0.5">{teamStats.fieldGoalPercentage}%</div>
-          </div>
-          
-          <div className="flex flex-col items-center">
-            <div className="text-base font-semibold text-gray-900 mb-1">
-              {teamStats.threePointersMade}/{teamStats.threePointersAttempted}
+            
+            <div className="flex flex-col items-center">
+              <div className={`font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : 'text-base'}`}>
+                {teamStats.threePointersMade}/{teamStats.threePointersAttempted}
+              </div>
+              <div className={`text-gray-500 uppercase ${isMobile ? 'text-[8px]' : 'text-xs'}`}>3FG</div>
+              <div className={`text-gray-400 ${isMobile ? 'text-[8px]' : 'text-xs'}`}>{teamStats.threePointPercentage}%</div>
             </div>
-            <div className="text-xs text-gray-500 uppercase">3FG</div>
-            <div className="text-xs text-gray-400 mt-0.5">{teamStats.threePointPercentage}%</div>
-          </div>
-          
-          <div className="flex flex-col items-center">
-            <div className="text-base font-semibold text-gray-900 mb-1">
-              {teamStats.freeThrowsMade}/{teamStats.freeThrowsAttempted}
+            
+            <div className="flex flex-col items-center">
+              <div className={`font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : 'text-base'}`}>
+                {teamStats.freeThrowsMade}/{teamStats.freeThrowsAttempted}
+              </div>
+              <div className={`text-gray-500 uppercase ${isMobile ? 'text-[8px]' : 'text-xs'}`}>FT</div>
+              <div className={`text-gray-400 ${isMobile ? 'text-[8px]' : 'text-xs'}`}>{teamStats.freeThrowPercentage}%</div>
             </div>
-            <div className="text-xs text-gray-500 uppercase">FTS</div>
-            <div className="text-xs text-gray-400 mt-0.5">{teamStats.freeThrowPercentage}%</div>
-          </div>
-          
-          <div className="flex flex-col items-center">
-            <div className="text-base font-semibold text-gray-900 mb-1">{teamStats.turnovers}</div>
-            <div className="text-xs text-gray-500 uppercase">TO</div>
-          </div>
-          
-          <div className="flex flex-col items-center">
-            <div className="text-base font-semibold text-gray-900 mb-1">{teamStats.rebounds}</div>
-            <div className="text-xs text-gray-500 uppercase">REB</div>
-          </div>
-          
-          <div className="flex flex-col items-center">
-            <div className="text-base font-semibold text-gray-900 mb-1">{teamStats.assists}</div>
-            <div className="text-xs text-gray-500 uppercase">AST</div>
-          </div>
-          
-          <div className="flex flex-col items-center">
-            <div className="text-base font-semibold text-gray-900 mb-1">{teamStats.teamFouls}</div>
-            <div className="text-xs text-gray-500 uppercase">FOULS</div>
+            
+            <div className="flex flex-col items-center">
+              <div className={`font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : 'text-base'}`}>{teamStats.turnovers}</div>
+              <div className={`text-gray-500 uppercase ${isMobile ? 'text-[8px]' : 'text-xs'}`}>TO</div>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className={`font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : 'text-base'}`}>{teamStats.rebounds}</div>
+              <div className={`text-gray-500 uppercase ${isMobile ? 'text-[8px]' : 'text-xs'}`}>REB</div>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className={`font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : 'text-base'}`}>{teamStats.assists}</div>
+              <div className={`text-gray-500 uppercase ${isMobile ? 'text-[8px]' : 'text-xs'}`}>AST</div>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className={`font-semibold text-gray-900 mb-0.5 ${isMobile ? 'text-xs' : 'text-base'}`}>{teamStats.teamFouls}</div>
+              <div className={`text-gray-500 uppercase ${isMobile ? 'text-[8px]' : 'text-xs'}`}>PF</div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* On Court Section */}
       <div>
-        <div className="text-base font-semibold text-gray-900 px-4 py-3 bg-purple-50 border-b border-purple-100">
+        <div className={`font-semibold text-gray-900 bg-purple-50 border-b border-purple-100 ${
+          isMobile ? 'text-xs px-2 py-1.5' : 'text-base px-4 py-3'
+        }`}>
           On court
         </div>
         <div>
@@ -157,7 +162,6 @@ export function TeamStatsTabLight({ gameId, teamId, teamName, useRealTime = fals
                   blocks: player.blocks,
                   fouls: player.fouls,
                   plusMinus: player.plusMinus,
-                  // ✅ NBA-style shooting stats
                   fieldGoalsMade: player.fieldGoalsMade,
                   fieldGoalsAttempted: player.fieldGoalsAttempted,
                   threePointersMade: player.threePointersMade,
@@ -168,14 +172,16 @@ export function TeamStatsTabLight({ gameId, teamId, teamName, useRealTime = fals
               />
             ))
           ) : (
-            <div className="text-gray-500 text-sm px-4 py-5 text-center">No players on court</div>
+            <div className={`text-gray-500 text-center ${isMobile ? 'text-xs px-2 py-3' : 'text-sm px-4 py-5'}`}>No players on court</div>
           )}
         </div>
       </div>
 
       {/* Bench Section */}
       <div>
-        <div className="text-base font-semibold text-gray-900 px-4 py-3 bg-purple-50 border-b border-purple-100 border-t border-gray-200">
+        <div className={`font-semibold text-gray-900 bg-purple-50 border-b border-purple-100 border-t border-gray-200 ${
+          isMobile ? 'text-xs px-2 py-1.5' : 'text-base px-4 py-3'
+        }`}>
           Bench
         </div>
         <div>
@@ -197,7 +203,6 @@ export function TeamStatsTabLight({ gameId, teamId, teamName, useRealTime = fals
                   blocks: player.blocks,
                   fouls: player.fouls,
                   plusMinus: player.plusMinus,
-                  // ✅ NBA-style shooting stats
                   fieldGoalsMade: player.fieldGoalsMade,
                   fieldGoalsAttempted: player.fieldGoalsAttempted,
                   threePointersMade: player.threePointersMade,
@@ -208,7 +213,7 @@ export function TeamStatsTabLight({ gameId, teamId, teamName, useRealTime = fals
               />
             ))
           ) : (
-            <div className="text-gray-500 text-sm px-4 py-5 text-center">No bench players</div>
+            <div className={`text-gray-500 text-center ${isMobile ? 'text-xs px-2 py-3' : 'text-sm px-4 py-5'}`}>No bench players</div>
           )}
         </div>
       </div>
