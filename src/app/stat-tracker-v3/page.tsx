@@ -1484,6 +1484,7 @@ function StatTrackerV3Content() {
                           isOpponentStat: true // ✅ Flag as opponent stat
                         });
                         console.log('✅ Coach mode: Recorded opponent blocked 2PT (auto-assigned)');
+                        tracker.clearPlayPrompt(); // ✅ Close modal immediately
                       } catch (error) {
                         console.error('❌ Error recording opponent missed shot:', error);
                         notify.error('Failed to record missed shot');
@@ -1507,6 +1508,7 @@ function StatTrackerV3Content() {
                           isOpponentStat: true // ✅ Flag as opponent stat
                         });
                         console.log('✅ Coach mode: Recorded opponent blocked 3PT (auto-assigned)');
+                        tracker.clearPlayPrompt(); // ✅ Close modal immediately
                       } catch (error) {
                         console.error('❌ Error recording opponent missed shot:', error);
                         notify.error('Failed to record missed shot');
