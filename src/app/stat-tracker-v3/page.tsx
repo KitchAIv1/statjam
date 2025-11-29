@@ -1472,48 +1472,48 @@ function StatTrackerV3Content() {
                 
                 <div className="flex gap-3">
                   <Button
-                    onClick={async () => {
-                      try {
-                        // Record opponent missed 2PT with is_opponent_stat flag
-                        await tracker.recordStat({
-                          gameId: gameData.id,
-                          playerId: user?.id, // Use coach's ID as proxy
-                          teamId: gameData.team_a_id, // Use home team ID for DB
-                          statType: 'field_goal',
-                          modifier: 'missed',
-                          isOpponentStat: true // ✅ Flag as opponent stat
-                        });
-                        console.log('✅ Coach mode: Recorded opponent blocked 2PT (auto-assigned)');
-                        tracker.clearPlayPrompt(); // ✅ Close modal immediately
-                      } catch (error) {
+                    onClick={() => {
+                      // ✅ OPTIMISTIC UI: Close modal FIRST, then write to DB
+                      tracker.clearPlayPrompt();
+                      
+                      // Record in background (non-blocking)
+                      tracker.recordStat({
+                        gameId: gameData.id,
+                        playerId: user?.id,
+                        teamId: gameData.team_a_id,
+                        statType: 'field_goal',
+                        modifier: 'missed',
+                        isOpponentStat: true
+                      }).then(() => {
+                        console.log('✅ Coach mode: Recorded opponent blocked 2PT');
+                      }).catch((error) => {
                         console.error('❌ Error recording opponent missed shot:', error);
                         notify.error('Failed to record missed shot');
-                        tracker.clearPlayPrompt();
-                      }
+                      });
                     }}
                     className="flex-1 h-14 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-lg rounded-xl"
                   >
                     2PT
                   </Button>
                   <Button
-                    onClick={async () => {
-                      try {
-                        // Record opponent missed 3PT with is_opponent_stat flag
-                        await tracker.recordStat({
-                          gameId: gameData.id,
-                          playerId: user?.id, // Use coach's ID as proxy
-                          teamId: gameData.team_a_id, // Use home team ID for DB
-                          statType: 'three_pointer',
-                          modifier: 'missed',
-                          isOpponentStat: true // ✅ Flag as opponent stat
-                        });
-                        console.log('✅ Coach mode: Recorded opponent blocked 3PT (auto-assigned)');
-                        tracker.clearPlayPrompt(); // ✅ Close modal immediately
-                      } catch (error) {
+                    onClick={() => {
+                      // ✅ OPTIMISTIC UI: Close modal FIRST, then write to DB
+                      tracker.clearPlayPrompt();
+                      
+                      // Record in background (non-blocking)
+                      tracker.recordStat({
+                        gameId: gameData.id,
+                        playerId: user?.id,
+                        teamId: gameData.team_a_id,
+                        statType: 'three_pointer',
+                        modifier: 'missed',
+                        isOpponentStat: true
+                      }).then(() => {
+                        console.log('✅ Coach mode: Recorded opponent blocked 3PT');
+                      }).catch((error) => {
                         console.error('❌ Error recording opponent missed shot:', error);
                         notify.error('Failed to record missed shot');
-                        tracker.clearPlayPrompt();
-                      }
+                      });
                     }}
                     className="flex-1 h-14 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-lg rounded-xl"
                   >
