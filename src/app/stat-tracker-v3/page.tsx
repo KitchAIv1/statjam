@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Shield } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useTracker } from '@/hooks/useTracker';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -1444,84 +1444,173 @@ function StatTrackerV3Content() {
       )}
 
       {/* Blocked Shot Selection Modal - After block */}
-      {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'missed_shot_type' && (
-        <BlockedShotSelectionModal
-          isOpen={true}
-          onClose={tracker.clearPlayPrompt}
-          onSelect={async (shooterId, shotType) => {
-            try {
-              // Get blocker info from metadata
-              const blockerId = tracker.playPrompt.metadata?.blockerId;
-              const blockerTeamId = tracker.playPrompt.metadata?.blockerTeamId;
-              
+      {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'missed_shot_type' && (() => {
+        const blockerTeamId = tracker.playPrompt.metadata?.blockerTeamId || gameData.team_a_id;
+        const isHomeTeamBlock = blockerTeamId === gameData.team_a_id;
+        
+        // ✅ COACH MODE FIX: If home team blocked opponent, auto-assign opponent as shooter
+        // Only ask for shot type (2PT or 3PT) - no shooter selection needed
+        if (coachMode && isHomeTeamBlock) {
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+                <div className="text-center mb-6">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center mx-auto mb-3">
+                    <Shield className="w-6 h-6 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">Blocked Shot</h2>
+                  <p className="text-gray-600 mt-1">
+                    {(() => {
+                      const blockerId = tracker.playPrompt.metadata?.blockerId;
+                      const blockerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === blockerId);
+                      return blockerData?.name || 'Your player';
+                    })()} blocked {opponentName || 'Opponent'}
+                  </p>
+                </div>
+                
+                <p className="text-sm text-gray-700 text-center mb-4">What type of shot was blocked?</p>
+                
+                <div className="flex gap-3">
+                  <Button
+                    onClick={async () => {
+                      try {
+                        // Record opponent missed 2PT with is_opponent_stat flag
+                        await tracker.recordStat({
+                          gameId: gameData.id,
+                          playerId: user?.id, // Use coach's ID as proxy
+                          teamId: gameData.team_a_id, // Use home team ID for DB
+                          statType: 'field_goal',
+                          modifier: 'missed',
+                          isOpponentStat: true // ✅ Flag as opponent stat
+                        });
+                        console.log('✅ Coach mode: Recorded opponent blocked 2PT (auto-assigned)');
+                      } catch (error) {
+                        console.error('❌ Error recording opponent missed shot:', error);
+                        notify.error('Failed to record missed shot');
+                        tracker.clearPlayPrompt();
+                      }
+                    }}
+                    className="flex-1 h-14 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-lg rounded-xl"
+                  >
+                    2PT
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        // Record opponent missed 3PT with is_opponent_stat flag
+                        await tracker.recordStat({
+                          gameId: gameData.id,
+                          playerId: user?.id, // Use coach's ID as proxy
+                          teamId: gameData.team_a_id, // Use home team ID for DB
+                          statType: 'three_pointer',
+                          modifier: 'missed',
+                          isOpponentStat: true // ✅ Flag as opponent stat
+                        });
+                        console.log('✅ Coach mode: Recorded opponent blocked 3PT (auto-assigned)');
+                      } catch (error) {
+                        console.error('❌ Error recording opponent missed shot:', error);
+                        notify.error('Failed to record missed shot');
+                        tracker.clearPlayPrompt();
+                      }
+                    }}
+                    className="flex-1 h-14 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-lg rounded-xl"
+                  >
+                    3PT
+                  </Button>
+                </div>
+                
+                <Button
+                  onClick={tracker.clearPlayPrompt}
+                  variant="ghost"
+                  className="w-full mt-3 text-gray-500"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          );
+        }
+        
+        // ✅ REGULAR MODE: Show full BlockedShotSelectionModal with shooter selection
+        return (
+          <BlockedShotSelectionModal
+            isOpen={true}
+            onClose={tracker.clearPlayPrompt}
+            onSelect={async (shooterId, shotType) => {
+              try {
+                // Get blocker info from metadata
+                const blockerId = tracker.playPrompt.metadata?.blockerId;
+                const blockerTeamId = tracker.playPrompt.metadata?.blockerTeamId;
+                
+                // Determine shooter team (opposite of blocker)
+                const shooterTeamId = blockerTeamId === gameData.team_a_id 
+                  ? gameData.team_b_id 
+                  : gameData.team_a_id;
+                
+                // Find shooter player data (check both full lists for custom player detection)
+                const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === shooterId);
+                
+                if (!shooterData) {
+                  console.error('❌ Shooter player not found');
+                  tracker.clearPlayPrompt();
+                  return;
+                }
+                
+                // Check if shooter is custom player
+                const isShooterCustom = shooterId.startsWith('custom-') || 
+                                       (shooterData.is_custom_player === true);
+                
+                // ✅ BLOCK SEQUENCE: Record missed shot (this will trigger rebound prompt via PlayEngine)
+                // Don't pass sequenceId - let PlayEngine create new sequence for rebound (prevents skip logic)
+                await tracker.recordStat({
+                  gameId: gameData.id,
+                  playerId: isShooterCustom ? undefined : shooterId,
+                  customPlayerId: isShooterCustom ? shooterId : undefined,
+                  teamId: shooterTeamId,
+                  statType: shotType,
+                  modifier: 'missed'
+                  // ✅ Note: No sequenceId - PlayEngine will create new sequence for rebound prompt
+                });
+                
+                // ✅ FIX: Don't clear prompt here - PlayEngine sets rebound prompt automatically inside recordStat()
+                // The rebound prompt will replace the missed_shot_type prompt via React re-render
+                // (BlockedShotSelectionModal closes when type !== 'missed_shot_type', ReboundPromptModal opens when type === 'rebound')
+              } catch (error) {
+                console.error('❌ Error recording missed shot after block:', error);
+                notify.error(
+                  'Failed to record missed shot',
+                  error instanceof Error ? error.message : 'Please try again'
+                );
+                tracker.clearPlayPrompt();
+              }
+            }}
+            shooterTeamPlayers={(() => {
               // Determine shooter team (opposite of blocker)
+              const blockerTeamId = tracker.playPrompt.metadata?.blockerTeamId || gameData.team_a_id;
               const shooterTeamId = blockerTeamId === gameData.team_a_id 
                 ? gameData.team_b_id 
                 : gameData.team_a_id;
               
-              // Find shooter player data (check both full lists for custom player detection)
-              const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === shooterId);
+              // Return only on-court players (first 5) from shooter team
+              return shooterTeamId === gameData.team_a_id ? currentRosterA : currentRosterB;
+            })()}
+            shooterTeamName={(() => {
+              // Determine shooter team name
+              const blockerTeamId = tracker.playPrompt.metadata?.blockerTeamId || gameData.team_a_id;
+              const shooterTeamId = blockerTeamId === gameData.team_a_id 
+                ? gameData.team_b_id 
+                : gameData.team_a_id;
               
-              if (!shooterData) {
-                console.error('❌ Shooter player not found');
-                tracker.clearPlayPrompt();
-                return;
-              }
-              
-              // Check if shooter is custom player
-              const isShooterCustom = shooterId.startsWith('custom-') || 
-                                     (shooterData.is_custom_player === true);
-              
-              // ✅ BLOCK SEQUENCE: Record missed shot (this will trigger rebound prompt via PlayEngine)
-              // Don't pass sequenceId - let PlayEngine create new sequence for rebound (prevents skip logic)
-              await tracker.recordStat({
-                gameId: gameData.id,
-                playerId: isShooterCustom ? undefined : shooterId,
-                customPlayerId: isShooterCustom ? shooterId : undefined,
-                teamId: shooterTeamId,
-                statType: shotType,
-                modifier: 'missed'
-                // ✅ Note: No sequenceId - PlayEngine will create new sequence for rebound prompt
-              });
-              
-              // ✅ FIX: Don't clear prompt here - PlayEngine sets rebound prompt automatically inside recordStat()
-              // The rebound prompt will replace the missed_shot_type prompt via React re-render
-              // (BlockedShotSelectionModal closes when type !== 'missed_shot_type', ReboundPromptModal opens when type === 'rebound')
-            } catch (error) {
-              console.error('❌ Error recording missed shot after block:', error);
-              notify.error(
-                'Failed to record missed shot',
-                error instanceof Error ? error.message : 'Please try again'
-              );
-              tracker.clearPlayPrompt();
-            }
-          }}
-          shooterTeamPlayers={(() => {
-            // Determine shooter team (opposite of blocker)
-            const blockerTeamId = tracker.playPrompt.metadata?.blockerTeamId || gameData.team_a_id;
-            const shooterTeamId = blockerTeamId === gameData.team_a_id 
-              ? gameData.team_b_id 
-              : gameData.team_a_id;
-            
-            // Return only on-court players (first 5) from shooter team
-            return shooterTeamId === gameData.team_a_id ? currentRosterA : currentRosterB;
-          })()}
-          shooterTeamName={(() => {
-            // Determine shooter team name
-            const blockerTeamId = tracker.playPrompt.metadata?.blockerTeamId || gameData.team_a_id;
-            const shooterTeamId = blockerTeamId === gameData.team_a_id 
-              ? gameData.team_b_id 
-              : gameData.team_a_id;
-            
-            return shooterTeamId === gameData.team_a_id ? gameData.team_a_name : gameData.team_b_name;
-          })()}
-          blockerName={(() => {
-            const blockerId = tracker.playPrompt.metadata?.blockerId;
-            const blockerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === blockerId);
-            return blockerData?.name || 'Unknown';
-          })()}
-        />
-      )}
+              return shooterTeamId === gameData.team_a_id ? gameData.team_a_name : gameData.team_b_name;
+            })()}
+            blockerName={(() => {
+              const blockerId = tracker.playPrompt.metadata?.blockerId;
+              const blockerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === blockerId);
+              return blockerData?.name || 'Unknown';
+            })()}
+          />
+        );
+      })()}
 
       {/* Turnover Prompt Modal - After steals */}
       {tracker.playPrompt.isOpen && tracker.playPrompt.type === 'turnover' && (
