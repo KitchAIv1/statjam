@@ -585,8 +585,13 @@ export class TeamStatsService {
         'id': `eq.${gameId}`
       });
 
+      // ✅ Graceful fallback: If RLS blocks game fetch (admin viewing other coach's game),
+      // return 0 plus/minus for all players instead of throwing error
       if (game.length === 0) {
-        throw new Error('Game not found');
+        console.warn('⚠️ TeamStatsService: Could not fetch game for plus/minus (RLS), returning 0 for all players');
+        const fallbackMap = new Map<string, number>();
+        playerIds.forEach(playerId => fallbackMap.set(playerId, 0));
+        return fallbackMap;
       }
 
       const isCoachGame = game[0].is_coach_game || false;

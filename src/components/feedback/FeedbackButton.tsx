@@ -25,7 +25,7 @@ export function FeedbackButton() {
         
         {/* Tooltip */}
         <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-          Share Feedback
+          Share feedback or concerns instantly
         </span>
       </button>
 

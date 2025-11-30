@@ -34,11 +34,12 @@ export async function GET(request: NextRequest) {
     // Get unique team IDs
     const teamIds = [...new Set(games?.map(g => g.team_a_id) || [])];
 
-    // Fetch team names with coach_id
+    // Fetch team names with coach_id (ordered by latest first)
     const { data: teams } = await supabaseAdmin
       .from('teams')
       .select('id, name, created_at, coach_id')
-      .in('id', teamIds.length > 0 ? teamIds : ['none']);
+      .in('id', teamIds.length > 0 ? teamIds : ['none'])
+      .order('created_at', { ascending: false });
 
     // Get unique coach IDs and fetch their emails
     const coachIds = [...new Set(teams?.map(t => t.coach_id).filter(Boolean) || [])];
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
       updatedAt: g.updated_at
     }));
 
-    const coachTeams = await Promise.all(
+    const coachTeamsUnsorted = await Promise.all(
       (teams || []).slice(0, 10).map(async (team) => {
         const { count: playerCount } = await supabaseAdmin
           .from('team_players')
@@ -105,6 +106,11 @@ export async function GET(request: NextRequest) {
           createdAt: team.created_at
         };
       })
+    );
+
+    // Sort teams by created_at descending (latest first)
+    const coachTeams = coachTeamsUnsorted.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
     return NextResponse.json({

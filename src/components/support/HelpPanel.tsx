@@ -43,7 +43,7 @@ export function HelpPanel({
   faqs,
   checklistLink,
   onChecklistOpen,
-  supportHref = "mailto:support@statjam.com",
+  supportHref = "mailto:support@statjam.net",
   className
 }: HelpPanelProps) {
   const [open, setOpen] = useState(false);

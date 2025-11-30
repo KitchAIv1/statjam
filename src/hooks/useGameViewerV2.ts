@@ -357,145 +357,224 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       };
 
       // ⚡ PHASE 1: Fetch game data (needed for IDs)
+      // Try direct fetch first, fallback to API route if RLS blocks (for admin viewing coach games)
+      let gameInfo: any = null;
+      
       const gameResponse = await fetch(
         `${supabaseUrl}/rest/v1/games?select=*&id=eq.${gameId}`,
         { headers }
       );
 
-      if (!gameResponse.ok) {
-        throw new Error(`Failed to fetch game: ${gameResponse.statusText}`);
-      }
-
-      const gameData = await gameResponse.json();
-      if (!gameData || gameData.length === 0) {
-        throw new Error('Game not found');
-      }
-
-      const gameInfo = gameData[0];
-
-      // ⚡ PHASE 2: Parallel fetch all related data
-      const teamIds = [gameInfo.team_a_id, gameInfo.team_b_id].filter(Boolean);
-      
-      const [
-        teamsResponse,
-        tournamentResponse,
-        statsResponse,
-        subsResponse,
-        timeoutsResponse
-      ] = await Promise.all([
-        // Teams
-        teamIds.length > 0 
-          ? fetch(`${supabaseUrl}/rest/v1/teams?select=id,name&id=in.(${teamIds.join(',')})`, { headers })
-          : Promise.resolve(null),
-        // Tournament
-        gameInfo.tournament_id
-          ? fetch(`${supabaseUrl}/rest/v1/tournaments?select=name&id=eq.${gameInfo.tournament_id}`, { headers })
-          : Promise.resolve(null),
-        // Stats (include custom_player_id, sequence_id, and is_opponent_stat for custom players, and-1 detection, and coach mode)
-        fetch(`${supabaseUrl}/rest/v1/game_stats?select=id,game_id,player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at,sequence_id,is_opponent_stat&game_id=eq.${gameId}&order=created_at.desc`, { headers }),
-        // Substitutions
-        fetch(`${supabaseUrl}/rest/v1/game_substitutions?select=*&game_id=eq.${gameId}&order=created_at.asc`, { headers }),
-        // Timeouts
-        fetch(`${supabaseUrl}/rest/v1/game_timeouts?select=*&game_id=eq.${gameId}&order=created_at.desc`, { headers })
-      ]);
-
-      // Parse teams
-      let teamsMap = new Map<string, string>();
-      if (teamsResponse && teamsResponse.ok) {
-        const teamsData = await teamsResponse.json();
-        teamsMap = new Map(teamsData.map((t: any) => [t.id, t.name]));
-      }
-
-      // Parse tournament
-      let tournamentName = 'Unknown Tournament';
-      if (tournamentResponse && tournamentResponse.ok) {
-        const tournamentData = await tournamentResponse.json();
-        if (tournamentData.length > 0) {
-          tournamentName = tournamentData[0].name;
+      if (gameResponse.ok) {
+        const gameData = await gameResponse.json();
+        if (gameData && gameData.length > 0) {
+          gameInfo = gameData[0];
         }
       }
 
-      // Parse stats
+      // Fallback to API route if direct fetch returns empty (RLS blocking)
+      // ✅ FIX: Store ALL API data when using fallback (stats, teams, players, subs)
+      let apiDataFromFallback: any = null;
+      
+      if (!gameInfo) {
+        console.log('🔄 useGameViewerV2: Direct fetch blocked by RLS, trying API fallback...');
+        const apiFallbackResponse = await fetch(`/api/game-viewer/${gameId}`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (apiFallbackResponse.ok) {
+          apiDataFromFallback = await apiFallbackResponse.json();
+          gameInfo = apiDataFromFallback.game;
+          if (apiDataFromFallback.game) {
+            console.log('✅ useGameViewerV2: Successfully fetched via API fallback (using full API data)');
+          }
+        }
+      }
+
+      if (!gameInfo) {
+        throw new Error('Game not found');
+      }
+
+      // ⚡ PHASE 2: Fetch related data
+      // ✅ FIX: If we used API fallback, use that data instead of making RLS-blocked calls
+      let teamsMap = new Map<string, string>();
+      let tournamentName = 'Unknown Tournament';
       let gameStats: GameStats[] = [];
-      if (statsResponse.ok) {
-        gameStats = await statsResponse.json();
-      } else {
-        console.error('❌ useGameViewerV2: Failed to fetch game_stats:', statsResponse.status);
-      }
-
-      // Parse substitutions
       let gameSubstitutions: any[] = [];
-      if (subsResponse.ok) {
-        gameSubstitutions = await subsResponse.json();
-      } else {
-        console.error('❌ useGameViewerV2: Failed to fetch substitutions:', subsResponse.status);
-      }
-
-      // Parse timeouts
       let gameTimeouts: any[] = [];
-      if (timeoutsResponse.ok) {
-        gameTimeouts = await timeoutsResponse.json();
+      
+      if (apiDataFromFallback) {
+        // ✅ USE API FALLBACK DATA (bypasses RLS)
+        console.log('📦 useGameViewerV2: Using API fallback data for teams/stats/subs');
+        
+        // Teams from API
+        if (apiDataFromFallback.teams) {
+          teamsMap = new Map(apiDataFromFallback.teams.map((t: any) => [t.id, t.name]));
+        }
+        
+        // Stats from API
+        gameStats = apiDataFromFallback.stats || [];
+        
+        // Substitutions from API
+        gameSubstitutions = apiDataFromFallback.substitutions || [];
+        
+        // Timeouts from API
+        gameTimeouts = apiDataFromFallback.timeouts || [];
+        
+        // Tournament name (API doesn't return this, but it's not critical for coach games)
+        tournamentName = 'Coach Game';
+        
       } else {
-        console.error('❌ useGameViewerV2: Failed to fetch timeouts:', timeoutsResponse.status);
+        // ✅ NORMAL PATH: Direct Supabase calls (RLS allowed)
+        const teamIds = [gameInfo.team_a_id, gameInfo.team_b_id].filter(Boolean);
+        
+        const [
+          teamsResponse,
+          tournamentResponse,
+          statsResponse,
+          subsResponse,
+          timeoutsResponse
+        ] = await Promise.all([
+          // Teams
+          teamIds.length > 0 
+            ? fetch(`${supabaseUrl}/rest/v1/teams?select=id,name&id=in.(${teamIds.join(',')})`, { headers })
+            : Promise.resolve(null),
+          // Tournament
+          gameInfo.tournament_id
+            ? fetch(`${supabaseUrl}/rest/v1/tournaments?select=name&id=eq.${gameInfo.tournament_id}`, { headers })
+            : Promise.resolve(null),
+          // Stats (include custom_player_id, sequence_id, and is_opponent_stat for custom players, and-1 detection, and coach mode)
+          fetch(`${supabaseUrl}/rest/v1/game_stats?select=id,game_id,player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at,sequence_id,is_opponent_stat&game_id=eq.${gameId}&order=created_at.desc`, { headers }),
+          // Substitutions
+          fetch(`${supabaseUrl}/rest/v1/game_substitutions?select=*&game_id=eq.${gameId}&order=created_at.asc`, { headers }),
+          // Timeouts
+          fetch(`${supabaseUrl}/rest/v1/game_timeouts?select=*&game_id=eq.${gameId}&order=created_at.desc`, { headers })
+        ]);
+
+        // Parse teams
+        if (teamsResponse && teamsResponse.ok) {
+          const teamsData = await teamsResponse.json();
+          teamsMap = new Map(teamsData.map((t: any) => [t.id, t.name]));
+        }
+
+        // Parse tournament
+        if (tournamentResponse && tournamentResponse.ok) {
+          const tournamentData = await tournamentResponse.json();
+          if (tournamentData.length > 0) {
+            tournamentName = tournamentData[0].name;
+          }
+        }
+
+        // Parse stats
+        if (statsResponse.ok) {
+          gameStats = await statsResponse.json();
+        } else {
+          console.error('❌ useGameViewerV2: Failed to fetch game_stats:', statsResponse.status);
+        }
+
+        // Parse substitutions
+        if (subsResponse.ok) {
+          gameSubstitutions = await subsResponse.json();
+        } else {
+          console.error('❌ useGameViewerV2: Failed to fetch substitutions:', subsResponse.status);
+        }
+
+        // Parse timeouts
+        if (timeoutsResponse.ok) {
+          gameTimeouts = await timeoutsResponse.json();
+        } else {
+          console.error('❌ useGameViewerV2: Failed to fetch timeouts:', timeoutsResponse.status);
+        }
       }
 
-      // ⚡ PHASE 3: Fetch ALL player names in parallel (for stats + subs, including custom players)
-      const statsPlayerIds = [...new Set(gameStats.map(s => s.player_id).filter(Boolean))];
-      const statsCustomPlayerIds = [...new Set((gameStats as any).map((s: any) => s.custom_player_id).filter(Boolean))];
-      // ✅ CUSTOM PLAYER SUPPORT: Include both regular and custom player IDs from substitutions
-      const subPlayerIds = [...new Set([
-        ...gameSubstitutions.map(s => (s as any).player_in_id || (s as any).custom_player_in_id).filter(Boolean),
-        ...gameSubstitutions.map(s => (s as any).player_out_id || (s as any).custom_player_out_id).filter(Boolean)
-      ])];
-      // ✅ FIX: Separate regular and custom player IDs from substitutions
-      const subRegularPlayerIds = [...new Set([
-        ...gameSubstitutions.map(s => (s as any).player_in_id).filter(Boolean),
-        ...gameSubstitutions.map(s => (s as any).player_out_id).filter(Boolean)
-      ])];
-      const subCustomPlayerIds = [...new Set([
-        ...gameSubstitutions.map(s => (s as any).custom_player_in_id).filter(Boolean),
-        ...gameSubstitutions.map(s => (s as any).custom_player_out_id).filter(Boolean)
-      ])];
-      // Combine all regular player IDs (from stats + substitutions)
-      const allRegularPlayerIds = [...new Set([...statsPlayerIds, ...subRegularPlayerIds])];
-      // Combine all custom player IDs (from stats + substitutions)
-      const allCustomPlayerIds = [...new Set([...statsCustomPlayerIds, ...subCustomPlayerIds])];
-
-      // ✅ FIX: Query both users AND custom_players tables in parallel
-      const [regularPlayersResponse, customPlayersResponse] = await Promise.all([
-        // Regular players from users table (including profile photo)
-        allRegularPlayerIds.length > 0 
-          ? fetch(`${supabaseUrl}/rest/v1/users?select=id,name,email,profile_photo_url&id=in.(${allRegularPlayerIds.join(',')})`, { headers })
-          : Promise.resolve(null),
-        // Custom players from custom_players table (include profile_photo_url) - NOW INCLUDES SUBSTITUTION CUSTOM PLAYERS
-        allCustomPlayerIds.length > 0
-          ? fetch(`${supabaseUrl}/rest/v1/custom_players?select=id,name,profile_photo_url&id=in.(${allCustomPlayerIds.join(',')})`, { headers })
-          : Promise.resolve(null)
-      ]);
-
-      // Build combined players map (name + photo URL)
+      // ⚡ PHASE 3: Fetch ALL player names (for stats + subs, including custom players)
+      // ✅ FIX: Use API fallback data if available (bypasses RLS)
       let playersMap = new Map<string, { name: string; photoUrl: string | null }>();
       
-      // Add regular players
-      if (regularPlayersResponse && regularPlayersResponse.ok) {
-        const playersData = await regularPlayersResponse.json();
-        playersData.forEach((p: any) => {
-          playersMap.set(p.id, {
-            name: p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`,
-            photoUrl: p.profile_photo_url || null
+      if (apiDataFromFallback) {
+        // ✅ USE API FALLBACK DATA FOR PLAYERS (bypasses RLS)
+        
+        // Add regular players from API
+        if (apiDataFromFallback.users) {
+          apiDataFromFallback.users.forEach((p: any) => {
+            const playerName = p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`;
+            const photoUrl = p.profile_photo_url || p.avatar_url || null;
+            playersMap.set(p.id, {
+              name: playerName,
+              photoUrl: photoUrl
+            });
           });
-        });
-      }
+        }
+        
+        // Add custom players from API
+        if (apiDataFromFallback.customPlayers) {
+          apiDataFromFallback.customPlayers.forEach((p: any) => {
+            const photoUrl = p.profile_photo_url || p.photo_url || null;
+            playersMap.set(p.id, {
+              name: p.name || `Custom Player ${p.id.substring(0, 8)}`,
+              photoUrl: photoUrl
+            });
+          });
+        }
+      } else {
+        // ✅ NORMAL PATH: Direct Supabase calls for players (RLS allowed)
+        const statsPlayerIds = [...new Set(gameStats.map(s => s.player_id).filter(Boolean))];
+        const statsCustomPlayerIds = [...new Set((gameStats as any).map((s: any) => s.custom_player_id).filter(Boolean))];
+        // CUSTOM PLAYER SUPPORT: Include both regular and custom player IDs from substitutions
+        const subPlayerIds = [...new Set([
+          ...gameSubstitutions.map(s => (s as any).player_in_id || (s as any).custom_player_in_id).filter(Boolean),
+          ...gameSubstitutions.map(s => (s as any).player_out_id || (s as any).custom_player_out_id).filter(Boolean)
+        ])];
+        // Separate regular and custom player IDs from substitutions
+        const subRegularPlayerIds = [...new Set([
+          ...gameSubstitutions.map(s => (s as any).player_in_id).filter(Boolean),
+          ...gameSubstitutions.map(s => (s as any).player_out_id).filter(Boolean)
+        ])];
+        const subCustomPlayerIds = [...new Set([
+          ...gameSubstitutions.map(s => (s as any).custom_player_in_id).filter(Boolean),
+          ...gameSubstitutions.map(s => (s as any).custom_player_out_id).filter(Boolean)
+        ])];
+        // Combine all regular player IDs (from stats + substitutions)
+        const allRegularPlayerIds = [...new Set([...statsPlayerIds, ...subRegularPlayerIds])];
+        // Combine all custom player IDs (from stats + substitutions)
+        const allCustomPlayerIds = [...new Set([...statsCustomPlayerIds, ...subCustomPlayerIds])];
 
-      // Add custom players (with photos)
-      if (customPlayersResponse && customPlayersResponse.ok) {
-        const customPlayersData = await customPlayersResponse.json();
-        customPlayersData.forEach((p: any) => {
-          playersMap.set(p.id, {
-            name: p.name || `Custom Player ${p.id.substring(0, 8)}`,
-            photoUrl: p.profile_photo_url || null
+        // Query both users AND custom_players tables in parallel
+        const [regularPlayersResponse, customPlayersResponse] = await Promise.all([
+          // Regular players from users table (including profile photo)
+          allRegularPlayerIds.length > 0 
+            ? fetch(`${supabaseUrl}/rest/v1/users?select=id,name,email,profile_photo_url&id=in.(${allRegularPlayerIds.join(',')})`, { headers })
+            : Promise.resolve(null),
+          // Custom players from custom_players table (include profile_photo_url)
+          allCustomPlayerIds.length > 0
+            ? fetch(`${supabaseUrl}/rest/v1/custom_players?select=id,name,profile_photo_url&id=in.(${allCustomPlayerIds.join(',')})`, { headers })
+            : Promise.resolve(null)
+        ]);
+
+        // Add regular players
+        if (regularPlayersResponse && regularPlayersResponse.ok) {
+          const playersData = await regularPlayersResponse.json();
+          playersData.forEach((p: any) => {
+            playersMap.set(p.id, {
+              name: p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`,
+              photoUrl: p.profile_photo_url || null
+            });
           });
-        });
+        }
+
+        // Add custom players (with photos)
+        if (customPlayersResponse && customPlayersResponse.ok) {
+          const customPlayersData = await customPlayersResponse.json();
+          customPlayersData.forEach((p: any) => {
+            playersMap.set(p.id, {
+              name: p.name || `Custom Player ${p.id.substring(0, 8)}`,
+              photoUrl: p.profile_photo_url || null
+            });
+          });
+        }
       }
 
       // Update ref for photo update subscriptions
@@ -508,7 +587,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         const playerInfo = playersMap.get(playerId) || { name: `Player ${playerId?.substring(0, 8)}`, photoUrl: null };
         return {
           ...stat,
-          custom_player_id: statWithCustomId.custom_player_id, // ✅ FIX: Explicitly preserve custom_player_id
+          custom_player_id: statWithCustomId.custom_player_id,
           player_name: playerInfo.name,
           player_photo_url: playerInfo.photoUrl
         };
