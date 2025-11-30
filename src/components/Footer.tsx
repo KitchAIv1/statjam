@@ -37,9 +37,15 @@ export function Footer() {
               <a href="#" className="block text-gray-300 hover:text-white transition-colors">
                 Blog
               </a>
-              <a href="#" className="block text-gray-300 hover:text-white transition-colors">
-                Contact
+              <a 
+                href="mailto:support@statjam.net" 
+                className="block text-gray-300 hover:text-white transition-colors"
+              >
+                Contact Us
               </a>
+              <span className="block text-gray-500 text-sm">
+                support@statjam.net
+              </span>
               <button
                 onClick={() => setIsFeedbackOpen(true)}
                 className="block text-gray-300 hover:text-white transition-colors text-left"
