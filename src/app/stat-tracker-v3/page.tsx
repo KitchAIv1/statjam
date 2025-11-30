@@ -2161,7 +2161,7 @@ function StatTrackerV3Content() {
         )}
 
         {/* Game Completion Modal with Awards */}
-        {!coachMode && gameData && (
+        {gameData && (
           <GameCompletionModal
             isOpen={tracker.showAwardsModal}
             onClose={() => tracker.setShowAwardsModal(false)}
@@ -2170,9 +2170,11 @@ function StatTrackerV3Content() {
             teamAId={gameData.team_a_id}
             teamBId={gameData.team_b_id}
             teamAName={gameData.team_a?.name || 'Team A'}
-            teamBName={gameData.team_b?.name || 'Team B'}
+            teamBName={coachMode ? (opponentName || 'Opponent') : (gameData.team_b?.name || 'Team B')}
             teamAScore={tracker.scores[gameData.team_a_id] || 0}
             teamBScore={tracker.scores[gameData.team_b_id] || 0}
+            isCoachGame={coachMode}
+            opponentName={opponentName || 'Opponent'}
           />
         )}
 

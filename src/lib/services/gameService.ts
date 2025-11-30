@@ -86,6 +86,35 @@ export class GameService {
       return false;
     }
   }
+
+  // ✅ Update game score (for coach mode final score adjustment)
+  static async updateGameScore(gameId: string, scores: {
+    home_score?: number;
+    away_score?: number;
+  }): Promise<boolean> {
+    try {
+      console.log('🏀 GameService: Updating game score:', { gameId, scores });
+
+      const { error } = await supabase
+        .from('games')
+        .update({
+          ...scores,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', gameId);
+
+      if (error) {
+        console.error('❌ Supabase error updating game score:', error);
+        return false;
+      }
+
+      console.log('✅ Game score updated successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error updating game score:', error);
+      return false;
+    }
+  }
   
   // Create a new game
   static async createGame(gameData: {

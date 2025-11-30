@@ -8,7 +8,8 @@ import { AdminService, UserStats } from '@/lib/services/adminService';
 import { AdminStatsCards } from '@/components/admin/AdminStatsCards';
 import { AdminUserList } from '@/components/admin/AdminUserList';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, ExternalLink } from 'lucide-react';
+import { BarChart3, ExternalLink, Users, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 /**
  * Admin Dashboard Page
@@ -97,6 +98,33 @@ const AdminDashboardPage = () => {
             <AdminStatsCards stats={userStats} loading={statsLoading} />
           </div>
         )}
+
+        {/* Quick Links Section */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4">Quick Links</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Link href="/dashboard/admin/coach-analytics">
+              <Card className="hover:border-orange-500 hover:shadow-md transition-all cursor-pointer">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-100 rounded-lg">
+                        <Users className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Coach Analytics</h3>
+                        <p className="text-sm text-muted-foreground">
+                          View your coach mode usage metrics
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </div>
 
         {/* Site Analytics Section */}
         <div className="mb-8">

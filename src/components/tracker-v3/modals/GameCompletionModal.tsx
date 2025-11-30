@@ -13,25 +13,27 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Trophy, Sparkles, CheckCircle } from 'lucide-react';
+import { X, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { TeamStatsTab } from '@/app/game-viewer/[gameId]/components/TeamStatsTab';
 import { AwardSelectionSection } from './AwardSelectionSection';
+import { CoachFinalScoreSection } from './CoachFinalScoreSection';
 import { AwardSuggestionService } from '@/lib/services/awardSuggestionService';
 import { GameAwardsService } from '@/lib/services/gameAwardsService';
 import { TeamStatsService, PlayerStats } from '@/lib/services/teamStatsService';
 import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { Loader2 } from 'lucide-react';
 
-// ✅ Updated interface to include custom player flags
+// ✅ Updated interface to include custom player flags and coach mode
 export interface GameCompletionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: (awards: { 
     playerOfTheGameId: string; 
     hustlePlayerId: string;
-    isPlayerOfGameCustom?: boolean;  // ✅ NEW
-    isHustlePlayerCustom?: boolean;  // ✅ NEW
+    isPlayerOfGameCustom?: boolean;
+    isHustlePlayerCustom?: boolean;
+    finalOpponentScore?: number;  // ✅ Coach mode: final opponent score
   }) => Promise<void>;
   gameId: string;
   teamAId: string;
@@ -40,6 +42,8 @@ export interface GameCompletionModalProps {
   teamBName: string;
   teamAScore: number;
   teamBScore: number;
+  isCoachGame?: boolean;  // ✅ Coach mode flag
+  opponentName?: string;  // ✅ Coach mode: opponent name
 }
 
 export function GameCompletionModal({
@@ -52,7 +56,9 @@ export function GameCompletionModal({
   teamAName,
   teamBName,
   teamAScore,
-  teamBScore
+  teamBScore,
+  isCoachGame = false,
+  opponentName = 'Opponent'
 }: GameCompletionModalProps) {
   const [selectedPlayerOfGame, setSelectedPlayerOfGame] = useState<string | null>(null);
   const [selectedHustlePlayer, setSelectedHustlePlayer] = useState<string | null>(null);
@@ -64,9 +70,12 @@ export function GameCompletionModal({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  // ✅ Coach mode: editable opponent score
+  const [finalOpponentScore, setFinalOpponentScore] = useState<number>(teamBScore);
 
-  const winningTeamId = teamAScore > teamBScore ? teamAId : teamBId;
-  const winningTeamName = teamAScore > teamBScore ? teamAName : teamBName;
+  // For coach mode, team A is always the coach's team
+  const winningTeamId = isCoachGame ? teamAId : (teamAScore > teamBScore ? teamAId : teamBId);
+  const winningTeamName = isCoachGame ? teamAName : (teamAScore > teamBScore ? teamAName : teamBName);
 
   // Load winning team players and auto-suggest on open
   useEffect(() => {
@@ -78,6 +87,7 @@ export function GameCompletionModal({
       setSuggestedHustlePlayer(null);
       setWinningTeamPlayers([]);
       setRosterWithCustomInfo(new Map());
+      setFinalOpponentScore(teamBScore); // Reset to current opponent score
       return;
     }
 
@@ -137,14 +147,16 @@ export function GameCompletionModal({
         playerOfGame: selectedPlayerOfGame,
         isPlayerOfGameCustom,
         hustlePlayer: selectedHustlePlayer,
-        isHustlePlayerCustom
+        isHustlePlayerCustom,
+        ...(isCoachGame && { finalOpponentScore })
       });
 
       await onComplete({
         playerOfTheGameId: selectedPlayerOfGame,
         hustlePlayerId: selectedHustlePlayer,
         isPlayerOfGameCustom,
-        isHustlePlayerCustom
+        isHustlePlayerCustom,
+        ...(isCoachGame && { finalOpponentScore })
       });
       onClose();
     } catch (error) {
@@ -187,6 +199,17 @@ export function GameCompletionModal({
             </div>
           ) : (
             <div className="space-y-6">
+              {/* ✅ Coach Mode: Final Score Section */}
+              {isCoachGame && (
+                <CoachFinalScoreSection
+                  teamName={teamAName}
+                  teamScore={teamAScore}
+                  opponentName={opponentName}
+                  opponentScore={finalOpponentScore}
+                  onOpponentScoreChange={setFinalOpponentScore}
+                />
+              )}
+
               {/* Winning Team Stats */}
               <div className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="bg-purple-50 px-4 py-2 border-b border-gray-200">

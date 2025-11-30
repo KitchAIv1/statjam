@@ -59,7 +59,7 @@ interface UseTrackerReturn {
   advanceIfNeeded: () => void;
   substitute: (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number }) => Promise<boolean>;
   closeGame: () => Promise<void>;
-  completeGameWithAwards: (awards: { playerOfTheGameId: string; hustlePlayerId: string; isPlayerOfGameCustom?: boolean; isHustlePlayerCustom?: boolean }) => Promise<void>; // ✅ Complete game with awards (supports custom players)
+  completeGameWithAwards: (awards: { playerOfTheGameId: string; hustlePlayerId: string; isPlayerOfGameCustom?: boolean; isHustlePlayerCustom?: boolean; finalOpponentScore?: number }) => Promise<void>; // ✅ Complete game with awards (supports custom players + coach mode)
   saveClockBeforeExit: () => Promise<void>; // ✅ Save clock state before navigation
   showAwardsModal: boolean; // ✅ Awards modal visibility
   setShowAwardsModal: (show: boolean) => void; // ✅ Control awards modal
@@ -1908,33 +1908,22 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   // Game Management
   const closeGame = useCallback(async () => {
     try {
-      // ✅ CRITICAL: Check if game is tied (require OT)
-      const teamAScore = scores[teamAId] || 0;
-      const teamBScore = scores[teamBId] || 0;
-      
-      if (teamAScore === teamBScore && gameStatus !== 'overtime') {
-        const { notify } = await import('@/lib/services/notificationService');
-        notify.warning('Tied Game', 'Complete overtime before selecting awards.');
-        console.warn('⚠️ Cannot complete tied game - overtime required');
-        return;
-      }
-
-      // ✅ Skip awards for coach mode
-      if (isCoachMode) {
-        const { GameService } = await import('@/lib/services/gameService');
-        setClock(prev => ({ ...prev, isRunning: false }));
-        stopShotClock();
+      // ✅ CRITICAL: Check if game is tied (require OT) - Skip for coach mode
+      // Coach mode: scores may not be tracked in games table, user edits final score in modal
+      if (!isCoachMode) {
+        const teamAScore = scores[teamAId] || 0;
+        const teamBScore = scores[teamBId] || 0;
         
-        const success = await GameService.updateGameStatus(gameId, 'completed');
-        if (success) {
-          setGameStatus('completed');
-          console.log('✅ Game closed successfully (coach mode - no awards)');
-          setLastAction('Game ended');
+        if (teamAScore === teamBScore && gameStatus !== 'overtime') {
+          const { notify } = await import('@/lib/services/notificationService');
+          notify.warning('Tied Game', 'Complete overtime before selecting awards.');
+          console.warn('⚠️ Cannot complete tied game - overtime required');
+          return;
         }
-        return;
       }
 
-      // ✅ Show awards modal for regular games
+      // ✅ Show awards modal for both regular and coach mode games
+      // Coach mode will also allow editing final opponent score
       setClock(prev => ({ ...prev, isRunning: false }));
       stopShotClock();
       setShowAwardsModal(true);
@@ -1945,12 +1934,13 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   }, [gameId, scores, teamAId, teamBId, gameStatus, isCoachMode, stopShotClock]);
 
   // ✅ Complete game with awards (called from awards modal)
-  // ✅ UPDATED: Supports custom players (Nov 2025)
+  // ✅ UPDATED: Supports custom players + coach mode final score (Nov 2025)
   const completeGameWithAwards = useCallback(async (awards: {
     playerOfTheGameId: string;
     hustlePlayerId: string;
     isPlayerOfGameCustom?: boolean;
     isHustlePlayerCustom?: boolean;
+    finalOpponentScore?: number;  // ✅ Coach mode: final opponent score
   }) => {
     try {
       const { GameAwardsService } = await import('@/lib/services/gameAwardsService');
@@ -1960,7 +1950,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         playerOfTheGameId: awards.playerOfTheGameId,
         isPlayerOfGameCustom: awards.isPlayerOfGameCustom,
         hustlePlayerId: awards.hustlePlayerId,
-        isHustlePlayerCustom: awards.isHustlePlayerCustom
+        isHustlePlayerCustom: awards.isHustlePlayerCustom,
+        ...(awards.finalOpponentScore !== undefined && { finalOpponentScore: awards.finalOpponentScore })
       });
       
       // Save awards (with custom player flags)
@@ -1971,13 +1962,21 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         isHustlePlayerCustom: awards.isHustlePlayerCustom
       });
 
+      // ✅ Coach mode: Update opponent final score if provided
+      if (awards.finalOpponentScore !== undefined && isCoachMode) {
+        console.log('🏀 Coach mode: Updating final opponent score to', awards.finalOpponentScore);
+        await GameService.updateGameScore(gameId, {
+          away_score: awards.finalOpponentScore
+        });
+      }
+
       // Update game status to completed
       const success = await GameService.updateGameStatus(gameId, 'completed');
       
       if (success) {
         setGameStatus('completed');
         setShowAwardsModal(false);
-        console.log('✅ Game completed with awards (custom player support enabled)');
+        console.log('✅ Game completed with awards (custom player + coach mode support enabled)');
         setLastAction('Game ended with awards');
       } else {
         throw new Error('Failed to update game status');
@@ -1987,7 +1986,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       setLastAction('Error completing game');
       throw error;
     }
-  }, [gameId]);
+  }, [gameId, isCoachMode]);
 
   // ✅ PHASE 6: Manual possession control for edge cases
   const manualSetPossession = useCallback(async (teamId: string, reason: string = 'manual_override') => {

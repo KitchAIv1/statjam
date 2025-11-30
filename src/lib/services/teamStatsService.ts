@@ -173,10 +173,12 @@ export class TeamStatsService {
       console.log('🏀 TeamStatsService: Aggregating team stats for game:', gameId, 'team:', teamId);
 
       // Fetch all game stats for this team (use authenticated for coach games)
+      // ✅ FIX: Exclude opponent stats (is_opponent_stat = false) for correct team totals
       const gameStats = await this.makeAuthenticatedRequest<any>('game_stats', {
         'select': 'stat_type,stat_value,modifier,quarter',
         'game_id': `eq.${gameId}`,
-        'team_id': `eq.${teamId}`
+        'team_id': `eq.${teamId}`,
+        'is_opponent_stat': 'eq.false'
       });
 
       console.log(`📊 TeamStatsService: Found ${gameStats.length} stats for team ${teamId}`);
@@ -729,10 +731,12 @@ export class TeamStatsService {
       }
 
       // Fetch all game stats for this team's players (including custom players, use authenticated for coach games)
+      // ✅ FIX: Exclude opponent stats (is_opponent_stat = false) for correct player totals
       const gameStats = await this.makeAuthenticatedRequest<any>('game_stats', {
         'select': 'player_id,custom_player_id,stat_type,stat_value,modifier,quarter',
         'game_id': `eq.${gameId}`,
-        'team_id': `eq.${teamId}`
+        'team_id': `eq.${teamId}`,
+        'is_opponent_stat': 'eq.false'
       });
 
       console.log(`📊 TeamStatsService: Found ${gameStats.length} stats for team`);
