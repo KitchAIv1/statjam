@@ -102,10 +102,27 @@ export function useLiveGamesHybrid() {
         return;
       }
 
+      // ✅ FIX: Filter out completed games (even if is_clock_running=true due to race condition)
+      // This ensures completed games never appear in "LIVE NOW" sections
+      const liveGamesOnly = gamesData.filter((game) => {
+        const status = String(game.status || '').toLowerCase();
+        return status !== 'completed';
+      });
+
+      if (liveGamesOnly.length === 0) {
+        console.log('📝 useLiveGamesHybrid: No live games found after filtering completed games');
+        setGames([]);
+        setLoading(false);
+        return;
+      }
+
+      // Use filtered games for remaining processing
+      const filteredGamesData = liveGamesOnly;
+
       // Step 2: Get team names
       const teamIds = [...new Set([
-        ...gamesData.map(g => g.team_a_id),
-        ...gamesData.map(g => g.team_b_id)
+        ...filteredGamesData.map(g => g.team_a_id),
+        ...filteredGamesData.map(g => g.team_b_id)
       ])].filter(Boolean);
 
       let teamsData: any[] = [];
@@ -118,7 +135,7 @@ export function useLiveGamesHybrid() {
       }
 
       // Step 3: Get tournament names
-      const tournamentIds = [...new Set(gamesData.map(g => g.tournament_id))].filter(Boolean);
+      const tournamentIds = [...new Set(filteredGamesData.map(g => g.tournament_id))].filter(Boolean);
       
       let tournamentsData: any[] = [];
       if (tournamentIds.length > 0) {
@@ -135,9 +152,9 @@ export function useLiveGamesHybrid() {
 
       // Step 5: ✅ SCALABLE FIX: Fetch stats per-game to avoid Supabase 1000 row limit
       // Each game's stats are fetched individually in parallel (bypasses 1000 limit)
-      console.log(`🏀 useLiveGamesHybrid: Fetching stats for ${gamesData.length} games (per-game queries)`);
+      console.log(`🏀 useLiveGamesHybrid: Fetching stats for ${filteredGamesData.length} games (per-game queries)`);
       const enrichedGames: LiveGame[] = await Promise.all(
-        gamesData.map(async (game) => {
+        filteredGamesData.map(async (game) => {
           let calculatedScores = { homeScore: game.home_score || 0, awayScore: game.away_score || 0 };
           
           try {

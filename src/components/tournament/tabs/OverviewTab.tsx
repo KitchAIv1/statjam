@@ -1,35 +1,35 @@
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { PlayerLeader } from '@/lib/services/tournamentLeadersService';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User, Trophy, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, Trophy, Sparkles, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
 import { useTournamentLeaders } from '@/hooks/useTournamentLeaders';
 import { useTournamentAwards } from '@/hooks/useTournamentAwards';
 import { AwardDisplayCard } from '@/components/tournament/AwardDisplayCard';
+import { TeamMatchupCard } from '@/components/tournament/TeamMatchupCard';
+import { useTournamentMatchups } from '@/hooks/useTournamentMatchups';
 
 interface OverviewTabProps {
   data: TournamentPageData;
 }
 
-const SUMMARY_CARDS = [
-  { label: 'Teams', key: 'teamCount' as const },
-  { label: 'Games', key: 'gameCount' as const },
-  { label: 'Venues', key: 'venueCount' as const },
-  { label: 'Divisions', key: 'divisionCount' as const },
-];
 
 export function OverviewTab({ data }: OverviewTabProps) {
   const router = useRouter();
   const [topScorers, setTopScorers] = useState<PlayerLeader[]>([]);
   const [loadingLeaders, setLoadingLeaders] = useState(true);
   const { isOpen, playerId, isCustomPlayer, gameStats, gameId, awardType, openModal, closeModal } = usePlayerProfileModal();
+  const [matchupFilter, setMatchupFilter] = useState<'all' | 'completed' | 'scheduled'>('all');
+  const matchupScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   // ✅ OPTIMIZED: Use custom hook with caching
   const { leaders: allLeaders, loading: leadersLoading } = useTournamentLeaders(data.tournament.id, 'points', 1);
@@ -37,6 +37,12 @@ export function OverviewTab({ data }: OverviewTabProps) {
   // ✅ Fetch tournament awards (fetch 10, show 3 by default)
   const { awards: tournamentAwards, loading: awardsLoading } = useTournamentAwards(data.tournament.id, 10);
   const [awardsExpanded, setAwardsExpanded] = useState(false);
+
+  // ✅ Fetch tournament matchups (completed + scheduled)
+  const { matchups, loading: matchupsLoading } = useTournamentMatchups(data.tournament.id, {
+    status: matchupFilter === 'all' ? undefined : matchupFilter,
+    limit: 20
+  });
   
   // Show 3 awards by default, all when expanded (latest first - already sorted by gameDate DESC)
   const COLLAPSED_AWARDS_COUNT = 3;
@@ -53,6 +59,182 @@ export function OverviewTab({ data }: OverviewTabProps) {
     setLoadingLeaders(leadersLoading);
   }, [allLeaders, leadersLoading]);
 
+  // ✅ Drag-to-scroll functionality for matchup cards (with global listeners for trackpad/mouse)
+  useEffect(() => {
+    const scrollContainer = matchupScrollRef.current;
+    if (!scrollContainer) return;
+
+    let isDown = false;
+    let startX: number;
+    let scrollLeft: number;
+    let hasMoved = false;
+    let containerRect: DOMRect;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      // Don't start drag if clicking directly on a card - let card handle click
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-matchup-card]')) {
+        return; // Let the card's onClick handle navigation
+      }
+      
+      // Use getBoundingClientRect for accurate position calculation
+      containerRect = scrollContainer.getBoundingClientRect();
+      isDown = true;
+      hasMoved = false;
+      scrollContainer.style.cursor = 'grabbing';
+      scrollContainer.style.userSelect = 'none';
+      startX = e.pageX - containerRect.left;
+      scrollLeft = scrollContainer.scrollLeft;
+      
+      // Attach global listeners for dragging outside container
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+    };
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!isDown || !scrollContainer) return;
+      
+      // Recalculate rect in case container moved/resized
+      containerRect = scrollContainer.getBoundingClientRect();
+      const x = e.pageX - containerRect.left;
+      const walk = (x - startX) * 1.5; // Scroll speed multiplier
+      
+      // Only prevent default and scroll if we've moved enough (5px threshold)
+      if (Math.abs(walk) > 5) {
+        hasMoved = true;
+        e.preventDefault();
+        scrollContainer.scrollLeft = scrollLeft - walk;
+      }
+    };
+
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      if (!isDown) return;
+      
+      const wasDragging = hasMoved;
+      isDown = false;
+      scrollContainer.style.cursor = 'grab';
+      scrollContainer.style.userSelect = '';
+      
+      // Only prevent click if we actually dragged (not just clicked)
+      if (wasDragging) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      // If no drag occurred, let the click event propagate to the card
+      
+      // Remove global listeners
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      
+      hasMoved = false;
+    };
+
+    // Touch handlers for mobile
+    let touchStartX: number;
+    let touchScrollLeft: number;
+    let touchHasMoved = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      containerRect = scrollContainer.getBoundingClientRect();
+      touchStartX = e.touches[0].pageX - containerRect.left;
+      touchScrollLeft = scrollContainer.scrollLeft;
+      touchHasMoved = false;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!touchStartX) return;
+      
+      containerRect = scrollContainer.getBoundingClientRect();
+      const x = e.touches[0].pageX - containerRect.left;
+      const walk = (x - touchStartX) * 1.5;
+      
+      if (Math.abs(walk) > 3) {
+        touchHasMoved = true;
+      }
+      
+      e.preventDefault();
+      scrollContainer.scrollLeft = touchScrollLeft - walk;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      // If we dragged, prevent card tap
+      if (touchHasMoved) {
+        e.preventDefault();
+      }
+      touchStartX = 0;
+      touchScrollLeft = 0;
+      touchHasMoved = false;
+    };
+
+    scrollContainer.addEventListener('mousedown', handleMouseDown);
+    scrollContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+    scrollContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+    scrollContainer.addEventListener('touchend', handleTouchEnd);
+
+    // Set initial cursor style
+    scrollContainer.style.cursor = 'grab';
+
+    return () => {
+      scrollContainer.removeEventListener('mousedown', handleMouseDown);
+      scrollContainer.removeEventListener('touchstart', handleTouchStart);
+      scrollContainer.removeEventListener('touchmove', handleTouchMove);
+      scrollContainer.removeEventListener('touchend', handleTouchEnd);
+      
+      // Clean up global listeners if still attached
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, []);
+
+  // ✅ Track scroll position for navigation arrows
+  useEffect(() => {
+    const scrollContainer = matchupScrollRef.current;
+    if (!scrollContainer) return;
+
+    const updateScrollButtons = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    };
+
+    // Initial check
+    updateScrollButtons();
+
+    // Update on scroll
+    scrollContainer.addEventListener('scroll', updateScrollButtons);
+    
+    // Update on resize
+    window.addEventListener('resize', updateScrollButtons);
+
+    return () => {
+      scrollContainer.removeEventListener('scroll', updateScrollButtons);
+      window.removeEventListener('resize', updateScrollButtons);
+    };
+  }, [matchups]);
+
+  // ✅ Scroll functions for navigation arrows
+  const scrollLeft = () => {
+    const scrollContainer = matchupScrollRef.current;
+    if (!scrollContainer) return;
+    const cardWidth = 320; // w-80 = 320px
+    const gap = 16; // gap-4 = 16px
+    scrollContainer.scrollBy({
+      left: -(cardWidth + gap),
+      behavior: 'smooth'
+    });
+  };
+
+  const scrollRight = () => {
+    const scrollContainer = matchupScrollRef.current;
+    if (!scrollContainer) return;
+    const cardWidth = 320; // w-80 = 320px
+    const gap = 16; // gap-4 = 16px
+    scrollContainer.scrollBy({
+      left: cardWidth + gap,
+      behavior: 'smooth'
+    });
+  };
+
   const getInitials = (name: string): string => {
     return name
       .split(' ')
@@ -64,17 +246,140 @@ export function OverviewTab({ data }: OverviewTabProps) {
 
   return (
     <div className="space-y-3 sm:space-y-4 md:space-y-6">
-      {/* Hero Summary Cards */}
-      <div className="grid gap-2 sm:gap-3 md:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
-        {SUMMARY_CARDS.map((card) => (
-          <Card key={card.key} className="rounded-xl border border-white/10 bg-[#121212] p-3 sm:rounded-2xl sm:p-4 md:p-6">
-            <div className="text-[10px] uppercase tracking-wide text-[#B3B3B3] sm:text-xs md:text-sm">{card.label}</div>
-            <div className="mt-1 text-xl font-bold text-white sm:mt-2 sm:text-2xl md:text-3xl">
-              {data.summary[card.key]}
+      {/* Team Matchups Section */}
+      <Card className="space-y-3 overflow-hidden rounded-xl border border-white/10 bg-[#121212] p-3 sm:space-y-4 sm:rounded-2xl sm:p-4 md:space-y-6 md:p-6">
+        <header className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-white sm:text-lg md:text-xl">Recent Matchups</h2>
+            <p className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">Completed games and upcoming schedule</p>
+          </div>
+          
+          {/* Filter Tabs */}
+          <div className="flex gap-2 rounded-lg border border-white/10 bg-black/40 p-1">
+            <button
+              onClick={() => setMatchupFilter('all')}
+              className={`rounded-md px-3 py-1.5 text-[10px] font-medium transition-colors sm:text-xs ${
+                matchupFilter === 'all'
+                  ? 'bg-[#FF3B30] text-white'
+                  : 'text-[#B3B3B3] hover:text-white'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setMatchupFilter('completed')}
+              className={`rounded-md px-3 py-1.5 text-[10px] font-medium transition-colors sm:text-xs ${
+                matchupFilter === 'completed'
+                  ? 'bg-[#FF3B30] text-white'
+                  : 'text-[#B3B3B3] hover:text-white'
+              }`}
+            >
+              Completed
+            </button>
+            <button
+              onClick={() => setMatchupFilter('scheduled')}
+              className={`rounded-md px-3 py-1.5 text-[10px] font-medium transition-colors sm:text-xs ${
+                matchupFilter === 'scheduled'
+                  ? 'bg-[#FF3B30] text-white'
+                  : 'text-[#B3B3B3] hover:text-white'
+              }`}
+            >
+              Upcoming
+            </button>
+          </div>
+        </header>
+
+        {/* Horizontal Scroll Container with Navigation Arrows */}
+        <div className="relative">
+          {/* Navigation Arrows - Only show when there are matchups */}
+          {matchups.length > 3 && (
+            <>
+              <button
+                onClick={scrollLeft}
+                disabled={!canScrollLeft}
+                aria-label="Scroll left"
+                className={`absolute left-0 top-1/2 z-10 -translate-y-1/2 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#FF3B30] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                  !canScrollLeft ? 'hidden' : ''
+                }`}
+              >
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+              <button
+                onClick={scrollRight}
+                disabled={!canScrollRight}
+                aria-label="Scroll right"
+                className={`absolute right-0 top-1/2 z-10 -translate-y-1/2 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#FF3B30] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                  !canScrollRight ? 'hidden' : ''
+                }`}
+              >
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </>
+          )}
+
+          {/* Scroll Container */}
+          {matchupsLoading ? (
+            <div 
+              ref={matchupScrollRef}
+              className="matchup-scroll-container flex gap-4 overflow-x-auto pb-2"
+              style={{
+                scrollBehavior: 'smooth',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="h-48 w-80 flex-shrink-0 animate-pulse rounded-xl border border-white/10 bg-white/5" />
+              ))}
             </div>
-          </Card>
-        ))}
-      </div>
+          ) : matchups.length > 0 ? (
+            <div 
+              ref={matchupScrollRef}
+              className="matchup-scroll-container flex gap-4 overflow-x-auto pb-2"
+              style={{
+                scrollBehavior: 'smooth',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              {matchups.map((matchup) => (
+                <div key={matchup.gameId} data-matchup-card>
+                  <TeamMatchupCard
+                    gameId={matchup.gameId}
+                    teamA={{
+                      name: matchup.teamA.name,
+                      logo: matchup.teamA.logo,
+                      score: matchup.teamA.score,
+                      bgColor: '#000000',
+                      textColor: '#FFFFFF'
+                    }}
+                    teamB={{
+                      name: matchup.teamB.name,
+                      logo: matchup.teamB.logo,
+                      score: matchup.teamB.score,
+                      bgColor: '#FFFFFF',
+                      textColor: '#000000'
+                    }}
+                    gameStatus={matchup.status}
+                    gameDate={matchup.gameDate}
+                    onClick={() => window.open(`/game-viewer/${matchup.gameId}`, '_blank')}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12 px-4">
+              <div className="text-center">
+                <p className="text-sm text-[#B3B3B3] sm:text-base">
+                  {matchupFilter === 'scheduled' 
+                    ? 'No upcoming games scheduled'
+                    : matchupFilter === 'completed'
+                    ? 'No completed games yet'
+                    : 'No matchups available'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
 
       {/* Leaderboard Highlights */}
       <Card className="space-y-3 rounded-xl border border-white/10 bg-[#121212] p-3 sm:space-y-4 sm:rounded-2xl sm:p-4 md:space-y-6 md:p-6">

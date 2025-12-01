@@ -278,6 +278,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               <GameAwardsSection 
                 isDark={isDark}
                 loading={gameAwardsPrefetch.loading}
+                gameId={gameId}
                 prefetchedData={!gameAwardsPrefetch.loading ? {
                   playerOfTheGame: gameAwardsPrefetch.playerOfTheGame,
                   hustlePlayer: gameAwardsPrefetch.hustlePlayer

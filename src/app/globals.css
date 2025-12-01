@@ -568,3 +568,49 @@ html {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
 }
+
+/* ✅ MATCHUP SCROLL CONTAINER: Horizontal scroll with always-visible scrollbar, navigation arrows, and drag-to-scroll */
+.matchup-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+  max-width: 1000px;
+  margin: 0 auto;
+  cursor: grab;
+  scroll-behavior: smooth;
+}
+
+.matchup-scroll-container:active {
+  cursor: grabbing;
+}
+
+.matchup-scroll-container:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.08);
+}
+
+.matchup-scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.matchup-scroll-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.matchup-scroll-container:hover::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.matchup-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.matchup-scroll-container:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.matchup-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.6);
+}

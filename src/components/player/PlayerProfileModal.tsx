@@ -200,6 +200,32 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
 
         const playerStat = playerStats.find(p => p.playerId === playerId);
 
+        // ✅ Fetch ALL game_stats for score calculation (source of truth)
+        const { data: allGameStats } = await supabase
+          .from('game_stats')
+          .select('team_id, stat_value, modifier, is_opponent_stat')
+          .eq('game_id', gameId);
+
+        // ✅ Calculate scores from game_stats (matches useGameViewerV2 and getTournamentAwards pattern)
+        let teamAScore = 0;
+        let teamBScore = 0;
+        
+        allGameStats?.forEach(stat => {
+          if (stat.modifier === 'made') {
+            const points = stat.stat_value || 0;
+            
+            // Check is_opponent_stat flag for coach mode consistency
+            if (stat.is_opponent_stat) {
+              // Opponent stats go to team B score
+              teamBScore += points;
+            } else if (stat.team_id === game.team_a_id) {
+              teamAScore += points;
+            } else if (stat.team_id === game.team_b_id) {
+              teamBScore += points;
+            }
+          }
+        });
+
         // Fetch shooting stats - check both player_id and custom_player_id
         const shootingStatsQuery = supabase
           .from('game_stats')
@@ -245,8 +271,8 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
           gameDate: game.start_time || game.created_at,
           teamAName: game.team_a?.name || 'Team A',
           teamBName: game.team_b?.name || 'Team B',
-          teamAScore: game.home_score || 0,
-          teamBScore: game.away_score || 0,
+          teamAScore: teamAScore,
+          teamBScore: teamBScore,
           playerTeamId,
           playerMinutes: playerStat?.minutes || 0,
           shootingStats: {
