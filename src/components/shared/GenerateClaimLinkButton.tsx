@@ -10,6 +10,7 @@
 import React, { useState } from 'react';
 import { Link2, Copy, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ClaimService } from '@/lib/services/claimService';
 
 interface GenerateClaimLinkButtonProps {
@@ -72,22 +73,31 @@ export function GenerateClaimLinkButton({ customPlayerId, playerName }: Generate
   if (status === 'idle' || status === 'error') {
     return (
       <div className="flex flex-col items-end gap-1">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={isDisabled ? undefined : handleGenerate}
-          disabled={isDisabled}
-          className={`gap-1.5 whitespace-nowrap ${
-            isDisabled 
-              ? 'opacity-50 cursor-not-allowed' 
-              : 'hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300'
-          }`}
-          title={isDisabled ? 'Claim link generation disabled during testing' : `Generate claim link for ${playerName}`}
-        >
-          <Link2 className="w-4 h-4" />
-          <span className="text-xs">Claim Link</span>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={isDisabled ? undefined : handleGenerate}
+              disabled={isDisabled}
+              className={`gap-1.5 whitespace-nowrap ${
+                isDisabled 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300'
+              }`}
+            >
+              <Link2 className="w-4 h-4" />
+              <span className="text-xs">Claim Link</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs bg-gray-900 text-white border-gray-700">
+            <p className="font-medium text-white">Generate Claim Link</p>
+            <p className="text-xs text-gray-300">
+              Create a unique link for {playerName} to claim their player profile and access their stats.
+            </p>
+          </TooltipContent>
+        </Tooltip>
         {status === 'error' && (
           <span className="text-xs text-red-500">{errorMessage}</span>
         )}
@@ -113,30 +123,41 @@ export function GenerateClaimLinkButton({ customPlayerId, playerName }: Generate
 
   // Success state - show copy button
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      onClick={handleCopy}
-      className={`gap-1.5 whitespace-nowrap ${
-        copied 
-          ? 'bg-green-50 text-green-600 border-green-300' 
-          : 'bg-orange-50 text-orange-600 border-orange-300'
-      }`}
-      title="Copy claim link"
-    >
-      {copied ? (
-        <>
-          <Check className="w-4 h-4" />
-          <span className="text-xs">Copied!</span>
-        </>
-      ) : (
-        <>
-          <Copy className="w-4 h-4" />
-          <span className="text-xs">Copy Link</span>
-        </>
-      )}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={handleCopy}
+          className={`gap-1.5 whitespace-nowrap ${
+            copied 
+              ? 'bg-green-50 text-green-600 border-green-300' 
+              : 'bg-orange-50 text-orange-600 border-orange-300'
+          }`}
+        >
+          {copied ? (
+            <>
+              <Check className="w-4 h-4" />
+              <span className="text-xs">Copied!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              <span className="text-xs">Copy Link</span>
+            </>
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs bg-gray-900 text-white border-gray-700">
+        <p className="font-medium text-white">{copied ? 'Link Copied!' : 'Copy Claim Link'}</p>
+        <p className="text-xs text-gray-300">
+          {copied 
+            ? 'Share this link with the player via text, email, or any messaging app.' 
+            : 'Click to copy the claim link to your clipboard.'}
+        </p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

@@ -17,7 +17,10 @@ import { ProfileCard, ProfileCardSkeleton } from '@/components/profile/ProfileCa
 import { ProfileEditModal } from '@/components/profile/ProfileEditModal';
 import { ProfileService } from '@/lib/services/profileService';
 import { Card } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BookOpen } from 'lucide-react';
+import { AnnouncementModal } from '@/components/announcements';
+import { PLAYER_CLAIM_ANNOUNCEMENT } from '@/config/announcements';
 
 /**
  * CoachDashboardContent - Main dashboard content with search params
@@ -146,47 +149,36 @@ const CoachDashboardContent = () => {
             />
 
             {/* Profile Card - Replaces old page header with richer profile display */}
-            {profileLoading ? (
-              <ProfileCardSkeleton />
-            ) : profileData ? (
-              <ProfileCard
-                profileData={profileData}
-                shareData={ProfileService.generateShareData(profileData)}
-                onEdit={() => setShowEditModal(true)}
-                onShare={handleShare}
-              />
-            ) : null}
-
-            {/* Automation Guide Quick Link */}
-            <div>
-              <Card
-                className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 border-orange-200 dark:border-orange-800 cursor-pointer overflow-hidden"
-                onClick={() => router.push('/dashboard/coach/automation-guide')}
-              >
-                <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg flex-shrink-0">
-                      <BookOpen className="w-7 h-7 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                          Tracker Automation Guide
-                        </h3>
-                        <span className="text-xs px-2 py-1 bg-orange-500 text-white rounded-full font-medium flex-shrink-0">NEW</span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Learn how Minimal, Balanced, and Full presets adapt to Quick Track and official games
-                      </p>
-                    </div>
-                    <div className="text-orange-600 dark:text-orange-400 flex-shrink-0">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+            <div className="relative">
+              {profileLoading ? (
+                <ProfileCardSkeleton />
+              ) : profileData ? (
+                <>
+                  {/* Automation Guide Button - Inside Profile Card, Upper Right */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => router.push('/dashboard/coach/automation-guide')}
+                        className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
+                      >
+                        <BookOpen className="w-4 h-4" />
+                        <span className="text-xs font-medium">Guide</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 bg-white/25 rounded">NEW</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="bg-gray-900 text-white px-3 py-2">
+                      <p className="font-medium">Tracker Automation Guide</p>
+                      <p className="text-xs text-gray-300">Learn Minimal, Balanced & Full presets</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <ProfileCard
+                    profileData={profileData}
+                    shareData={ProfileService.generateShareData(profileData)}
+                    onEdit={() => setShowEditModal(true)}
+                    onShare={handleShare}
+                  />
+                </>
+              ) : null}
             </div>
 
             {/* Section Content */}
@@ -214,6 +206,14 @@ const CoachDashboardContent = () => {
             onSave={updateProfile}
           />
         )}
+
+        {/* Player Claim Announcement Modal - Shows once */}
+        <AnnouncementModal
+          config={{
+            ...PLAYER_CLAIM_ANNOUNCEMENT,
+            ctaAction: () => router.push('/dashboard/coach?section=teams&highlight=claim'),
+          }}
+        />
       </div>
     </ErrorBoundary>
   );

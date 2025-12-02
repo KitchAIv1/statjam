@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Users, PlayCircle, Trophy, Settings, Share2, Eye, EyeOff, 
   MapPin, Calendar, MoreVertical, Edit, Trash2, UserPlus, AlertCircle, BarChart3,
@@ -47,6 +48,9 @@ interface CoachTeamCardProps {
  * Follows .cursorrules: <500 lines, single responsibility
  */
 export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
   // Modal states
   const [showQuickTrack, setShowQuickTrack] = useState(false);
   const [showTournamentSearch, setShowTournamentSearch] = useState(false);
@@ -55,6 +59,59 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   const [showEditTeam, setShowEditTeam] = useState(false);
   const [showGameStats, setShowGameStats] = useState(false);
   const [selectedGame, setSelectedGame] = useState<CoachGame | null>(null);
+  
+  // ✅ Highlight state for claim flow onboarding
+  const [highlightManage, setHighlightManage] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  
+  // Check if we should highlight the Manage button (from announcement CTA)
+  useEffect(() => {
+    const highlight = searchParams.get('highlight');
+    if (highlight === 'claim') {
+      // Highlight ALL team cards' Manage buttons
+      setHighlightManage(true);
+      
+      // Scroll to first team with custom players (only once)
+      const alreadyScrolled = sessionStorage.getItem('highlight_claim_scrolled');
+      if (!alreadyScrolled && team.players_count > 0 && cardRef.current) {
+        sessionStorage.setItem('highlight_claim_scrolled', 'true');
+        setTimeout(() => {
+          cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+      
+      // Clear URL param after a short delay (only once, use sessionStorage flag)
+      const alreadyCleared = sessionStorage.getItem('highlight_claim_cleared');
+      if (!alreadyCleared) {
+        sessionStorage.setItem('highlight_claim_cleared', 'true');
+        setTimeout(() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('highlight');
+          window.history.replaceState({}, '', url.toString());
+          // Clear the flags after 5 seconds so it can work again next time
+          setTimeout(() => {
+            sessionStorage.removeItem('highlight_claim_cleared');
+            sessionStorage.removeItem('highlight_claim_scrolled');
+          }, 5000);
+        }, 100);
+      }
+    }
+  }, [searchParams, team.players_count]);
+  
+  // Stop highlight on any click (with delay to prevent immediate trigger)
+  useEffect(() => {
+    if (!highlightManage) return;
+    
+    const handleClick = () => setHighlightManage(false);
+    const timer = setTimeout(() => {
+      document.addEventListener('click', handleClick, { once: true });
+    }, 500); // Longer delay so user can see it
+    
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', handleClick);
+    };
+  }, [highlightManage]);
   
   // Game history states
   const [games, setGames] = useState<CoachGame[]>([]);
@@ -281,7 +338,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
 
   return (
     <>
-      <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden">
+      <Card ref={cardRef} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-accent to-orange-500"></div>
         <CardHeader className="pb-3 relative">
           {/* Mobile-First Layout */}
@@ -431,10 +488,17 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 content="Open the roster manager to add players before you start tracking."
               >
                 <Button
-                  onClick={() => setShowPlayerManagement(true)}
+                  onClick={() => {
+                    setHighlightManage(false);
+                    setShowPlayerManagement(true);
+                  }}
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 !border-gray-300"
+                  className={`gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 !border-gray-300 ${
+                    highlightManage 
+                      ? 'ring-2 ring-orange-500 ring-offset-2 animate-pulse bg-orange-50 border-orange-400 text-orange-700' 
+                      : ''
+                  }`}
                 >
                   <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                   <span className="hidden sm:inline truncate">Manage</span>

@@ -179,15 +179,15 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
               {statsDisplay.map((stat, index) => (
                 <div 
                   key={index}
-                  className="bg-muted/50 rounded-lg p-3 text-center hover:bg-muted transition-colors"
+                  className="bg-primary/10 dark:bg-primary/20 rounded-lg p-3 text-center hover:bg-primary/15 dark:hover:bg-primary/25 transition-colors border border-primary/20"
                 >
                   <div className="flex items-center justify-center mb-1">
                     <stat.icon className="w-4 h-4 text-primary" />
                   </div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <div className="text-2xl font-bold text-primary drop-shadow-sm">
                     {stat.value}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-foreground/70">
                     {stat.label}
                   </div>
                 </div>
