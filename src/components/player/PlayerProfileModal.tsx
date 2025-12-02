@@ -340,15 +340,47 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
   if (!isOpen) return null;
 
   const isAwardView = awardType && gameStats && gameId;
-  const awardTitle = awardType === 'player_of_the_game' ? 'Player of the Game' : 'Hustle Player of the Game';
-  const AwardIcon = awardType === 'player_of_the_game' ? Trophy : Sparkles;
+  const isPOTG = awardType === 'player_of_the_game';
+  const awardTitle = isPOTG ? 'Player of the Game' : 'Hustle Player of the Game';
+  const AwardIcon = isPOTG ? Trophy : Sparkles;
+  
+  // ✅ Distinct color schemes for each award type (entire modal + badge)
+  const awardColors = isPOTG 
+    ? {
+        // Modal background - Amber/Gold theme for Player of the Game
+        modalBg: 'bg-gradient-to-br from-amber-600 via-yellow-500 to-orange-600',
+        sidePanelBg: 'bg-gradient-to-br from-amber-700/30 to-orange-700/30',
+        // Badge colors
+        gradient: 'from-amber-400/20 to-orange-400/20',
+        border: 'border-amber-300/30',
+        iconColor: 'text-amber-200',
+        titleColor: 'text-amber-50',
+        textColor: 'text-amber-100/90',
+        accentColor: 'text-amber-200',
+        separatorColor: 'text-amber-200/60'
+      }
+    : {
+        // Modal background - Cyan/Teal theme for Hustle Player
+        modalBg: 'bg-gradient-to-br from-cyan-600 via-teal-500 to-emerald-600',
+        sidePanelBg: 'bg-gradient-to-br from-cyan-700/30 to-teal-700/30',
+        // Badge colors
+        gradient: 'from-cyan-400/20 to-teal-400/20',
+        border: 'border-cyan-300/30',
+        iconColor: 'text-cyan-200',
+        titleColor: 'text-cyan-50',
+        textColor: 'text-cyan-100/90',
+        accentColor: 'text-cyan-200',
+        separatorColor: 'text-cyan-200/60'
+      };
+  
+  // Default modal colors for non-award view
+  const defaultModalBg = 'bg-gradient-to-br from-red-600 via-red-500 to-orange-600';
+  const defaultSidePanelBg = 'bg-gradient-to-br from-red-700/30 to-orange-700/30';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={`max-w-5xl max-h-[90vh] overflow-hidden p-0 border-0 shadow-2xl ${
-        isAwardView 
-          ? 'bg-gradient-to-br from-yellow-600 via-yellow-500 to-orange-600' 
-          : 'bg-gradient-to-br from-red-600 via-red-500 to-orange-600'
+        isAwardView ? awardColors.modalBg : defaultModalBg
       }`}>
         <DialogHeader className="sr-only">
           <DialogTitle>{isAwardView ? `${awardTitle} - Player Profile` : 'Player Profile'}</DialogTitle>
@@ -370,28 +402,28 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
             {isAwardView && (
               loadingAwardDetails ? (
                 <div className="relative -mt-2 mb-4">
-                  <div className="flex flex-col gap-2 bg-gradient-to-r from-yellow-400/20 to-orange-400/20 backdrop-blur-sm rounded-xl border-2 border-yellow-300/30 px-4 py-3 shadow-lg">
-                    <Skeleton className="h-6 w-48 bg-yellow-300/20" />
-                    <Skeleton className="h-4 w-full bg-yellow-300/20" />
+                  <div className={`flex flex-col gap-2 bg-gradient-to-r ${awardColors.gradient} backdrop-blur-sm rounded-xl border-2 ${awardColors.border} px-4 py-3 shadow-lg`}>
+                    <Skeleton className="h-6 w-48 bg-white/20" />
+                    <Skeleton className="h-4 w-full bg-white/20" />
                   </div>
                 </div>
               ) : gameAwardDetails ? (
                 <div className="relative -mt-2 mb-4">
-                  <div className="flex flex-col gap-2 bg-gradient-to-r from-yellow-400/20 to-orange-400/20 backdrop-blur-sm rounded-xl border-2 border-yellow-300/30 px-4 py-3 shadow-lg">
+                  <div className={`flex flex-col gap-2 bg-gradient-to-r ${awardColors.gradient} backdrop-blur-sm rounded-xl border-2 ${awardColors.border} px-4 py-3 shadow-lg`}>
                     {/* Award Title */}
                     <div className="flex items-center gap-3">
                       <div className="flex-shrink-0">
-                        <AwardIcon className="h-6 w-6 sm:h-7 sm:w-7 text-yellow-200 drop-shadow-lg" />
+                        <AwardIcon className={`h-6 w-6 sm:h-7 sm:w-7 ${awardColors.iconColor} drop-shadow-lg`} />
                       </div>
                       <div className="flex-1">
-                        <div className="text-base sm:text-lg font-bold text-yellow-50 drop-shadow-md">
+                        <div className={`text-base sm:text-lg font-bold ${awardColors.titleColor} drop-shadow-md`}>
                           {awardTitle}
                         </div>
                       </div>
                     </div>
                     
                     {/* Compact Game Details Inside Badge */}
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] sm:text-xs text-yellow-100/90 pl-9 sm:pl-10">
+                    <div className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] sm:text-xs ${awardColors.textColor} pl-9 sm:pl-10`}>
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         <span>{new Date(gameAwardDetails.gameDate).toLocaleDateString('en-US', { 
@@ -400,15 +432,15 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                           year: 'numeric' 
                         })}</span>
                       </div>
-                      <span className="text-yellow-200/60">•</span>
+                      <span className={awardColors.separatorColor}>•</span>
                       <div className="flex items-center gap-1">
                         <span className="font-medium">{gameAwardDetails.teamAName} vs {gameAwardDetails.teamBName}</span>
-                        <span className="font-bold text-yellow-200">•</span>
-                        <span className="font-bold text-yellow-200">{gameAwardDetails.teamAScore} - {gameAwardDetails.teamBScore}</span>
+                        <span className={`font-bold ${awardColors.accentColor}`}>•</span>
+                        <span className={`font-bold ${awardColors.accentColor}`}>{gameAwardDetails.teamAScore} - {gameAwardDetails.teamBScore}</span>
                       </div>
                       {gameAwardDetails.playerMinutes > 0 && (
                         <>
-                          <span className="text-yellow-200/60">•</span>
+                          <span className={awardColors.separatorColor}>•</span>
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             <span>{Math.round(gameAwardDetails.playerMinutes)} min</span>
@@ -753,7 +785,9 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
           </div>
 
           {/* Player Image Section - Right side, always visible */}
-          <div className="relative w-[35%] sm:w-[40%] lg:w-[45%] flex-shrink-0 bg-gradient-to-br from-red-700/30 to-orange-700/30 overflow-hidden">
+          <div className={`relative w-[35%] sm:w-[40%] lg:w-[45%] flex-shrink-0 overflow-hidden ${
+            isAwardView ? awardColors.sidePanelBg : defaultSidePanelBg
+          }`}>
             {identity?.posePhotoUrl ? (
               <>
                 {/* Image fills container, aligned to right */}
@@ -768,7 +802,10 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                 />
                 {/* Jersey Number Overlay */}
                 {identity.jerseyNumber && (
-                  <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 lg:bottom-4 lg:right-4 text-2xl sm:text-3xl lg:text-6xl font-bold text-white opacity-50 drop-shadow-lg z-10">
+                  <div 
+                    className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 lg:bottom-4 lg:right-4 text-2xl sm:text-3xl lg:text-6xl font-bold text-white/70 z-10"
+                    style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3), 0 0 20px rgba(0,0,0,0.4)' }}
+                  >
                     #{identity.jerseyNumber}
                   </div>
                 )}
@@ -794,7 +831,10 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                     </AvatarFallback>
                   </Avatar>
                   {identity?.jerseyNumber && (
-                    <div className="text-2xl sm:text-4xl lg:text-7xl font-bold text-white/40 mt-2 sm:mt-4">
+                    <div 
+                      className="text-2xl sm:text-4xl lg:text-7xl font-bold text-white/60 mt-2 sm:mt-4"
+                      style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3), 0 0 20px rgba(0,0,0,0.4)' }}
+                    >
                       #{identity.jerseyNumber}
                     </div>
                   )}

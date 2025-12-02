@@ -46,9 +46,15 @@ export function AwardDisplayCard({
     : 'Hustle Player';
   
   const Icon = awardType === 'player_of_the_game' ? Trophy : Sparkles;
-  const bgColor = awardType === 'player_of_the_game' 
-    ? 'bg-gradient-to-br from-purple-500 to-indigo-600' 
-    : 'bg-gradient-to-br from-orange-500 to-red-600';
+  
+  // ✅ Distinct color schemes for each award type
+  const isPOTG = awardType === 'player_of_the_game';
+  const avatarBgColor = isPOTG 
+    ? 'bg-gradient-to-br from-amber-500 to-orange-600' 
+    : 'bg-gradient-to-br from-cyan-500 to-teal-600';
+  const accentColor = isPOTG ? 'text-amber-500' : 'text-cyan-400';
+  const borderColor = isPOTG ? 'border-amber-500/30' : 'border-cyan-500/30';
+  const hoverBorder = isPOTG ? 'hover:border-amber-500/50' : 'hover:border-cyan-500/50';
 
   const handleClick = () => {
     if (onClick) {
@@ -69,15 +75,15 @@ export function AwardDisplayCard({
   return (
     <div
       onClick={handleClick}
-      className="cursor-pointer rounded-xl border border-white/10 bg-[#121212] p-4 transition hover:border-white/20 hover:bg-black/50"
+      className={`cursor-pointer rounded-xl border ${borderColor} bg-[#121212] p-4 transition ${hoverBorder} hover:bg-black/50`}
     >
       <div className="flex items-center gap-3">
         {/* Player Avatar */}
-        <Avatar className="h-12 w-12 border-2 border-white/20">
+        <Avatar className={`h-12 w-12 border-2 ${isPOTG ? 'border-amber-500/40' : 'border-cyan-500/40'}`}>
           {profilePhotoUrl ? (
             <AvatarImage src={profilePhotoUrl} alt={playerName} />
           ) : null}
-          <AvatarFallback className={`${bgColor} text-white font-bold`}>
+          <AvatarFallback className={`${avatarBgColor} text-white font-bold`}>
             {initials || '??'}
           </AvatarFallback>
         </Avatar>
@@ -85,8 +91,8 @@ export function AwardDisplayCard({
         {/* Player Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <Icon className="w-4 h-4 text-[#FF3B30]" />
-            <span className="text-xs font-semibold text-[#FF3B30] uppercase tracking-wide">
+            <Icon className={`w-4 h-4 ${accentColor}`} />
+            <span className={`text-xs font-semibold ${accentColor} uppercase tracking-wide`}>
               {awardLabel}
             </span>
           </div>

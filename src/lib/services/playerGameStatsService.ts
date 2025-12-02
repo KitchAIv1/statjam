@@ -122,11 +122,11 @@ export class PlayerGameStatsService {
       console.log('🔍 PlayerGameStatsService: Found', gameIds.length, 'unique game IDs from stats', isCustomPlayer ? '(custom player)' : '(regular player)');
       console.log('🔍 PlayerGameStatsService: Game IDs:', gameIds);
 
-      // ⚡ OPTIMIZATION: Parallel queries (Step 3 & 4 run simultaneously)
+      // ⚡ OPTIMIZATION: Parallel queries (Step 3, 4 & 5 run simultaneously)
       // ✅ CRITICAL: Ensure authenticated session for RLS to work correctly
       // RLS will filter games based on player_has_game_stats_official() function
       // This respects is_official_team flags (practice games filtered, official games shown)
-      const [gamesResult, teamPlayersResult] = await Promise.all([
+      const [gamesResult, teamPlayersResult, allGameStatsResult] = await Promise.all([
         // Step 3: Fetch game info for all games
         // ✅ RLS POLICY: games_player_view_official_only filters based on:
         // - Tournament games (always shown)
@@ -161,11 +161,18 @@ export class PlayerGameStatsService {
           : supabase
               .from('team_players')
               .select('team_id')
-              .eq('player_id', playerId)
+              .eq('player_id', playerId),
+
+        // Step 5: ✅ FIX - Fetch ALL game_stats for score calculation (source of truth)
+        supabase
+          .from('game_stats')
+          .select('game_id, team_id, stat_value, modifier, is_opponent_stat')
+          .in('game_id', gameIds)
       ]);
 
       const { data: games, error: gamesError } = gamesResult;
       const { data: teamPlayers, error: teamError } = teamPlayersResult;
+      const { data: allGameStats } = allGameStatsResult;
 
       console.log('🔍 PlayerGameStatsService: Fetched', games?.length || 0, 'games from database');
       console.log('🔍 PlayerGameStatsService: Requested', gameIds.length, 'games, received', games?.length || 0);
@@ -200,7 +207,30 @@ export class PlayerGameStatsService {
 
       const playerTeamIds = teamPlayers?.map(tp => tp.team_id) || [];
 
-      // Step 5: Aggregate stats by game
+      // ✅ FIX: Pre-calculate scores from game_stats (source of truth)
+      const scoresByGameId = new Map<string, { teamAScore: number; teamBScore: number }>();
+      for (const game of games) {
+        const gameStatsForGame = (allGameStats || []).filter((s: any) => s.game_id === game.id);
+        let teamAScore = 0, teamBScore = 0;
+        
+        for (const stat of gameStatsForGame) {
+          if (stat.modifier !== 'made') continue;
+          const points = stat.stat_value || 0;
+          
+          // Handle is_opponent_stat for coach mode
+          if (stat.is_opponent_stat) {
+            teamBScore += points;
+          } else if (stat.team_id === game.team_a_id) {
+            teamAScore += points;
+          } else if (stat.team_id === game.team_b_id) {
+            teamBScore += points;
+          }
+        }
+        
+        scoresByGameId.set(game.id, { teamAScore, teamBScore });
+      }
+
+      // Step 6: Aggregate stats by game
       const gameStatsSummaries = gameIds.map(gameId => {
         const gameStats = rawStats.filter(s => s.game_id === gameId) as RawGameStat[];
         const gameInfo = games.find(g => g.id === gameId) as GameInfo | undefined;
@@ -215,8 +245,11 @@ export class PlayerGameStatsService {
         const isHome = isTeamA; // Assuming team_a is home
         const playerTeam = isTeamA ? gameInfo.team_a : gameInfo.team_b;
         const opponentTeam = isTeamA ? gameInfo.team_b : gameInfo.team_a;
-        const playerScore = isTeamA ? gameInfo.home_score : gameInfo.away_score;
-        const opponentScore = isTeamA ? gameInfo.away_score : gameInfo.home_score;
+        
+        // ✅ FIX: Use calculated scores from game_stats (source of truth)
+        const calculatedScores = scoresByGameId.get(gameId) || { teamAScore: 0, teamBScore: 0 };
+        const playerScore = isTeamA ? calculatedScores.teamAScore : calculatedScores.teamBScore;
+        const opponentScore = isTeamA ? calculatedScores.teamBScore : calculatedScores.teamAScore;
 
         // ✅ Calculate result based on game status
         let result: 'W' | 'L' | 'N/A' | 'LIVE' = 'N/A';

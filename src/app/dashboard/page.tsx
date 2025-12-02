@@ -62,6 +62,19 @@ const OrganizerDashboardContent = () => {
     );
   }
 
+  // ✅ FIX: Prevent rendering OrganizerDashboard for non-organizer roles (they'll be redirected)
+  // This prevents the organizer profile hook from firing and causing 406 errors
+  if (userRole !== 'organizer') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/50 via-background to-red-50/30">
+        <div className="flex items-center gap-4 text-lg font-medium">
+          <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          Redirecting...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <OrganizerGuideProvider>
       <NavigationHeader />

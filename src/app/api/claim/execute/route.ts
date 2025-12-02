@@ -5,6 +5,10 @@
  * 
  * This route uses the service_role key to perform updates that
  * client-side code cannot do due to RLS restrictions.
+ * 
+ * Security:
+ * - Rate limiting: 5 requests per minute per IP
+ * - Idempotency: Prevents double-claims for same user
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,6 +26,36 @@ interface ClaimRequest {
 interface ClaimResponse {
   success: boolean;
   error?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RATE LIMITING (In-memory, resets on server restart)
+// ═══════════════════════════════════════════════════════════════
+
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 5;
+
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+
+  if (!record || now > record.resetAt) {
+    // First request or window expired - allow and start new window
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true };
+  }
+
+  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+    // Rate limit exceeded
+    const retryAfter = Math.ceil((record.resetAt - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+
+  // Increment count
+  record.count++;
+  return { allowed: true };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -193,6 +227,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<ClaimResp
   console.log('🔐 ClaimAPI: Received claim execution request');
 
   try {
+    // ═══════════════════════════════════════════════════════════════
+    // GUARD 1: Rate Limiting
+    // ═══════════════════════════════════════════════════════════════
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+               request.headers.get('x-real-ip') || 
+               'unknown';
+    
+    const rateCheck = checkRateLimit(ip);
+    if (!rateCheck.allowed) {
+      console.warn('⚠️ ClaimAPI: Rate limit exceeded for IP:', ip);
+      return NextResponse.json(
+        { success: false, error: `Too many requests. Please try again in ${rateCheck.retryAfter} seconds.` },
+        { status: 429 }
+      );
+    }
+
     // Parse request body
     const body: ClaimRequest = await request.json();
     const { token, userId } = body;
@@ -210,6 +260,24 @@ export async function POST(request: NextRequest): Promise<NextResponse<ClaimResp
 
     // Get admin client
     const db = getSupabaseAdmin();
+
+    // ═══════════════════════════════════════════════════════════════
+    // GUARD 2: Idempotency - Check if user already claimed a profile
+    // ═══════════════════════════════════════════════════════════════
+    const { data: existingClaim } = await db
+      .from('custom_players')
+      .select('id, name')
+      .eq('claimed_by_user_id', userId)
+      .limit(1)
+      .single();
+
+    if (existingClaim) {
+      console.warn('⚠️ ClaimAPI: User already claimed a profile:', existingClaim.name);
+      return NextResponse.json(
+        { success: false, error: 'You have already claimed a player profile.' },
+        { status: 409 } // Conflict
+      );
+    }
 
     // Step 1: Validate token
     const validation = await validateClaimToken(db, token);

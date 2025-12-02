@@ -656,45 +656,21 @@ export function PlayerDashboard() {
                 </Card>
 
                 {/* Game Stats Table - NBA Box Score */}
-                {user?.premium_status ? (
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <CardTitle className="text-card-foreground flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-primary" />
-                        My Stats
+                {/* ✅ UNLOCKED FOR TESTING - Premium check bypassed */}
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="text-card-foreground flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-primary" />
+                      My Stats
+                      {user?.premium_status && (
                         <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">Premium</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <GameStatsTable userId={user.id} />
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <CardTitle className="text-card-foreground flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-primary" />
-                        My Stats
-                        <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-800">Premium</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center py-12">
-                      <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                      <h3 className="text-lg font-semibold mb-2">Premium Feature</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Detailed game statistics and analytics are available with Premium access.
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        disabled
-                        className="cursor-not-allowed opacity-60"
-                      >
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Upgrade to Premium
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <GameStatsTable userId={user?.id || ''} />
+                  </CardContent>
+                </Card>
 
                 {/* Premium Features (Phase 1: hidden) */}
 

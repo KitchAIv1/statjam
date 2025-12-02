@@ -337,41 +337,43 @@ export class GameAwardsService {
       const playersMap = new Map((playersResponse || []).map((p: any) => [p.id, p.name]));
       const customPlayersMap = new Map((customPlayersResponse || []).map((p: any) => [p.id, p.name]));
 
-      // ✅ FIX: Fetch game_stats to calculate accurate scores (source of truth)
-      const gameIds = games.map((g: any) => g.id);
-      let gameStatsData: any[] = [];
-      
-      if (gameIds.length > 0) {
-        try {
-          const statsUrl = `${this.SUPABASE_URL}/rest/v1/game_stats?game_id=in.(${gameIds.join(',')})&select=game_id,team_id,stat_value,modifier,is_opponent_stat`;
-          const statsResponse = await fetch(statsUrl, { headers });
-          if (statsResponse.ok) {
-            gameStatsData = await statsResponse.json();
-          }
-        } catch (e) {
-          console.warn('Failed to fetch game_stats for score calculation:', e);
-        }
-      }
-
-      // Group stats by game_id and calculate scores
+      // ✅ FIX: Fetch game_stats per-game in parallel (avoids PostgREST 1000 row limit)
+      // Same pattern as useTournamentMatchups
       const scoresByGameId = new Map<string, { teamAScore: number; teamBScore: number }>();
-      for (const game of games) {
-        const gameStats = gameStatsData.filter((s: any) => s.game_id === game.id);
-        let teamAScore = 0, teamBScore = 0;
-        
-        for (const stat of gameStats) {
-          if (stat.modifier !== 'made') continue;
-          const points = stat.stat_value || 0;
+      
+      await Promise.all(games.map(async (game: any) => {
+        try {
+          const statsUrl = `${this.SUPABASE_URL}/rest/v1/game_stats?game_id=eq.${game.id}&select=game_id,team_id,stat_value,modifier,is_opponent_stat`;
+          const statsResponse = await fetch(statsUrl, { headers });
           
-          if (stat.team_id === game.team_a_id) {
-            teamAScore += points;
-          } else if (stat.team_id === game.team_b_id) {
-            teamBScore += points;
+          if (!statsResponse.ok) {
+            scoresByGameId.set(game.id, { teamAScore: 0, teamBScore: 0 });
+            return;
           }
+          
+          const gameStats = await statsResponse.json();
+          let teamAScore = 0, teamBScore = 0;
+          
+          for (const stat of gameStats) {
+            if (stat.modifier !== 'made') continue;
+            const points = stat.stat_value || 0;
+            
+            // ✅ Handle is_opponent_stat for coach mode consistency
+            if (stat.is_opponent_stat) {
+              teamBScore += points;
+            } else if (stat.team_id === game.team_a_id) {
+              teamAScore += points;
+            } else if (stat.team_id === game.team_b_id) {
+              teamBScore += points;
+            }
+          }
+          
+          scoresByGameId.set(game.id, { teamAScore, teamBScore });
+        } catch (e) {
+          console.warn(`Failed to fetch game_stats for game ${game.id}:`, e);
+          scoresByGameId.set(game.id, { teamAScore: 0, teamBScore: 0 });
         }
-        
-        scoresByGameId.set(game.id, { teamAScore, teamBScore });
-      }
+      }));
 
       // ✅ Fetch game-specific stats using PlayerGameStatsService (proven to work for custom players)
       const { PlayerGameStatsService } = await import('./playerGameStatsService');

@@ -66,8 +66,8 @@ export function GenerateClaimLinkButton({ customPlayerId, playerName }: Generate
   };
 
   // Idle state - show generate button
-  // ⚠️ TEMPORARILY DISABLED FOR TESTING
-  const isDisabled = true; // Set to false when ready for production
+  // ✅ ENABLED FOR TESTING
+  const isDisabled = false;
   
   if (status === 'idle' || status === 'error') {
     return (

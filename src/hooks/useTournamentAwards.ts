@@ -54,8 +54,8 @@ export function useTournamentAwards(tournamentId: string | null, limit: number =
     }
 
     const loadAwards = async () => {
-      // Check cache first (v3 includes accurate score calculation from game_stats)
-      const cacheKey = `tournament_awards_v3_${tournamentId}_${limit}`;
+      // Check cache first (v5 uses per-game queries to avoid PostgREST 1000 row limit)
+      const cacheKey = `tournament_awards_v5_${tournamentId}_${limit}`;
       const cached = cache.get<TournamentAward[]>(cacheKey);
       
       if (cached) {
