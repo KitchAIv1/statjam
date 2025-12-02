@@ -71,10 +71,12 @@
 - **FEATURES_PAGE.md** - Features page implementation (premium dark theme, carousels, device mockups)
 - **MOBILE_ADVANTAGE_SECTION.md** - Mobile advantage section documentation
 - **SMART_SEQUENCES_IMPLEMENTATION.md** - Smart sequences feature
+- **announcements/ANNOUNCEMENT_SYSTEM.md** - Reusable announcement modal system for feature updates (v0.17.0)
+- **coach-dashboard/COACH_DASHBOARD_V0_17.md** - Coach dashboard UI/UX enhancements (v0.17.0)
 - **coach-team-card/COACH_TEAM_CARD_IMPLEMENTATION.md** - Coach team management UI & services
 - **stat-tracker/AUTOMATION_PRESETS_GUIDE.md** - Automation presets comparison + demo workflow
 - **Authentication** - Auth system documentation
-- **Dashboards** - Dashboard documentation (Player, Organizer; Coach dashboard covered in coach-team-card)
+- **Dashboards** - Dashboard documentation (Player, Organizer; Coach dashboard covered in coach-team-card and coach-dashboard)
 - **Live-viewer** - Live viewer documentation
 - **Organizer-guide** - Organizer guide documentation
 - **Personal-stat-tracker** - Personal stat tracker documentation

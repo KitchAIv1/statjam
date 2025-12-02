@@ -5,6 +5,71 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2025-12-01
+
+### 🎉 **Announcement System & Coach Dashboard UX Enhancements**
+
+#### Reusable Announcement Modal System
+- **NEW**: `AnnouncementModal` component - Reusable modal for feature announcements
+  - Supports image-based announcements with full-screen display
+  - Configurable CTA buttons with custom actions
+  - "Show once" functionality via localStorage tracking
+  - Accessible with proper ARIA labels and screen reader support
+  - Responsive design with loading states
+- **NEW**: Announcement configuration system (`src/config/announcements.ts`)
+  - Centralized announcement definitions
+  - Easy to add new announcements for future features
+- **NEW**: Player Claim announcement for coach dashboard
+  - Beautiful image-based announcement modal
+  - CTA navigates to teams section with onboarding highlight
+  - Shows once per user (configurable)
+
+#### Coach Dashboard UX Improvements
+- **ENHANCED**: Team cards layout - Changed from 3-column to 2-column grid
+  - More compact and balanced display
+  - Better use of screen space
+  - Applied to both Overview and Teams sections
+- **ENHANCED**: Profile stats visibility
+  - Fixed white text on light background issue
+  - Now uses primary color (orange) with proper contrast
+  - Added border and drop-shadow for better definition
+- **ENHANCED**: Automation Guide button placement
+  - Moved from large card to compact button in profile card upper right
+  - Tooltip with descriptive content
+  - Matches organizer guide pattern
+
+#### Player Claim Onboarding Flow
+- **NEW**: Pulsating Manage button highlight
+  - When user clicks "Try It Now" from announcement, Manage buttons glow orange
+  - Auto-scrolls to first team with players
+  - Stops highlighting on any click or navigation
+- **ENHANCED**: Claim link tooltips
+  - Dark background tooltips for better contrast
+  - Descriptive content explaining claim link generation and sharing
+  - Context-aware tooltips (generate vs copy states)
+
+#### Technical Details
+- **Files Created**:
+  - `src/components/announcements/AnnouncementModal.tsx` - Reusable announcement component
+  - `src/components/announcements/index.ts` - Export barrel
+  - `src/config/announcements.ts` - Announcement configurations
+  - `public/announcements/player-claim-announcement.png` - Player Claim announcement image
+- **Files Modified**:
+  - `src/app/dashboard/coach/page.tsx` - Added announcement modal, guide button
+  - `src/components/coach/CoachDashboardOverview.tsx` - 2-column grid, profile stats fix
+  - `src/components/coach/CoachTeamCard.tsx` - Pulsating highlight, auto-scroll
+  - `src/components/coach/CoachTeamsSection.tsx` - 2-column grid
+  - `src/components/profile/ProfileCard.tsx` - Stats visibility fix
+  - `src/components/shared/GenerateClaimLinkButton.tsx` - Enhanced tooltips
+
+#### Performance & Scalability
+- Announcement modal uses Next.js Image optimization
+- Lazy loading for announcement images
+- localStorage-based "show once" tracking (minimal overhead)
+- Smooth scroll animations with proper timing
+
+---
+
 ## [0.16.5] - 2025-11-28
 
 ### 🔐 **Custom Player Claiming Feature - Complete Implementation**

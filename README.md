@@ -17,9 +17,9 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 ## 🎯 **Current Status: 🚀 MVP1 LIVE IN PRODUCTION (v0.15.0+)** 
 
 **Phase**: MVP1 Live - Production-Ready Platform with Advanced Automation  
-**Version**: 0.16.1  
-**Last Updated**: November 21, 2025  
-**Status**: ✅ **MVP1 LIVE** - Complete MVP with NBA-level automation, bracket builder, custom player photos, FT auto-sequence, and security fixes now in production
+**Version**: 0.17.0  
+**Last Updated**: December 1, 2025  
+**Status**: ✅ **MVP1 LIVE** - Complete MVP with NBA-level automation, bracket builder, custom player photos, FT auto-sequence, announcement system, and enhanced coach dashboard UX now in production
 
 **Authentication**: ✅ Centralized Auth Context with JWT Auto-Refresh  
 **Live Tracking**: ✅ NBA-Grade V3 Engine with Real-time Sync  
@@ -40,6 +40,8 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 **Modal System**: ✅ 10 Specialized Modals for All Interactions  
 **Team Stats Tab**: ✅ Live Viewer Team Performance Analytics  
 **Homepage Marketing**: ✅ Professional marketing homepage with NBA-level messaging, optimized for SEO and performance  
+**Announcement System**: ✅ Reusable announcement modal system for feature updates  
+**Coach Dashboard UX**: ✅ Enhanced UI with 2-column layout, profile stats visibility, and onboarding flows  
 **Documentation**: ✅ Complete Architecture and Reference Documentation
 
 ## 📚 **Documentation**
@@ -54,6 +56,8 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 - 🏀 **Live Tracking**: [Live Tracking Victory](docs/04-fixes/LIVE_TRACKING_VICTORY.md)
 - 🤖 **Automation Presets**: [Automation Guide](docs/04-features/stat-tracker/AUTOMATION_PRESETS_GUIDE.md)
 - 🛠️ **Raw HTTP Pattern**: [Enterprise Integration](docs/03-architecture/RAW_HTTP_PATTERN.md)
+- 🎉 **Announcements**: [Announcement System](docs/04-features/announcements/ANNOUNCEMENT_SYSTEM.md)
+- 👨‍🏫 **Coach Dashboard**: [Coach Dashboard v0.17](docs/04-features/coach-dashboard/COACH_DASHBOARD_V0_17.md)
 - 🔍 **Troubleshooting**: [Common Issues](docs/06-troubleshooting/COMMON_ISSUES.md)
 
 ## 🏆 **System Achievements**
