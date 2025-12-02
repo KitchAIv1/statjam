@@ -191,20 +191,33 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
           return;
         }
 
-        // Fetch player stats and shooting stats in parallel
+        // ⚡ OPTIMIZATION: Fetch player stats, all game stats, and shooting stats in parallel
         const rosterPlayerIds = roster.map(p => p.id);
-        const [{ supabase }, playerStats] = await Promise.all([
-          import('@/lib/supabase'),
-          TeamStatsService.aggregatePlayerStats(gameId, playerTeamId, rosterPlayerIds)
+        const { supabase } = await import('@/lib/supabase');
+        
+        // Build shooting stats query
+        const shootingStatsQuery = supabase
+          .from('game_stats')
+          .select('stat_type, stat_value, modifier')
+          .eq('game_id', gameId)
+          .in('stat_type', ['field_goal', 'two_pointer', 'three_pointer', 'free_throw']);
+
+        if (isCustomPlayer) {
+          shootingStatsQuery.eq('custom_player_id', playerId);
+        } else {
+          shootingStatsQuery.eq('player_id', playerId);
+        }
+        
+        // ⚡ Run ALL queries in parallel (was sequential before)
+        const [playerStats, allGameStatsResult, shootingStatsResult] = await Promise.all([
+          TeamStatsService.aggregatePlayerStats(gameId, playerTeamId, rosterPlayerIds),
+          supabase.from('game_stats').select('team_id, stat_value, modifier, is_opponent_stat').eq('game_id', gameId),
+          shootingStatsQuery
         ]);
 
         const playerStat = playerStats.find(p => p.playerId === playerId);
-
-        // ✅ Fetch ALL game_stats for score calculation (source of truth)
-        const { data: allGameStats } = await supabase
-          .from('game_stats')
-          .select('team_id, stat_value, modifier, is_opponent_stat')
-          .eq('game_id', gameId);
+        const allGameStats = allGameStatsResult.data;
+        const shootingStats = shootingStatsResult.data;
 
         // ✅ Calculate scores from game_stats (matches useGameViewerV2 and getTournamentAwards pattern)
         let teamAScore = 0;
@@ -225,21 +238,6 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
             }
           }
         });
-
-        // Fetch shooting stats - check both player_id and custom_player_id
-        const shootingStatsQuery = supabase
-          .from('game_stats')
-          .select('stat_type, stat_value, modifier')
-          .eq('game_id', gameId)
-          .in('stat_type', ['field_goal', 'two_pointer', 'three_pointer', 'free_throw']);
-
-        if (isCustomPlayer) {
-          shootingStatsQuery.eq('custom_player_id', playerId);
-        } else {
-          shootingStatsQuery.eq('player_id', playerId);
-        }
-
-        const { data: shootingStats } = await shootingStatsQuery;
 
         // Calculate shooting percentages
         let fgMade = 0, fgAttempted = 0;
