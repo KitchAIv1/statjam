@@ -139,7 +139,8 @@ export function CoachDashboardOverview({
           </Button>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {/* Stale-while-revalidate: Only show skeleton on initial load */}
+          {loading && teams.length === 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {[1, 2].map((i) => (
                 <Card key={i} className="animate-pulse">
