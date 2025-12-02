@@ -1,11 +1,16 @@
 "use client";
 
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/Button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { CalendarDays, Clock, MapPin, Play, Shield, Lock, CheckCircle } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Play, Shield, Lock, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { Game } from '@/lib/types/game';
+
+// Max games to show initially for better UI performance
+const INITIAL_DISPLAY_LIMIT = 10;
 
 interface ScheduleTabProps {
   tournamentId: string;
@@ -14,6 +19,20 @@ interface ScheduleTabProps {
 export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
   // ✅ OPTIMIZED: Use custom hook with batching and caching
   const { games, loading } = useScheduleData(tournamentId);
+  const [showAll, setShowAll] = useState(false);
+
+  // Sort games: latest first (newest start_time at top)
+  const sortedGames = useMemo(() => {
+    return [...games].sort((a, b) => {
+      const dateA = a.start_time ? new Date(a.start_time).getTime() : 0;
+      const dateB = b.start_time ? new Date(b.start_time).getTime() : 0;
+      return dateB - dateA; // Descending (newest first)
+    });
+  }, [games]);
+
+  // Apply display limit
+  const displayedGames = showAll ? sortedGames : sortedGames.slice(0, INITIAL_DISPLAY_LIMIT);
+  const hasMoreGames = sortedGames.length > INITIAL_DISPLAY_LIMIT;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -31,13 +50,13 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
             <div key={item} className="h-24 animate-pulse rounded-2xl border border-white/10 bg-white/5 sm:h-28 sm:rounded-3xl" />
           ))}
         </div>
-      ) : games.length === 0 ? (
+      ) : sortedGames.length === 0 ? (
         <Card className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-sm text-white/60 sm:rounded-3xl sm:p-8">
           No games scheduled yet. Check back soon for live matchups.
         </Card>
       ) : (
         <div className="space-y-3 sm:space-y-4">
-          {games.map((game) => {
+          {displayedGames.map((game) => {
             const teamAName = game.teamAName || 'Team A';
             const teamBName = game.teamBName || 'Team B';
             
@@ -141,6 +160,27 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
               </Card>
             );
           })}
+
+          {/* View All / Show Less Button */}
+          {hasMoreGames && (
+            <Button
+              variant="ghost"
+              onClick={() => setShowAll(!showAll)}
+              className="w-full mt-2 text-white/60 hover:text-white hover:bg-white/10 border border-white/10"
+            >
+              {showAll ? (
+                <>
+                  <ChevronUp className="w-4 h-4 mr-2" />
+                  Show Less
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4 mr-2" />
+                  View All {sortedGames.length} Games
+                </>
+              )}
+            </Button>
+          )}
         </div>
       )}
     </div>
