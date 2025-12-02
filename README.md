@@ -12,14 +12,14 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 
 ## 🌐 **Live Site**
 
-**MVP1 is now live at**: **[www.statjam.net](https://www.statjam.net)** ✅
+**Now live at**: **[www.statjam.net](https://www.statjam.net)** ✅
 
-## 🎯 **Current Status: 🚀 MVP1 LIVE IN PRODUCTION (v0.15.0+)** 
+## 🎯 **Current Status: 🚀 ALPHA v0.18 - PRODUCTION** 
 
-**Phase**: MVP1 Live - Production-Ready Platform with Advanced Automation  
-**Version**: 0.17.0  
-**Last Updated**: December 1, 2025  
-**Status**: ✅ **MVP1 LIVE** - Complete MVP with NBA-level automation, bracket builder, custom player photos, FT auto-sequence, announcement system, and enhanced coach dashboard UX now in production
+**Phase**: Alpha - Feature Complete Platform  
+**Version**: 0.18.0  
+**Last Updated**: December 2, 2025  
+**Status**: ✅ **ALPHA LIVE** - Multi-role platform with NBA-level automation, player claim system, tournament management, and enhanced dashboard UX in production
 
 **Authentication**: ✅ Centralized Auth Context with JWT Auto-Refresh  
 **Live Tracking**: ✅ NBA-Grade V3 Engine with Real-time Sync  
@@ -42,6 +42,9 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 **Homepage Marketing**: ✅ Professional marketing homepage with NBA-level messaging, optimized for SEO and performance  
 **Announcement System**: ✅ Reusable announcement modal system for feature updates  
 **Coach Dashboard UX**: ✅ Enhanced UI with 2-column layout, profile stats visibility, and onboarding flows  
+**Player Claim System**: ✅ Profile ownership transfer with secure token-based claiming  
+**Multi-Role Architecture**: ✅ Coach, Organizer, Player, Stat Admin with role-specific dashboards  
+**Performance**: ✅ Optimized queries with parallel execution and reduced payloads  
 **Documentation**: ✅ Complete Architecture and Reference Documentation
 
 ## 📚 **Documentation**
@@ -106,6 +109,14 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 - ✅ **Game Stats Table**: NBA-style box scores (ready for data)
 - ✅ **Performance Analytics**: Season averages, career highs, achievements
 
+### **🔗 Player Claim System**
+- ✅ **Secure Token Generation**: Coaches generate unique claim links for custom players
+- ✅ **Profile Preview**: Players see their stats before claiming
+- ✅ **Inline Registration**: Sign-up form embedded in claim flow
+- ✅ **Role-Aware UX**: Coaches see share instructions, players see claim button
+- ✅ **Copy Link**: One-click sharing for coaches to distribute claim links
+- ✅ **Optimized Performance**: Parallel queries for fast claim page loading
+
 ### **🏢 Organizer Dashboard**  
 - ✅ **Tournament Management**: Create, edit, status control (draft/active)
 - ✅ **Team Roster System**: Add players, manage rosters, substitutions
@@ -142,7 +153,7 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 
 ## 🌐 **Homepage Features**
 
-**Marketing Homepage** (MVP1 Live):
+**Marketing Homepage** (Alpha Live):
 - ✅ **Hero Section**: NBA-level messaging with clear value proposition
   - Main headline: "NBA-Level Stats. Real-Time. Zero Friction"
   - Sub-headline: "Automation handles clock, possession, and shot sequences — you just tap and track."
@@ -186,4 +197,4 @@ open http://localhost:3000
 
 ---
 
-**StatJam MVP**: Professional-grade sports tournament management with enterprise authentication and real-time tracking. 🏆
+**StatJam Alpha**: Professional-grade sports tournament management with multi-role architecture, player ownership, and real-time tracking. 🏆
