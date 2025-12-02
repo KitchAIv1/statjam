@@ -457,6 +457,40 @@ export class TeamStatsService {
         return playerMinutes;
       }
 
+      // ✅ FIX: Infer starters from substitution data
+      // If a player's first action is "OUT", they started the game
+      const inferredStarters = new Set<string>();
+      const playerFirstAction = new Map<string, 'IN' | 'OUT'>();
+      const playersInSubs = new Set<string>(); // Track all players who appear in any sub
+      
+      for (const sub of substitutions) {
+        const playerInId = sub.player_in_id || sub.custom_player_in_id;
+        const playerOutId = sub.player_out_id || sub.custom_player_out_id;
+        
+        // Track all players who appear in substitutions
+        if (playerInId) playersInSubs.add(playerInId);
+        if (playerOutId) playersInSubs.add(playerOutId);
+        
+        // Record first action for each player (only if not already recorded)
+        if (playerOutId && !playerFirstAction.has(playerOutId)) {
+          playerFirstAction.set(playerOutId, 'OUT');
+          inferredStarters.add(playerOutId); // First action is OUT = they started
+        }
+        if (playerInId && !playerFirstAction.has(playerInId)) {
+          playerFirstAction.set(playerInId, 'IN');
+          // First action is IN = they did NOT start (came off bench)
+        }
+      }
+      
+      // ✅ FIX: Players who NEVER appear in any substitution = played full game (started and never left)
+      for (const playerId of playerIds) {
+        if (!playersInSubs.has(playerId)) {
+          inferredStarters.add(playerId);
+        }
+      }
+      
+      console.log(`📊 TeamStatsService: Inferred ${inferredStarters.size} starters from substitution data`);
+
       // ✅ FIX: Calculate floor time with quarter-aware logic
       for (const playerId of playerIds) {
         let totalSeconds = 0;
@@ -464,8 +498,8 @@ export class TeamStatsService {
         let stintStartQuarter = 1;
         let stintStartGameClock = quarterLengthSeconds; // Game clock when stint started
 
-        // Assume starting 5 start on court at Q1 start
-        const isStarter = playerIds.indexOf(playerId) < 5;
+        // ✅ FIX: Use inferred starters instead of array position
+        const isStarter = inferredStarters.has(playerId);
         if (isStarter) {
           isOnCourt = true;
           stintStartQuarter = 1;
