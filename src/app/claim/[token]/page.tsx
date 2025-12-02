@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { usePlayerClaim } from '@/hooks/usePlayerClaim';
 import { ClaimPreviewCard } from './ClaimPreviewCard';
 import { ClaimSignUpForm } from './ClaimSignUpForm';
-import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Copy, Check } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════
 // PAGE COMPONENT
@@ -27,7 +27,9 @@ export default function ClaimPage() {
     status, 
     preview, 
     errorMessage, 
-    isAuthenticated, 
+    isAuthenticated,
+    userRole,
+    userName,
     handleClaim,
     handleSignUpSuccess,
     setError
@@ -52,6 +54,9 @@ export default function ClaimPage() {
             <ValidState
               preview={preview}
               isAuthenticated={isAuthenticated}
+              userRole={userRole}
+              userName={userName}
+              claimToken={token}
               onClaim={handleClaim}
               onSignUpSuccess={handleSignUpSuccess}
               onError={setError}
@@ -98,17 +103,46 @@ function InvalidState({ message }: { message: string | null }) {
 interface ValidStateProps {
   preview: NonNullable<ReturnType<typeof usePlayerClaim>['preview']>;
   isAuthenticated: boolean;
+  userRole: string | null;
+  userName: string | null;
+  claimToken: string;
   onClaim: () => void;
   onSignUpSuccess: (userId: string) => void;
   onError: (message: string) => void;
 }
 
-function ValidState({ preview, isAuthenticated, onClaim, onSignUpSuccess, onError }: ValidStateProps) {
+function ValidState({ 
+  preview, 
+  isAuthenticated, 
+  userRole, 
+  userName, 
+  claimToken, 
+  onClaim, 
+  onSignUpSuccess, 
+  onError 
+}: ValidStateProps) {
   const [formError, setFormError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleError = (message: string) => {
     setFormError(message);
     onError(message);
+  };
+
+  // Check if logged-in user is a coach/organizer (not the intended player)
+  const isCoachOrOrganizer = isAuthenticated && (userRole === 'coach' || userRole === 'organizer');
+  const claimUrl = typeof window !== 'undefined' 
+    ? `${window.location.origin}/claim/${claimToken}` 
+    : `/claim/${claimToken}`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(claimUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
   };
 
   return (
@@ -116,7 +150,36 @@ function ValidState({ preview, isAuthenticated, onClaim, onSignUpSuccess, onErro
       <ClaimPreviewCard preview={preview} />
       
       <div className="mt-6">
-        {isAuthenticated ? (
+        {isCoachOrOrganizer ? (
+          // Coach/Organizer View: Show share instructions
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <p className="text-blue-300 text-sm text-center">
+                You&apos;re logged in as <span className="font-semibold text-white">{userName || userRole}</span>.
+              </p>
+              <p className="text-gray-400 text-sm text-center mt-2">
+                Share this link with <span className="font-semibold text-orange-400">{preview.name}</span> so they can create their account and claim their profile.
+              </p>
+            </div>
+            <button
+              onClick={handleCopyLink}
+              className="w-full py-3 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-2"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-5 h-5 text-green-400" />
+                  Link Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-5 h-5" />
+                  Copy Claim Link
+                </>
+              )}
+            </button>
+          </div>
+        ) : isAuthenticated ? (
+          // Authenticated Player View: Can claim directly
           <button
             onClick={onClaim}
             className="w-full py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition"
@@ -124,6 +187,7 @@ function ValidState({ preview, isAuthenticated, onClaim, onSignUpSuccess, onErro
             Claim This Profile
           </button>
         ) : (
+          // Not Authenticated: Show sign-up form
           <div className="space-y-4">
             {formError && (
               <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm text-center">

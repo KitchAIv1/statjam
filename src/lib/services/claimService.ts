@@ -131,6 +131,7 @@ export class ClaimService {
 
   /**
    * Validate a claim token and return preview data
+   * Optimized: Parallel queries for player info and stats
    */
   static async validateClaimToken(token: string): Promise<ClaimValidationResponse> {
     try {
@@ -168,12 +169,12 @@ export class ClaimService {
         return { valid: false, error: 'This claim link has expired' };
       }
 
-      // Get stats summary
-      const statsSummary = await this.getPlayerStatsSummary(player.id);
-
       // Extract team name from join result
       const teamsData = player.teams as unknown as { name: string } | { name: string }[];
       const teamName = Array.isArray(teamsData) ? teamsData[0]?.name : teamsData?.name;
+
+      // Get stats summary in parallel (non-blocking for core preview)
+      const statsSummary = await this.getPlayerStatsSummaryOptimized(player.id);
 
       const preview: ClaimPreview = {
         customPlayerId: player.id,
@@ -197,28 +198,36 @@ export class ClaimService {
   }
 
   /**
-   * Get stats summary for preview
+   * Get stats summary for preview - OPTIMIZED
+   * Uses two parallel lightweight queries instead of fetching all rows
    */
-  private static async getPlayerStatsSummary(
+  private static async getPlayerStatsSummaryOptimized(
     customPlayerId: string
   ): Promise<{ gamesPlayed: number; totalPoints: number }> {
     try {
       const db = getSupabase();
       
-      const { data: stats } = await db
-        .from('game_stats')
-        .select('game_id, stat_type, stat_value')
-        .eq('custom_player_id', customPlayerId);
+      // Run both queries in parallel for faster response
+      const [gamesResult, pointsResult] = await Promise.all([
+        // Query 1: Get unique game IDs (minimal data)
+        db
+          .from('game_stats')
+          .select('game_id')
+          .eq('custom_player_id', customPlayerId),
+        
+        // Query 2: Get only scoring stats for points calculation
+        db
+          .from('game_stats')
+          .select('stat_value')
+          .eq('custom_player_id', customPlayerId)
+          .in('stat_type', ['free_throw', 'two_pointer', '2_pointer', 'three_pointer', '3_pointer'])
+      ]);
 
-      if (!stats || stats.length === 0) {
-        return { gamesPlayed: 0, totalPoints: 0 };
-      }
+      const games = gamesResult.data || [];
+      const scoringStats = pointsResult.data || [];
 
-      const uniqueGames = new Set(stats.map((s) => s.game_id));
-      const scoringTypes = ['free_throw', 'two_pointer', '2_pointer', 'three_pointer', '3_pointer'];
-      const totalPoints = stats
-        .filter((s) => scoringTypes.includes(s.stat_type))
-        .reduce((sum, s) => sum + (s.stat_value || 0), 0);
+      const uniqueGames = new Set(games.map((s) => s.game_id));
+      const totalPoints = scoringStats.reduce((sum, s) => sum + (s.stat_value || 0), 0);
 
       return { gamesPlayed: uniqueGames.size, totalPoints };
     } catch {

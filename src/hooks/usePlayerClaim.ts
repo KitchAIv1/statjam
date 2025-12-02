@@ -21,6 +21,8 @@ interface UsePlayerClaimResult {
   preview: ClaimPreview | null;
   errorMessage: string | null;
   isAuthenticated: boolean;
+  userRole: string | null;
+  userName: string | null;
   handleClaim: () => Promise<void>;
   handleSignUpSuccess: (userId: string) => void;
   setError: (message: string) => void;
@@ -121,6 +123,8 @@ export function usePlayerClaim(token: string): UsePlayerClaimResult {
     preview,
     errorMessage,
     isAuthenticated,
+    userRole: user?.role ?? null,
+    userName: user?.full_name ?? null,
     handleClaim,
     handleSignUpSuccess,
     setError,
