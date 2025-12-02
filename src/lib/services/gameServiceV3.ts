@@ -446,7 +446,8 @@ export class GameServiceV3 {
         body: JSON.stringify({
           game_clock_minutes: clockData.minutes,
           game_clock_seconds: clockData.seconds,
-          is_clock_running: clockData.isRunning
+          is_clock_running: clockData.isRunning,
+          quarter_length_minutes: clockData.minutes // ✅ Preserve original quarter length
         })
       });
 

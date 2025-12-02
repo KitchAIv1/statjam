@@ -303,26 +303,26 @@ export class TeamStatsService {
   }
 
   /**
-   * Get quarter length from game's tournament ruleset (supports custom quarter lengths)
-   * Defaults: NBA=12min, FIBA=10min, NCAA=20min (halves)
+   * Get quarter length from game's stored setting or tournament ruleset
+   * ✅ Priority 1: quarter_length_minutes (preserved original setting)
+   * ✅ Priority 2: Tournament ruleset config
+   * ✅ Priority 3: Standard ruleset defaults (NBA=12, FIBA=10, NCAA=20)
    */
   private static async getQuarterLengthMinutes(gameId: string): Promise<number> {
     try {
-      // Fetch game with tournament's ruleset config
+      // Fetch game with quarter_length_minutes and tournament's ruleset config
       const gameData = await this.makeAuthenticatedRequest<any>('games', {
-        'select': 'tournament_id,game_clock_minutes,tournaments(ruleset,ruleset_config)',
+        'select': 'tournament_id,quarter_length_minutes,tournaments(ruleset,ruleset_config)',
         'id': `eq.${gameId}`
       });
 
       if (gameData.length > 0) {
         const game = gameData[0];
-        const gameClock = game.game_clock_minutes;
         
-        // ✅ Priority 1: Use game's clock setting if explicitly set by stat admin
-        // Valid custom values: 5, 6, 8, 10, 12 (not null, not 0)
-        if (gameClock && gameClock > 0 && [5, 6, 8, 10, 12].includes(gameClock)) {
-          console.log(`📊 TeamStatsService: Using game-level clock setting: ${gameClock} min`);
-          return gameClock;
+        // ✅ Priority 1: Use preserved quarter_length_minutes (set at game start)
+        if (game.quarter_length_minutes && game.quarter_length_minutes > 0) {
+          console.log(`📊 TeamStatsService: Using quarter_length_minutes: ${game.quarter_length_minutes} min`);
+          return game.quarter_length_minutes;
         }
         
         if (game.tournaments) {
@@ -331,20 +331,28 @@ export class TeamStatsService {
           
           // ✅ Priority 2: Custom ruleset override
           if (rulesetConfig?.clockRules?.quarterLengthMinutes) {
+            console.log(`📊 TeamStatsService: Using ruleset_config: ${rulesetConfig.clockRules.quarterLengthMinutes} min`);
             return rulesetConfig.clockRules.quarterLengthMinutes;
           }
           
           // ✅ Priority 3: Standard ruleset defaults
           switch (ruleset) {
-            case 'FIBA': return 10;
-            case 'NCAA': return 20;
+            case 'FIBA': 
+              console.log('📊 TeamStatsService: Using FIBA default: 10 min');
+              return 10;
+            case 'NCAA': 
+              console.log('📊 TeamStatsService: Using NCAA default: 20 min');
+              return 20;
             case 'NBA':
-            default: return 12;
+            default: 
+              console.log('📊 TeamStatsService: Using NBA default: 12 min');
+              return 12;
           }
         }
         
-        // Fallback to game clock if no tournament
-        return gameClock || 12;
+        // Fallback
+        console.log('📊 TeamStatsService: No tournament, defaulting to 12 min');
+        return 12;
       }
       
       return 12; // Default fallback
