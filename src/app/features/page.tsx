@@ -168,14 +168,11 @@ export default function FeaturesPage() {
         <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-8 py-20 lg:py-28">
           <div className="text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
-              Built for Everyone
-              <span className="block text-3xl sm:text-4xl lg:text-5xl mt-3 text-neutral-300">
-                From players to tournament organizers
-              </span>
+              The Complete Basketball Platform
             </h1>
             <p className="text-lg lg:text-xl text-neutral-300 max-w-3xl mx-auto leading-relaxed">
-              Whether you're tracking personal stats, running games, coaching teams, or organizing tournaments — 
-              StatJam has the tools you need.
+              Where players build legacies, coaches discover talent, and organizers run professional tournaments. 
+              One connected platform for the entire basketball community.
             </p>
           </div>
         </div>
@@ -391,9 +388,27 @@ export default function FeaturesPage() {
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
             Ready to Get Started?
           </h2>
-          <p className="text-lg lg:text-xl text-neutral-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of players, coaches, and organizers using StatJam.
+          <p className="text-lg lg:text-xl text-neutral-300 mb-4 max-w-2xl mx-auto">
+            Join the global basketball community on StatJam
           </p>
+          
+          {/* Country Flags */}
+          <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 mb-8 text-sm sm:text-base">
+            <span className="flex items-center gap-1.5"><span className="text-2xl">🇺🇸</span> USA</span>
+            <span className="text-neutral-600">•</span>
+            <span className="flex items-center gap-1.5"><span className="text-2xl">🇵🇭</span> Philippines</span>
+            <span className="text-neutral-600">•</span>
+            <span className="flex items-center gap-1.5"><span className="text-2xl">🇦🇺</span> Australia</span>
+            <span className="text-neutral-600">•</span>
+            <span className="flex items-center gap-1.5"><span className="text-2xl">🇮🇳</span> India</span>
+            <span className="text-neutral-600">•</span>
+            <span className="flex items-center gap-1.5"><span className="text-2xl">🇮🇹</span> Italy</span>
+            <span className="text-neutral-600">•</span>
+            <span className="flex items-center gap-1.5"><span className="text-2xl">🇨🇦</span> Canada</span>
+            <span className="text-neutral-600">•</span>
+            <span className="flex items-center gap-1.5"><span className="text-2xl">🇬🇧</span> UK</span>
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               onClick={() => router.push('/auth?mode=signup')}

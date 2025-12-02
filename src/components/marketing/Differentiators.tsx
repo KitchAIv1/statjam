@@ -27,16 +27,16 @@ export function Differentiators() {
   ];
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-12 bg-gradient-to-b from-[#111111] to-[#0A0A0A]">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {items.map((item, idx) => (
-            <div key={idx} className="rounded-xl border-2 border-gray-200 hover:border-orange-300 p-6 bg-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+            <div key={idx} className="rounded-xl border border-white/10 hover:border-orange-500/50 p-6 bg-white/5 backdrop-blur-sm hover:bg-orange-500/5 hover:-translate-y-1 transition-all duration-300 group">
               <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
                 {item.icon}
               </div>
-              <h3 className="font-bold text-lg mb-2 text-gray-900">{item.title}</h3>
-              <p className="text-base text-gray-600 leading-relaxed">{item.text}</p>
+              <h3 className="font-bold text-lg mb-2 text-white">{item.title}</h3>
+              <p className="text-base text-gray-400 leading-relaxed">{item.text}</p>
             </div>
           ))}
         </div>
