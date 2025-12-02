@@ -88,7 +88,7 @@ export function AnnouncementModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent 
-        className="max-w-2xl p-0 border-0 overflow-hidden bg-transparent shadow-2xl"
+        className="max-w-3xl p-0 border-0 overflow-hidden bg-transparent shadow-2xl"
         aria-describedby={undefined}
       >
         {/* Accessibility: Hidden title for screen readers */}
