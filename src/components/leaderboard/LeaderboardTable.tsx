@@ -19,7 +19,10 @@ interface LeaderboardTableProps {
 }
 
 const ITEMS_PER_PAGE = 15;
-const LABELS: Record<SortColumn | 'player' | 'team', string> = { player: 'Player', team: 'Team', gp: 'GP', pts: 'PTS', reb: 'REB', ast: 'AST', stl: 'STL', blk: 'BLK', tov: 'TOV' };
+const LABELS: Record<SortColumn | 'player' | 'team', string> = { 
+  player: 'Player', team: 'Team', gp: 'GP', pts: 'PTS', reb: 'REB', ast: 'AST', 
+  stl: 'STL', blk: 'BLK', tov: 'TOV', fg_pct: 'FG%', '3p_pct': '3P%', ft_pct: 'FT%' 
+};
 
 /** LeaderboardTable - NBA-style with sorting/pagination. Mobile: compact, Desktop: full grid. <200 lines */
 export function LeaderboardTable({ leaders, loading, initialSortColumn = 'pts', initialPerMode = 'per_game', initialMinGames = 1, onPlayerClick, onFilterChange }: LeaderboardTableProps) {
@@ -39,6 +42,9 @@ export function LeaderboardTable({ leaders, loading, initialSortColumn = 'pts', 
         case 'blk': return pg ? b.blocksPerGame - a.blocksPerGame : b.totalBlocks - a.totalBlocks;
         case 'tov': return pg ? a.turnoversPerGame - b.turnoversPerGame : a.totalTurnovers - b.totalTurnovers;
         case 'gp': return b.gamesPlayed - a.gamesPlayed;
+        case 'fg_pct': return b.fieldGoalPercentage - a.fieldGoalPercentage;
+        case '3p_pct': return b.threePointPercentage - a.threePointPercentage;
+        case 'ft_pct': return b.freeThrowPercentage - a.freeThrowPercentage;
         default: return 0;
       }
     });
@@ -76,24 +82,26 @@ export function LeaderboardTable({ leaders, loading, initialSortColumn = 'pts', 
         <h2 className="text-sm font-semibold text-white sm:text-base">Player Leaders</h2>
         <LeaderboardFilters sortColumn={sortColumn} onSortColumnChange={handleSort} perMode={perMode} onPerModeChange={setPerMode} minGames={minGames} onMinGamesChange={handleMin} />
       </div>
-      {/* Mobile Header */}
+      {/* Mobile Header - Scrollable to match row layout */}
       <div className="flex md:hidden bg-white/5 border-b border-white/10">
-        <div className="flex items-center gap-1.5 px-2 py-2 w-[140px] shrink-0">
+        <div className="flex items-center gap-1.5 px-2 py-2 w-[130px] shrink-0 border-r border-white/10 sticky left-0 bg-white/5 z-10">
           <span className="w-5 text-center text-[9px] uppercase text-white/50 font-medium">#</span>
           <span className="text-[9px] uppercase text-white/50 font-medium">Player</span>
         </div>
-        <div className="flex items-center shrink-0">
-          {(['gp','pts','reb','ast','stl','blk','tov'] as SortColumn[]).map(c => (
-            <div key={c} className={c === 'gp' ? 'w-8' : 'w-10'}><ColHead col={c} cls="text-center text-[9px]" /></div>
+        <div className="flex items-center overflow-x-auto scrollbar-hide">
+          {(['gp','pts','reb','ast','stl','blk','tov','fg_pct','3p_pct','ft_pct'] as SortColumn[]).map(c => (
+            <div key={c} className={c === 'gp' ? 'w-7 shrink-0' : c.includes('pct') ? 'w-11 shrink-0' : 'w-9 shrink-0'}>
+              <ColHead col={c} cls="text-center text-[9px]" />
+            </div>
           ))}
         </div>
       </div>
-      {/* Desktop Header */}
-      <div className="hidden md:grid grid-cols-[50px_1fr_140px_60px_70px_70px_70px_70px_70px_70px] items-center gap-2 px-5 py-3 bg-white/5 border-b border-white/10">
+      {/* Desktop Header - Full NBA-style grid */}
+      <div className="hidden md:grid grid-cols-[40px_1fr_120px_45px_55px_55px_55px_55px_55px_55px_60px_60px_60px] items-center gap-1 px-4 py-3 bg-white/5 border-b border-white/10">
         <span className="text-xs uppercase text-white/50 font-medium">#</span>
         <span className="text-xs uppercase text-white/50 font-medium">Player</span>
         <span className="text-xs uppercase text-white/50 font-medium">Team</span>
-        {(['gp','pts','reb','ast','stl','blk','tov'] as SortColumn[]).map(c => <ColHead key={c} col={c} cls="text-center" />)}
+        {(['gp','pts','reb','ast','stl','blk','tov','fg_pct','3p_pct','ft_pct'] as SortColumn[]).map(c => <ColHead key={c} col={c} cls="text-center" />)}
       </div>
       {/* Body */}
       {sortedLeaders.length === 0 ? (
