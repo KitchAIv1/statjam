@@ -198,17 +198,15 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
 
       {/* Section 6: StatJam Promo Poster */}
       <section className="overflow-hidden">
-        <a href="/features" target="_blank" rel="noopener noreferrer" className="block">
-          <Image
-            src="/announcements/player-claim-announcement-2.png"
-            alt="Own Your Game - Claim your profile on StatJam"
-            width={380}
-            height={380}
-            className="w-full h-auto object-cover"
-            loading="lazy"
-            sizes="(max-width: 768px) 100vw, 380px"
-          />
-        </a>
+        <Image
+          src="/announcements/player-claim-announcement-2.png"
+          alt="Own Your Game - Claim your profile on StatJam"
+          width={380}
+          height={380}
+          className="w-full h-auto object-cover"
+          loading="lazy"
+          sizes="(max-width: 768px) 100vw, 380px"
+        />
       </section>
     </div>
   );

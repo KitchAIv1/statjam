@@ -446,17 +446,15 @@ export function OverviewTab({ data }: OverviewTabProps) {
 
       {/* StatJam Promo Poster - Mobile Only (between Leaders & Awards) */}
       <section className="lg:hidden overflow-hidden">
-        <a href="/features" target="_blank" rel="noopener noreferrer" className="block">
-          <Image
-            src="/announcements/player-claim-announcement-2.png"
-            alt="Own Your Game - Claim your profile on StatJam"
-            width={600}
-            height={600}
-            className="w-full h-auto object-cover"
-            loading="lazy"
-            sizes="100vw"
-          />
-        </a>
+        <Image
+          src="/announcements/player-claim-announcement-2.png"
+          alt="Own Your Game - Claim your profile on StatJam"
+          width={600}
+          height={600}
+          className="w-full h-auto object-cover"
+          loading="lazy"
+          sizes="100vw"
+        />
       </section>
 
       {/* Game Awards */}
