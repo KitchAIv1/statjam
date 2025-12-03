@@ -16,81 +16,63 @@ interface LeaderboardRowProps {
   onClick: () => void;
 }
 
-/**
- * LeaderboardRow - Single player row in the leaderboard table
- * Mobile: Fixed player zone + scrollable stats (ESPN-style)
- * Desktop: Full grid layout
- * Follows .cursorrules: <100 lines, single responsibility
- */
+/** LeaderboardRow - Mobile: compact fixed widths, Desktop: full grid. <100 lines */
 export function LeaderboardRow({ player, rank, perMode, sortColumn, onClick }: LeaderboardRowProps) {
-  const getInitials = (name: string): string => {
-    return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  const getStat = (perGame: number, total: number): string => {
-    const value = perMode === 'per_game' ? perGame : total;
-    return perMode === 'per_game' ? value.toFixed(1) : String(total);
-  };
-
-  const getStatClass = (column: SortColumn) => cn(
-    "text-center tabular-nums whitespace-nowrap",
-    sortColumn === column ? "text-[#FF3B30] font-bold" : "text-white/80"
-  );
-
-  const getRankClass = () => {
-    if (rank === 1) return "text-yellow-400 font-bold";
-    if (rank === 2) return "text-gray-300 font-bold";
-    if (rank === 3) return "text-amber-600 font-bold";
-    return "text-white/40 font-medium";
-  };
-
-  // Get 3-letter team abbreviation
-  const getTeamAbbrev = (name: string): string => {
-    return name.slice(0, 3).toUpperCase();
-  };
+  const getInitials = (name: string) => name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  const getStat = (pg: number, tot: number) => perMode === 'per_game' ? pg.toFixed(1) : String(tot);
+  const sc = (col: SortColumn) => cn("text-center tabular-nums", sortColumn === col ? "text-[#FF3B30] font-bold" : "text-white/80");
+  const rc = rank === 1 ? "text-yellow-400 font-bold" : rank === 2 ? "text-gray-300 font-bold" : rank === 3 ? "text-amber-600 font-bold" : "text-white/40";
+  const team3 = player.teamName.slice(0, 3).toUpperCase();
+  const p = player;
 
   return (
-    <div
-      onClick={onClick}
-      className="flex hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-b-0"
-    >
-      {/* Fixed Zone: Rank + Player - FIXED WIDTH to ensure stats alignment */}
-      <div className="flex items-center gap-1.5 px-2 py-2.5 w-[140px] shrink-0 bg-[#121212] sm:gap-3 sm:px-4 sm:py-3 sm:w-[200px]">
-        {/* Rank */}
-        <div className={cn("w-5 text-center text-xs shrink-0 sm:w-6 sm:text-sm", getRankClass())}>
-          {rank}
+    <>
+      {/* Mobile (<md) */}
+      <div onClick={onClick} className="flex md:hidden hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5">
+        <div className="flex items-center gap-1.5 px-2 py-2.5 w-[140px] shrink-0 bg-[#121212]">
+          <div className={cn("w-5 text-center text-xs shrink-0", rc)}>{rank}</div>
+          <Avatar className="h-6 w-6 shrink-0 border border-white/10">
+            {p.profilePhotoUrl && <AvatarImage src={p.profilePhotoUrl} alt={p.playerName} />}
+            <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-[8px] text-white">
+              {getInitials(p.playerName) || <User className="h-3 w-3" />}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-medium text-white truncate">{p.playerName}</div>
+            <div className="text-[9px] text-white/50">{team3}</div>
+          </div>
         </div>
-        {/* Avatar */}
-        <Avatar className="h-6 w-6 shrink-0 border border-white/10 sm:h-9 sm:w-9">
-          {player.profilePhotoUrl ? (
-            <AvatarImage src={player.profilePhotoUrl} alt={player.playerName} />
-          ) : null}
-          <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-[8px] sm:text-xs text-white">
-            {getInitials(player.playerName) || <User className="h-3 w-3" />}
-          </AvatarFallback>
-        </Avatar>
-        {/* Name + Team (stacked on mobile) */}
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-medium text-white truncate sm:text-sm">{player.playerName}</div>
-          <div className="text-[9px] text-white/50 sm:hidden">{getTeamAbbrev(player.teamName)}</div>
+        <div className="flex items-center shrink-0">
+          <div className={cn("w-8 text-center text-[10px]", sc('gp'))}>{p.gamesPlayed}</div>
+          <div className={cn("w-10 text-center text-[10px]", sc('pts'))}>{getStat(p.pointsPerGame, p.totalPoints)}</div>
+          <div className={cn("w-10 text-center text-[10px]", sc('reb'))}>{getStat(p.reboundsPerGame, p.totalRebounds)}</div>
+          <div className={cn("w-10 text-center text-[10px]", sc('ast'))}>{getStat(p.assistsPerGame, p.totalAssists)}</div>
+          <div className={cn("w-10 text-center text-[10px]", sc('stl'))}>{getStat(p.stealsPerGame, p.totalSteals)}</div>
+          <div className={cn("w-10 text-center text-[10px]", sc('blk'))}>{getStat(p.blocksPerGame, p.totalBlocks)}</div>
+          <div className={cn("w-10 text-center text-[10px]", sc('tov'))}>{getStat(p.turnoversPerGame, p.totalTurnovers)}</div>
         </div>
       </div>
-
-      {/* Team - Desktop only */}
-      <div className="hidden sm:flex items-center w-[100px] text-xs text-white/50 truncate">
-        {player.teamName}
+      {/* Desktop (md+) */}
+      <div onClick={onClick} className="hidden md:grid grid-cols-[50px_1fr_140px_60px_70px_70px_70px_70px_70px_70px] items-center gap-2 px-5 py-4 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5">
+        <div className={cn("text-base", rc)}>{rank}</div>
+        <div className="flex items-center gap-3 min-w-0">
+          <Avatar className="h-10 w-10 shrink-0 border border-white/10">
+            {p.profilePhotoUrl && <AvatarImage src={p.profilePhotoUrl} alt={p.playerName} />}
+            <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-sm text-white">
+              {getInitials(p.playerName) || <User className="h-4 w-4" />}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-medium text-white truncate">{p.playerName}</span>
+        </div>
+        <div className="text-sm text-white/50 truncate">{p.teamName}</div>
+        <div className={cn("text-sm", sc('gp'))}>{p.gamesPlayed}</div>
+        <div className={cn("text-sm", sc('pts'))}>{getStat(p.pointsPerGame, p.totalPoints)}</div>
+        <div className={cn("text-sm", sc('reb'))}>{getStat(p.reboundsPerGame, p.totalRebounds)}</div>
+        <div className={cn("text-sm", sc('ast'))}>{getStat(p.assistsPerGame, p.totalAssists)}</div>
+        <div className={cn("text-sm", sc('stl'))}>{getStat(p.stealsPerGame, p.totalSteals)}</div>
+        <div className={cn("text-sm", sc('blk'))}>{getStat(p.blocksPerGame, p.totalBlocks)}</div>
+        <div className={cn("text-sm", sc('tov'))}>{getStat(p.turnoversPerGame, p.totalTurnovers)}</div>
       </div>
-
-      {/* Stats Zone - Fixed widths for alignment */}
-      <div className="flex items-center shrink-0">
-        <div className={cn("w-8 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('gp'))}>{player.gamesPlayed}</div>
-        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('pts'))}>{getStat(player.pointsPerGame, player.totalPoints)}</div>
-        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('reb'))}>{getStat(player.reboundsPerGame, player.totalRebounds)}</div>
-        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('ast'))}>{getStat(player.assistsPerGame, player.totalAssists)}</div>
-        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('stl'))}>{getStat(player.stealsPerGame, player.totalSteals)}</div>
-        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('blk'))}>{getStat(player.blocksPerGame, player.totalBlocks)}</div>
-        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('tov'))}>{getStat(player.turnoversPerGame, player.totalTurnovers)}</div>
-      </div>
-    </div>
+    </>
   );
 }
