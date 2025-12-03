@@ -133,26 +133,26 @@ export function LeaderboardTable({
         />
       </div>
 
-      {/* Table Header - Matches row structure */}
+      {/* Table Header - Matches row structure with fixed widths */}
       <div className="flex bg-white/5 border-b border-white/10">
-        {/* Fixed Zone Header */}
-        <div className="flex items-center gap-2 px-2 py-2 shrink-0 sm:gap-3 sm:px-4 sm:py-2.5 sm:w-[200px]">
-          <span className="w-6 text-center text-[9px] sm:text-[10px] uppercase tracking-wider text-white/50 font-medium">#</span>
+        {/* Fixed Zone Header - MUST match row width (140px mobile, 200px desktop) */}
+        <div className="flex items-center gap-1.5 px-2 py-2 w-[140px] shrink-0 sm:gap-3 sm:px-4 sm:py-2.5 sm:w-[200px]">
+          <span className="w-5 text-center text-[9px] shrink-0 sm:w-6 sm:text-[10px] uppercase tracking-wider text-white/50 font-medium">#</span>
           <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-white/50 font-medium">Player</span>
         </div>
         {/* Team - Desktop only */}
         <div className="hidden sm:flex items-center w-[100px]">
           <span className="text-[10px] uppercase tracking-wider text-white/50 font-medium">Team</span>
         </div>
-        {/* Scrollable Stats Header */}
-        <div className="flex items-center gap-0 overflow-x-auto scrollbar-hide flex-1 sm:overflow-visible">
-          <div className="w-10 px-1 sm:w-14"><ColumnHeader column="gp" className="text-center" /></div>
-          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="pts" className="text-center" /></div>
-          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="reb" className="text-center" /></div>
-          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="ast" className="text-center" /></div>
-          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="stl" className="text-center" /></div>
-          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="blk" className="text-center" /></div>
-          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="tov" className="text-center" /></div>
+        {/* Stats Header - Fixed widths matching row */}
+        <div className="flex items-center shrink-0">
+          <div className="w-8 sm:w-12"><ColumnHeader column="gp" className="text-center" /></div>
+          <div className="w-10 sm:w-12"><ColumnHeader column="pts" className="text-center" /></div>
+          <div className="w-10 sm:w-12"><ColumnHeader column="reb" className="text-center" /></div>
+          <div className="w-10 sm:w-12"><ColumnHeader column="ast" className="text-center" /></div>
+          <div className="w-10 sm:w-12"><ColumnHeader column="stl" className="text-center" /></div>
+          <div className="w-10 sm:w-12"><ColumnHeader column="blk" className="text-center" /></div>
+          <div className="w-10 sm:w-12"><ColumnHeader column="tov" className="text-center" /></div>
         </div>
       </div>
 

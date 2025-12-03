@@ -54,25 +54,25 @@ export function LeaderboardRow({ player, rank, perMode, sortColumn, onClick }: L
       onClick={onClick}
       className="flex hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-b-0"
     >
-      {/* Fixed Zone: Rank + Player (sticky on mobile) */}
-      <div className="flex items-center gap-2 px-2 py-2.5 shrink-0 bg-[#121212] sm:gap-3 sm:px-4 sm:py-3 sm:w-[200px]">
+      {/* Fixed Zone: Rank + Player - FIXED WIDTH to ensure stats alignment */}
+      <div className="flex items-center gap-1.5 px-2 py-2.5 w-[140px] shrink-0 bg-[#121212] sm:gap-3 sm:px-4 sm:py-3 sm:w-[200px]">
         {/* Rank */}
-        <div className={cn("w-6 text-center text-xs sm:text-sm", getRankClass())}>
+        <div className={cn("w-5 text-center text-xs shrink-0 sm:w-6 sm:text-sm", getRankClass())}>
           {rank}
         </div>
         {/* Avatar */}
-        <Avatar className="h-7 w-7 shrink-0 border border-white/10 sm:h-9 sm:w-9">
+        <Avatar className="h-6 w-6 shrink-0 border border-white/10 sm:h-9 sm:w-9">
           {player.profilePhotoUrl ? (
             <AvatarImage src={player.profilePhotoUrl} alt={player.playerName} />
           ) : null}
-          <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-[9px] sm:text-xs text-white">
+          <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-[8px] sm:text-xs text-white">
             {getInitials(player.playerName) || <User className="h-3 w-3" />}
           </AvatarFallback>
         </Avatar>
         {/* Name + Team (stacked on mobile) */}
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium text-white truncate sm:text-sm">{player.playerName}</div>
-          <div className="text-[10px] text-white/50 sm:hidden">{getTeamAbbrev(player.teamName)}</div>
+          <div className="text-[10px] font-medium text-white truncate sm:text-sm">{player.playerName}</div>
+          <div className="text-[9px] text-white/50 sm:hidden">{getTeamAbbrev(player.teamName)}</div>
         </div>
       </div>
 
@@ -81,15 +81,15 @@ export function LeaderboardRow({ player, rank, perMode, sortColumn, onClick }: L
         {player.teamName}
       </div>
 
-      {/* Scrollable Stats Zone */}
-      <div className="flex items-center gap-0 overflow-x-auto scrollbar-hide flex-1 sm:overflow-visible">
-        <div className={cn("w-10 px-1 text-[10px] sm:w-14 sm:text-xs", getStatClass('gp'))}>{player.gamesPlayed}</div>
-        <div className={cn("w-12 px-1 text-[10px] sm:w-14 sm:text-xs", getStatClass('pts'))}>{getStat(player.pointsPerGame, player.totalPoints)}</div>
-        <div className={cn("w-12 px-1 text-[10px] sm:w-14 sm:text-xs", getStatClass('reb'))}>{getStat(player.reboundsPerGame, player.totalRebounds)}</div>
-        <div className={cn("w-12 px-1 text-[10px] sm:w-14 sm:text-xs", getStatClass('ast'))}>{getStat(player.assistsPerGame, player.totalAssists)}</div>
-        <div className={cn("w-12 px-1 text-[10px] sm:w-14 sm:text-xs", getStatClass('stl'))}>{getStat(player.stealsPerGame, player.totalSteals)}</div>
-        <div className={cn("w-12 px-1 text-[10px] sm:w-14 sm:text-xs", getStatClass('blk'))}>{getStat(player.blocksPerGame, player.totalBlocks)}</div>
-        <div className={cn("w-12 px-1 text-[10px] sm:w-14 sm:text-xs", getStatClass('tov'))}>{getStat(player.turnoversPerGame, player.totalTurnovers)}</div>
+      {/* Stats Zone - Fixed widths for alignment */}
+      <div className="flex items-center shrink-0">
+        <div className={cn("w-8 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('gp'))}>{player.gamesPlayed}</div>
+        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('pts'))}>{getStat(player.pointsPerGame, player.totalPoints)}</div>
+        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('reb'))}>{getStat(player.reboundsPerGame, player.totalRebounds)}</div>
+        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('ast'))}>{getStat(player.assistsPerGame, player.totalAssists)}</div>
+        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('stl'))}>{getStat(player.stealsPerGame, player.totalSteals)}</div>
+        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('blk'))}>{getStat(player.blocksPerGame, player.totalBlocks)}</div>
+        <div className={cn("w-10 text-center text-[10px] sm:w-12 sm:text-xs", getStatClass('tov'))}>{getStat(player.turnoversPerGame, player.totalTurnovers)}</div>
       </div>
     </div>
   );
