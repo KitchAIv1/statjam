@@ -268,7 +268,7 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
             </div>
 
             <TabsContent value="overview" className="mt-0">
-              <OverviewTab data={data} />
+              <OverviewTab data={data} onNavigateToTab={handleTabChange} />
             </TabsContent>
             <TabsContent value="schedule" className="mt-0">
               <ScheduleTab tournamentId={data.tournament.id} />

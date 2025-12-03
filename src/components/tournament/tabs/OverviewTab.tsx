@@ -19,10 +19,11 @@ import { useTournamentMatchups } from '@/hooks/useTournamentMatchups';
 
 interface OverviewTabProps {
   data: TournamentPageData;
+  onNavigateToTab?: (tab: string) => void;
 }
 
 
-export function OverviewTab({ data }: OverviewTabProps) {
+export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
   const router = useRouter();
   const [topScorers, setTopScorers] = useState<PlayerLeader[]>([]);
   const [loadingLeaders, setLoadingLeaders] = useState(true);
@@ -392,12 +393,7 @@ export function OverviewTab({ data }: OverviewTabProps) {
           <Button
             variant="outline"
             className="w-full rounded-full border-white/10 bg-[#121212] text-[10px] text-white/70 hover:border-white/30 hover:text-white sm:w-auto sm:text-xs md:text-sm"
-            onClick={() => {
-              const leadersTab = document.querySelector('[value="leaders"]');
-              if (leadersTab) {
-                (leadersTab as HTMLElement).click();
-              }
-            }}
+            onClick={() => onNavigateToTab?.('leaders')}
           >
             View Full Leaders
           </Button>
