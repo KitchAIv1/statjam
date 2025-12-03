@@ -1,6 +1,7 @@
 /**
  * Tournament Leaders Service
- * Aggregates player statistics across all tournament games
+ * Fast: Uses pre-computed tournament_leaders table
+ * Fallback: Aggregates from game_stats if table is empty
  */
 
 import { hybridSupabaseService } from '@/lib/services/hybridSupabaseService';
@@ -13,7 +14,7 @@ export interface PlayerLeader {
   teamId: string;
   teamName: string;
   profilePhotoUrl?: string;
-  isCustomPlayer?: boolean; // Flag to identify custom players
+  isCustomPlayer?: boolean;
   gamesPlayed: number;
   // Per-game averages
   pointsPerGame: number;
@@ -42,6 +43,31 @@ export interface PlayerLeader {
   freeThrowsAttempted: number;
 }
 
+/** Pre-computed leader row from tournament_leaders table */
+interface PrecomputedLeader {
+  tournament_id: string;
+  player_id: string;
+  player_name: string;
+  team_id: string;
+  team_name: string;
+  profile_photo_url?: string;
+  is_custom_player?: boolean;
+  games_played: number;
+  total_points: number;
+  total_rebounds: number;
+  total_assists: number;
+  total_steals: number;
+  total_blocks: number;
+  total_turnovers: number;
+  field_goals_made: number;
+  field_goals_attempted: number;
+  three_pointers_made: number;
+  three_pointers_attempted: number;
+  free_throws_made: number;
+  free_throws_attempted: number;
+  updated_at?: string;
+}
+
 interface GameStat {
   game_id: string;
   player_id?: string;
@@ -61,6 +87,8 @@ interface Game {
 export class TournamentLeadersService {
   /**
    * Get player leaders for a tournament
+   * Fast path: Uses pre-computed tournament_leaders table
+   * Fallback: Calculates from game_stats if table is empty
    */
   static async getTournamentPlayerLeaders(
     tournamentId: string,
@@ -68,308 +96,285 @@ export class TournamentLeadersService {
     minGames: number = 1
   ): Promise<PlayerLeader[]> {
     try {
-      console.log('🏆 TournamentLeadersService: Calculating leaders for tournament:', tournamentId, 'category:', category);
+      console.log('🏆 TournamentLeadersService: Fetching leaders for tournament:', tournamentId);
 
-      // Fetch all games for this tournament
-      const games = await hybridSupabaseService.query<Game>(
-        'games',
-        'id, team_a_id, team_b_id',
+      // ⚡ FAST PATH: Try pre-computed table first
+      const precomputedLeaders = await this.fetchPrecomputedLeaders(tournamentId, minGames);
+      if (precomputedLeaders.length > 0) {
+        console.log('⚡ TournamentLeadersService: Using pre-computed leaders (fast path)');
+        return this.sortLeaders(precomputedLeaders, category);
+      }
+
+      // 🔄 FALLBACK: Calculate from game_stats (slow path)
+      console.log('🔄 TournamentLeadersService: Pre-computed table empty, calculating from game_stats...');
+      return this.calculateLeadersFromGameStats(tournamentId, category, minGames);
+    } catch (error) {
+      console.error('❌ TournamentLeadersService: Error fetching leaders:', error);
+      return [];
+    }
+  }
+
+  /**
+   * ⚡ Fast path: Fetch from pre-computed tournament_leaders table
+   */
+  private static async fetchPrecomputedLeaders(
+    tournamentId: string,
+    minGames: number
+  ): Promise<PlayerLeader[]> {
+    try {
+      const rows = await hybridSupabaseService.query<PrecomputedLeader>(
+        'tournament_leaders',
+        '*',
         { tournament_id: `eq.${tournamentId}` }
       );
 
-      if (!games || games.length === 0) {
-        console.log('🏆 TournamentLeadersService: No games found');
-        return [];
-      }
+      if (!rows || rows.length === 0) return [];
 
-      // ✅ FIX: Fetch game_stats PER GAME to avoid Supabase 1000 row limit
-      // Each game can have 200-400 stats, so batching all games hits the limit
-      console.log('🏆 TournamentLeadersService: Fetching stats for', games.length, 'games (per-game queries)');
-      
-      // Fetch stats for each game in parallel
-      const statsPromises = games.map(async (game) => {
-        try {
-          const stats = await hybridSupabaseService.query<GameStat>(
-            'game_stats',
-            'game_id, player_id, custom_player_id, team_id, stat_type, stat_value, modifier',
-            { game_id: `eq.${game.id}` }
-          );
-          return stats || [];
-        } catch (error) {
-          console.error(`❌ Failed to fetch stats for game ${game.id}:`, error);
-          return [];
-        }
-      });
-      
-      const statsResults = await Promise.all(statsPromises);
-      const allStats: GameStat[] = statsResults.flat();
-      
-      console.log('✅ TournamentLeadersService: Fetched', allStats.length, 'total stats from', games.length, 'games');
-
-      if (allStats.length === 0) {
-        console.log('🏆 TournamentLeadersService: No stats found');
-        return [];
-      }
-
-      // Get all teams to map team IDs to names
-      const teams = await TeamService.getTeamsByTournament(tournamentId);
-      const teamMap = new Map(teams.map(t => [t.id, { name: t.name }]));
-
-      // Aggregate stats by player
-      const playerStatsMap = new Map<string, {
-        playerId: string;
-        teamId: string;
-        gamesPlayed: Set<string>;
-        points: number;
-        rebounds: number;
-        assists: number;
-        steals: number;
-        blocks: number;
-        turnovers: number;
-        fieldGoalsMade: number;
-        fieldGoalsAttempted: number;
-        threePointersMade: number;
-        threePointersAttempted: number;
-        freeThrowsMade: number;
-        freeThrowsAttempted: number;
-      }>();
-
-      // Process each stat
-      allStats.forEach(stat => {
-        const playerId = stat.player_id || stat.custom_player_id;
-        const isCustomPlayer = !!stat.custom_player_id; // true if custom_player_id exists
-        if (!playerId) return;
-
-        // Initialize player if not exists
-        if (!playerStatsMap.has(playerId)) {
-          playerStatsMap.set(playerId, {
-            playerId,
-            isCustomPlayer,
-            teamId: stat.team_id,
-            gamesPlayed: new Set(),
-            points: 0,
-            rebounds: 0,
-            assists: 0,
-            steals: 0,
-            blocks: 0,
-            turnovers: 0,
-            fieldGoalsMade: 0,
-            fieldGoalsAttempted: 0,
-            threePointersMade: 0,
-            threePointersAttempted: 0,
-            freeThrowsMade: 0,
-            freeThrowsAttempted: 0,
-          });
-        }
-
-        const playerStats = playerStatsMap.get(playerId)!;
-        playerStats.gamesPlayed.add(stat.game_id);
-
-        const statType = stat.stat_type;
-        const modifier = stat.modifier;
-        const value = stat.stat_value || 1;
-
-        // Aggregate stats
-        switch (statType) {
-          case 'field_goal':
-          case 'two_pointer':
-            if (modifier === 'made') {
-              playerStats.points += 2;
-              playerStats.fieldGoalsMade += 1;
-              playerStats.fieldGoalsAttempted += 1;
-            } else if (modifier === 'missed') {
-              playerStats.fieldGoalsAttempted += 1;
-            }
-            break;
-          case 'three_pointer':
-            if (modifier === 'made') {
-              playerStats.points += 3;
-              playerStats.threePointersMade += 1;
-              playerStats.threePointersAttempted += 1;
-              playerStats.fieldGoalsMade += 1;
-              playerStats.fieldGoalsAttempted += 1;
-            } else if (modifier === 'missed') {
-              playerStats.threePointersAttempted += 1;
-              playerStats.fieldGoalsAttempted += 1;
-            }
-            break;
-          case 'free_throw':
-            if (modifier === 'made') {
-              playerStats.points += 1;
-              playerStats.freeThrowsMade += 1;
-              playerStats.freeThrowsAttempted += 1;
-            } else if (modifier === 'missed') {
-              playerStats.freeThrowsAttempted += 1;
-            }
-            break;
-          case 'rebound':
-            playerStats.rebounds += value;
-            break;
-          case 'assist':
-            playerStats.assists += value;
-            break;
-          case 'steal':
-            playerStats.steals += value;
-            break;
-          case 'block':
-            playerStats.blocks += value;
-            break;
-          case 'turnover':
-            playerStats.turnovers += value;
-            break;
-        }
-      });
-
-      // Get player info (name, photo) for both regular and custom players
-      const regularPlayerIds: string[] = [];
-      const customPlayerIds: string[] = [];
-      
-      // Separate regular and custom players
-      playerStatsMap.forEach((stats, playerId) => {
-        if (stats.isCustomPlayer) {
-          customPlayerIds.push(playerId);
-        } else {
-          regularPlayerIds.push(playerId);
-        }
-      });
-      
-      const playerInfoMap = new Map<string, { name: string; profilePhotoUrl?: string; isCustomPlayer: boolean }>();
-
-      // Fetch regular players from users table
-      if (regularPlayerIds.length > 0) {
-        const batchSize = 50;
-        for (let i = 0; i < regularPlayerIds.length; i += batchSize) {
-          const batch = regularPlayerIds.slice(i, i + batchSize);
-          
-          const playerPromises = batch.map(playerId =>
-            hybridSupabaseService.query<{ id: string; name: string; profile_photo_url?: string }>(
-              'users',
-              'id, name, profile_photo_url',
-              { id: `eq.${playerId}` }
-            )
-          );
-          
-          const playerResults = await Promise.all(playerPromises);
-          playerResults.forEach(players => {
-            players.forEach(player => {
-              playerInfoMap.set(player.id, {
-                name: player.name || 'Unknown Player',
-                profilePhotoUrl: player.profile_photo_url || undefined,
-                isCustomPlayer: false,
-              });
-            });
-          });
-        }
-      }
-
-      // Fetch custom players from custom_players table
-      if (customPlayerIds.length > 0) {
-        const batchSize = 50;
-        for (let i = 0; i < customPlayerIds.length; i += batchSize) {
-          const batch = customPlayerIds.slice(i, i + batchSize);
-          
-          const customPlayerPromises = batch.map(customPlayerId =>
-            hybridSupabaseService.query<{ id: string; name: string }>(
-              'custom_players',
-              'id, name',
-              { id: `eq.${customPlayerId}` }
-            )
-          );
-          
-          const customPlayerResults = await Promise.all(customPlayerPromises);
-          customPlayerResults.forEach(customPlayers => {
-            customPlayers.forEach(customPlayer => {
-              playerInfoMap.set(customPlayer.id, {
-                name: customPlayer.name || 'Custom Player',
-                profilePhotoUrl: undefined, // Custom players don't have profile photos
-                isCustomPlayer: true,
-              });
-            });
-          });
-        }
-      }
-
-      // Convert to leaders array
-      const leaders: PlayerLeader[] = Array.from(playerStatsMap.values())
-        .filter(player => player.gamesPlayed.size >= minGames)
-        .map(player => {
-          const gamesPlayed = player.gamesPlayed.size;
-          const playerInfo = playerInfoMap.get(player.playerId);
-          const teamInfo = teamMap.get(player.teamId);
-
-          // Calculate percentages
-          const fieldGoalPercentage = player.fieldGoalsAttempted > 0
-            ? Math.round((player.fieldGoalsMade / player.fieldGoalsAttempted) * 1000) / 10
-            : 0;
-          const threePointPercentage = player.threePointersAttempted > 0
-            ? Math.round((player.threePointersMade / player.threePointersAttempted) * 1000) / 10
-            : 0;
-          const freeThrowPercentage = player.freeThrowsAttempted > 0
-            ? Math.round((player.freeThrowsMade / player.freeThrowsAttempted) * 1000) / 10
-            : 0;
+      // Map database rows to PlayerLeader interface
+      return rows
+        .filter(row => row.games_played >= minGames)
+        .map((row, index) => {
+          const gp = row.games_played || 1;
+          const fgPct = row.field_goals_attempted > 0
+            ? Math.round((row.field_goals_made / row.field_goals_attempted) * 1000) / 10 : 0;
+          const threePct = row.three_pointers_attempted > 0
+            ? Math.round((row.three_pointers_made / row.three_pointers_attempted) * 1000) / 10 : 0;
+          const ftPct = row.free_throws_attempted > 0
+            ? Math.round((row.free_throws_made / row.free_throws_attempted) * 1000) / 10 : 0;
 
           return {
-            rank: 0, // Will be set after sorting
-            playerId: player.playerId,
-            playerName: playerInfo?.name || 'Unknown Player',
-            teamId: player.teamId,
-            teamName: teamInfo?.name || 'Unknown Team',
-            profilePhotoUrl: playerInfo?.profilePhotoUrl,
-            isCustomPlayer: player.isCustomPlayer || playerInfo?.isCustomPlayer || false,
-            gamesPlayed,
-            pointsPerGame: gamesPlayed > 0 ? Math.round((player.points / gamesPlayed) * 10) / 10 : 0,
-            reboundsPerGame: gamesPlayed > 0 ? Math.round((player.rebounds / gamesPlayed) * 10) / 10 : 0,
-            assistsPerGame: gamesPlayed > 0 ? Math.round((player.assists / gamesPlayed) * 10) / 10 : 0,
-            stealsPerGame: gamesPlayed > 0 ? Math.round((player.steals / gamesPlayed) * 10) / 10 : 0,
-            blocksPerGame: gamesPlayed > 0 ? Math.round((player.blocks / gamesPlayed) * 10) / 10 : 0,
-            turnoversPerGame: gamesPlayed > 0 ? Math.round((player.turnovers / gamesPlayed) * 10) / 10 : 0,
-            totalPoints: player.points,
-            totalRebounds: player.rebounds,
-            totalAssists: player.assists,
-            totalSteals: player.steals,
-            totalBlocks: player.blocks,
-            totalTurnovers: player.turnovers,
-            fieldGoalPercentage,
-            threePointPercentage,
-            freeThrowPercentage,
-            fieldGoalsMade: player.fieldGoalsMade,
-            fieldGoalsAttempted: player.fieldGoalsAttempted,
-            threePointersMade: player.threePointersMade,
-            threePointersAttempted: player.threePointersAttempted,
-            freeThrowsMade: player.freeThrowsMade,
-            freeThrowsAttempted: player.freeThrowsAttempted,
+            rank: index + 1,
+            playerId: row.player_id,
+            playerName: row.player_name || 'Unknown Player',
+            teamId: row.team_id,
+            teamName: row.team_name || 'Unknown Team',
+            profilePhotoUrl: row.profile_photo_url,
+            isCustomPlayer: row.is_custom_player || false,
+            gamesPlayed: gp,
+            pointsPerGame: Math.round((row.total_points / gp) * 10) / 10,
+            reboundsPerGame: Math.round((row.total_rebounds / gp) * 10) / 10,
+            assistsPerGame: Math.round((row.total_assists / gp) * 10) / 10,
+            stealsPerGame: Math.round((row.total_steals / gp) * 10) / 10,
+            blocksPerGame: Math.round((row.total_blocks / gp) * 10) / 10,
+            turnoversPerGame: Math.round((row.total_turnovers / gp) * 10) / 10,
+            totalPoints: row.total_points,
+            totalRebounds: row.total_rebounds,
+            totalAssists: row.total_assists,
+            totalSteals: row.total_steals,
+            totalBlocks: row.total_blocks,
+            totalTurnovers: row.total_turnovers,
+            fieldGoalPercentage: fgPct,
+            threePointPercentage: threePct,
+            freeThrowPercentage: ftPct,
+            fieldGoalsMade: row.field_goals_made,
+            fieldGoalsAttempted: row.field_goals_attempted,
+            threePointersMade: row.three_pointers_made,
+            threePointersAttempted: row.three_pointers_attempted,
+            freeThrowsMade: row.free_throws_made,
+            freeThrowsAttempted: row.free_throws_attempted,
           };
         });
-
-      // Sort by category
-      leaders.sort((a, b) => {
-        switch (category) {
-          case 'points':
-            return b.pointsPerGame - a.pointsPerGame;
-          case 'rebounds':
-            return b.reboundsPerGame - a.reboundsPerGame;
-          case 'assists':
-            return b.assistsPerGame - a.assistsPerGame;
-          case 'steals':
-            return b.stealsPerGame - a.stealsPerGame;
-          case 'blocks':
-            return b.blocksPerGame - a.blocksPerGame;
-          default:
-            return b.pointsPerGame - a.pointsPerGame;
-        }
-      });
-
-      // Assign ranks
-      leaders.forEach((leader, index) => {
-        leader.rank = index + 1;
-      });
-
-      console.log('✅ TournamentLeadersService: Calculated leaders for', leaders.length, 'players');
-      return leaders;
     } catch (error) {
-      console.error('❌ TournamentLeadersService: Error calculating leaders:', error);
+      console.warn('⚠️ TournamentLeadersService: Pre-computed table query failed, using fallback:', error);
       return [];
     }
+  }
+
+  /**
+   * Sort leaders by category and assign ranks
+   */
+  private static sortLeaders(
+    leaders: PlayerLeader[],
+    category: 'points' | 'rebounds' | 'assists' | 'steals' | 'blocks'
+  ): PlayerLeader[] {
+    leaders.sort((a, b) => {
+      switch (category) {
+        case 'points': return b.pointsPerGame - a.pointsPerGame;
+        case 'rebounds': return b.reboundsPerGame - a.reboundsPerGame;
+        case 'assists': return b.assistsPerGame - a.assistsPerGame;
+        case 'steals': return b.stealsPerGame - a.stealsPerGame;
+        case 'blocks': return b.blocksPerGame - a.blocksPerGame;
+        default: return b.pointsPerGame - a.pointsPerGame;
+      }
+    });
+    leaders.forEach((leader, index) => { leader.rank = index + 1; });
+    return leaders;
+  }
+
+  /**
+   * 🔄 Fallback: Calculate leaders from game_stats (slow path)
+   */
+  private static async calculateLeadersFromGameStats(
+    tournamentId: string,
+    category: 'points' | 'rebounds' | 'assists' | 'steals' | 'blocks',
+    minGames: number
+  ): Promise<PlayerLeader[]> {
+    // Fetch all games for this tournament
+    const games = await hybridSupabaseService.query<Game>(
+      'games',
+      'id, team_a_id, team_b_id',
+      { tournament_id: `eq.${tournamentId}` }
+    );
+
+    if (!games || games.length === 0) {
+      console.log('🏆 TournamentLeadersService: No games found');
+      return [];
+    }
+
+    // Fetch game_stats PER GAME to avoid Supabase 1000 row limit
+    console.log('🏆 TournamentLeadersService: Fetching stats for', games.length, 'games (per-game queries)');
+    
+    const statsPromises = games.map(async (game) => {
+      try {
+        const stats = await hybridSupabaseService.query<GameStat>(
+          'game_stats',
+          'game_id, player_id, custom_player_id, team_id, stat_type, stat_value, modifier',
+          { game_id: `eq.${game.id}` }
+        );
+        return stats || [];
+      } catch (error) {
+        console.error(`❌ Failed to fetch stats for game ${game.id}:`, error);
+        return [];
+      }
+    });
+    
+    const statsResults = await Promise.all(statsPromises);
+    const allStats: GameStat[] = statsResults.flat();
+    
+    console.log('✅ TournamentLeadersService: Fetched', allStats.length, 'total stats from', games.length, 'games');
+
+    if (allStats.length === 0) {
+      console.log('🏆 TournamentLeadersService: No stats found');
+      return [];
+    }
+
+    // Get all teams to map team IDs to names
+    const teams = await TeamService.getTeamsByTournament(tournamentId);
+    const teamMap = new Map(teams.map(t => [t.id, { name: t.name }]));
+
+    // Aggregate stats by player
+    const playerStatsMap = new Map<string, {
+      playerId: string;
+      isCustomPlayer: boolean;
+      teamId: string;
+      gamesPlayed: Set<string>;
+      points: number;
+      rebounds: number;
+      assists: number;
+      steals: number;
+      blocks: number;
+      turnovers: number;
+      fieldGoalsMade: number;
+      fieldGoalsAttempted: number;
+      threePointersMade: number;
+      threePointersAttempted: number;
+      freeThrowsMade: number;
+      freeThrowsAttempted: number;
+    }>();
+
+    // Process each stat
+    allStats.forEach(stat => {
+      const playerId = stat.player_id || stat.custom_player_id;
+      const isCustomPlayer = !!stat.custom_player_id;
+      if (!playerId) return;
+
+      if (!playerStatsMap.has(playerId)) {
+        playerStatsMap.set(playerId, {
+          playerId, isCustomPlayer, teamId: stat.team_id,
+          gamesPlayed: new Set(), points: 0, rebounds: 0, assists: 0,
+          steals: 0, blocks: 0, turnovers: 0,
+          fieldGoalsMade: 0, fieldGoalsAttempted: 0,
+          threePointersMade: 0, threePointersAttempted: 0,
+          freeThrowsMade: 0, freeThrowsAttempted: 0,
+        });
+      }
+
+      const ps = playerStatsMap.get(playerId)!;
+      ps.gamesPlayed.add(stat.game_id);
+      const value = stat.stat_value || 1;
+
+      switch (stat.stat_type) {
+        case 'field_goal': case 'two_pointer':
+          if (stat.modifier === 'made') { ps.points += 2; ps.fieldGoalsMade++; ps.fieldGoalsAttempted++; }
+          else if (stat.modifier === 'missed') { ps.fieldGoalsAttempted++; }
+          break;
+        case 'three_pointer':
+          if (stat.modifier === 'made') { ps.points += 3; ps.threePointersMade++; ps.threePointersAttempted++; ps.fieldGoalsMade++; ps.fieldGoalsAttempted++; }
+          else if (stat.modifier === 'missed') { ps.threePointersAttempted++; ps.fieldGoalsAttempted++; }
+          break;
+        case 'free_throw':
+          if (stat.modifier === 'made') { ps.points += 1; ps.freeThrowsMade++; ps.freeThrowsAttempted++; }
+          else if (stat.modifier === 'missed') { ps.freeThrowsAttempted++; }
+          break;
+        case 'rebound': ps.rebounds += value; break;
+        case 'assist': ps.assists += value; break;
+        case 'steal': ps.steals += value; break;
+        case 'block': ps.blocks += value; break;
+        case 'turnover': ps.turnovers += value; break;
+      }
+    });
+
+    // Separate regular and custom players
+    const regularPlayerIds: string[] = [];
+    const customPlayerIds: string[] = [];
+    playerStatsMap.forEach((stats) => {
+      if (stats.isCustomPlayer) customPlayerIds.push(stats.playerId);
+      else regularPlayerIds.push(stats.playerId);
+    });
+
+    const playerInfoMap = new Map<string, { name: string; profilePhotoUrl?: string; isCustomPlayer: boolean }>();
+
+    // Fetch regular players
+    if (regularPlayerIds.length > 0) {
+      const promises = regularPlayerIds.map(id =>
+        hybridSupabaseService.query<{ id: string; name: string; profile_photo_url?: string }>('users', 'id, name, profile_photo_url', { id: `eq.${id}` })
+      );
+      const results = await Promise.all(promises);
+      results.flat().forEach(p => playerInfoMap.set(p.id, { name: p.name || 'Unknown', profilePhotoUrl: p.profile_photo_url, isCustomPlayer: false }));
+    }
+
+    // Fetch custom players
+    if (customPlayerIds.length > 0) {
+      const promises = customPlayerIds.map(id =>
+        hybridSupabaseService.query<{ id: string; name: string }>('custom_players', 'id, name', { id: `eq.${id}` })
+      );
+      const results = await Promise.all(promises);
+      results.flat().forEach(p => playerInfoMap.set(p.id, { name: p.name || 'Custom Player', isCustomPlayer: true }));
+    }
+
+    // Convert to leaders array
+    const leaders: PlayerLeader[] = Array.from(playerStatsMap.values())
+      .filter(p => p.gamesPlayed.size >= minGames)
+      .map(p => {
+        const gp = p.gamesPlayed.size;
+        const info = playerInfoMap.get(p.playerId);
+        const team = teamMap.get(p.teamId);
+        const fgPct = p.fieldGoalsAttempted > 0 ? Math.round((p.fieldGoalsMade / p.fieldGoalsAttempted) * 1000) / 10 : 0;
+        const threePct = p.threePointersAttempted > 0 ? Math.round((p.threePointersMade / p.threePointersAttempted) * 1000) / 10 : 0;
+        const ftPct = p.freeThrowsAttempted > 0 ? Math.round((p.freeThrowsMade / p.freeThrowsAttempted) * 1000) / 10 : 0;
+
+        return {
+          rank: 0, playerId: p.playerId, playerName: info?.name || 'Unknown Player',
+          teamId: p.teamId, teamName: team?.name || 'Unknown Team',
+          profilePhotoUrl: info?.profilePhotoUrl, isCustomPlayer: p.isCustomPlayer || info?.isCustomPlayer || false,
+          gamesPlayed: gp,
+          pointsPerGame: Math.round((p.points / gp) * 10) / 10,
+          reboundsPerGame: Math.round((p.rebounds / gp) * 10) / 10,
+          assistsPerGame: Math.round((p.assists / gp) * 10) / 10,
+          stealsPerGame: Math.round((p.steals / gp) * 10) / 10,
+          blocksPerGame: Math.round((p.blocks / gp) * 10) / 10,
+          turnoversPerGame: Math.round((p.turnovers / gp) * 10) / 10,
+          totalPoints: p.points, totalRebounds: p.rebounds, totalAssists: p.assists,
+          totalSteals: p.steals, totalBlocks: p.blocks, totalTurnovers: p.turnovers,
+          fieldGoalPercentage: fgPct, threePointPercentage: threePct, freeThrowPercentage: ftPct,
+          fieldGoalsMade: p.fieldGoalsMade, fieldGoalsAttempted: p.fieldGoalsAttempted,
+          threePointersMade: p.threePointersMade, threePointersAttempted: p.threePointersAttempted,
+          freeThrowsMade: p.freeThrowsMade, freeThrowsAttempted: p.freeThrowsAttempted,
+        };
+      });
+
+    console.log('✅ TournamentLeadersService: Calculated', leaders.length, 'leaders (fallback)');
+    return this.sortLeaders(leaders, category);
   }
 }
 
