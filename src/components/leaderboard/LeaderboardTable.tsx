@@ -34,7 +34,8 @@ const COLUMN_LABELS: Record<SortColumn | 'player' | 'team', string> = {
 
 /**
  * LeaderboardTable - NBA-style leaderboard with sorting and pagination
- * Shows all stats, re-sorts when filter changes
+ * Mobile: Fixed player zone + scrollable stats (ESPN-style)
+ * Desktop: Full layout
  * Follows .cursorrules: <200 lines, single responsibility
  */
 export function LeaderboardTable({
@@ -51,7 +52,6 @@ export function LeaderboardTable({
   const [minGames, setMinGames] = useState(initialMinGames);
   const [showAll, setShowAll] = useState(false);
 
-  // Sort leaders by selected column
   const sortedLeaders = useMemo(() => {
     const sorted = [...leaders].sort((a, b) => {
       const isPerGame = perMode === 'per_game';
@@ -61,7 +61,7 @@ export function LeaderboardTable({
         case 'ast': return isPerGame ? b.assistsPerGame - a.assistsPerGame : b.totalAssists - a.totalAssists;
         case 'stl': return isPerGame ? b.stealsPerGame - a.stealsPerGame : b.totalSteals - a.totalSteals;
         case 'blk': return isPerGame ? b.blocksPerGame - a.blocksPerGame : b.totalBlocks - a.totalBlocks;
-        case 'tov': return isPerGame ? a.turnoversPerGame - b.turnoversPerGame : a.totalTurnovers - b.totalTurnovers; // Lower is better
+        case 'tov': return isPerGame ? a.turnoversPerGame - b.turnoversPerGame : a.totalTurnovers - b.totalTurnovers;
         case 'gp': return b.gamesPlayed - a.gamesPlayed;
         default: return 0;
       }
@@ -69,17 +69,11 @@ export function LeaderboardTable({
     return sorted;
   }, [leaders, sortColumn, perMode]);
 
-  // Paginate
   const displayedLeaders = showAll ? sortedLeaders : sortedLeaders.slice(0, ITEMS_PER_PAGE);
   const hasMore = sortedLeaders.length > ITEMS_PER_PAGE;
 
-  // Handle filter changes
   const handleSortColumnChange = (column: SortColumn) => {
     setSortColumn(column);
-    // Map to service category
-    const categoryMap: Record<SortColumn, 'points' | 'rebounds' | 'assists' | 'steals' | 'blocks'> = {
-      pts: 'points', reb: 'rebounds', ast: 'assists', stl: 'steals', blk: 'blocks', tov: 'points', gp: 'points'
-    };
     onFilterChange?.(column, minGames);
   };
 
@@ -88,7 +82,6 @@ export function LeaderboardTable({
     onFilterChange?.(sortColumn, games);
   };
 
-  // Column header with sort indicator
   const ColumnHeader = ({ column, className }: { column: SortColumn | 'player' | 'team'; className?: string }) => {
     const isSortable = !['player', 'team'].includes(column);
     const isActive = sortColumn === column;
@@ -98,16 +91,14 @@ export function LeaderboardTable({
         onClick={() => isSortable && handleSortColumnChange(column as SortColumn)}
         disabled={!isSortable}
         className={cn(
-          "text-[9px] sm:text-[10px] uppercase tracking-wider font-medium transition-colors",
+          "text-[9px] sm:text-[10px] uppercase tracking-wider font-medium transition-colors whitespace-nowrap",
           isSortable ? "cursor-pointer hover:text-white" : "cursor-default",
           isActive ? "text-[#FF3B30]" : "text-white/50",
           className
         )}
       >
         {COLUMN_LABELS[column]}
-        {isActive && isSortable && (
-          <ChevronDown className="inline-block w-3 h-3 ml-0.5" />
-        )}
+        {isActive && isSortable && <ChevronDown className="inline-block w-3 h-3 ml-0.5" />}
       </button>
     );
   };
@@ -142,19 +133,27 @@ export function LeaderboardTable({
         />
       </div>
 
-      {/* Table Header */}
-      <div className="grid grid-cols-[40px_1fr_80px_40px_50px_50px_50px_50px_50px_50px] items-center gap-2 px-3 py-2 bg-white/5 border-b border-white/10
-                      sm:grid-cols-[50px_1fr_100px_50px_60px_60px_60px_60px_60px_60px] sm:px-4 sm:py-2.5">
-        <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-white/50 font-medium">#</span>
-        <ColumnHeader column="player" className="text-left" />
-        <ColumnHeader column="team" className="text-left" />
-        <ColumnHeader column="gp" className="text-center" />
-        <ColumnHeader column="pts" className="text-center" />
-        <ColumnHeader column="reb" className="text-center" />
-        <ColumnHeader column="ast" className="text-center" />
-        <ColumnHeader column="stl" className="text-center" />
-        <ColumnHeader column="blk" className="text-center" />
-        <ColumnHeader column="tov" className="text-center" />
+      {/* Table Header - Matches row structure */}
+      <div className="flex bg-white/5 border-b border-white/10">
+        {/* Fixed Zone Header */}
+        <div className="flex items-center gap-2 px-2 py-2 shrink-0 sm:gap-3 sm:px-4 sm:py-2.5 sm:w-[200px]">
+          <span className="w-6 text-center text-[9px] sm:text-[10px] uppercase tracking-wider text-white/50 font-medium">#</span>
+          <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-white/50 font-medium">Player</span>
+        </div>
+        {/* Team - Desktop only */}
+        <div className="hidden sm:flex items-center w-[100px]">
+          <span className="text-[10px] uppercase tracking-wider text-white/50 font-medium">Team</span>
+        </div>
+        {/* Scrollable Stats Header */}
+        <div className="flex items-center gap-0 overflow-x-auto scrollbar-hide flex-1 sm:overflow-visible">
+          <div className="w-10 px-1 sm:w-14"><ColumnHeader column="gp" className="text-center" /></div>
+          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="pts" className="text-center" /></div>
+          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="reb" className="text-center" /></div>
+          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="ast" className="text-center" /></div>
+          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="stl" className="text-center" /></div>
+          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="blk" className="text-center" /></div>
+          <div className="w-12 px-1 sm:w-14"><ColumnHeader column="tov" className="text-center" /></div>
+        </div>
       </div>
 
       {/* Table Body */}
@@ -177,7 +176,6 @@ export function LeaderboardTable({
             ))}
           </div>
 
-          {/* Pagination */}
           {hasMore && (
             <div className="p-3 border-t border-white/10 sm:p-4">
               <Button
@@ -186,15 +184,9 @@ export function LeaderboardTable({
                 className="w-full text-white/60 hover:text-white hover:bg-white/10 text-xs sm:text-sm"
               >
                 {showAll ? (
-                  <>
-                    <ChevronUp className="w-4 h-4 mr-2" />
-                    Show Less
-                  </>
+                  <><ChevronUp className="w-4 h-4 mr-2" />Show Less</>
                 ) : (
-                  <>
-                    <ChevronDown className="w-4 h-4 mr-2" />
-                    View All {sortedLeaders.length} Players
-                  </>
+                  <><ChevronDown className="w-4 h-4 mr-2" />View All {sortedLeaders.length} Players</>
                 )}
               </Button>
             </div>
@@ -204,4 +196,3 @@ export function LeaderboardTable({
     </div>
   );
 }
-
