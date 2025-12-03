@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useLiveGamesHybrid } from '@/hooks/useLiveGamesHybrid';
 import { TeamService } from '@/lib/services/tournamentService';
 import LiveGameCard from '@/components/LiveGameCard';
@@ -194,6 +195,21 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
 
       {/* Section 5: Organizer Card */}
       <TournamentOrganizerCard organizerId={data.tournament.organizerId} />
+
+      {/* Section 6: StatJam Promo Poster */}
+      <section className="overflow-hidden">
+        <a href="/features" target="_blank" rel="noopener noreferrer" className="block">
+          <Image
+            src="/announcements/player-claim-announcement-2.png"
+            alt="Own Your Game - Claim your profile on StatJam"
+            width={380}
+            height={380}
+            className="w-full h-auto object-cover"
+            loading="lazy"
+            sizes="(max-width: 768px) 100vw, 380px"
+          />
+        </a>
+      </section>
     </div>
   );
 }

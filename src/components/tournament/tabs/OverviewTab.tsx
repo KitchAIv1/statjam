@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { User, Trophy, Sparkles, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
 import { useTournamentLeaders } from '@/hooks/useTournamentLeaders';
@@ -442,6 +443,21 @@ export function OverviewTab({ data }: OverviewTabProps) {
           </div>
         )}
       </Card>
+
+      {/* StatJam Promo Poster - Mobile Only (between Leaders & Awards) */}
+      <section className="lg:hidden overflow-hidden">
+        <a href="/features" target="_blank" rel="noopener noreferrer" className="block">
+          <Image
+            src="/announcements/player-claim-announcement-2.png"
+            alt="Own Your Game - Claim your profile on StatJam"
+            width={600}
+            height={600}
+            className="w-full h-auto object-cover"
+            loading="lazy"
+            sizes="100vw"
+          />
+        </a>
+      </section>
 
       {/* Game Awards */}
       {tournamentAwards.length > 0 && (
