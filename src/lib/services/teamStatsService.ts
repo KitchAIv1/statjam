@@ -482,10 +482,32 @@ export class TeamStatsService {
         }
       }
       
-      // ✅ FIX: Players who NEVER appear in any substitution = played full game (started and never left)
+      // ✅ FIX v2: Players who NEVER appear in substitutions need stat check
+      // Only count as "played full game" if they have at least 1 game stat action
+      // DNP bench players (no subs + no stats) = 0 minutes
+      const playersWithStats = new Set<string>();
+      try {
+        const gameStats = await this.makeRequest<any>('game_stats', {
+          'select': 'player_id,custom_player_id',
+          'game_id': `eq.${gameId}`,
+          'team_id': `eq.${teamId}`
+        });
+        for (const stat of gameStats) {
+          const pid = stat.player_id || stat.custom_player_id;
+          if (pid) playersWithStats.add(pid);
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not fetch game stats for DNP detection');
+      }
+      
       for (const playerId of playerIds) {
         if (!playersInSubs.has(playerId)) {
-          inferredStarters.add(playerId);
+          // Never appeared in substitutions - check if they have any stats
+          if (playersWithStats.has(playerId)) {
+            // Has stats but no subs = played full game (started, never subbed out)
+            inferredStarters.add(playerId);
+          }
+          // No subs + no stats = DNP bench player, leave at 0 minutes
         }
       }
       
