@@ -56,7 +56,7 @@ export class TournamentStandingsService {
         return [];
       }
 
-      // Fetch game_stats for all completed games to calculate scores as fallback
+      // ✅ Fetch game_stats for all completed games (source of truth for scores)
       const gameIds = games.map(g => g.id);
       let gameStatsMap = new Map<string, GameStat[]>();
       
@@ -77,12 +77,13 @@ export class TournamentStandingsService {
             gameStatsMap.get(stat.game_id)!.push(stat);
           });
         } catch (error) {
-          console.warn('⚠️ TournamentStandingsService: Failed to fetch game_stats, using DB scores only:', error);
+          console.error('❌ TournamentStandingsService: Failed to fetch game_stats (source of truth):', error);
         }
       }
 
       /**
-       * Calculate scores from game_stats as fallback if DB scores are 0
+       * Calculate scores from game_stats (source of truth)
+       * stat_value contains: 2 for 2PT, 3 for 3PT, 1 for FT
        */
       const calculateScoresFromStats = (gameId: string, teamAId: string, teamBId: string): { teamAScore: number; teamBScore: number } => {
         const stats = gameStatsMap.get(gameId) || [];
@@ -123,27 +124,24 @@ export class TournamentStandingsService {
         const teamAId = game.team_a_id;
         const teamBId = game.team_b_id;
         
-        // Use DB scores if available, otherwise calculate from game_stats as fallback
-        let teamAScore = game.home_score || 0;
-        let teamBScore = game.away_score || 0;
-        
-        // If scores are 0 or missing, calculate from game_stats as fallback
-        // This handles cases where the database trigger didn't update scores properly
+        // ✅ FIX: ALWAYS calculate scores from game_stats (source of truth)
+        // DB scores (home_score, away_score) are unreliable - often 0 or stale
         const gameStats = gameStatsMap.get(game.id) || [];
         const hasStats = gameStats.length > 0;
         
-        if ((teamAScore === 0 && teamBScore === 0) && hasStats) {
+        let teamAScore = 0;
+        let teamBScore = 0;
+        
+        if (hasStats) {
+          // Calculate from game_stats (source of truth)
           const calculatedScores = calculateScoresFromStats(game.id, teamAId, teamBId);
           teamAScore = calculatedScores.teamAScore;
           teamBScore = calculatedScores.teamBScore;
-          
-          if (teamAScore > 0 || teamBScore > 0) {
-            console.log(`📊 TournamentStandingsService: Calculated scores from stats for game ${game.id}:`, {
-              dbScores: { home: game.home_score, away: game.away_score },
-              calculatedScores: { teamAScore, teamBScore },
-              statsCount: gameStats.length
-            });
-          }
+        } else {
+          // Fallback to DB scores only if no stats exist
+          teamAScore = game.home_score || 0;
+          teamBScore = game.away_score || 0;
+          console.warn(`⚠️ TournamentStandingsService: No stats for game ${game.id}, using DB scores`);
         }
 
         // Initialize team A if not exists
