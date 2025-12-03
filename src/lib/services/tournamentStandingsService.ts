@@ -56,30 +56,35 @@ export class TournamentStandingsService {
         return [];
       }
 
-      // ✅ Fetch game_stats for all completed games (source of truth for scores)
-      const gameIds = games.map(g => g.id);
-      let gameStatsMap = new Map<string, GameStat[]>();
+      // ✅ Fetch game_stats PER GAME to avoid Supabase 1000 row limit
+      // Each game can have 200-400 stats, so batching all games hits the limit
+      const gameStatsMap = new Map<string, GameStat[]>();
       
-      if (gameIds.length > 0) {
+      console.log(`📊 TournamentStandingsService: Fetching stats for ${games.length} games (per-game queries)`);
+      
+      // Fetch stats for each game in parallel
+      const statsPromises = games.map(async (game) => {
         try {
-          // Fetch stats for all games at once (more efficient)
-          const allStats = await hybridSupabaseService.query<GameStat>(
+          const stats = await hybridSupabaseService.query<GameStat>(
             'game_stats',
             'game_id, team_id, stat_value, modifier',
-            { game_id: `in.(${gameIds.join(',')})` }
+            { game_id: `eq.${game.id}` }
           );
-          
-          // Group stats by game_id
-          allStats.forEach(stat => {
-            if (!gameStatsMap.has(stat.game_id)) {
-              gameStatsMap.set(stat.game_id, []);
-            }
-            gameStatsMap.get(stat.game_id)!.push(stat);
-          });
+          return { gameId: game.id, stats: stats || [] };
         } catch (error) {
-          console.error('❌ TournamentStandingsService: Failed to fetch game_stats (source of truth):', error);
+          console.error(`❌ Failed to fetch stats for game ${game.id}:`, error);
+          return { gameId: game.id, stats: [] };
         }
-      }
+      });
+      
+      const statsResults = await Promise.all(statsPromises);
+      
+      // Group stats by game_id
+      statsResults.forEach(({ gameId, stats }) => {
+        gameStatsMap.set(gameId, stats);
+      });
+      
+      console.log(`✅ TournamentStandingsService: Fetched stats for all ${games.length} games`);
 
       /**
        * Calculate scores from game_stats (source of truth)
