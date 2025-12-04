@@ -10,6 +10,7 @@ import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Shield, Calendar, Video, Clock } from 'lucide-react';
 import { TournamentOrganizerCard } from './TournamentOrganizerCard';
+import { PhaseBadge } from './PhaseBadge';
 
 interface TournamentRightRailProps {
   data: TournamentPageData;
@@ -201,6 +202,7 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
               teamA={game.teamA.name}
               teamB={game.teamB.name}
               gameDate={game.gameDate}
+              gamePhase={game.gamePhase}
             />
           ))}
         </div>
@@ -239,7 +241,7 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
   );
 }
 
-function UpcomingGameItem({ gameId, teamA, teamB, gameDate }: { gameId: string; teamA: string; teamB: string; gameDate?: string }) {
+function UpcomingGameItem({ gameId, teamA, teamB, gameDate, gamePhase }: { gameId: string; teamA: string; teamB: string; gameDate?: string; gamePhase?: 'regular' | 'playoffs' | 'finals' }) {
   const formatGameDate = (dateString?: string): string => {
     if (!dateString) return 'TBD';
     try {
@@ -262,7 +264,10 @@ function UpcomingGameItem({ gameId, teamA, teamB, gameDate }: { gameId: string; 
       onClick={() => window.open(`/game-viewer/${gameId}`, '_blank')}
     >
       <div className="flex-1 min-w-0">
-        <div className="text-white font-medium truncate">{teamA} vs {teamB}</div>
+        <div className="flex items-center gap-2">
+          <div className="text-white font-medium truncate">{teamA} vs {teamB}</div>
+          <PhaseBadge phase={gamePhase} size="sm" showIcon={false} />
+        </div>
         <div className="flex items-center gap-1 text-[#B3B3B3] mt-0.5">
           <Clock className="h-3 w-3" />
           <span className="text-[10px]">{formatGameDate(gameDate)}</span>

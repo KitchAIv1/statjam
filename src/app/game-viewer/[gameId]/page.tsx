@@ -209,6 +209,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
             teamBFouls: game.team_b_fouls || 0,
             teamATimeouts: game.team_a_timeouts_remaining || 5,
             teamBTimeouts: game.team_b_timeouts_remaining || 5,
+            gamePhase: game.game_phase || undefined,
           }}
           isLive={isLive}
           lastUpdated={game.updated_at || ''}

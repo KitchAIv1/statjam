@@ -368,6 +368,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                     }}
                     gameStatus={matchup.status}
                     gameDate={matchup.gameDate}
+                    gamePhase={matchup.gamePhase}
                     onClick={() => window.open(`/game-viewer/${matchup.gameId}`, '_blank')}
                   />
                 </div>

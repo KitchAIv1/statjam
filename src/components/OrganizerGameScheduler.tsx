@@ -9,6 +9,7 @@ import { GameService } from '@/lib/services/gameService';
 import { useTournaments } from '@/lib/hooks/useTournaments';
 import { Game } from '@/lib/types/game';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
+import { PhaseBadge } from '@/components/tournament/PhaseBadge';
 
 interface GameWithTournament extends Game {
   tournament_name?: string;
@@ -72,8 +73,12 @@ export function OrganizerGameScheduler({ user }: OrganizerGameSchedulerProps) {
       // Flatten all games into single array
       const allGames: GameWithTournament[] = tournamentGamesArrays.flat();
 
-      // Sort by start time (most recent first)
-      allGames.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+      // Sort by created_at (latest created first)
+      allGames.sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA; // Descending (newest first)
+      });
       
       const totalTime = performance.now() - perfStart;
       console.log(`⚡ Loaded ${allGames.length} games in ${totalTime.toFixed(0)}ms (avg ${(totalTime / tournaments.length).toFixed(0)}ms per tournament)`);
@@ -207,9 +212,10 @@ export function OrganizerGameScheduler({ user }: OrganizerGameSchedulerProps) {
                   {/* Game Info */}
                   <div className="flex-1 space-y-3">
                     {/* Tournament Badge */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Trophy className="w-4 h-4 text-orange-600" />
                       <span className="text-sm font-medium text-orange-600">{game.tournament_name}</span>
+                      <PhaseBadge phase={game.game_phase} size="sm" />
                     </div>
 
                     {/* Teams */}

@@ -12,6 +12,7 @@ import { BracketService } from '@/lib/services/bracketService';
 import { BracketVisualization } from '@/components/bracket/BracketVisualization';
 import { DivisionBracketView } from '@/components/bracket/DivisionBracketView';
 import { hybridSupabaseService } from '@/lib/services/hybridSupabaseService';
+import { PhaseBadge } from '@/components/tournament/PhaseBadge';
 import { 
   Calendar, 
   ArrowLeft, 
@@ -188,11 +189,18 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
     setShowCreateGame(true);
   };
 
-  const filteredGames = games.filter(game => {
-    if (filterStatus !== 'all' && game.status !== filterStatus) return false;
-    if (filterDate && !game.start_time.startsWith(filterDate)) return false;
-    return true;
-  });
+  const filteredGames = games
+    .filter(game => {
+      if (filterStatus !== 'all' && game.status !== filterStatus) return false;
+      if (filterDate && !game.start_time.startsWith(filterDate)) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort by created_at (latest created first)
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA; // Descending (newest first)
+    });
 
   if (loading || loadingData) {
     return (
@@ -632,6 +640,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
                     teamBId: gameData.teamBId,
                     startTime: gameData.startTime,
                     venue: gameData.venue,
+                    gamePhase: gameData.gamePhase,
                     statAdminId: gameData.statAdminId || null,
                   });
                   console.log('✅ Game updated successfully');
@@ -643,6 +652,7 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
                     teamBId: gameData.teamBId,
                     startTime: gameData.startTime,
                     venue: gameData.venue,
+                    gamePhase: gameData.gamePhase,
                     statAdminId: gameData.statAdminId || null,
                   });
                   console.log('✅ Game created successfully');
@@ -924,6 +934,7 @@ function CreateGameModal({
     teamBId: game?.team_b_id || '',
     startTime: game?.start_time ? formatDateTimeLocal(game.start_time) : minDate,
     venue: game?.venue || tournament.venue || '',
+    gamePhase: game?.game_phase || 'regular',
     statAdminId: game?.stat_admin_id || '',
   });
 
@@ -1117,6 +1128,27 @@ function CreateGameModal({
               placeholder="Enter venue location"
               required
             />
+          </div>
+
+          {/* Game Phase */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Trophy className="w-4 h-4 text-orange-600" />
+              Game Phase
+              <span className="text-xs text-muted-foreground">(Optional)</span>
+            </label>
+            <select
+              className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+              value={formData.gamePhase}
+              onChange={(e) => setFormData(prev => ({ ...prev, gamePhase: e.target.value as 'regular' | 'playoffs' | 'finals' }))}
+            >
+              <option value="regular">Regular</option>
+              <option value="playoffs">Playoffs</option>
+              <option value="finals">Finals</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Label this game for tournament organization (until bracket system is implemented)
+            </p>
           </div>
 
           {/* Stat Admin */}
@@ -1341,8 +1373,11 @@ function GameCard({
             {teamB?.name || 'Team B'}
           </div>
         </div>
-        <div style={styles.status}>
-          {game.status}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={styles.status}>
+            {game.status}
+          </div>
+          <PhaseBadge phase={game.game_phase} size="sm" />
         </div>
       </div>
 

@@ -123,6 +123,7 @@ export class GameService {
     teamBId: string;
     startTime: string;
     venue?: string;
+    gamePhase?: 'regular' | 'playoffs' | 'finals';
     statAdminId?: string;
   }): Promise<Game | null> {
     try {
@@ -149,11 +150,24 @@ export class GameService {
         insertData.venue = gameData.venue.trim();
       }
 
-      const { data: game, error } = await supabase
+      // Include game_phase if provided (defaults to 'regular' in DB)
+      if (gameData.gamePhase && gameData.gamePhase !== 'regular') {
+        insertData.game_phase = gameData.gamePhase;
+      }
+
+      let { data: game, error } = await supabase
         .from('games')
         .insert([insertData])
         .select()
         .single();
+
+      // Handle schema cache issue gracefully - retry without game_phase if column not recognized
+      if (error && insertData.game_phase && (error.message?.includes("schema cache") || error.message?.includes("game_phase"))) {
+        delete insertData.game_phase;
+        const retry = await supabase.from('games').insert([insertData]).select().single();
+        game = retry.data;
+        error = retry.error;
+      }
 
       if (error) {
         console.error('❌ Supabase error creating game:', error);
@@ -198,6 +212,7 @@ export class GameService {
     teamBId?: string;
     startTime?: string;
     venue?: string;
+    gamePhase?: 'regular' | 'playoffs' | 'finals';
     statAdminId?: string;
     status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   }): Promise<Game | null> {
@@ -212,15 +227,28 @@ export class GameService {
       if (updateData.venue !== undefined && updateData.venue && updateData.venue.trim()) {
         dbUpdateData.venue = updateData.venue.trim();
       }
+      // Handle game_phase - only include if provided and column exists
+      if (updateData.gamePhase !== undefined) {
+        dbUpdateData.game_phase = updateData.gamePhase;
+      }
       if (updateData.statAdminId !== undefined) dbUpdateData.stat_admin_id = updateData.statAdminId;
       if (updateData.status !== undefined) dbUpdateData.status = updateData.status;
 
-      const { data: game, error } = await supabase
+      // Try update with game_phase first (if provided)
+      let { data: game, error } = await supabase
         .from('games')
         .update(dbUpdateData)
         .eq('id', gameId)
         .select()
         .single();
+
+      // Handle schema cache issue gracefully - retry without game_phase if column not recognized
+      if (error && dbUpdateData.game_phase && (error.message?.includes("game_phase") || error.message?.includes("schema cache"))) {
+        const { game_phase, ...restUpdateData } = dbUpdateData;
+        const retry = await supabase.from('games').update(restUpdateData).eq('id', gameId).select().single();
+        if (retry.error) throw new Error(`Failed to update game: ${retry.error.message}`);
+        return retry.data;
+      }
 
       if (error) {
         console.error('❌ Supabase error updating game:', error);

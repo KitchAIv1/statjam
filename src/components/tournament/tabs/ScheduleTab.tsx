@@ -8,6 +8,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { CalendarDays, Clock, MapPin, Play, Shield, Lock, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { Game } from '@/lib/types/game';
+import { PhaseBadge } from '@/components/tournament/PhaseBadge';
 
 // Max games to show initially for better UI performance
 const INITIAL_DISPLAY_LIMIT = 10;
@@ -142,6 +143,7 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                   <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 md:gap-3">
                     <div className="text-[9px] uppercase tracking-wide text-white/40 sm:text-[10px] md:text-xs">{formatDate(game.start_time)}</div>
                     <Badge className={`text-[9px] sm:text-[10px] md:text-xs ${badgeClassForStatus(game.status)}`}>{statusLabel(game.status)}</Badge>
+                    <PhaseBadge phase={game.game_phase} size="sm" />
                     <button
                       onClick={() => {
                         if (canView) {

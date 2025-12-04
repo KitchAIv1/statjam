@@ -14,6 +14,7 @@
 import React from 'react';
 import { Trophy, Clock } from 'lucide-react';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
+import { PhaseRibbon } from './PhaseRibbon';
 
 export interface TeamMatchupCardProps {
   teamA: {
@@ -33,6 +34,7 @@ export interface TeamMatchupCardProps {
   gameId: string;
   gameStatus: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   gameDate?: string;
+  gamePhase?: 'regular' | 'playoffs' | 'finals';
   onClick?: () => void;
 }
 
@@ -41,6 +43,7 @@ export function TeamMatchupCard({
   teamB,
   gameStatus,
   gameDate,
+  gamePhase,
   onClick
 }: TeamMatchupCardProps) {
   const isCompleted = gameStatus === 'completed';
@@ -77,15 +80,28 @@ export function TeamMatchupCard({
     }
   };
 
+  // Phase-based styling - FINALS gets championship glow, PLAYOFFS gets intensity border
+  const isFinals = gamePhase === 'finals';
+  const isPlayoffs = gamePhase === 'playoffs';
+  
+  const borderClass = isFinals 
+    ? 'border-amber-400 border-[3px] animate-championship-glow' 
+    : isPlayoffs 
+      ? 'border-orange-500 border-2 animate-playoffs-intensity'
+      : 'border-2 border-white/20';
+
   return (
     <div
       onClick={onClick}
-      className={`relative flex h-48 w-80 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all hover:scale-105 hover:shadow-xl ${
+      className={`relative flex h-48 w-80 flex-shrink-0 overflow-hidden rounded-xl transition-all hover:scale-105 hover:shadow-xl ${
         onClick ? 'cursor-pointer' : ''
-      } ${isCancelled ? 'opacity-60' : ''}`}
+      } ${isCancelled ? 'opacity-60' : ''} ${borderClass}`}
       style={{ aspectRatio: '16/9' }}
     >
-      {/* Team A Section (Left) */}
+      {/* Phase Ribbon - Corner badge, doesn't break split-screen layout */}
+      <PhaseRibbon phase={gamePhase} position="top-left" />
+      
+      {/* Team A Section (Left) - Side by side with Team B */}
       <div
         className="relative flex flex-1 items-center justify-center overflow-hidden"
         style={{ backgroundColor: teamABg, color: teamAText }}

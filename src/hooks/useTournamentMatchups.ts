@@ -34,6 +34,7 @@ export interface TournamentMatchup {
   };
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   gameDate: string;
+  gamePhase?: 'regular' | 'playoffs' | 'finals';
 }
 
 interface UseTournamentMatchupsOptions {
@@ -124,12 +125,26 @@ export function useTournamentMatchups(
         filters['status'] = 'eq.scheduled';
       }
 
-      // ✅ STEP 1: Fetch games (already sorted and limited by database)
-      const games = await hybridSupabaseService.query<any>(
-        'games',
-        'id,team_a_id,team_b_id,status,start_time,home_score,away_score',
-        filters
-      );
+      // ✅ STEP 1: Fetch games with game_phase (graceful fallback if column doesn't exist)
+      let games: any[];
+      try {
+        games = await hybridSupabaseService.query<any>(
+          'games',
+          'id,team_a_id,team_b_id,status,start_time,home_score,away_score,game_phase',
+          filters
+        );
+      } catch (error: any) {
+        // Fallback: fetch without game_phase if column doesn't exist
+        if (error?.message?.includes('game_phase')) {
+          games = await hybridSupabaseService.query<any>(
+            'games',
+            'id,team_a_id,team_b_id,status,start_time,home_score,away_score',
+            filters
+          );
+        } else {
+          throw error;
+        }
+      }
 
       if (!games || games.length === 0) {
         setMatchups([]);
@@ -212,7 +227,8 @@ export function useTournamentMatchups(
             teamA: { ...teamA, score: teamAScore },
             teamB: { ...teamB, score: teamBScore },
             status: game.status,
-            gameDate: game.start_time || game.created_at
+            gameDate: game.start_time || game.created_at,
+            gamePhase: game.game_phase || undefined // Will be undefined if column doesn't exist
           };
         })
       );

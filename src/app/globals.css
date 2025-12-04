@@ -117,6 +117,59 @@
   animation: winner-glow 2.5s ease-in-out infinite;
 }
 
+/* 🏆 CHAMPIONSHIP GLOW: Premium gold glow for FINALS games */
+@keyframes championship-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.6), 0 0 20px rgba(251, 191, 36, 0.4), 0 0 30px rgba(251, 191, 36, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(251, 191, 36, 0.8), 0 0 30px rgba(251, 191, 36, 0.5), 0 0 45px rgba(251, 191, 36, 0.3);
+  }
+}
+
+.animate-championship-glow {
+  animation: championship-glow 2s ease-in-out infinite;
+}
+
+/* 🔥 PLAYOFFS INTENSITY: Subtle border intensity for elimination games */
+@keyframes playoffs-intensity {
+  0%, 100% {
+    border-color: rgba(249, 115, 22, 0.8);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 0.9);
+  }
+}
+
+.animate-playoffs-intensity {
+  animation: playoffs-intensity 1.5s ease-in-out infinite;
+}
+
+/* ✨ GOLD SHIMMER: Metallic shimmer effect for championship elements */
+@keyframes gold-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    #B8860B 0%,
+    #FFD700 25%,
+    #FFF8DC 50%,
+    #FFD700 75%,
+    #B8860B 100%
+  );
+  background-size: 200% auto;
+  animation: gold-shimmer 3s linear infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
 /* ✨ PULSE GLOW: Inviting button glow animation */
 @keyframes pulse-glow {
   0%, 100% {

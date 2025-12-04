@@ -8,6 +8,7 @@ export interface Game {
   start_time: string;
   end_time?: string;
   venue?: string;
+  game_phase?: 'regular' | 'playoffs' | 'finals';
   quarter: number;
   game_clock_minutes: number;
   game_clock_seconds: number;

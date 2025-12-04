@@ -18,6 +18,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { GameViewerTheme } from '../hooks/useGameViewerTheme';
 import { Clock, AlertCircle, Trophy } from 'lucide-react';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
+import { PhaseBanner } from '@/components/tournament/PhaseBanner';
 
 interface GameHeaderProps {
   theme: GameViewerTheme;
@@ -40,6 +41,7 @@ interface GameHeaderProps {
     teamBFouls?: number;
     teamATimeouts?: number;
     teamBTimeouts?: number;
+    gamePhase?: 'regular' | 'playoffs' | 'finals';
   };
   isLive: boolean;
   lastUpdated: string;
@@ -66,6 +68,9 @@ const GameHeader: React.FC<GameHeaderProps> = ({ theme, onThemeToggle, game, isL
       animate={{ opacity: 1, y: 0 }}
       className={`sticky top-0 z-100 border-b transition-colors duration-300 ${isDark ? 'bg-slate-900 border-slate-700 shadow-xl' : 'bg-white border-orange-200 shadow-md'}`}
     >
+      {/* Phase Banner - FINALS Championship Treatment */}
+      <PhaseBanner phase={game.gamePhase} isLive={isLive} />
+      
       {/* Status Bar */}
       <div className={`flex items-center justify-between px-6 py-3 border-b ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-orange-50/30 border-orange-200'}`}>
         <StatusBadge
