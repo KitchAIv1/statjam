@@ -296,6 +296,41 @@ The StatJam data ecosystem for the SJAM tournament is **fully verified and accur
 
 ---
 
+## Section 6: UI Display Fixes (Post-Audit)
+
+### 6.1 Tournament Awards Photo Display Fix
+
+**Date:** December 4, 2024  
+**Issue:** Player profile photos not displaying in Recent Game Awards section on tournament Overview tab
+
+**Root Cause:**
+- `GameAwardsService.getTournamentAwards()` was only fetching `id,name` for players
+- Missing `profile_photo_url` in database queries
+- `TournamentAward` interface missing `profilePhotoUrl` property
+- `OverviewTab` component not passing photo URL to `AwardDisplayCard`
+
+**Fix Applied:**
+1. Updated `GameAwardsService.getTournamentAwards()` to fetch `profile_photo_url`:
+   - Regular players: `SELECT id,name,profile_photo_url`
+   - Custom players: `SELECT id,name,profile_photo_url`
+2. Added `profilePhotoUrl?: string | null` to `TournamentAward` interface
+3. Updated player info mapping to include `profilePhotoUrl`
+4. Updated `OverviewTab` to pass `profilePhotoUrl` prop to `AwardDisplayCard`
+
+**Verification:**
+- ✅ Player of the Game cards now display profile photos
+- ✅ Hustle Player cards now display profile photos
+- ✅ Fallback initials show when no photo available
+- ✅ Works for both regular and custom players
+
+**Files Modified:**
+- `src/hooks/useTournamentAwards.ts`
+- `src/lib/services/gameAwardsService.ts`
+- `src/components/tournament/tabs/OverviewTab.tsx`
+
+---
+
 *Report generated: December 4, 2024*  
+*Last updated: December 4, 2024*  
 *StatJam Platform Version: 1.0*
 

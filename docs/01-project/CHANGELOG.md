@@ -5,6 +5,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.1] - 2025-12-04
+
+### 🎨 **Tournament Overview UI Improvements & Photo Display Fixes**
+
+#### Tournament Awards Photo Display Fix
+- **FIXED**: Player photos now display correctly in Recent Game Awards section on Overview tab
+- **FIXED**: `GameAwardsService.getTournamentAwards()` now fetches `profile_photo_url` from database
+- **ENHANCED**: Added `profilePhotoUrl` property to `TournamentAward` interface
+- **ENHANCED**: `OverviewTab` now passes `profilePhotoUrl` to `AwardDisplayCard` component
+- **Impact**: Award cards (Player of the Game, Hustle Player) now show player profile photos correctly
+
+#### Avatar Size Increases (~30%)
+- **ENHANCED**: AwardDisplayCard avatars: `h-12 w-12` → `h-16 w-16` (48px → 64px)
+- **ENHANCED**: OverviewTab Leaders section avatars:
+  - Mobile: `h-8 w-8` → `h-10 w-10` (32px → 40px)
+  - Tablet: `h-10 w-10` → `h-14 w-14` (40px → 56px)
+  - Desktop: `h-14 w-14` → `h-[72px] w-[72px]` (56px → 72px)
+- **ENHANCED**: LeaderboardRow avatars:
+  - Mobile: `h-6 w-6` → `h-8 w-8` (24px → 32px)
+  - Desktop: `h-8 w-8` → `h-10 w-10` (32px → 40px)
+- **ENHANCED**: All fallback initials and icons scaled proportionally
+
+#### Compact Rectangle UI Design
+- **ENHANCED**: Matchup filter tabs changed from rounded pills to compact rectangles
+  - Container: `rounded-lg p-1 gap-2` → `rounded p-0.5 gap-1`
+  - Buttons: `rounded-md px-3 py-1.5` → `rounded px-2.5 py-1`
+- **ENHANCED**: TeamMatchupCard badges changed from rounded-full to rectangles:
+  - Score badge: `rounded-full px-6 py-1.5` → `rounded px-5 py-1`
+  - Date/Time badge: `rounded-full px-2.5 py-1` → `rounded px-2 py-0.5`
+  - LIVE indicator: `rounded-full` → `rounded`
+  - CANCELLED badge: `rounded-full` → `rounded`
+
+#### Tournament Right Rail Improvements
+- **ENHANCED**: Replaced Play-by-Play section with Upcoming Games (real data from `useTournamentMatchups`)
+- **NEW**: Live Streaming "Coming Soon" teaser with Video icon and gradient background
+- **ENHANCED**: Upcoming Games section shows next 5 scheduled games with dates/times
+- **Impact**: Right rail now provides actionable information instead of static demo content
+
+#### Overview Tab Cleanup & Mobile Enhancements
+- **REMOVED**: Redundant "Watch Live Now" and "Today's Schedule" CTA cards
+- **ENHANCED**: Replaced Bracket Preview with "Coming Soon" teaser (Zap icon)
+- **NEW**: Mobile-only Upcoming Games section (`lg:hidden`) - shows next 3 scheduled games
+- **NEW**: Mobile-only Live Streaming teaser section
+- **FIXED**: Removed duplicate `useLiveGamesHybrid` hook call that was causing WebSocket conflicts
+- **Impact**: Cleaner UI, no duplicate data, fixed WebSocket errors
+
+#### Mobile Leaderboard Card Improvements
+- **ENHANCED**: Mobile leaderboard cards in Overview tab:
+  - Avatar: `h-10 w-10` → `h-14 w-14` (40px → 56px)
+  - Player name: `text-[10px]` → `text-xs` (10px → 12px)
+  - Team name: `text-[9px]` → `text-[10px]`
+  - PPG: `text-[9px]` → `text-[10px]`
+  - Card padding: `px-2.5 py-2` → `px-3 py-3`
+  - Card gap: `gap-2` → `gap-3`
+  - Card radius: `rounded-lg` → `rounded-xl`
+- **Impact**: Better readability and touch targets on mobile devices
+
+#### Technical Details
+- **Files Modified**:
+  - `src/components/tournament/tabs/OverviewTab.tsx` - UI cleanup, mobile sections, leaderboard improvements
+  - `src/components/tournament/TournamentRightRail.tsx` - Upcoming Games, Streaming teaser
+  - `src/components/tournament/AwardDisplayCard.tsx` - Avatar size increase
+  - `src/components/tournament/TeamMatchupCard.tsx` - Compact rectangle badges
+  - `src/components/leaderboard/LeaderboardRow.tsx` - Avatar size increase
+  - `src/hooks/useTournamentAwards.ts` - Added `profilePhotoUrl` to interface
+  - `src/lib/services/gameAwardsService.ts` - Fetch `profile_photo_url`, map to `profilePhotoUrl`
+- **Performance**: No impact - all changes are UI-only with existing hooks/services
+- **Breaking Changes**: None
+
+---
+
 ## [0.17.0] - 2025-12-01
 
 ### 🎉 **Announcement System & Coach Dashboard UX Enhancements**
