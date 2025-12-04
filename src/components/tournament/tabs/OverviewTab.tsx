@@ -256,11 +256,11 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
             <p className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">Completed games and upcoming schedule</p>
           </div>
           
-          {/* Filter Tabs */}
-          <div className="flex gap-2 rounded-lg border border-white/10 bg-black/40 p-1">
+          {/* Filter Tabs - Compact rectangle style */}
+          <div className="flex gap-1 rounded border border-white/10 bg-black/40 p-0.5">
             <button
               onClick={() => setMatchupFilter('all')}
-              className={`rounded-md px-3 py-1.5 text-[10px] font-medium transition-colors sm:text-xs ${
+              className={`rounded px-2.5 py-1 text-[10px] font-medium transition-colors sm:text-xs ${
                 matchupFilter === 'all'
                   ? 'bg-[#FF3B30] text-white'
                   : 'text-[#B3B3B3] hover:text-white'
@@ -270,7 +270,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
             </button>
             <button
               onClick={() => setMatchupFilter('completed')}
-              className={`rounded-md px-3 py-1.5 text-[10px] font-medium transition-colors sm:text-xs ${
+              className={`rounded px-2.5 py-1 text-[10px] font-medium transition-colors sm:text-xs ${
                 matchupFilter === 'completed'
                   ? 'bg-[#FF3B30] text-white'
                   : 'text-[#B3B3B3] hover:text-white'
@@ -280,7 +280,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
             </button>
             <button
               onClick={() => setMatchupFilter('scheduled')}
-              className={`rounded-md px-3 py-1.5 text-[10px] font-medium transition-colors sm:text-xs ${
+              className={`rounded px-2.5 py-1 text-[10px] font-medium transition-colors sm:text-xs ${
                 matchupFilter === 'scheduled'
                   ? 'bg-[#FF3B30] text-white'
                   : 'text-[#B3B3B3] hover:text-white'
@@ -418,12 +418,12 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                   onClick={() => openModal(leader.playerId, { isCustomPlayer: leader.isCustomPlayer || false })}
                   className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-2.5 py-2 transition hover:border-white/20 hover:bg-black/50 sm:gap-3 sm:rounded-xl sm:px-3 sm:py-2.5 md:gap-4 md:px-4 md:py-3"
                 >
-                  <Avatar className="h-8 w-8 border-2 border-white/10 sm:h-10 sm:w-10 md:h-14 md:w-14">
+                  <Avatar className="h-10 w-10 border-2 border-white/10 sm:h-14 sm:w-14 md:h-[72px] md:w-[72px]">
                     {leader.profilePhotoUrl ? (
                       <AvatarImage src={leader.profilePhotoUrl} alt={leader.playerName} />
                     ) : null}
-                    <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-white">
-                      {initials || <User className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />}
+                    <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-white text-sm sm:text-base md:text-lg">
+                      {initials || <User className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
@@ -486,6 +486,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                     <AwardDisplayCard
                       playerId={award.playerOfTheGame.id}
                       playerName={award.playerOfTheGame.name}
+                      profilePhotoUrl={award.playerOfTheGame.profilePhotoUrl}
                       awardType="player_of_the_game"
                       stats={award.playerOfTheGame.stats}
                       onClick={() => openModal(award.playerOfTheGame!.id, {
@@ -500,6 +501,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                     <AwardDisplayCard
                       playerId={award.hustlePlayer.id}
                       playerName={award.hustlePlayer.name}
+                      profilePhotoUrl={award.hustlePlayer.profilePhotoUrl}
                       awardType="hustle_player"
                       stats={award.hustlePlayer.stats}
                       onClick={() => openModal(award.hustlePlayer!.id, {

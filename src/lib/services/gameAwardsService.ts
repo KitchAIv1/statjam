@@ -248,6 +248,7 @@ export class GameAwardsService {
     playerOfTheGame: {
       id: string;
       name: string;
+      profilePhotoUrl?: string | null;  // ✅ Added photo URL
       isCustomPlayer?: boolean;
       stats: {
         points: number;
@@ -260,6 +261,7 @@ export class GameAwardsService {
     hustlePlayer: {
       id: string;
       name: string;
+      profilePhotoUrl?: string | null;  // ✅ Added photo URL
       isCustomPlayer?: boolean;
       stats: {
         points: number;
@@ -317,25 +319,25 @@ export class GameAwardsService {
         ...games.map((g: any) => g.custom_hustle_player_of_the_game_id).filter(Boolean)
       ].filter(Boolean))];
 
-      // ✅ Fetch teams, regular players, AND custom players in parallel
+      // ✅ Fetch teams, regular players, AND custom players in parallel (now includes profile_photo_url)
       const [teamsResponse, playersResponse, customPlayersResponse] = await Promise.all([
         teamIds.length > 0 ? fetch(
           `${this.SUPABASE_URL}/rest/v1/teams?id=in.(${teamIds.join(',')})&select=id,name`,
           { headers }
         ).then(r => r.json()) : Promise.resolve([]),
         regularPlayerIds.length > 0 ? fetch(
-          `${this.SUPABASE_URL}/rest/v1/users?id=in.(${regularPlayerIds.join(',')})&select=id,name`,
+          `${this.SUPABASE_URL}/rest/v1/users?id=in.(${regularPlayerIds.join(',')})&select=id,name,profile_photo_url`,
           { headers }
         ).then(r => r.json()) : Promise.resolve([]),
         customPlayerIds.length > 0 ? fetch(
-          `${this.SUPABASE_URL}/rest/v1/custom_players?id=in.(${customPlayerIds.join(',')})&select=id,name`,
+          `${this.SUPABASE_URL}/rest/v1/custom_players?id=in.(${customPlayerIds.join(',')})&select=id,name,profile_photo_url`,
           { headers }
         ).then(r => r.json()) : Promise.resolve([])
       ]);
 
       const teamsMap = new Map((teamsResponse || []).map((t: any) => [t.id, t.name]));
-      const playersMap = new Map((playersResponse || []).map((p: any) => [p.id, p.name]));
-      const customPlayersMap = new Map((customPlayersResponse || []).map((p: any) => [p.id, p.name]));
+      const playersMap = new Map((playersResponse || []).map((p: any) => [p.id, { name: p.name, profilePhotoUrl: p.profile_photo_url }]));
+      const customPlayersMap = new Map((customPlayersResponse || []).map((p: any) => [p.id, { name: p.name, profilePhotoUrl: p.profile_photo_url }]));
 
       // ✅ FIX: Fetch game_stats per-game in parallel (avoids PostgREST 1000 row limit)
       // Same pattern as useTournamentMatchups
@@ -411,6 +413,10 @@ export class GameAwardsService {
           hustleId ? getPlayerStatsForGame(hustleId, game.id, isHustleCustom) : Promise.resolve({ ...DEFAULT_STATS })
         ]);
 
+        // ✅ Get player info including photo URL
+        const potgPlayerInfo = isPotgCustom ? customPlayersMap.get(potgId) : playersMap.get(potgId);
+        const hustlePlayerInfo = isHustleCustom ? customPlayersMap.get(hustleId) : playersMap.get(hustleId);
+
         return {
           gameId: game.id, gameDate: game.start_time,
           teamAName: teamsMap.get(game.team_a_id) || 'Team A',
@@ -418,12 +424,14 @@ export class GameAwardsService {
           teamAScore, teamBScore,
           playerOfTheGame: potgId ? {
             id: potgId,
-            name: isPotgCustom ? (customPlayersMap.get(potgId) || 'Custom Player') : (playersMap.get(potgId) || 'Unknown Player'),
+            name: potgPlayerInfo?.name || (isPotgCustom ? 'Custom Player' : 'Unknown Player'),
+            profilePhotoUrl: potgPlayerInfo?.profilePhotoUrl || null,
             isCustomPlayer: isPotgCustom, stats: potgStats
           } : null,
           hustlePlayer: hustleId ? {
             id: hustleId,
-            name: isHustleCustom ? (customPlayersMap.get(hustleId) || 'Custom Player') : (playersMap.get(hustleId) || 'Unknown Player'),
+            name: hustlePlayerInfo?.name || (isHustleCustom ? 'Custom Player' : 'Unknown Player'),
+            profilePhotoUrl: hustlePlayerInfo?.profilePhotoUrl || null,
             isCustomPlayer: isHustleCustom, stats: hustleStats
           } : null
         };

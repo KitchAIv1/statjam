@@ -222,7 +222,9 @@ export class PlayerDashboardService {
     const cacheKey = `custom_player_${customPlayerId}`;
     const cachedIdentity = cache.get<PlayerIdentity>(cacheKey);
     if (cachedIdentity) {
-      console.log('⚡ PlayerDashboardService.getCustomPlayerIdentity: Using cached data for', customPlayerId.substring(0, 8));
+      console.log('⚡ [DEBUG] getCustomPlayerIdentity: CACHE HIT for', customPlayerId.substring(0, 8));
+      console.log('⚡ [DEBUG] Cached profilePhotoUrl:', cachedIdentity.profilePhotoUrl);
+      console.log('⚡ [DEBUG] Cached posePhotoUrl:', cachedIdentity.posePhotoUrl);
       return cachedIdentity;
     }
     
@@ -283,14 +285,16 @@ export class PlayerDashboardService {
       posePhotoUrl: (customPlayerData as any).pose_photo_url ?? undefined,
     };
     
-    console.log('📥 PlayerDashboardService.getCustomPlayerIdentity: Database data received:', {
+    console.log('📥 [DEBUG] getCustomPlayerIdentity: RAW DB data:', {
+      id: customPlayerData?.id,
       name: customPlayerData?.name,
-      jersey_number: customPlayerData?.jersey_number,
-      position: customPlayerData?.position,
-      team_id: customPlayerData?.team_id,
-      team_name: teamName,
+      profile_photo_url: (customPlayerData as any)?.profile_photo_url,
+      pose_photo_url: (customPlayerData as any)?.pose_photo_url,
     });
-    console.log('📤 PlayerDashboardService.getCustomPlayerIdentity: Transformed identity:', JSON.stringify(identity, null, 2));
+    console.log('📤 [DEBUG] getCustomPlayerIdentity: MAPPED identity:', {
+      profilePhotoUrl: identity.profilePhotoUrl,
+      posePhotoUrl: identity.posePhotoUrl,
+    });
     
     // Cache the identity data
     cache.set(cacheKey, identity, CacheTTL.USER_DATA);

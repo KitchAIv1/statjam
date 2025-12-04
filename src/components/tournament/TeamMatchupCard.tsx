@@ -109,9 +109,9 @@ export function TeamMatchupCard({
         )}
       </div>
 
-      {/* Score Pill (Floating) */}
+      {/* Score Badge (Floating) - Compact rectangle */}
       {!isScheduled && !isCancelled && (
-        <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full bg-[#FF5757] px-6 py-1.5 shadow-lg min-w-[140px]">
+        <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded bg-[#FF5757] px-5 py-1 shadow-lg min-w-[140px]">
           {/* Trophy on Winner Side */}
           {teamAWins && (
             <Trophy className="h-5 w-5 text-yellow-300 drop-shadow-md flex-shrink-0" />
@@ -132,24 +132,24 @@ export function TeamMatchupCard({
       )}
 
 
-      {/* Cancelled Badge */}
+      {/* Cancelled Badge - Compact rectangle */}
       {isCancelled && (
-        <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-gray-800/90 px-3 py-1.5 text-xs text-white shadow-lg">
+        <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded bg-gray-800/90 px-3 py-1 text-xs text-white shadow-lg">
           CANCELLED
         </div>
       )}
 
-      {/* Date/Time Badge - Top Center (for all statuses) */}
+      {/* Date/Time Badge - Top Center (for all statuses) - Compact rectangle */}
       {gameDate && (
-        <div className="absolute top-2 left-1/2 z-10 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-sm px-2.5 py-1 text-[10px] font-medium text-white shadow-lg">
+        <div className="absolute top-2 left-1/2 z-10 -translate-x-1/2 flex items-center gap-1 rounded bg-black/70 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-white shadow-lg">
           <Clock className="h-3 w-3 flex-shrink-0" />
           <span>{formatGameDateTime(gameDate)}</span>
         </div>
       )}
 
-      {/* Live Indicator for In-Progress */}
+      {/* Live Indicator for In-Progress - Compact rectangle */}
       {isInProgress && (
-        <div className="absolute top-2 right-2 z-10 rounded-full bg-red-500 px-2 py-1 text-[10px] font-bold text-white">
+        <div className="absolute top-2 right-2 z-10 rounded bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
           LIVE
         </div>
       )}

@@ -79,6 +79,8 @@ export function useGameAwards(
       const potgId = awards.customPlayerOfTheGameId || awards.playerOfTheGameId;
       const potgIsCustom = !!awards.customPlayerOfTheGameId;
       
+      console.log('🏆 [DEBUG] POTG ID:', potgId, 'isCustom:', potgIsCustom);
+      
       if (potgId) {
         fetchPromises.push(
           (async () => {
@@ -86,6 +88,13 @@ export function useGameAwards(
               PlayerDashboardService.getIdentity(potgId, potgIsCustom),
               PlayerGameStatsService.getPlayerGameStats(potgId, potgIsCustom)
             ]);
+            
+            console.log('🏆 [DEBUG] POTG Identity returned:', {
+              name: identity?.name,
+              profilePhotoUrl: identity?.profilePhotoUrl,
+              posePhotoUrl: identity?.posePhotoUrl,
+              fullIdentity: identity
+            });
             
             const thisGameStats = gameStats.find(g => g.gameId === gameId);
             
@@ -111,6 +120,8 @@ export function useGameAwards(
       const hustleId = awards.customHustlePlayerId || awards.hustlePlayerId;
       const hustleIsCustom = !!awards.customHustlePlayerId;
       
+      console.log('🏆 [DEBUG] Hustle ID:', hustleId, 'isCustom:', hustleIsCustom);
+      
       if (hustleId) {
         fetchPromises.push(
           (async () => {
@@ -118,6 +129,13 @@ export function useGameAwards(
               PlayerDashboardService.getIdentity(hustleId, hustleIsCustom),
               PlayerGameStatsService.getPlayerGameStats(hustleId, hustleIsCustom)
             ]);
+            
+            console.log('🏆 [DEBUG] Hustle Identity returned:', {
+              name: identity?.name,
+              profilePhotoUrl: identity?.profilePhotoUrl,
+              posePhotoUrl: identity?.posePhotoUrl,
+              fullIdentity: identity
+            });
             
             const thisGameStats = gameStats.find(g => g.gameId === gameId);
             

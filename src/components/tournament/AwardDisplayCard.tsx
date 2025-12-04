@@ -78,12 +78,12 @@ export function AwardDisplayCard({
       className={`cursor-pointer rounded-xl border ${borderColor} bg-[#121212] p-4 transition ${hoverBorder} hover:bg-black/50`}
     >
       <div className="flex items-center gap-3">
-        {/* Player Avatar */}
-        <Avatar className={`h-12 w-12 border-2 ${isPOTG ? 'border-amber-500/40' : 'border-cyan-500/40'}`}>
+        {/* Player Avatar - 30% larger (h-12 w-12 → h-16 w-16) */}
+        <Avatar className={`h-16 w-16 border-2 ${isPOTG ? 'border-amber-500/40' : 'border-cyan-500/40'}`}>
           {profilePhotoUrl ? (
             <AvatarImage src={profilePhotoUrl} alt={playerName} />
           ) : null}
-          <AvatarFallback className={`${avatarBgColor} text-white font-bold`}>
+          <AvatarFallback className={`${avatarBgColor} text-white font-bold text-lg`}>
             {initials || '??'}
           </AvatarFallback>
         </Avatar>

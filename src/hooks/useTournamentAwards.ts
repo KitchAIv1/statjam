@@ -20,6 +20,7 @@ export interface TournamentAward {
   playerOfTheGame: {
     id: string;
     name: string;
+    profilePhotoUrl?: string | null;  // ✅ Added photo URL
     isCustomPlayer?: boolean;  // ✅ Custom player support
     stats: {
       points: number;
@@ -32,6 +33,7 @@ export interface TournamentAward {
   hustlePlayer: {
     id: string;
     name: string;
+    profilePhotoUrl?: string | null;  // ✅ Added photo URL
     isCustomPlayer?: boolean;  // ✅ Custom player support
     stats: {
       points: number;

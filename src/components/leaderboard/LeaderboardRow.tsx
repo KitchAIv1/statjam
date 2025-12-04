@@ -33,10 +33,10 @@ export function LeaderboardRow({ player, rank, perMode, sortColumn, onClick }: L
         {/* Fixed player info */}
         <div className="flex items-center gap-1.5 px-2 py-2.5 w-[130px] shrink-0 bg-[#121212] border-r border-white/10 sticky left-0 z-10">
           <div className={cn("w-5 text-center text-xs shrink-0", rc)}>{rank}</div>
-          <Avatar className="h-6 w-6 shrink-0 border border-white/10">
+          <Avatar className="h-8 w-8 shrink-0 border border-white/10">
             {p.profilePhotoUrl && <AvatarImage src={p.profilePhotoUrl} alt={p.playerName} />}
-            <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-[8px] text-white">
-              {getInitials(p.playerName) || <User className="h-3 w-3" />}
+            <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-[9px] text-white">
+              {getInitials(p.playerName) || <User className="h-3.5 w-3.5" />}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
@@ -62,10 +62,10 @@ export function LeaderboardRow({ player, rank, perMode, sortColumn, onClick }: L
       <div onClick={onClick} className="hidden md:grid grid-cols-[40px_1fr_120px_45px_55px_55px_55px_55px_55px_55px_60px_60px_60px] items-center gap-1 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5">
         <div className={cn("text-sm", rc)}>{rank}</div>
         <div className="flex items-center gap-2 min-w-0">
-          <Avatar className="h-8 w-8 shrink-0 border border-white/10">
+          <Avatar className="h-10 w-10 shrink-0 border border-white/10">
             {p.profilePhotoUrl && <AvatarImage src={p.profilePhotoUrl} alt={p.playerName} />}
-            <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-xs text-white">
-              {getInitials(p.playerName) || <User className="h-3 w-3" />}
+            <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-sm text-white">
+              {getInitials(p.playerName) || <User className="h-4 w-4" />}
             </AvatarFallback>
           </Avatar>
           <span className="text-sm font-medium text-white truncate">{p.playerName}</span>
