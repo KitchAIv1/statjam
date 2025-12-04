@@ -3,11 +3,12 @@
 import { useMemo, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useLiveGamesHybrid } from '@/hooks/useLiveGamesHybrid';
+import { useTournamentMatchups } from '@/hooks/useTournamentMatchups';
 import { TeamService } from '@/lib/services/tournamentService';
 import LiveGameCard from '@/components/LiveGameCard';
 import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Shield } from 'lucide-react';
+import { Shield, Calendar, Video, Clock } from 'lucide-react';
 import { TournamentOrganizerCard } from './TournamentOrganizerCard';
 
 interface TournamentRightRailProps {
@@ -32,6 +33,12 @@ interface GameWithLogos {
 export function TournamentRightRail({ data }: TournamentRightRailProps) {
   const { games, loading } = useLiveGamesHybrid();
   const [gamesWithLogos, setGamesWithLogos] = useState<GameWithLogos[]>([]);
+  
+  // ✅ Fetch upcoming scheduled games for this tournament
+  const { matchups: upcomingGames, loading: upcomingLoading } = useTournamentMatchups(data.tournament.id, {
+    status: 'scheduled',
+    limit: 5
+  });
 
   const filteredGames = useMemo(() => {
     return games.filter((game) => game.tournament_id === data.tournament.id).slice(0, 3);
@@ -152,30 +159,50 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
         </div>
       </section>
 
-      {/* Section 2: Embedded Stream Player (PiP capable) */}
+      {/* Section 2: Live Streaming - Coming Soon Teaser */}
       <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
-        <div className="relative aspect-video bg-black">
-          <div className="absolute inset-0 flex items-center justify-center text-[#B3B3B3]">
-            <div className="text-center">
-              <div className="mb-2 text-sm">Live Stream</div>
-              <div className="text-xs text-white/40">PiP capable</div>
+        <div className="relative aspect-video bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a]">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+            <Video className="h-10 w-10 text-[#FF3B30]/60 mb-3" />
+            <div className="text-sm font-semibold text-white mb-1">Live Streaming</div>
+            <div className="rounded bg-[#FF3B30]/20 px-2 py-0.5 text-[10px] font-medium text-[#FF3B30] mb-2">
+              COMING SOON
+            </div>
+            <div className="text-[10px] text-white/40 max-w-[180px]">
+              Watch games live with synced stats overlay
             </div>
           </div>
         </div>
-        <div className="border-t border-white/10 p-3 text-xs text-[#B3B3B3]">
-          Stream syncs with StatJam play-by-play
-        </div>
       </section>
 
-      {/* Section 3: Play-by-Play Ticker */}
+      {/* Section 3: Upcoming Schedule */}
       <section className="rounded-2xl border border-white/10 bg-[#121212] p-5">
-        <header className="mb-3 text-sm font-semibold text-white">Play-by-Play</header>
+        <header className="mb-3 flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-[#FF3B30]" />
+          <span className="text-sm font-semibold text-white">Upcoming Games</span>
+        </header>
         <div className="space-y-2.5 max-h-64 overflow-y-auto">
-          <PlayByPlayItem timestamp="3:12" description="Wildcats fast break layup. Murray +2" />
-          <PlayByPlayItem timestamp="3:27" description="Jones shooting foul. Score tied 44–44" />
-          <PlayByPlayItem timestamp="3:44" description="Razorbacks defensive rebound. Turner" />
-          <PlayByPlayItem timestamp="4:06" description="Timeout called by Hurricanes" />
-          <PlayByPlayItem timestamp="4:32" description="Thunder 3PT made. Lead extends to 6" />
+          {upcomingLoading && (
+            <div className="animate-pulse space-y-2">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="h-12 rounded-lg bg-white/5" />
+              ))}
+            </div>
+          )}
+          {!upcomingLoading && upcomingGames.length === 0 && (
+            <p className="text-xs text-[#B3B3B3] py-2">
+              No upcoming games scheduled
+            </p>
+          )}
+          {!upcomingLoading && upcomingGames.map((game) => (
+            <UpcomingGameItem
+              key={game.gameId}
+              gameId={game.gameId}
+              teamA={game.teamA.name}
+              teamB={game.teamB.name}
+              gameDate={game.gameDate}
+            />
+          ))}
         </div>
       </section>
 
@@ -212,11 +239,35 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
   );
 }
 
-function PlayByPlayItem({ timestamp, description }: { timestamp: string; description: string }) {
+function UpcomingGameItem({ gameId, teamA, teamB, gameDate }: { gameId: string; teamA: string; teamB: string; gameDate?: string }) {
+  const formatGameDate = (dateString?: string): string => {
+    if (!dateString) return 'TBD';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'short',
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'TBD';
+    }
+  };
+
   return (
-    <div className="flex gap-2 text-xs">
-      <span className="shrink-0 font-semibold text-[#B3B3B3]">{timestamp}</span>
-      <p className="text-[#B3B3B3]">{description}</p>
+    <div 
+      className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-xs cursor-pointer hover:border-white/10 hover:bg-white/10 transition"
+      onClick={() => window.open(`/game-viewer/${gameId}`, '_blank')}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="text-white font-medium truncate">{teamA} vs {teamB}</div>
+        <div className="flex items-center gap-1 text-[#B3B3B3] mt-0.5">
+          <Clock className="h-3 w-3" />
+          <span className="text-[10px]">{formatGameDate(gameDate)}</span>
+        </div>
+      </div>
     </div>
   );
 }

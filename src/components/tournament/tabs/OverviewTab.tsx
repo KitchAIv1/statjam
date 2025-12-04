@@ -6,7 +6,7 @@ import { PlayerLeader } from '@/lib/services/tournamentLeadersService';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User, Trophy, Sparkles, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, Trophy, Sparkles, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Calendar, Video, Clock, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
@@ -44,6 +44,12 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
   const { matchups, loading: matchupsLoading } = useTournamentMatchups(data.tournament.id, {
     status: matchupFilter === 'all' ? undefined : matchupFilter,
     limit: 20
+  });
+
+  // ✅ Fetch upcoming games for mobile section (no WebSocket, just HTTP)
+  const { matchups: upcomingGames, loading: upcomingLoading } = useTournamentMatchups(data.tournament.id, {
+    status: 'scheduled',
+    limit: 3
   });
   
   // Show 3 awards by default, all when expanded (latest first - already sorted by gameDate DESC)
@@ -409,27 +415,27 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
             No player stats available yet. Leaders will appear as games are tracked.
           </div>
         ) : (
-          <div className="grid gap-2 sm:gap-3 md:gap-4 sm:grid-cols-2 md:grid-cols-3">
+          <div className="grid gap-2.5 sm:gap-3 md:gap-4 sm:grid-cols-2 md:grid-cols-3">
             {topScorers.map((leader, index) => {
               const initials = getInitials(leader.playerName);
               return (
                 <div 
                   key={leader.playerId}
                   onClick={() => openModal(leader.playerId, { isCustomPlayer: leader.isCustomPlayer || false })}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-2.5 py-2 transition hover:border-white/20 hover:bg-black/50 sm:gap-3 sm:rounded-xl sm:px-3 sm:py-2.5 md:gap-4 md:px-4 md:py-3"
+                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-3 py-3 transition hover:border-white/20 hover:bg-black/50 sm:gap-3 sm:px-3 sm:py-2.5 md:gap-4 md:px-4 md:py-3"
                 >
-                  <Avatar className="h-10 w-10 border-2 border-white/10 sm:h-14 sm:w-14 md:h-[72px] md:w-[72px]">
+                  <Avatar className="h-14 w-14 border-2 border-white/10 sm:h-14 sm:w-14 md:h-[72px] md:w-[72px]">
                     {leader.profilePhotoUrl ? (
                       <AvatarImage src={leader.profilePhotoUrl} alt={leader.playerName} />
                     ) : null}
-                    <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-white text-sm sm:text-base md:text-lg">
-                      {initials || <User className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />}
+                    <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-white text-base sm:text-base md:text-lg">
+                      {initials || <User className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7" />}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[10px] font-semibold text-white truncate sm:text-xs md:text-sm">{leader.playerName}</div>
-                    <div className="text-[9px] text-[#B3B3B3] truncate sm:text-[10px] md:text-xs">{leader.teamName}</div>
-                    <div className="text-[9px] font-semibold text-[#FF3B30] mt-0.5 sm:text-[10px] sm:mt-1 md:text-xs">
+                    <div className="text-xs font-semibold text-white truncate sm:text-xs md:text-sm">{leader.playerName}</div>
+                    <div className="text-[10px] text-[#B3B3B3] truncate sm:text-[10px] md:text-xs">{leader.teamName}</div>
+                    <div className="text-[10px] font-semibold text-[#FF3B30] mt-0.5 sm:text-[10px] sm:mt-1 md:text-xs">
                       {leader.pointsPerGame.toFixed(1)} PPG
                     </div>
                   </div>
@@ -519,47 +525,68 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
         </Card>
       )}
 
-      {/* Bracket Preview */}
-      <Card className="space-y-3 rounded-xl border border-white/10 bg-[#121212] p-3 sm:space-y-4 sm:rounded-2xl sm:p-4 md:space-y-6 md:p-6">
-        <header className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-white sm:text-lg md:text-xl">Bracket Preview</h2>
-            <p className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">Interactive bracket launches soon</p>
+      {/* Mobile Only: Upcoming Schedule & Streaming Teaser (hidden on lg+ where right rail shows) */}
+      <div className="space-y-3 sm:space-y-4 lg:hidden">
+        {/* Upcoming Games - Mobile */}
+        <Card className="rounded-xl border border-white/10 bg-[#121212] p-3 sm:rounded-2xl sm:p-4">
+          <header className="mb-3 flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-[#FF3B30]" />
+            <span className="text-sm font-semibold text-white">Upcoming Games</span>
+          </header>
+          <div className="space-y-2">
+            {upcomingLoading && (
+              <div className="animate-pulse h-12 rounded-lg bg-white/5" />
+            )}
+            {!upcomingLoading && upcomingGames.length === 0 && (
+              <p className="text-xs text-[#B3B3B3]">No upcoming games scheduled</p>
+            )}
+            {!upcomingLoading && upcomingGames.map((game) => (
+              <div
+                key={game.gameId}
+                className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 px-3 py-2 cursor-pointer hover:bg-white/10 transition"
+                onClick={() => window.open(`/game-viewer/${game.gameId}`, '_blank')}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-white truncate">
+                    {game.teamA.name} vs {game.teamB.name}
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-[#B3B3B3]">
+                    <Clock className="h-3 w-3" />
+                    <span>{game.gameDate ? new Date(game.gameDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'TBD'}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          <Button className="w-full rounded-full bg-[#FF3B30] px-3 py-1.5 text-[10px] uppercase tracking-wide text-white hover:brightness-110 sm:w-auto sm:px-4 sm:text-xs">
-            Open Bracket
-          </Button>
-        </header>
-        <div className="grid gap-3 sm:gap-4 md:grid-cols-2 md:gap-6">
-          <MiniBracket />
-          <div className="space-y-2 rounded-lg border border-white/10 bg-black/40 p-3 text-[10px] text-[#B3B3B3] sm:space-y-3 sm:rounded-xl sm:p-4 sm:text-xs md:p-5 md:text-sm">
-            <p>
-              Pool standings update automatically as scores finalize. Bracket seeds lock when pool games end.
-            </p>
-            <p>
-              Organizers can configure consolation rounds, double elimination, and placement games from the dashboard.
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* CTA Cards */}
-      <div className="grid gap-2 sm:gap-3 md:gap-4 md:grid-cols-2">
-        <Card className="rounded-xl border border-[#FF3B30]/30 bg-[#FF3B30]/10 p-3 text-white sm:rounded-2xl sm:p-4 md:p-6">
-          <h3 className="text-sm font-semibold sm:text-base md:text-lg">Watch Live Now</h3>
-          <p className="mt-1.5 text-[10px] text-white/70 sm:mt-2 sm:text-xs md:text-sm">Catch all live games with real-time play-by-play and stat leaderboards.</p>
-          <Button className="mt-2 w-full rounded-full bg-white px-3 py-1.5 text-[10px] font-semibold text-black hover:bg-white/90 sm:mt-3 sm:w-auto sm:px-4 sm:py-2 sm:text-xs md:text-sm">
-            Launch Live Center
-          </Button>
         </Card>
-        <Card className="rounded-xl border border-white/10 bg-[#121212] p-3 text-white sm:rounded-2xl sm:p-4 md:p-6">
-          <h3 className="text-sm font-semibold sm:text-base md:text-lg">Today&apos;s Schedule</h3>
-          <p className="mt-1.5 text-[10px] text-[#B3B3B3] sm:mt-2 sm:text-xs md:text-sm">See court assignments, streaming links, and officials in one place.</p>
-          <Button variant="outline" className="mt-2 w-full rounded-full border-white/20 bg-[#121212] text-[10px] text-white/70 hover:border-white/40 hover:text-white sm:mt-3 sm:w-auto sm:px-4 sm:py-2 sm:text-xs md:text-sm">
-            View Schedule
-          </Button>
+
+        {/* Live Streaming Coming Soon - Mobile */}
+        <Card className="overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] sm:rounded-2xl">
+          <div className="flex items-center gap-4 p-4">
+            <Video className="h-8 w-8 text-[#FF3B30]/60 shrink-0" />
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-white mb-0.5">Live Streaming</div>
+              <div className="rounded bg-[#FF3B30]/20 px-2 py-0.5 text-[10px] font-medium text-[#FF3B30] inline-block">
+                COMING SOON
+              </div>
+            </div>
+          </div>
         </Card>
       </div>
+
+      {/* Bracket Preview - Coming Soon */}
+      <Card className="overflow-hidden rounded-xl border border-white/10 bg-[#121212] sm:rounded-2xl">
+        <div className="flex flex-col items-center justify-center py-8 px-4 sm:py-12 text-center">
+          <Zap className="h-10 w-10 text-[#FF3B30]/60 mb-3 sm:h-12 sm:w-12" />
+          <h2 className="text-base font-semibold text-white mb-1 sm:text-lg">Tournament Bracket</h2>
+          <div className="rounded bg-[#FF3B30]/20 px-2.5 py-0.5 text-[10px] font-medium text-[#FF3B30] mb-2 sm:text-xs">
+            COMING SOON
+          </div>
+          <p className="text-[10px] text-white/40 max-w-[280px] sm:text-xs sm:max-w-[320px]">
+            Interactive bracket view with live updates, automatic seeding, and elimination tracking
+          </p>
+        </div>
+      </Card>
 
       {/* Player Profile Modal */}
       {playerId && (
@@ -577,34 +604,3 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
   );
 }
 
-function MiniBracket() {
-  return (
-    <div className="grid grid-cols-1 gap-3 text-xs text-white/70 sm:grid-cols-3 sm:gap-4 sm:text-sm">
-      <div className="space-y-3 sm:space-y-4">
-        <BracketCard label="Quarterfinals" matchups={[['Hurricanes', 'Wolves'], ['Chargers', 'Spartans']]} />
-      </div>
-      <div className="flex items-center sm:block">
-        <BracketCard label="Semifinals" matchups={[['Winner QF1', 'Winner QF2']]} />
-      </div>
-      <div className="flex items-center sm:block">
-        <BracketCard label="Final" matchups={[['Semifinal Winner', 'Semifinal Winner']]} />
-      </div>
-    </div>
-  );
-}
-
-function BracketCard({ label, matchups }: { label: string; matchups: [string, string][] }) {
-  return (
-    <div className="w-full space-y-2 rounded-lg border border-white/10 bg-black/40 p-3 sm:rounded-xl sm:p-4">
-      <div className="text-[10px] uppercase tracking-wide text-[#B3B3B3] sm:text-xs">{label}</div>
-      <div className="space-y-2 sm:space-y-3">
-        {matchups.map(([home, away], idx) => (
-          <div key={`${home}-${away}-${idx}`} className="space-y-1">
-            <div className="rounded-md border border-white/10 bg-[#121212] px-2 py-1.5 text-xs text-white sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm">{home}</div>
-            <div className="rounded-md border border-white/10 bg-[#121212] px-2 py-1.5 text-xs text-white sm:rounded-lg sm:px-3 sm:py-2 sm:text-sm">{away}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
