@@ -92,7 +92,7 @@ export function useGameAwards(
             setPlayerOfTheGame({
               id: potgId,
               name: identity?.name || 'Unknown Player',
-              photoUrl: identity?.photoUrl,
+              photoUrl: identity?.profilePhotoUrl,
               jerseyNumber: identity?.jerseyNumber,
               isCustomPlayer: potgIsCustom,
               stats: {
@@ -124,7 +124,7 @@ export function useGameAwards(
             setHustlePlayer({
               id: hustleId,
               name: identity?.name || 'Unknown Player',
-              photoUrl: identity?.photoUrl,
+              photoUrl: identity?.profilePhotoUrl,
               jerseyNumber: identity?.jerseyNumber,
               isCustomPlayer: hustleIsCustom,
               stats: {
