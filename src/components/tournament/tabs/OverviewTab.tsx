@@ -391,18 +391,28 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
       </Card>
 
       {/* Leaderboard Highlights */}
-      <Card className="space-y-3 rounded-xl border border-white/10 bg-[#121212] p-3 sm:space-y-4 sm:rounded-2xl sm:p-4 md:space-y-6 md:p-6">
-        <header className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+      <Card className="relative overflow-hidden rounded-xl border border-white/10 bg-[#121212] sm:rounded-2xl">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center opacity-60 pointer-events-none"
+          style={{ backgroundImage: 'url(/images/leadersection.webp)' }}
+        />
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+        
+        {/* Content */}
+        <div className="relative z-10 space-y-3 p-3 sm:space-y-4 sm:p-4 md:space-y-6 md:p-6">
+        <header className="flex items-start justify-between gap-2 sm:items-center sm:gap-3">
+          <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold text-white sm:text-lg md:text-xl">Leaderboard Highlights</h2>
             <p className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">Top performers updated every possession</p>
           </div>
           <Button
             variant="outline"
-            className="w-full rounded-full border-white/10 bg-[#121212] text-[10px] text-white/70 hover:border-white/30 hover:text-white sm:w-auto sm:text-xs md:text-sm"
+            className="shrink-0 rounded-full border-white/10 bg-[#121212]/80 px-3 py-1.5 text-[10px] text-white/70 hover:border-white/30 hover:text-white sm:px-4 sm:py-2 sm:text-xs md:text-sm"
             onClick={() => onNavigateToTab?.('leaders')}
           >
-            View Full Leaders
+            View Leaders
           </Button>
         </header>
         {loadingLeaders ? (
@@ -445,6 +455,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
             })}
           </div>
         )}
+        </div>
       </Card>
 
       {/* StatJam Promo Poster - Mobile Only (between Leaders & Awards) */}
@@ -482,12 +493,14 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
               </Button>
             )}
           </header>
-          <div className="space-y-3 sm:space-y-4">
-            {visibleAwards.map((award) => (
-              <div key={award.gameId} className="rounded-lg border border-white/10 bg-black/40 p-3 sm:rounded-xl sm:p-4">
+          <div className="space-y-4">
+            {visibleAwards.map((award, index) => (
+              <div key={`${award.gameId}-${index}`}>
+                {/* Game Context Header */}
                 <div className="text-[10px] text-[#B3B3B3] mb-2 sm:text-xs">
                   {new Date(award.gameDate).toLocaleDateString()} • {award.teamAName} vs {award.teamBName} ({award.teamAScore}-{award.teamBScore})
                 </div>
+                {/* Award Cards */}
                 <div className="grid gap-2 sm:gap-3 sm:grid-cols-2">
                   {award.playerOfTheGame && (
                     <AwardDisplayCard

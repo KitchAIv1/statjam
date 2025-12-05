@@ -36,9 +36,16 @@ export function TournamentsListHeader({
   return (
     <>
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight text-white mb-2 sm:text-5xl">Tournaments</h1>
-        <p className="text-lg text-[#B3B3B3] sm:text-xl">Discover and follow live basketball tournaments</p>
+      <div className="mb-8 flex items-center -ml-4 sm:-ml-6">
+        <img 
+          src="/images/logo-ball.webp" 
+          alt="" 
+          className="w-36 h-36 sm:w-48 sm:h-48 object-contain flex-shrink-0 -mr-6 sm:-mr-8"
+        />
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight text-white mb-2 sm:text-5xl">Tournaments</h1>
+          <p className="text-lg text-[#B3B3B3] sm:text-xl">Discover and follow live basketball tournaments</p>
+        </div>
       </div>
 
       {/* Search and Filter Section */}

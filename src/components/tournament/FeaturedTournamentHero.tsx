@@ -51,6 +51,18 @@ export function FeaturedTournamentHero({ tournament, liveGameCount, onClick, onL
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#121212] to-black max-w-4xl mx-auto">
+      {/* Basketball Splash Background - Responsive sizing */}
+      <div 
+        className="absolute inset-0 bg-no-repeat opacity-50 pointer-events-none"
+        style={{ 
+          backgroundImage: 'url(/images/basketball-splash.webp)',
+          backgroundPosition: 'right center',
+          backgroundSize: 'auto 130%'
+        }}
+      />
+      {/* Dark gradient overlay for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent pointer-events-none" />
+      
       <div className="relative p-6 sm:p-8 lg:p-10 max-h-[500px] lg:max-h-[450px] overflow-hidden">
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 h-full">
           {/* Left: Tournament Info */}
