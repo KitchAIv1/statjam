@@ -174,7 +174,7 @@ export function PlayerProfileHero({ identity, careerStats, gamesPlayed }: Player
           {/* Far Right: Career Stats Box - Larger, ESPN-style */}
           {/* Mobile: Full width below name | Desktop: Right side */}
           <div className="shrink-0 self-center w-full sm:w-auto">
-            <div className="bg-[#FF6B35] rounded-lg overflow-hidden sm:min-w-[220px]">
+            <div className="bg-[#FF6B35] rounded-lg overflow-hidden sm:min-w-[220px] shadow-lg">
               <div className="px-3 py-1.5 flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-white uppercase tracking-wide">
                   Career Stats
