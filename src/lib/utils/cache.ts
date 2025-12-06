@@ -3,6 +3,8 @@
  * Optimized for StatJam performance improvements
  */
 
+import { logger } from '@/lib/utils/logger';
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -150,7 +152,7 @@ export const CacheTTL = {
 export function invalidateOrganizerDashboard(userId: string): void {
   const cacheKey = CacheKeys.organizerDashboard(userId);
   cache.delete(cacheKey);
-  console.log('🗑️ Cache invalidated: organizer dashboard for user', userId);
+  logger.debug('🗑️ Cache invalidated: organizer dashboard for user', userId);
 }
 
 /**
@@ -160,7 +162,7 @@ export function invalidateOrganizerDashboard(userId: string): void {
 export function invalidateOrganizerTournaments(userId: string): void {
   const cacheKey = CacheKeys.organizerTournaments(userId);
   cache.delete(cacheKey);
-  console.log('🗑️ Cache invalidated: organizer tournaments for user', userId);
+  logger.debug('🗑️ Cache invalidated: organizer tournaments for user', userId);
 }
 
 /**
@@ -170,7 +172,7 @@ export function invalidateOrganizerTournaments(userId: string): void {
 export function invalidateOrganizerGames(userId: string): void {
   const cacheKey = CacheKeys.organizerGames(userId);
   cache.delete(cacheKey);
-  console.log('🗑️ Cache invalidated: organizer games for user', userId);
+  logger.debug('🗑️ Cache invalidated: organizer games for user', userId);
 }
 
 /**
@@ -181,7 +183,7 @@ export function invalidateAllOrganizerCaches(userId: string): void {
   invalidateOrganizerDashboard(userId);
   invalidateOrganizerTournaments(userId);
   invalidateOrganizerGames(userId);
-  console.log('🗑️ Cache invalidated: all organizer caches for user', userId);
+  logger.debug('🗑️ Cache invalidated: all organizer caches for user', userId);
 }
 
 /**
@@ -191,5 +193,5 @@ export function invalidateAllOrganizerCaches(userId: string): void {
 export function invalidateCoachTeams(coachId: string): void {
   const cacheKey = CacheKeys.coachTeams(coachId);
   cache.delete(cacheKey);
-  console.log('🗑️ Cache invalidated: coach teams for coach', coachId);
+  logger.debug('🗑️ Cache invalidated: coach teams for coach', coachId);
 }

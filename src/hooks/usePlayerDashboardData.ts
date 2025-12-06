@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { PlayerDashboardService } from '@/lib/services/playerDashboardService';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
+import { logger } from '@/lib/utils/logger';
 import type { PlayerDashboardData } from '@/lib/types/playerDashboard';
 
 export function usePlayerDashboardData(user: { id: string } | null) {
@@ -34,8 +35,8 @@ export function usePlayerDashboardData(user: { id: string } | null) {
       const cachedDashboard = cache.get<PlayerDashboardData>(dashboardCacheKey);
       
       if (cachedDashboard) {
-        console.log('⚡ usePlayerDashboardData: Using cached dashboard data for', userId.substring(0, 8));
-        console.log('📦 Cached data:', JSON.stringify({
+        logger.debug('⚡ usePlayerDashboardData: Using cached dashboard data for', userId.substring(0, 8));
+        logger.debug('📦 Cached data:', JSON.stringify({
           identity: cachedDashboard.identity,
           season: cachedDashboard.season,
           careerHighs: cachedDashboard.careerHighs,
@@ -46,7 +47,7 @@ export function usePlayerDashboardData(user: { id: string } | null) {
         return;
       }
       
-      console.log('🔍 usePlayerDashboardData: Cache miss, fetching fresh data for', userId.substring(0, 8));
+      logger.debug('🔍 usePlayerDashboardData: Cache miss, fetching fresh data for', userId.substring(0, 8));
       
       // Cache miss: show loading state
       setLoading(true);
@@ -98,11 +99,11 @@ export function usePlayerDashboardData(user: { id: string } | null) {
           cache.set(dashboardCacheKey, completeData, CacheTTL.playerDashboard);
         }
       }).catch(err => {
-        console.warn('Background data fetch failed:', err);
+        logger.warn('Background data fetch failed:', err);
       });
 
     } catch (e: any) {
-      console.error('Dashboard data fetch error:', e);
+      logger.error('Dashboard data fetch error:', e);
       setError(e?.message || 'Failed to load dashboard');
       setLoading(false);
     }

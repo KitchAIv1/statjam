@@ -23,6 +23,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { PlayerDataDebug } from "@/lib/utils/playerDataDebug";
 import { supabase } from "@/lib/supabase";
 import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3, Clock, MapPin } from "lucide-react";
+import { logger } from "@/lib/utils/logger";
 import { GameAwardsService } from "@/lib/services/gameAwardsService";
 import { AwardDisplayCard } from "@/components/tournament/AwardDisplayCard";
 import { Skeleton, SkeletonStat } from "@/components/ui/skeleton";
@@ -114,7 +115,7 @@ export function PlayerDashboard() {
       
       // Get user from context instead of supabase.auth (more reliable)
       if (!user?.id) {
-        console.error('💾 No authenticated user for profile save');
+        logger.error('💾 No authenticated user for profile save');
         alert('Please sign in to save your profile.');
         return;
       }
@@ -169,8 +170,8 @@ export function PlayerDashboard() {
         .select();
       
       if (error) {
-        console.error('💾 Error saving profile:', error);
-        console.error('💾 Error details:', error.message, error.code, error.details);
+        logger.error('💾 Error saving profile:', error);
+        logger.error('💾 Error details:', error.message, error.code, error.details);
         alert(`Failed to save profile: ${error.message}`);
         return;
       }
@@ -182,7 +183,7 @@ export function PlayerDashboard() {
       await refetch();
       
     } catch (error) {
-      console.error('💾 Unexpected error saving profile:', error);
+      logger.error('💾 Unexpected error saving profile:', error);
       alert('An unexpected error occurred. Please try again.');
     }
   };
@@ -249,30 +250,30 @@ export function PlayerDashboard() {
   useEffect(() => {
     if (user?.id && data.identity) {
       // Log what's actually being displayed (after fallback logic)
-      console.group('📊 Player Dashboard - DISPLAYED VALUES');
-      console.log('Name:', identityName);
-      console.log('Jersey:', jerseyNumber);
-      console.log('Position:', position);
-      console.log('Height:', height);
-      console.log('Weight:', weight);
-      console.log('Age:', age);
-      console.log('Location:', location ? getCountryName(location) : location);
-      console.log('Season PTS:', seasonPts);
-      console.log('Season REB:', seasonReb);
-      console.log('Season AST:', seasonAst);
-      console.log('Season FG%:', seasonFg);
-      console.log('Season 3PT%:', season3Pt);
-      console.log('Season FT%:', seasonFt);
-      console.log('Season MPG:', seasonMin);
-      console.log('Career PTS:', careerPts);
-      console.log('Career REB:', careerReb);
-      console.log('Career AST:', careerAst);
-      console.log('---');
-      console.log('Raw data.identity:', JSON.stringify(data.identity, null, 2));
-      console.log('Raw data.season:', JSON.stringify(data.season, null, 2));
-      console.log('Raw data.careerHighs:', JSON.stringify(data.careerHighs, null, 2));
-      console.log('currentPlayerData:', JSON.stringify(currentPlayerData, null, 2));
-      console.groupEnd();
+      logger.group('📊 Player Dashboard - DISPLAYED VALUES');
+      logger.debug('Name:', identityName);
+      logger.debug('Jersey:', jerseyNumber);
+      logger.debug('Position:', position);
+      logger.debug('Height:', height);
+      logger.debug('Weight:', weight);
+      logger.debug('Age:', age);
+      logger.debug('Location:', location ? getCountryName(location) : location);
+      logger.debug('Season PTS:', seasonPts);
+      logger.debug('Season REB:', seasonReb);
+      logger.debug('Season AST:', seasonAst);
+      logger.debug('Season FG%:', seasonFg);
+      logger.debug('Season 3PT%:', season3Pt);
+      logger.debug('Season FT%:', seasonFt);
+      logger.debug('Season MPG:', seasonMin);
+      logger.debug('Career PTS:', careerPts);
+      logger.debug('Career REB:', careerReb);
+      logger.debug('Career AST:', careerAst);
+      logger.debug('---');
+      logger.debug('Raw data.identity:', JSON.stringify(data.identity, null, 2));
+      logger.debug('Raw data.season:', JSON.stringify(data.season, null, 2));
+      logger.debug('Raw data.careerHighs:', JSON.stringify(data.careerHighs, null, 2));
+      logger.debug('currentPlayerData:', JSON.stringify(currentPlayerData, null, 2));
+      logger.groupEnd();
 
       PlayerDataDebug.logSnapshot('dashboard', user.id, {
         identity: data.identity,
@@ -296,7 +297,7 @@ export function PlayerDashboard() {
         const awards = await GameAwardsService.getPlayerAwards(user.id);
         setPlayerAwards(awards);
       } catch (error) {
-        console.error('Failed to load player awards:', error);
+        logger.error('Failed to load player awards:', error);
       } finally {
         setLoadingAwards(false);
       }

@@ -5,6 +5,8 @@
  * to identify discrepancies between Player Dashboard and Player Profile Modal
  */
 
+import { logger } from '@/lib/utils/logger';
+
 export interface PlayerDataSnapshot {
   source: 'dashboard' | 'modal';
   timestamp: string;
@@ -77,12 +79,12 @@ export class PlayerDataDebug {
     this.snapshots.push(snapshot);
 
     // Log to console with clear formatting
-    console.group(`🔍 Player Data Snapshot [${source.toUpperCase()}] - ${playerId.substring(0, 8)}`);
-    console.log('Timestamp:', snapshot.timestamp);
-    console.log('Identity:', JSON.stringify(snapshot.identity, null, 2));
-    console.log('Season Averages:', JSON.stringify(snapshot.seasonAverages, null, 2));
-    console.log('Career Highs:', JSON.stringify(snapshot.careerHighs, null, 2));
-    console.groupEnd();
+    logger.group(`🔍 Player Data Snapshot [${source.toUpperCase()}] - ${playerId.substring(0, 8)}`);
+    logger.debug('Timestamp:', snapshot.timestamp);
+    logger.debug('Identity:', JSON.stringify(snapshot.identity, null, 2));
+    logger.debug('Season Averages:', JSON.stringify(snapshot.seasonAverages, null, 2));
+    logger.debug('Career Highs:', JSON.stringify(snapshot.careerHighs, null, 2));
+    logger.groupEnd();
 
     // If we have both snapshots, compare them
     const dashboardSnapshot = this.snapshots.find(s => s.source === 'dashboard' && s.playerId === playerId);
@@ -97,7 +99,7 @@ export class PlayerDataDebug {
    * Compare two snapshots and log differences
    */
   private static compareSnapshots(dashboard: PlayerDataSnapshot, modal: PlayerDataSnapshot): void {
-    console.group('🔍 COMPARISON: Dashboard vs Modal');
+    logger.group('🔍 COMPARISON: Dashboard vs Modal');
     
     // Compare Identity
     const identityDiff: string[] = [];
@@ -124,9 +126,9 @@ export class PlayerDataDebug {
     }
 
     if (identityDiff.length > 0) {
-      console.warn('⚠️ IDENTITY DIFFERENCES:', identityDiff);
+      logger.warn('⚠️ IDENTITY DIFFERENCES:', identityDiff);
     } else {
-      console.log('✅ Identity: MATCH');
+      logger.debug('✅ Identity: MATCH');
     }
 
     // Compare Season Averages
@@ -154,9 +156,9 @@ export class PlayerDataDebug {
     }
 
     if (seasonDiff.length > 0) {
-      console.warn('⚠️ SEASON AVERAGES DIFFERENCES:', seasonDiff);
+      logger.warn('⚠️ SEASON AVERAGES DIFFERENCES:', seasonDiff);
     } else {
-      console.log('✅ Season Averages: MATCH');
+      logger.debug('✅ Season Averages: MATCH');
     }
 
     // Compare Career Highs
@@ -172,20 +174,20 @@ export class PlayerDataDebug {
     }
 
     if (careerDiff.length > 0) {
-      console.warn('⚠️ CAREER HIGHS DIFFERENCES:', careerDiff);
+      logger.warn('⚠️ CAREER HIGHS DIFFERENCES:', careerDiff);
     } else {
-      console.log('✅ Career Highs: MATCH');
+      logger.debug('✅ Career Highs: MATCH');
     }
 
     // Summary
     const totalDiffs = identityDiff.length + seasonDiff.length + careerDiff.length;
     if (totalDiffs === 0) {
-      console.log('✅✅✅ ALL DATA MATCHES ✅✅✅');
+      logger.debug('✅✅✅ ALL DATA MATCHES ✅✅✅');
     } else {
-      console.error(`❌❌❌ FOUND ${totalDiffs} DIFFERENCES ❌❌❌`);
+      logger.error(`❌❌❌ FOUND ${totalDiffs} DIFFERENCES ❌❌❌`);
     }
 
-    console.groupEnd();
+    logger.groupEnd();
   }
 
   /**
