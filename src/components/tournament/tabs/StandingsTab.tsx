@@ -64,7 +64,7 @@ export function StandingsTab({ tournamentId }: StandingsTabProps) {
                         <TableCell className="font-semibold text-xs text-white/70 sm:text-sm md:text-base">{team.rank}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
-                            <Avatar className="h-5 w-5 shrink-0 border border-white/10 sm:h-6 sm:w-6 md:h-8 md:w-8">
+                            <Avatar className="h-8 w-8 shrink-0 border border-white/10 sm:h-10 sm:w-10 md:h-12 md:w-12">
                               {team.teamLogo ? (
                                 <AvatarImage
                                   src={team.teamLogo}
@@ -74,7 +74,7 @@ export function StandingsTab({ tournamentId }: StandingsTabProps) {
                                 />
                               ) : null}
                               <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10">
-                                <Shield className="h-2.5 w-2.5 text-[#FF3B30] sm:h-3 sm:w-3 md:h-4 md:w-4" />
+                                <Shield className="h-4 w-4 text-[#FF3B30] sm:h-5 sm:w-5 md:h-6 md:w-6" />
                               </AvatarFallback>
                             </Avatar>
                             <span className="truncate text-xs font-medium text-white sm:text-sm md:text-base">{team.teamName}</span>

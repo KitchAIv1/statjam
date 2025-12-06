@@ -59,6 +59,7 @@ interface UseTrackerReturn {
   advanceIfNeeded: () => void;
   substitute: (sub: { gameId: string; teamId: string; playerOutId: string; playerInId: string; quarter: number; gameTimeSeconds: number }) => Promise<boolean>;
   closeGame: () => Promise<void>;
+  cancelGame: () => Promise<void>; // ✅ Cancel/abandon game without completion
   completeGameWithAwards: (awards: { playerOfTheGameId: string; hustlePlayerId: string; isPlayerOfGameCustom?: boolean; isHustlePlayerCustom?: boolean; finalOpponentScore?: number }) => Promise<void>; // ✅ Complete game with awards (supports custom players + coach mode)
   saveClockBeforeExit: () => Promise<void>; // ✅ Save clock state before navigation
   showAwardsModal: boolean; // ✅ Awards modal visibility
@@ -1933,6 +1934,37 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     }
   }, [gameId, scores, teamAId, teamBId, gameStatus, isCoachMode, stopShotClock]);
 
+  // ✅ Cancel/abandon game without completion (no awards, marks as cancelled)
+  const cancelGame = useCallback(async () => {
+    try {
+      const { GameService } = await import('@/lib/services/gameService');
+      const { notify } = await import('@/lib/services/notificationService');
+      
+      console.log('🚫 useTracker: Cancelling game', gameId);
+      
+      // Stop all clocks
+      setClock(prev => ({ ...prev, isRunning: false }));
+      stopShotClock();
+      
+      // Update game status to cancelled
+      const success = await GameService.updateGameStatus(gameId, 'cancelled');
+      
+      if (success) {
+        setGameStatus('cancelled');
+        setLastAction('Game cancelled');
+        notify.info('Game Cancelled', 'This game has been marked as cancelled.');
+        console.log('✅ Game cancelled successfully');
+      } else {
+        throw new Error('Failed to cancel game');
+      }
+    } catch (error) {
+      console.error('❌ Error cancelling game:', error);
+      const { notify } = await import('@/lib/services/notificationService');
+      notify.error('Cancel Failed', 'Could not cancel the game. Please try again.');
+      setLastAction('Error cancelling game');
+    }
+  }, [gameId, stopShotClock]);
+
   // ✅ Complete game with awards (called from awards modal)
   // ✅ UPDATED: Supports custom players + coach mode final score (Nov 2025)
   const completeGameWithAwards = useCallback(async (awards: {
@@ -2240,6 +2272,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     advanceIfNeeded,
     substitute,
     closeGame,
+    cancelGame,
     completeGameWithAwards,
     saveClockBeforeExit,
     showAwardsModal,

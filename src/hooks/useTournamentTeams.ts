@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { TeamService } from '@/lib/services/tournamentService';
 import { Team } from '@/lib/types/team';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
+import { logger } from '@/lib/utils/logger';
 
 interface TournamentTeamsState {
   teams: Team[];
@@ -33,7 +34,7 @@ export function useTournamentTeams(tournamentId: string) {
       const cachedTeams = cache.get<Team[]>(cacheKey);
       
       if (cachedTeams) {
-        console.log('⚡ useTournamentTeams: Using cached teams data');
+        logger.debug('⚡ useTournamentTeams: Using cached teams data');
         // Set data immediately without loading state
         setState({ teams: cachedTeams, loading: false, error: null });
         return;
@@ -44,13 +45,13 @@ export function useTournamentTeams(tournamentId: string) {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      console.log('🔍 useTournamentTeams: Fetching teams for tournament:', tournamentId);
+      logger.debug('🔍 useTournamentTeams: Fetching teams for tournament:', tournamentId);
       const teams = await TeamService.getTeamsByTournament(tournamentId);
 
       // ✅ Cache the result
       const cacheKey = CacheKeys.tournamentTeams(tournamentId);
       cache.set(cacheKey, teams, CacheTTL.tournamentTeams);
-      console.log('⚡ useTournamentTeams: Teams cached for', CacheTTL.tournamentTeams, 'minutes');
+      logger.debug('⚡ useTournamentTeams: Teams cached for', CacheTTL.tournamentTeams, 'minutes');
 
       setState({ teams, loading: false, error: null });
     } catch (error) {

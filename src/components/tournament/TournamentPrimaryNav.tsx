@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { TournamentTab } from './TournamentPageShell';
+import { logger } from '@/lib/utils/logger';
 
 interface TournamentPrimaryNavProps {
   activeTab: TournamentTab;
@@ -39,7 +40,7 @@ export function TournamentPrimaryNav({ activeTab, onTabChange }: TournamentPrima
                 onClick={(e) => {
                   // ✅ FIX: Ensure tab click works - prevent any event blocking
                   e.stopPropagation();
-                  console.log('🔍 [TournamentPrimaryNav] Tab clicked:', tab, label);
+                  logger.debug('🔍 [TournamentPrimaryNav] Tab clicked:', tab, label);
                   onTabChange(tab);
                 }}
                 className={`relative shrink-0 px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30]/40 sm:px-4 sm:text-sm ${

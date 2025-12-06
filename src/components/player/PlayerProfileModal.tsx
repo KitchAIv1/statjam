@@ -303,7 +303,7 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
   }, [isOpen, gameId, awardType, playerId, isCustomPlayer]);
 
   const handleViewFullProfile = () => {
-    window.open(`/player-dashboard`, '_blank');
+    window.open(`/player/${playerId}`, '_blank');
     onClose();
   };
 
@@ -395,7 +395,9 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
           </button>
 
           {/* Player Info Section - Left side, always visible */}
-          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 lg:space-y-8 text-white overflow-y-auto">
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Scrollable Content */}
+            <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 lg:space-y-8 text-white overflow-y-auto">
             {/* Award Badge with Integrated Game Context */}
             {isAwardView && (
               loadingAwardDetails ? (
@@ -703,81 +705,73 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                   </div>
                 )}
 
-                {/* Career Highs - Hide for award view to avoid redundancy */}
+                {/* Career Highs - 2 rows x 3 columns grid for compact layout */}
                 {!isAwardView && (
                   <div>
                     <p className="text-orange-100 mb-2 sm:mb-3 text-xs sm:text-sm font-medium uppercase tracking-wider">Career Highs</p>
-                    <div className="flex flex-wrap gap-2 sm:gap-4 lg:gap-6 text-xs sm:text-sm">
-                      <div className="bg-white/5 rounded-md sm:rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
-                        <span className="text-orange-200">PTS: </span>
-                        <span className="font-bold text-white">
-                          {careerHighs?.points ?? 0}
-                        </span>
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                      <div className="bg-white/5 rounded-md px-2 py-1.5 text-center">
+                        <span className="text-orange-200 text-[10px] sm:text-xs block">PTS</span>
+                        <span className="font-bold text-white">{careerHighs?.points ?? 0}</span>
                       </div>
-                      <div className="bg-white/5 rounded-md sm:rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
-                        <span className="text-orange-200">REB: </span>
-                        <span className="font-bold text-white">
-                          {careerHighs?.rebounds ?? 0}
-                        </span>
+                      <div className="bg-white/5 rounded-md px-2 py-1.5 text-center">
+                        <span className="text-orange-200 text-[10px] sm:text-xs block">REB</span>
+                        <span className="font-bold text-white">{careerHighs?.rebounds ?? 0}</span>
                       </div>
-                      <div className="bg-white/5 rounded-md sm:rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
-                        <span className="text-orange-200">AST: </span>
-                        <span className="font-bold text-white">
-                          {careerHighs?.assists ?? 0}
-                        </span>
+                      <div className="bg-white/5 rounded-md px-2 py-1.5 text-center">
+                        <span className="text-orange-200 text-[10px] sm:text-xs block">AST</span>
+                        <span className="font-bold text-white">{careerHighs?.assists ?? 0}</span>
                       </div>
-                      {careerHighs?.blocks !== undefined && (
-                        <div className="bg-white/5 rounded-md sm:rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
-                          <span className="text-orange-200">BLK: </span>
-                          <span className="font-bold text-white">{careerHighs.blocks}</span>
-                        </div>
-                      )}
-                      {careerHighs?.steals !== undefined && (
-                        <div className="bg-white/5 rounded-md sm:rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
-                          <span className="text-orange-200">STL: </span>
-                          <span className="font-bold text-white">{careerHighs.steals}</span>
-                        </div>
-                      )}
+                      <div className="bg-white/5 rounded-md px-2 py-1.5 text-center">
+                        <span className="text-orange-200 text-[10px] sm:text-xs block">BLK</span>
+                        <span className="font-bold text-white">{careerHighs?.blocks ?? 0}</span>
+                      </div>
+                      <div className="bg-white/5 rounded-md px-2 py-1.5 text-center">
+                        <span className="text-orange-200 text-[10px] sm:text-xs block">STL</span>
+                        <span className="font-bold text-white">{careerHighs?.steals ?? 0}</span>
+                      </div>
+                      <div className="bg-white/5 rounded-md px-2 py-1.5 text-center">
+                        <span className="text-orange-200 text-[10px] sm:text-xs block">3PM</span>
+                        <span className="font-bold text-white">{careerHighs?.threes ?? 0}</span>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Action Button - Hidden for Award View */}
-                {!isAwardView && (
-                  <div className="pt-4 sm:pt-6 border-t border-white/10">
-                    <TooltipProvider>
-                      <Tooltip>
-                        {!isCustomPlayer && (
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleViewFullProfile}
-                              className="bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs sm:text-sm"
-                            >
-                              <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 opacity-50" />
-                              View Full Profile
-                            </Button>
-                          </TooltipTrigger>
-                        )}
-                        {!isCustomPlayer && (
-                          <TooltipContent 
-                            side="top" 
-                            className="bg-[#121212] border border-white/20 text-white shadow-lg rounded-lg px-3 py-2 text-xs font-medium"
-                          >
-                            <span className="flex items-center gap-1.5">
-                              <span>View full player dashboard</span>
-                            </span>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                )}
               </>
             ) : (
               <div className="text-center text-white/70 py-8">
                 <p>Player profile not found</p>
+              </div>
+            )}
+            </div>
+            
+            {/* Sticky Footer - View Full Profile Button (only if profile is public) */}
+            {!isAwardView && !isCustomPlayer && identity && identity.isPublicProfile !== false && (
+              <div className="shrink-0 px-4 sm:px-6 lg:px-8 py-3 sm:py-4 border-t border-white/10 bg-black/20 backdrop-blur-sm">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleViewFullProfile}
+                        className="bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs sm:text-sm w-full sm:w-auto"
+                      >
+                        <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 opacity-50" />
+                        View Full Profile
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="top" 
+                      className="bg-[#121212] border border-white/20 text-white shadow-lg rounded-lg px-3 py-2 text-xs font-medium"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span>View full player dashboard</span>
+                      </span>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             )}
           </div>

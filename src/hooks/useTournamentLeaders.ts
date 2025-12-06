@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { TournamentLeadersService, PlayerLeader } from '@/lib/services/tournamentLeadersService';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
+import { logger } from '@/lib/utils/logger';
 
 type LeaderCategory = 'points' | 'rebounds' | 'assists' | 'steals' | 'blocks';
 
@@ -37,7 +38,7 @@ export function useTournamentLeaders(
       const cachedLeaders = cache.get<PlayerLeader[]>(cacheKey);
       
       if (cachedLeaders) {
-        console.log('⚡ useTournamentLeaders: Using cached leaders data');
+        logger.debug('⚡ useTournamentLeaders: Using cached leaders data');
         setState({ leaders: cachedLeaders, loading: false, error: null });
         return;
       }
@@ -46,7 +47,7 @@ export function useTournamentLeaders(
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      console.log('🔍 useTournamentLeaders: Fetching leaders for tournament:', tournamentId, 'category:', category);
+      logger.debug('🔍 useTournamentLeaders: Fetching leaders for tournament:', tournamentId, 'category:', category);
       const leaders = await TournamentLeadersService.getTournamentPlayerLeaders(
         tournamentId,
         category,
@@ -56,7 +57,7 @@ export function useTournamentLeaders(
       // ✅ Cache the result
       const cacheKey = CacheKeys.tournamentLeaders(tournamentId, category, minGames);
       cache.set(cacheKey, leaders, CacheTTL.tournamentLeaders);
-      console.log('⚡ useTournamentLeaders: Leaders cached for', CacheTTL.tournamentLeaders, 'minutes');
+      logger.debug('⚡ useTournamentLeaders: Leaders cached for', CacheTTL.tournamentLeaders, 'minutes');
 
       setState({ leaders, loading: false, error: null });
     } catch (error) {

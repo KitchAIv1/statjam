@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo } from 'react';
-import { Team } from '@/lib/types/team';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { User } from 'lucide-react';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
 import { useTournamentTeams } from '@/hooks/useTournamentTeams';
+import { prefetchPlayerProfile } from '@/lib/services/prefetchService';
 
 interface PlayersTabProps {
   tournamentId: string;
@@ -33,7 +33,7 @@ export function PlayersTab({ tournamentId }: PlayersTabProps) {
     const allPlayers: PlayerWithTeam[] = [];
     teams.forEach((team) => {
       if (team.players && team.players.length > 0) {
-        team.players.forEach((player) => {
+        team.players.forEach((player: { id: string; name: string; profilePhotoUrl?: string; position?: string; jerseyNumber?: number; is_custom_player?: boolean }) => {
           allPlayers.push({
             id: player.id,
             name: player.name,
@@ -89,6 +89,7 @@ export function PlayersTab({ tournamentId }: PlayersTabProps) {
                 <div
                   key={`${player.teamId}-${player.id}`}
                   onClick={() => openModal(player.id, { isCustomPlayer: player.is_custom_player || false })}
+                  onMouseEnter={() => !player.is_custom_player && prefetchPlayerProfile(player.id)}
                   className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 transition hover:border-white/30 hover:bg-black/40 sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-3 md:gap-4 md:rounded-3xl md:px-5 md:py-4"
                 >
                   <Avatar className="h-8 w-8 border-2 border-white/10 sm:h-10 sm:w-10 md:h-14 md:w-14">

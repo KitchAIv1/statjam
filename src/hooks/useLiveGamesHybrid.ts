@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { hybridSupabaseService } from '@/lib/services/hybridSupabaseService';
+import { logger } from '@/lib/utils/logger';
 
 interface LiveGame {
   id: string;
@@ -44,7 +45,7 @@ async function calculateScoresFromStats(
   let awayScore = 0;
   
   // Debug: Log what we're processing
-  console.log(`🔍 calculateScoresFromStats: gameId=${gameId}, teamA=${teamAId}, teamB=${teamBId}, statsCount=${stats.length}`);
+  logger.debug(`🔍 calculateScoresFromStats: gameId=${gameId}, teamA=${teamAId}, teamB=${teamBId}, statsCount=${stats.length}`);
   
   for (const stat of stats) {
     // Only count made shots
@@ -60,11 +61,11 @@ async function calculateScoresFromStats(
       awayScore += points;
     } else {
       // Debug: Log unmatched stats
-      console.warn(`⚠️ Stat team_id ${stat.team_id} doesn't match teamA=${teamAId} or teamB=${teamBId}`);
+      logger.warn(`⚠️ Stat team_id ${stat.team_id} doesn't match teamA=${teamAId} or teamB=${teamBId}`);
     }
   }
   
-  console.log(`📊 calculateScoresFromStats: gameId=${gameId} → home=${homeScore}, away=${awayScore}`);
+  logger.debug(`📊 calculateScoresFromStats: gameId=${gameId} → home=${homeScore}, away=${awayScore}`);
   
   return { homeScore, awayScore };
 }
@@ -82,7 +83,7 @@ export function useLiveGamesHybrid() {
     try {
       setError(null);
 
-      console.log('🏀 useLiveGamesHybrid: Fetching live games with hybrid service...');
+      logger.debug('🏀 useLiveGamesHybrid: Fetching live games with hybrid service...');
 
       // Step 1: Get live games using reliable raw HTTP
       const gamesData = await hybridSupabaseService.query<LiveGame>(
@@ -96,7 +97,7 @@ export function useLiveGamesHybrid() {
       );
 
       if (!gamesData || gamesData.length === 0) {
-        console.log('📝 useLiveGamesHybrid: No live games found');
+        logger.debug('📝 useLiveGamesHybrid: No live games found');
         setGames([]);
         setLoading(false);
         return;
@@ -110,7 +111,7 @@ export function useLiveGamesHybrid() {
       });
 
       if (liveGamesOnly.length === 0) {
-        console.log('📝 useLiveGamesHybrid: No live games found after filtering completed games');
+        logger.debug('📝 useLiveGamesHybrid: No live games found after filtering completed games');
         setGames([]);
         setLoading(false);
         return;
@@ -152,7 +153,7 @@ export function useLiveGamesHybrid() {
 
       // Step 5: ✅ SCALABLE FIX: Fetch stats per-game to avoid Supabase 1000 row limit
       // Each game's stats are fetched individually in parallel (bypasses 1000 limit)
-      console.log(`🏀 useLiveGamesHybrid: Fetching stats for ${filteredGamesData.length} games (per-game queries)`);
+      logger.debug(`🏀 useLiveGamesHybrid: Fetching stats for ${filteredGamesData.length} games (per-game queries)`);
       const enrichedGames: LiveGame[] = await Promise.all(
         filteredGamesData.map(async (game) => {
           let calculatedScores = { homeScore: game.home_score || 0, awayScore: game.away_score || 0 };
@@ -177,7 +178,7 @@ export function useLiveGamesHybrid() {
               );
             }
           } catch (statsError) {
-            console.error(`❌ useLiveGamesHybrid: Error fetching stats for game ${game.id}:`, statsError);
+            logger.error(`❌ useLiveGamesHybrid: Error fetching stats for game ${game.id}:`, statsError);
             // Fallback to database scores on error
           }
           
@@ -196,7 +197,7 @@ export function useLiveGamesHybrid() {
       // ✅ ANTI-FLICKER: Smart comparison (ignore timestamps, focus on scores/status)
       setGames(prevGames => {
         if (prevGames.length !== enrichedGames.length) {
-          console.log('🔄 useLiveGamesHybrid: Game count changed:', prevGames.length, '→', enrichedGames.length);
+          logger.debug('🔄 useLiveGamesHybrid: Game count changed:', prevGames.length, '→', enrichedGames.length);
           return enrichedGames;
         }
         
@@ -220,17 +221,17 @@ export function useLiveGamesHybrid() {
         }
         
         if (!hasChanges) {
-          console.log('🔇 useLiveGamesHybrid: No meaningful changes, skipping update');
+          logger.debug('🔇 useLiveGamesHybrid: No meaningful changes, skipping update');
           return prevGames; // Keep same reference
         }
         
-        console.log('🔄 useLiveGamesHybrid: Meaningful changes detected, updating UI');
+        logger.debug('🔄 useLiveGamesHybrid: Meaningful changes detected, updating UI');
         return enrichedGames;
       });
-      console.log(`✅ useLiveGamesHybrid: Loaded ${enrichedGames.length} live games`);
+      logger.debug(`✅ useLiveGamesHybrid: Loaded ${enrichedGames.length} live games`);
 
     } catch (e: any) {
-      console.error('❌ useLiveGamesHybrid: Error:', e);
+      logger.error('❌ useLiveGamesHybrid: Error:', e);
       setError(e?.message || 'Failed to load live games');
       setGames([]);
     } finally {
@@ -242,7 +243,7 @@ export function useLiveGamesHybrid() {
    * 🔌 SET UP REAL-TIME SUBSCRIPTIONS (NBA-Level)
    */
   useEffect(() => {
-    console.log('🏀 useLiveGamesHybrid: Setting up NBA-level real-time subscriptions...');
+    logger.debug('🏀 useLiveGamesHybrid: Setting up NBA-level real-time subscriptions...');
 
     // Initial fetch
     fetchLiveGames();
@@ -257,7 +258,7 @@ export function useLiveGamesHybrid() {
       'games',
       'status=in.(live,LIVE,in_progress,IN_PROGRESS,overtime,OVERTIME)',
       (payload) => {
-        console.log('🔔 useLiveGamesHybrid: Real-time game update received:', payload);
+        logger.debug('🔔 useLiveGamesHybrid: Real-time game update received:', payload);
         
         // Update connection status
         setConnectionStatus('connected');
@@ -278,7 +279,7 @@ export function useLiveGamesHybrid() {
       'game_stats',
       '*', // Subscribe to all game_stats (we'll filter by game_id in fetchLiveGames)
       (payload) => {
-        console.log('🔔 useLiveGamesHybrid: Real-time stat update received:', payload);
+        logger.debug('🔔 useLiveGamesHybrid: Real-time stat update received:', payload);
         
         // Update connection status
         setConnectionStatus('connected');
@@ -321,7 +322,7 @@ export function useLiveGamesHybrid() {
     }, 5000);
 
     return () => {
-      console.log('🧹 useLiveGamesHybrid: Cleaning up subscriptions...');
+      logger.debug('🧹 useLiveGamesHybrid: Cleaning up subscriptions...');
       unsubscribe();
       clearInterval(statusInterval);
     };
@@ -335,7 +336,7 @@ export function useLiveGamesHybrid() {
     const backupInterval = setInterval(() => {
       // Only poll if we haven't received real-time updates recently
       if (connectionStatus !== 'connected') {
-        console.log('🔄 useLiveGamesHybrid: Backup polling triggered');
+        logger.debug('🔄 useLiveGamesHybrid: Backup polling triggered');
         fetchLiveGames();
       }
     }, 10000); // 10 seconds backup polling

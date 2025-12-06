@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '@/lib/utils/logger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -9,13 +10,13 @@ const createSupabaseClient = () => {
   if (!supabaseUrl || !supabaseAnonKey) {
     // During build time, return null to prevent build failures
     if (typeof window === 'undefined') {
-      console.warn('⚠️ Supabase environment variables not found during build');
+      logger.warn('⚠️ Supabase environment variables not found during build');
       return null;
     }
     throw new Error('❌ Missing Supabase environment variables');
   }
   
-  console.log('🏢 Creating Enterprise Supabase Client...');
+  logger.debug('🏢 Creating Enterprise Supabase Client...');
   
   const client = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -83,7 +84,7 @@ const createSupabaseClient = () => {
     const userStr = localStorage.getItem('sb-user');
     
     if (accessToken && refreshToken && userStr) {
-      console.log('🔐 Syncing authServiceV2 session to Supabase client...');
+      logger.debug('🔐 Syncing authServiceV2 session to Supabase client...');
       
       // ⚠️ CRITICAL: This is async but we need it to complete before queries
       // The Supabase client will queue queries until session is set
@@ -91,16 +92,16 @@ const createSupabaseClient = () => {
         access_token: accessToken,
         refresh_token: refreshToken
       }).then(() => {
-        console.log('✅ Supabase client session synced with authServiceV2');
+        logger.debug('✅ Supabase client session synced with authServiceV2');
       }).catch((err) => {
-        console.error('❌ Failed to sync session:', err);
+        logger.error('❌ Failed to sync session:', err);
       });
     } else {
-      console.warn('⚠️ No authServiceV2 tokens found in localStorage');
+      logger.warn('⚠️ No authServiceV2 tokens found in localStorage');
     }
   }
   
-  console.log('✅ Enterprise Supabase Client created successfully');
+  logger.debug('✅ Enterprise Supabase Client created successfully');
   
   return client;
 };
@@ -111,36 +112,36 @@ export const supabase = createSupabaseClient();
 let sessionSyncPromise: Promise<void> | null = null;
 
 export const ensureSupabaseSession = async (): Promise<void> => {
-  console.log('🔍 ensureSupabaseSession: Starting...');
+  logger.debug('🔍 ensureSupabaseSession: Starting...');
   
   if (typeof window === 'undefined') {
-    console.log('🔍 ensureSupabaseSession: Server-side, skipping');
+    logger.debug('🔍 ensureSupabaseSession: Server-side, skipping');
     return;
   }
   
   if (!supabase) {
-    console.warn('⚠️ ensureSupabaseSession: No supabase client');
+    logger.warn('⚠️ ensureSupabaseSession: No supabase client');
     return;
   }
   
   // If already syncing, wait for it
   if (sessionSyncPromise) {
-    console.log('🔍 ensureSupabaseSession: Already syncing, waiting...');
+    logger.debug('🔍 ensureSupabaseSession: Already syncing, waiting...');
     return sessionSyncPromise;
   }
   
   // ⚠️ CRITICAL: Skip getSession() check - it hangs with custom storage
   // Just force set the session from localStorage
-  console.log('🔍 ensureSupabaseSession: Forcing session sync from localStorage...');
+  logger.debug('🔍 ensureSupabaseSession: Forcing session sync from localStorage...');
   const accessToken = localStorage.getItem('sb-access-token');
   const refreshToken = localStorage.getItem('sb-refresh-token');
   
   if (!accessToken || !refreshToken) {
-    console.warn('⚠️ ensureSupabaseSession: No authServiceV2 tokens found in localStorage');
+    logger.warn('⚠️ ensureSupabaseSession: No authServiceV2 tokens found in localStorage');
     return;
   }
   
-  console.log('🔐 ensureSupabaseSession: Setting session...');
+  logger.debug('🔐 ensureSupabaseSession: Setting session...');
   
   // Set session with timeout to prevent hanging
   sessionSyncPromise = Promise.race([
@@ -152,10 +153,10 @@ export const ensureSupabaseSession = async (): Promise<void> => {
       setTimeout(() => reject(new Error('setSession timeout')), 5000)
     )
   ]).then(() => {
-    console.log('✅ ensureSupabaseSession: Session synced successfully');
+    logger.debug('✅ ensureSupabaseSession: Session synced successfully');
     sessionSyncPromise = null;
   }).catch((err) => {
-    console.error('❌ ensureSupabaseSession: Failed to sync session:', err);
+    logger.error('❌ ensureSupabaseSession: Failed to sync session:', err);
     sessionSyncPromise = null;
     // Don't throw - let queries try anyway
   });

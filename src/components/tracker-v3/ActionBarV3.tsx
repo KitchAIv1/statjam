@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Square, Save, AlertCircle, BarChart } from 'lucide-react';
+import { Square, Save, AlertCircle, BarChart, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
@@ -10,9 +10,10 @@ interface ActionBarV3Props {
   gameId: string;
   lastAction: string | null;
   onGameEnd: () => void;
+  onGameCancel: () => void;
 }
 
-export function ActionBarV3({ gameId, lastAction, onGameEnd }: ActionBarV3Props) {
+export function ActionBarV3({ gameId, lastAction, onGameEnd, onGameCancel }: ActionBarV3Props) {
   const handleSaveGame = () => {
     // TODO: Implement manual save functionality
     console.log('Saving game state...');
@@ -77,18 +78,37 @@ export function ActionBarV3({ gameId, lastAction, onGameEnd }: ActionBarV3Props)
               </div>
             </Button>
 
-            {/* End Game */}
-            <Button
-              onClick={onGameEnd}
-              variant="outline"
-              className="w-full h-12 justify-start gap-3 hover:bg-red-500/10 hover:border-red-500 border-red-500/20"
-            >
-              <Square className="w-5 h-5 text-red-500" />
-              <div className="text-left">
-                <div className="font-medium text-red-500">End Game</div>
-                <div className="text-xs text-red-400">Mark game as completed</div>
-              </div>
-            </Button>
+            {/* Cancel & End Game - Side by Side */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Cancel Game */}
+              <Button
+                onClick={() => {
+                  if (confirm('Are you sure you want to cancel this game? This action cannot be undone.')) {
+                    onGameCancel();
+                  }
+                }}
+                variant="outline"
+                className="h-12 justify-start gap-2 hover:bg-orange-500/10 hover:border-orange-500 border-orange-500/20"
+              >
+                <XCircle className="w-5 h-5 text-orange-500" />
+                <div className="text-left">
+                  <div className="font-medium text-orange-500 text-sm">Cancel</div>
+                  <div className="text-[10px] text-orange-400">Abandon game</div>
+                </div>
+              </Button>
+              {/* End Game */}
+              <Button
+                onClick={onGameEnd}
+                variant="outline"
+                className="h-12 justify-start gap-2 hover:bg-red-500/10 hover:border-red-500 border-red-500/20"
+              >
+                <Square className="w-5 h-5 text-red-500" />
+                <div className="text-left">
+                  <div className="font-medium text-red-500 text-sm">End Game</div>
+                  <div className="text-[10px] text-red-400">Complete game</div>
+                </div>
+              </Button>
+            </div>
           </div>
 
           {/* Game Status */}

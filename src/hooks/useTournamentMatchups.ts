@@ -17,6 +17,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { hybridSupabaseService } from '@/lib/services/hybridSupabaseService';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
+import { logger } from '@/lib/utils/logger';
 
 export interface TournamentMatchup {
   gameId: string;
@@ -102,7 +103,7 @@ export function useTournamentMatchups(
       const cachedMatchups = cache.get<TournamentMatchup[]>(cacheKey);
       
       if (cachedMatchups) {
-        console.log('⚡ useTournamentMatchups: Using cached matchup data');
+        logger.debug('⚡ useTournamentMatchups: Using cached matchup data');
         setMatchups(cachedMatchups);
         setLoading(false);
         return;
@@ -176,7 +177,7 @@ export function useTournamentMatchups(
       // ✅ STEP 4: Fetch stats per-game in parallel (avoids PostgREST 1000 row limit)
       // Similar to useLiveGamesHybrid - each game gets its own query, executed in parallel
       // This avoids truncation when total stats exceed 1000 rows
-      console.log(`📊 useTournamentMatchups: Fetching stats for ${games.length} games (per-game queries in parallel)`);
+      logger.debug(`📊 useTournamentMatchups: Fetching stats for ${games.length} games (per-game queries in parallel)`);
       
       const matchupsData: TournamentMatchup[] = await Promise.all(
         games.map(async (game: any) => {
@@ -215,7 +216,7 @@ export function useTournamentMatchups(
                 teamBScore = game.away_score ?? 0;
               }
             } catch (statsError) {
-              console.error(`❌ useTournamentMatchups: Error fetching stats for game ${game.id}:`, statsError);
+              logger.error(`❌ useTournamentMatchups: Error fetching stats for game ${game.id}:`, statsError);
               // Fallback to database scores on error
               teamAScore = game.home_score ?? 0;
               teamBScore = game.away_score ?? 0;
@@ -236,12 +237,12 @@ export function useTournamentMatchups(
       // ✅ Cache the result
       const cacheKey = CacheKeys.tournamentMatchups(tournamentId, status, limit);
       cache.set(cacheKey, matchupsData, CacheTTL.tournamentMatchups);
-      console.log('⚡ useTournamentMatchups: Matchups cached for', CacheTTL.tournamentMatchups, 'minutes');
-      console.log('📊 useTournamentMatchups: Score summary:', matchupsData.map(m => `${m.teamA.name} ${m.teamA.score}-${m.teamB.score} ${m.teamB.name}`).join(', '));
+      logger.debug('⚡ useTournamentMatchups: Matchups cached for', CacheTTL.tournamentMatchups, 'minutes');
+      logger.debug('📊 useTournamentMatchups: Score summary:', matchupsData.map(m => `${m.teamA.name} ${m.teamA.score}-${m.teamB.score} ${m.teamB.name}`).join(', '));
 
       setMatchups(matchupsData);
     } catch (error) {
-      console.error('Failed to fetch tournament matchups:', error);
+      logger.error('Failed to fetch tournament matchups:', error);
       setMatchups([]);
     } finally {
       setLoading(false);

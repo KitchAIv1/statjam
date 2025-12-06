@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '@/lib/supabase';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
+import { logger } from '@/lib/utils/logger';
 import { PlayerGameStatsService } from '@/lib/services/playerGameStatsService';
 import { calculateGameScore, calculatePlayerEfficiencyRating } from '@/utils/personalStatsCalculations';
 import type {
@@ -59,6 +60,8 @@ function toIdentity(row: Record<string, unknown>): PlayerIdentity | null {
     location: (row as any).country ?? undefined,  // Map DB 'country' column to 'location' field
     profilePhotoUrl: (row as any).profile_photo_url ?? undefined,
     posePhotoUrl: (row as any).pose_photo_url ?? undefined,
+    bio: (row as any).bio ?? undefined,  // ✅ Player bio/about text
+    isPublicProfile: (row as any).is_public_profile ?? true,  // ✅ Default to true if not set
   };
 }
 
@@ -156,14 +159,14 @@ export class PlayerDashboardService {
     const cacheKey = CacheKeys.user(playerId);
     const cachedIdentity = cache.get<PlayerIdentity>(cacheKey);
     if (cachedIdentity) {
-      console.log('⚡ PlayerDashboardService.getIdentity: Using cached data for', playerId.substring(0, 8));
+      logger.debug('⚡ PlayerDashboardService.getIdentity: Using cached data for', playerId.substring(0, 8));
       return cachedIdentity;
     }
     
-    console.log('🔍 PlayerDashboardService.getIdentity: Fetching from database for', playerId.substring(0, 8));
+    logger.debug('🔍 PlayerDashboardService.getIdentity: Fetching from database for', playerId.substring(0, 8));
     const { data, error } = await supabase
       .from('users')
-      .select('id, name, jersey_number, position, age, height, weight, country, profile_photo_url, pose_photo_url')
+      .select('id, name, jersey_number, position, age, height, weight, country, profile_photo_url, pose_photo_url, bio, is_public_profile')
       .eq('id', playerId)
       .single();
     if (error) {
@@ -184,13 +187,13 @@ export class PlayerDashboardService {
           posePhotoUrl: undefined,
         };
       }
-      console.error('❌ PlayerDashboard: Identity fetch error:', error);
+      logger.error('❌ PlayerDashboard: Identity fetch error:', error);
       return null;
     }
     
     const identity = toIdentity(data);
     
-    console.log('📥 PlayerDashboardService.getIdentity: Database data received:', {
+    logger.debug('📥 PlayerDashboardService.getIdentity: Database data received:', {
       name: data?.name,
       jersey_number: data?.jersey_number,
       position: data?.position,
@@ -199,12 +202,12 @@ export class PlayerDashboardService {
       weight: data?.weight,
       country: data?.country,
     });
-    console.log('📤 PlayerDashboardService.getIdentity: Transformed identity:', JSON.stringify(identity, null, 2));
+    logger.debug('📤 PlayerDashboardService.getIdentity: Transformed identity:', JSON.stringify(identity, null, 2));
     
     // Cache the identity data
     if (identity) {
       cache.set(cacheKey, identity, CacheTTL.USER_DATA);
-      console.log('💾 PlayerDashboardService.getIdentity: Cached with key', cacheKey, 'TTL:', CacheTTL.USER_DATA, 'minutes');
+      logger.debug('💾 PlayerDashboardService.getIdentity: Cached with key', cacheKey, 'TTL:', CacheTTL.USER_DATA, 'minutes');
     }
     
     return identity;
@@ -222,13 +225,13 @@ export class PlayerDashboardService {
     const cacheKey = `custom_player_${customPlayerId}`;
     const cachedIdentity = cache.get<PlayerIdentity>(cacheKey);
     if (cachedIdentity) {
-      console.log('⚡ [DEBUG] getCustomPlayerIdentity: CACHE HIT for', customPlayerId.substring(0, 8));
-      console.log('⚡ [DEBUG] Cached profilePhotoUrl:', cachedIdentity.profilePhotoUrl);
-      console.log('⚡ [DEBUG] Cached posePhotoUrl:', cachedIdentity.posePhotoUrl);
+      logger.debug('⚡ [DEBUG] getCustomPlayerIdentity: CACHE HIT for', customPlayerId.substring(0, 8));
+      logger.debug('⚡ [DEBUG] Cached profilePhotoUrl:', cachedIdentity.profilePhotoUrl);
+      logger.debug('⚡ [DEBUG] Cached posePhotoUrl:', cachedIdentity.posePhotoUrl);
       return cachedIdentity;
     }
     
-    console.log('🔍 PlayerDashboardService.getCustomPlayerIdentity: Fetching from database for', customPlayerId.substring(0, 8));
+    logger.debug('🔍 PlayerDashboardService.getCustomPlayerIdentity: Fetching from database for', customPlayerId.substring(0, 8));
     
     // Fetch custom player data
     const { data: customPlayerData, error: customPlayerError } = await supabase
@@ -238,8 +241,8 @@ export class PlayerDashboardService {
       .single();
     
     if (customPlayerError) {
-      console.error('❌ PlayerDashboard: Custom player identity fetch error:', customPlayerError);
-      console.error('❌ Error details:', {
+      logger.error('❌ PlayerDashboard: Custom player identity fetch error:', customPlayerError);
+      logger.error('❌ Error details:', {
         code: customPlayerError.code,
         message: customPlayerError.message,
         details: customPlayerError.details,
@@ -249,7 +252,7 @@ export class PlayerDashboardService {
     }
     
     if (!customPlayerData) {
-      console.error('❌ PlayerDashboard: Custom player not found:', customPlayerId);
+      logger.error('❌ PlayerDashboard: Custom player not found:', customPlayerId);
       return null;
     }
     
@@ -265,7 +268,7 @@ export class PlayerDashboardService {
       if (!teamError && teamData) {
         teamName = teamData.name || 'N/A';
       } else {
-        console.warn('⚠️ PlayerDashboard: Could not fetch team name:', teamError?.message);
+        logger.warn('⚠️ PlayerDashboard: Could not fetch team name:', teamError?.message);
       }
     }
     
@@ -285,20 +288,20 @@ export class PlayerDashboardService {
       posePhotoUrl: (customPlayerData as any).pose_photo_url ?? undefined,
     };
     
-    console.log('📥 [DEBUG] getCustomPlayerIdentity: RAW DB data:', {
+    logger.debug('📥 [DEBUG] getCustomPlayerIdentity: RAW DB data:', {
       id: customPlayerData?.id,
       name: customPlayerData?.name,
       profile_photo_url: (customPlayerData as any)?.profile_photo_url,
       pose_photo_url: (customPlayerData as any)?.pose_photo_url,
     });
-    console.log('📤 [DEBUG] getCustomPlayerIdentity: MAPPED identity:', {
+    logger.debug('📤 [DEBUG] getCustomPlayerIdentity: MAPPED identity:', {
       profilePhotoUrl: identity.profilePhotoUrl,
       posePhotoUrl: identity.posePhotoUrl,
     });
     
     // Cache the identity data
     cache.set(cacheKey, identity, CacheTTL.USER_DATA);
-    console.log('💾 PlayerDashboardService.getCustomPlayerIdentity: Cached with key', cacheKey, 'TTL:', CacheTTL.USER_DATA, 'minutes');
+    logger.debug('💾 PlayerDashboardService.getCustomPlayerIdentity: Cached with key', cacheKey, 'TTL:', CacheTTL.USER_DATA, 'minutes');
     
     return identity;
   }
@@ -314,17 +317,17 @@ export class PlayerDashboardService {
       : `player_season_avg_${playerId}`;
     const cached = cache.get<SeasonAverages>(cacheKey);
     if (cached) {
-      console.log('⚡ PlayerDashboardService.getSeasonAverages: Using cached data for', playerId.substring(0, 8));
+      logger.debug('⚡ PlayerDashboardService.getSeasonAverages: Using cached data for', playerId.substring(0, 8));
       return cached;
     }
     
-    console.log('🔍 PlayerDashboardService.getSeasonAverages: Fetching for', playerId.substring(0, 8), isCustomPlayer ? '(custom)' : '(regular)');
+    logger.debug('🔍 PlayerDashboardService.getSeasonAverages: Fetching for', playerId.substring(0, 8), isCustomPlayer ? '(custom)' : '(regular)');
     
     // Custom players don't have backend aggregated tables, always calculate from game_stats
     if (isCustomPlayer) {
-      console.log('📥 PlayerDashboardService.getSeasonAverages: Custom player, calculating from game_stats');
+      logger.debug('📥 PlayerDashboardService.getSeasonAverages: Custom player, calculating from game_stats');
       const calculated = await this.calculateSeasonAveragesFromGameStats(playerId, true);
-      console.log('📤 PlayerDashboardService.getSeasonAverages: Calculated result:', JSON.stringify(calculated, null, 2));
+      logger.debug('📤 PlayerDashboardService.getSeasonAverages: Calculated result:', JSON.stringify(calculated, null, 2));
       // ⚡ Cache the result
       if (calculated) {
         cache.set(cacheKey, calculated, CacheTTL.playerGameStats);
@@ -341,7 +344,7 @@ export class PlayerDashboardService {
       .maybeSingle(); // Use maybeSingle() to avoid 406 errors when table is empty
     
     if (data && !error) {
-      console.log('📥 PlayerDashboardService.getSeasonAverages: Using backend table data');
+      logger.debug('📥 PlayerDashboardService.getSeasonAverages: Using backend table data');
       const result = toSeasonAverages(data);
       // ⚡ Cache the result
       if (result) {
@@ -350,10 +353,10 @@ export class PlayerDashboardService {
       return result;
     }
     
-    console.log('📥 PlayerDashboardService.getSeasonAverages: Backend table empty, calculating from game_stats');
+    logger.debug('📥 PlayerDashboardService.getSeasonAverages: Backend table empty, calculating from game_stats');
     // PHASE 1: Fallback to frontend calculation from game_stats (primary method for now)
     const calculated = await this.calculateSeasonAveragesFromGameStats(playerId, false);
-    console.log('📤 PlayerDashboardService.getSeasonAverages: Calculated result:', JSON.stringify(calculated, null, 2));
+    logger.debug('📤 PlayerDashboardService.getSeasonAverages: Calculated result:', JSON.stringify(calculated, null, 2));
     // ⚡ Cache the result
     if (calculated) {
       cache.set(cacheKey, calculated, CacheTTL.playerGameStats);
@@ -405,7 +408,7 @@ export class PlayerDashboardService {
       };
       
     } catch (error) {
-      console.error('❌ PlayerDashboard: Error calculating season averages:', error);
+      logger.error('❌ PlayerDashboard: Error calculating season averages:', error);
       return null;
     }
   }
@@ -421,7 +424,7 @@ export class PlayerDashboardService {
       : `player_career_highs_${playerId}`;
     const cached = cache.get<CareerHighs>(cacheKey);
     if (cached) {
-      console.log('⚡ PlayerDashboardService.getCareerHighs: Using cached data for', playerId.substring(0, 8));
+      logger.debug('⚡ PlayerDashboardService.getCareerHighs: Using cached data for', playerId.substring(0, 8));
       return cached;
     }
     
@@ -482,7 +485,7 @@ export class PlayerDashboardService {
       };
       
     } catch (error) {
-      console.error('❌ PlayerDashboard: Error calculating career highs:', error);
+      logger.error('❌ PlayerDashboard: Error calculating career highs:', error);
       return null;
     }
   }
@@ -509,7 +512,7 @@ export class PlayerDashboardService {
       return this.calculatePerformanceFromGameStats(userId);
       
     } catch (err) {
-      console.error('❌ PlayerDashboard: Unexpected error in getPerformance:', err);
+      logger.error('❌ PlayerDashboard: Unexpected error in getPerformance:', err);
       return { kpis: null, series: [] };
     }
   }
@@ -604,7 +607,7 @@ export class PlayerDashboardService {
       return { kpis, series };
       
     } catch (error) {
-      console.error('❌ PlayerDashboard: Error calculating performance analytics:', error);
+      logger.error('❌ PlayerDashboard: Error calculating performance analytics:', error);
       return { kpis: null, series: [] };
     }
   }
@@ -643,7 +646,7 @@ export class PlayerDashboardService {
         .eq('player_id', userId);
 
       if (teamError) {
-        console.error('❌ PlayerDashboard: Error fetching player teams:', teamError);
+        logger.error('❌ PlayerDashboard: Error fetching player teams:', teamError);
         return [];
       }
 
@@ -674,7 +677,7 @@ export class PlayerDashboardService {
         .limit(10);
 
       if (gamesError) {
-        console.error('❌ PlayerDashboard: Error fetching upcoming games:', gamesError);
+        logger.error('❌ PlayerDashboard: Error fetching upcoming games:', gamesError);
         return [];
       }
 
@@ -703,7 +706,7 @@ export class PlayerDashboardService {
       });
 
     } catch (error) {
-      console.error('❌ PlayerDashboard: Error in getUpcomingGames:', error);
+      logger.error('❌ PlayerDashboard: Error in getUpcomingGames:', error);
       return [];
     }
   }

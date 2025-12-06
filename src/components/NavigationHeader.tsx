@@ -9,7 +9,11 @@ import { getNavigationForRole } from "@/lib/navigation-config";
 import { Menu, X } from "lucide-react";
 import { OrganizerGuideButton } from "@/components/guide";
 
-function NavigationHeaderContent() {
+interface NavigationHeaderContentProps {
+  minimal?: boolean;
+}
+
+function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -100,32 +104,34 @@ function NavigationHeaderContent() {
             </h1>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
-            {navigation.primary.map((item) => {
-              const Icon = item.icon;
-              const isActive = isActiveLink(item.href);
-              const isDisabled = item.disabled || item.href.startsWith('#disabled');
-              
-              return (
-                <button
-                  key={item.href}
-                  onClick={() => handleNavigation(item.href, item.disabled)}
-                  disabled={isDisabled}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                    isDisabled
-                      ? 'text-white/40 cursor-not-allowed opacity-60'
-                      : isActive 
-                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
-                        : 'text-white hover:text-orange-400 hover:bg-orange-400/10'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
+          {/* Desktop Navigation - Hidden in minimal mode */}
+          {!minimal && (
+            <nav className="hidden md:flex items-center space-x-1">
+              {navigation.primary.map((item) => {
+                const Icon = item.icon;
+                const isActive = isActiveLink(item.href);
+                const isDisabled = item.disabled || item.href.startsWith('#disabled');
+                
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => handleNavigation(item.href, item.disabled)}
+                    disabled={isDisabled}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      isDisabled
+                        ? 'text-white/40 cursor-not-allowed opacity-60'
+                        : isActive 
+                          ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
+                          : 'text-white hover:text-orange-400 hover:bg-orange-400/10'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          )}
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-4">
@@ -162,18 +168,20 @@ function NavigationHeaderContent() {
               </div>
             )}
 
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-white hover:text-orange-400 transition-colors"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            {/* Mobile Menu Button - Hidden in minimal mode */}
+            {!minimal && (
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 text-white hover:text-orange-400 transition-colors"
+              >
+                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
+        {/* Mobile Menu - Hidden in minimal mode */}
+        {!minimal && isMobileMenuOpen && (
           <div className="md:hidden border-t border-white/10 bg-black/95 backdrop-blur-md">
             <div className="px-6 py-4 space-y-3">
               {/* Navigation Items */}
@@ -232,7 +240,11 @@ function NavigationHeaderContent() {
   );
 }
 
-export function NavigationHeader() {
+interface NavigationHeaderProps {
+  minimal?: boolean;
+}
+
+export function NavigationHeader({ minimal = false }: NavigationHeaderProps) {
   return (
     <Suspense fallback={
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10">
@@ -247,7 +259,7 @@ export function NavigationHeader() {
         </div>
       </header>
     }>
-      <NavigationHeaderContent />
+      <NavigationHeaderContent minimal={minimal} />
     </Suspense>
   );
 }

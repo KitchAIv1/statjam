@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { authServiceV2 } from '@/lib/services/authServiceV2';
 import { Game, GameStat, PlayerGameStats, GameSubstitution, AuditLog } from '@/lib/types/game';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
+import { logger } from '@/lib/utils/logger';
 
 // Temporary feature flag to silence audit log writes until backend endpoint is ready
 const ENABLE_AUDIT_LOGS = false;
@@ -23,8 +24,8 @@ export class GameService {
     team_b_timeouts_remaining?: number;
   }): Promise<boolean> {
     try {
-      console.log('🔄 GameService: Updating game state for:', gameId);
-      console.log('🔄 GameService: State data:', gameStateData);
+      logger.debug('🔄 GameService: Updating game state for:', gameId);
+      logger.debug('🔄 GameService: State data:', gameStateData);
 
       const updateData: any = {
         quarter: gameStateData.quarter,
@@ -48,14 +49,14 @@ export class GameService {
         .eq('id', gameId);
 
       if (error) {
-        console.error('❌ Supabase error updating game state:', error);
+        logger.error('❌ Supabase error updating game state:', error);
         return false;
       }
 
-      console.log('✅ Game state updated successfully');
+      logger.debug('✅ Game state updated successfully');
       return true;
     } catch (error) {
-      console.error('❌ Error updating game state:', error);
+      logger.error('❌ Error updating game state:', error);
       return false;
     }
   }
@@ -63,7 +64,7 @@ export class GameService {
   // Update game status (for completion, overtime, etc.)
   static async updateGameStatus(gameId: string, status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'overtime'): Promise<boolean> {
     try {
-      console.log('🎯 GameService: Updating game status:', { gameId, status });
+      logger.debug('🎯 GameService: Updating game status:', { gameId, status });
 
       const { error } = await supabase
         .from('games')
@@ -75,14 +76,14 @@ export class GameService {
         .eq('id', gameId);
 
       if (error) {
-        console.error('❌ Supabase error updating game status:', error);
+        logger.error('❌ Supabase error updating game status:', error);
         return false;
       }
 
-      console.log('✅ Game status updated successfully');
+      logger.debug('✅ Game status updated successfully');
       return true;
     } catch (error) {
-      console.error('❌ Error updating game status:', error);
+      logger.error('❌ Error updating game status:', error);
       return false;
     }
   }
@@ -93,7 +94,7 @@ export class GameService {
     away_score?: number;
   }): Promise<boolean> {
     try {
-      console.log('🏀 GameService: Updating game score:', { gameId, scores });
+      logger.debug('🏀 GameService: Updating game score:', { gameId, scores });
 
       const { error } = await supabase
         .from('games')
@@ -104,14 +105,14 @@ export class GameService {
         .eq('id', gameId);
 
       if (error) {
-        console.error('❌ Supabase error updating game score:', error);
+        logger.error('❌ Supabase error updating game score:', error);
         return false;
       }
 
-      console.log('✅ Game score updated successfully');
+      logger.debug('✅ Game score updated successfully');
       return true;
     } catch (error) {
-      console.error('❌ Error updating game score:', error);
+      logger.error('❌ Error updating game score:', error);
       return false;
     }
   }
@@ -127,7 +128,7 @@ export class GameService {
     statAdminId?: string;
   }): Promise<Game | null> {
     try {
-      console.log('🔍 GameService: Creating game:', gameData);
+      logger.debug('🔍 GameService: Creating game:', gameData);
       
       // Build insert data - only include venue if provided (column may not exist yet)
       const insertData: any = {
@@ -170,14 +171,14 @@ export class GameService {
       }
 
       if (error) {
-        console.error('❌ Supabase error creating game:', error);
+        logger.error('❌ Supabase error creating game:', error);
         throw new Error(`Failed to create game: ${error.message}`);
       }
 
-      console.log('✅ Game created successfully:', game.id);
+      logger.debug('✅ Game created successfully:', game.id);
       return game;
     } catch (error) {
-      console.error('Error creating game:', error);
+      logger.error('Error creating game:', error);
       throw error;
     }
   }
@@ -185,7 +186,7 @@ export class GameService {
   // Get games by tournament
   static async getGamesByTournament(tournamentId: string): Promise<Game[]> {
     try {
-      console.log('🔍 GameService: Fetching games for tournament:', tournamentId);
+      logger.debug('🔍 GameService: Fetching games for tournament:', tournamentId);
       
       const { data: games, error } = await supabase
         .from('games')
@@ -194,14 +195,14 @@ export class GameService {
         .order('start_time', { ascending: true });
 
       if (error) {
-        console.error('❌ Supabase error getting games:', error);
+        logger.error('❌ Supabase error getting games:', error);
         throw new Error(`Failed to get games: ${error.message}`);
       }
 
-      console.log('🔍 GameService: Found games:', games?.length || 0);
+      logger.debug('🔍 GameService: Found games:', games?.length || 0);
       return games || [];
     } catch (error) {
-      console.error('Error getting games by tournament:', error);
+      logger.error('Error getting games by tournament:', error);
       throw error;
     }
   }
@@ -217,7 +218,7 @@ export class GameService {
     status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   }): Promise<Game | null> {
     try {
-      console.log('🔍 GameService: Updating game:', gameId, updateData);
+      logger.debug('🔍 GameService: Updating game:', gameId, updateData);
       
       const dbUpdateData: any = {};
       if (updateData.teamAId !== undefined) dbUpdateData.team_a_id = updateData.teamAId;
@@ -251,14 +252,14 @@ export class GameService {
       }
 
       if (error) {
-        console.error('❌ Supabase error updating game:', error);
+        logger.error('❌ Supabase error updating game:', error);
         throw new Error(`Failed to update game: ${error.message}`);
       }
 
-      console.log('✅ Game updated successfully:', gameId);
+      logger.debug('✅ Game updated successfully:', gameId);
       return game;
     } catch (error) {
-      console.error('Error updating game:', error);
+      logger.error('Error updating game:', error);
       throw error;
     }
   }
@@ -266,7 +267,7 @@ export class GameService {
   // Delete a game
   static async deleteGame(gameId: string): Promise<boolean> {
     try {
-      console.log('🔍 GameService: Deleting game:', gameId);
+      logger.debug('🔍 GameService: Deleting game:', gameId);
       
       // Step 1: Delete related records first (to avoid foreign key constraint violations)
       // Delete game_stats
@@ -276,10 +277,10 @@ export class GameService {
         .eq('game_id', gameId);
 
       if (statsError && statsError.code !== '42P01') {
-        console.error('Error deleting game_stats:', statsError);
+        logger.error('Error deleting game_stats:', statsError);
         throw new Error(`Failed to delete game_stats: ${statsError.message}`);
       }
-      console.log('🗑️ Deleted game_stats for game:', gameId);
+      logger.debug('🗑️ Deleted game_stats for game:', gameId);
 
       // Delete game_substitutions
       const { error: substitutionsError } = await supabase
@@ -288,10 +289,10 @@ export class GameService {
         .eq('game_id', gameId);
 
       if (substitutionsError && substitutionsError.code !== '42P01') {
-        console.error('Error deleting game_substitutions:', substitutionsError);
+        logger.error('Error deleting game_substitutions:', substitutionsError);
         throw new Error(`Failed to delete game_substitutions: ${substitutionsError.message}`);
       }
-      console.log('🗑️ Deleted game_substitutions for game:', gameId);
+      logger.debug('🗑️ Deleted game_substitutions for game:', gameId);
 
       // Delete game_timeouts
       const { error: timeoutsError } = await supabase
@@ -300,10 +301,10 @@ export class GameService {
         .eq('game_id', gameId);
 
       if (timeoutsError && timeoutsError.code !== '42P01') {
-        console.error('Error deleting game_timeouts:', timeoutsError);
+        logger.error('Error deleting game_timeouts:', timeoutsError);
         throw new Error(`Failed to delete game_timeouts: ${timeoutsError.message}`);
       }
-      console.log('🗑️ Deleted game_timeouts for game:', gameId);
+      logger.debug('🗑️ Deleted game_timeouts for game:', gameId);
 
       // Delete legacy stats table (if exists) - uses match_id column
       const { error: legacyStatsError } = await supabase
@@ -312,11 +313,11 @@ export class GameService {
         .eq('match_id', gameId);
 
       if (legacyStatsError && legacyStatsError.code !== '42P01') {
-        console.error('Error deleting legacy stats:', legacyStatsError);
+        logger.error('Error deleting legacy stats:', legacyStatsError);
         // Don't throw - legacy table might not exist
-        console.warn('⚠️ Legacy stats deletion failed (table may not exist)');
+        logger.warn('⚠️ Legacy stats deletion failed (table may not exist)');
       } else {
-        console.log('🗑️ Deleted legacy stats for game:', gameId);
+        logger.debug('🗑️ Deleted legacy stats for game:', gameId);
       }
 
       // Step 2: Now delete the game itself (all references are gone)
@@ -326,14 +327,14 @@ export class GameService {
         .eq('id', gameId);
 
       if (error) {
-        console.error('❌ Supabase error deleting game:', error);
+        logger.error('❌ Supabase error deleting game:', error);
         throw new Error(`Failed to delete game: ${error.message}`);
       }
 
-      console.log('✅ Game deleted successfully:', gameId);
+      logger.debug('✅ Game deleted successfully:', gameId);
       return true;
     } catch (error) {
-      console.error('Error deleting game:', error);
+      logger.error('Error deleting game:', error);
       throw error;
     }
   }
@@ -345,7 +346,7 @@ export class GameService {
       const cacheKey = CacheKeys.gameBasic(gameId);
       const cachedGame = cache.get<Game>(cacheKey);
       if (cachedGame) {
-        console.log('✅ GameService: Returning cached game data for:', gameId);
+        logger.debug('✅ GameService: Returning cached game data for:', gameId);
         return cachedGame;
       }
 
@@ -360,11 +361,11 @@ export class GameService {
         .single();
 
       if (error) {
-        console.error('Error getting game:', error);
+        logger.error('Error getting game:', error);
         return null;
       }
 
-      console.log('🏀 GameService: Fetched game with team names:', {
+      logger.debug('🏀 GameService: Fetched game with team names:', {
         gameId,
         teamA: game?.team_a?.name,
         teamB: game?.team_b?.name
@@ -372,11 +373,11 @@ export class GameService {
 
       // Cache the game data for short-term reuse
       cache.set(cacheKey, game, CacheTTL.GAME_BASIC);
-      console.log('💾 GameService: Cached game data for:', gameId);
+      logger.debug('💾 GameService: Cached game data for:', gameId);
 
       return game;
     } catch (error) {
-      console.error('Error in getGame:', error);
+      logger.error('Error in getGame:', error);
       return null;
     }
   }
@@ -545,7 +546,7 @@ export class GameService {
 
       return organizedGames;
     } catch (error) {
-      console.error('❌ Error getting assigned games:', error);
+      logger.error('❌ Error getting assigned games:', error);
       throw error; // Re-throw to let the component handle it
     }
   }
@@ -565,13 +566,13 @@ export class GameService {
         .single();
 
       if (error) {
-        console.error('Error getting current game:', error);
+        logger.error('Error getting current game:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in getCurrentGame:', error);
+      logger.error('Error in getCurrentGame:', error);
       return null;
     }
   }
@@ -592,7 +593,7 @@ export class GameService {
         .eq('id', gameId);
 
       if (error) {
-        console.error('Error starting game:', error);
+        logger.error('Error starting game:', error);
         return false;
       }
 
@@ -601,7 +602,7 @@ export class GameService {
 
       return true;
     } catch (error) {
-      console.error('Error in startGame:', error);
+      logger.error('Error in startGame:', error);
       return false;
     }
   }
@@ -623,13 +624,13 @@ export class GameService {
         .eq('id', gameId);
 
       if (error) {
-        console.error('Error updating game clock:', error);
+        logger.error('Error updating game clock:', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error in updateGameClock:', error);
+      logger.error('Error in updateGameClock:', error);
       return false;
     }
   }
@@ -647,15 +648,15 @@ export class GameService {
     gameTimeSeconds: number;
   }): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🔍 GameService: Recording stat for player:', statData.playerId);
+      logger.debug('🔍 GameService: Recording stat for player:', statData.playerId);
       
       // ✅ SKIP SESSION CHECK: supabase.from().insert() will use auth token from custom storage
       // The hanging getSession() call is bypassed - auth token is automatically attached
-      console.log('🔐 GameService: Using auth token from custom storage for stat recording');
+      logger.debug('🔐 GameService: Using auth token from custom storage for stat recording');
       
       // Validate data before insert
       if (!statData.gameId || !statData.playerId || !statData.teamId) {
-        console.error('❌ Missing required IDs:', statData);
+        logger.error('❌ Missing required IDs:', statData);
         return { 
           success: false, 
           error: 'Invalid stat data: missing required fields'
@@ -675,7 +676,7 @@ export class GameService {
         game_time_seconds: statData.gameTimeSeconds
       };
       
-      console.log('📊 GameService: Inserting stat:', statData.statType);
+      logger.debug('📊 GameService: Inserting stat:', statData.statType);
       
       // Insert stat record
       const { data, error } = await supabase
@@ -685,7 +686,7 @@ export class GameService {
         .single();
 
       if (error) {
-        console.error('❌ Supabase error recording stat:', error);
+        logger.error('❌ Supabase error recording stat:', error);
         
         // Provide specific error messages based on error code
         let userMessage = 'Failed to record stat';
@@ -708,11 +709,11 @@ export class GameService {
         };
       }
 
-      console.log('✅ Stat recorded successfully:', data);
+      logger.debug('✅ Stat recorded successfully:', data);
       return { success: true };
       
     } catch (error) {
-      console.error('❌ Unexpected error in recordStat:', error);
+      logger.error('❌ Unexpected error in recordStat:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -765,7 +766,7 @@ export class GameService {
         .insert(insertData);
 
       if (error) {
-        console.error('❌ Error recording substitution:', {
+        logger.error('❌ Error recording substitution:', {
           code: error.code,
           message: error.message,
           details: error.details,
@@ -792,7 +793,7 @@ export class GameService {
 
       return true;
     } catch (error) {
-      console.error('Error in recordSubstitution:', error);
+      logger.error('Error in recordSubstitution:', error);
       return false;
     }
   }
@@ -849,13 +850,13 @@ export class GameService {
         });
 
       if (error) {
-        console.error('Error updating player game stats:', error);
+        logger.error('Error updating player game stats:', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error in updatePlayerGameStats:', error);
+      logger.error('Error in updatePlayerGameStats:', error);
       return false;
     }
   }
@@ -906,13 +907,13 @@ export class GameService {
         .single();
 
       if (error) {
-        console.error('Error getting player game stats:', error);
+        logger.error('Error getting player game stats:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in getPlayerGameStats:', error);
+      logger.error('Error in getPlayerGameStats:', error);
       return null;
     }
   }

@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { SearchableCountrySelect } from '@/components/shared/SearchableCountrySelect';
+import { Globe, Lock } from 'lucide-react';
 
 interface PlayerProfile {
   name: string;
@@ -17,9 +19,13 @@ interface PlayerProfile {
   weight: string;
   age: number;
   team: string;
-  location?: string;  // Country code
+  location: string;  // Country code
   profilePhoto: string;
   posePhoto: string;
+  bio: string;  // About me text
+  school: string;  // School/organization name
+  graduationYear: string;  // Class of YYYY
+  isPublicProfile: boolean;  // ✅ Public profile toggle
   seasonAverages: {
     rebounds: number;
     assists: number;
@@ -64,6 +70,10 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
     location: data.location || '',
     profilePhoto: data.profilePhoto || '',
     posePhoto: data.posePhoto || '',
+    bio: data.bio || '',
+    school: data.school || '',
+    graduationYear: data.graduationYear || '',
+    isPublicProfile: data.isPublicProfile ?? true, // ✅ Default to true (public)
     seasonAverages: data.seasonAverages || {
       rebounds: 0,
       assists: 0,
@@ -509,6 +519,77 @@ export function EditProfileModal({ isOpen, onClose, playerData, onSave }: EditPr
                 placeholder="Enter your team name"
                 className="bg-input-background"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="school">
+                School <span className="text-xs text-muted-foreground">(Optional)</span>
+              </Label>
+              <Input
+                id="school"
+                value={formData.school || ''}
+                onChange={(e) => handleInputChange('school', e.target.value)}
+                placeholder="e.g., Lincoln High School"
+                className="bg-input-background"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="graduationYear">
+                Class of <span className="text-xs text-muted-foreground">(Optional)</span>
+              </Label>
+              <Input
+                id="graduationYear"
+                value={formData.graduationYear || ''}
+                onChange={(e) => handleInputChange('graduationYear', e.target.value)}
+                placeholder="e.g., 2025"
+                maxLength={4}
+                className="bg-input-background"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="bio">
+                About Me <span className="text-xs text-muted-foreground">(Optional)</span>
+              </Label>
+              <textarea
+                id="bio"
+                value={formData.bio || ''}
+                onChange={(e) => handleInputChange('bio', e.target.value)}
+                placeholder="Tell scouts about yourself, your playing style, and goals..."
+                rows={3}
+                maxLength={500}
+                className="w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+              <p className="text-xs text-muted-foreground">{(formData.bio || '').length}/500 characters</p>
+            </div>
+
+            {/* ✅ Public Profile Toggle */}
+            <div className="md:col-span-2 pt-4 border-t border-border/50">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center gap-3">
+                  {formData.isPublicProfile ? (
+                    <Globe className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <Lock className="w-5 h-5 text-muted-foreground" />
+                  )}
+                  <div>
+                    <Label htmlFor="isPublicProfile" className="text-base font-medium cursor-pointer">
+                      Public Profile
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formData.isPublicProfile
+                        ? 'Your profile is visible to everyone'
+                        : 'Only you can see your profile'}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="isPublicProfile"
+                  checked={formData.isPublicProfile}
+                  onCheckedChange={(checked) => handleInputChange('isPublicProfile', checked)}
+                />
+              </div>
             </div>
           </div>
         </div>

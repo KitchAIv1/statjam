@@ -6,6 +6,7 @@
 
 import { hybridSupabaseService } from '@/lib/services/hybridSupabaseService';
 import { TeamService } from '@/lib/services/tournamentService';
+import { logger } from '@/lib/utils/logger';
 
 export interface PlayerLeader {
   rank: number;
@@ -96,20 +97,20 @@ export class TournamentLeadersService {
     minGames: number = 1
   ): Promise<PlayerLeader[]> {
     try {
-      console.log('🏆 TournamentLeadersService: Fetching leaders for tournament:', tournamentId);
+      logger.debug('🏆 TournamentLeadersService: Fetching leaders for tournament:', tournamentId);
 
       // ⚡ FAST PATH: Try pre-computed table first
       const precomputedLeaders = await this.fetchPrecomputedLeaders(tournamentId, minGames);
       if (precomputedLeaders.length > 0) {
-        console.log('⚡ TournamentLeadersService: Using pre-computed leaders (fast path)');
+        logger.debug('⚡ TournamentLeadersService: Using pre-computed leaders (fast path)');
         return this.sortLeaders(precomputedLeaders, category);
       }
 
       // 🔄 FALLBACK: Calculate from game_stats (slow path)
-      console.log('🔄 TournamentLeadersService: Pre-computed table empty, calculating from game_stats...');
+      logger.debug('🔄 TournamentLeadersService: Pre-computed table empty, calculating from game_stats...');
       return this.calculateLeadersFromGameStats(tournamentId, category, minGames);
     } catch (error) {
-      console.error('❌ TournamentLeadersService: Error fetching leaders:', error);
+      logger.error('❌ TournamentLeadersService: Error fetching leaders:', error);
       return [];
     }
   }
@@ -175,7 +176,7 @@ export class TournamentLeadersService {
           };
         });
     } catch (error) {
-      console.warn('⚠️ TournamentLeadersService: Pre-computed table query failed, using fallback:', error);
+      logger.warn('⚠️ TournamentLeadersService: Pre-computed table query failed, using fallback:', error);
       return [];
     }
   }
@@ -217,12 +218,12 @@ export class TournamentLeadersService {
     );
 
     if (!games || games.length === 0) {
-      console.log('🏆 TournamentLeadersService: No games found');
+      logger.debug('🏆 TournamentLeadersService: No games found');
       return [];
     }
 
     // Fetch game_stats PER GAME to avoid Supabase 1000 row limit
-    console.log('🏆 TournamentLeadersService: Fetching stats for', games.length, 'games (per-game queries)');
+    logger.debug('🏆 TournamentLeadersService: Fetching stats for', games.length, 'games (per-game queries)');
     
     const statsPromises = games.map(async (game) => {
       try {
@@ -233,7 +234,7 @@ export class TournamentLeadersService {
         );
         return stats || [];
       } catch (error) {
-        console.error(`❌ Failed to fetch stats for game ${game.id}:`, error);
+        logger.error(`❌ Failed to fetch stats for game ${game.id}:`, error);
         return [];
       }
     });
@@ -241,10 +242,10 @@ export class TournamentLeadersService {
     const statsResults = await Promise.all(statsPromises);
     const allStats: GameStat[] = statsResults.flat();
     
-    console.log('✅ TournamentLeadersService: Fetched', allStats.length, 'total stats from', games.length, 'games');
+    logger.debug('✅ TournamentLeadersService: Fetched', allStats.length, 'total stats from', games.length, 'games');
 
     if (allStats.length === 0) {
-      console.log('🏆 TournamentLeadersService: No stats found');
+      logger.debug('🏆 TournamentLeadersService: No stats found');
       return [];
     }
 
@@ -373,7 +374,7 @@ export class TournamentLeadersService {
         };
       });
 
-    console.log('✅ TournamentLeadersService: Calculated', leaders.length, 'leaders (fallback)');
+    logger.debug('✅ TournamentLeadersService: Calculated', leaders.length, 'leaders (fallback)');
     return this.sortLeaders(leaders, category);
   }
 }

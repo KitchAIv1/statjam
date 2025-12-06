@@ -296,7 +296,7 @@ export function MobileLayoutV3({
           onClearRecordingStateRef={onClearRecordingStateRef}
         />
 
-        {/* End Game Button / Status - Clean Design */}
+        {/* End Game & Cancel Buttons / Status - Clean Design */}
         <div className="px-4 pb-4 mt-8">
           {gameStatus === 'completed' || gameStatus === 'cancelled' ? (
             <div
@@ -308,18 +308,35 @@ export function MobileLayoutV3({
               </div>
             </div>
           ) : (
-            <button
-              className="w-full text-base font-black py-4 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
-              onClick={() => {
-                // ✅ Awards modal will show (or direct completion for coach mode)
-                tracker.closeGame();
-              }}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-xl">🏁</span>
-                <span>END GAME</span>
-              </div>
-            </button>
+            <div className="flex gap-3">
+              {/* Cancel Game Button */}
+              <button
+                className="flex-1 text-sm font-bold py-4 rounded-xl border-2 border-orange-400 bg-orange-500 hover:bg-orange-600 text-white transition-all duration-200 hover:shadow-lg active:scale-95"
+                onClick={() => {
+                  if (confirm('Are you sure you want to cancel this game? This action cannot be undone.')) {
+                    tracker.cancelGame();
+                  }
+                }}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-lg">🚫</span>
+                  <span>CANCEL</span>
+                </div>
+              </button>
+              {/* End Game Button */}
+              <button
+                className="flex-1 text-sm font-bold py-4 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg active:scale-95"
+                onClick={() => {
+                  // ✅ Awards modal will show (or direct completion for coach mode)
+                  tracker.closeGame();
+                }}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-lg">🏁</span>
+                  <span>END GAME</span>
+                </div>
+              </button>
+            </div>
           )}
         </div>
 

@@ -8,6 +8,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/utils/logger';
 import { authServiceV2 } from '@/lib/services/authServiceV2';
 
 interface User {
@@ -45,12 +46,12 @@ export function useAuthV2() {
         const session = authServiceV2.getSession();
         
         if (!session.accessToken || !session.user) {
-          console.log('🔐 useAuthV2: No session found');
+          logger.debug('🔐 useAuthV2: No session found');
           if (isMounted) setState({ user: null, loading: false, error: null });
           return;
         }
 
-        console.log('🔐 useAuthV2: Session found, loading profile...');
+        logger.debug('🔐 useAuthV2: Session found, loading profile...');
         
         // Check if token is expired or about to expire
         const tokenPayload = JSON.parse(atob(session.accessToken.split('.')[1]));
@@ -58,14 +59,14 @@ export function useAuthV2() {
         const currentTime = Date.now();
         const timeUntilExpiry = expirationTime - currentTime;
         
-        console.log('🔐 useAuthV2: Token expires in', Math.round(timeUntilExpiry / 1000 / 60), 'minutes');
+        logger.debug('🔐 useAuthV2: Token expires in', Math.round(timeUntilExpiry / 1000 / 60), 'minutes');
         
         // If token is expired or expires in less than 5 minutes, refresh it immediately
         if (timeUntilExpiry < 5 * 60 * 1000) {
-          console.log('🔐 useAuthV2: Token expires soon or is expired, refreshing immediately...');
+          logger.debug('🔐 useAuthV2: Token expires soon or is expired, refreshing immediately...');
           const refreshResult = await refreshSession();
           if (!refreshResult.success) {
-            console.log('🔐 useAuthV2: Refresh failed, clearing invalid session');
+            logger.debug('🔐 useAuthV2: Refresh failed, clearing invalid session');
             await authServiceV2.signOut();
             if (isMounted) setState({ user: null, loading: false, error: null });
             return;
@@ -78,14 +79,14 @@ export function useAuthV2() {
         if (error || !profile) {
           // Check if error is due to expired token
           if (error?.message?.includes('JWT expired') || error?.message?.includes('401') || error?.message?.includes('403')) {
-            console.log('🔐 useAuthV2: Token expired, attempting refresh...');
+            logger.debug('🔐 useAuthV2: Token expired, attempting refresh...');
             const refreshResult = await refreshSession();
             if (refreshResult.success) {
               // Retry getting profile with new token
               const newSession = authServiceV2.getSession();
               const { data: newProfile, error: newError } = await authServiceV2.getUserProfile(newSession.accessToken);
               if (newProfile && !newError) {
-                console.log('✅ useAuthV2: User loaded after token refresh:', newProfile.email, 'role:', newProfile.role);
+                logger.debug('✅ useAuthV2: User loaded after token refresh:', newProfile.email, 'role:', newProfile.role);
                 if (isMounted) setState({ user: newProfile, loading: false, error: null });
                 setupTokenRefreshTimer();
                 return;
@@ -93,7 +94,7 @@ export function useAuthV2() {
             }
           }
           
-          console.warn('⚠️ useAuthV2: Could not load profile, clearing invalid session');
+          logger.warn('⚠️ useAuthV2: Could not load profile, clearing invalid session');
           // ✅ FIX: Clear invalid tokens from localStorage
           await authServiceV2.signOut();
           if (isMounted) {
@@ -102,14 +103,14 @@ export function useAuthV2() {
           return;
         }
 
-        console.log('✅ useAuthV2: User loaded:', profile.email, 'role:', profile.role);
+        logger.debug('✅ useAuthV2: User loaded:', profile.email, 'role:', profile.role);
         if (isMounted) setState({ user: profile, loading: false, error: null });
         
         // Setup automatic token refresh
         setupTokenRefreshTimer();
 
       } catch (error: any) {
-        console.error('❌ useAuthV2: Error loading user:', error);
+        logger.error('❌ useAuthV2: Error loading user:', error);
         // ✅ FIX: Clear invalid session on error
         await authServiceV2.signOut();
         if (isMounted) setState({ user: null, loading: false, error: null });
@@ -126,14 +127,14 @@ export function useAuthV2() {
       refreshInterval = setInterval(async () => {
         if (!isMounted) return;
         
-        console.log('🔐 useAuthV2: Automatic token refresh triggered');
+        logger.debug('🔐 useAuthV2: Automatic token refresh triggered');
         const refreshResult = await refreshSession();
         if (!refreshResult.success) {
-          console.warn('⚠️ useAuthV2: Automatic refresh failed, user will need to re-authenticate');
+          logger.warn('⚠️ useAuthV2: Automatic refresh failed, user will need to re-authenticate');
         }
       }, 45 * 60 * 1000); // 45 minutes
       
-      console.log('✅ useAuthV2: Automatic token refresh timer set (45 minutes)');
+      logger.debug('✅ useAuthV2: Automatic token refresh timer set (45 minutes)');
     };
 
     loadUser();
@@ -154,7 +155,7 @@ export function useAuthV2() {
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      console.log('🔐 useAuthV2: Signing in...');
+      logger.debug('🔐 useAuthV2: Signing in...');
       const { data, error } = await authServiceV2.signIn(email, password);
       
       if (error || !data) {
@@ -165,7 +166,7 @@ export function useAuthV2() {
       const { data: profile, error: profileError } = await authServiceV2.getUserProfile(data.access_token);
       
       if (profileError || !profile) {
-        console.warn('⚠️ useAuthV2: Could not load profile after sign in');
+        logger.warn('⚠️ useAuthV2: Could not load profile after sign in');
         // Use basic user data from sign in response
         setState({ 
           user: {
@@ -179,12 +180,12 @@ export function useAuthV2() {
         return { success: true };
       }
 
-      console.log('✅ useAuthV2: Sign in successful, role:', profile.role);
+      logger.debug('✅ useAuthV2: Sign in successful, role:', profile.role);
       setState({ user: profile, loading: false, error: null });
       return { success: true };
 
     } catch (error: any) {
-      console.error('❌ useAuthV2: Sign in error:', error);
+      logger.error('❌ useAuthV2: Sign in error:', error);
       setState({ user: null, loading: false, error: error.message });
       return { success: false, error: error.message };
     }
@@ -201,18 +202,18 @@ export function useAuthV2() {
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      console.log('🔐 useAuthV2: Signing up...', { email, userType: metadata?.userType });
+      logger.debug('🔐 useAuthV2: Signing up...', { email, userType: metadata?.userType });
       const { data, error } = await authServiceV2.signUp(email, password, metadata);
       
       if (error || !data) {
         throw error || new Error('Sign up failed');
       }
 
-      console.log('✅ useAuthV2: Sign up successful');
+      logger.debug('✅ useAuthV2: Sign up successful');
       
       // If auto sign-in is enabled (access_token returned)
       if (data.access_token) {
-        console.log('🔍 useAuthV2: Attempting to fetch user profile...');
+        logger.debug('🔍 useAuthV2: Attempting to fetch user profile...');
         
         // ✅ ENHANCED: Retry logic for profile creation timing
         let profile = null;
@@ -221,24 +222,24 @@ export function useAuthV2() {
         
         while (attempts < maxAttempts && !profile) {
           attempts++;
-          console.log(`🔄 useAuthV2: Profile fetch attempt ${attempts}/${maxAttempts}`);
+          logger.debug(`🔄 useAuthV2: Profile fetch attempt ${attempts}/${maxAttempts}`);
           
           const { data: profileData, error: profileError } = await authServiceV2.getUserProfile(data.access_token);
           
           if (profileData) {
             profile = profileData;
-            console.log('✅ useAuthV2: Profile found:', { role: profile.role, email: profile.email });
+            logger.debug('✅ useAuthV2: Profile found:', { role: profile.role, email: profile.email });
             break;
           }
           
           if (profileError) {
-            console.warn(`⚠️ useAuthV2: Profile fetch attempt ${attempts} failed:`, profileError.message);
+            logger.warn(`⚠️ useAuthV2: Profile fetch attempt ${attempts} failed:`, profileError.message);
           }
           
           // Wait before retry (exponential backoff)
           if (attempts < maxAttempts) {
             const delay = Math.min(500 * Math.pow(1.5, attempts - 1), 3000); // 500ms, 750ms, 1125ms, 1687ms, 2531ms
-            console.log(`⏳ useAuthV2: Waiting ${delay}ms before retry...`);
+            logger.debug(`⏳ useAuthV2: Waiting ${delay}ms before retry...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
@@ -252,53 +253,53 @@ export function useAuthV2() {
           // ✅ ENHANCED: Validate role matches requested userType
           const requestedRole = metadata?.userType || 'player';
           if (profile.role !== requestedRole) {
-            console.warn(`⚠️ useAuthV2: Role mismatch! Requested: ${requestedRole}, Got: ${profile.role}`);
+            logger.warn(`⚠️ useAuthV2: Role mismatch! Requested: ${requestedRole}, Got: ${profile.role}`);
             
             // ✅ CRITICAL FIX: Update profile with correct role immediately
-            console.log('🔧 useAuthV2: Attempting to fix role mismatch...');
+            logger.debug('🔧 useAuthV2: Attempting to fix role mismatch...');
             try {
               const { data: updatedProfile, error: updateError } = await authServiceV2.updateUserRole(profile.id, requestedRole);
               if (updatedProfile && !updateError) {
-                console.log('✅ useAuthV2: Role corrected successfully!');
+                logger.debug('✅ useAuthV2: Role corrected successfully!');
                 profile.role = requestedRole; // Update local profile
               } else {
-                console.error('❌ useAuthV2: Role correction failed:', updateError?.message);
+                logger.error('❌ useAuthV2: Role correction failed:', updateError?.message);
               }
             } catch (roleFixError: any) {
-              console.error('❌ useAuthV2: Role correction threw error:', roleFixError.message);
+              logger.error('❌ useAuthV2: Role correction threw error:', roleFixError.message);
             }
           }
           
           // ✅ Update country if pending from signup
           if (pendingCountry && (!profile.country || profile.country === 'US')) {
-            console.log('🌍 useAuthV2: Updating profile with pending country:', pendingCountry);
+            logger.debug('🌍 useAuthV2: Updating profile with pending country:', pendingCountry);
             try {
               const { data: updatedProfile, error: updateError } = await authServiceV2.updateUserCountry(profile.id, pendingCountry);
               if (updatedProfile && !updateError) {
-                console.log('✅ useAuthV2: Country updated successfully!');
+                logger.debug('✅ useAuthV2: Country updated successfully!');
                 profile.country = pendingCountry; // Update local profile
                 
                 // Clear pending country from localStorage
                 if (typeof window !== 'undefined') {
                   localStorage.removeItem('pending_country');
-                  console.log('🧹 useAuthV2: Cleared pending_country from localStorage');
+                  logger.debug('🧹 useAuthV2: Cleared pending_country from localStorage');
                 }
               } else {
-                console.error('❌ useAuthV2: Country update failed:', updateError?.message);
+                logger.error('❌ useAuthV2: Country update failed:', updateError?.message);
               }
             } catch (countryError: any) {
-              console.error('❌ useAuthV2: Country update threw error:', countryError.message);
+              logger.error('❌ useAuthV2: Country update threw error:', countryError.message);
             }
           }
           
           setState({ user: profile, loading: false, error: null });
           return { success: true, autoSignedIn: true, profile };
         } else {
-          console.error('❌ useAuthV2: Profile not found after all retry attempts');
+          logger.error('❌ useAuthV2: Profile not found after all retry attempts');
           
           // ✅ ULTIMATE FALLBACK: Try to create profile manually
           if (metadata) {
-            console.log('🔧 useAuthV2: Attempting manual profile creation as fallback...');
+            logger.debug('🔧 useAuthV2: Attempting manual profile creation as fallback...');
             
             // Check for pending country from signup
             const pendingCountry = typeof window !== 'undefined' 
@@ -306,7 +307,7 @@ export function useAuthV2() {
               : null;
             
             if (pendingCountry) {
-              console.log('🌍 useAuthV2: Found pending country from signup:', pendingCountry);
+              logger.debug('🌍 useAuthV2: Found pending country from signup:', pendingCountry);
             }
             
             try {
@@ -318,21 +319,21 @@ export function useAuthV2() {
               });
               
               if (createdProfile && !createError) {
-                console.log('✅ useAuthV2: Manual profile creation successful!');
+                logger.debug('✅ useAuthV2: Manual profile creation successful!');
                 
                 // Clear pending country from localStorage after successful use
                 if (typeof window !== 'undefined' && pendingCountry) {
                   localStorage.removeItem('pending_country');
-                  console.log('🧹 useAuthV2: Cleared pending_country from localStorage');
+                  logger.debug('🧹 useAuthV2: Cleared pending_country from localStorage');
                 }
                 
                 setState({ user: createdProfile, loading: false, error: null });
                 return { success: true, autoSignedIn: true, profile: createdProfile };
               } else {
-                console.error('❌ useAuthV2: Manual profile creation failed:', createError?.message);
+                logger.error('❌ useAuthV2: Manual profile creation failed:', createError?.message);
               }
             } catch (fallbackError: any) {
-              console.error('❌ useAuthV2: Manual profile creation threw error:', fallbackError.message);
+              logger.error('❌ useAuthV2: Manual profile creation threw error:', fallbackError.message);
             }
           }
           
@@ -350,7 +351,7 @@ export function useAuthV2() {
       return { success: true, autoSignedIn: false };
 
     } catch (error: any) {
-      console.error('❌ useAuthV2: Sign up error:', error);
+      logger.error('❌ useAuthV2: Sign up error:', error);
       setState({ user: null, loading: false, error: error.message });
       return { success: false, error: error.message };
     }
@@ -363,15 +364,15 @@ export function useAuthV2() {
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      console.log('🔐 useAuthV2: Signing out...');
+      logger.debug('🔐 useAuthV2: Signing out...');
       await authServiceV2.signOut();
       
-      console.log('✅ useAuthV2: Sign out successful');
+      logger.debug('✅ useAuthV2: Sign out successful');
       setState({ user: null, loading: false, error: null });
       return { success: true };
 
     } catch (error: any) {
-      console.error('❌ useAuthV2: Sign out error:', error);
+      logger.error('❌ useAuthV2: Sign out error:', error);
       // Still clear user state even if API call failed
       setState({ user: null, loading: false, error: null });
       return { success: true }; // Don't fail sign out
@@ -389,7 +390,7 @@ export function useAuthV2() {
         throw new Error('No refresh token available');
       }
 
-      console.log('🔐 useAuthV2: Refreshing session...');
+      logger.debug('🔐 useAuthV2: Refreshing session...');
       const { data, error } = await authServiceV2.refreshToken(session.refreshToken);
       
       if (error || !data) {
@@ -402,13 +403,13 @@ export function useAuthV2() {
         setState({ user: profile, loading: false, error: null });
       }
 
-      console.log('✅ useAuthV2: Session refreshed');
+      logger.debug('✅ useAuthV2: Session refreshed');
       return { success: true };
 
     } catch (error: any) {
-      console.error('❌ useAuthV2: Refresh session error:', error);
+      logger.error('❌ useAuthV2: Refresh session error:', error);
       // If refresh fails (expired refresh token), clear invalid session
-      console.log('🔐 useAuthV2: Clearing invalid session due to refresh failure');
+      logger.debug('🔐 useAuthV2: Clearing invalid session due to refresh failure');
       await authServiceV2.signOut();
       setState({ user: null, loading: false, error: null });
       return { success: false };

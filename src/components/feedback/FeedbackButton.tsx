@@ -23,9 +23,12 @@ export function FeedbackButton() {
       >
         <MessageSquare className="w-6 h-6" />
         
-        {/* Tooltip */}
-        <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-          Share feedback or concerns instantly
+        {/* Tooltip - suppressHydrationWarning prevents errors from browser extensions modifying text */}
+        <span 
+          className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+          suppressHydrationWarning
+        >
+          Share Feedback
         </span>
       </button>
 

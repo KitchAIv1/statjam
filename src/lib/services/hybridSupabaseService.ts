@@ -11,6 +11,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/utils/logger';
 
 interface HybridConfig {
   url: string;
@@ -82,8 +83,8 @@ export class HybridSupabaseService {
       maxRetries: 3
     };
 
-    console.log('🏀 HybridSupabaseService: Initialized with WebSocket health tracking');
-    console.log('📊 WebSocket Health: Monitoring started at', this.health.startTime.toISOString());
+    logger.debug('🏀 HybridSupabaseService: Initialized with WebSocket health tracking');
+    logger.debug('📊 WebSocket Health: Monitoring started at', this.health.startTime.toISOString());
   }
 
   /**
@@ -112,8 +113,8 @@ export class HybridSupabaseService {
     
     // Debug log to catch double-prefix issues
     if (url.includes('=eq.eq.') || url.includes('=in.in.')) {
-      console.error('🚨 DOUBLE PREFIX DETECTED IN URL:', url);
-      console.error('🚨 Filters passed:', filters);
+      logger.error('🚨 DOUBLE PREFIX DETECTED IN URL:', url);
+      logger.error('🚨 Filters passed:', filters);
     }
     
     for (let attempt = 0; attempt <= retries; attempt++) {
@@ -153,7 +154,7 @@ export class HybridSupabaseService {
             }
             // Only log non-404 errors for debugging (404s are expected for missing tables)
             if (!isTableNotFound) {
-              console.error('🚨 HybridService: Query error details:', {
+              logger.error('🚨 HybridService: Query error details:', {
                 url,
                 status: response.status,
                 statusText: response.statusText,
@@ -175,7 +176,7 @@ export class HybridSupabaseService {
         }
 
         const data = await response.json();
-        console.log(`✅ HybridService: Query successful - ${table} (${data.length} records)`);
+        logger.debug(`✅ HybridService: Query successful - ${table} (${data.length} records)`);
         return data;
 
       } catch (error: any) {
@@ -187,7 +188,7 @@ export class HybridSupabaseService {
           throw error;
         }
         
-        console.warn(`⚠️ HybridService: Query attempt ${attempt + 1} failed:`, error.message);
+        logger.warn(`⚠️ HybridService: Query attempt ${attempt + 1} failed:`, error.message);
         
         if (attempt === retries) {
           throw new Error(`❌ Query failed after ${retries + 1} attempts: ${error.message}`);
@@ -218,7 +219,7 @@ export class HybridSupabaseService {
     } = options;
 
     const subscriptionKey = `${table}-${filter}`;
-    console.log(`🔌 HybridService: Setting up NBA-level subscription for ${subscriptionKey}`);
+    logger.debug(`🔌 HybridService: Setting up NBA-level subscription for ${subscriptionKey}`);
 
     // Try WebSocket first (primary method)
     if (this.config.enableRealtime && supabase) {
@@ -235,7 +236,7 @@ export class HybridSupabaseService {
             this.health.totalEventsReceived++;
             this.health.lastEventTime = new Date();
             
-            console.log(`🔔 WS EVENT [${table}]: ${payload.eventType || 'unknown'}`, {
+            logger.debug(`🔔 WS EVENT [${table}]: ${payload.eventType || 'unknown'}`, {
               table,
               eventType: payload.eventType,
               totalEvents: this.health.totalEventsReceived,
@@ -251,7 +252,7 @@ export class HybridSupabaseService {
             if (status === 'SUBSCRIBED') {
               // 📊 Track successful connection
               this.health.totalConnections++;
-              console.log(`✅ WS CONNECTED [${subscriptionKey}]`, {
+              logger.debug(`✅ WS CONNECTED [${subscriptionKey}]`, {
                 timestamp,
                 totalConnections: this.health.totalConnections,
                 activeSubscriptions: this.subscriptions.size
@@ -266,7 +267,7 @@ export class HybridSupabaseService {
               this.health.lastErrorTime = new Date();
               this.health.lastError = `${status} on ${subscriptionKey}`;
               
-              console.error(`❌ WS ERROR [${subscriptionKey}]:`, {
+              logger.error(`❌ WS ERROR [${subscriptionKey}]:`, {
                 status,
                 timestamp,
                 totalErrors: this.health.totalErrors,
@@ -277,7 +278,7 @@ export class HybridSupabaseService {
               // Fallback: Switch to polling (30s interval)
               if (fallbackToPolling) {
                 this.health.pollingFallbackCount++;
-                console.warn(`🔄 POLLING FALLBACK [${subscriptionKey}]: Switching to ${pollingInterval}ms polling`, {
+                logger.warn(`🔄 POLLING FALLBACK [${subscriptionKey}]: Switching to ${pollingInterval}ms polling`, {
                   fallbackCount: this.health.pollingFallbackCount
                 });
                 this.startPollingFallback(table, filter, callback, pollingInterval, subscriptionKey);
@@ -285,7 +286,7 @@ export class HybridSupabaseService {
             } else if (status === 'CLOSED') {
               // 📊 Track disconnection
               this.health.totalDisconnections++;
-              console.warn(`🔌 WS CLOSED [${subscriptionKey}]:`, {
+              logger.warn(`🔌 WS CLOSED [${subscriptionKey}]:`, {
                 timestamp,
                 totalDisconnections: this.health.totalDisconnections
               });
@@ -296,7 +297,7 @@ export class HybridSupabaseService {
 
         // Return unsubscribe function
         return () => {
-          console.log(`🔒 HybridService: Unsubscribing from ${subscriptionKey}`);
+          logger.debug(`🔒 HybridService: Unsubscribing from ${subscriptionKey}`);
           if (channel) {
             supabase.removeChannel(channel);
           }
@@ -306,11 +307,11 @@ export class HybridSupabaseService {
         };
 
       } catch (error) {
-        console.error(`❌ HybridService: WebSocket setup failed for ${subscriptionKey}:`, error);
+        logger.error(`❌ HybridService: WebSocket setup failed for ${subscriptionKey}:`, error);
         
         // Fallback to polling immediately
         if (fallbackToPolling) {
-          console.log(`🔄 HybridService: WebSocket failed, using polling for ${subscriptionKey}`);
+          logger.debug(`🔄 HybridService: WebSocket failed, using polling for ${subscriptionKey}`);
           this.startPollingFallback(table, filter, callback, pollingInterval, subscriptionKey);
         }
       }
@@ -318,7 +319,7 @@ export class HybridSupabaseService {
 
     // If WebSocket is disabled or failed, use polling
     if (!this.config.enableRealtime || !supabase) {
-      console.log(`🔄 HybridService: WebSocket disabled, using polling for ${subscriptionKey}`);
+      logger.debug(`🔄 HybridService: WebSocket disabled, using polling for ${subscriptionKey}`);
       this.startPollingFallback(table, filter, callback, pollingInterval, subscriptionKey);
     }
 
@@ -339,7 +340,7 @@ export class HybridSupabaseService {
     interval: number,
     subscriptionKey: string
   ) {
-    console.log(`🔄 HybridService: Starting polling fallback for ${subscriptionKey} (${interval}ms)`);
+    logger.debug(`🔄 HybridService: Starting polling fallback for ${subscriptionKey} (${interval}ms)`);
     
     let lastData: any[] = [];
     
@@ -349,7 +350,7 @@ export class HybridSupabaseService {
         // Filter format: "key=eq.value" or "key=in.(val1,val2)"
         const firstEquals = filter.indexOf('=');
         if (firstEquals === -1) {
-          console.warn(`⚠️ HybridService: Invalid filter format: ${filter}`);
+          logger.warn(`⚠️ HybridService: Invalid filter format: ${filter}`);
           return;
         }
         
@@ -363,7 +364,7 @@ export class HybridSupabaseService {
 
         // Simple change detection (in production, use timestamps)
         if (JSON.stringify(currentData) !== JSON.stringify(lastData)) {
-          console.log(`🔔 HybridService: Polling detected changes in ${table}`);
+          logger.debug(`🔔 HybridService: Polling detected changes in ${table}`);
           
           // Simulate WebSocket payload format
           const payload = {
@@ -378,7 +379,7 @@ export class HybridSupabaseService {
         }
 
       } catch (error) {
-        console.warn(`⚠️ HybridService: Polling error for ${subscriptionKey}:`, error);
+        logger.warn(`⚠️ HybridService: Polling error for ${subscriptionKey}:`, error);
       }
     };
 
@@ -398,7 +399,7 @@ export class HybridSupabaseService {
     if (intervalId) {
       clearInterval(intervalId);
       this.pollingIntervals.delete(subscriptionKey);
-      console.log(`🧹 HybridService: Cleared polling for ${subscriptionKey}`);
+      logger.debug(`🧹 HybridService: Cleared polling for ${subscriptionKey}`);
     }
   }
 
@@ -431,7 +432,7 @@ export class HybridSupabaseService {
       status
     };
     
-    console.log('📊 WEBSOCKET HEALTH REPORT:', report);
+    logger.debug('📊 WEBSOCKET HEALTH REPORT:', report);
     return report;
   }
 
@@ -440,7 +441,7 @@ export class HybridSupabaseService {
    */
   logHealthSummary(): void {
     const report = this.getHealthReport();
-    console.log(`
+    logger.debug(`
 📊 ═══════════════════════════════════════════════════
    WEBSOCKET HEALTH SUMMARY
 ═══════════════════════════════════════════════════
@@ -477,7 +478,7 @@ export class HybridSupabaseService {
    */
   updateConfig(updates: Partial<HybridConfig>) {
     this.config = { ...this.config, ...updates };
-    console.log('🔧 HybridService: Configuration updated:', updates);
+    logger.debug('🔧 HybridService: Configuration updated:', updates);
   }
 }
 

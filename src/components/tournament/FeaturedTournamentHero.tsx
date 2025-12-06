@@ -27,7 +27,7 @@ interface TournamentWithStats {
 
 interface FeaturedTournamentHeroProps {
   tournament: TournamentWithStats;
-  liveGameCount: number;
+  liveGameCount?: number; // Kept for backwards compatibility, now handled by TournamentNextGame
   onClick: () => void;
   onLiveGamesClick?: () => void;
   shareUrl?: string;
@@ -39,7 +39,7 @@ interface FeaturedTournamentHeroProps {
  * Purpose: Large display of featured tournament with stats and top players
  * Follows .cursorrules: <200 lines, single responsibility
  */
-export function FeaturedTournamentHero({ tournament, liveGameCount, onClick, onLiveGamesClick, shareUrl }: FeaturedTournamentHeroProps) {
+export function FeaturedTournamentHero({ tournament, onClick, onLiveGamesClick, shareUrl }: FeaturedTournamentHeroProps) {
   const isLive = tournament.status === 'active' || tournament.status === 'live';
   const { organizer } = useOrganizerProfile(tournament.organizer_id || null);
   
@@ -53,7 +53,7 @@ export function FeaturedTournamentHero({ tournament, liveGameCount, onClick, onL
     <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#121212] to-black max-w-4xl mx-auto">
       {/* Basketball Splash Background - Responsive sizing */}
       <div 
-        className="absolute inset-0 bg-no-repeat opacity-50 pointer-events-none"
+        className="absolute inset-0 bg-no-repeat opacity-65 pointer-events-none"
         style={{ 
           backgroundImage: 'url(/images/basketball-splash.webp)',
           backgroundPosition: 'right center',
@@ -189,12 +189,12 @@ export function FeaturedTournamentHero({ tournament, liveGameCount, onClick, onL
             </div>
           </div>
 
-          {/* Right: Quick Stats - Fixed Width */}
+          {/* Right: Next Game Countdown */}
           <FeaturedTournamentQuickStats
-            teamCount={tournament.teamCount}
-            gameCount={tournament.gameCount}
-            liveGameCount={liveGameCount}
-            isLive={isLive}
+            tournamentId={tournament.id}
+            tournamentStartDate={tournament.start_date}
+            tournamentEndDate={tournament.end_date}
+            tournamentStatus={tournament.status}
             onLiveGamesClick={onLiveGamesClick || onClick}
           />
         </div>

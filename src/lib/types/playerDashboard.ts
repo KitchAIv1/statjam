@@ -11,6 +11,8 @@ export interface PlayerIdentity {
   location?: string;  // Country code
   profilePhotoUrl?: string;
   posePhotoUrl?: string;
+  bio?: string;  // ✅ Player bio/about text
+  isPublicProfile?: boolean;  // ✅ Public profile visibility toggle
 }
 
 export interface SeasonAverages {

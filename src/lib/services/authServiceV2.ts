@@ -5,6 +5,8 @@
  * Same approach as data fetching: reliable, fast, never hangs
  */
 
+import { logger } from '@/lib/utils/logger';
+
 interface AuthConfig {
   url: string;
   anonKey: string;
@@ -69,13 +71,13 @@ export class AuthServiceV2 {
     // Graceful degradation instead of throwing at construction time
     if (!url || !anonKey) {
       if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️ AuthServiceV2: Missing Supabase environment variables - auth methods will fail gracefully');
+        logger.warn('⚠️ AuthServiceV2: Missing Supabase environment variables - auth methods will fail gracefully');
       }
       // Methods that require config will check and throw with clear message
       return;
     }
 
-    console.log('🔐 AuthServiceV2: Enterprise auth service initialized');
+    logger.debug('🔐 AuthServiceV2: Enterprise auth service initialized');
   }
 
   private getHeaders(accessToken?: string) {
@@ -150,7 +152,7 @@ export class AuthServiceV2 {
       // ✅ CRITICAL FIX #1: Normalize email (trim and lowercase) for sign-in too
       email = email.trim().toLowerCase();
       
-      console.log('🔐 AuthServiceV2: Signing in user:', email);
+      logger.debug('🔐 AuthServiceV2: Signing in user:', email);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
@@ -179,7 +181,7 @@ export class AuthServiceV2 {
         localStorage.setItem('sb-user', JSON.stringify(data.user));
       }
 
-      console.log('✅ AuthServiceV2: Sign in successful for:', email);
+      logger.debug('✅ AuthServiceV2: Sign in successful for:', email);
       return { data, error: null };
 
     } catch (error: any) {
@@ -188,7 +190,7 @@ export class AuthServiceV2 {
         ? 'Request timed out. Please check your connection and try again.'
         : error.message || 'Sign in failed';
       
-      console.error('❌ AuthServiceV2: Sign in error:', errorMessage);
+      logger.error('❌ AuthServiceV2: Sign in error:', errorMessage);
       return { data: null, error: new Error(errorMessage) };
     }
   }
@@ -205,7 +207,7 @@ export class AuthServiceV2 {
       // ✅ CRITICAL FIX #1: Normalize email (trim and lowercase)
       email = email.trim().toLowerCase();
       
-      console.log('🔐 AuthServiceV2: Signing up user:', email, {
+      logger.debug('🔐 AuthServiceV2: Signing up user:', email, {
         passwordLength: password?.length || 0,
         hasMetadata: !!metadata,
         userType: metadata?.userType
@@ -213,17 +215,17 @@ export class AuthServiceV2 {
 
       // ✅ VALIDATION: Check metadata and userType (Tier 2 #3)
       if (!metadata || !metadata.userType) {
-        console.error('❌ AuthServiceV2: Missing userType in metadata');
+        logger.error('❌ AuthServiceV2: Missing userType in metadata');
         throw new Error('User type must be selected');
       }
 
       const validUserTypes = ['player', 'organizer', 'stat_admin', 'coach'];
       if (!validUserTypes.includes(metadata.userType)) {
-        console.error('❌ AuthServiceV2: Invalid userType:', metadata.userType);
+        logger.error('❌ AuthServiceV2: Invalid userType:', metadata.userType);
         throw new Error(`Invalid user type. Must be one of: ${validUserTypes.join(', ')}`);
       }
 
-      console.log('✅ AuthServiceV2: Metadata validated:', {
+      logger.debug('✅ AuthServiceV2: Metadata validated:', {
         userType: metadata.userType,
         hasOtherMetadata: Object.keys(metadata).length > 1
       });
@@ -257,7 +259,7 @@ export class AuthServiceV2 {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        console.error('❌ AuthServiceV2: Signup API error:', {
+        logger.error('❌ AuthServiceV2: Signup API error:', {
           status: response.status,
           statusText: response.statusText,
           errorData
@@ -267,11 +269,11 @@ export class AuthServiceV2 {
       }
 
       const data: SignUpResponse = await response.json();
-      console.log('✅ AuthServiceV2: Sign up successful for:', email);
+      logger.debug('✅ AuthServiceV2: Sign up successful for:', email);
       
       // Store tokens in localStorage if provided (email confirmation disabled)
       if (data.access_token && typeof window !== 'undefined') {
-        console.log('🔐 AuthServiceV2: Storing signup tokens in localStorage');
+        logger.debug('🔐 AuthServiceV2: Storing signup tokens in localStorage');
         localStorage.setItem('sb-access-token', data.access_token);
         localStorage.setItem('sb-refresh-token', data.refresh_token || '');
         localStorage.setItem('sb-user', JSON.stringify(data.user));
@@ -280,7 +282,7 @@ export class AuthServiceV2 {
       return { data, error: null };
 
     } catch (error: any) {
-      console.error('❌ AuthServiceV2: Sign up error:', error.message);
+      logger.error('❌ AuthServiceV2: Sign up error:', error.message);
       return { data: null, error };
     }
   }
@@ -290,7 +292,7 @@ export class AuthServiceV2 {
    */
   async signOut(): Promise<{ error: Error | null }> {
     try {
-      console.log('🔐 AuthServiceV2: Signing out user');
+      logger.debug('🔐 AuthServiceV2: Signing out user');
 
       const accessToken = typeof window !== 'undefined' 
         ? localStorage.getItem('sb-access-token') 
@@ -316,11 +318,11 @@ export class AuthServiceV2 {
         localStorage.removeItem('sb-user');
       }
 
-      console.log('✅ AuthServiceV2: Sign out successful');
+      logger.debug('✅ AuthServiceV2: Sign out successful');
       return { error: null };
 
     } catch (error: any) {
-      console.error('❌ AuthServiceV2: Sign out error:', error.message);
+      logger.error('❌ AuthServiceV2: Sign out error:', error.message);
       // Still clear local storage even if API call fails
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sb-access-token');
@@ -336,7 +338,7 @@ export class AuthServiceV2 {
    */
   async getUserProfile(accessToken: string): Promise<{ data: UserProfile | null; error: Error | null }> {
     try {
-      console.log('🔐 AuthServiceV2: Fetching user profile');
+      logger.debug('🔐 AuthServiceV2: Fetching user profile');
 
       // ✅ FIX: Add timeout to prevent hanging
       const controller = new AbortController();
@@ -353,14 +355,14 @@ export class AuthServiceV2 {
 
       if (!userResponse.ok) {
         const errorText = await userResponse.text().catch(() => 'Unknown error');
-        console.error('❌ AuthServiceV2: Failed to get user from token:', userResponse.status, errorText);
+        logger.error('❌ AuthServiceV2: Failed to get user from token:', userResponse.status, errorText);
         throw new Error(`Failed to get user from token: ${userResponse.status}`);
       }
 
       const userData = await userResponse.json();
       const userId = userData.id;
 
-      console.log('🔐 AuthServiceV2: User ID:', userId);
+      logger.debug('🔐 AuthServiceV2: User ID:', userId);
 
       // ✅ FIX: Add timeout for profile fetch
       const controller2 = new AbortController();
@@ -384,24 +386,24 @@ export class AuthServiceV2 {
 
       if (!profileResponse.ok) {
         const errorText = await profileResponse.text().catch(() => 'Unknown error');
-        console.error('❌ AuthServiceV2: Failed to fetch profile:', profileResponse.status, errorText);
+        logger.error('❌ AuthServiceV2: Failed to fetch profile:', profileResponse.status, errorText);
         throw new Error(`Failed to fetch user profile from database: ${profileResponse.status}`);
       }
 
       const profiles = await profileResponse.json();
       
       if (!profiles || profiles.length === 0) {
-        console.log('⚠️ AuthServiceV2: No profile found in users table, might be new user');
+        logger.debug('⚠️ AuthServiceV2: No profile found in users table, might be new user');
         return { data: null, error: new Error('Profile not found') };
       }
 
       const profile: UserProfile = profiles[0];
-      console.log('✅ AuthServiceV2: Profile fetched successfully, role:', profile.role);
+      logger.debug('✅ AuthServiceV2: Profile fetched successfully, role:', profile.role);
       
       return { data: profile, error: null };
 
     } catch (error: any) {
-      console.error('❌ AuthServiceV2: Get profile error:', error.message);
+      logger.error('❌ AuthServiceV2: Get profile error:', error.message);
       return { data: null, error };
     }
   }
@@ -427,7 +429,7 @@ export class AuthServiceV2 {
    */
   async refreshToken(refreshToken: string): Promise<{ data: SignInResponse | null; error: Error | null }> {
     try {
-      console.log('🔐 AuthServiceV2: Refreshing access token');
+      logger.debug('🔐 AuthServiceV2: Refreshing access token');
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
@@ -443,7 +445,7 @@ export class AuthServiceV2 {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ AuthServiceV2: Token refresh failed with ${response.status}:`, errorText);
+        logger.error(`❌ AuthServiceV2: Token refresh failed with ${response.status}:`, errorText);
         
         // If 400, it means refresh token is expired/invalid
         if (response.status === 400) {
@@ -462,11 +464,11 @@ export class AuthServiceV2 {
         localStorage.setItem('sb-user', JSON.stringify(data.user));
       }
 
-      console.log('✅ AuthServiceV2: Token refreshed successfully');
+      logger.debug('✅ AuthServiceV2: Token refreshed successfully');
       return { data, error: null };
 
     } catch (error: any) {
-      console.error('❌ AuthServiceV2: Refresh token error:', error.message);
+      logger.error('❌ AuthServiceV2: Refresh token error:', error.message);
       return { data: null, error };
     }
   }
@@ -481,7 +483,7 @@ export class AuthServiceV2 {
     country?: string;
   }): Promise<{ data: any | null; error: Error | null }> {
     try {
-      console.log('🔐 AuthServiceV2: Creating user profile manually:', profileData.email);
+      logger.debug('🔐 AuthServiceV2: Creating user profile manually:', profileData.email);
 
       const session = this.getSession();
       if (!session.accessToken) {
@@ -517,12 +519,12 @@ export class AuthServiceV2 {
       }
 
       const data = await response.json();
-      console.log('✅ AuthServiceV2: User profile created manually');
+      logger.debug('✅ AuthServiceV2: User profile created manually');
       
       return { data: data[0] || data, error: null };
 
     } catch (error: any) {
-      console.error('❌ AuthServiceV2: Create profile error:', error.message);
+      logger.error('❌ AuthServiceV2: Create profile error:', error.message);
       return { data: null, error };
     }
   }
@@ -532,7 +534,7 @@ export class AuthServiceV2 {
    */
   async updateUserRole(userId: string, newRole: string): Promise<{ data: any | null; error: Error | null }> {
     try {
-      console.log('🔐 AuthServiceV2: Updating user role:', { userId, newRole });
+      logger.debug('🔐 AuthServiceV2: Updating user role:', { userId, newRole });
 
       const session = this.getSession();
       if (!session.accessToken) {
@@ -564,12 +566,12 @@ export class AuthServiceV2 {
       }
 
       const data = await response.json();
-      console.log('✅ AuthServiceV2: User role updated successfully');
+      logger.debug('✅ AuthServiceV2: User role updated successfully');
       
       return { data: data[0] || data, error: null };
 
     } catch (error: any) {
-      console.error('❌ AuthServiceV2: Update role error:', error.message);
+      logger.error('❌ AuthServiceV2: Update role error:', error.message);
       return { data: null, error };
     }
   }
@@ -579,7 +581,7 @@ export class AuthServiceV2 {
    */
   async updateUserCountry(userId: string, country: string): Promise<{ data: any | null; error: Error | null }> {
     try {
-      console.log('🔐 AuthServiceV2: Updating user country:', { userId, country });
+      logger.debug('🔐 AuthServiceV2: Updating user country:', { userId, country });
 
       const session = this.getSession();
       if (!session.accessToken) {
@@ -611,12 +613,12 @@ export class AuthServiceV2 {
       }
 
       const data = await response.json();
-      console.log('✅ AuthServiceV2: User country updated successfully');
+      logger.debug('✅ AuthServiceV2: User country updated successfully');
       
       return { data: data[0] || data, error: null };
 
     } catch (error: any) {
-      console.error('❌ AuthServiceV2: Update country error:', error.message);
+      logger.error('❌ AuthServiceV2: Update country error:', error.message);
       return { data: null, error };
     }
   }
@@ -626,7 +628,7 @@ export class AuthServiceV2 {
    */
   async resendConfirmationEmail(email: string): Promise<{ error: Error | null }> {
     try {
-      console.log('🔐 AuthServiceV2: Resending confirmation email to:', email);
+      logger.debug('🔐 AuthServiceV2: Resending confirmation email to:', email);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
@@ -648,11 +650,11 @@ export class AuthServiceV2 {
         throw new Error(errorData.error_description || errorData.message || 'Failed to resend confirmation email');
       }
 
-      console.log('✅ AuthServiceV2: Confirmation email resent successfully');
+      logger.debug('✅ AuthServiceV2: Confirmation email resent successfully');
       return { error: null };
 
     } catch (error: any) {
-      console.error('❌ AuthServiceV2: Resend confirmation email error:', error.message);
+      logger.error('❌ AuthServiceV2: Resend confirmation email error:', error.message);
       return { error };
     }
   }

@@ -2,6 +2,7 @@
 import { supabase } from '@/lib/supabase';
 import { ensureSupabaseSession } from '@/lib/supabase';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
+import { logger } from '@/lib/utils/logger';
 
 // Types for game stats aggregation
 export interface GameStatsSummary {
@@ -108,7 +109,7 @@ export class PlayerGameStatsService {
       const { data: rawStats, error: statsError } = await statsQuery;
 
       if (statsError) {
-        console.error('❌ PlayerGameStatsService: Error fetching game_stats:', statsError);
+        logger.error('❌ PlayerGameStatsService: Error fetching game_stats:', statsError);
         return [];
       }
 
@@ -119,8 +120,8 @@ export class PlayerGameStatsService {
       // Step 2: Get unique game IDs
       const gameIds = [...new Set(rawStats.map(s => s.game_id))];
       
-      console.log('🔍 PlayerGameStatsService: Found', gameIds.length, 'unique game IDs from stats', isCustomPlayer ? '(custom player)' : '(regular player)');
-      console.log('🔍 PlayerGameStatsService: Game IDs:', gameIds);
+      logger.debug('🔍 PlayerGameStatsService: Found', gameIds.length, 'unique game IDs from stats', isCustomPlayer ? '(custom player)' : '(regular player)');
+      logger.debug('🔍 PlayerGameStatsService: Game IDs:', gameIds);
 
       // ⚡ OPTIMIZATION: Parallel queries (Step 3, 4 & 5 run simultaneously)
       // ✅ CRITICAL: Ensure authenticated session for RLS to work correctly
@@ -128,10 +129,8 @@ export class PlayerGameStatsService {
       // This respects is_official_team flags (practice games filtered, official games shown)
       const [gamesResult, teamPlayersResult, allGameStatsResult] = await Promise.all([
         // Step 3: Fetch game info for all games
-        // ✅ RLS POLICY: games_player_view_official_only filters based on:
-        // - Tournament games (always shown)
-        // - Coach games from official teams only (practice teams filtered)
-        // This ensures consistency between local dev and production
+        // ✅ FILTER: Only tournament games (is_coach_game = false)
+        // Coach mode games should not appear in player profiles/stats
         supabase
           .from('games')
           .select(`
@@ -147,9 +146,8 @@ export class PlayerGameStatsService {
             team_a:teams!team_a_id (id, name),
             team_b:teams!team_b_id (id, name)
           `)
-          .in('id', gameIds),
-          // ✅ RLS will automatically filter based on player_has_game_stats_official()
-          // Local dev MUST respect RLS - if showing all games, check auth session
+          .in('id', gameIds)
+          .eq('is_coach_game', false), // ✅ Exclude coach mode games from player profiles
         
         // Step 4: Get player's team assignments to determine home/away
         // For custom players, query team_players by custom_player_id
@@ -174,34 +172,34 @@ export class PlayerGameStatsService {
       const { data: teamPlayers, error: teamError } = teamPlayersResult;
       const { data: allGameStats } = allGameStatsResult;
 
-      console.log('🔍 PlayerGameStatsService: Fetched', games?.length || 0, 'games from database');
-      console.log('🔍 PlayerGameStatsService: Requested', gameIds.length, 'games, received', games?.length || 0);
+      logger.debug('🔍 PlayerGameStatsService: Fetched', games?.length || 0, 'games from database');
+      logger.debug('🔍 PlayerGameStatsService: Requested', gameIds.length, 'games, received', games?.length || 0);
       
       // ✅ DEBUG: Log missing game IDs (RLS might be filtering them)
       if (games && games.length < gameIds.length) {
         const fetchedGameIds = new Set(games.map(g => g.id));
         const missingGameIds = gameIds.filter(id => !fetchedGameIds.has(id));
-        console.warn('⚠️ PlayerGameStatsService: RLS may be filtering games. Missing game IDs:', missingGameIds);
-        console.warn('⚠️ This could be due to RLS policies restricting game access in production');
+        logger.warn('⚠️ PlayerGameStatsService: RLS may be filtering games. Missing game IDs:', missingGameIds);
+        logger.warn('⚠️ This could be due to RLS policies restricting game access in production');
       }
       
-      console.log('🔍 PlayerGameStatsService: Games data:', games);
+      logger.debug('🔍 PlayerGameStatsService: Games data:', games);
 
       if (gamesError) {
-        console.error('❌ PlayerGameStatsService: Error fetching game info:', gamesError);
-        console.error('❌ Error code:', gamesError.code);
-        console.error('❌ Error message:', gamesError.message);
-        console.error('❌ Error details:', gamesError.details);
+        logger.error('❌ PlayerGameStatsService: Error fetching game info:', gamesError);
+        logger.error('❌ Error code:', gamesError.code);
+        logger.error('❌ Error message:', gamesError.message);
+        logger.error('❌ Error details:', gamesError.details);
         return [];
       }
 
       if (!games || games.length === 0) {
-        console.error('🔍 PlayerGameStatsService: No games returned from query (after status filter)');
+        logger.error('🔍 PlayerGameStatsService: No games returned from query (after status filter)');
         return [];
       }
 
       if (teamError) {
-        console.error('❌ Error fetching player teams:', teamError);
+        logger.error('❌ Error fetching player teams:', teamError);
         return [];
       }
 
@@ -297,7 +295,7 @@ export class PlayerGameStatsService {
       return gameStatsSummaries;
 
     } catch (error) {
-      console.error('❌ PlayerGameStatsService: Unexpected error:', error);
+      logger.error('❌ PlayerGameStatsService: Unexpected error:', error);
       return [];
     }
   }

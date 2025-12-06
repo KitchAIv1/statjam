@@ -2079,6 +2079,7 @@ function StatTrackerV3Content() {
                 onTimeOut={handleTimeoutClick}
                 onSubstitution={() => handleSubstitution()}
                 onGameEnd={tracker.closeGame}
+                onGameCancel={tracker.cancelGame}
                 lastAction={tracker.lastAction}
                 lastActionPlayerId={tracker.lastActionPlayerId}
                 onUndoLastAction={tracker.undoLastAction}

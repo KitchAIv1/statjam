@@ -23,6 +23,7 @@ interface DesktopStatGridV3Props {
   onTimeOut: () => void;
   onSubstitution?: () => void;
   onGameEnd: () => void;
+  onGameCancel: () => void;
   lastAction?: string | null;
   lastActionPlayerId?: string | null;
   onUndoLastAction?: () => Promise<void>; // ✅ UNDO: Undo callback
@@ -58,6 +59,7 @@ export function DesktopStatGridV3({
   onTimeOut,
   onSubstitution,
   onGameEnd,
+  onGameCancel,
   lastAction,
   lastActionPlayerId,
   onUndoLastAction, // ✅ UNDO
@@ -552,7 +554,7 @@ export function DesktopStatGridV3({
       </div>
       {/* ✅ END: Scrollable Stat Grids Container */}
 
-      {/* ✅ End Game Button / Status - Always Visible at Bottom */}
+      {/* ✅ End Game & Cancel Buttons / Status - Always Visible at Bottom */}
       <div className="mt-3 flex-shrink-0">
         {gameStatus === 'completed' || gameStatus === 'cancelled' ? (
           <div
@@ -564,18 +566,35 @@ export function DesktopStatGridV3({
             </div>
           </div>
         ) : (
-          <button
-            className="w-full text-lg font-black py-3 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
-            onClick={() => {
-              // ✅ Awards modal will show (or direct completion for coach mode)
-              onGameEnd();
-            }}
-          >
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-2xl">🏁</span>
-              <span>END GAME</span>
-            </div>
-          </button>
+          <div className="flex gap-3">
+            {/* Cancel Game Button */}
+            <button
+              className="flex-1 text-base font-bold py-3 rounded-xl border-2 border-orange-400 bg-orange-500 hover:bg-orange-600 text-white transition-all duration-200 hover:shadow-lg active:scale-95"
+              onClick={() => {
+                if (confirm('Are you sure you want to cancel this game? This action cannot be undone.')) {
+                  onGameCancel();
+                }
+              }}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-xl">🚫</span>
+                <span>CANCEL GAME</span>
+              </div>
+            </button>
+            {/* End Game Button */}
+            <button
+              className="flex-1 text-base font-bold py-3 rounded-xl border-2 border-red-400 bg-red-500 hover:bg-red-600 text-white transition-all duration-200 hover:shadow-lg active:scale-95"
+              onClick={() => {
+                // ✅ Awards modal will show (or direct completion for coach mode)
+                onGameEnd();
+              }}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-xl">🏁</span>
+                <span>END GAME</span>
+              </div>
+            </button>
+          </div>
         )}
       </div>
 

@@ -4,6 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { User } from 'lucide-react';
 import { PlayerLeader } from '@/lib/services/tournamentLeadersService';
 import { cn } from '@/lib/utils';
+import { prefetchPlayerProfile } from '@/lib/services/prefetchService';
 
 export type PerMode = 'per_game' | 'totals';
 export type SortColumn = 'pts' | 'reb' | 'ast' | 'stl' | 'blk' | 'tov' | 'gp' | 'fg_pct' | '3p_pct' | 'ft_pct';
@@ -26,10 +27,12 @@ export function LeaderboardRow({ player, rank, perMode, sortColumn, onClick }: L
   const team3 = player.teamName.slice(0, 3).toUpperCase();
   const p = player;
 
+  const handleHover = () => !p.isCustomPlayer && prefetchPlayerProfile(p.playerId);
+
   return (
     <>
       {/* Mobile (<md) - Horizontal scroll for stats */}
-      <div onClick={onClick} className="flex md:hidden hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5">
+      <div onClick={onClick} onMouseEnter={handleHover} className="flex md:hidden hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5">
         {/* Fixed player info */}
         <div className="flex items-center gap-1.5 px-2 py-2.5 w-[130px] shrink-0 bg-[#121212] border-r border-white/10 sticky left-0 z-10">
           <div className={cn("w-5 text-center text-xs shrink-0", rc)}>{rank}</div>
@@ -59,7 +62,7 @@ export function LeaderboardRow({ player, rank, perMode, sortColumn, onClick }: L
         </div>
       </div>
       {/* Desktop (md+) - Full NBA-style grid */}
-      <div onClick={onClick} className="hidden md:grid grid-cols-[40px_1fr_120px_45px_55px_55px_55px_55px_55px_55px_60px_60px_60px] items-center gap-1 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5">
+      <div onClick={onClick} onMouseEnter={handleHover} className="hidden md:grid grid-cols-[40px_1fr_120px_45px_55px_55px_55px_55px_55px_55px_60px_60px_60px] items-center gap-1 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5">
         <div className={cn("text-sm", rc)}>{rank}</div>
         <div className="flex items-center gap-2 min-w-0">
           <Avatar className="h-10 w-10 shrink-0 border border-white/10">

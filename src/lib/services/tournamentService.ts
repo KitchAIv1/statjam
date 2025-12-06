@@ -1,6 +1,7 @@
 import { Tournament, TournamentCreateRequest, TournamentUpdateRequest, Team, Player } from '@/lib/types/tournament';
 import { supabase } from '@/lib/supabase';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
+import { logger } from '@/lib/utils/logger';
 
 // Tournament Business Logic Layer
 export class TournamentService {
@@ -43,7 +44,7 @@ export class TournamentService {
         .single();
 
       if (error) {
-        console.error('Supabase error creating tournament:', error);
+        logger.error('Supabase error creating tournament:', error);
         throw new Error(`Failed to create tournament: ${error.message}`);
       }
 
@@ -75,7 +76,7 @@ export class TournamentService {
         updatedAt: tournament.updated_at || new Date().toISOString(),
       };
     } catch (error) {
-      console.error('Error creating tournament:', error);
+      logger.error('Error creating tournament:', error);
       throw error instanceof Error ? error : new Error('Failed to create tournament');
     }
   }
@@ -116,7 +117,7 @@ export class TournamentService {
         .single();
 
       if (error) {
-        console.error('Supabase error updating tournament:', error);
+        logger.error('Supabase error updating tournament:', error);
         throw new Error(`Failed to update tournament: ${error.message}`);
       }
 
@@ -148,14 +149,14 @@ export class TournamentService {
         updatedAt: tournament.updated_at || new Date().toISOString(),
       };
     } catch (error) {
-      console.error('Error updating tournament:', error);
+      logger.error('Error updating tournament:', error);
       throw error instanceof Error ? error : new Error('Failed to update tournament');
     }
   }
 
   static async deleteTournament(id: string): Promise<void> {
     try {
-      console.log('🗑️ Starting MASTER DELETE tournament deletion process for:', id);
+      logger.debug('🗑️ Starting MASTER DELETE tournament deletion process for:', id);
 
       // Step 0: Get tournament info and validate deletion is allowed
       const tournament = await this.getTournament(id);
@@ -175,12 +176,12 @@ export class TournamentService {
         .eq('tournament_id', id);
 
       if (teamsError) {
-        console.error('Error fetching teams for deletion:', teamsError);
+        logger.error('Error fetching teams for deletion:', teamsError);
         throw new Error(`Failed to fetch teams: ${teamsError.message}`);
       }
 
       const teamIds = teams?.map(team => team.id) || [];
-      console.log('🗑️ Found teams to delete:', teamIds.length);
+      logger.debug('🗑️ Found teams to delete:', teamIds.length);
 
       // Step 2: Delete all team_players relationships
       if (teamIds.length > 0) {
@@ -192,13 +193,13 @@ export class TournamentService {
         if (teamPlayersError) {
           // If table doesn't exist, log warning but continue (not critical for deletion)
           if (teamPlayersError.code === '42P01') {
-            console.warn('⚠️ team_players table does not exist, skipping team players deletion');
+            logger.warn('⚠️ team_players table does not exist, skipping team players deletion');
           } else {
-            console.error('Error deleting team players:', teamPlayersError);
+            logger.error('Error deleting team players:', teamPlayersError);
             throw new Error(`Failed to delete team players: ${teamPlayersError.message}`);
           }
         } else {
-          console.log('🗑️ Deleted team_players relationships');
+          logger.debug('🗑️ Deleted team_players relationships');
         }
       }
 
@@ -209,17 +210,17 @@ export class TournamentService {
         .eq('tournament_id', id);
 
       if (gamesError) {
-        console.error('Error fetching games for deletion:', gamesError);
+        logger.error('Error fetching games for deletion:', gamesError);
         throw new Error(`Failed to fetch games: ${gamesError.message}`);
       }
 
       const gameIds = games?.map(game => game.id) || [];
-      console.log('🗑️ Found games to delete:', gameIds.length);
+      logger.debug('🗑️ Found games to delete:', gameIds.length);
 
       // Step 4: NUCLEAR APPROACH - Find and delete ALL substitutions for this tournament
       // This handles old tournaments with orphaned data or different constraints
       
-      console.log('🚀 NUCLEAR APPROACH: Finding ALL substitutions for tournament:', id);
+      logger.debug('🚀 NUCLEAR APPROACH: Finding ALL substitutions for tournament:', id);
       
       // First, get ALL games for this tournament
       const { data: allGames, error: allGamesError } = await supabase
@@ -228,19 +229,19 @@ export class TournamentService {
         .eq('tournament_id', id);
 
       if (allGamesError) {
-        console.error('Error fetching all games for deletion:', allGamesError);
+        logger.error('Error fetching all games for deletion:', allGamesError);
         throw new Error(`Failed to fetch all games: ${allGamesError.message}`);
       }
 
       const allGameIds = allGames?.map(game => game.id) || [];
-      console.log('🗑️ Found ALL games to delete:', allGameIds.length);
+      logger.debug('🗑️ Found ALL games to delete:', allGameIds.length);
       
       // Note: RLS policy 'game_substitutions_organizer_delete' now allows organizers to delete substitutions
-      console.log('ℹ️ RLS policy allows organizer deletion - proceeding with standard deletion flow');
+      logger.debug('ℹ️ RLS policy allows organizer deletion - proceeding with standard deletion flow');
 
       if (allGameIds.length > 0) {
         // MASTER DELETE: Delete ALL tables that reference games(id)
-        console.log('🔍 DIAGNOSTIC: Game IDs to delete:', allGameIds);
+        logger.debug('🔍 DIAGNOSTIC: Game IDs to delete:', allGameIds);
         
         // DIAGNOSTIC: Check what substitutions exist for these games
         const { data: existingSubs, error: checkSubsError } = await supabase
@@ -249,9 +250,9 @@ export class TournamentService {
           .in('game_id', allGameIds);
         
         if (!checkSubsError) {
-          console.log('🔍 DIAGNOSTIC: Found substitutions for these games:', existingSubs?.length || 0);
+          logger.debug('🔍 DIAGNOSTIC: Found substitutions for these games:', existingSubs?.length || 0);
           if (existingSubs && existingSubs.length > 0) {
-            console.log('🔍 DIAGNOSTIC: Substitution game_ids:', existingSubs.map(s => s.game_id));
+            logger.debug('🔍 DIAGNOSTIC: Substitution game_ids:', existingSubs.map(s => s.game_id));
           }
         }
         
@@ -262,23 +263,23 @@ export class TournamentService {
           .in('game_id', allGameIds);
 
         if (statsError && statsError.code !== '42P01') {
-          console.error('Error deleting game_stats:', statsError);
+          logger.error('Error deleting game_stats:', statsError);
           throw new Error(`Failed to delete game_stats: ${statsError.message}`);
         }
-        console.log('🗑️ Deleted game_stats');
+        logger.debug('🗑️ Deleted game_stats');
 
         // 2. Delete game_substitutions (now that RLS policy allows organizer DELETE)
-        console.log('🗑️ Deleting game_substitutions with organizer DELETE policy...');
+        logger.debug('🗑️ Deleting game_substitutions with organizer DELETE policy...');
         const { error: substitutionsError } = await supabase
           .from('game_substitutions')
           .delete()
           .in('game_id', allGameIds);
 
         if (substitutionsError && substitutionsError.code !== '42P01') {
-          console.error('Error deleting game_substitutions:', substitutionsError);
+          logger.error('Error deleting game_substitutions:', substitutionsError);
           throw new Error(`Failed to delete game_substitutions: ${substitutionsError.message}`);
         }
-        console.log('🗑️ Deleted game_substitutions');
+        logger.debug('🗑️ Deleted game_substitutions');
         
         // DIAGNOSTIC: Double-check if any substitutions remain
         const { data: remainingSubs, error: checkRemainingError } = await supabase
@@ -287,9 +288,9 @@ export class TournamentService {
           .in('game_id', allGameIds);
         
         if (!checkRemainingError && remainingSubs && remainingSubs.length > 0) {
-          console.error('🚨 DIAGNOSTIC: Substitutions still exist after deletion!', remainingSubs);
+          logger.error('🚨 DIAGNOSTIC: Substitutions still exist after deletion!', remainingSubs);
         } else {
-          console.log('✅ DIAGNOSTIC: All substitutions successfully deleted');
+          logger.debug('✅ DIAGNOSTIC: All substitutions successfully deleted');
         }
 
         // 3. Delete game_timeouts (NEW - this was missing!)
@@ -299,10 +300,10 @@ export class TournamentService {
           .in('game_id', allGameIds);
 
         if (timeoutsError && timeoutsError.code !== '42P01') {
-          console.error('Error deleting game_timeouts:', timeoutsError);
+          logger.error('Error deleting game_timeouts:', timeoutsError);
           throw new Error(`Failed to delete game_timeouts: ${timeoutsError.message}`);
         }
-        console.log('🗑️ Deleted game_timeouts');
+        logger.debug('🗑️ Deleted game_timeouts');
 
         // 4. Delete legacy stats table (if exists) - uses match_id column
         const { error: legacyStatsError } = await supabase
@@ -311,10 +312,10 @@ export class TournamentService {
           .in('match_id', allGameIds);
 
         if (legacyStatsError && legacyStatsError.code !== '42P01') {
-          console.error('Error deleting legacy stats:', legacyStatsError);
+          logger.error('Error deleting legacy stats:', legacyStatsError);
           throw new Error(`Failed to delete legacy stats: ${legacyStatsError.message}`);
         }
-        console.log('🗑️ Deleted legacy stats');
+        logger.debug('🗑️ Deleted legacy stats');
       }
 
       // Delete games (now should work since all references are gone)
@@ -324,10 +325,10 @@ export class TournamentService {
         .eq('tournament_id', id);
 
       if (deleteGamesError) {
-        console.error('Error deleting games:', deleteGamesError);
+        logger.error('Error deleting games:', deleteGamesError);
         throw new Error(`Failed to delete games: ${deleteGamesError.message}`);
       }
-      console.log('🗑️ Deleted games');
+      logger.debug('🗑️ Deleted games');
 
       // Step 5: Delete teams
       if (teamIds.length > 0) {
@@ -337,10 +338,10 @@ export class TournamentService {
           .eq('tournament_id', id);
 
         if (deleteTeamsError) {
-          console.error('Error deleting teams:', deleteTeamsError);
+          logger.error('Error deleting teams:', deleteTeamsError);
           throw new Error(`Failed to delete teams: ${deleteTeamsError.message}`);
         }
-        console.log('🗑️ Deleted teams');
+        logger.debug('🗑️ Deleted teams');
       }
 
       // Step 6: Finally delete the tournament
@@ -350,13 +351,13 @@ export class TournamentService {
         .eq('id', id);
 
       if (deleteTournamentError) {
-        console.error('Error deleting tournament:', deleteTournamentError);
+        logger.error('Error deleting tournament:', deleteTournamentError);
         throw new Error(`Failed to delete tournament: ${deleteTournamentError.message}`);
       }
 
-      console.log('✅ Tournament deletion completed successfully');
+      logger.debug('✅ Tournament deletion completed successfully');
     } catch (error) {
-      console.error('Error in tournament deletion process:', error);
+      logger.error('Error in tournament deletion process:', error);
       throw error instanceof Error ? error : new Error('Failed to delete tournament');
     }
   }
@@ -379,7 +380,7 @@ export class TournamentService {
           // No rows returned
           return null;
         }
-        console.error('Supabase error getting tournament:', error);
+        logger.error('Supabase error getting tournament:', error);
         throw new Error(`Failed to get tournament: ${error.message}`);
       }
 
@@ -412,7 +413,7 @@ export class TournamentService {
         logo: tournament.logo || undefined,
       };
     } catch (error) {
-      console.error('Error getting tournament:', error);
+      logger.error('Error getting tournament:', error);
       throw error instanceof Error ? error : new Error('Failed to get tournament');
     }
   }
@@ -431,7 +432,7 @@ export class TournamentService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Supabase error getting tournaments:', error);
+        logger.error('Supabase error getting tournaments:', error);
         throw new Error(`Failed to get tournaments: ${error.message}`);
       }
 
@@ -466,7 +467,7 @@ export class TournamentService {
 
       return mappedTournaments;
     } catch (error) {
-      console.error('Error getting tournaments by organizer:', error);
+      logger.error('Error getting tournaments by organizer:', error);
       throw error instanceof Error ? error : new Error('Failed to get tournaments');
     }
   }
@@ -612,7 +613,7 @@ export class TeamService {
         .single();
 
       if (error) {
-        console.error('Supabase error creating team:', error);
+        logger.error('Supabase error creating team:', error);
         throw new Error(`Failed to create team: ${error.message}`);
       }
 
@@ -643,14 +644,14 @@ export class TeamService {
         createdAt: new Date().toISOString(), // Default since created_at doesn't exist in teams table
       };
     } catch (error) {
-      console.error('Error creating team:', error);
+      logger.error('Error creating team:', error);
       throw error instanceof Error ? error : new Error('Failed to create team');
     }
   }
 
   static async deleteTeam(teamId: string): Promise<void> {
     try {
-      console.log('🔍 TeamService: Deleting team:', teamId);
+      logger.debug('🔍 TeamService: Deleting team:', teamId);
       
       // First, get the team to verify it's an organizer team and get tournament info
       const { data: teamData, error: teamFetchError } = await supabase
@@ -660,7 +661,7 @@ export class TeamService {
         .single();
 
       if (teamFetchError) {
-        console.error('❌ TeamService: Error fetching team for deletion:', teamFetchError);
+        logger.error('❌ TeamService: Error fetching team for deletion:', teamFetchError);
         throw new Error(`Failed to fetch team: ${teamFetchError.message}`);
       }
 
@@ -680,7 +681,7 @@ export class TeamService {
         .in('status', ['in_progress', 'scheduled']);
 
       if (gamesError) {
-        console.error('❌ TeamService: Error checking games:', gamesError);
+        logger.error('❌ TeamService: Error checking games:', gamesError);
         throw new Error(`Failed to check team games: ${gamesError.message}`);
       }
 
@@ -701,7 +702,7 @@ export class TeamService {
         .eq('team_id', teamId);
 
       if (teamPlayersError) {
-        console.error('❌ TeamService: Error deleting team players:', teamPlayersError);
+        logger.error('❌ TeamService: Error deleting team players:', teamPlayersError);
         throw new Error(`Failed to delete team players: ${teamPlayersError.message}`);
       }
 
@@ -712,7 +713,7 @@ export class TeamService {
         .eq('id', teamId);
 
       if (deleteError) {
-        console.error('❌ TeamService: Error deleting team:', deleteError);
+        logger.error('❌ TeamService: Error deleting team:', deleteError);
         throw new Error(`Failed to delete team: ${deleteError.message}`);
       }
 
@@ -721,9 +722,9 @@ export class TeamService {
         await this.updateTournamentTeamCount(teamData.tournament_id);
       }
 
-      console.log('✅ TeamService: Team deleted successfully:', teamId);
+      logger.debug('✅ TeamService: Team deleted successfully:', teamId);
     } catch (error) {
-      console.error('❌ TeamService: Error in deleteTeam:', error);
+      logger.error('❌ TeamService: Error in deleteTeam:', error);
       throw error instanceof Error ? error : new Error('Failed to delete team');
     }
   }
@@ -735,7 +736,7 @@ export class TeamService {
    */
   static async disconnectCoachTeam(teamId: string): Promise<void> {
     try {
-      console.log('🔍 TeamService: Disconnecting coach team:', teamId);
+      logger.debug('🔍 TeamService: Disconnecting coach team:', teamId);
       
       // First, get the team to verify it's a coach team and get tournament info
       const { data: teamData, error: teamFetchError } = await supabase
@@ -745,7 +746,7 @@ export class TeamService {
         .single();
 
       if (teamFetchError) {
-        console.error('❌ TeamService: Error fetching team for disconnect:', teamFetchError);
+        logger.error('❌ TeamService: Error fetching team for disconnect:', teamFetchError);
         throw new Error(`Failed to fetch team: ${teamFetchError.message}`);
       }
 
@@ -765,7 +766,7 @@ export class TeamService {
         .in('status', ['in_progress', 'scheduled']);
 
       if (gamesError) {
-        console.error('❌ TeamService: Error checking games:', gamesError);
+        logger.error('❌ TeamService: Error checking games:', gamesError);
         throw new Error(`Failed to check team games: ${gamesError.message}`);
       }
 
@@ -786,7 +787,7 @@ export class TeamService {
         .eq('id', teamId);
 
       if (updateError) {
-        console.error('❌ TeamService: Error disconnecting team:', updateError);
+        logger.error('❌ TeamService: Error disconnecting team:', updateError);
         throw new Error(`Failed to disconnect team: ${updateError.message}`);
       }
 
@@ -795,16 +796,16 @@ export class TeamService {
         await this.updateTournamentTeamCount(teamData.tournament_id);
       }
 
-      console.log('✅ TeamService: Coach team disconnected successfully:', teamId);
+      logger.debug('✅ TeamService: Coach team disconnected successfully:', teamId);
     } catch (error) {
-      console.error('❌ TeamService: Error in disconnectCoachTeam:', error);
+      logger.error('❌ TeamService: Error in disconnectCoachTeam:', error);
       throw error instanceof Error ? error : new Error('Failed to disconnect team');
     }
   }
 
   static async updateTournamentTeamCount(tournamentId: string): Promise<void> {
     try {
-      console.log('🔍 TeamService: Updating team count for tournament:', tournamentId);
+      logger.debug('🔍 TeamService: Updating team count for tournament:', tournamentId);
       
       // Get the current count of teams for this tournament
       const { data: teams, error: countError } = await supabase
@@ -813,7 +814,7 @@ export class TeamService {
         .eq('tournament_id', tournamentId);
 
       if (countError) {
-        console.error('❌ TeamService: Error counting teams:', countError);
+        logger.error('❌ TeamService: Error counting teams:', countError);
         throw new Error(`Failed to count teams: ${countError.message}`);
       }
 
@@ -826,13 +827,13 @@ export class TeamService {
         .eq('id', tournamentId);
 
       if (updateError) {
-        console.error('❌ TeamService: Error updating tournament team count:', updateError);
+        logger.error('❌ TeamService: Error updating tournament team count:', updateError);
         throw new Error(`Failed to update tournament team count: ${updateError.message}`);
       }
 
-      console.log('✅ TeamService: Tournament team count updated:', { tournamentId, currentTeamsCount });
+      logger.debug('✅ TeamService: Tournament team count updated:', { tournamentId, currentTeamsCount });
     } catch (error) {
-      console.error('❌ TeamService: Error in updateTournamentTeamCount:', error);
+      logger.error('❌ TeamService: Error in updateTournamentTeamCount:', error);
       throw error instanceof Error ? error : new Error('Failed to update tournament team count');
     }
   }
@@ -848,9 +849,9 @@ export class TeamService {
         .eq('id', teamId);
 
       if (error) throw error;
-      console.log('✅ Team approved successfully');
+      logger.debug('✅ Team approved successfully');
     } catch (error) {
-      console.error('❌ Error approving team:', error);
+      logger.error('❌ Error approving team:', error);
       throw error;
     }
   }
@@ -868,9 +869,9 @@ export class TeamService {
         .eq('id', teamId);
 
       if (error) throw error;
-      console.log('✅ Team rejected successfully');
+      logger.debug('✅ Team rejected successfully');
     } catch (error) {
-      console.error('❌ Error rejecting team:', error);
+      logger.error('❌ Error rejecting team:', error);
       throw error;
     }
   }
@@ -891,16 +892,16 @@ export class TeamService {
         .eq('id', teamId);
 
       if (error) throw error;
-      console.log('✅ Team updated successfully');
+      logger.debug('✅ Team updated successfully');
     } catch (error) {
-      console.error('❌ Error updating team:', error);
+      logger.error('❌ Error updating team:', error);
       throw error;
     }
   }
 
   static async getTeamsByTournament(tournamentId: string): Promise<Team[]> {
     try {
-      console.log('🔍 TeamService: Fetching teams for tournament:', tournamentId);
+      logger.debug('🔍 TeamService: Fetching teams for tournament:', tournamentId);
       
       // Query with name column if it exists - includes both regular and custom players
       const { data: teams, error } = await supabase
@@ -938,16 +939,16 @@ export class TeamService {
         .eq('tournament_id', tournamentId);
 
       if (error) {
-        console.error('❌ Supabase error getting teams:', error);
-        console.error('❌ Error details:', error.message, error.details, error.hint);
+        logger.error('❌ Supabase error getting teams:', error);
+        logger.error('❌ Error details:', error.message, error.details, error.hint);
         throw new Error(`Failed to get teams: ${error.message}`);
       }
 
-      console.log('🔍 TeamService: Raw teams data from Supabase:', teams);
-      console.log('🔍 TeamService: Found teams count:', teams?.length || 0);
+      logger.debug('🔍 TeamService: Raw teams data from Supabase:', teams);
+      logger.debug('🔍 TeamService: Found teams count:', teams?.length || 0);
       
       if (!teams || teams.length === 0) {
-        console.log('⚠️ No teams found for tournament:', tournamentId);
+        logger.debug('⚠️ No teams found for tournament:', tournamentId);
         return [];
       }
 
@@ -991,6 +992,7 @@ export class TeamService {
                 isPremium: user.premium_status || false,
                 country: user.country || 'US',
                 createdAt: user.created_at || new Date().toISOString(),
+                is_custom_player: false, // ✅ Explicitly mark as regular player (for View Full Profile visibility)
                 profilePhotoUrl: user.profile_photo_url || undefined,
               };
             });
@@ -1047,7 +1049,7 @@ export class TeamService {
         };
       });
 
-      console.log('🔍 TeamService: Mapped teams with players:', mappedTeams.map(t => ({ 
+      logger.debug('🔍 TeamService: Mapped teams with players:', mappedTeams.map(t => ({ 
         id: t.id, 
         name: t.name, 
         playerCount: t.players.length,
@@ -1056,14 +1058,14 @@ export class TeamService {
       
       return mappedTeams;
     } catch (error) {
-      console.error('Error getting teams by tournament:', error);
+      logger.error('Error getting teams by tournament:', error);
       throw error instanceof Error ? error : new Error('Failed to get teams');
     }
   }
 
   static async getAllPlayers(): Promise<Player[]> {
     try {
-      console.log('🚀 TeamService: Fetching all available players (optimized)');
+      logger.debug('🚀 TeamService: Fetching all available players (optimized)');
       
       // ✅ PHASE 1 OPTIMIZATION: Direct, efficient query with proper error handling
       const { data: playerUsers, error: playersError } = await supabase
@@ -1075,17 +1077,17 @@ export class TeamService {
         .limit(100); // Reasonable limit to prevent performance issues
 
       if (playersError) {
-        console.error('❌ Error fetching players:', playersError.message);
+        logger.error('❌ Error fetching players:', playersError.message);
         // Return empty array instead of falling back to expensive operations
         return [];
       }
 
       if (!playerUsers || playerUsers.length === 0) {
-        console.log('ℹ️ No players found in database');
+        logger.debug('ℹ️ No players found in database');
         return [];
       }
 
-      console.log('✅ Found', playerUsers.length, 'players');
+      logger.debug('✅ Found', playerUsers.length, 'players');
       
       // ✅ PHASE 1 OPTIMIZATION: Efficient mapping without random operations
       const players = playerUsers.map((user, index) => ({
@@ -1102,7 +1104,7 @@ export class TeamService {
 
       return players;
     } catch (error) {
-      console.error('❌ Error getting all players:', error);
+      logger.error('❌ Error getting all players:', error);
       // Return empty array instead of throwing to prevent modal crashes
       return [];
     }
@@ -1110,7 +1112,7 @@ export class TeamService {
 
   static async searchPlayers(query: string, country?: string): Promise<Player[]> {
     try {
-      console.log('🔍 TeamService: Searching players with query:', query);
+      logger.debug('🔍 TeamService: Searching players with query:', query);
       
       const allPlayers = await this.getAllPlayers();
       
@@ -1121,7 +1123,7 @@ export class TeamService {
       );
       
     } catch (error) {
-      console.error('Error searching players:', error);
+      logger.error('Error searching players:', error);
       throw error instanceof Error ? error : new Error('Failed to search players');
     }
   }
@@ -1129,8 +1131,8 @@ export class TeamService {
   // Team-Player Relationship Management
   static async addPlayerToTeam(teamId: string, playerId: string, position?: string, jerseyNumber?: number): Promise<void> {
     try {
-      console.log('🚀 TeamService: Adding player to team (optimized):', { teamId, playerId });
-      console.log('⚠️ Note: position and jerseyNumber are ignored as team_players table only has (team_id, player_id)');
+      logger.debug('🚀 TeamService: Adding player to team (optimized):', { teamId, playerId });
+      logger.debug('⚠️ Note: position and jerseyNumber are ignored as team_players table only has (team_id, player_id)');
       
       // ✅ PHASE 1 OPTIMIZATION: Parallel database calls instead of sequential
       const [teamResult, existingAssignmentsResult] = await Promise.all([
@@ -1158,7 +1160,7 @@ export class TeamService {
 
       // Handle existing assignments check
       if (existingAssignmentsResult.error) {
-        console.error('❌ Error checking existing player assignments:', existingAssignmentsResult.error);
+        logger.error('❌ Error checking existing player assignments:', existingAssignmentsResult.error);
         // Don't block the assignment if check fails (fail open)
       } else if (existingAssignmentsResult.data && existingAssignmentsResult.data.length > 0) {
         // Filter for assignments in the same tournament
@@ -1185,25 +1187,25 @@ export class TeamService {
         });
 
       if (error) {
-        console.error('❌ Supabase error adding player to team:', error);
+        logger.error('❌ Supabase error adding player to team:', error);
         throw new Error(`Failed to add player to team: ${error.message}`);
       }
 
       // ✅ FIX: Invalidate cache so current roster updates immediately
       const cacheKey = CacheKeys.teamPlayers(teamId);
       cache.delete(cacheKey);
-      console.log('🔄 Invalidated team players cache for team:', teamId);
+      logger.debug('🔄 Invalidated team players cache for team:', teamId);
 
-      console.log('✅ Player successfully added to team in database (optimized)');
+      logger.debug('✅ Player successfully added to team in database (optimized)');
     } catch (error) {
-      console.error('Error adding player to team:', error);
+      logger.error('Error adding player to team:', error);
       throw error instanceof Error ? error : new Error('Failed to add player to team');
     }
   }
 
   static async removePlayerFromTeam(teamId: string, playerId: string): Promise<void> {
     try {
-      console.log('🔍 TeamService: Removing player from team:', { teamId, playerId });
+      logger.debug('🔍 TeamService: Removing player from team:', { teamId, playerId });
       
       const { error } = await supabase
         .from('team_players')
@@ -1212,29 +1214,29 @@ export class TeamService {
         .eq('player_id', playerId);
 
       if (error) {
-        console.error('❌ Supabase error removing player from team:', error);
+        logger.error('❌ Supabase error removing player from team:', error);
         throw new Error(`Failed to remove player from team: ${error.message}`);
       }
 
       // ✅ FIX: Invalidate cache so current roster updates immediately
       const cacheKey = CacheKeys.teamPlayers(teamId);
       cache.delete(cacheKey);
-      console.log('🔄 Invalidated team players cache for team:', teamId);
+      logger.debug('🔄 Invalidated team players cache for team:', teamId);
 
-      console.log('✅ Player successfully removed from team in database');
+      logger.debug('✅ Player successfully removed from team in database');
     } catch (error) {
-      console.error('Error removing player from team:', error);
+      logger.error('Error removing player from team:', error);
       throw error instanceof Error ? error : new Error('Failed to remove player from team');
     }
   }
 
   static async getTeamPlayers(teamId: string): Promise<Player[]> {
     try {
-      console.log('🔍 TeamService: Fetching players for team:', teamId);
+      logger.debug('🔍 TeamService: Fetching players for team:', teamId);
       
       // Validate team ID to prevent database timeouts
       if (!teamId || teamId === 'undefined' || teamId === 'null' || teamId.trim() === '') {
-        console.warn('⚠️ TeamService: Invalid team ID provided:', teamId);
+        logger.warn('⚠️ TeamService: Invalid team ID provided:', teamId);
         return [];
       }
 
@@ -1242,7 +1244,7 @@ export class TeamService {
       const cacheKey = CacheKeys.teamPlayers(teamId);
       const cachedPlayers = cache.get<Player[]>(cacheKey);
       if (cachedPlayers) {
-        console.log('✅ TeamService: Returning cached players for team:', teamId, '(count:', cachedPlayers.length, ')');
+        logger.debug('✅ TeamService: Returning cached players for team:', teamId, '(count:', cachedPlayers.length, ')');
         return cachedPlayers;
       }
       
@@ -1253,12 +1255,12 @@ export class TeamService {
         .eq('team_id', teamId);
 
       if (error) {
-        console.error('❌ Supabase error getting team players:', error);
+        logger.error('❌ Supabase error getting team players:', error);
         throw new Error(`Failed to get team players: ${error.message}`);
       }
 
       if (!teamPlayers || teamPlayers.length === 0) {
-        console.log('ℹ️ TeamService: No players found for team:', teamId);
+        logger.debug('ℹ️ TeamService: No players found for team:', teamId);
         return [];
       }
 
@@ -1270,7 +1272,7 @@ export class TeamService {
         .filter(tp => tp.custom_player_id)
         .map(tp => tp.custom_player_id);
 
-      console.log('🔍 TeamService: Found player IDs:', regularPlayerIds.length, 'regular,', customPlayerIds.length, 'custom');
+      logger.debug('🔍 TeamService: Found player IDs:', regularPlayerIds.length, 'regular,', customPlayerIds.length, 'custom');
 
       const allPlayers: Player[] = [];
 
@@ -1285,7 +1287,7 @@ export class TeamService {
           .in('id', limitedPlayerIds);
 
         if (usersError) {
-          console.error('❌ Supabase error getting user data:', usersError);
+          logger.error('❌ Supabase error getting user data:', usersError);
         } else if (users && users.length > 0) {
           // Map regular users to Player interface
           const regularPlayers: Player[] = users.map((user, index) => {
@@ -1322,9 +1324,9 @@ export class TeamService {
           .in('id', limitedCustomIds);
 
         if (customError) {
-          console.error('❌ Supabase error getting custom players:', customError);
+          logger.error('❌ Supabase error getting custom players:', customError);
         } else if (customPlayers && customPlayers.length > 0) {
-          console.log('🔍 TeamService: Found custom players:', customPlayers.length);
+          logger.debug('🔍 TeamService: Found custom players:', customPlayers.length);
           
           // Map custom players to Player interface
           const mappedCustomPlayers: Player[] = customPlayers.map((cp, index) => ({
@@ -1341,15 +1343,15 @@ export class TeamService {
         }
       }
 
-      console.log('🔍 TeamService: Total mapped players:', allPlayers.length, '(' + regularPlayerIds.length + ' regular +', customPlayerIds.length, 'custom)');
+      logger.debug('🔍 TeamService: Total mapped players:', allPlayers.length, '(' + regularPlayerIds.length + ' regular +', customPlayerIds.length, 'custom)');
       
       // Cache the result for future requests
       cache.set(cacheKey, allPlayers, CacheTTL.PLAYER_DATA);
-      console.log('💾 TeamService: Cached players for team:', teamId);
+      logger.debug('💾 TeamService: Cached players for team:', teamId);
       
       return allPlayers;
     } catch (error) {
-      console.error('Error getting team players:', error);
+      logger.error('Error getting team players:', error);
       throw error instanceof Error ? error : new Error('Failed to get team players');
     }
   }
@@ -1357,7 +1359,7 @@ export class TeamService {
   // Get basic team info by ID
   static async getTeamInfo(teamId: string): Promise<{ id: string; name: string; logo?: string } | null> {
     try {
-      console.log('🔍 TeamService: Fetching team info for:', teamId);
+      logger.debug('🔍 TeamService: Fetching team info for:', teamId);
       
       const { data: team, error } = await supabase
         .from('teams')
@@ -1366,18 +1368,18 @@ export class TeamService {
         .single();
 
       if (error) {
-        console.error('❌ Supabase error getting team info:', error);
+        logger.error('❌ Supabase error getting team info:', error);
         return null;
       }
 
-      console.log('🔍 TeamService: Found team info:', team);
+      logger.debug('🔍 TeamService: Found team info:', team);
       return {
         id: team.id,
         name: team.name,
         logo: team.logo_url || undefined,
       };
     } catch (error) {
-      console.error('Error getting team info:', error);
+      logger.error('Error getting team info:', error);
       return null;
     }
   }
@@ -1389,7 +1391,7 @@ export class TeamService {
         return new Map();
       }
 
-      console.log('🔍 TeamService: Batch fetching team info for', teamIds.length, 'teams');
+      logger.debug('🔍 TeamService: Batch fetching team info for', teamIds.length, 'teams');
       
       const { data: teams, error } = await supabase
         .from('teams')
@@ -1397,7 +1399,7 @@ export class TeamService {
         .in('id', teamIds);
 
       if (error) {
-        console.error('❌ Supabase error batch fetching team info:', error);
+        logger.error('❌ Supabase error batch fetching team info:', error);
         return new Map();
       }
 
@@ -1410,10 +1412,10 @@ export class TeamService {
         });
       });
 
-      console.log('🔍 TeamService: Batch fetched', teamMap.size, 'team infos');
+      logger.debug('🔍 TeamService: Batch fetched', teamMap.size, 'team infos');
       return teamMap;
     } catch (error) {
-      console.error('Error batch fetching team info:', error);
+      logger.error('Error batch fetching team info:', error);
       return new Map();
     }
   }
@@ -1422,7 +1424,7 @@ export class TeamService {
   // Only counts approved teams (excludes pending and rejected)
   static async getTeamCountByTournament(tournamentId: string): Promise<number> {
     try {
-      console.log('🔍 TeamService: Getting team count for tournament:', tournamentId);
+      logger.debug('🔍 TeamService: Getting team count for tournament:', tournamentId);
       
       // Count only approved teams (or teams with no approval_status for backwards compatibility)
       const { count, error } = await supabase
@@ -1432,15 +1434,15 @@ export class TeamService {
         .or('approval_status.is.null,approval_status.eq.approved');
 
       if (error) {
-        console.error('❌ Error getting team count:', error);
+        logger.error('❌ Error getting team count:', error);
         return 0;
       }
 
       const teamCount = count || 0;
-      console.log('✅ TeamService: Team count (approved only):', teamCount);
+      logger.debug('✅ TeamService: Team count (approved only):', teamCount);
       return teamCount;
     } catch (error) {
-      console.error('❌ Error in getTeamCountByTournament:', error);
+      logger.error('❌ Error in getTeamCountByTournament:', error);
       return 0;
     }
   }
@@ -1448,7 +1450,7 @@ export class TeamService {
   // Get all stat admins for assignment
   static async getStatAdmins(): Promise<{ id: string; name: string; email: string }[]> {
     try {
-      console.log('🔍 TeamService: Fetching stat admins');
+      logger.debug('🔍 TeamService: Fetching stat admins');
       
       // Try the query with detailed error logging
       const { data: statAdmins, error } = await supabase
@@ -1457,26 +1459,26 @@ export class TeamService {
         .eq('role', 'stat_admin');
 
       if (error) {
-        console.error('❌ Supabase error getting stat admins:', error);
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error details:', error.details);
-        console.error('❌ Error hint:', error.hint);
-        console.error('❌ Error code:', error.code);
+        logger.error('❌ Supabase error getting stat admins:', error);
+        logger.error('❌ Error message:', error.message);
+        logger.error('❌ Error details:', error.details);
+        logger.error('❌ Error hint:', error.hint);
+        logger.error('❌ Error code:', error.code);
         
         // Try alternative approach - get all users and filter (might work if RLS allows broader access)
-        console.log('🔄 Trying alternative approach...');
+        logger.debug('🔄 Trying alternative approach...');
         const { data: allUsers, error: allUsersError } = await supabase
           .from('users')
           .select('id, email, role');
           
         if (allUsersError) {
-          console.error('❌ Alternative approach also failed:', allUsersError);
+          logger.error('❌ Alternative approach also failed:', allUsersError);
           return [];
         }
         
-        console.log('🔍 All users found:', allUsers?.length || 0);
+        logger.debug('🔍 All users found:', allUsers?.length || 0);
         const filteredAdmins = (allUsers || []).filter(user => user.role === 'stat_admin');
-        console.log('🔍 Filtered stat admins:', filteredAdmins.length);
+        logger.debug('🔍 Filtered stat admins:', filteredAdmins.length);
         
         if (filteredAdmins.length > 0) {
           const admins = filteredAdmins.map(admin => ({
@@ -1484,18 +1486,18 @@ export class TeamService {
             name: admin.email.split('@')[0],
             email: admin.email
           }));
-          console.log('🔍 TeamService: Using filtered admins:', admins);
+          logger.debug('🔍 TeamService: Using filtered admins:', admins);
           return admins;
         }
         
         return [];
       }
 
-      console.log('🔍 TeamService: Raw stat admins data:', statAdmins);
-      console.log('🔍 TeamService: Found stat admins count:', statAdmins?.length || 0);
+      logger.debug('🔍 TeamService: Raw stat admins data:', statAdmins);
+      logger.debug('🔍 TeamService: Found stat admins count:', statAdmins?.length || 0);
       
       if (!statAdmins || statAdmins.length === 0) {
-        console.log('⚠️ No stat admins found in database with role filter');
+        logger.debug('⚠️ No stat admins found in database with role filter');
         return [];
       }
       
@@ -1506,10 +1508,10 @@ export class TeamService {
         email: admin.email
       }));
 
-      console.log('🔍 TeamService: Mapped stat admins:', admins);
+      logger.debug('🔍 TeamService: Mapped stat admins:', admins);
       return admins;
     } catch (error) {
-      console.error('Error getting stat admins:', error);
+      logger.error('Error getting stat admins:', error);
       return [];
     }
   }
@@ -1517,7 +1519,7 @@ export class TeamService {
   // Get stat admins assigned to games in a specific tournament
   static async getTournamentStatAdmins(tournamentId: string): Promise<string[]> {
     try {
-      console.log('🔍 TeamService: Fetching stat admins for tournament:', tournamentId);
+      logger.debug('🔍 TeamService: Fetching stat admins for tournament:', tournamentId);
       
       const { data: games, error } = await supabase
         .from('games')
@@ -1526,7 +1528,7 @@ export class TeamService {
         .not('stat_admin_id', 'is', null);
 
       if (error) {
-        console.error('❌ Supabase error getting tournament stat admins:', error);
+        logger.error('❌ Supabase error getting tournament stat admins:', error);
         return [];
       }
 
@@ -1537,10 +1539,10 @@ export class TeamService {
           .filter(id => id !== null)
       )];
 
-      console.log('🔍 TeamService: Found stat admins for tournament:', statAdminIds.length, 'unique admins');
+      logger.debug('🔍 TeamService: Found stat admins for tournament:', statAdminIds.length, 'unique admins');
       return statAdminIds;
     } catch (error) {
-      console.error('Error getting tournament stat admins:', error);
+      logger.error('Error getting tournament stat admins:', error);
       return [];
     }
   }
@@ -1548,8 +1550,8 @@ export class TeamService {
   // Update stat admin assignments for all games in a tournament
   static async updateTournamentStatAdmins(tournamentId: string, statAdminIds: string[]): Promise<boolean> {
     try {
-      console.log('🔍 TeamService: Updating stat admin assignments for tournament:', tournamentId);
-      console.log('🔍 TeamService: New assignments:', statAdminIds);
+      logger.debug('🔍 TeamService: Updating stat admin assignments for tournament:', tournamentId);
+      logger.debug('🔍 TeamService: New assignments:', statAdminIds);
 
       // Get all games for this tournament
       const { data: games, error: gamesError } = await supabase
@@ -1558,12 +1560,12 @@ export class TeamService {
         .eq('tournament_id', tournamentId);
 
       if (gamesError) {
-        console.error('❌ Error fetching tournament games:', gamesError);
+        logger.error('❌ Error fetching tournament games:', gamesError);
         return false;
       }
 
       if (!games || games.length === 0) {
-        console.log('ℹ️ No games found for tournament, assignments saved for when games are created');
+        logger.debug('ℹ️ No games found for tournament, assignments saved for when games are created');
         return true;
       }
 
@@ -1575,11 +1577,11 @@ export class TeamService {
           .eq('tournament_id', tournamentId);
 
         if (clearError) {
-          console.error('❌ Error clearing stat admin assignments:', clearError);
+          logger.error('❌ Error clearing stat admin assignments:', clearError);
           return false;
         }
 
-        console.log('✅ Cleared all stat admin assignments for tournament');
+        logger.debug('✅ Cleared all stat admin assignments for tournament');
         return true;
       }
 
@@ -1599,19 +1601,19 @@ export class TeamService {
       const hasErrors = results.some(result => result.error);
 
       if (hasErrors) {
-        console.error('❌ Some stat admin assignments failed');
+        logger.error('❌ Some stat admin assignments failed');
         results.forEach((result, index) => {
           if (result.error) {
-            console.error(`❌ Game ${games[index].id}:`, result.error);
+            logger.error(`❌ Game ${games[index].id}:`, result.error);
           }
         });
         return false;
       }
 
-      console.log('✅ Successfully updated stat admin assignments for tournament');
+      logger.debug('✅ Successfully updated stat admin assignments for tournament');
       return true;
     } catch (error) {
-      console.error('Error updating tournament stat admins:', error);
+      logger.error('Error updating tournament stat admins:', error);
       return false;
     }
   }
@@ -1626,7 +1628,7 @@ export class TeamService {
     jerseyNumber?: number;
   }): Promise<boolean> {
     try {
-      console.log('🔍 TeamService: Updating player in users table:', playerId, updates);
+      logger.debug('🔍 TeamService: Updating player in users table:', playerId, updates);
 
       const { error } = await supabase
         .from('users')
@@ -1638,14 +1640,14 @@ export class TeamService {
         .eq('id', playerId);
 
       if (error) {
-        console.error('❌ TeamService: Error updating player:', error);
+        logger.error('❌ TeamService: Error updating player:', error);
         throw new Error(`Failed to update player: ${error.message}`);
       }
 
-      console.log('✅ TeamService: Player updated successfully in users table');
+      logger.debug('✅ TeamService: Player updated successfully in users table');
       return true;
     } catch (error) {
-      console.error('❌ TeamService: Error in updatePlayer:', error);
+      logger.error('❌ TeamService: Error in updatePlayer:', error);
       return false;
     }
   }

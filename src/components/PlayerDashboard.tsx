@@ -40,6 +40,10 @@ const defaultPlayerData = {
   location: "",
   profilePhoto: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop&crop=faces",
   posePhoto: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=600&fit=crop&crop=faces",
+  bio: "",
+  school: "",
+  graduationYear: "",
+  isPublicProfile: true, // ✅ Default to public
   seasonAverages: {
     rebounds: 0,
     assists: 0,
@@ -152,6 +156,10 @@ export function PlayerDashboard() {
         country: updatedData.location || null, // Map 'location' field to DB 'country' column
         profile_photo_url: updatedData.profilePhoto || null,
         pose_photo_url: updatedData.posePhoto || null,
+        bio: updatedData.bio || null,
+        is_public_profile: updatedData.isPublicProfile ?? true, // ✅ Public profile toggle
+        // school: updatedData.school || null, // TODO: Add column to Supabase first
+        // graduation_year: updatedData.graduationYear || null, // TODO: Add column to Supabase first
       };
       
       const { data, error } = await supabase!
@@ -204,21 +212,29 @@ export function PlayerDashboard() {
         return `${weight} lbs`;
       };
       
+      // Cast height/weight to number for formatters (they're stored as numbers in DB)
+      const heightNum = typeof data.identity.height === 'number' ? data.identity.height : undefined;
+      const weightNum = typeof data.identity.weight === 'number' ? data.identity.weight : undefined;
+      
       setCurrentPlayerData({
         name: data.identity.name || '',
         jerseyNumber: String(data.identity.jerseyNumber || ''),
         position: data.identity.position || '',
-        height: formatHeightForDisplay(data.identity.height),
-        weight: formatWeightForDisplay(data.identity.weight),
+        height: formatHeightForDisplay(heightNum),
+        weight: formatWeightForDisplay(weightNum),
         age: data.identity.age || 0,
         team: data.identity.teamName || '',
         location: data.identity.location || '',
         profilePhoto: data.identity.profilePhotoUrl || '',
         posePhoto: data.identity.posePhotoUrl || '',
+        bio: data.identity.bio || '',
+        school: (data.identity as any).school || '', // TODO: Add to PlayerIdentity type when column exists
+        graduationYear: (data.identity as any).graduationYear || '', // TODO: Add to PlayerIdentity type when column exists
+        isPublicProfile: data.identity.isPublicProfile ?? true, // ✅ Default to public if not set
         seasonAverages: {
-          rebounds: data.seasonAverages?.rebounds || 0,
-          assists: data.seasonAverages?.assists || 0,
-          fieldGoalPercent: data.seasonAverages?.fieldGoalPercent || 0
+          rebounds: data.season?.reboundsPerGame || 0,
+          assists: data.season?.assistsPerGame || 0,
+          fieldGoalPercent: data.season?.fieldGoalPct || 0
         },
         careerHigh: {
           points: data.careerHighs?.points || 0,
@@ -227,7 +243,7 @@ export function PlayerDashboard() {
         }
       });
     }
-  }, [data.identity, data.careerHighs, data.seasonAverages]);
+  }, [data.identity, data.careerHighs, data.season]);
 
   // ✅ DEBUG: Log dashboard data for comparison
   useEffect(() => {

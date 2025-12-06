@@ -115,6 +115,7 @@ export const CacheKeys = {
   playerTournaments: (userId: string) => `player_tournaments:${userId}`,
   gameAwards: (gameId: string) => `game_awards:${gameId}`,
   tournamentMatchups: (tournamentId: string, status: string, limit: number) => `tournament_matchups:${tournamentId}:${status}:${limit}`,
+  publicPlayerProfile: (playerId: string) => `public_player_profile:${playerId}`,
 } as const;
 
 // Cache TTL constants (in minutes)
@@ -139,6 +140,7 @@ export const CacheTTL = {
   playerTournaments: 5, // Moderate TTL for player tournament data
   gameAwards: 5, // 5 minutes TTL for game awards
   tournamentMatchups: 3, // 3 minutes TTL for matchup data (balance between freshness and performance)
+  publicPlayerProfile: 5, // 5 minutes TTL for public player profiles
 } as const;
 
 /**
