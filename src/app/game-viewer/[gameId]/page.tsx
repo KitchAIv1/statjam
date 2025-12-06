@@ -202,8 +202,8 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
             status: game.status || 'scheduled',
             quarter: game.quarter || 1,
             startTime: game.created_at || new Date().toISOString(),
-            gameClockMinutes: game.game_clock_minutes || 10,
-            gameClockSeconds: game.game_clock_seconds || 0,
+            gameClockMinutes: game.game_clock_minutes ?? 0, // ✅ FIX: Use ?? to allow 0 as valid value
+            gameClockSeconds: game.game_clock_seconds ?? 0, // ✅ FIX: Use ?? for consistency
             isClockRunning: game.is_clock_running || false,
             teamAFouls: game.team_a_fouls || 0,
             teamBFouls: game.team_b_fouls || 0,

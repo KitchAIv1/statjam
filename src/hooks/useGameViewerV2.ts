@@ -819,17 +819,18 @@ export function useGameViewerV2(gameId: string): GameViewerData {
 
   // ✅ DEDICATED CLOCK POLLING: Ensures clock updates every 5 seconds regardless of WebSocket status
   // This runs independently of subscriptions and only updates clock fields (lightweight)
+  // ✅ FIX: Poll even when clock is STOPPED to catch quarter transitions
   useEffect(() => {
     if (!gameId || !game) return;
 
-    // Only poll when game is live and clock is running
+    // Poll when game is live (regardless of clock running state)
+    // This ensures quarter transitions and clock edits are received even when paused
     const isLive = game.status?.toLowerCase().includes('live') || 
                   game.status?.toLowerCase().includes('progress') ||
                   game.status?.toLowerCase().includes('overtime');
-    const isClockRunning = game.is_clock_running;
 
-    if (!isLive || !isClockRunning) {
-      return; // Don't poll if game isn't live or clock isn't running
+    if (!isLive) {
+      return; // Only skip polling if game isn't live at all
     }
 
     console.log('⏱️ useGameViewerV2: Starting dedicated clock polling (every 5 seconds)');
@@ -920,7 +921,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       clearInterval(pollInterval);
       console.log('⏱️ useGameViewerV2: Stopped dedicated clock polling');
     };
-  }, [gameId, game?.status, game?.is_clock_running]); // Only re-run if game status or clock running state changes
+  }, [gameId, game?.status]); // ✅ FIX: Removed is_clock_running - poll continuously when game is live
 
   return {
     game,

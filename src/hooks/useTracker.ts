@@ -139,8 +139,33 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     secondsRemaining: 12 * 60 // 12 minutes (will be adjusted based on quarter)
   });
   
-  // ✅ Original quarter length (set at game start, used to validate clock edits)
-  const [originalQuarterLength, setOriginalQuarterLength] = useState(12);
+  // ✅ FIXED: Load quarter length from localStorage IMMEDIATELY on mount
+  // This ensures edits use the correct value before async game data loads
+  // ✅ FIX: Lock to prevent originalQuarterLength from being overwritten after correct initialization
+  const quarterLengthLockedRef = useRef<boolean>(false);
+  
+  const getInitialQuarterLength = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`quarterLength_${initialGameId}`);
+        if (stored) {
+          const parsed = parseInt(stored, 10);
+          if ([5, 6, 8, 10, 12].includes(parsed)) {
+            // ✅ Lock immediately when valid value is found from localStorage
+            quarterLengthLockedRef.current = true;
+            console.log(`🔒 Quarter length locked from localStorage: ${parsed} min`);
+            return parsed;
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load quarter length from localStorage:', error);
+      }
+    }
+    return 12; // Default fallback (not locked - can be updated from DB)
+  };
+  
+  // ✅ Original quarter length (loaded from localStorage immediately, updated when game data loads)
+  const [originalQuarterLength, setOriginalQuarterLength] = useState(getInitialQuarterLength);
   
   // ✅ CRITICAL: Ref to store current clock state for exit handlers (prevents stale closure)
   const clockRef = useRef(clock);
@@ -161,6 +186,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   
   // ✅ FIX: Guard to prevent saving initial hardcoded clock (12 min) before DB data loads
   const gameDataLoadedRef = useRef<boolean>(false);
+  
   // NEW: Shot Clock State
   // ✅ Load visibility preference from localStorage on initialization
   const getInitialShotClockVisibility = () => {
@@ -460,16 +486,22 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             console.log(`✅ Clock initialized: ${clockMinutes}:${clockSeconds.toString().padStart(2, '0')} (${clockIsRunning ? 'RUNNING' : 'STOPPED'})`);
             
             // ✅ Set original quarter length (already calculated above)
-            // If localStorage didn't have a value but clock is valid, save it
-            if (typeof window !== 'undefined') {
-              const stored = localStorage.getItem(storageKey);
-              if (!stored && [5, 6, 8, 10, 12].includes(clockMinutes)) {
-                quarterLen = clockMinutes;
-                localStorage.setItem(storageKey, String(quarterLen));
+            // ✅ FIX: Only update if not locked (prevents overwriting correct localStorage value)
+            if (!quarterLengthLockedRef.current) {
+              // If localStorage didn't have a value but clock is valid, save it
+              if (typeof window !== 'undefined') {
+                const stored = localStorage.getItem(storageKey);
+                if (!stored && [5, 6, 8, 10, 12].includes(clockMinutes)) {
+                  quarterLen = clockMinutes;
+                  localStorage.setItem(storageKey, String(quarterLen));
+                }
               }
+              setOriginalQuarterLength(quarterLen);
+              quarterLengthLockedRef.current = true; // Lock after first valid set
+              console.log(`✅ Original quarter length set and locked: ${quarterLen} min`);
+            } else {
+              console.log(`🔒 Original quarter length already locked, skipping update (current: ${quarterLen} min)`);
             }
-            setOriginalQuarterLength(quarterLen);
-            console.log(`✅ Original quarter length set: ${quarterLen} min`);
             
             // ✅ Mark game data as loaded - prevents saving hardcoded 12 min during mount
             gameDataLoadedRef.current = true;
@@ -777,7 +809,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       const otPeriod = targetQuarter - 4;
       setLastAction(`OT${otPeriod} clock reset (5 minutes)`);
     } else {
-      setLastAction(`Q${targetQuarter} clock reset (12 minutes)`);
+      setLastAction(`Q${targetQuarter} clock reset (${clockMinutes} minutes)`);
     }
     
     // ✅ FIX #3: Sync clock state to database with correct minutes (not always 12)
@@ -955,8 +987,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     }
     
     // ✅ FIX #2: Calculate new clock time BEFORE resetting (prevents race condition)
+    // ✅ FIX: Use originalQuarterLength instead of hardcoded 12 (prevents DB corruption)
     const isOvertime = newQuarter >= 5;
-    const newClockMinutes = isOvertime ? 5 : 12;
+    const newClockMinutes = isOvertime ? 5 : originalQuarterLength;
     const newClockSeconds = 0;
     
     // ✅ Update quarter state
@@ -996,7 +1029,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       const { notify } = await import('@/lib/services/notificationService');
       notify.error('Sync Failed', 'Failed to sync quarter change to database');
     }
-  }, [gameId, resetClock, teamAId, teamBId]);
+  }, [gameId, resetClock, teamAId, teamBId, originalQuarterLength]);
 
   const advanceIfNeeded = useCallback(() => {
     // ✅ FIX #5: Guard against multiple calls - only advance if clock reaches 0
