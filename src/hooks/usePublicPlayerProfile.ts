@@ -60,6 +60,8 @@ export function usePublicPlayerProfile(playerId: string) {
           age: identity.age && identity.age > 0 ? identity.age : undefined,
           height: formatHeight(identity.height), weight: formatWeight(identity.weight),
           location: identity.location, profilePhotoUrl: identity.profilePhotoUrl, posePhotoUrl: identity.posePhotoUrl,
+          bio: identity.bio, // ✅ Pass bio/about me to public profile
+          isPublicProfile: identity.isPublicProfile,
         },
         careerStats: {
           ppg: seasonAverages?.pointsPerGame || 0, rpg: seasonAverages?.reboundsPerGame || 0, apg: seasonAverages?.assistsPerGame || 0,

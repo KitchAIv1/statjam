@@ -143,11 +143,7 @@ export function PlayerProfileHero({ identity, careerStats, gamesPlayed }: Player
               value={identity.location && identity.location !== 'N/A' ? getCountryName(identity.location) : undefined}
               placeholder="Add location"
             />
-            <InfoRow 
-              label="BIO" 
-              value={identity.bio ? '✓ Added' : undefined}
-              placeholder="Add bio"
-            />
+            {/* Bio is displayed in the About section below hero, not in compact info */}
           </div>
 
           {/* Far Right: Career Stats Box - Larger, ESPN-style */}
