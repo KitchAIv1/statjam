@@ -53,6 +53,7 @@ interface PrecomputedLeader {
   team_name: string;
   profile_photo_url?: string;
   is_custom_player?: boolean;
+  game_phase?: string;
   games_played: number;
   total_points: number;
   total_rebounds: number;
@@ -85,30 +86,36 @@ interface Game {
   team_b_id: string;
 }
 
+// Game phase type for filtering
+export type LeaderGamePhase = 'all' | 'regular' | 'playoffs' | 'finals';
+
 export class TournamentLeadersService {
   /**
    * Get player leaders for a tournament
    * Fast path: Uses pre-computed tournament_leaders table
    * Fallback: Calculates from game_stats if table is empty
+   * 
+   * @param gamePhase - Optional filter: 'all' (default), 'regular', 'playoffs', 'finals'
    */
   static async getTournamentPlayerLeaders(
     tournamentId: string,
     category: 'points' | 'rebounds' | 'assists' | 'steals' | 'blocks' = 'points',
-    minGames: number = 1
+    minGames: number = 1,
+    gamePhase: LeaderGamePhase = 'all'
   ): Promise<PlayerLeader[]> {
     try {
-      logger.debug('🏆 TournamentLeadersService: Fetching leaders for tournament:', tournamentId);
+      logger.debug('🏆 TournamentLeadersService: Fetching leaders for tournament:', tournamentId, 'phase:', gamePhase);
 
-      // ⚡ FAST PATH: Try pre-computed table first
-      const precomputedLeaders = await this.fetchPrecomputedLeaders(tournamentId, minGames);
+      // ⚡ FAST PATH: Try pre-computed table first (now supports game_phase filtering)
+      const precomputedLeaders = await this.fetchPrecomputedLeaders(tournamentId, minGames, gamePhase);
       if (precomputedLeaders.length > 0) {
-        logger.debug('⚡ TournamentLeadersService: Using pre-computed leaders (fast path)');
+        logger.debug('⚡ TournamentLeadersService: Using pre-computed leaders (fast path), phase:', gamePhase);
         return this.sortLeaders(precomputedLeaders, category);
       }
 
       // 🔄 FALLBACK: Calculate from game_stats (slow path)
-      logger.debug('🔄 TournamentLeadersService: Pre-computed table empty, calculating from game_stats...');
-      return this.calculateLeadersFromGameStats(tournamentId, category, minGames);
+      logger.debug('🔄 TournamentLeadersService: No pre-computed data, calculating from game_stats (phase:', gamePhase, ')');
+      return this.calculateLeadersFromGameStats(tournamentId, category, minGames, gamePhase);
     } catch (error) {
       logger.error('❌ TournamentLeadersService: Error fetching leaders:', error);
       return [];
@@ -117,16 +124,24 @@ export class TournamentLeadersService {
 
   /**
    * ⚡ Fast path: Fetch from pre-computed tournament_leaders table
+   * Now supports filtering by game_phase column
    */
   private static async fetchPrecomputedLeaders(
     tournamentId: string,
-    minGames: number
+    minGames: number,
+    gamePhase: LeaderGamePhase = 'all'
   ): Promise<PlayerLeader[]> {
     try {
+      // Build query filters
+      const filters: Record<string, string> = { 
+        tournament_id: `eq.${tournamentId}`,
+        game_phase: `eq.${gamePhase}`
+      };
+
       const rows = await hybridSupabaseService.query<PrecomputedLeader>(
         'tournament_leaders',
         '*',
-        { tournament_id: `eq.${tournamentId}` }
+        filters
       );
 
       if (!rows || rows.length === 0) return [];
@@ -204,17 +219,27 @@ export class TournamentLeadersService {
 
   /**
    * 🔄 Fallback: Calculate leaders from game_stats (slow path)
+   * Supports optional gamePhase filtering
    */
   private static async calculateLeadersFromGameStats(
     tournamentId: string,
     category: 'points' | 'rebounds' | 'assists' | 'steals' | 'blocks',
-    minGames: number
+    minGames: number,
+    gamePhase: LeaderGamePhase = 'all'
   ): Promise<PlayerLeader[]> {
-    // Fetch all games for this tournament
-    const games = await hybridSupabaseService.query<Game>(
+    // Build query filters
+    const filters: Record<string, string> = { tournament_id: `eq.${tournamentId}` };
+    
+    // Add game_phase filter if not 'all'
+    if (gamePhase !== 'all') {
+      filters.game_phase = `eq.${gamePhase}`;
+    }
+    
+    // Fetch games for this tournament (optionally filtered by phase)
+    const games = await hybridSupabaseService.query<Game & { game_phase?: string }>(
       'games',
-      'id, team_a_id, team_b_id',
-      { tournament_id: `eq.${tournamentId}` }
+      'id, team_a_id, team_b_id, game_phase',
+      filters
     );
 
     if (!games || games.length === 0) {
@@ -334,13 +359,13 @@ export class TournamentLeadersService {
       results.flat().forEach(p => playerInfoMap.set(p.id, { name: p.name || 'Unknown', profilePhotoUrl: p.profile_photo_url, isCustomPlayer: false }));
     }
 
-    // Fetch custom players
+    // Fetch custom players (include profile_photo_url)
     if (customPlayerIds.length > 0) {
       const promises = customPlayerIds.map(id =>
-        hybridSupabaseService.query<{ id: string; name: string }>('custom_players', 'id, name', { id: `eq.${id}` })
+        hybridSupabaseService.query<{ id: string; name: string; profile_photo_url?: string }>('custom_players', 'id, name, profile_photo_url', { id: `eq.${id}` })
       );
       const results = await Promise.all(promises);
-      results.flat().forEach(p => playerInfoMap.set(p.id, { name: p.name || 'Custom Player', isCustomPlayer: true }));
+      results.flat().forEach(p => playerInfoMap.set(p.id, { name: p.name || 'Custom Player', profilePhotoUrl: p.profile_photo_url, isCustomPlayer: true }));
     }
 
     // Convert to leaders array

@@ -8,6 +8,7 @@ import { prefetchPlayerProfile } from '@/lib/services/prefetchService';
 
 export type PerMode = 'per_game' | 'totals';
 export type SortColumn = 'pts' | 'reb' | 'ast' | 'stl' | 'blk' | 'tov' | 'gp' | 'fg_pct' | '3p_pct' | 'ft_pct';
+export type GamePhase = 'all' | 'regular' | 'playoffs' | 'finals';
 
 interface LeaderboardRowProps {
   player: PlayerLeader;

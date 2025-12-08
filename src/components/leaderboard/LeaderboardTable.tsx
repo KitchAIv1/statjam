@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { PlayerLeader } from '@/lib/services/tournamentLeadersService';
-import { LeaderboardRow, SortColumn, PerMode } from './LeaderboardRow';
+import { LeaderboardRow, SortColumn, PerMode, GamePhase } from './LeaderboardRow';
 import { LeaderboardFilters } from './LeaderboardFilters';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -14,8 +14,10 @@ interface LeaderboardTableProps {
   initialSortColumn?: SortColumn;
   initialPerMode?: PerMode;
   initialMinGames?: number;
+  initialGamePhase?: GamePhase;
   onPlayerClick: (playerId: string, isCustomPlayer: boolean) => void;
   onFilterChange?: (sortColumn: SortColumn, minGames: number) => void;
+  onGamePhaseChange?: (phase: GamePhase) => void;
 }
 
 const ITEMS_PER_PAGE = 15;
@@ -25,10 +27,11 @@ const LABELS: Record<SortColumn | 'player' | 'team', string> = {
 };
 
 /** LeaderboardTable - NBA-style with sorting/pagination. Mobile: compact, Desktop: full grid. <200 lines */
-export function LeaderboardTable({ leaders, loading, initialSortColumn = 'pts', initialPerMode = 'per_game', initialMinGames = 1, onPlayerClick, onFilterChange }: LeaderboardTableProps) {
+export function LeaderboardTable({ leaders, loading, initialSortColumn = 'pts', initialPerMode = 'per_game', initialMinGames = 1, initialGamePhase = 'all', onPlayerClick, onFilterChange, onGamePhaseChange }: LeaderboardTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>(initialSortColumn);
   const [perMode, setPerMode] = useState<PerMode>(initialPerMode);
   const [minGames, setMinGames] = useState(initialMinGames);
+  const [gamePhase, setGamePhase] = useState<GamePhase>(initialGamePhase);
   const [showAll, setShowAll] = useState(false);
 
   const sortedLeaders = useMemo(() => {
@@ -54,6 +57,7 @@ export function LeaderboardTable({ leaders, loading, initialSortColumn = 'pts', 
   const hasMore = sortedLeaders.length > ITEMS_PER_PAGE;
   const handleSort = (col: SortColumn) => { setSortColumn(col); onFilterChange?.(col, minGames); };
   const handleMin = (g: number) => { setMinGames(g); onFilterChange?.(sortColumn, g); };
+  const handlePhase = (p: GamePhase) => { setGamePhase(p); onGamePhaseChange?.(p); };
 
   const ColHead = ({ col, cls }: { col: SortColumn | 'player' | 'team'; cls?: string }) => {
     const sortable = !['player', 'team'].includes(col);
@@ -68,19 +72,19 @@ export function LeaderboardTable({ leaders, loading, initialSortColumn = 'pts', 
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-white/10 bg-[#121212] overflow-hidden">
+      <div className="rounded-xl border border-white/10 bg-[#121212] overflow-hidden sm:rounded-2xl min-h-[500px]">
         <div className="p-4 border-b border-white/10"><div className="h-8 w-48 bg-white/5 rounded animate-pulse" /></div>
-        <div className="divide-y divide-white/5">{[1,2,3,4,5].map(i => <div key={i} className="h-14 bg-white/5 animate-pulse" />)}</div>
+        <div className="divide-y divide-white/5">{[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(i => <div key={i} className="h-14 bg-white/5 animate-pulse" />)}</div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#121212] overflow-hidden sm:rounded-2xl">
+    <div className="rounded-xl border border-white/10 bg-[#121212] overflow-hidden sm:rounded-2xl min-h-[500px]">
       {/* Filters */}
       <div className="flex flex-col gap-3 p-3 border-b border-white/10 sm:flex-row sm:items-center sm:justify-between sm:p-4">
         <h2 className="text-sm font-semibold text-white sm:text-base">Player Leaders</h2>
-        <LeaderboardFilters sortColumn={sortColumn} onSortColumnChange={handleSort} perMode={perMode} onPerModeChange={setPerMode} minGames={minGames} onMinGamesChange={handleMin} />
+        <LeaderboardFilters sortColumn={sortColumn} onSortColumnChange={handleSort} perMode={perMode} onPerModeChange={setPerMode} minGames={minGames} onMinGamesChange={handleMin} gamePhase={gamePhase} onGamePhaseChange={onGamePhaseChange ? handlePhase : undefined} />
       </div>
       {/* Mobile Header - Scrollable to match row layout */}
       <div className="flex md:hidden bg-white/5 border-b border-white/10">

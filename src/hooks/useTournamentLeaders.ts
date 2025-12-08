@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { TournamentLeadersService, PlayerLeader } from '@/lib/services/tournamentLeadersService';
+import { TournamentLeadersService, PlayerLeader, LeaderGamePhase } from '@/lib/services/tournamentLeadersService';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import { logger } from '@/lib/utils/logger';
 
@@ -13,12 +13,15 @@ interface TournamentLeadersState {
 
 /**
  * ✅ OPTIMIZED: Custom hook for tournament leaders with caching
- * Caches leader data per category and minGames to avoid recalculation
+ * Caches leader data per category, minGames, and gamePhase to avoid recalculation
+ * 
+ * @param gamePhase - Optional filter: 'all' (default), 'regular', 'playoffs', 'finals'
  */
 export function useTournamentLeaders(
   tournamentId: string,
   category: LeaderCategory = 'points',
-  minGames: number = 1
+  minGames: number = 1,
+  gamePhase: LeaderGamePhase = 'all'
 ) {
   const [state, setState] = useState<TournamentLeadersState>({
     leaders: [],
@@ -32,9 +35,11 @@ export function useTournamentLeaders(
       return;
     }
 
+    // ✅ Include gamePhase in cache key for proper separation
+    const cacheKey = `${CacheKeys.tournamentLeaders(tournamentId, category, minGames)}_${gamePhase}`;
+
     // ✅ Check cache first
     if (!skipCache) {
-      const cacheKey = CacheKeys.tournamentLeaders(tournamentId, category, minGames);
       const cachedLeaders = cache.get<PlayerLeader[]>(cacheKey);
       
       if (cachedLeaders) {
@@ -47,15 +52,15 @@ export function useTournamentLeaders(
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      logger.debug('🔍 useTournamentLeaders: Fetching leaders for tournament:', tournamentId, 'category:', category);
+      logger.debug('🔍 useTournamentLeaders: Fetching leaders for tournament:', tournamentId, 'category:', category, 'phase:', gamePhase);
       const leaders = await TournamentLeadersService.getTournamentPlayerLeaders(
         tournamentId,
         category,
-        minGames
+        minGames,
+        gamePhase
       );
 
       // ✅ Cache the result
-      const cacheKey = CacheKeys.tournamentLeaders(tournamentId, category, minGames);
       cache.set(cacheKey, leaders, CacheTTL.tournamentLeaders);
       logger.debug('⚡ useTournamentLeaders: Leaders cached for', CacheTTL.tournamentLeaders, 'minutes');
 
@@ -68,7 +73,7 @@ export function useTournamentLeaders(
         error: error instanceof Error ? error.message : 'Failed to load leaders',
       });
     }
-  }, [tournamentId, category, minGames]);
+  }, [tournamentId, category, minGames, gamePhase]);
 
   useEffect(() => {
     loadLeaders();

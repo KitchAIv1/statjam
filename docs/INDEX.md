@@ -41,6 +41,7 @@
 - **TEAM_FOULS_TIMEOUTS_ANALYSIS.md** - Team fouls and timeouts analysis
 
 ### **2. Development Guides** (`02-development/`)
+- **LEADERS_GAME_PHASE_FILTER_IMPROVEMENT.md** - Leaders tab game phase filter improvement plan (⏳ PENDING)
 - **JANUARY_2025_PLAYER_MANAGEMENT_UPDATES.md** - Complete summary of January 2025 player management updates
 - **CUSTOM_PLAYER_PHOTO_UPLOAD_IMPLEMENTATION.md** - Custom player photo upload feature (✅ COMPLETED)
 - **PLAYER_MANAGEMENT_MODAL_UI_IMPROVEMENTS.md** - Player Management Modal UI/UX improvements

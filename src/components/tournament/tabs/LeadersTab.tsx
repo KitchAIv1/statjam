@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
 import { useTournamentLeaders } from '@/hooks/useTournamentLeaders';
-import { LeaderboardTable, SortColumn } from '@/components/leaderboard';
+import { LeaderboardTable, SortColumn, GamePhase } from '@/components/leaderboard';
 
 interface LeadersTabProps {
   tournamentId: string;
@@ -32,10 +32,11 @@ const SORT_TO_CATEGORY: Record<SortColumn, LeaderCategory> = {
 export function LeadersTab({ tournamentId }: LeadersTabProps) {
   const [selectedCategory, setSelectedCategory] = useState<LeaderCategory>('points');
   const [minGames, setMinGames] = useState(1);
+  const [gamePhase, setGamePhase] = useState<GamePhase>('all');
   const { isOpen, playerId, isCustomPlayer, openModal, closeModal } = usePlayerProfileModal();
 
-  // ✅ OPTIMIZED: Use custom hook with batching and caching
-  const { leaders, loading } = useTournamentLeaders(tournamentId, selectedCategory, minGames);
+  // ✅ OPTIMIZED: Use custom hook with batching and caching (now includes gamePhase)
+  const { leaders, loading } = useTournamentLeaders(tournamentId, selectedCategory, minGames, gamePhase);
 
   // Handle filter changes from LeaderboardTable
   const handleFilterChange = useCallback((sortColumn: SortColumn, games: number) => {
@@ -47,6 +48,11 @@ export function LeadersTab({ tournamentId }: LeadersTabProps) {
       setMinGames(games);
     }
   }, [selectedCategory, minGames]);
+
+  // Handle game phase filter change
+  const handleGamePhaseChange = useCallback((phase: GamePhase) => {
+    setGamePhase(phase);
+  }, []);
 
   // Handle player click
   const handlePlayerClick = useCallback((id: string, isCustom: boolean) => {
@@ -75,8 +81,10 @@ export function LeadersTab({ tournamentId }: LeadersTabProps) {
             initialSortColumn="pts"
             initialPerMode="per_game"
             initialMinGames={minGames}
+            initialGamePhase={gamePhase}
             onPlayerClick={handlePlayerClick}
             onFilterChange={handleFilterChange}
+            onGamePhaseChange={handleGamePhaseChange}
           />
         </TabsContent>
 
