@@ -15,6 +15,8 @@ import { GameService } from '@/lib/services/gameService';
 import { TeamStatsService } from '@/lib/services/teamStatsService';
 import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { cache, CacheTTL } from '@/lib/utils/cache';
+import { supabase } from '@/lib/supabase';
+import { isTournamentWhitelistedForPublicProfiles } from '@/lib/constants/publicProfileWhitelist';
 
 interface PlayerProfileModalProps {
   isOpen: boolean;
@@ -61,6 +63,7 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
   const [imagesLoaded, setImagesLoaded] = useState({ profile: false, pose: false });
   const [gameAwardDetails, setGameAwardDetails] = useState<GameAwardDetails | null>(null);
   const [loadingAwardDetails, setLoadingAwardDetails] = useState(false);
+  const [isWhitelistedCustomPlayer, setIsWhitelistedCustomPlayer] = useState(false);
 
   // Preload images when identity data is available for fast loading
   useEffect(() => {
@@ -110,12 +113,33 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
       setCareerHighs(null);
       setImagesLoaded({ profile: false, pose: false });
       setGameAwardDetails(null);
+      setIsWhitelistedCustomPlayer(false);
       return;
     }
 
     const loadPlayerData = async () => {
       setLoading(true);
+      // Reset whitelist state before checking
+      setIsWhitelistedCustomPlayer(false);
+      
       try {
+        // Check if custom player is in a whitelisted tournament
+        if (isCustomPlayer) {
+          const { data: teamPlayerData } = await supabase
+            .from('team_players')
+            .select('team_id, teams!inner(tournament_id)')
+            .eq('custom_player_id', playerId)
+            .limit(1)
+            .single();
+          
+          if (teamPlayerData) {
+            const tournamentId = (teamPlayerData?.teams as any)?.tournament_id;
+            const isWhitelisted = isTournamentWhitelistedForPublicProfiles(tournamentId);
+            console.log('🔍 Whitelist check:', { playerId: playerId.substring(0, 8), tournamentId, isWhitelisted });
+            setIsWhitelistedCustomPlayer(isWhitelisted);
+          }
+        }
+
         // Load data in parallel for faster loading
         // Pass isCustomPlayer flag to service methods
         const [identityData, seasonData, careerData] = await Promise.all([
@@ -746,8 +770,8 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
             )}
             </div>
             
-            {/* Sticky Footer - View Full Profile Button (only if profile is public) */}
-            {!isAwardView && !isCustomPlayer && identity && identity.isPublicProfile !== false && (
+            {/* Sticky Footer - View Full Profile Button (only if profile is public or whitelisted custom player) */}
+            {!isAwardView && identity && ((!isCustomPlayer && identity.isPublicProfile !== false) || isWhitelistedCustomPlayer) && (
               <div className="shrink-0 px-4 sm:px-6 lg:px-8 py-3 sm:py-4 border-t border-white/10 bg-black/20 backdrop-blur-sm">
                 <TooltipProvider>
                   <Tooltip>

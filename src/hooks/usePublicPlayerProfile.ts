@@ -10,6 +10,7 @@ import { PlayerGameStatsService } from '@/lib/services/playerGameStatsService';
 import { GameAwardsService } from '@/lib/services/gameAwardsService';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import { buildTournamentStats, buildCareerHighs, countAwards, type PublicPlayerProfile, type PublicPlayerIdentity, type TournamentStat, type PlayerAward } from '@/lib/services/publicPlayerProfileService';
+import { ALLOW_UNCLAIMED_PROFILES_TOURNAMENTS } from '@/lib/constants/publicProfileWhitelist';
 
 export type { PublicPlayerProfile, PublicPlayerIdentity, TournamentStat, PlayerAward };
 
@@ -29,15 +30,45 @@ export function usePublicPlayerProfile(playerId: string) {
     setState(prev => ({ ...prev, loading: true, error: null, notFound: false }));
 
     try {
-      const [identity, teamPlayerData, seasonAverages, gameStats, awardsData] = await Promise.all([
-        PlayerDashboardService.getIdentity(playerId, false),
-        supabase.from('team_players').select('team_id, teams!inner(id, name, logo_url)').eq('player_id', playerId).limit(1).single().then(r => r.data),
-        PlayerDashboardService.getSeasonAverages(playerId, false),
-        PlayerGameStatsService.getPlayerGameStats(playerId, false),
-        GameAwardsService.getPlayerAwards(playerId, false),
-      ]);
+      // First, try regular player path
+      let identity = await PlayerDashboardService.getIdentity(playerId, false);
+      let isCustomPlayer = false;
+      let teamPlayerData = await supabase.from('team_players').select('team_id, teams!inner(id, name, logo_url, tournament_id)').eq('player_id', playerId).limit(1).single().then(r => r.data);
 
-      if (!identity?.name || identity.isPublicProfile === false) { setState({ profile: null, loading: false, error: null, notFound: true }); return; }
+      // If regular player not found or not public, check for whitelisted custom player
+      if (!identity?.name || identity.isPublicProfile === false) {
+        // Check if this is a custom player in a whitelisted tournament
+        const customPlayerData = await supabase
+          .from('team_players')
+          .select('custom_player_id, team_id, teams!inner(id, name, logo_url, tournament_id)')
+          .eq('custom_player_id', playerId)
+          .limit(1)
+          .single()
+          .then(r => r.data);
+
+        if (customPlayerData) {
+          const tournamentId = (customPlayerData.teams as any)?.tournament_id;
+          if (tournamentId && ALLOW_UNCLAIMED_PROFILES_TOURNAMENTS.includes(tournamentId)) {
+            // ✅ Whitelisted tournament - fetch custom player identity
+            identity = await PlayerDashboardService.getIdentity(playerId, true);
+            isCustomPlayer = true;
+            teamPlayerData = customPlayerData as any;
+          }
+        }
+
+        // Still not found after whitelist check
+        if (!identity?.name) {
+          setState({ profile: null, loading: false, error: null, notFound: true });
+          return;
+        }
+      }
+
+      // Fetch remaining data (use custom player flag for correct queries)
+      const [seasonAverages, gameStats, awardsData] = await Promise.all([
+        PlayerDashboardService.getSeasonAverages(playerId, isCustomPlayer),
+        PlayerGameStatsService.getPlayerGameStats(playerId, isCustomPlayer),
+        GameAwardsService.getPlayerAwards(playerId, isCustomPlayer),
+      ]);
 
       const team = teamPlayerData?.teams as { name: string; logo_url?: string } | undefined;
       let tournamentStats = buildTournamentStats(gameStats);
