@@ -35,7 +35,8 @@ const PER_MODE_OPTIONS: { value: PerMode; label: string }[] = [
   { value: 'totals', label: 'Totals' },
 ];
 
-const MIN_GAMES_OPTIONS = [1, 2, 3, 5];
+// Min Games filter removed - was competing with Game Phase filter
+// Keeping minGames prop for backward compatibility (defaults to 1)
 
 const GAME_PHASE_OPTIONS: { value: GamePhase; label: string }[] = [
   { value: 'all', label: 'All Games' },
@@ -91,24 +92,6 @@ export function LeaderboardFilters({
               className="text-white text-xs hover:bg-white/10 focus:bg-white/10 focus:text-white"
             >
               {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Min Games Dropdown */}
-      <Select value={String(minGames)} onValueChange={(v) => onMinGamesChange(Number(v))}>
-        <SelectTrigger className="w-20 sm:w-24 h-8 sm:h-9 bg-white/5 border-white/10 text-white text-[10px] sm:text-xs">
-          <SelectValue placeholder="Min GP" />
-        </SelectTrigger>
-        <SelectContent className="bg-[#1a1a1a] border-white/10">
-          {MIN_GAMES_OPTIONS.map((games) => (
-            <SelectItem
-              key={games}
-              value={String(games)}
-              className="text-white text-xs hover:bg-white/10 focus:bg-white/10 focus:text-white"
-            >
-              {games}+ GP
             </SelectItem>
           ))}
         </SelectContent>
