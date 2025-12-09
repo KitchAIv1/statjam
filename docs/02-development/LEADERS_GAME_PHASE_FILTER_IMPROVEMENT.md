@@ -141,11 +141,21 @@ Once backend is ready and tested, the `calculateLeadersFromGameStats` fallback c
 ## Status
 
 - [x] Game phase filter UI implemented (temporary fallback)
-- [ ] Backend: Add `game_phase` column
-- [ ] Backend: Update pre-compute trigger
-- [ ] Backend: Re-populate existing data
-- [ ] Frontend: Update to use single code path
-- [ ] Testing: Verify photos show for all filters
+- [x] Backend: Add `game_phase` column ✅ **COMPLETED**
+- [x] Backend: Update pre-compute trigger ✅ **COMPLETED** (SQL function created)
+- [x] Backend: Re-populate existing data ✅ **COMPLETED** (via SQL function)
+- [x] Frontend: Update to use single code path ✅ **COMPLETED**
+- [x] Testing: Verify photos show for all filters ✅ **COMPLETED**
+
+**Status:** ✅ **COMPLETE** - Shipped in v0.17.2
+
+**Implementation Date:** January 2025
+
+**SQL Scripts:** See `docs/sql/` directory:
+- `recompute_tournament_leaders_by_phase.sql` - Main re-compute function
+- `fix_tournament_leaders_constraint_and_recompute.sql` - Constraint fix + execution guide
+- `verify_tournament_leaders_trigger.sql` - Verification queries
+- `verify_fisto_data.sql` - Data integrity checks
 
 ---
 

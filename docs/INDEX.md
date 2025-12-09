@@ -41,7 +41,9 @@
 - **TEAM_FOULS_TIMEOUTS_ANALYSIS.md** - Team fouls and timeouts analysis
 
 ### **2. Development Guides** (`02-development/`)
-- **LEADERS_GAME_PHASE_FILTER_IMPROVEMENT.md** - Leaders tab game phase filter improvement plan (⏳ PENDING)
+- **TOURNAMENT_LEADERS_PHASE_FILTER_OPTIMIZATION.md** - Tournament leaders game phase filter & prefetch optimization (✅ COMPLETED v0.17.2)
+- **LEADERS_GAME_PHASE_FILTER_IMPROVEMENT.md** - Leaders tab game phase filter improvement plan (✅ COMPLETED v0.17.2)
+- **TOURNAMENTS_LIST_PERFORMANCE_OPTIMIZATION.md** - Tournament list page performance optimization (✅ COMPLETED)
 - **JANUARY_2025_PLAYER_MANAGEMENT_UPDATES.md** - Complete summary of January 2025 player management updates
 - **CUSTOM_PLAYER_PHOTO_UPLOAD_IMPLEMENTATION.md** - Custom player photo upload feature (✅ COMPLETED)
 - **PLAYER_MANAGEMENT_MODAL_UI_IMPROVEMENTS.md** - Player Management Modal UI/UX improvements
@@ -102,6 +104,12 @@
 - **RLS_FINAL_EXECUTION_PLAN.md** - RLS execution plan
 - **RLS_POLICIES.md** - RLS policies documentation
 - **SUPABASE_EMAIL_TEMPLATES_SETUP_GUIDE.md** - Email templates setup
+
+### **10. SQL Scripts** (`sql/`)
+- **recompute_tournament_leaders_by_phase.sql** - Re-compute tournament leaders with per-phase breakdown (v0.17.2)
+- **fix_tournament_leaders_constraint_and_recompute.sql** - Fix unique constraint + execution guide (v0.17.2)
+- **verify_tournament_leaders_trigger.sql** - Verification queries for triggers and functions (v0.17.2)
+- **verify_fisto_data.sql** - Data integrity verification queries (v0.17.2)
 
 ### **7. Troubleshooting** (`06-troubleshooting/`)
 - **AUTH_DEBUGGING.sql** - Auth debugging queries
@@ -193,6 +201,7 @@
 **Status**: ✅ Complete and Current
 
 ### **Recent Updates (January 2025)**
+- ✅ **v0.17.2**: Leaders tab game phase filter + comprehensive prefetch optimization
 - ✅ Custom player photo upload feature completed
 - ✅ Player Management Modal UI improvements
 - ✅ Global focus outline removal

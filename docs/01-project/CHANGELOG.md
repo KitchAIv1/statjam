@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.2] - 2025-01-XX
+
+### ⚡ **Leaders Tab Game Phase Filter & Comprehensive Prefetch Optimization**
+
+#### Game Phase Filter Implementation
+- **NEW**: Game phase filter in Leaders tab (All Games, Regular Season, Playoffs, Finals)
+- **FIXED**: "All Games" filter now correctly aggregates stats from all phases including Finals
+- **FIXED**: Removed "Min Games" filter that was competing with Game Phase filter
+- **ENHANCED**: All filter combinations now display player photos consistently
+- **Backend**: Added `game_phase` column to `tournament_leaders` table with proper indexing
+- **Backend**: Created SQL function to recompute tournament leaders with per-phase breakdown
+- **Backend**: Updated unique constraint to allow multiple rows per player per phase
+- **Impact**: Users can now filter leaderboards by game phase with accurate stats and photos
+
+#### Tournament Page Prefetch Optimization
+- **NEW**: Comprehensive prefetching system for all major tournament tabs
+  - **Leaders Tab**: Prefetches 20 filter combinations (4 phases × 5 categories) in parallel
+  - **Players Tab**: Prefetches team rosters with player data
+  - **Schedule Tab**: Prefetches games with enriched team information
+  - **Standings Tab**: Prefetches W-L records and point differentials
+- **ENHANCED**: All tabs now load instantly after initial page load (~24 parallel background requests)
+- **Performance**: Eliminated loading delays when switching between tabs and filters
+- **Impact**: Significantly improved user experience with instant tab switching
+
+#### Service Layer Improvements
+- **ENHANCED**: `TournamentLeadersService` simplified to fetch by `game_phase` directly (removed client-side aggregation)
+- **ENHANCED**: Converted `console.log` to production-safe logger in `useTournamentLeaders` hook
+- **FIXED**: Fixed double-counting issue where "All Games" was aggregating pre-computed 'all' rows
+
+#### SQL Documentation & Tools
+- **NEW**: SQL verification scripts for tournament leaders debugging
+  - `verify_tournament_leaders_trigger.sql` - Check triggers and functions
+  - `verify_fisto_data.sql` - Verify data integrity for specific players
+- **NEW**: SQL migration scripts for backend team
+  - `recompute_tournament_leaders_by_phase.sql` - Re-compute function with per-phase breakdown
+  - `fix_tournament_leaders_constraint_and_recompute.sql` - Constraint fix + execution guide
+
+#### Technical Details
+- **Files Modified**:
+  - `src/lib/services/tournamentLeadersService.ts` - Simplified to fetch by game_phase directly
+  - `src/hooks/useTournamentLeaders.ts` - Production-safe logging
+  - `src/components/tournament/TournamentPageShell.tsx` - Comprehensive prefetch system
+  - `src/components/leaderboard/LeaderboardFilters.tsx` - Removed Min Games filter
+  - `src/components/tournament/tabs/LeadersTab.tsx` - Integrated game phase filter
+- **Files Created**:
+  - `docs/sql/recompute_tournament_leaders_by_phase.sql` - Backend migration script
+  - `docs/sql/fix_tournament_leaders_constraint_and_recompute.sql` - Constraint fix guide
+  - `docs/sql/verify_tournament_leaders_trigger.sql` - Verification queries
+  - `docs/sql/verify_fisto_data.sql` - Data integrity checks
+- **Performance**: 
+  - First tab load: Same (network request)
+  - Subsequent tab/filter switches: **Instant** (from cache)
+  - Parallel prefetch: ~24 requests fire simultaneously on page load
+- **Breaking Changes**: None
+- **Database Changes**: 
+  - Added `game_phase` column to `tournament_leaders` table
+  - Updated unique constraint to include `game_phase`
+  - Requires running SQL migration scripts (see `docs/sql/`)
+
+---
+
 ## [0.17.1] - 2025-12-04
 
 ### 🎨 **Tournament Overview UI Improvements & Photo Display Fixes**
