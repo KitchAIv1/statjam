@@ -19,6 +19,11 @@ import { PlayersTab } from './tabs/PlayersTab';
 import { LiveGamesTab } from './tabs/LiveGamesTab';
 import { MediaTab } from './tabs/MediaTab';
 import { InfoTab } from './tabs/InfoTab';
+import { TournamentLeadersService } from '@/lib/services/tournamentLeadersService';
+import { TeamService } from '@/lib/services/tournamentService';
+import { GameService } from '@/lib/services/gameService';
+import { TournamentStandingsService } from '@/lib/services/tournamentStandingsService';
+import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 
 const TABS = [
   'overview',
@@ -170,6 +175,99 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
       behavior: 'smooth'
     });
   }, [activeTab]);
+
+  // ✅ Prefetch Leaders data in background for instant tab load
+  // Prefetch ALL game phases AND categories in parallel so ALL filter switches are instant
+  useEffect(() => {
+    const tournamentId = data.tournament.id;
+    if (!tournamentId) return;
+
+    const phases = ['all', 'regular', 'playoffs', 'finals'] as const;
+    const categories = ['points', 'rebounds', 'assists', 'steals', 'blocks'] as const;
+    
+    // Prefetch all combinations (phases × categories = 20 requests, all parallel)
+    phases.forEach(phase => {
+      categories.forEach(category => {
+        const cacheKey = `${CacheKeys.tournamentLeaders(tournamentId, category, 1)}_${phase}`;
+        if (cache.get(cacheKey)) return; // Skip if already cached
+
+        // Prefetch in background (silent, non-blocking)
+        TournamentLeadersService.getTournamentPlayerLeaders(tournamentId, category, 1, phase)
+          .then(leaders => {
+            cache.set(cacheKey, leaders, CacheTTL.tournamentLeaders);
+          })
+          .catch(() => {}); // Silently ignore errors
+      });
+    });
+  }, [data.tournament.id]);
+
+  // ✅ Prefetch Teams/Players data for instant Players tab load
+  useEffect(() => {
+    const tournamentId = data.tournament.id;
+    if (!tournamentId) return;
+
+    const cacheKey = CacheKeys.tournamentTeams(tournamentId);
+    if (cache.get(cacheKey)) return; // Skip if already cached
+
+    // Prefetch teams with players in background
+    TeamService.getTeamsByTournament(tournamentId)
+      .then(teams => {
+        cache.set(cacheKey, teams, CacheTTL.tournamentTeams);
+      })
+      .catch(() => {}); // Silently ignore errors
+  }, [data.tournament.id]);
+
+  // ✅ Prefetch Schedule data for instant Schedule tab load
+  useEffect(() => {
+    const tournamentId = data.tournament.id;
+    if (!tournamentId) return;
+
+    const cacheKey = CacheKeys.tournamentSchedule(tournamentId);
+    if (cache.get(cacheKey)) return; // Skip if already cached
+
+    // Prefetch games and enrich with team info (matches useScheduleData logic)
+    (async () => {
+      try {
+        const games = await GameService.getGamesByTournament(tournamentId);
+        if (games.length === 0) return;
+
+        // Collect unique team IDs and batch fetch team info
+        const teamIds = new Set<string>();
+        games.forEach(game => {
+          if (game.team_a_id) teamIds.add(game.team_a_id);
+          if (game.team_b_id) teamIds.add(game.team_b_id);
+        });
+        const teamInfoMap = await TeamService.getBatchTeamInfo(Array.from(teamIds));
+
+        // Enrich games with team info
+        const enrichedGames = games.map(game => ({
+          ...game,
+          teamALogo: game.team_a_id ? teamInfoMap.get(game.team_a_id)?.logo : undefined,
+          teamBLogo: game.team_b_id ? teamInfoMap.get(game.team_b_id)?.logo : undefined,
+          teamAName: game.team_a_id ? teamInfoMap.get(game.team_a_id)?.name : undefined,
+          teamBName: game.team_b_id ? teamInfoMap.get(game.team_b_id)?.name : undefined,
+        }));
+
+        cache.set(cacheKey, enrichedGames, CacheTTL.tournamentSchedule);
+      } catch {} // Silently ignore errors
+    })();
+  }, [data.tournament.id]);
+
+  // ✅ Prefetch Standings data for instant Standings tab load
+  useEffect(() => {
+    const tournamentId = data.tournament.id;
+    if (!tournamentId) return;
+
+    const cacheKey = CacheKeys.tournamentStandings(tournamentId);
+    if (cache.get(cacheKey)) return; // Skip if already cached
+
+    // Prefetch standings in background
+    TournamentStandingsService.getTournamentStandings(tournamentId)
+      .then(standings => {
+        cache.set(cacheKey, standings, CacheTTL.tournamentStandings);
+      })
+      .catch(() => {}); // Silently ignore errors
+  }, [data.tournament.id]);
 
   const handleSignIn = () => {
     router.push('/auth?mode=signin');

@@ -37,13 +37,14 @@ export function useTournamentLeaders(
 
     // ✅ Include gamePhase in cache key for proper separation
     const cacheKey = `${CacheKeys.tournamentLeaders(tournamentId, category, minGames)}_${gamePhase}`;
+    logger.debug('🎯 useTournamentLeaders: gamePhase =', gamePhase, 'cacheKey =', cacheKey);
 
     // ✅ Check cache first
     if (!skipCache) {
       const cachedLeaders = cache.get<PlayerLeader[]>(cacheKey);
       
       if (cachedLeaders) {
-        logger.debug('⚡ useTournamentLeaders: Using cached leaders data');
+        logger.debug('⚡ useTournamentLeaders: Using cached leaders for phase:', gamePhase, 'count:', cachedLeaders.length);
         setState({ leaders: cachedLeaders, loading: false, error: null });
         return;
       }
@@ -66,7 +67,7 @@ export function useTournamentLeaders(
 
       setState({ leaders, loading: false, error: null });
     } catch (error) {
-      console.error('❌ useTournamentLeaders: Error loading leaders:', error);
+      logger.error('❌ useTournamentLeaders: Error loading leaders:', error);
       setState({
         leaders: [],
         loading: false,
