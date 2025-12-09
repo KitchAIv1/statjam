@@ -207,6 +207,29 @@ export class GameService {
     }
   }
 
+  // Get game COUNT by tournament (optimized - header only, no row data)
+  static async getGameCountByTournament(tournamentId: string): Promise<number> {
+    try {
+      logger.debug('🔍 GameService: Getting game count for tournament:', tournamentId);
+      
+      const { count, error } = await supabase
+        .from('games')
+        .select('*', { count: 'exact', head: true })
+        .eq('tournament_id', tournamentId);
+
+      if (error) {
+        logger.error('❌ Error getting game count:', error);
+        return 0;
+      }
+
+      logger.debug('✅ GameService: Game count:', count || 0);
+      return count || 0;
+    } catch (error) {
+      logger.error('❌ Error in getGameCountByTournament:', error);
+      return 0;
+    }
+  }
+
   // Update a game
   static async updateGame(gameId: string, updateData: {
     teamAId?: string;

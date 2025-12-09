@@ -8,6 +8,7 @@ import { TeamService } from '@/lib/services/tournamentService';
 import { GameService } from '@/lib/services/gameService';
 import { TournamentLeadersService } from '@/lib/services/tournamentLeadersService';
 import { useLiveGamesHybrid } from '@/hooks/useLiveGamesHybrid';
+import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import { TournamentsListHeader } from './TournamentsListHeader';
 import { FeaturedTournamentHero } from './FeaturedTournamentHero';
 import { LiveTournamentCard } from './LiveTournamentCard';
@@ -60,6 +61,17 @@ export function TournamentsListPage() {
     let mounted = true;
 
     const loadTournaments = async () => {
+      // ✅ Cache-first: Check cache before loading
+      const cacheKey = CacheKeys.tournamentsList();
+      const cachedData = cache.get<TournamentWithStats[]>(cacheKey);
+      
+      if (cachedData && cachedData.length > 0) {
+        setTournamentsWithStats(cachedData);
+        setTournaments(cachedData);
+        setLoading(false);
+        return; // Use cached data, skip fetch
+      }
+
       try {
         const tournamentData = await hybridSupabaseService.query<Tournament>(
           'tournaments',
@@ -73,9 +85,10 @@ export function TournamentsListPage() {
           const tournamentsWithStatsData = await Promise.all(
             tournamentData.map(async (tournament) => {
               try {
-                const [teamCount, games] = await Promise.all([
+                // ✅ FIX: Use COUNT query instead of fetching all rows
+                const [teamCount, gameCount] = await Promise.all([
                   TeamService.getTeamCountByTournament(tournament.id).catch(() => 0),
-                  GameService.getGamesByTournament(tournament.id).catch(() => [])
+                  GameService.getGameCountByTournament(tournament.id).catch(() => 0)
                 ]);
 
                 let topPlayers: Array<{ id: string; name: string; photoUrl?: string; pointsPerGame: number }> = [];
@@ -100,7 +113,7 @@ export function TournamentsListPage() {
                 return {
                   ...tournament,
                   teamCount: teamCount || 0,
-                  gameCount: games?.length || 0,
+                  gameCount: gameCount || 0,
                   topPlayers,
                   isVerified: false
                 };
@@ -117,6 +130,9 @@ export function TournamentsListPage() {
           );
 
           setTournamentsWithStats(tournamentsWithStatsData);
+          
+          // ✅ Cache the result for faster repeat visits
+          cache.set(cacheKey, tournamentsWithStatsData, CacheTTL.tournamentsList);
         }
       } catch (error) {
         console.error('Failed to load tournaments:', error);
@@ -219,11 +235,12 @@ export function TournamentsListPage() {
   }, [tournamentsWithStats]);
 
   const liveTournaments = useMemo(() => {
+    // ✅ FIX: Only show tournaments with ACTUAL live games (not just 'active' status)
     return tournamentsWithStats.filter(t => {
-      const status = (t.status || '').toLowerCase();
-      return status === 'active' || status === 'live';
+      const actualLiveGameCount = liveGames.filter(g => g.tournament_id === t.id).length;
+      return actualLiveGameCount > 0;
     }).slice(0, 6);
-  }, [tournamentsWithStats]);
+  }, [tournamentsWithStats, liveGames]);
 
   const upcomingTournaments = useMemo(() => {
     const filtered = filteredTournaments.filter(t => {
