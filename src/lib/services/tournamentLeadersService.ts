@@ -124,7 +124,8 @@ export class TournamentLeadersService {
 
   /**
    * ⚡ Fast path: Fetch from pre-computed tournament_leaders table
-   * Now supports filtering by game_phase column
+   * When gamePhase='all': fetches all rows and aggregates by player (sums across phases)
+   * When gamePhase='regular'/'playoffs'/'finals': filters by that phase directly
    */
   private static async fetchPrecomputedLeaders(
     tournamentId: string,
@@ -134,9 +135,14 @@ export class TournamentLeadersService {
     try {
       // Build query filters
       const filters: Record<string, string> = { 
-        tournament_id: `eq.${tournamentId}`,
-        game_phase: `eq.${gamePhase}`
+        tournament_id: `eq.${tournamentId}`
       };
+      
+      // Only add game_phase filter if NOT 'all'
+      // For 'all', we fetch all rows and aggregate client-side
+      if (gamePhase !== 'all') {
+        filters.game_phase = `eq.${gamePhase}`;
+      }
 
       const rows = await hybridSupabaseService.query<PrecomputedLeader>(
         'tournament_leaders',
@@ -146,8 +152,40 @@ export class TournamentLeadersService {
 
       if (!rows || rows.length === 0) return [];
 
+      // If 'all', aggregate rows by player (sum stats across all phases)
+      let processedRows = rows;
+      if (gamePhase === 'all') {
+        const playerMap = new Map<string, PrecomputedLeader>();
+        
+        rows.forEach(row => {
+          const existing = playerMap.get(row.player_id);
+          if (existing) {
+            // Aggregate: sum stats, keep first team/name info
+            existing.games_played += row.games_played;
+            existing.total_points += row.total_points;
+            existing.total_rebounds += row.total_rebounds;
+            existing.total_assists += row.total_assists;
+            existing.total_steals += row.total_steals;
+            existing.total_blocks += row.total_blocks;
+            existing.total_turnovers += row.total_turnovers;
+            existing.field_goals_made += row.field_goals_made;
+            existing.field_goals_attempted += row.field_goals_attempted;
+            existing.three_pointers_made += row.three_pointers_made;
+            existing.three_pointers_attempted += row.three_pointers_attempted;
+            existing.free_throws_made += row.free_throws_made;
+            existing.free_throws_attempted += row.free_throws_attempted;
+          } else {
+            // First occurrence - clone to avoid mutating original
+            playerMap.set(row.player_id, { ...row });
+          }
+        });
+        
+        processedRows = Array.from(playerMap.values());
+        logger.debug('⚡ TournamentLeadersService: Aggregated', rows.length, 'rows into', processedRows.length, 'players for "all" phase');
+      }
+
       // Map database rows to PlayerLeader interface
-      return rows
+      return processedRows
         .filter(row => row.games_played >= minGames)
         .map((row, index) => {
           const gp = row.games_played || 1;
