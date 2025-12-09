@@ -12,9 +12,11 @@
  * STYLING: Dark mode theme matching existing game viewer
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { PlayerStatsRow } from './PlayerStatsRow';
+import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
+import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
 
 export interface TeamStatsTabProps {
   gameId: string;
@@ -43,6 +45,13 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
     error: null
   } : hookData;
   const [isMobile, setIsMobile] = useState(false);
+
+  // ✅ Player Profile Modal - opens when clicking on a player row
+  const { isOpen, playerId, isCustomPlayer, openModal, closeModal } = usePlayerProfileModal();
+
+  const handlePlayerClick = useCallback((id: string, isCustom: boolean) => {
+    openModal(id, { isCustomPlayer: isCustom });
+  }, [openModal]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -160,7 +169,8 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                 player={{
                   id: player.playerId,
                   name: player.playerName,
-                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C' // Simple position assignment
+                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C', // Simple position assignment
+                  isCustomPlayer: player.isCustomPlayer || false // ✅ Use actual flag from stats service
                 }}
                 stats={{
                   minutes: player.minutes,
@@ -179,6 +189,7 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                   freeThrowsMade: player.freeThrowsMade,
                   freeThrowsAttempted: player.freeThrowsAttempted
                 }}
+                onPlayerClick={handlePlayerClick}
               />
             ))
           ) : (
@@ -198,7 +209,8 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                 player={{
                   id: player.playerId,
                   name: player.playerName,
-                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C' // Simple position assignment
+                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C', // Simple position assignment
+                  isCustomPlayer: player.isCustomPlayer || false // ✅ Use actual flag from stats service
                 }}
                 stats={{
                   minutes: player.minutes,
@@ -217,6 +229,7 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                   freeThrowsMade: player.freeThrowsMade,
                   freeThrowsAttempted: player.freeThrowsAttempted
                 }}
+                onPlayerClick={handlePlayerClick}
               />
             ))
           ) : (
@@ -224,6 +237,16 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
           )}
         </div>
       </div>
+
+      {/* Player Profile Modal */}
+      {playerId && (
+        <PlayerProfileModal
+          isOpen={isOpen}
+          onClose={closeModal}
+          playerId={playerId}
+          isCustomPlayer={isCustomPlayer || false}
+        />
+      )}
     </div>
   );
 }

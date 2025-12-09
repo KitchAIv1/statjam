@@ -30,6 +30,7 @@ export interface TeamStats {
 export interface PlayerStats {
   playerId: string;
   playerName: string;
+  isCustomPlayer: boolean; // ✅ Track if player is from custom_players table
   minutes: number;
   points: number;
   rebounds: number;
@@ -836,9 +837,11 @@ export class TeamStatsService {
         ])
       );
 
-      // Add custom players to map
+      // Add custom players to map and track their IDs
+      const customPlayerIds = new Set<string>();
       customPlayersResponse.forEach((p: any) => {
         playersMap.set(p.id, p.name || `Custom Player ${p.id.substring(0, 8)}`);
+        customPlayerIds.add(p.id);
       });
 
       // Build final player list:
@@ -875,6 +878,7 @@ export class TeamStatsService {
         playerStatsMap.set(playerId, {
           playerId,
           playerName: playersMap.get(playerId) || `Player ${playerId.substring(0, 8)}`,
+          isCustomPlayer: customPlayerIds.has(playerId), // ✅ Track custom player status
           minutes: playerMinutesMap.get(playerId) || 0,
           points: 0,
           rebounds: 0,
@@ -975,6 +979,7 @@ export class TeamStatsService {
         return {
           playerId: player.playerId,
           playerName: player.playerName,
+          isCustomPlayer: player.isCustomPlayer, // ✅ Pass through custom player flag
           minutes: player.minutes,
           points: player.points,
           rebounds: player.rebounds,

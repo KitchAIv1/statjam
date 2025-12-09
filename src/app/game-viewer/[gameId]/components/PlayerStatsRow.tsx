@@ -15,6 +15,7 @@ export interface PlayerStatsRowProps {
     id: string;
     name: string;
     position?: string;
+    isCustomPlayer?: boolean;
   };
   stats: {
     minutes: number;
@@ -33,9 +34,11 @@ export interface PlayerStatsRowProps {
     freeThrowsMade?: number;
     freeThrowsAttempted?: number;
   };
+  /** Click handler to open player profile modal */
+  onPlayerClick?: (playerId: string, isCustomPlayer: boolean) => void;
 }
 
-export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
+export function PlayerStatsRow({ player, stats, onPlayerClick }: PlayerStatsRowProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -48,7 +51,13 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  const { name, position } = player;
+  const { id, name, position, isCustomPlayer = false } = player;
+
+  const handleClick = () => {
+    if (onPlayerClick) {
+      onPlayerClick(id, isCustomPlayer);
+    }
+  };
   const { 
     minutes, points, rebounds, assists, steals, blocks, fouls, plusMinus,
     fieldGoalsMade = 0, fieldGoalsAttempted = 0,
@@ -79,12 +88,13 @@ export function PlayerStatsRow({ player, stats }: PlayerStatsRowProps) {
     ...(isMobile ? styles.playerRowMobile : styles.playerRow),
     backgroundColor: isHovered ? '#1f2937' : '#111827', // gray-800 on hover, gray-900 default
     transition: 'background-color 150ms ease-in-out',
-    cursor: 'default'
+    cursor: onPlayerClick ? 'pointer' : 'default'
   };
 
   return (
     <div 
       style={rowStyle}
+      onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
