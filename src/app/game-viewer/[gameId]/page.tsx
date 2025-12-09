@@ -294,6 +294,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               gameId={gameId} 
               teamId={game.team_a_id} 
               teamName={game.team_a_name || 'Team A'}
+              isDark={isDark}
               prefetchedData={!teamAPrefetch.loading && !teamAPrefetch.error ? {
                 teamStats: teamAPrefetch.teamStats,
                 onCourtPlayers: teamAPrefetch.onCourtPlayers,
@@ -308,6 +309,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               gameId={gameId} 
               teamId={game.team_b_id} 
               teamName={game.team_b_name || 'Team B'}
+              isDark={isDark}
               prefetchedData={!teamBPrefetch.loading && !teamBPrefetch.error ? {
                 teamStats: teamBPrefetch.teamStats,
                 onCourtPlayers: teamBPrefetch.onCourtPlayers,

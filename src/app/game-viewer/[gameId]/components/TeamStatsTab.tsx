@@ -22,6 +22,7 @@ export interface TeamStatsTabProps {
   gameId: string;
   teamId: string;
   teamName: string;
+  isDark?: boolean; // ✅ Theme support - matches Game Viewer
   // ✅ PHASE 2: Optional prefetched data for instant rendering
   prefetchedData?: {
     teamStats: any;
@@ -30,7 +31,7 @@ export interface TeamStatsTabProps {
   };
 }
 
-export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamStatsTabProps) {
+export function TeamStatsTab({ gameId, teamId, teamName, isDark = true, prefetchedData }: TeamStatsTabProps) {
   // ✅ PHASE 2: Use prefetched data if available, otherwise fetch normally
   const hookData = useTeamStats(gameId, teamId, { 
     enabled: !prefetchedData // Skip hook if we have prefetched data
@@ -65,22 +66,17 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        {/* ✅ LIGHTWEIGHT SKELETON: 8 elements vs 62 elements (87% reduction) */}
-        <div style={styles.lightweightSkeletonContainer}>
-          {/* Team Summary Skeleton */}
-          <div style={styles.lightweightSkeletonBlock} />
-          
-          {/* On Court Section Skeleton */}
-          <div style={styles.lightweightSkeletonHeader}>On court</div>
-          <div style={styles.lightweightSkeletonBlock} />
-          <div style={styles.lightweightSkeletonBlock} />
-          <div style={styles.lightweightSkeletonBlock} />
-          
-          {/* Bench Section Skeleton */}
-          <div style={styles.lightweightSkeletonHeader}>Bench</div>
-          <div style={styles.lightweightSkeletonBlock} />
-          <div style={styles.lightweightSkeletonBlock} />
+      <div className={isDark ? 'bg-slate-900 text-white' : 'bg-orange-50/30 text-gray-900'}>
+        {/* ✅ LIGHTWEIGHT SKELETON */}
+        <div className="p-5 space-y-4">
+          <div className={`h-20 rounded-lg animate-pulse ${isDark ? 'bg-slate-800' : 'bg-orange-100/50'}`} />
+          <div className={`h-6 w-24 rounded animate-pulse mt-6 ${isDark ? 'bg-slate-700' : 'bg-orange-200/50'}`} />
+          <div className={`h-14 rounded-lg animate-pulse ${isDark ? 'bg-slate-800' : 'bg-orange-100/50'}`} />
+          <div className={`h-14 rounded-lg animate-pulse ${isDark ? 'bg-slate-800' : 'bg-orange-100/50'}`} />
+          <div className={`h-14 rounded-lg animate-pulse ${isDark ? 'bg-slate-800' : 'bg-orange-100/50'}`} />
+          <div className={`h-6 w-24 rounded animate-pulse mt-6 ${isDark ? 'bg-slate-700' : 'bg-orange-200/50'}`} />
+          <div className={`h-14 rounded-lg animate-pulse ${isDark ? 'bg-slate-800' : 'bg-orange-100/50'}`} />
+          <div className={`h-14 rounded-lg animate-pulse ${isDark ? 'bg-slate-800' : 'bg-orange-100/50'}`} />
         </div>
       </div>
     );
@@ -88,80 +84,83 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
 
   if (error) {
     return (
-      <div style={styles.errorContainer}>
-        <div style={styles.errorText}>{error}</div>
+      <div className={`flex items-center justify-center p-10 ${isDark ? 'bg-slate-900' : 'bg-orange-50/30'}`}>
+        <div className="text-red-500 text-sm">{error}</div>
       </div>
     );
   }
 
   if (!teamStats) {
     return (
-      <div style={styles.emptyContainer}>
-        <div style={styles.emptyText}>No team statistics available</div>
+      <div className={`flex items-center justify-center p-10 ${isDark ? 'bg-slate-900' : 'bg-orange-50/30'}`}>
+        <div className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>No team statistics available</div>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <div className={isDark ? 'bg-slate-900 text-white' : 'bg-orange-50/30 text-gray-900'}>
       {/* Team Performance Summary */}
-      <div style={isMobile ? styles.teamSummaryMobile : styles.teamSummary}>
-        <div style={styles.teamHeader}>
-          <div style={styles.teamName}>{teamName}</div>
-          <div style={styles.teamSpread}>▼ 2.5</div>
+      <div className={`p-3 md:p-4 border-b ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-orange-200'}`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{teamName}</div>
+          <div className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>▼ 2.5</div>
         </div>
         
-        <div style={isMobile ? styles.teamStatsGridMobile : styles.teamStatsGrid}>
-          <div style={styles.teamStatItem}>
-            <div style={styles.teamStatValue}>
+        <div className={`grid gap-3 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-7'}`}>
+          <div className="flex flex-col items-center text-center min-w-[50px]">
+            <div className={`text-base font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {teamStats.fieldGoalsMade}/{teamStats.fieldGoalsAttempted}
             </div>
-            <div style={styles.teamStatLabel}>FG</div>
-            <div style={styles.teamStatPercentage}>{teamStats.fieldGoalPercentage}%</div>
+            <div className={`text-xs uppercase tracking-wide mb-0.5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>FG</div>
+            <div className={`text-xs ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>{teamStats.fieldGoalPercentage}%</div>
           </div>
           
-          <div style={styles.teamStatItem}>
-            <div style={styles.teamStatValue}>
+          <div className="flex flex-col items-center text-center min-w-[50px]">
+            <div className={`text-base font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {teamStats.threePointersMade}/{teamStats.threePointersAttempted}
             </div>
-            <div style={styles.teamStatLabel}>3FG</div>
-            <div style={styles.teamStatPercentage}>{teamStats.threePointPercentage}%</div>
+            <div className={`text-xs uppercase tracking-wide mb-0.5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>3FG</div>
+            <div className={`text-xs ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>{teamStats.threePointPercentage}%</div>
           </div>
           
-          <div style={styles.teamStatItem}>
-            <div style={styles.teamStatValue}>
+          <div className="flex flex-col items-center text-center min-w-[50px]">
+            <div className={`text-base font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {teamStats.freeThrowsMade}/{teamStats.freeThrowsAttempted}
             </div>
-            <div style={styles.teamStatLabel}>FTS</div>
-            <div style={styles.teamStatPercentage}>{teamStats.freeThrowPercentage}%</div>
+            <div className={`text-xs uppercase tracking-wide mb-0.5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>FTS</div>
+            <div className={`text-xs ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>{teamStats.freeThrowPercentage}%</div>
           </div>
           
-          <div style={styles.teamStatItem}>
-            <div style={styles.teamStatValue}>{teamStats.turnovers}</div>
-            <div style={styles.teamStatLabel}>TO</div>
+          <div className="flex flex-col items-center text-center min-w-[50px]">
+            <div className={`text-base font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{teamStats.turnovers}</div>
+            <div className={`text-xs uppercase tracking-wide ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>TO</div>
           </div>
           
-          <div style={styles.teamStatItem}>
-            <div style={styles.teamStatValue}>{teamStats.rebounds}</div>
-            <div style={styles.teamStatLabel}>REB</div>
+          <div className="flex flex-col items-center text-center min-w-[50px]">
+            <div className={`text-base font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{teamStats.rebounds}</div>
+            <div className={`text-xs uppercase tracking-wide ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>REB</div>
           </div>
           
-          <div style={styles.teamStatItem}>
-            <div style={styles.teamStatValue}>{teamStats.assists}</div>
-            <div style={styles.teamStatLabel}>AST</div>
+          <div className="flex flex-col items-center text-center min-w-[50px]">
+            <div className={`text-base font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{teamStats.assists}</div>
+            <div className={`text-xs uppercase tracking-wide ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>AST</div>
           </div>
           
-          <div style={styles.teamStatItem}>
-            <div style={styles.teamStatValue}>{teamStats.teamFouls}</div>
-            <div style={styles.teamStatLabel}>FOULS</div>
+          <div className="flex flex-col items-center text-center min-w-[50px]">
+            <div className={`text-base font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{teamStats.teamFouls}</div>
+            <div className={`text-xs uppercase tracking-wide ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>FOULS</div>
           </div>
         </div>
       </div>
 
       {/* On Court Section */}
-      <div style={styles.section}>
-        <div style={styles.sectionHeader}>On court</div>
-        <div style={styles.playersList}>
+      <div className={isDark ? 'bg-slate-900' : 'bg-orange-50/30'}>
+        <div className={`text-sm font-semibold uppercase tracking-wide px-4 py-3 border-b flex items-center gap-2 ${isDark ? 'text-orange-400 bg-slate-800/50 border-slate-700' : 'text-orange-600 bg-white border-orange-200'}`}>
+          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+          On Court
+        </div>
+        <div className={isDark ? 'bg-slate-900' : 'bg-white'}>
           {onCourtPlayers.length > 0 ? (
             onCourtPlayers.map((player, index) => (
               <PlayerStatsRow
@@ -169,8 +168,9 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                 player={{
                   id: player.playerId,
                   name: player.playerName,
-                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C', // Simple position assignment
-                  isCustomPlayer: player.isCustomPlayer || false // ✅ Use actual flag from stats service
+                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C',
+                  isCustomPlayer: player.isCustomPlayer || false,
+                  profilePhotoUrl: player.profilePhotoUrl
                 }}
                 stats={{
                   minutes: player.minutes,
@@ -181,7 +181,6 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                   blocks: player.blocks,
                   fouls: player.fouls,
                   plusMinus: player.plusMinus,
-                  // ✅ NBA-style shooting stats
                   fieldGoalsMade: player.fieldGoalsMade,
                   fieldGoalsAttempted: player.fieldGoalsAttempted,
                   threePointersMade: player.threePointersMade,
@@ -190,18 +189,21 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                   freeThrowsAttempted: player.freeThrowsAttempted
                 }}
                 onPlayerClick={handlePlayerClick}
+                isDark={isDark}
               />
             ))
           ) : (
-            <div style={styles.noPlayersText}>No players on court</div>
+            <div className={`text-sm text-center p-5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>No players on court</div>
           )}
         </div>
       </div>
 
       {/* Bench Section */}
-      <div style={styles.section}>
-        <div style={styles.sectionHeader}>Bench</div>
-        <div style={styles.playersList}>
+      <div className={isDark ? 'bg-slate-900' : 'bg-orange-50/30'}>
+        <div className={`text-sm font-semibold uppercase tracking-wide px-4 py-3 border-b ${isDark ? 'text-slate-300 bg-slate-800/50 border-slate-700' : 'text-gray-600 bg-white border-orange-200'}`}>
+          Bench
+        </div>
+        <div className={isDark ? 'bg-slate-900' : 'bg-white'}>
           {benchPlayers.length > 0 ? (
             benchPlayers.map((player, index) => (
               <PlayerStatsRow
@@ -209,8 +211,9 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                 player={{
                   id: player.playerId,
                   name: player.playerName,
-                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C', // Simple position assignment
-                  isCustomPlayer: player.isCustomPlayer || false // ✅ Use actual flag from stats service
+                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C',
+                  isCustomPlayer: player.isCustomPlayer || false,
+                  profilePhotoUrl: player.profilePhotoUrl
                 }}
                 stats={{
                   minutes: player.minutes,
@@ -221,7 +224,6 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                   blocks: player.blocks,
                   fouls: player.fouls,
                   plusMinus: player.plusMinus,
-                  // ✅ NBA-style shooting stats
                   fieldGoalsMade: player.fieldGoalsMade,
                   fieldGoalsAttempted: player.fieldGoalsAttempted,
                   threePointersMade: player.threePointersMade,
@@ -230,10 +232,11 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
                   freeThrowsAttempted: player.freeThrowsAttempted
                 }}
                 onPlayerClick={handlePlayerClick}
+                isDark={isDark}
               />
             ))
           ) : (
-            <div style={styles.noPlayersText}>No bench players</div>
+            <div className={`text-sm text-center p-5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>No bench players</div>
           )}
         </div>
       </div>
@@ -251,147 +254,4 @@ export function TeamStatsTab({ gameId, teamId, teamName, prefetchedData }: TeamS
   );
 }
 
-const styles = {
-  container: {
-    backgroundColor: '#000000',
-    color: '#ffffff'
-  },
-  errorContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px',
-    backgroundColor: '#000000'
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: '14px'
-  },
-  emptyContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px',
-    backgroundColor: '#000000'
-  },
-  emptyText: {
-    color: '#9ca3af',
-    fontSize: '14px'
-  },
-  teamSummary: {
-    backgroundColor: '#111827', // gray-900
-    padding: '16px',
-    borderBottom: '1px solid #374151' // gray-700
-  },
-  teamSummaryMobile: {
-    backgroundColor: '#111827', // gray-900
-    padding: '12px',
-    borderBottom: '1px solid #374151' // gray-700
-  },
-  teamHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '16px'
-  },
-  teamName: {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: '#ffffff'
-  },
-  teamSpread: {
-    fontSize: '14px',
-    color: '#9ca3af' // gray-400
-  },
-  teamStatsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '16px'
-  },
-  teamStatsGridMobile: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '12px'
-  },
-  teamStatItem: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    minWidth: '50px',
-    textAlign: 'center' as const
-  },
-  teamStatValue: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: '4px'
-  },
-  teamStatLabel: {
-    fontSize: '12px',
-    color: '#9ca3af', // gray-400
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-    marginBottom: '2px'
-  },
-  teamStatPercentage: {
-    fontSize: '12px',
-    color: '#6b7280' // gray-500
-  },
-  section: {
-    backgroundColor: '#000000'
-  },
-  sectionHeader: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#ffffff',
-    padding: '16px 20px',
-    backgroundColor: '#111827', // gray-900
-    borderBottom: '1px solid #374151' // gray-700
-  },
-  playersList: {
-    backgroundColor: '#000000'
-  },
-  noPlayersText: {
-    color: '#9ca3af',
-    fontSize: '14px',
-    padding: '20px',
-    textAlign: 'center' as const
-  },
-  
-  // ✅ SKELETON STYLES - Custom dark theme skeleton matching game viewer
-  // ✅ LIGHTWEIGHT SKELETON STYLES - 87% fewer DOM elements
-  lightweightSkeletonContainer: {
-    padding: '20px'
-  },
-  lightweightSkeletonBlock: {
-    height: '80px',
-    backgroundColor: '#1f2937',
-    borderRadius: '8px',
-    marginBottom: '16px',
-    animation: 'pulse 1.5s ease-in-out infinite'
-  },
-  lightweightSkeletonHeader: {
-    height: '24px',
-    width: '120px',
-    backgroundColor: '#374151',
-    borderRadius: '4px',
-    marginBottom: '12px',
-    marginTop: '24px',
-    animation: 'pulse 1.5s ease-in-out infinite'
-  }
-};
-
-// ✅ Add CSS animations for skeleton loading
-if (typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-  `;
-  if (!document.head.querySelector('style[data-skeleton-animations]')) {
-    style.setAttribute('data-skeleton-animations', 'true');
-    document.head.appendChild(style);
-  }
-}
+// ✅ Styles migrated to Tailwind classes with isDark theme support

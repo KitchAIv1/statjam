@@ -31,6 +31,7 @@ export interface PlayerStats {
   playerId: string;
   playerName: string;
   isCustomPlayer: boolean; // ✅ Track if player is from custom_players table
+  profilePhotoUrl?: string; // ✅ Player photo for UI display
   minutes: number;
   points: number;
   rebounds: number;
@@ -811,17 +812,17 @@ export class TeamStatsService {
 
       console.log(`📊 TeamStatsService: Found ${gameStats.length} stats for team`);
 
-      // Fetch regular player names from users table
+      // Fetch regular player names and photos from users table
       const playersResponse = await this.makeRequest<any>('users', {
-        'select': 'id,name,email',
+        'select': 'id,name,email,profile_photo_url',
         'id': `in.(${playerIds.join(',')})`
       });
 
-      // Fetch custom player names from custom_players table
+      // Fetch custom player names and photos from custom_players table
       let customPlayersResponse: any[] = [];
       try {
         customPlayersResponse = await this.makeAuthenticatedRequest<any>('custom_players', {
-          'select': 'id,name,team_id',
+          'select': 'id,name,team_id,profile_photo_url',
           'team_id': `eq.${teamId}`
         });
         console.log(`📊 TeamStatsService: Found ${customPlayersResponse.length} custom players`);
@@ -829,18 +830,22 @@ export class TeamStatsService {
         console.log('⚠️ TeamStatsService: No custom_players table or no custom players found');
       }
 
-      // Build combined players map
+      // Build combined players map (name) and photos map
       const playersMap = new Map(
         playersResponse.map((p: any) => [
           p.id,
           p.name || p.email?.split('@')[0] || `Player ${p.id.substring(0, 8)}`
         ])
       );
+      const playerPhotosMap = new Map<string, string | undefined>(
+        playersResponse.map((p: any) => [p.id, p.profile_photo_url])
+      );
 
       // Add custom players to map and track their IDs
       const customPlayerIds = new Set<string>();
       customPlayersResponse.forEach((p: any) => {
         playersMap.set(p.id, p.name || `Custom Player ${p.id.substring(0, 8)}`);
+        playerPhotosMap.set(p.id, p.profile_photo_url);
         customPlayerIds.add(p.id);
       });
 
@@ -879,6 +884,7 @@ export class TeamStatsService {
           playerId,
           playerName: playersMap.get(playerId) || `Player ${playerId.substring(0, 8)}`,
           isCustomPlayer: customPlayerIds.has(playerId), // ✅ Track custom player status
+          profilePhotoUrl: playerPhotosMap.get(playerId), // ✅ Include player photo
           minutes: playerMinutesMap.get(playerId) || 0,
           points: 0,
           rebounds: 0,
@@ -980,6 +986,7 @@ export class TeamStatsService {
           playerId: player.playerId,
           playerName: player.playerName,
           isCustomPlayer: player.isCustomPlayer, // ✅ Pass through custom player flag
+          profilePhotoUrl: player.profilePhotoUrl, // ✅ Pass through player photo
           minutes: player.minutes,
           points: player.points,
           rebounds: player.rebounds,

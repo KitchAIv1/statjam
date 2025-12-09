@@ -4,11 +4,14 @@
  * PURPOSE: Display individual player statistics in a consistent row format
  * for both on-court and bench players in the Team Stats Tab.
  * 
- * LAYOUT: Player photo + name + position on left, stats grid on right
- * STATS: MIN, PTS, REB, AST, STL, BLK, +/-
+ * LAYOUT: Photo + name on left, stats grid on right
+ * STATS: MIN, FG, 3P, FT, PTS, REB, AST, STL, BLK, PF, +/-
+ * 
+ * Follows .cursorrules: <200 lines, single responsibility, Tailwind styling
  */
 
 import React, { useState, useEffect } from 'react';
+import { User } from 'lucide-react';
 
 export interface PlayerStatsRowProps {
   player: {
@@ -16,6 +19,7 @@ export interface PlayerStatsRowProps {
     name: string;
     position?: string;
     isCustomPlayer?: boolean;
+    profilePhotoUrl?: string;
   };
   stats: {
     minutes: number;
@@ -26,7 +30,6 @@ export interface PlayerStatsRowProps {
     blocks: number;
     fouls: number;
     plusMinus: number;
-    // ✅ NBA-style shooting stats
     fieldGoalsMade?: number;
     fieldGoalsAttempted?: number;
     threePointersMade?: number;
@@ -34,30 +37,21 @@ export interface PlayerStatsRowProps {
     freeThrowsMade?: number;
     freeThrowsAttempted?: number;
   };
-  /** Click handler to open player profile modal */
   onPlayerClick?: (playerId: string, isCustomPlayer: boolean) => void;
+  isDark?: boolean;
 }
 
-export function PlayerStatsRow({ player, stats, onPlayerClick }: PlayerStatsRowProps) {
+export function PlayerStatsRow({ player, stats, onPlayerClick, isDark = true }: PlayerStatsRowProps) {
   const [isMobile, setIsMobile] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  const { id, name, position, isCustomPlayer = false } = player;
 
-  const handleClick = () => {
-    if (onPlayerClick) {
-      onPlayerClick(id, isCustomPlayer);
-    }
-  };
+  const { id, name, isCustomPlayer = false, profilePhotoUrl } = player;
   const { 
     minutes, points, rebounds, assists, steals, blocks, fouls, plusMinus,
     fieldGoalsMade = 0, fieldGoalsAttempted = 0,
@@ -65,245 +59,98 @@ export function PlayerStatsRow({ player, stats, onPlayerClick }: PlayerStatsRowP
     freeThrowsMade = 0, freeThrowsAttempted = 0
   } = stats;
 
-  // Format shooting stats as "made/attempted"
+  const handleClick = () => onPlayerClick?.(id, isCustomPlayer);
+
+  // Get initials for fallback avatar
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+  // Format shooting stats
   const fgDisplay = `${fieldGoalsMade}/${fieldGoalsAttempted}`;
   const threePtDisplay = `${threePointersMade}/${threePointersAttempted}`;
   const ftDisplay = `${freeThrowsMade}/${freeThrowsAttempted}`;
 
-  // Format plus/minus with color coding
-  const formatPlusMinus = (value: number): { text: string; color: string } => {
-    if (value > 0) {
-      return { text: `+${value}`, color: '#10b981' }; // green-500
-    } else if (value < 0) {
-      return { text: `${value}`, color: '#ef4444' }; // red-500
-    } else {
-      return { text: '0', color: '#6b7280' }; // gray-500
-    }
-  };
+  // Plus/minus color coding
+  const pmColor = plusMinus > 0 ? 'text-green-500' : plusMinus < 0 ? 'text-red-500' : (isDark ? 'text-slate-500' : 'text-gray-400');
+  const pmText = plusMinus > 0 ? `+${plusMinus}` : `${plusMinus}`;
 
-  const plusMinusFormatted = formatPlusMinus(plusMinus);
-
-  // ✅ Hover highlight: subtle background change for interactivity
-  const rowStyle = {
-    ...(isMobile ? styles.playerRowMobile : styles.playerRow),
-    backgroundColor: isHovered ? '#1f2937' : '#111827', // gray-800 on hover, gray-900 default
-    transition: 'background-color 150ms ease-in-out',
-    cursor: onPlayerClick ? 'pointer' : 'default'
-  };
+  // Theme classes
+  const rowTheme = isDark 
+    ? 'bg-slate-900 border-slate-700/50 hover:bg-slate-800' 
+    : 'bg-white border-orange-100 hover:bg-orange-50/50';
+  const textPrimary = isDark ? 'text-white' : 'text-gray-900';
+  const textSecondary = isDark ? 'text-slate-400' : 'text-gray-500';
 
   return (
     <div 
-      style={rowStyle}
+      className={`flex items-stretch border-b transition-colors duration-150 ${onPlayerClick ? 'cursor-pointer' : ''} ${rowTheme} ${isMobile ? 'py-1 px-2 min-h-[48px]' : 'py-1.5 px-3 min-h-[56px]'}`}
       onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Left Section: Player Info - STICKY */}
-      <div style={isMobile ? styles.playerInfoMobile : styles.playerInfo}>
-        <div style={isMobile ? styles.playerNameMobile : styles.playerName}>
+      {/* Player Photo + Name */}
+      <div className={`flex items-center gap-2.5 shrink-0 ${isMobile ? 'w-[100px] mr-3' : 'w-[180px] mr-6'}`}>
+        {/* Avatar - Square with rounded corners */}
+        <div className={`shrink-0 rounded-md overflow-hidden border ${isDark ? 'border-slate-600 bg-slate-700' : 'border-orange-200 bg-orange-100'} ${isMobile ? 'w-10 h-10' : 'w-11 h-11'}`}>
+          {profilePhotoUrl ? (
+            <img src={profilePhotoUrl} alt={name} className="w-full h-full object-cover" />
+          ) : (
+            <div className={`w-full h-full flex items-center justify-center ${isDark ? 'text-slate-400' : 'text-orange-400'}`}>
+              {initials ? (
+                <span className={`font-bold ${isMobile ? 'text-xs' : 'text-sm'}`}>{initials}</span>
+              ) : (
+                <User className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
+              )}
+            </div>
+          )}
+        </div>
+        {/* Name */}
+        <div className={`${textPrimary} font-semibold leading-tight truncate ${isMobile ? 'text-[11px]' : 'text-sm'}`}>
           {name}
         </div>
       </div>
 
-      {/* Right Section: Stats Grid - SCROLLABLE on mobile */}
-      <div 
-        style={isMobile ? styles.statsScrollContainer : undefined}
-        className={isMobile ? 'scrollbar-hide' : undefined}
-      >
-        <div style={isMobile ? styles.statsGridMobile : styles.statsGrid}>
-          {/* MIN */}
-          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
-            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{minutes}</div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>MIN</div>
-          </div>
-          {/* FG */}
-          <div style={isMobile ? styles.statCellWideMobile : styles.statCellWide}>
-            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{fgDisplay}</div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FG</div>
-          </div>
-          {/* 3P */}
-          <div style={isMobile ? styles.statCellWideMobile : styles.statCellWide}>
-            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{threePtDisplay}</div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>3P</div>
-          </div>
-          {/* FT */}
-          <div style={isMobile ? styles.statCellWideMobile : styles.statCellWide}>
-            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{ftDisplay}</div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>FT</div>
-          </div>
-          {/* PTS */}
-          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
-            <div style={{ ...(isMobile ? styles.statValueMobile : styles.statValue), color: '#a855f7' }}>{points}</div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>PTS</div>
-          </div>
-          {/* REB */}
-          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
-            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{rebounds}</div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>REB</div>
-          </div>
-          {/* AST */}
-          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
-            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{assists}</div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>AST</div>
-          </div>
-          {/* STL */}
-          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
-            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{steals}</div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>STL</div>
-          </div>
-          {/* BLK */}
-          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
-            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{blocks}</div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>BLK</div>
-          </div>
-          {/* PF */}
-          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
-            <div style={isMobile ? styles.statValueMobile : styles.statValue}>{fouls}</div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>PF</div>
-          </div>
-          {/* +/- */}
-          <div style={isMobile ? styles.statCellMobile : styles.statCell}>
-            <div style={{ 
-              ...(isMobile ? styles.statValueMobile : styles.statValue), 
-              color: plusMinusFormatted.color 
-            }}>
-              {plusMinusFormatted.text}
-            </div>
-            <div style={isMobile ? styles.statLabelMobile : styles.statLabel}>+/-</div>
-          </div>
+      {/* Stats Grid */}
+      <div className={`flex items-center ${isMobile ? 'flex-1 overflow-x-auto scrollbar-hide' : 'flex-1'}`}>
+        <div className={`grid grid-cols-11 items-center ${isMobile ? 'gap-0.5 min-w-[280px]' : 'gap-1.5 min-w-[440px]'}`}>
+          <StatCell label="MIN" value={minutes} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
+          <StatCell label="FG" value={fgDisplay} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} wide />
+          <StatCell label="3P" value={threePtDisplay} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} wide />
+          <StatCell label="FT" value={ftDisplay} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} wide />
+          <StatCell label="PTS" value={points} isMobile={isMobile} textPrimary="text-orange-400" textSecondary={textSecondary} />
+          <StatCell label="REB" value={rebounds} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
+          <StatCell label="AST" value={assists} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
+          <StatCell label="STL" value={steals} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
+          <StatCell label="BLK" value={blocks} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
+          <StatCell label="PF" value={fouls} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
+          <StatCell label="+/-" value={pmText} isMobile={isMobile} textPrimary={pmColor} textSecondary={textSecondary} />
         </div>
       </div>
     </div>
   );
 }
 
-const styles = {
-  playerRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '10px 12px',
-    borderBottom: '1px solid #374151',
-    backgroundColor: '#111827',
-    minHeight: '48px'
-  },
-  playerRowMobile: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '6px 6px',
-    borderBottom: '1px solid #374151',
-    backgroundColor: '#111827',
-    minHeight: '36px'
-  },
-  playerInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    flex: 1,
-    minWidth: '100px'
-  },
-  playerInfoMobile: {
-    display: 'flex',
-    alignItems: 'center',
-    minWidth: '60px',
-    maxWidth: '60px',
-    flexShrink: 0,
-    paddingRight: '4px'
-  },
-  playerName: {
-    color: '#ffffff',
-    fontSize: '13px',
-    fontWeight: '600',
-    lineHeight: '1.3'
-  },
-  playerNameMobile: {
-    color: '#ffffff',
-    fontSize: '10px',
-    fontWeight: '600',
-    lineHeight: '1.2',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const
-  },
-  playerPosition: {
-    color: '#9ca3af',
-    fontSize: '12px',
-    fontWeight: '400'
-  },
-  // ✅ Horizontal scroll container for mobile
-  statsScrollContainer: {
-    flex: 1,
-    overflowX: 'auto' as const,
-    overflowY: 'hidden' as const,
-    WebkitOverflowScrolling: 'touch' as const
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(11, 1fr)',
-    gap: '6px',
-    alignItems: 'center',
-    minWidth: '440px'
-  },
-  statsGridMobile: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(11, 1fr)',
-    gap: '2px',
-    alignItems: 'center',
-    minWidth: '280px'
-  },
-  statCell: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    minWidth: '28px',
-    textAlign: 'center' as const
-  },
-  statCellMobile: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    minWidth: '22px',
-    textAlign: 'center' as const
-  },
-  statCellWide: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    minWidth: '36px',
-    textAlign: 'center' as const
-  },
-  statCellWideMobile: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    minWidth: '28px',
-    textAlign: 'center' as const
-  },
-  statValue: {
-    color: '#ffffff',
-    fontSize: '13px',
-    fontWeight: '600',
-    lineHeight: '1.2',
-    marginBottom: '2px'
-  },
-  statValueMobile: {
-    color: '#ffffff',
-    fontSize: '10px',
-    fontWeight: '600',
-    lineHeight: '1.1',
-    marginBottom: '1px'
-  },
-  statLabel: {
-    color: '#9ca3af',
-    fontSize: '9px',
-    fontWeight: '400',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px'
-  },
-  statLabelMobile: {
-    color: '#9ca3af',
-    fontSize: '7px',
-    fontWeight: '400',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.3px'
-  }
-};
+/** Reusable stat cell component */
+function StatCell({ 
+  label, 
+  value, 
+  isMobile, 
+  textPrimary, 
+  textSecondary,
+  wide = false 
+}: { 
+  label: string; 
+  value: string | number; 
+  isMobile: boolean; 
+  textPrimary: string; 
+  textSecondary: string;
+  wide?: boolean;
+}) {
+  return (
+    <div className={`flex flex-col items-center text-center ${wide ? (isMobile ? 'min-w-[28px]' : 'min-w-[36px]') : (isMobile ? 'min-w-[22px]' : 'min-w-[28px]')}`}>
+      <div className={`${textPrimary} font-semibold ${isMobile ? 'text-[10px] leading-tight mb-0.5' : 'text-[13px] leading-tight mb-0.5'}`}>
+        {value}
+      </div>
+      <div className={`${textSecondary} uppercase tracking-wide ${isMobile ? 'text-[7px]' : 'text-[9px]'}`}>
+        {label}
+      </div>
+    </div>
+  );
+}
