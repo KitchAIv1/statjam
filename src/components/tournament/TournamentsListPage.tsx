@@ -7,7 +7,7 @@ import { hybridSupabaseService } from '@/lib/services/hybridSupabaseService';
 import { TeamService } from '@/lib/services/tournamentService';
 import { GameService } from '@/lib/services/gameService';
 import { TournamentLeadersService } from '@/lib/services/tournamentLeadersService';
-import { useLiveGamesHybrid } from '@/hooks/useLiveGamesHybrid';
+import { useLiveGameCount } from '@/hooks/useLiveGameCount';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import { TournamentsListHeader } from './TournamentsListHeader';
 import { FeaturedTournamentHero } from './FeaturedTournamentHero';
@@ -55,7 +55,8 @@ export function TournamentsListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(12);
-  const { games: liveGames } = useLiveGamesHybrid();
+  // ✅ OPTIMIZED: Use lightweight hook (1 query vs 14+ queries)
+  const { liveGameCountByTournament } = useLiveGameCount();
 
   useEffect(() => {
     let mounted = true;
@@ -235,12 +236,12 @@ export function TournamentsListPage() {
   }, [tournamentsWithStats]);
 
   const liveTournaments = useMemo(() => {
-    // ✅ FIX: Only show tournaments with ACTUAL live games (not just 'active' status)
+    // ✅ OPTIMIZED: Only show tournaments with ACTUAL live games
     return tournamentsWithStats.filter(t => {
-      const actualLiveGameCount = liveGames.filter(g => g.tournament_id === t.id).length;
+      const actualLiveGameCount = liveGameCountByTournament.get(t.id) || 0;
       return actualLiveGameCount > 0;
     }).slice(0, 6);
-  }, [tournamentsWithStats, liveGames]);
+  }, [tournamentsWithStats, liveGameCountByTournament]);
 
   const upcomingTournaments = useMemo(() => {
     const filtered = filteredTournaments.filter(t => {
@@ -349,7 +350,7 @@ export function TournamentsListPage() {
             {featuredTournament && selectedFilter !== 'completed' && (
               <FeaturedTournamentHero
                 tournament={featuredTournament}
-                liveGameCount={liveGames.filter(g => g.tournament_id === featuredTournament.id).length}
+                liveGameCount={liveGameCountByTournament.get(featuredTournament.id) || 0}
                 onClick={() => handleTournamentClick(featuredTournament)}
                 onLiveGamesClick={() => {
                   handleTournamentClick(featuredTournament);
@@ -386,7 +387,7 @@ export function TournamentsListPage() {
                       <LiveTournamentCard
                         key={tournament.id}
                         tournament={tournament}
-                        liveGameCount={liveGames.filter(g => g.tournament_id === tournament.id).length}
+                        liveGameCount={liveGameCountByTournament.get(tournament.id) || 0}
                         onClick={() => handleTournamentClick(tournament)}
                       />
                     ))}
