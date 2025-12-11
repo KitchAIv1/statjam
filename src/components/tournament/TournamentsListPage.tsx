@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { hybridSupabaseService } from '@/lib/services/hybridSupabaseService';
@@ -18,6 +18,14 @@ import { TournamentSocialFooter } from '@/components/shared/TournamentSocialFoot
 import { SocialLinks } from '@/components/shared/SocialLinks';
 import { ArrowRight } from 'lucide-react';
 
+/**
+ * 🚫 EXCLUDED TOURNAMENTS: IDs of tournaments to hide from public list
+ * These are test tournaments or tournaments that should not be publicly visible
+ */
+const EXCLUDED_TOURNAMENT_IDS = [
+  '40e68d1d-84da-4095-833e-63962983a02f', // Excluded by request
+];
+
 interface Tournament {
   id: string;
   name: string;
@@ -34,6 +42,7 @@ interface Tournament {
 interface TournamentWithStats extends Tournament {
   teamCount: number;
   gameCount: number;
+  completedGameCount: number; // ✅ NEW: For featuring data-rich tournaments
   topPlayers?: Array<{ id: string; name: string; photoUrl?: string; pointsPerGame: number }>;
   isVerified?: boolean;
 }
@@ -80,10 +89,19 @@ export function TournamentsListPage() {
         );
 
         if (mounted) {
-          setTournaments(tournamentData);
+          // ✅ Filter out excluded tournaments
+          const filteredTournamentData = tournamentData.filter(t => 
+            !EXCLUDED_TOURNAMENT_IDS.includes(t.id)
+          );
+          
+          setTournaments(filteredTournamentData);
+          
+          // ✅ BATCH OPTIMIZATION: Get completed game counts for ALL tournaments in ONE query
+          const tournamentIds = filteredTournamentData.map(t => t.id);
+          const completedGameCounts = await GameService.getCompletedGameCountsBatch(tournamentIds).catch(() => new Map<string, number>());
           
           const tournamentsWithStatsData = await Promise.all(
-            tournamentData.map(async (tournament) => {
+            filteredTournamentData.map(async (tournament) => {
               try {
                 // ✅ OPTIMIZED: Only fetch counts, skip leaders (saves ~40% load time)
                 const [teamCount, gameCount] = await Promise.all([
@@ -95,6 +113,7 @@ export function TournamentsListPage() {
                   ...tournament,
                   teamCount: teamCount || 0,
                   gameCount: gameCount || 0,
+                  completedGameCount: completedGameCounts.get(tournament.id) || 0, // ✅ From batch query
                   topPlayers: [], // Skipped for performance
                   isVerified: false
                 };
@@ -104,6 +123,7 @@ export function TournamentsListPage() {
                   ...tournament,
                   teamCount: 0,
                   gameCount: 0,
+                  completedGameCount: 0,
                   topPlayers: []
                 };
               }
@@ -147,15 +167,65 @@ export function TournamentsListPage() {
     router.push(`/tournament/${tournament.id}`);
   };
 
+  // ✅ HELPER: Check if tournament is "effectively completed" (derived status)
+  const isTournamentEffectivelyCompleted = useCallback((t: TournamentWithStats) => {
+    const status = (t.status || '').toLowerCase();
+    
+    // Explicit completed status
+    if (status === 'completed') return true;
+    
+    // Derived completion: end_date passed AND no live games
+    if (t.end_date) {
+      const now = new Date();
+      const endDate = new Date(t.end_date);
+      endDate.setHours(23, 59, 59, 999);
+      endDate.setDate(endDate.getDate() + 1); // 24h grace period
+      
+      const hasExpired = endDate < now;
+      const hasNoLiveGames = (liveGameCountByTournament.get(t.id) || 0) === 0;
+      
+      if (hasExpired && hasNoLiveGames) {
+        return true;
+      }
+    }
+    
+    return false;
+  }, [liveGameCountByTournament]);
+
+  // ✅ HELPER: Check if tournament is "truly upcoming" based on dates
+  // A tournament is upcoming ONLY if start_date is in the future or not set
+  // Strict cutoff: If start_date has passed, it's no longer upcoming (it's ongoing or completed)
+  const isTournamentTrulyUpcoming = useCallback((t: TournamentWithStats) => {
+    const now = new Date();
+    
+    // If no start_date, consider it upcoming (draft state, dates not set yet)
+    if (!t.start_date) return true;
+    
+    const startDate = new Date(t.start_date);
+    // Strict cutoff: start_date must be in the future
+    return startDate > now;
+  }, []);
+
   const filteredTournaments = useMemo(() => {
-    let filtered = tournamentsWithStats;
+    // ✅ EDGE CASE: Filter out empty tournaments (no games AND no teams)
+    let filtered = tournamentsWithStats.filter(t => t.teamCount > 0 || t.gameCount > 0);
 
     if (selectedFilter !== 'all') {
       filtered = filtered.filter(t => {
         const status = (t.status || '').toLowerCase();
         if (selectedFilter === 'live') return status === 'active' || status === 'live';
-        if (selectedFilter === 'upcoming') return status === 'draft' || status === 'upcoming' || !status;
-        if (selectedFilter === 'completed') return status === 'completed';
+        if (selectedFilter === 'upcoming') {
+          // ✅ Must pass BOTH status check AND date check
+          // Exclude derived-completed tournaments
+          if (isTournamentEffectivelyCompleted(t)) return false;
+          // Exclude tournaments that have already started (strict date check)
+          if (!isTournamentTrulyUpcoming(t)) return false;
+          return status === 'draft' || status === 'upcoming' || !status;
+        }
+        if (selectedFilter === 'completed') {
+          // ✅ Include derived-completed tournaments
+          return isTournamentEffectivelyCompleted(t);
+        }
         return true;
       });
     }
@@ -190,30 +260,83 @@ export function TournamentsListPage() {
     });
 
     return filtered;
-  }, [tournamentsWithStats, selectedFilter, searchQuery, showVerifiedOnly]);
+  }, [tournamentsWithStats, selectedFilter, searchQuery, showVerifiedOnly, isTournamentEffectivelyCompleted, isTournamentTrulyUpcoming]);
 
-  const featuredTournament = useMemo(() => {
+  // ✅ FEATURED TOURNAMENTS: Show top 2 tournaments
+  // Prioritizes: Live games > Completed tournaments with data > Upcoming
+  const featuredTournaments = useMemo(() => {
     const validTournaments = tournamentsWithStats.filter(t => {
-      const hasNoTeams = t.teamCount === 0;
+      // ✅ EDGE CASE: Must have at least teams OR games to be featured
+      const isEmpty = t.teamCount === 0 && t.gameCount === 0;
       const isTestTournament = t.name.toLowerCase().startsWith('test');
-      return !hasNoTeams && !isTestTournament;
+      // ✅ INCLUDE completed tournaments - they can be featured if data-rich
+      return !isEmpty && !isTestTournament;
     });
 
-    const live = validTournaments.find(t => {
+    // Score and sort tournaments by priority
+    const scoredTournaments = validTournaments.map(t => {
       const status = (t.status || '').toLowerCase();
-      return status === 'active' || status === 'live';
+      const liveGameCount = liveGameCountByTournament.get(t.id) || 0;
+      const hasLiveGames = liveGameCount > 0;
+      const isUpcomingStatus = status === 'draft' || status === 'upcoming' || !status;
+      const isTrulyUpcoming = isTournamentTrulyUpcoming(t);
+      const isCompleted = isTournamentEffectivelyCompleted(t);
+      
+      // Calculate day spread for multi-day tournament bonus
+      let daySpread = 0;
+      if (t.start_date && t.end_date) {
+        const start = new Date(t.start_date);
+        const end = new Date(t.end_date);
+        daySpread = Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+      }
+      
+      // Priority scoring: higher = more important
+      let score = 0;
+      
+      // 🥇 HIGHEST PRIORITY: Live games
+      if (hasLiveGames) {
+        score += 2000 + (liveGameCount * 10);
+      }
+      
+      // 🥈 SECOND PRIORITY: Completed tournaments with lots of data
+      // (Showcases successful, data-rich tournaments)
+      if (isCompleted && t.completedGameCount > 0) {
+        score += 1000 + (t.completedGameCount * 15); // Heavy weight on completed games
+        score += daySpread * 20; // Multi-day tournaments get big bonus
+      }
+      
+      // 🥉 THIRD PRIORITY: Truly upcoming tournaments
+      if (isUpcomingStatus && isTrulyUpcoming) {
+        score += 500;
+      }
+      
+      // Active but no live games
+      if (status === 'active' && !hasLiveGames && !isCompleted) {
+        score += 400;
+      }
+      
+      // Engagement bonuses (applies to all)
+      score += t.teamCount * 5; // More teams = more important
+      score += t.gameCount * 2; // More games = more activity
+      
+      return { tournament: t, score };
     });
     
-    if (!live) {
-      const upcoming = validTournaments.find(t => {
-        const status = (t.status || '').toLowerCase();
-        return status === 'draft' || status === 'upcoming' || !status;
-      });
-      return upcoming || validTournaments[0];
+    // Sort by score descending and take top 2
+    scoredTournaments.sort((a, b) => b.score - a.score);
+    const top2 = scoredTournaments.slice(0, 2).map(s => s.tournament);
+    
+    // ✅ PRIORITY: Put tournament with most completed games on the LEFT
+    // This showcases data-rich tournaments prominently
+    if (top2.length === 2) {
+      top2.sort((a, b) => (b.completedGameCount || 0) - (a.completedGameCount || 0));
     }
     
-    return live;
-  }, [tournamentsWithStats]);
+    return top2;
+  }, [tournamentsWithStats, isTournamentEffectivelyCompleted, isTournamentTrulyUpcoming, liveGameCountByTournament]);
+
+  // Keep single reference for backwards compatibility (first featured)
+  const featuredTournament = featuredTournaments[0] || null;
 
   const liveTournaments = useMemo(() => {
     // ✅ OPTIMIZED: Only show tournaments with ACTUAL live games
@@ -226,25 +349,36 @@ export function TournamentsListPage() {
   const upcomingTournaments = useMemo(() => {
     const filtered = filteredTournaments.filter(t => {
       const status = (t.status || '').toLowerCase();
-      const isUpcoming = status === 'draft' || status === 'upcoming' || !status;
+      const isUpcomingStatus = status === 'draft' || status === 'upcoming' || !status;
       const hasNoTeams = t.teamCount === 0;
       const isTestTournament = t.name.toLowerCase().startsWith('test');
       
-      return isUpcoming && 
-             t.id !== featuredTournament?.id && 
+      // ✅ EXCLUDE DERIVED-COMPLETED: Use helper for consistent logic
+      if (isTournamentEffectivelyCompleted(t)) {
+        return false;
+      }
+      
+      // ✅ STRICT DATE CHECK: Exclude tournaments that have already started
+      if (!isTournamentTrulyUpcoming(t)) {
+        return false;
+      }
+      
+      // Exclude featured tournaments from the upcoming grid
+      const isFeatured = featuredTournaments.some(ft => ft.id === t.id);
+      
+      return isUpcomingStatus && 
+             !isFeatured && 
              !hasNoTeams && 
              !isTestTournament;
     });
     
     return filtered.slice(0, displayLimit);
-  }, [filteredTournaments, featuredTournament, displayLimit]);
+  }, [filteredTournaments, featuredTournaments, displayLimit, isTournamentEffectivelyCompleted, isTournamentTrulyUpcoming]);
 
   const completedTournaments = useMemo(() => {
-    return tournamentsWithStats.filter(t => {
-      const status = (t.status || '').toLowerCase();
-      return status === 'completed';
-    });
-  }, [tournamentsWithStats]);
+    // Use the helper function for consistent derived-completion logic
+    return tournamentsWithStats.filter(t => isTournamentEffectivelyCompleted(t));
+  }, [tournamentsWithStats, isTournamentEffectivelyCompleted]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -326,24 +460,30 @@ export function TournamentsListPage() {
           />
         ) : (
           <div className="space-y-12">
-            {/* Featured Tournament Hero */}
-            {featuredTournament && selectedFilter !== 'completed' && (
-              <FeaturedTournamentHero
-                tournament={featuredTournament}
-                liveGameCount={liveGameCountByTournament.get(featuredTournament.id) || 0}
-                onClick={() => handleTournamentClick(featuredTournament)}
-                onLiveGamesClick={() => {
-                  handleTournamentClick(featuredTournament);
-                  // Scroll to live games section on tournament page
-                  setTimeout(() => {
-                    const liveSection = document.getElementById('live-games');
-                    if (liveSection) {
-                      liveSection.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }, 500);
-                }}
-                shareUrl={typeof window !== 'undefined' ? `${window.location.origin}/tournament/${featuredTournament.id}` : undefined}
-              />
+            {/* Featured Tournaments (Top 2) */}
+            {featuredTournaments.length > 0 && selectedFilter !== 'completed' && (
+              <div className={`grid ${featuredTournaments.length === 2 ? 'gap-6 lg:gap-8 lg:grid-cols-2' : 'grid-cols-1'}`}>
+                {featuredTournaments.map((tournament) => (
+                  <FeaturedTournamentHero
+                    key={tournament.id}
+                    tournament={tournament}
+                    liveGameCount={liveGameCountByTournament.get(tournament.id) || 0}
+                    onClick={() => handleTournamentClick(tournament)}
+                    onLiveGamesClick={() => {
+                      handleTournamentClick(tournament);
+                      // Scroll to live games section on tournament page
+                      setTimeout(() => {
+                        const liveSection = document.getElementById('live-games');
+                        if (liveSection) {
+                          liveSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }, 500);
+                    }}
+                    shareUrl={typeof window !== 'undefined' ? `${window.location.origin}/tournament/${tournament.id}` : undefined}
+                    fullWidth={featuredTournaments.length === 2}
+                  />
+                ))}
+              </div>
             )}
 
             {/* Live Now Section */}

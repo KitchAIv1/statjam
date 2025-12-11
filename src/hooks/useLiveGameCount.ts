@@ -16,7 +16,15 @@ interface LiveGameBasic {
   id: string;
   tournament_id: string;
   status: string;
+  updated_at?: string;
+  start_time?: string;
 }
+
+/**
+ * 🕐 STALENESS THRESHOLD: Games are considered stale if not updated in 6 hours
+ * This prevents abandoned/unclosed games from showing in "Live Now" sections
+ */
+const STALE_GAME_HOURS = 6;
 
 interface LiveGameCountResult {
   /** Map of tournament_id -> live game count */
@@ -45,10 +53,10 @@ export function useLiveGameCount(): LiveGameCountResult {
       setError(null);
       logger.debug('🏀 useLiveGameCount: Fetching live game counts (lightweight)...');
 
-      // Single query - just get game IDs and tournament IDs
+      // Single query - get game IDs, tournament IDs, and timestamps for staleness check
       const gamesData = await hybridSupabaseService.query<LiveGameBasic>(
         'games',
-        'id,tournament_id,status',
+        'id,tournament_id,status,updated_at,start_time',
         {
           'or': '(status.eq.live,status.eq.LIVE,status.eq.in_progress,status.eq.IN_PROGRESS,status.eq.overtime,status.eq.OVERTIME,is_clock_running.eq.true)',
           'limit': '100'
@@ -62,10 +70,30 @@ export function useLiveGameCount(): LiveGameCountResult {
         return;
       }
 
-      // Filter out completed games (safety check)
+      // Filter out completed games AND stale games (safety check)
+      const now = new Date();
+      const staleThreshold = new Date(now.getTime() - STALE_GAME_HOURS * 60 * 60 * 1000);
+      
       const liveGamesOnly = gamesData.filter((game) => {
         const status = String(game.status || '').toLowerCase();
-        return status !== 'completed';
+        
+        // Exclude completed games
+        if (status === 'completed') return false;
+        
+        // ✅ STALENESS CHECK: Exclude games not updated in the last 6 hours
+        // This prevents abandoned/unclosed games from appearing in "Live Now"
+        const updatedAt = game.updated_at ? new Date(game.updated_at) : null;
+        const startTime = game.start_time ? new Date(game.start_time) : null;
+        
+        // Use updated_at if available, otherwise fall back to start_time
+        const lastActivity = updatedAt || startTime;
+        
+        if (lastActivity && lastActivity < staleThreshold) {
+          logger.debug(`🕐 useLiveGameCount: Filtering stale game ${game.id} (last activity: ${lastActivity.toISOString()})`);
+          return false;
+        }
+        
+        return true;
       });
 
       // Group by tournament_id and count

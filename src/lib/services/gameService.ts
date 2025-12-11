@@ -230,6 +230,47 @@ export class GameService {
     }
   }
 
+  /**
+   * ✅ BATCH: Get completed game counts for multiple tournaments in ONE query
+   * Much more efficient than N individual queries
+   * Returns Map<tournamentId, completedGameCount>
+   */
+  static async getCompletedGameCountsBatch(tournamentIds: string[]): Promise<Map<string, number>> {
+    try {
+      if (tournamentIds.length === 0) {
+        return new Map();
+      }
+
+      logger.debug('🔍 GameService: Batch fetching completed game counts for', tournamentIds.length, 'tournaments');
+      
+      // Single query to get all completed games for all tournaments
+      const { data, error } = await supabase
+        .from('games')
+        .select('tournament_id')
+        .in('tournament_id', tournamentIds)
+        .eq('status', 'completed');
+
+      if (error) {
+        logger.error('❌ Error getting completed game counts:', error);
+        return new Map();
+      }
+
+      // Count completed games per tournament
+      const counts = new Map<string, number>();
+      (data || []).forEach(game => {
+        if (game.tournament_id) {
+          counts.set(game.tournament_id, (counts.get(game.tournament_id) || 0) + 1);
+        }
+      });
+
+      logger.debug('✅ GameService: Completed game counts:', Object.fromEntries(counts));
+      return counts;
+    } catch (error) {
+      logger.error('❌ Error in getCompletedGameCountsBatch:', error);
+      return new Map();
+    }
+  }
+
   // Update a game
   static async updateGame(gameId: string, updateData: {
     teamAId?: string;

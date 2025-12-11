@@ -31,6 +31,8 @@ interface FeaturedTournamentHeroProps {
   onClick: () => void;
   onLiveGamesClick?: () => void;
   shareUrl?: string;
+  /** When true, removes max-width constraint for grid layouts */
+  fullWidth?: boolean;
 }
 
 /**
@@ -39,8 +41,9 @@ interface FeaturedTournamentHeroProps {
  * Purpose: Large display of featured tournament with stats and top players
  * Follows .cursorrules: <200 lines, single responsibility
  */
-export function FeaturedTournamentHero({ tournament, onClick, onLiveGamesClick, shareUrl }: FeaturedTournamentHeroProps) {
-  const isLive = tournament.status === 'active' || tournament.status === 'live';
+export function FeaturedTournamentHero({ tournament, liveGameCount = 0, onClick, onLiveGamesClick, shareUrl, fullWidth = false }: FeaturedTournamentHeroProps) {
+  // ✅ FIX: Show "Live Now" only if there are ACTUAL live games, not just tournament status
+  const isLive = liveGameCount > 0;
   const { organizer } = useOrganizerProfile(tournament.organizer_id || null);
   
   const descriptionPreview = tournament.description 
@@ -50,7 +53,7 @@ export function FeaturedTournamentHero({ tournament, onClick, onLiveGamesClick, 
     : null;
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#121212] to-black max-w-4xl mx-auto">
+    <section className={`relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#121212] to-black ${fullWidth ? 'w-full' : 'max-w-4xl mx-auto'}`}>
       {/* Basketball Splash Background - Responsive sizing */}
       <div 
         className="absolute inset-0 bg-no-repeat opacity-65 pointer-events-none"

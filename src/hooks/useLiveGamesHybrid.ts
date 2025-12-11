@@ -29,7 +29,14 @@ interface LiveGame {
   team_b_name?: string;
   tournament_name?: string;
   updated_at?: string;
+  start_time?: string;
 }
+
+/**
+ * 🕐 STALENESS THRESHOLD: Games are considered stale if not updated in 6 hours
+ * This prevents abandoned/unclosed games from showing in "Live Now" sections
+ */
+const STALE_GAME_HOURS = 6;
 
 /**
  * ✅ SCORE CALCULATION: Calculate scores from game_stats (source of truth)
@@ -85,10 +92,10 @@ export function useLiveGamesHybrid() {
 
       logger.debug('🏀 useLiveGamesHybrid: Fetching live games with hybrid service...');
 
-      // Step 1: Get live games using reliable raw HTTP
+      // Step 1: Get live games using reliable raw HTTP (includes timestamps for staleness check)
       const gamesData = await hybridSupabaseService.query<LiveGame>(
         'games',
-        'id,status,quarter,game_clock_minutes,game_clock_seconds,is_clock_running,home_score,away_score,team_a_id,team_b_id,tournament_id,updated_at',
+        'id,status,quarter,game_clock_minutes,game_clock_seconds,is_clock_running,home_score,away_score,team_a_id,team_b_id,tournament_id,updated_at,start_time',
         {
           'or': '(status.eq.live,status.eq.LIVE,status.eq.in_progress,status.eq.IN_PROGRESS,status.eq.overtime,status.eq.OVERTIME,is_clock_running.eq.true)',
           'order': 'updated_at.desc',
@@ -103,11 +110,31 @@ export function useLiveGamesHybrid() {
         return;
       }
 
-      // ✅ FIX: Filter out completed games (even if is_clock_running=true due to race condition)
-      // This ensures completed games never appear in "LIVE NOW" sections
+      // ✅ FIX: Filter out completed games AND stale games
+      // This ensures completed/abandoned games never appear in "LIVE NOW" sections
+      const now = new Date();
+      const staleThreshold = new Date(now.getTime() - STALE_GAME_HOURS * 60 * 60 * 1000);
+      
       const liveGamesOnly = gamesData.filter((game) => {
         const status = String(game.status || '').toLowerCase();
-        return status !== 'completed';
+        
+        // Exclude completed games (even if is_clock_running=true due to race condition)
+        if (status === 'completed') return false;
+        
+        // ✅ STALENESS CHECK: Exclude games not updated in the last 6 hours
+        // This prevents abandoned/unclosed games from appearing in "Live Now"
+        const updatedAt = game.updated_at ? new Date(game.updated_at) : null;
+        const startTime = game.start_time ? new Date(game.start_time) : null;
+        
+        // Use updated_at if available, otherwise fall back to start_time
+        const lastActivity = updatedAt || startTime;
+        
+        if (lastActivity && lastActivity < staleThreshold) {
+          logger.debug(`🕐 useLiveGamesHybrid: Filtering stale game ${game.id} (last activity: ${lastActivity.toISOString()})`);
+          return false;
+        }
+        
+        return true;
       });
 
       if (liveGamesOnly.length === 0) {

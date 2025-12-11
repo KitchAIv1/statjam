@@ -8,6 +8,12 @@
 import { hybridSupabaseService } from './hybridSupabaseService';
 import { getCountry } from '@/data/countries';
 
+/**
+ * 🕐 STALENESS THRESHOLD: Games are considered stale if not updated in 6 hours
+ * This prevents abandoned/unclosed games from affecting carousel display
+ */
+const STALE_GAME_HOURS = 6;
+
 export interface TournamentCarouselData {
   id: string;
   name: string;
@@ -30,16 +36,31 @@ export interface TournamentCarouselData {
  */
 export async function fetchTournamentsForCarousel(): Promise<TournamentCarouselData[]> {
   try {
-    // Fetch tournaments with live games first
-    const liveGames = await hybridSupabaseService.query<any>(
+    // Fetch tournaments with live games first (includes timestamps for staleness check)
+    const liveGamesRaw = await hybridSupabaseService.query<any>(
       'games',
-      'tournament_id,status',
+      'tournament_id,status,updated_at,start_time',
       {
         'or': '(status.eq.live,status.eq.LIVE,status.eq.in_progress,status.eq.IN_PROGRESS,status.eq.overtime,status.eq.OVERTIME)',
         'order': 'updated_at.desc',
         'limit': '50'
       }
     );
+    
+    // ✅ STALENESS CHECK: Filter out games not updated in the last 6 hours
+    const now = new Date();
+    const staleThreshold = new Date(now.getTime() - STALE_GAME_HOURS * 60 * 60 * 1000);
+    
+    const liveGames = liveGamesRaw.filter((game: any) => {
+      const updatedAt = game.updated_at ? new Date(game.updated_at) : null;
+      const startTime = game.start_time ? new Date(game.start_time) : null;
+      const lastActivity = updatedAt || startTime;
+      
+      if (lastActivity && lastActivity < staleThreshold) {
+        return false; // Stale game - exclude
+      }
+      return true;
+    });
 
     // Get unique tournament IDs from live games
     const liveTournamentIds = [...new Set(liveGames.map((g: any) => g.tournament_id).filter(Boolean))];
