@@ -46,13 +46,18 @@ export interface ZoneConfig {
 
 /**
  * Normalized court coordinates (0-100 range)
- * Origin (0,0) is bottom-left of half-court
+ * 
+ * Based on half-court image orientation:
+ * - Basket is at TOP of image (baseline)
+ * - Half-court line is at BOTTOM of image
+ * 
+ * Origin (0,0) is top-left corner (left side of baseline)
  * Basket is approximately at (50, 5)
  */
 export interface CourtCoordinates {
   /** X position: 0 = left edge, 100 = right edge */
   x: number;
-  /** Y position: 0 = baseline, 100 = half-court line */
+  /** Y position: 0 = baseline (basket end, top), 100 = half-court line (bottom) */
   y: number;
 }
 
@@ -203,3 +208,4 @@ export const ZONE_CONFIGS: Record<ShotZone, { label: string; shotType: InferredS
   wing_3_right: { label: 'Right Wing 3', shotType: 'three_pointer', points: 3 },
   top_3: { label: 'Top of Key 3', shotType: 'three_pointer', points: 3 }
 };
+
