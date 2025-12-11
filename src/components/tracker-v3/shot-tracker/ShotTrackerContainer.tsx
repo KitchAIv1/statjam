@@ -68,10 +68,10 @@ export function ShotTrackerContainer({
   const isCourtInteractive = hasPlayerSelected && !pendingShot && !isProcessing;
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 rounded-lg overflow-hidden">
-      {/* Player Selection Prompt */}
+    <div className="relative w-full h-full">
+      {/* Player Selection Prompt Overlay */}
       {!hasPlayerSelected && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10 rounded-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20 rounded-lg">
           <div className="text-center p-6">
             <p className="text-white text-lg font-medium mb-2">
               Select a Player First
@@ -83,8 +83,8 @@ export function ShotTrackerContainer({
         </div>
       )}
 
-      {/* Court Diagram */}
-      <div className="flex-1 relative p-4">
+      {/* Court Diagram - Full width, no padding */}
+      <div className="w-full h-full">
         <HalfCourtDiagram
           onCourtTap={handleCourtTap}
           perspective={perspective}
@@ -94,23 +94,25 @@ export function ShotTrackerContainer({
         />
       </div>
 
-      {/* Made/Missed Confirmation Bar */}
+      {/* Made/Missed Confirmation Bar - Overlays bottom of court */}
       {pendingShot && (
-        <MadeMissedBar
-          pendingShot={pendingShot}
-          playerName={playerName}
-          jerseyNumber={jerseyNumber}
-          onMade={confirmMade}
-          onMissed={confirmMissed}
-          onCancel={cancelPendingShot}
-          isProcessing={isProcessing}
-        />
+        <div className="absolute bottom-0 left-0 right-0 z-10">
+          <MadeMissedBar
+            pendingShot={pendingShot}
+            playerName={playerName}
+            jerseyNumber={jerseyNumber}
+            onMade={confirmMade}
+            onMissed={confirmMissed}
+            onCancel={cancelPendingShot}
+            isProcessing={isProcessing}
+          />
+        </div>
       )}
 
-      {/* Instruction hint when no pending shot */}
+      {/* Instruction hint - Overlays bottom of court when no pending shot */}
       {!pendingShot && hasPlayerSelected && (
-        <div className="p-3 bg-slate-800/50 border-t border-slate-700">
-          <p className="text-slate-400 text-sm text-center">
+        <div className="absolute bottom-0 left-0 right-0 p-3 bg-black/40 z-10">
+          <p className="text-white/80 text-sm text-center">
             Tap the court where the shot was taken
           </p>
         </div>

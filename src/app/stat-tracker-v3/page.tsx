@@ -18,7 +18,9 @@ import { TopScoreboardV3 } from '@/components/tracker-v3/TopScoreboardV3';
 import { TeamRosterV3 } from '@/components/tracker-v3/TeamRosterV3';
 import { OpponentTeamPanel } from '@/components/tracker-v3/OpponentTeamPanel';
 import { DesktopStatGridV3 } from '@/components/tracker-v3/DesktopStatGridV3';
+import { StatInputWrapper } from '@/components/tracker-v3/StatInputWrapper';
 import { SubstitutionModalV4 } from '@/components/tracker-v3/SubstitutionModalV4';
+import { ShotLocationData } from '@/lib/types/shotTracker';
 import { TimeoutModalV3 } from '@/components/tracker-v3/TimeoutModalV3';
 import { PossessionIndicator } from '@/components/tracker-v3/PossessionIndicator';
 // ✅ PHASE 4 & 5: Play Sequence Modals
@@ -496,6 +498,49 @@ function StatTrackerV3Content() {
         'Failed to record stat',
         error instanceof Error ? error.message : 'Please try again'
       );
+    }
+  };
+
+  // ✅ SHOT TRACKER: Handle stat record with location data from court tap
+  const handleStatRecordWithLocation = async (
+    statType: string,
+    modifier: string,
+    locationData?: ShotLocationData
+  ) => {
+    if (!selectedPlayer || !gameData) return;
+    
+    try {
+      // Determine player/team context (same logic as handleStatRecord)
+      let actualPlayerId: string | undefined = undefined;
+      let actualCustomPlayerId: string | undefined = undefined;
+      const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+      const actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+      
+      const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+      const isCustomPlayer = selectedPlayer.startsWith('custom-') || 
+                            (selectedPlayerData && selectedPlayerData.is_custom_player === true);
+      
+      if (isCustomPlayer) {
+        actualCustomPlayerId = selectedPlayer;
+      } else {
+        actualPlayerId = selectedPlayer;
+      }
+      
+      await tracker.recordStat({
+        gameId: gameData.id,
+        teamId: actualTeamId,
+        playerId: actualPlayerId,
+        customPlayerId: actualCustomPlayerId,
+        statType: statType as 'field_goal' | 'three_pointer',
+        modifier: modifier as 'made' | 'missed',
+        // ✅ Include shot location data
+        shotLocationX: locationData?.shotLocationX,
+        shotLocationY: locationData?.shotLocationY,
+        shotZone: locationData?.shotZone
+      });
+    } catch (error) {
+      console.error('❌ Error recording stat with location:', error);
+      notify.error('Failed to record shot', error instanceof Error ? error.message : 'Please try again');
     }
   };
   
@@ -2044,7 +2089,7 @@ function StatTrackerV3Content() {
         {/* ✅ REFINEMENT: Possession Indicator moved to Last Action section (saves space) */}
 
         {/* Main Content Grid - Responsive Layout: Mobile/Tablet/Desktop */}
-        <div className={`grid gap-3 items-start flex-1 min-h-0 ${
+        <div className={`grid gap-3 items-stretch flex-1 min-h-0 ${
           isTablet 
             ? 'grid-cols-1 md:grid-cols-5' 
             : 'grid-cols-1 lg:grid-cols-7'
@@ -2067,14 +2112,15 @@ function StatTrackerV3Content() {
             </div>
           </div>
 
-          {/* Center Column - Stat Interface */}
+          {/* Center Column - Stat Interface (with Shot Tracker toggle) */}
           <div className={isTablet ? "md:col-span-1" : "lg:col-span-3"}>
             <div className="h-full">
-              <DesktopStatGridV3
+              <StatInputWrapper
                 selectedPlayer={selectedPlayer}
                 selectedPlayerData={[...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer)}
                 isClockRunning={tracker.clock.isRunning && !tracker.timeoutActive}
                 onStatRecord={handleStatRecord}
+                onStatRecordWithLocation={handleStatRecordWithLocation}
                 onFoulRecord={handleFoulRecord}
                 onTimeOut={handleTimeoutClick}
                 onSubstitution={() => handleSubstitution()}
@@ -2084,7 +2130,6 @@ function StatTrackerV3Content() {
                 lastActionPlayerId={tracker.lastActionPlayerId}
                 onUndoLastAction={tracker.undoLastAction}
                 canUndo={!!tracker.lastRecordedStat}
-                // ✅ REFINEMENT 1: Pass possession indicator props
                 possession={tracker.possession}
                 teamAId={gameData.team_a_id}
                 teamBId={coachMode ? 'opponent-team' : gameData.team_b_id}
@@ -2093,11 +2138,9 @@ function StatTrackerV3Content() {
                 isCoachMode={coachMode}
                 onPossessionChange={tracker.manualSetPossession}
                 gameStatus={tracker.gameStatus}
-                // ✅ Stat Edit Modal Props
                 gameId={gameData.id}
                 teamAPlayers={teamAPlayers}
                 teamBPlayers={teamBPlayers}
-                // ✅ STICKY BUTTON FIX: Pass callback to expose clear recording state function
                 onClearRecordingStateRef={(clearFn) => {
                   clearDesktopRecordingStateRef.current = clearFn;
                 }}

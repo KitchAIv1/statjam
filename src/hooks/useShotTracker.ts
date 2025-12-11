@@ -84,15 +84,10 @@ export function useShotTracker({
         shotZone: pendingShot.zone
       });
 
-      // Add marker for visual feedback
-      setShotMarkers(prev => [...prev, {
-        id: pendingShot.pendingId,
-        location: pendingShot.location,
-        made,
-        shotType: pendingShot.shotType,
-        playerId: pendingShot.playerId,
-        timestamp: Date.now()
-      }]);
+      // Shot recorded to database with location data
+      // Marker disappears (pendingShot cleared below)
+      // Court stays clean for next shot
+      // Shot chart summary can query database when needed
     } finally {
       setPendingShot(null);
       setIsProcessing(false);

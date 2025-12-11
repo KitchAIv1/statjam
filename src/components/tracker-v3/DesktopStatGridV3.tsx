@@ -239,15 +239,12 @@ export function DesktopStatGridV3({
 
   return (
     <div 
-      className="w-full h-full rounded-xl p-4 flex flex-col"
+      className="w-full h-full rounded-xl p-4 flex flex-col justify-end"
       style={{ 
         background: '#ffffff', 
         borderColor: '#e5e7eb',
         borderWidth: '1px',
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        minHeight: '650px',
-        maxHeight: '650px',
-        height: '650px',
         overflow: 'hidden'
       }}
     >
@@ -392,7 +389,7 @@ export function DesktopStatGridV3({
 
       {/* ✅ FIXED: Scrollable Stat Grids Container */}
       <div 
-        className="flex-1 overflow-y-auto overflow-x-hidden stat-grid-scroll"
+        className="overflow-y-auto overflow-x-hidden stat-grid-scroll"
         style={{
           scrollbarWidth: 'thin',
           scrollbarColor: '#9ca3af #f3f4f6'
@@ -555,7 +552,7 @@ export function DesktopStatGridV3({
       {/* ✅ END: Scrollable Stat Grids Container */}
 
       {/* ✅ End Game & Cancel Buttons / Status - Always Visible at Bottom */}
-      <div className="mt-3 flex-shrink-0">
+      <div className="flex-shrink-0">
         {gameStatus === 'completed' || gameStatus === 'cancelled' ? (
           <div
             className="w-full text-lg font-black py-3 rounded-xl border-2 border-gray-400 bg-gray-500 text-white cursor-not-allowed opacity-50"
