@@ -470,13 +470,12 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
               </Button>
               
               <Button
-                onClick={() => {}}
+                onClick={() => setShowAnalytics(true)}
                 size="sm"
                 variant="outline"
-                disabled
-                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 !border-gray-300 cursor-not-allowed opacity-60"
-                title="Coming Soon - Team analytics and insights"
-                aria-label="Team analytics (coming soon)"
+                className="gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 !border-gray-300"
+                title="View team analytics and insights"
+                aria-label="Team analytics"
               >
                 <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 <span className="hidden sm:inline truncate">Analytics</span>
