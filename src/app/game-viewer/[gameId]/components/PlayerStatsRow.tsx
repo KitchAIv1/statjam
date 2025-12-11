@@ -12,6 +12,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
+import { ShotChartButton } from '@/components/shot-chart';
 
 export interface PlayerStatsRowProps {
   player: {
@@ -39,9 +40,11 @@ export interface PlayerStatsRowProps {
   };
   onPlayerClick?: (playerId: string, isCustomPlayer: boolean) => void;
   isDark?: boolean;
+  /** Game ID for shot chart - enables shot chart button */
+  gameId?: string;
 }
 
-export function PlayerStatsRow({ player, stats, onPlayerClick, isDark = true }: PlayerStatsRowProps) {
+export function PlayerStatsRow({ player, stats, onPlayerClick, isDark = true, gameId }: PlayerStatsRowProps) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -86,7 +89,7 @@ export function PlayerStatsRow({ player, stats, onPlayerClick, isDark = true }: 
       onClick={handleClick}
     >
       {/* Player Photo + Name */}
-      <div className={`flex items-center gap-2.5 shrink-0 ${isMobile ? 'w-[100px] mr-3' : 'w-[180px] mr-6'}`}>
+      <div className={`flex items-center gap-2.5 shrink-0 ${isMobile ? 'w-[120px] mr-3' : 'w-[200px] mr-6'}`}>
         {/* Avatar - Square with rounded corners */}
         <div className={`shrink-0 rounded-md overflow-hidden border ${isDark ? 'border-slate-600 bg-slate-700' : 'border-orange-200 bg-orange-100'} ${isMobile ? 'w-10 h-10' : 'w-11 h-11'}`}>
           {profilePhotoUrl ? (
@@ -102,9 +105,22 @@ export function PlayerStatsRow({ player, stats, onPlayerClick, isDark = true }: 
           )}
         </div>
         {/* Name */}
-        <div className={`${textPrimary} font-semibold leading-tight truncate ${isMobile ? 'text-[11px]' : 'text-sm'}`}>
+        <div className={`${textPrimary} font-semibold leading-tight truncate flex-1 ${isMobile ? 'text-[11px]' : 'text-sm'}`}>
           {name}
         </div>
+        {/* Shot Chart Button - only shown if gameId provided */}
+        {gameId && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <ShotChartButton
+              gameId={gameId}
+              playerId={id}
+              playerName={name}
+              variant="icon"
+              className={isDark ? 'hover:bg-slate-700' : ''}
+              hideIfNoData={false}
+            />
+          </div>
+        )}
       </div>
 
       {/* Stats Grid */}

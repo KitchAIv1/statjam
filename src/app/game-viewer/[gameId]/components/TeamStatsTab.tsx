@@ -190,6 +190,7 @@ export function TeamStatsTab({ gameId, teamId, teamName, isDark = true, prefetch
                 }}
                 onPlayerClick={handlePlayerClick}
                 isDark={isDark}
+                gameId={gameId}
               />
             ))
           ) : (
@@ -233,6 +234,7 @@ export function TeamStatsTab({ gameId, teamId, teamName, isDark = true, prefetch
                 }}
                 onPlayerClick={handlePlayerClick}
                 isDark={isDark}
+                gameId={gameId}
               />
             ))
           ) : (

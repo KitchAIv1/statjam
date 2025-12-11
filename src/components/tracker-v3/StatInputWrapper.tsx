@@ -133,7 +133,7 @@ export function StatInputWrapper({
           height: '650px'
         }}
       >
-        {/* Mode Toggle Header - Floating above the grid */}
+        {/* Mode Toggle Header - Available for all tracking modes */}
         <div className="flex items-center justify-end p-2 flex-shrink-0">
           <TrackerModeToggle
             mode={inputMode}
@@ -186,7 +186,7 @@ export function StatInputWrapper({
         height: '650px'
       }}
     >
-      {/* Mode Toggle Header */}
+      {/* Mode Toggle Header - Available for all tracking modes */}
       <div className="flex items-center justify-end p-2 flex-shrink-0">
         <TrackerModeToggle
           mode={inputMode}

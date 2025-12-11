@@ -2,7 +2,7 @@
  * Shot Location Service
  * 
  * Handles zone detection from court coordinates and shot type inference.
- * Used by useShotTracker hook to determine 2PT vs 3PT based on tap location.
+ * Uses circular arc geometry calibrated to the halfcourt.png image.
  * 
  * @module shotLocationService
  */
@@ -16,51 +16,58 @@ import {
 } from '@/lib/types/shotTracker';
 
 // ============================================================================
-// COURT GEOMETRY CONSTANTS (Based on NBA half-court proportions)
+// COURT GEOMETRY CONSTANTS (Calibrated to halfcourt.png)
 // ============================================================================
 
-/** 
- * 3-point line distance from basket (as percentage of court width/height)
- * NBA 3PT line is 23.75 feet from basket, corners are 22 feet
+/**
+ * Basket center position (normalized 0-100)
+ * Measured from the actual halfcourt.png image
  */
-const THREE_POINT_ARC_RADIUS = 42; // Approximate Y distance where arc crosses
+const BASKET_X = 50;
+const BASKET_Y = 8;
 
-/** Paint boundaries (percentage of court dimensions) */
-const PAINT_LEFT = 30;
-const PAINT_RIGHT = 70;
-const PAINT_BOTTOM = 35; // Y position where paint ends (towards half-court)
+/**
+ * 3-point arc as ELLIPSE (not circle)
+ * The arc is wider vertically (top) than horizontally (sides)
+ * 
+ * X_RADIUS: Controls side boundaries (left/right wings)
+ * Y_RADIUS: Controls top boundary (top of key area)
+ */
+const ARC_X_RADIUS = 42; // Horizontal reach (sides) - smaller
+const ARC_Y_RADIUS = 55; // Vertical reach (top) - larger
 
-/** Corner 3 boundaries */
-const CORNER_3_MAX_Y = 18; // Corners extend this far from baseline
-const CORNER_3_LEFT_MAX_X = 15;
-const CORNER_3_RIGHT_MIN_X = 85;
+/**
+ * Corner 3 zone boundaries
+ * Corners are straight lines, not part of the arc
+ */
+const CORNER_3_LEFT_MAX_X = 12;  // Left corner boundary
+const CORNER_3_RIGHT_MIN_X = 88; // Right corner boundary
+const CORNER_3_MAX_Y = 18;       // How far corners extend from baseline
 
-/** Wing 3 boundaries */
-const WING_Y_MIN = 18;
-const WING_Y_MAX = 50;
+/**
+ * Paint/key boundaries (measured from image)
+ */
+const PAINT_LEFT = 32;
+const PAINT_RIGHT = 68;
+const PAINT_BOTTOM = 32; // Where paint ends (Y value)
 
 // ============================================================================
-// ZONE DETECTION
+// ZONE DETECTION (Arc-based)
 // ============================================================================
 
 /**
  * Detect which zone a court tap falls into
- * Uses geometric boundaries based on NBA court proportions
+ * Uses circular arc geometry for accurate 2PT vs 3PT detection
  */
 export function detectZoneFromCoordinates(coords: CourtCoordinates): ZoneDetectionResult {
   const { x, y } = coords;
   
   // Validate coordinates are in range
   if (x < 0 || x > 100 || y < 0 || y > 100) {
-    return createResult('mid_range', 'low'); // Default fallback
+    return createResult('mid_range', 'low');
   }
 
-  // Check paint first (innermost zone)
-  if (isInPaint(x, y)) {
-    return createResult('paint', 'high');
-  }
-
-  // Check corner 3s
+  // Step 1: Check corner 3s first (straight lines, not arc)
   if (isInCorner3Left(x, y)) {
     return createResult('corner_3_left', 'high');
   }
@@ -68,16 +75,17 @@ export function detectZoneFromCoordinates(coords: CourtCoordinates): ZoneDetecti
     return createResult('corner_3_right', 'high');
   }
 
-  // Check if beyond 3-point arc
-  if (isBeyond3PointArc(x, y)) {
-    // Determine which 3PT zone
-    if (y > WING_Y_MAX) {
-      return createResult('top_3', 'high');
-    }
-    if (x < 50) {
-      return createResult('wing_3_left', 'high');
-    }
-    return createResult('wing_3_right', 'high');
+  // Step 2: Check if beyond 3-point arc (elliptical boundary)
+  const isBeyondArc = isOutsideEllipticalArc(x, y);
+
+  if (isBeyondArc) {
+    // Determine which 3PT zone based on position
+    return classify3PointZone(x, y);
+  }
+
+  // Step 3: Inside the arc - check paint vs mid-range
+  if (isInPaint(x, y)) {
+    return createResult('paint', 'high');
   }
 
   // Default: mid-range (inside arc but outside paint)
@@ -85,14 +93,24 @@ export function detectZoneFromCoordinates(coords: CourtCoordinates): ZoneDetecti
 }
 
 /**
- * Check if coordinates are inside the paint/key area
+ * Check if point is outside the elliptical 3PT arc
+ * Uses ellipse equation: (dx/a)² + (dy/b)² > 1 means outside
+ * 
+ * This allows different radii for horizontal (sides) and vertical (top)
  */
-function isInPaint(x: number, y: number): boolean {
-  return x >= PAINT_LEFT && x <= PAINT_RIGHT && y <= PAINT_BOTTOM;
+function isOutsideEllipticalArc(x: number, y: number): boolean {
+  const dx = Math.abs(x - BASKET_X);
+  const dy = y - BASKET_Y;
+  
+  // Ellipse equation: if > 1, point is outside the arc
+  const normalizedDistance = (dx / ARC_X_RADIUS) ** 2 + (dy / ARC_Y_RADIUS) ** 2;
+  
+  return normalizedDistance > 1;
 }
 
 /**
  * Check if coordinates are in left corner 3 zone
+ * Corners are straight vertical lines, not part of the arc
  */
 function isInCorner3Left(x: number, y: number): boolean {
   return x <= CORNER_3_LEFT_MAX_X && y <= CORNER_3_MAX_Y;
@@ -106,21 +124,28 @@ function isInCorner3Right(x: number, y: number): boolean {
 }
 
 /**
- * Check if coordinates are beyond the 3-point arc
- * Uses simplified rectangular approximation for the arc
+ * Check if coordinates are inside the paint/key area
  */
-function isBeyond3PointArc(x: number, y: number): boolean {
-  // Simple distance-from-basket calculation
-  const basketX = 50;
-  const basketY = 5;
+function isInPaint(x: number, y: number): boolean {
+  return x >= PAINT_LEFT && x <= PAINT_RIGHT && y <= PAINT_BOTTOM;
+}
+
+/**
+ * Classify which 3-point zone based on position
+ */
+function classify3PointZone(x: number, y: number): ZoneDetectionResult {
+  // Top of key (center)
+  if (x >= 35 && x <= 65) {
+    return createResult('top_3', 'high');
+  }
   
-  const dx = Math.abs(x - basketX);
-  const dy = y - basketY;
+  // Left wing
+  if (x < 35) {
+    return createResult('wing_3_left', 'high');
+  }
   
-  // Approximate arc as ellipse (wider horizontally)
-  const normalizedDistance = Math.sqrt((dx / 45) ** 2 + (dy / 40) ** 2);
-  
-  return normalizedDistance > 1;
+  // Right wing
+  return createResult('wing_3_right', 'high');
 }
 
 /**

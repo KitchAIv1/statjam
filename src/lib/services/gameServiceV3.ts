@@ -487,6 +487,10 @@ export class GameServiceV3 {
     eventMetadata?: Record<string, any>; // Additional context
     // ✅ RELIABILITY: Idempotency key to prevent duplicate writes
     idempotencyKey?: string; // Generated client-side before write
+    // ✅ SHOT TRACKER: Location data for court-based shot tracking
+    shotLocationX?: number; // 0-100 normalized X coordinate
+    shotLocationY?: number; // 0-100 normalized Y coordinate
+    shotZone?: string; // Zone identifier (paint, mid_range, corner_3_left, etc.)
   }): Promise<any> {
     try {
       console.log('🚀 GameServiceV3: Recording stat via raw HTTP:', statData);
@@ -525,7 +529,11 @@ export class GameServiceV3 {
           linked_event_id: statData.linkedEventId || null,
           event_metadata: statData.eventMetadata || null,
           // ✅ RELIABILITY: Idempotency key to prevent duplicate writes
-          idempotency_key: statData.idempotencyKey || null
+          idempotency_key: statData.idempotencyKey || null,
+          // ✅ SHOT TRACKER: Location data for court-based shot tracking
+          shot_location_x: statData.shotLocationX ?? null,
+          shot_location_y: statData.shotLocationY ?? null,
+          shot_zone: statData.shotZone || null
         })
       });
 

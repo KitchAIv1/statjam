@@ -1612,7 +1612,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           linkedEventId: stat.linkedEventId,
           eventMetadata: stat.eventMetadata,
           // ✅ RELIABILITY: Include idempotency key to prevent duplicate writes
-          idempotencyKey: idempotencyKey
+          idempotencyKey: idempotencyKey,
+          // ✅ SHOT TRACKER: Pass location data for court-based shot tracking
+          shotLocationX: stat.shotLocationX,
+          shotLocationY: stat.shotLocationY,
+          shotZone: stat.shotZone
         }),
         stat.statType
       );
