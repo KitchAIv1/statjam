@@ -65,6 +65,10 @@ export interface StatRecord {
   eventMetadata?: Record<string, any>; // Additional context
   // ✅ PHASE 6B: Possession metadata
   metadata?: Record<string, any>; // For technical/flagrant FT possession retention
+  // ✅ SHOT TRACKER: Location data for court-based shot tracking
+  shotLocationX?: number; // 0-100 normalized X coordinate
+  shotLocationY?: number; // 0-100 normalized Y coordinate
+  shotZone?: string; // Zone identifier (paint, mid_range, corner_3_left, etc.)
 }
 
 export interface SubstitutionInput {
