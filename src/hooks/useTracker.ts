@@ -260,12 +260,13 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
       }
       
-      // Handle coach mode where both team IDs are the same
-      if (teamAId === teamBId) {
-        // Coach mode: Store opponent score separately
+      // ✅ FIX: Use isCoachMode flag instead of comparing team IDs
+      // Coach games may have different team_a_id and team_b_id in some cases
+      if (isCoachMode) {
+        // Coach mode: Store opponent score separately under 'opponent' key
         return { [teamAId]: teamAScore, opponent: teamBScore };
       } else {
-        // Tournament mode: Use both team IDs
+        // Tournament/Stat Admin mode: Use both team IDs
         return {
           [teamAId]: teamAScore,
           [teamBId]: teamBScore
@@ -713,7 +714,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               const currentScores = scoresRef.current;
           let hasChanges = false;
               
-          if (teamAId === teamBId) {
+          // ✅ FIX: Use isCoachMode flag instead of comparing team IDs
+          if (isCoachMode) {
             // Coach mode: compare both team score and opponent score
                 hasChanges = (
                   currentScores[teamAId] !== calculatedScores[teamAId] ||
@@ -1047,9 +1049,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         setQuarter(nextQuarter);
       } else if (quarter === 4) {
         // End of 4th quarter - check if game should go to overtime
-        // ✅ FIX #4 & #7: Use correct score access (handle coach mode)
+        // ✅ FIX: Use isCoachMode flag instead of comparing team IDs
         const teamAScore = scores[teamAId] || 0;
-        const teamBScore = teamAId === teamBId 
+        const teamBScore = isCoachMode 
           ? scores.opponent || 0  // Coach mode: opponent score
           : scores[teamBId] || 0; // Tournament mode: team B score
         
@@ -1067,9 +1069,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
       } else {
         // Already in overtime (quarter >= 5) - check for tie again
-        // ✅ FIX #4 & #7: Use correct score access (handle coach mode)
+        // ✅ FIX: Use isCoachMode flag instead of comparing team IDs
         const teamAScore = scores[teamAId] || 0;
-        const teamBScore = teamAId === teamBId 
+        const teamBScore = isCoachMode 
           ? scores.opponent || 0  // Coach mode: opponent score
           : scores[teamBId] || 0; // Tournament mode: team B score
         
