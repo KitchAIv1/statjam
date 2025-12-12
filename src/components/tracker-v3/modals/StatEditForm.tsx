@@ -19,6 +19,7 @@ import { StatEditService, GameStatRecord } from '@/lib/services/statEditService'
 interface Player {
   id: string;
   name: string;
+  is_custom_player?: boolean;
 }
 
 interface StatEditFormProps {
@@ -108,8 +109,12 @@ export function StatEditForm({
       }
 
       // Regular stat update
-      // Determine if this is regular player or custom player
-      const isCustomPlayer = !players.find(p => p.id === playerId && !p.id.startsWith('custom-'));
+      // Determine if this is regular player or custom player (TWO CHECKS: ID prefix OR flag)
+      const selectedPlayerData = players.find(p => p.id === playerId);
+      const isCustomPlayer = playerId.startsWith('custom-') || 
+                            (selectedPlayerData && selectedPlayerData.is_custom_player === true) ||
+                            // Fallback: if original stat was custom and player unchanged, preserve it
+                            (stat.custom_player_id !== null && stat.custom_player_id === playerId);
       
       const updates: Partial<GameStatRecord> = {
         player_id: isCustomPlayer ? null : playerId,
