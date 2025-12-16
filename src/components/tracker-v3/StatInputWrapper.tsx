@@ -74,6 +74,11 @@ interface StatInputWrapperProps {
   
   // Sticky button fix
   onClearRecordingStateRef?: (clearFn: () => void) => void;
+  
+  // Clock state for Add Stat modal
+  currentQuarter?: number;
+  currentMinutes?: number;
+  currentSeconds?: number;
 }
 
 export function StatInputWrapper({
@@ -102,7 +107,10 @@ export function StatInputWrapper({
   possession,
   onPossessionChange,
   isCoachMode,
-  onClearRecordingStateRef
+  onClearRecordingStateRef,
+  currentQuarter = 1,
+  currentMinutes = 10,
+  currentSeconds = 0
 }: StatInputWrapperProps) {
   const [inputMode, setInputMode] = useState<TrackerInputMode>('classic');
 
@@ -170,6 +178,9 @@ export function StatInputWrapper({
             teamAPlayers={teamAPlayers}
             teamBPlayers={teamBPlayers}
             onClearRecordingStateRef={onClearRecordingStateRef}
+            currentQuarter={currentQuarter}
+            currentMinutes={currentMinutes}
+            currentSeconds={currentSeconds}
           />
         </div>
       </div>

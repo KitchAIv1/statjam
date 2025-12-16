@@ -44,10 +44,15 @@ export function getPlayerName(
     return `${playerOutName} → ${playerInName}`;
   }
   
-  if (stat.is_opponent_stat) return 'Opponent Team';
+  if (stat.is_opponent_stat) return teamBName;
   
   const playerId = stat.player_id || stat.custom_player_id;
-  return playerMap.get(playerId || '') || 'Unknown Player';
+  const playerName = playerMap.get(playerId || '');
+  
+  // ✅ Coach mode: If player not found and stat is from Team B (opponent), show opponent team name
+  if (!playerName && stat.team_side === 'B') return teamBName;
+  
+  return playerName || 'Unknown Player';
 }
 
 /**

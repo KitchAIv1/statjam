@@ -294,6 +294,10 @@ export function MobileLayoutV3({
           teamBName={isCoachMode ? (opponentName || 'Opponent Team') : (gameData.team_b?.name || 'Team B')}
           // ✅ STICKY BUTTON FIX: Pass callback to expose clear recording state function
           onClearRecordingStateRef={onClearRecordingStateRef}
+          isCoachMode={isCoachMode}
+          currentQuarter={tracker.quarter}
+          currentMinutes={Math.floor(tracker.clock.secondsRemaining / 60)}
+          currentSeconds={tracker.clock.secondsRemaining % 60}
         />
 
         {/* End Game & Cancel Buttons / Status - Clean Design */}

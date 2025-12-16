@@ -5,6 +5,7 @@ import { AutomationFlags, DEFAULT_AUTOMATION_FLAGS, COACH_AUTOMATION_FLAGS } fro
 import { RulesetService } from '@/lib/config/rulesetService';
 import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 import { validateQuarter } from '@/lib/validation/statValidation';
+import { cache } from '@/lib/utils/cache';
 
 interface UseTrackerProps {
   initialGameId: string;
@@ -1644,6 +1645,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         });
         console.log('✅ useTracker: Captured stat for undo:', savedStat.id);
       }
+      
+      // ✅ FIX: Invalidate Edit Stats cache so new stats appear immediately
+      cache.delete(`stat_edit_stats_${stat.gameId}`);
       
     } catch (error) {
       console.error('❌ Error recording stat:', error);

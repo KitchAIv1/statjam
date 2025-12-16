@@ -32,6 +32,7 @@ import { BlockedShotSelectionModal } from '@/components/tracker-v3/modals/Blocke
 import { FreeThrowSequenceModal } from '@/components/tracker-v3/modals/FreeThrowSequenceModal';
 import { FreeThrowCountModal } from '@/components/tracker-v3/modals/FreeThrowCountModal';
 import { FoulTypeSelectionModal, FoulType } from '@/components/tracker-v3/modals/FoulTypeSelectionModal';
+import { TurnoverTypeModal, TurnoverType } from '@/components/tracker-v3/modals/TurnoverTypeModal';
 import { VictimPlayerSelectionModal } from '@/components/tracker-v3/modals/VictimPlayerSelectionModal';
 import { ShotMadeMissedModal } from '@/components/tracker-v3/modals/ShotMadeMissedModal';
 import { ShotClockViolationModal } from '@/components/tracker-v3/modals/ShotClockViolationModal';
@@ -134,6 +135,8 @@ function StatTrackerV3Content() {
     shooterId: string;
     shooterName: string;
     shooterTeamId: string;
+    isOpponentStat?: boolean; // ✅ Coach mode: track if this is opponent team FT
+    actualPlayerId?: string;  // ✅ Coach mode: use coach's user ID as proxy for opponent
   } | null>(null);
   
   // ✅ PHASE 5: Foul Flow State
@@ -141,6 +144,11 @@ function StatTrackerV3Content() {
   const [showVictimSelectionModal, setShowVictimSelectionModal] = useState(false);
   const [showShotMadeMissedModal, setShowShotMadeMissedModal] = useState(false);
   const [selectedFoulType, setSelectedFoulType] = useState<string | null>(null);
+  
+  // ✅ Turnover Type Modal State
+  const [showTurnoverTypeModal, setShowTurnoverTypeModal] = useState(false);
+  const [turnoverPlayerId, setTurnoverPlayerId] = useState<string | null>(null);
+  const [turnoverPlayerName, setTurnoverPlayerName] = useState<string>('');
   const [foulerPlayerId, setFoulerPlayerId] = useState<string | null>(null);
   const [foulerPlayerName, setFoulerPlayerName] = useState<string>('');
   const [victimPlayerId, setVictimPlayerId] = useState<string | null>(null);
@@ -447,6 +455,18 @@ function StatTrackerV3Content() {
       }
     }
     
+    // ✅ Intercept Turnover without modifier - show type selection modal
+    if (statType === 'turnover' && !modifier) {
+      const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+      const playerName = playerData?.name || 'Player';
+      
+      // Store player info and show turnover type modal
+      setTurnoverPlayerId(selectedPlayer);
+      setTurnoverPlayerName(playerName);
+      setShowTurnoverTypeModal(true);
+      return; // Don't record stat yet - wait for type selection
+    }
+    
     try {
       // Handle different player types in coach mode
       let actualPlayerId: string | undefined = undefined;
@@ -513,17 +533,30 @@ function StatTrackerV3Content() {
       // Determine player/team context (same logic as handleStatRecord)
       let actualPlayerId: string | undefined = undefined;
       let actualCustomPlayerId: string | undefined = undefined;
-      const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
-      const actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+      let actualTeamId = gameData.team_a_id; // Default to coach team
+      let isOpponentStat = false;
       
-      const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-      const isCustomPlayer = selectedPlayer.startsWith('custom-') || 
-                            (selectedPlayerData && selectedPlayerData.is_custom_player === true);
-      
-      if (isCustomPlayer) {
-        actualCustomPlayerId = selectedPlayer;
+      // ✅ FIX: Handle opponent team in coach mode (same as handleStatRecord)
+      if (coachMode && selectedPlayer === 'opponent-team') {
+        // OPPONENT TEAM STATS: Use coach's user ID as proxy, mark as opponent stat
+        actualPlayerId = user?.id || undefined;
+        actualTeamId = gameData.team_a_id; // Use coach's team ID for database (UUID required)
+        isOpponentStat = true;
+        console.log('✅ Shot Tracker: Recording opponent team shot, isOpponentStat:', isOpponentStat);
       } else {
-        actualPlayerId = selectedPlayer;
+        // Regular player or custom player
+        const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
+        actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+        
+        const selectedPlayerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+        const isCustomPlayer = selectedPlayer.startsWith('custom-') || 
+                              (selectedPlayerData && selectedPlayerData.is_custom_player === true);
+        
+        if (isCustomPlayer) {
+          actualCustomPlayerId = selectedPlayer;
+        } else {
+          actualPlayerId = selectedPlayer;
+        }
       }
       
       await tracker.recordStat({
@@ -531,6 +564,7 @@ function StatTrackerV3Content() {
         teamId: actualTeamId,
         playerId: actualPlayerId,
         customPlayerId: actualCustomPlayerId,
+        isOpponentStat: isOpponentStat,
         statType: statType as 'field_goal' | 'three_pointer',
         modifier: modifier as 'made' | 'missed',
         // ✅ Include shot location data
@@ -550,11 +584,14 @@ function StatTrackerV3Content() {
     
     setShowFTCountModal(false);
     
+    // ✅ Coach mode: Handle opponent team FT
+    const isOpponentTeam = coachMode && selectedPlayer === 'opponent-team';
+    
     // Get shooter info
     const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-    const shooterName = shooterData?.name || 'Player';
+    const shooterName = isOpponentTeam ? 'Opponent' : (shooterData?.name || 'Player');
     const isTeamAPlayer = teamAPlayers.some(p => p.id === selectedPlayer);
-    const shooterTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+    const shooterTeamId = isOpponentTeam ? gameData.team_a_id : (isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id);
     
     // Start auto-sequence
     setFtAutoSequence({
@@ -564,7 +601,9 @@ function StatTrackerV3Content() {
       results: [],
       shooterId: selectedPlayer,
       shooterName,
-      shooterTeamId
+      shooterTeamId,
+      isOpponentStat: isOpponentTeam,
+      actualPlayerId: isOpponentTeam ? user?.id : undefined
     });
   };
   
@@ -594,15 +633,32 @@ function StatTrackerV3Content() {
     }
     
     // Record current shot (using captured values)
-    const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === currentSequence.shooterId);
-    const isCustomPlayer = currentSequence.shooterId.startsWith('custom-') || 
-                          (shooterData && shooterData.is_custom_player === true);
+    // ✅ Coach mode: Handle opponent team FT properly
+    let actualPlayerId: string | undefined = undefined;
+    let actualCustomPlayerId: string | undefined = undefined;
+    
+    if (currentSequence.isOpponentStat) {
+      // Opponent team FT: Use coach's user ID as proxy
+      actualPlayerId = currentSequence.actualPlayerId;
+    } else {
+      // Regular player or custom player
+      const shooterData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === currentSequence.shooterId);
+      const isCustomPlayer = currentSequence.shooterId.startsWith('custom-') || 
+                            (shooterData && shooterData.is_custom_player === true);
+      
+      if (isCustomPlayer) {
+        actualCustomPlayerId = currentSequence.shooterId;
+      } else {
+        actualPlayerId = currentSequence.shooterId;
+      }
+    }
     
     // ✅ OPTIMIZATION: Write to database in background (non-blocking)
     tracker.recordStat({
       gameId: gameData.id,
-      playerId: isCustomPlayer ? undefined : currentSequence.shooterId,
-      customPlayerId: isCustomPlayer ? currentSequence.shooterId : undefined,
+      playerId: actualPlayerId,
+      customPlayerId: actualCustomPlayerId,
+      isOpponentStat: currentSequence.isOpponentStat || false,
       teamId: currentSequence.shooterTeamId,
       statType: 'free_throw',
       modifier: currentResult.made ? 'made' : 'missed',
@@ -674,6 +730,63 @@ function StatTrackerV3Content() {
       // Personal or Offensive foul - record immediately
       console.log('🔍 handleFoulTypeSelection: Recording foul without victim - Type:', foulType);
       await recordFoulWithoutVictim(foulType);
+    }
+  };
+  
+  // ✅ Handle turnover type selection from modal
+  const handleTurnoverTypeSelection = async (turnoverType: TurnoverType) => {
+    setShowTurnoverTypeModal(false);
+    
+    if (!turnoverPlayerId || !gameData) {
+      setTurnoverPlayerId(null);
+      setTurnoverPlayerName('');
+      return;
+    }
+    
+    try {
+      // Determine player type and team
+      let actualPlayerId: string | undefined = undefined;
+      let actualCustomPlayerId: string | undefined = undefined;
+      let actualTeamId = gameData.team_a_id;
+      let isOpponentStat = false;
+      
+      if (coachMode && turnoverPlayerId === 'opponent-team') {
+        actualPlayerId = user?.id || undefined;
+        actualTeamId = gameData.team_a_id;
+        isOpponentStat = true;
+      } else {
+        const isTeamAPlayer = teamAPlayers.some(p => p.id === turnoverPlayerId);
+        actualTeamId = isTeamAPlayer ? gameData.team_a_id : gameData.team_b_id;
+        
+        const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === turnoverPlayerId);
+        const isCustomPlayer = turnoverPlayerId.startsWith('custom-') || 
+                              (playerData && playerData.is_custom_player === true);
+        
+        if (isCustomPlayer) {
+          actualCustomPlayerId = turnoverPlayerId;
+        } else {
+          actualPlayerId = turnoverPlayerId;
+        }
+      }
+      
+      // Map 'other' to null modifier (generic turnover)
+      const modifier = turnoverType === 'other' ? null : turnoverType;
+      
+      await tracker.recordStat({
+        gameId: gameData.id,
+        teamId: actualTeamId,
+        playerId: actualPlayerId,
+        customPlayerId: actualCustomPlayerId,
+        isOpponentStat: isOpponentStat,
+        statType: 'turnover',
+        modifier: modifier as any
+      });
+    } catch (error) {
+      console.error('❌ Error recording turnover:', error);
+      notify.error('Failed to record turnover', error instanceof Error ? error.message : 'Please try again');
+    } finally {
+      setTurnoverPlayerId(null);
+      setTurnoverPlayerName('');
     }
   };
   
@@ -1739,6 +1852,18 @@ function StatTrackerV3Content() {
         foulerName={foulerPlayerName}
       />
 
+      {/* Turnover Type Selection Modal */}
+      <TurnoverTypeModal
+        isOpen={showTurnoverTypeModal}
+        onClose={() => {
+          setShowTurnoverTypeModal(false);
+          setTurnoverPlayerId(null);
+          setTurnoverPlayerName('');
+        }}
+        onSelectTurnoverType={handleTurnoverTypeSelection}
+        playerName={turnoverPlayerName}
+      />
+
       {/* Victim Player Selection Modal */}
       {showVictimSelectionModal && selectedFoulType && (
         <VictimPlayerSelectionModal
@@ -2144,6 +2269,9 @@ function StatTrackerV3Content() {
                 onClearRecordingStateRef={(clearFn) => {
                   clearDesktopRecordingStateRef.current = clearFn;
                 }}
+                currentQuarter={tracker.quarter}
+                currentMinutes={Math.floor(tracker.clock.secondsRemaining / 60)}
+                currentSeconds={tracker.clock.secondsRemaining % 60}
               />
             </div>
           </div>

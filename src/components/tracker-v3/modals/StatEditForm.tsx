@@ -15,6 +15,7 @@ import React, { useState } from 'react';
 import { X, Save } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { StatEditService, GameStatRecord } from '@/lib/services/statEditService';
+import { ShotLocationEditor } from './ShotLocationEditor';
 
 interface Player {
   id: string;
@@ -44,7 +45,13 @@ export function StatEditForm({
   const [value, setValue] = useState(stat.stat_value); // For game-level stats
   const [saving, setSaving] = useState(false);
   
+  // ✅ Shot location state (for field_goal/three_pointer)
+  const [shotLocationX, setShotLocationX] = useState<number | null>(stat.shot_location_x ?? null);
+  const [shotLocationY, setShotLocationY] = useState<number | null>(stat.shot_location_y ?? null);
+  const [shotZone, setShotZone] = useState<string | null>(stat.shot_zone ?? null);
+  
   const isGameLevelStat = stat.is_game_level_stat || false;
+  const isShotStat = statType === 'field_goal' || statType === 'three_pointer';
 
   const statTypes = [
     { value: 'field_goal', label: '2PT Field Goal' },
@@ -123,7 +130,13 @@ export function StatEditForm({
         modifier: modifier || null,
         quarter,
         game_time_minutes: minutes,
-        game_time_seconds: seconds
+        game_time_seconds: seconds,
+        // ✅ Include shot location for field_goal/three_pointer
+        ...(isShotStat && {
+          shot_location_x: shotLocationX,
+          shot_location_y: shotLocationY,
+          shot_zone: shotZone
+        })
       };
 
       await StatEditService.updateStat(stat.id, updates);
@@ -245,6 +258,20 @@ export function StatEditForm({
                 ))}
               </select>
             </div>
+          )}
+
+          {/* ✅ Shot Location Editor (for field_goal/three_pointer only) */}
+          {isShotStat && (
+            <ShotLocationEditor
+              locationX={shotLocationX}
+              locationY={shotLocationY}
+              zone={shotZone}
+              onLocationChange={(x, y, zone) => {
+                setShotLocationX(x);
+                setShotLocationY(y);
+                setShotZone(zone);
+              }}
+            />
           )}
 
               {/* Quarter and Time */}

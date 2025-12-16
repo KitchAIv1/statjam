@@ -5,6 +5,7 @@ import { AlertTriangle, MoreHorizontal, RotateCcw, Clock, Undo, Edit } from 'luc
 import { Button } from '@/components/ui/Button';
 import { StatEditModalV2 } from '../modals/StatEditModalV2';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { MADE_STATS, MISSED_STATS, SINGLE_STATS } from '../config/statButtonConfigs';
 
 interface Player {
   id: string;
@@ -35,6 +36,11 @@ interface MobileStatGridV3Props {
   teamBName?: string;
   // ✅ STICKY BUTTON FIX: Callback to expose clear recording state function
   onClearRecordingStateRef?: (clearFn: () => void) => void;
+  // ✅ Clock state for Add Stat modal
+  currentQuarter?: number;
+  currentMinutes?: number;
+  currentSeconds?: number;
+  isCoachMode?: boolean;
 }
 
 export function MobileStatGridV3({
@@ -58,7 +64,12 @@ export function MobileStatGridV3({
   teamAName = 'Team A',
   teamBName = 'Team B',
   // ✅ STICKY BUTTON FIX: Callback to expose clear recording state function
-  onClearRecordingStateRef
+  onClearRecordingStateRef,
+  // ✅ Clock state for Add Stat modal
+  currentQuarter = 1,
+  currentMinutes = 10,
+  currentSeconds = 0,
+  isCoachMode = false
 }: MobileStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
@@ -157,28 +168,8 @@ export function MobileStatGridV3({
 
   const isDisabled = !selectedPlayer || !isClockRunning;
 
-  // Primary stats with made/missed options - FIXED: Swapped rebound positions
-  const madeStats = [
-    { id: '2pt-made', label: '2PT', statType: 'field_goal', modifier: 'made' },
-    { id: '3pt-made', label: '3PT', statType: 'three_pointer', modifier: 'made' },
-    { id: 'ft-made', label: 'FT', statType: 'free_throw', modifier: 'made' },
-    { id: 'reb-offensive', label: 'REB', statType: 'rebound', modifier: 'offensive' } // FIXED: Offensive rebound in first layer
-  ];
-
-  const missedStats = [
-    { id: '2pt-missed', label: '2PT', statType: 'field_goal', modifier: 'missed' },
-    { id: '3pt-missed', label: '3PT', statType: 'three_pointer', modifier: 'missed' },
-    { id: 'ft-missed', label: 'FT', statType: 'free_throw', modifier: 'missed' },
-    { id: 'reb-defensive', label: 'REB', statType: 'rebound', modifier: 'defensive' } // FIXED: Defensive rebound in second layer
-  ];
-
-  // Other single-button stats (✅ PHASE 5 FIX: No modifiers - database constraint requires NULL)
-  const singleStats = [
-    { id: 'ast', label: 'AST', statType: 'assist', modifier: undefined },
-    { id: 'stl', label: 'STL', statType: 'steal', modifier: undefined },
-    { id: 'blk', label: 'BLK', statType: 'block', modifier: undefined },
-    { id: 'tov', label: 'TOV', statType: 'turnover', modifier: 'traveling' } // ✅ FIX: Default to traveling (dead ball - clock pauses)
-  ];
+  // ✅ Use shared configs from statButtonConfigs.ts for consistency
+  // MADE_STATS, MISSED_STATS, SINGLE_STATS imported from config
 
   // Secondary actions - FOUL, TF, TIME OUT, SUB
   const secondaryActions = [
@@ -230,7 +221,7 @@ export function MobileStatGridV3({
 
       {/* Made Stats Row - Clean Design */}
       <div className="grid grid-cols-4 gap-3 mb-4">
-        {madeStats.map((stat) => {
+        {MADE_STATS.map((stat) => {
           const statId = `${stat.statType}-${stat.modifier}`;
           const isThisButtonRecording = isRecording === statId;
           
@@ -270,7 +261,7 @@ export function MobileStatGridV3({
 
       {/* Missed Stats Row - Clean Design */}
       <div className="grid grid-cols-4 gap-3 mb-4">
-        {missedStats.map((stat) => {
+        {MISSED_STATS.map((stat) => {
           const statId = `${stat.statType}-${stat.modifier}`;
           const isThisButtonRecording = isRecording === statId;
           
@@ -303,7 +294,7 @@ export function MobileStatGridV3({
 
       {/* Single Action Stats - Clean Design */}
       <div className="grid grid-cols-4 gap-3 mb-4">
-        {singleStats.map((stat) => (
+        {SINGLE_STATS.map((stat) => (
           <Button
             key={stat.id}
             onClick={() => handleStatClick(stat.statType)}
@@ -512,6 +503,10 @@ export function MobileStatGridV3({
           teamBId={teamBId}
           teamAName={teamAName}
           teamBName={teamBName}
+          isCoachMode={isCoachMode}
+          currentQuarter={currentQuarter}
+          currentMinutes={currentMinutes}
+          currentSeconds={currentSeconds}
         />
       )}
     </div>

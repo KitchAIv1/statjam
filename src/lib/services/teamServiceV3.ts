@@ -203,16 +203,17 @@ export class TeamServiceV3 {
       }
 
       // Step 4: Fetch custom player details from custom_players table
+      // ✅ FIX: Use authenticated request - custom_players RLS requires auth.uid() check
       let customPlayers: any[] = [];
       if (customPlayerIds.length > 0) {
         try {
-          customPlayers = await this.makeRequest<any>('custom_players', {
+          customPlayers = await this.makeAuthenticatedRequest<any>('custom_players', {
             'select': 'id,name,jersey_number,position,profile_photo_url',
             'id': `in.(${customPlayerIds.join(',')})`
           });
           console.log('✅ TeamServiceV3: Found', customPlayers.length, 'custom player details');
         } catch (error) {
-          console.log('⚠️ TeamServiceV3: No custom_players table or no custom players found');
+          console.log('⚠️ TeamServiceV3: Custom players query failed (auth or table issue):', error);
         }
       }
 

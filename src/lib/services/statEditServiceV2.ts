@@ -95,7 +95,7 @@ export class StatEditServiceV2 {
       // ⚡ PARALLEL FETCH: All requests at once
       const [statsResponse, timeoutsResponse, subsResponse, gameDataResponse] = await Promise.all([
         // Regular stats (optimized: only needed columns)
-        fetch(`${this.SUPABASE_URL}/rest/v1/game_stats?game_id=eq.${gameId}&select=id,game_id,player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at&order=created_at.desc`, { headers }),
+        fetch(`${this.SUPABASE_URL}/rest/v1/game_stats?game_id=eq.${gameId}&select=id,game_id,player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,created_at,is_opponent_stat,shot_location_x,shot_location_y,shot_zone&order=created_at.desc`, { headers }),
         // Timeouts
         fetch(`${this.SUPABASE_URL}/rest/v1/game_timeouts?game_id=eq.${gameId}&select=*&order=created_at.desc`, { headers }),
         // Substitutions
@@ -105,11 +105,17 @@ export class StatEditServiceV2 {
       ]);
 
       // Parse responses
-      const stats = statsResponse.ok ? await statsResponse.json() : [];
+      const rawStats = statsResponse.ok ? await statsResponse.json() : [];
       const timeouts = timeoutsResponse.ok ? await timeoutsResponse.json() : [];
       const substitutions = subsResponse.ok ? await subsResponse.json() : [];
       const gameDataArray = gameDataResponse.ok ? await gameDataResponse.json() : [];
       const gameData = gameDataArray[0] || { team_a_id: '', team_b_id: '' };
+
+      // ✅ Transform regular stats to add team_side
+      const stats = rawStats.map((stat: any) => ({
+        ...stat,
+        team_side: stat.team_id === gameData.team_a_id ? 'A' : 'B'
+      }));
 
       // Transform timeout events
       const timeoutEvents: GameStatRecord[] = timeouts.map((timeout: any) => ({
@@ -147,9 +153,16 @@ export class StatEditServiceV2 {
         team_side: sub.team_id === gameData.team_a_id ? 'A' : 'B'
       }));
 
-      // Combine and sort
+      // Combine and sort by game timeline (most recent game time first)
       const allEvents = [...stats, ...timeoutEvents, ...substitutionEvents];
       allEvents.sort((a, b) => {
+        // Quarter descending (Q4 first, Q1 last)
+        if (a.quarter !== b.quarter) return b.quarter - a.quarter;
+        // Minutes ascending (lower = later in quarter, e.g., 0:30 is after 5:30)
+        if (a.game_time_minutes !== b.game_time_minutes) return a.game_time_minutes - b.game_time_minutes;
+        // Seconds ascending (lower = later within same minute)
+        if (a.game_time_seconds !== b.game_time_seconds) return a.game_time_seconds - b.game_time_seconds;
+        // Fallback to created_at for stats at exact same game time
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 

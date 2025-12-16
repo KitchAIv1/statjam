@@ -14,18 +14,20 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { X, Edit, Filter } from 'lucide-react';
+import { X, Edit, Filter, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStatEditV2 } from '@/hooks/useStatEditV2';
 import { StatEditServiceV2 } from '@/lib/services/statEditServiceV2';
 import { GameStatRecord } from '@/lib/services/statEditService';
 import { StatEditForm } from './StatEditForm';
+import { StatCreateForm } from './StatCreateForm';
 import { StatEditTable } from './StatEditTable';
 import { StatEditTeamTab } from './StatEditTeamTab';
 import { StatDeleteConfirmation } from './StatDeleteConfirmation';
 import { getPlayerName, formatStatDisplay, createPlayerNameMap } from '@/lib/utils/statEditUtils';
 import { deleteStatHandler, invalidateTeamStatsCache } from '@/lib/utils/statEditHandlers';
+import { cache } from '@/lib/utils/cache';
 
 interface Player {
   id: string;
@@ -42,6 +44,10 @@ interface StatEditModalV2Props {
   teamBId?: string;
   teamAName?: string;
   teamBName?: string;
+  isCoachMode?: boolean;
+  currentQuarter?: number;
+  currentMinutes?: number;
+  currentSeconds?: number;
 }
 
 export function StatEditModalV2({
@@ -53,12 +59,17 @@ export function StatEditModalV2({
   teamAId,
   teamBId,
   teamAName = 'Team A',
-  teamBName = 'Team B'
+  teamBName = 'Team B',
+  isCoachMode = false,
+  currentQuarter = 1,
+  currentMinutes = 10,
+  currentSeconds = 0
 }: StatEditModalV2Props) {
   const [filterQuarter, setFilterQuarter] = useState<string>('all');
   const [editingStat, setEditingStat] = useState<GameStatRecord | null>(null);
   const [deletingStatId, setDeletingStatId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('stats');
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // ✅ FIX: Only fetch stats when modal is open to prevent background queries
   const { filteredStats, loading, error, refetch } = useStatEditV2(gameId, filterQuarter, isOpen);
@@ -90,6 +101,8 @@ export function StatEditModalV2({
   };
 
   const handleUpdateSuccess = async () => {
+    // ✅ FIX: Invalidate stats cache BEFORE refetch to ensure fresh data
+    cache.delete(`stat_edit_stats_${gameId}`);
     await refetch();
     setEditingStat(null);
     invalidateTeamStatsCache(gameId, teamAId, teamBId);
@@ -113,12 +126,21 @@ export function StatEditModalV2({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Stat
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -170,6 +192,9 @@ export function StatEditModalV2({
                 onDelete={setDeletingStatId}
                 getPlayerName={getPlayerNameForStat}
                 formatStatDisplay={formatStatDisplay}
+                teamAId={teamAId}
+                teamBId={teamBId}
+                isCoachMode={isCoachMode}
               />
             </div>
           </TabsContent>
@@ -216,6 +241,30 @@ export function StatEditModalV2({
         onCancel={() => setDeletingStatId(null)}
         onConfirm={() => deletingStatId && handleDelete(deletingStatId)}
       />
+
+      {/* Create Form Modal */}
+      {showCreateForm && teamAId && (
+        <StatCreateForm
+          gameId={gameId}
+          teamAId={teamAId}
+          teamBId={teamBId || ''}
+          teamAName={teamAName}
+          teamBName={teamBName}
+          teamAPlayers={teamAPlayers}
+          teamBPlayers={teamBPlayers}
+          isCoachMode={isCoachMode}
+          initialQuarter={currentQuarter}
+          initialMinutes={currentMinutes}
+          initialSeconds={currentSeconds}
+          onClose={() => setShowCreateForm(false)}
+          onSuccess={async () => {
+            cache.delete(`stat_edit_stats_${gameId}`);
+            await refetch();
+            setShowCreateForm(false);
+            invalidateTeamStatsCache(gameId, teamAId, teamBId);
+          }}
+        />
+      )}
     </div>
   );
 }

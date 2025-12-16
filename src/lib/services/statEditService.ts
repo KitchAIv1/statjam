@@ -29,6 +29,10 @@ export interface GameStatRecord {
   game_time_seconds: number;
   created_at: string;
   is_opponent_stat: boolean;
+  // Shot location data (for field_goal/three_pointer)
+  shot_location_x?: number | null;
+  shot_location_y?: number | null;
+  shot_zone?: string | null;
   // Joined data
   player_name?: string;
   // Synthetic entries for game-level stats (fouls/timeouts)
@@ -240,12 +244,17 @@ export class StatEditService {
       // ✅ Fetch substitution events from game_substitutions table
       const substitutionEvents = await this.getSubstitutionEvents(gameId);
 
-      // Combine stats, timeout events, and substitution events, sort by created_at (most recent first)
+      // Combine stats, timeout events, and substitution events, sort by game timeline (most recent game time first)
       const allEvents = [...stats, ...timeoutEvents, ...substitutionEvents];
       allEvents.sort((a, b) => {
-        const timeA = new Date(a.created_at).getTime();
-        const timeB = new Date(b.created_at).getTime();
-        return timeB - timeA; // Descending order (most recent first)
+        // Quarter descending (Q4 first, Q1 last)
+        if (a.quarter !== b.quarter) return b.quarter - a.quarter;
+        // Minutes ascending (lower = later in quarter, e.g., 0:30 is after 5:30)
+        if (a.game_time_minutes !== b.game_time_minutes) return a.game_time_minutes - b.game_time_minutes;
+        // Seconds ascending (lower = later within same minute)
+        if (a.game_time_seconds !== b.game_time_seconds) return a.game_time_seconds - b.game_time_seconds;
+        // Fallback to created_at for stats at exact same game time
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 
       return allEvents;
@@ -352,6 +361,69 @@ export class StatEditService {
       console.error('❌ StatEditService: Failed to delete stat:', error);
       throw error;
     }
+  }
+
+  /**
+   * Create a new stat (manual entry via Edit Stats modal)
+   */
+  static async createStat(statData: {
+    gameId: string;
+    teamId: string;
+    playerId?: string;
+    customPlayerId?: string;
+    statType: string;
+    modifier: string | null;
+    statValue: number;
+    quarter: number;
+    gameTimeMinutes: number;
+    gameTimeSeconds: number;
+    isOpponentStat: boolean;
+    shotLocationX?: number | null;
+    shotLocationY?: number | null;
+    shotZone?: string | null;
+  }): Promise<GameStatRecord> {
+    const accessToken = this.getAccessToken();
+    if (!accessToken) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.SUPABASE_URL}/rest/v1/game_stats`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'apikey': this.SUPABASE_ANON_KEY!,
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        game_id: statData.gameId,
+        team_id: statData.teamId,
+        player_id: statData.playerId || null,
+        custom_player_id: statData.customPlayerId || null,
+        stat_type: statData.statType,
+        modifier: statData.modifier,
+        stat_value: statData.statValue,
+        quarter: statData.quarter,
+        game_time_minutes: statData.gameTimeMinutes,
+        game_time_seconds: statData.gameTimeSeconds,
+        is_opponent_stat: statData.isOpponentStat,
+        shot_location_x: statData.shotLocationX ?? null,
+        shot_location_y: statData.shotLocationY ?? null,
+        shot_zone: statData.shotZone || null
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ StatEditService: Failed to create stat:', errorText);
+      throw new Error(`Failed to create stat: ${response.status}`);
+    }
+
+    const [createdStat] = await response.json();
+    console.log('✅ StatEditService: Stat created successfully:', createdStat.id);
+    return createdStat;
   }
 }
 

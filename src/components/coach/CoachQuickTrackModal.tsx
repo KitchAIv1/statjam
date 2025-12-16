@@ -12,6 +12,14 @@ import { AutomationFlags, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation'
 import { GameServiceV3 } from '@/lib/services/gameServiceV3';
 import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
 
+// Quarter length options (same as stat admin pre-flight)
+const QUARTER_LENGTH_OPTIONS = [
+  { value: 8, label: '8 min', description: 'Youth/Rec' },
+  { value: 10, label: '10 min', description: 'FIBA Standard' },
+  { value: 12, label: '12 min', description: 'NBA Standard' },
+  { value: 6, label: '6 min', description: 'Short Game' },
+] as const;
+
 interface CoachQuickTrackModalProps {
   team: CoachTeam;
   onClose: () => void;
@@ -76,7 +84,7 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
     opponent_name: '',
     opponent_tournament_name: '',
     game_settings: {
-      quarter_length_minutes: 12,
+      quarter_length_minutes: 8, // Default to Youth/Rec for coach mode
       shot_clock_seconds: 24,
       venue: '',
       notes: ''
@@ -298,17 +306,29 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
         return (
           <div>
             <div style={styles.formGroup}>
-              <Label style={styles.label}>Quarter Length (minutes)</Label>
-              <Input
-                type="number"
-                value={formData.game_settings?.quarter_length_minutes}
-                onChange={(e) => updateFormData({
-                  game_settings: { quarter_length_minutes: parseInt(e.target.value) || 12 }
-                })}
-                min="1"
-                max="20"
-                style={styles.input}
-              />
+              <Label style={styles.label}>Quarter Length</Label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                {QUARTER_LENGTH_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => updateFormData({ game_settings: { quarter_length_minutes: option.value } })}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '8px',
+                      border: `2px solid ${formData.game_settings?.quarter_length_minutes === option.value ? '#f97316' : 'rgba(255, 255, 255, 0.2)'}`,
+                      backgroundColor: formData.game_settings?.quarter_length_minutes === option.value ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    <span style={{ fontWeight: '600' }}>{option.label}</span>
+                    <span style={{ fontSize: '0.75rem', marginLeft: '4px', opacity: 0.7 }}>({option.description})</span>
+                  </button>
+                ))}
+              </div>
             </div>
             
             <div style={styles.formGroup}>

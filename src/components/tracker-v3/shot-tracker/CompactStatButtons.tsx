@@ -5,6 +5,7 @@
  * 
  * Shows only non-shot stats when court diagram handles 2PT/3PT.
  * Compact layout with smaller buttons to fit alongside court.
+ * Uses shared configs from statButtonConfigs.ts for consistency.
  * 
  * @module CompactStatButtons
  */
@@ -12,6 +13,7 @@
 import React, { useRef } from 'react';
 import { AlertTriangle, Clock, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { FT_REB_STATS, OTHER_STATS } from '../config/statButtonConfigs';
 
 interface CompactStatButtonsProps {
   selectedPlayer: string | null;
@@ -77,21 +79,9 @@ export function CompactStatButtons({
 
   const isDisabled = !selectedPlayer || !isClockRunning;
 
-  // Row 1: Free throws + Rebounds (shooting follow-ups)
-  const ftRebStats = [
-    { id: 'ft-made', label: 'FT', sub: '✓', statType: 'free_throw', modifier: 'made', color: 'green' },
-    { id: 'ft-missed', label: 'FT', sub: '✗', statType: 'free_throw', modifier: 'missed', color: 'red' },
-    { id: 'reb-off', label: 'REB', sub: 'Off', statType: 'rebound', modifier: 'offensive', color: 'green' },
-    { id: 'reb-def', label: 'REB', sub: 'Def', statType: 'rebound', modifier: 'defensive', color: 'blue' }
-  ];
-
-  // Row 2: Non-scoring stats
-  const otherStats = [
-    { id: 'ast', label: 'AST', statType: 'assist', color: 'blue' },
-    { id: 'stl', label: 'STL', statType: 'steal', color: 'purple' },
-    { id: 'blk', label: 'BLK', statType: 'block', color: 'indigo' },
-    { id: 'tov', label: 'TOV', statType: 'turnover', modifier: 'traveling', color: 'yellow' }
-  ];
+  // ✅ Use shared configs for consistency with Button mode
+  // FT_REB_STATS: Free throws + Rebounds (Row 1)
+  // OTHER_STATS: AST, STL, BLK, TOV with correct modifiers (Row 2)
 
   const getButtonClasses = (color: string, isActive: boolean, disabled: boolean) => {
     if (disabled) return 'opacity-40 bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed';
@@ -114,7 +104,7 @@ export function CompactStatButtons({
     <div className="space-y-2">
       {/* Row 1: FT + Rebounds */}
       <div className="grid grid-cols-4 gap-2">
-        {ftRebStats.map((stat) => {
+        {FT_REB_STATS.map((stat) => {
           const statId = `${stat.statType}-${stat.modifier}`;
           const isActive = isRecording === statId;
           const isFTMade = stat.id === 'ft-made';
@@ -136,9 +126,9 @@ export function CompactStatButtons({
         })}
       </div>
 
-      {/* Row 2: Other stats */}
+      {/* Row 2: Other stats (AST, STL, BLK, TOV) */}
       <div className="grid grid-cols-4 gap-2">
-        {otherStats.map((stat) => {
+        {OTHER_STATS.map((stat) => {
           const isActive = isRecording === stat.statType;
           
           return (
