@@ -1,6 +1,10 @@
 /**
  * Game Viewer API Route
  * Uses service role to bypass RLS for admin viewing coach games
+ * 
+ * ✅ UPDATE: Coach games are now publicly viewable (anyone with link)
+ * - Coach games: No auth required (UUID security)
+ * - Non-coach games: Still require auth for non-public tournaments
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,18 +26,34 @@ export async function GET(
     const supabaseAdmin = getSupabaseAdmin();
     const { gameId } = await params;
     
-    // Verify auth token exists
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // First, fetch the game to check if it's a coach game
+    const { data: gameCheck } = await supabaseAdmin
+      .from('games')
+      .select('is_coach_game')
+      .eq('id', gameId)
+      .single();
+    
+    // ✅ Coach games are publicly viewable (anyone with link)
+    // Non-coach games require authentication (unless in public tournament)
+    const isCoachGame = gameCheck?.is_coach_game === true;
+    
+    if (!isCoachGame) {
+      // Verify auth token exists for non-coach games
+      const authHeader = request.headers.get('authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
-    // Fetch game with service role (bypasses RLS)
+    // Fetch full game data with service role (bypasses RLS)
     const { data: game, error: gameError } = await supabaseAdmin
       .from('games')
       .select('*')
       .eq('id', gameId)
       .single();
+    
+    // Log access type for debugging
+    console.log(`📺 Game viewer API: ${isCoachGame ? 'Coach game (public)' : 'Tournament game'} - ${gameId.substring(0, 8)}`);
 
     if (gameError || !game) {
       return NextResponse.json({ error: 'Game not found' }, { status: 404 });

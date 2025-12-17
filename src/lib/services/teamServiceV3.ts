@@ -161,8 +161,15 @@ export class TeamServiceV3 {
         });
         console.log('✅ TeamServiceV3: Authenticated request successful');
       } catch (authError: any) {
-        // If authentication fails, try public access (for live viewer context)
-        if (authError.message === 'Not authenticated') {
+        // If authentication fails OR permission denied, try public access (for live viewer context)
+        // This handles: no token, expired token, invalid token, RLS blocking
+        const shouldTryPublic = 
+          authError.message === 'Not authenticated' ||
+          authError.message?.includes('permission') ||
+          authError.message?.includes('403') ||
+          authError.message?.includes('401');
+        
+        if (shouldTryPublic) {
           console.log('🌐 TeamServiceV3: Auth failed, falling back to public access for live viewer');
           teamPlayers = await this.makeRequest<any>('team_players', {
             'select': 'player_id,custom_player_id',
@@ -170,7 +177,7 @@ export class TeamServiceV3 {
           });
           console.log('✅ TeamServiceV3: Public request successful (live viewer context)');
         } else {
-          // Re-throw non-auth errors
+          // Re-throw other errors
           throw authError;
         }
       }
@@ -203,17 +210,38 @@ export class TeamServiceV3 {
       }
 
       // Step 4: Fetch custom player details from custom_players table
-      // ✅ FIX: Use authenticated request - custom_players RLS requires auth.uid() check
+      // ✅ FIX: Try authenticated first, fallback to public (for coach game viewers)
       let customPlayers: any[] = [];
       if (customPlayerIds.length > 0) {
         try {
+          // Try authenticated request first (for stat tracker context)
           customPlayers = await this.makeAuthenticatedRequest<any>('custom_players', {
             'select': 'id,name,jersey_number,position,profile_photo_url',
             'id': `in.(${customPlayerIds.join(',')})`
           });
-          console.log('✅ TeamServiceV3: Found', customPlayers.length, 'custom player details');
-        } catch (error) {
-          console.log('⚠️ TeamServiceV3: Custom players query failed (auth or table issue):', error);
+          console.log('✅ TeamServiceV3: Found', customPlayers.length, 'custom player details (authenticated)');
+        } catch (authError: any) {
+          // If authentication fails OR permission denied, try public access
+          const shouldTryPublic = 
+            authError.message === 'Not authenticated' ||
+            authError.message?.includes('permission') ||
+            authError.message?.includes('403') ||
+            authError.message?.includes('401');
+          
+          if (shouldTryPublic) {
+            console.log('🌐 TeamServiceV3: Auth failed for custom_players, trying public access');
+            try {
+              customPlayers = await this.makeRequest<any>('custom_players', {
+                'select': 'id,name,jersey_number,position,profile_photo_url',
+                'id': `in.(${customPlayerIds.join(',')})`
+              });
+              console.log('✅ TeamServiceV3: Found', customPlayers.length, 'custom player details (public)');
+            } catch (publicError) {
+              console.log('⚠️ TeamServiceV3: Custom players public query also failed:', publicError);
+            }
+          } else {
+            console.log('⚠️ TeamServiceV3: Custom players query failed (other error):', authError);
+          }
         }
       }
 
