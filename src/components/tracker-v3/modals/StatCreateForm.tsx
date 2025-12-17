@@ -34,6 +34,7 @@ interface StatCreateFormProps {
   teamAPlayers: Player[];
   teamBPlayers: Player[];
   isCoachMode?: boolean;
+  currentUserId?: string; // For opponent stats proxy in coach mode
   initialQuarter?: number;
   initialMinutes?: number;
   initialSeconds?: number;
@@ -43,7 +44,7 @@ interface StatCreateFormProps {
 
 export function StatCreateForm({
   gameId, teamAId, teamBId, teamAName, teamBName, teamAPlayers, teamBPlayers, isCoachMode = false,
-  initialQuarter = 1, initialMinutes = 10, initialSeconds = 0, onClose, onSuccess
+  currentUserId, initialQuarter = 1, initialMinutes = 10, initialSeconds = 0, onClose, onSuccess
 }: StatCreateFormProps) {
   const [selectedTeam, setSelectedTeam] = useState<'A' | 'B' | 'opponent'>('A');
   const [playerId, setPlayerId] = useState('');
@@ -86,15 +87,29 @@ export function StatCreateForm({
       setSaving(true);
       const isOpponentStat = selectedTeam === 'opponent';
       const teamId = selectedTeam === 'A' ? teamAId : selectedTeam === 'B' ? teamBId : teamAId;
-      const selectedPlayer = availablePlayers.find(p => p.id === playerId);
-      const isCustomPlayer = selectedPlayer?.is_custom_player || playerId.startsWith('custom-');
+      
+      // For opponent stats in coach mode: use currentUserId as proxy (same pattern as tracker)
+      let actualPlayerId: string | undefined;
+      let actualCustomPlayerId: string | undefined;
+      
+      if (isOpponentStat && isCoachMode) {
+        // Use coach's user ID as proxy player (satisfies DB constraint)
+        actualPlayerId = currentUserId;
+        actualCustomPlayerId = undefined;
+      } else {
+        const selectedPlayer = availablePlayers.find(p => p.id === playerId);
+        const isCustomPlayer = selectedPlayer?.is_custom_player || playerId.startsWith('custom-');
+        actualPlayerId = isCustomPlayer ? undefined : (playerId || undefined);
+        actualCustomPlayerId = isCustomPlayer ? playerId : undefined;
+      }
+      
       const statValue = calculateStatValue(statType, modifier);
 
       await StatEditService.createStat({
         gameId,
         teamId,
-        playerId: isCustomPlayer ? undefined : (playerId || undefined),
-        customPlayerId: isCustomPlayer ? playerId : undefined,
+        playerId: actualPlayerId,
+        customPlayerId: actualCustomPlayerId,
         statType,
         modifier: modifier || null,
         statValue,

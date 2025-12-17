@@ -673,20 +673,31 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                             <span>{formatGameTime(game)}</span>
                           </div>
                         </div>
-                        <Button
-                          onClick={() => {
-                            setSelectedGame(game);
-                            setShowGameStats(true);
-                          }}
-                          size="sm"
-                          variant="outline"
-                          className="gap-2 w-full sm:w-auto shrink-0"
-                          title="View box score and player stats"
-                        >
-                          <BarChart3 className="w-3 h-3" />
-                          <span className="hidden sm:inline">View Stats</span>
-                          <span className="sm:hidden">Stats</span>
-                        </Button>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <Button
+                            onClick={() => window.open(`/game-viewer/${game.id}`, '_blank')}
+                            size="sm"
+                            variant="outline"
+                            className="gap-2 flex-1 sm:flex-initial shrink-0"
+                            title="View play-by-play (shareable link)"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span className="hidden sm:inline">View</span>
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setSelectedGame(game);
+                              setShowGameStats(true);
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="gap-2 flex-1 sm:flex-initial shrink-0"
+                            title="View box score and player stats"
+                          >
+                            <BarChart3 className="w-3 h-3" />
+                            <span className="hidden sm:inline">Stats</span>
+                          </Button>
+                        </div>
                       </div>
                     ))}
 

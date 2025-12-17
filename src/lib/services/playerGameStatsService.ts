@@ -194,7 +194,8 @@ export class PlayerGameStatsService {
       }
 
       if (!games || games.length === 0) {
-        logger.error('🔍 PlayerGameStatsService: No games returned from query (after status filter)');
+        // ✅ Changed to debug - this is expected for coach mode games (RLS filtering)
+        logger.debug('🔍 PlayerGameStatsService: No games returned from query (after status filter) - expected for coach mode');
         return [];
       }
 

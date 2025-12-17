@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { GameAwardsService } from '@/lib/services/gameAwardsService';
 import { PlayerGameStatsService } from '@/lib/services/playerGameStatsService';
 import { PlayerDashboardService } from '@/lib/services/playerDashboardService';
+import { supabase } from '@/lib/supabase';
 
 export interface AwardedPlayer {
   id: string;
@@ -41,6 +42,74 @@ export interface GameAwardsData {
 export interface UseGameAwardsOptions {
   prefetch?: boolean;
   enabled?: boolean;
+}
+
+/**
+ * Fallback: Fetch player stats directly from game_stats for a specific game
+ * Used when PlayerGameStatsService fails due to RLS (e.g., coach mode games)
+ */
+async function getPlayerStatsForGame(
+  gameId: string,
+  playerId: string,
+  isCustomPlayer: boolean
+): Promise<{ points: number; rebounds: number; assists: number; steals: number; blocks: number }> {
+  if (!supabase) return { points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0 };
+  
+  try {
+    // Build query based on player type
+    let query = supabase
+      .from('game_stats')
+      .select('stat_type, modifier, stat_value')
+      .eq('game_id', gameId)
+      .eq('is_opponent_stat', false); // Only team stats, not opponent
+    
+    if (isCustomPlayer) {
+      query = query.eq('custom_player_id', playerId);
+    } else {
+      query = query.eq('player_id', playerId);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error || !data) {
+      console.warn('⚠️ useGameAwards: Fallback stats fetch failed:', error);
+      return { points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0 };
+    }
+    
+    // Calculate stats from raw game_stats
+    let points = 0, rebounds = 0, assists = 0, steals = 0, blocks = 0;
+    
+    for (const stat of data) {
+      switch (stat.stat_type) {
+        case 'field_goal':
+          if (stat.modifier === 'made') points += 2;
+          break;
+        case 'three_pointer':
+          if (stat.modifier === 'made') points += 3;
+          break;
+        case 'free_throw':
+          if (stat.modifier === 'made') points += 1;
+          break;
+        case 'rebound':
+          rebounds += 1;
+          break;
+        case 'assist':
+          assists += 1;
+          break;
+        case 'steal':
+          steals += 1;
+          break;
+        case 'block':
+          blocks += 1;
+          break;
+      }
+    }
+    
+    return { points, rebounds, assists, steals, blocks };
+  } catch (e) {
+    console.warn('⚠️ useGameAwards: Fallback stats exception:', e);
+    return { points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0 };
+  }
 }
 
 export function useGameAwards(
@@ -96,7 +165,21 @@ export function useGameAwards(
               fullIdentity: identity
             });
             
-            const thisGameStats = gameStats.find(g => g.gameId === gameId);
+            let thisGameStats = gameStats.find(g => g.gameId === gameId);
+            
+            // ✅ Coach mode fallback: If no stats found (RLS filtered), fetch directly from game_stats
+            let stats = {
+              points: thisGameStats?.points || 0,
+              rebounds: thisGameStats?.rebounds || 0,
+              assists: thisGameStats?.assists || 0,
+              steals: thisGameStats?.steals || 0,
+              blocks: thisGameStats?.blocks || 0
+            };
+            
+            if (!thisGameStats) {
+              console.log('🏆 [DEBUG] POTG: Using fallback stats fetch for coach mode');
+              stats = await getPlayerStatsForGame(gameId, potgId, potgIsCustom);
+            }
             
             setPlayerOfTheGame({
               id: potgId,
@@ -104,13 +187,7 @@ export function useGameAwards(
               photoUrl: identity?.profilePhotoUrl,
               jerseyNumber: identity?.jerseyNumber,
               isCustomPlayer: potgIsCustom,
-              stats: {
-                points: thisGameStats?.points || 0,
-                rebounds: thisGameStats?.rebounds || 0,
-                assists: thisGameStats?.assists || 0,
-                steals: thisGameStats?.steals || 0,
-                blocks: thisGameStats?.blocks || 0
-              }
+              stats
             });
           })()
         );
@@ -137,7 +214,21 @@ export function useGameAwards(
               fullIdentity: identity
             });
             
-            const thisGameStats = gameStats.find(g => g.gameId === gameId);
+            let thisGameStats = gameStats.find(g => g.gameId === gameId);
+            
+            // ✅ Coach mode fallback: If no stats found (RLS filtered), fetch directly from game_stats
+            let stats = {
+              points: thisGameStats?.points || 0,
+              rebounds: thisGameStats?.rebounds || 0,
+              assists: thisGameStats?.assists || 0,
+              steals: thisGameStats?.steals || 0,
+              blocks: thisGameStats?.blocks || 0
+            };
+            
+            if (!thisGameStats) {
+              console.log('🏆 [DEBUG] Hustle: Using fallback stats fetch for coach mode');
+              stats = await getPlayerStatsForGame(gameId, hustleId, hustleIsCustom);
+            }
             
             setHustlePlayer({
               id: hustleId,
@@ -145,13 +236,7 @@ export function useGameAwards(
               photoUrl: identity?.profilePhotoUrl,
               jerseyNumber: identity?.jerseyNumber,
               isCustomPlayer: hustleIsCustom,
-              stats: {
-                points: thisGameStats?.points || 0,
-                rebounds: thisGameStats?.rebounds || 0,
-                assists: thisGameStats?.assists || 0,
-                steals: thisGameStats?.steals || 0,
-                blocks: thisGameStats?.blocks || 0
-              }
+              stats
             });
           })()
         );

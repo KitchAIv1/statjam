@@ -456,22 +456,20 @@ export class CoachAnalyticsService {
       );
       const allStats = await statsRes.json();
 
-      // Fetch team players to map player IDs to names
-      const playersRes = await fetch(
-        `${this.SUPABASE_URL}/rest/v1/team_players?coach_team_id=eq.${teamId}&select=id,first_name,last_name,profile_player_id`,
+      // ✅ Fetch custom_players for coach mode (uses `name` field, not first_name/last_name)
+      const customPlayersRes = await fetch(
+        `${this.SUPABASE_URL}/rest/v1/custom_players?coach_team_id=eq.${teamId}&select=id,name`,
         { headers }
       );
-      const players = await playersRes.json();
+      const customPlayers = await customPlayersRes.json();
 
-      // Create player ID to name mapping (handles both team_player_id and profile_player_id)
+      // Create player ID to name mapping (handles custom_player_id)
       const playerMap = new Map<string, string>();
-      players.forEach((p: any) => {
-        const name = `${p.first_name} ${p.last_name}`.trim();
-        playerMap.set(p.id, name);
-        if (p.profile_player_id) {
-          playerMap.set(p.profile_player_id, name);
-        }
-      });
+      if (Array.isArray(customPlayers)) {
+        customPlayers.forEach((p: any) => {
+          playerMap.set(p.id, p.name || 'Unknown');
+        });
+      }
 
       // Calculate team stats
       let fgm = 0, fga = 0, tpm = 0, tpa = 0, ftm = 0, fta = 0;
@@ -489,7 +487,11 @@ export class CoachAnalyticsService {
       }>();
 
       allStats.forEach((stat: any) => {
-        const playerId = stat.player_id;
+        // ✅ Coach mode uses custom_player_id, skip opponent stats
+        if (stat.is_opponent_stat) return;
+        const playerId = stat.custom_player_id || stat.player_id;
+        if (!playerId) return;
+        
         if (!playerStats.has(playerId)) {
           playerStats.set(playerId, { points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, fgm: 0, fga: 0 });
         }
@@ -564,6 +566,29 @@ export class CoachAnalyticsService {
         .sort((a, b) => b.vps - a.vps)
         .slice(0, 3); // Top 3 performers
 
+      // ✅ Calculate points for advanced stats
+      const points = (fgm - tpm) * 2 + tpm * 3 + ftm;
+      
+      // ✅ Calculate advanced stats
+      const effectiveFGPercentage = fga > 0 
+        ? Math.round(((fgm + 0.5 * tpm) / fga) * 1000) / 10 
+        : 0;
+      const trueShootingPercentage = (fga + 0.44 * fta) > 0
+        ? Math.round((points / (2 * (fga + 0.44 * fta))) * 1000) / 10
+        : 0;
+      const assistToTurnoverRatio = turnovers > 0
+        ? Math.round((assists / turnovers) * 10) / 10
+        : assists > 0 ? assists : 0;
+      const threePointAttemptRate = fga > 0
+        ? Math.round((tpa / fga) * 1000) / 10
+        : 0;
+      const freeThrowRate = fga > 0
+        ? Math.round((fta / fga) * 1000) / 10
+        : 0;
+      const assistPercentage = fgm > 0
+        ? Math.round((assists / fgm) * 1000) / 10
+        : 0;
+
       return {
         gameId,
         date: game.start_time || game.end_time || new Date().toISOString(),
@@ -579,7 +604,22 @@ export class CoachAnalyticsService {
           assists,
           turnovers,
           steals,
-          blocks
+          blocks,
+          // ✅ Advanced Stats
+          effectiveFGPercentage,
+          trueShootingPercentage,
+          assistToTurnoverRatio,
+          threePointAttemptRate,
+          freeThrowRate,
+          assistPercentage,
+          // Raw counts
+          fgm,
+          fga,
+          tpm,
+          tpa,
+          ftm,
+          fta,
+          points
         },
         topPerformers
       };

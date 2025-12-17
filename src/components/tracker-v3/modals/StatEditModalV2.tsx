@@ -45,6 +45,7 @@ interface StatEditModalV2Props {
   teamAName?: string;
   teamBName?: string;
   isCoachMode?: boolean;
+  currentUserId?: string; // For opponent stats proxy in coach mode
   currentQuarter?: number;
   currentMinutes?: number;
   currentSeconds?: number;
@@ -61,6 +62,7 @@ export function StatEditModalV2({
   teamAName = 'Team A',
   teamBName = 'Team B',
   isCoachMode = false,
+  currentUserId,
   currentQuarter = 1,
   currentMinutes = 10,
   currentSeconds = 0
@@ -253,6 +255,7 @@ export function StatEditModalV2({
           teamAPlayers={teamAPlayers}
           teamBPlayers={teamBPlayers}
           isCoachMode={isCoachMode}
+          currentUserId={currentUserId}
           initialQuarter={currentQuarter}
           initialMinutes={currentMinutes}
           initialSeconds={currentSeconds}

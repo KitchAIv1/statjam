@@ -21,6 +21,7 @@ import PlayByPlayFeed from './components/PlayByPlayFeed';
 import { TeamStatsTab } from './components/TeamStatsTab';
 import { LiveIndicator } from './components/LiveIndicator';
 import { GameAwardsSection } from './components/GameAwardsSection';
+import { CoachGameAnalyticsTab } from './components/CoachGameAnalyticsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { TeamService } from '@/lib/services/tournamentService';
@@ -228,8 +229,14 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               {game.team_a_name || 'Team A'}
             </TabsTrigger>
             <TabsTrigger value="teamB" className={`flex-1 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none py-3 ${isDark ? 'data-[state=active]:bg-slate-700/50 text-muted-foreground data-[state=active]:text-orange-400' : 'data-[state=active]:bg-orange-50 text-gray-600 data-[state=active]:text-orange-600'}`}>
-              {game.team_b_name || 'Team B'}
+              {game.is_coach_game ? 'Opponent' : (game.team_b_name || 'Team B')}
             </TabsTrigger>
+            {/* ✅ Coach Analytics Tab - Only for coach games */}
+            {game.is_coach_game && isCompleted && (
+              <TabsTrigger value="analytics" className={`flex-1 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none py-3 ${isDark ? 'data-[state=active]:bg-slate-700/50 text-muted-foreground data-[state=active]:text-orange-400' : 'data-[state=active]:bg-orange-50 text-gray-600 data-[state=active]:text-orange-600'}`}>
+                Analytics
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Feed Tab */}
@@ -308,8 +315,9 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
             <TeamStatsTab 
               gameId={gameId} 
               teamId={game.team_b_id} 
-              teamName={game.team_b_name || 'Team B'}
+              teamName={game.is_coach_game ? 'Opponent' : (game.team_b_name || 'Team B')}
               isDark={isDark}
+              teamStatsOnly={game.is_coach_game || false}
               prefetchedData={!teamBPrefetch.loading && !teamBPrefetch.error ? {
                 teamStats: teamBPrefetch.teamStats,
                 onCourtPlayers: teamBPrefetch.onCourtPlayers,
@@ -317,6 +325,18 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               } : undefined}
             />
           </TabsContent>
+
+          {/* ✅ Coach Analytics Tab - Game breakdown for coach games */}
+          {game.is_coach_game && isCompleted && (
+            <TabsContent value="analytics" className="mt-0">
+              <CoachGameAnalyticsTab
+                gameId={gameId}
+                teamId={game.team_a_id}
+                teamName={game.team_a_name || 'Team'}
+                isDark={isDark}
+              />
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Live Indicator */}

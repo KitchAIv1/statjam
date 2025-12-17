@@ -79,6 +79,9 @@ interface StatInputWrapperProps {
   currentQuarter?: number;
   currentMinutes?: number;
   currentSeconds?: number;
+  
+  // User ID for opponent stats in coach mode
+  currentUserId?: string;
 }
 
 export function StatInputWrapper({
@@ -110,7 +113,8 @@ export function StatInputWrapper({
   onClearRecordingStateRef,
   currentQuarter = 1,
   currentMinutes = 10,
-  currentSeconds = 0
+  currentSeconds = 0,
+  currentUserId
 }: StatInputWrapperProps) {
   const [inputMode, setInputMode] = useState<TrackerInputMode>('classic');
 
@@ -181,6 +185,7 @@ export function StatInputWrapper({
             currentQuarter={currentQuarter}
             currentMinutes={currentMinutes}
             currentSeconds={currentSeconds}
+            currentUserId={currentUserId}
           />
         </div>
       </div>

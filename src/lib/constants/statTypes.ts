@@ -26,7 +26,7 @@ export const MODIFIERS_BY_TYPE: Record<string, readonly string[]> = {
   free_throw: ['made', 'missed'],
   rebound: ['offensive', 'defensive'],
   foul: ['personal', 'shooting', 'technical', 'offensive', 'flagrant', '1-and-1'],
-  turnover: ['bad_pass', 'travel', 'lost_ball'],
+  turnover: ['bad_pass', 'travel', 'offensive_foul', 'steal', 'double_dribble', 'lost_ball', 'out_of_bounds'],
   assist: [],
   steal: [],
   block: []

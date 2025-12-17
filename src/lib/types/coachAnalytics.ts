@@ -110,6 +110,21 @@ export interface GameBreakdown {
     turnovers: number;
     steals: number;
     blocks: number;
+    // ✅ Advanced Stats
+    effectiveFGPercentage: number;      // (FGM + 0.5 * 3PM) / FGA
+    trueShootingPercentage: number;     // PTS / (2 * (FGA + 0.44 * FTA))
+    assistToTurnoverRatio: number;      // AST / TO
+    threePointAttemptRate: number;      // 3PA / FGA
+    freeThrowRate: number;              // FTA / FGA
+    assistPercentage: number;           // AST / FGM
+    // Raw counts for calculations
+    fgm: number;
+    fga: number;
+    tpm: number;
+    tpa: number;
+    ftm: number;
+    fta: number;
+    points: number;
   };
   
   // Top Performers

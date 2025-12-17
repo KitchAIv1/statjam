@@ -16,6 +16,7 @@ import { X, Save } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { StatEditService, GameStatRecord } from '@/lib/services/statEditService';
 import { ShotLocationEditor } from './ShotLocationEditor';
+import { STAT_TYPES, getModifiersForStatType } from '@/lib/constants/statTypes';
 
 interface Player {
   id: string;
@@ -53,33 +54,10 @@ export function StatEditForm({
   const isGameLevelStat = stat.is_game_level_stat || false;
   const isShotStat = statType === 'field_goal' || statType === 'three_pointer';
 
-  const statTypes = [
-    { value: 'field_goal', label: '2PT Field Goal' },
-    { value: 'three_pointer', label: '3PT Shot' },
-    { value: 'free_throw', label: 'Free Throw' },
-    { value: 'rebound', label: 'Rebound' },
-    { value: 'assist', label: 'Assist' },
-    { value: 'steal', label: 'Steal' },
-    { value: 'block', label: 'Block' },
-    { value: 'turnover', label: 'Turnover' },
-    { value: 'foul', label: 'Foul' }
-  ];
-
-  const getModifiersForType = (type: string): string[] => {
-    switch (type) {
-      case 'field_goal':
-      case 'three_pointer':
-      case 'free_throw':
-        return ['made', 'missed'];
-      case 'rebound':
-        return ['offensive', 'defensive'];
-      case 'foul':
-        return ['personal', 'technical', 'flagrant', 'offensive', 'shooting'];
-      case 'turnover':
-        return ['bad_pass', 'travel', 'offensive_foul', 'lost_ball'];
-      default:
-        return [''];
-    }
+  // Use shared constants for stat types and modifiers (aligned with DB constraints)
+  const getModifiers = (type: string): string[] => {
+    const modifiers = getModifiersForStatType(type);
+    return modifiers.length > 0 ? [...modifiers] : [];
   };
 
   const handleSave = async () => {
@@ -223,7 +201,7 @@ export function StatEditForm({
               onChange={(e) => {
                 setStatType(e.target.value);
                 // Reset modifier when type changes
-                const newModifiers = getModifiersForType(e.target.value);
+                const newModifiers = getModifiers(e.target.value);
                 if (newModifiers.length > 0) {
                   setModifier(newModifiers[0]);
                 } else {
@@ -232,7 +210,7 @@ export function StatEditForm({
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              {statTypes.map(type => (
+              {STAT_TYPES.map(type => (
                 <option key={type.value} value={type.value}>
                   {type.label}
                 </option>
@@ -241,7 +219,7 @@ export function StatEditForm({
           </div>
 
           {/* Modifier */}
-          {getModifiersForType(statType).length > 0 && (
+          {getModifiers(statType).length > 0 && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Outcome
@@ -251,7 +229,7 @@ export function StatEditForm({
                 onChange={(e) => setModifier(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
-                {getModifiersForType(statType).map(mod => (
+                {getModifiers(statType).map(mod => (
                   <option key={mod} value={mod}>
                     {mod.replace(/_/g, ' ').toUpperCase()}
                   </option>

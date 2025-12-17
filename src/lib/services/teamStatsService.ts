@@ -174,14 +174,34 @@ export class TeamStatsService {
     try {
       console.log('🏀 TeamStatsService: Aggregating team stats for game:', gameId, 'team:', teamId);
 
-      // Fetch all game stats for this team (use authenticated for coach games)
-      // ✅ FIX: Exclude opponent stats (is_opponent_stat = false) for correct team totals
-      const gameStats = await this.makeAuthenticatedRequest<any>('game_stats', {
-        'select': 'stat_type,stat_value,modifier,quarter',
-        'game_id': `eq.${gameId}`,
-        'team_id': `eq.${teamId}`,
-        'is_opponent_stat': 'eq.false'
+      // ✅ First check if this is a coach game and if we're fetching opponent (team_b) stats
+      const gameData = await this.makeAuthenticatedRequest<any>('games', {
+        'select': 'is_coach_game,team_a_id,team_b_id,team_a_fouls,team_b_fouls',
+        'id': `eq.${gameId}`
       });
+      
+      const game = gameData[0];
+      const isCoachGame = game?.is_coach_game === true;
+      const isOpponentTeam = isCoachGame && game?.team_b_id === teamId;
+
+      let gameStats;
+      if (isOpponentTeam) {
+        // ✅ Coach mode opponent: Fetch stats where is_opponent_stat = true
+        console.log('📊 TeamStatsService: Fetching opponent stats (is_opponent_stat = true)');
+        gameStats = await this.makeAuthenticatedRequest<any>('game_stats', {
+          'select': 'stat_type,stat_value,modifier,quarter',
+          'game_id': `eq.${gameId}`,
+          'is_opponent_stat': 'eq.true'
+        });
+      } else {
+        // ✅ Normal mode or coach mode team: Fetch team stats excluding opponent
+        gameStats = await this.makeAuthenticatedRequest<any>('game_stats', {
+          'select': 'stat_type,stat_value,modifier,quarter',
+          'game_id': `eq.${gameId}`,
+          'team_id': `eq.${teamId}`,
+          'is_opponent_stat': 'eq.false'
+        });
+      }
 
       console.log(`📊 TeamStatsService: Found ${gameStats.length} stats for team ${teamId}`);
 
@@ -246,26 +266,12 @@ export class TeamStatsService {
         }
       });
 
-      // Fetch team fouls from games table
+      // Get team fouls from game data (already fetched)
       let teamFouls = 0;
-      try {
-        const gameData = await this.makeAuthenticatedRequest<any>('games', {
-          'select': 'team_a_id,team_b_id,team_a_fouls,team_b_fouls',
-          'id': `eq.${gameId}`
-        });
-
-        if (gameData.length > 0) {
-          const game = gameData[0];
-          // Determine which team's fouls to use
-          if (game.team_a_id === teamId) {
-            teamFouls = game.team_a_fouls || 0;
-          } else if (game.team_b_id === teamId) {
-            teamFouls = game.team_b_fouls || 0;
-          }
-        }
-      } catch (error) {
-        console.warn('⚠️ TeamStatsService: Could not fetch team fouls, defaulting to 0:', error);
-        teamFouls = 0;
+      if (game?.team_a_id === teamId) {
+        teamFouls = game.team_a_fouls || 0;
+      } else if (game?.team_b_id === teamId) {
+        teamFouls = game.team_b_fouls || 0;
       }
 
       // Calculate percentages

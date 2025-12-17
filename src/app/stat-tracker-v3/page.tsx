@@ -2272,6 +2272,7 @@ function StatTrackerV3Content() {
                 currentQuarter={tracker.quarter}
                 currentMinutes={Math.floor(tracker.clock.secondsRemaining / 60)}
                 currentSeconds={tracker.clock.secondsRemaining % 60}
+                currentUserId={user?.id}
               />
             </div>
           </div>

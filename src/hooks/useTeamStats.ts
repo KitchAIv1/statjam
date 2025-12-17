@@ -65,8 +65,12 @@ export function useTeamStats(
 
       // 2. Extract player IDs
       const playerIds = teamRoster.map(player => player.id);
+      
+      // ✅ FIX: For coach mode opponent (no players), still fetch team stats
       if (playerIds.length === 0) {
-        setTeamStats(null);
+        // Fetch team stats even without players (opponent stats in coach mode)
+        const teamStatsData = await TeamStatsService.aggregateTeamStats(gameId, teamId);
+        setTeamStats(teamStatsData);
         setOnCourtPlayers([]);
         setBenchPlayers([]);
         return;

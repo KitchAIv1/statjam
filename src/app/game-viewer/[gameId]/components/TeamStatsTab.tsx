@@ -23,6 +23,7 @@ export interface TeamStatsTabProps {
   teamId: string;
   teamName: string;
   isDark?: boolean; // ✅ Theme support - matches Game Viewer
+  teamStatsOnly?: boolean; // ✅ Coach mode: Show only team summary, hide player sections
   // ✅ PHASE 2: Optional prefetched data for instant rendering
   prefetchedData?: {
     teamStats: any;
@@ -31,7 +32,7 @@ export interface TeamStatsTabProps {
   };
 }
 
-export function TeamStatsTab({ gameId, teamId, teamName, isDark = true, prefetchedData }: TeamStatsTabProps) {
+export function TeamStatsTab({ gameId, teamId, teamName, isDark = true, teamStatsOnly = false, prefetchedData }: TeamStatsTabProps) {
   // ✅ PHASE 2: Use prefetched data if available, otherwise fetch normally
   const hookData = useTeamStats(gameId, teamId, { 
     enabled: !prefetchedData // Skip hook if we have prefetched data
@@ -154,103 +155,108 @@ export function TeamStatsTab({ gameId, teamId, teamName, isDark = true, prefetch
         </div>
       </div>
 
-      {/* On Court Section */}
-      <div className={isDark ? 'bg-slate-900' : 'bg-orange-50/30'}>
-        <div className={`text-sm font-semibold uppercase tracking-wide px-4 py-3 border-b flex items-center gap-2 ${isDark ? 'text-orange-400 bg-slate-800/50 border-slate-700' : 'text-orange-600 bg-white border-orange-200'}`}>
-          <span className="w-2 h-2 rounded-full bg-green-500"></span>
-          On Court
-        </div>
-        <div className={isDark ? 'bg-slate-900' : 'bg-white'}>
-          {onCourtPlayers.length > 0 ? (
-            onCourtPlayers.map((player, index) => (
-              <PlayerStatsRow
-                key={player.playerId}
-                player={{
-                  id: player.playerId,
-                  name: player.playerName,
-                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C',
-                  isCustomPlayer: player.isCustomPlayer || false,
-                  profilePhotoUrl: player.profilePhotoUrl
-                }}
-                stats={{
-                  minutes: player.minutes,
-                  points: player.points,
-                  rebounds: player.rebounds,
-                  assists: player.assists,
-                  steals: player.steals,
-                  blocks: player.blocks,
-                  fouls: player.fouls,
-                  plusMinus: player.plusMinus,
-                  fieldGoalsMade: player.fieldGoalsMade,
-                  fieldGoalsAttempted: player.fieldGoalsAttempted,
-                  threePointersMade: player.threePointersMade,
-                  threePointersAttempted: player.threePointersAttempted,
-                  freeThrowsMade: player.freeThrowsMade,
-                  freeThrowsAttempted: player.freeThrowsAttempted
-                }}
-                onPlayerClick={handlePlayerClick}
-                isDark={isDark}
-                gameId={gameId}
-              />
-            ))
-          ) : (
-            <div className={`text-sm text-center p-5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>No players on court</div>
-          )}
-        </div>
-      </div>
+      {/* ✅ Player sections - hidden for opponent in coach mode */}
+      {!teamStatsOnly && (
+        <>
+          {/* On Court Section */}
+          <div className={isDark ? 'bg-slate-900' : 'bg-orange-50/30'}>
+            <div className={`text-sm font-semibold uppercase tracking-wide px-4 py-3 border-b flex items-center gap-2 ${isDark ? 'text-orange-400 bg-slate-800/50 border-slate-700' : 'text-orange-600 bg-white border-orange-200'}`}>
+              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              On Court
+            </div>
+            <div className={isDark ? 'bg-slate-900' : 'bg-white'}>
+              {onCourtPlayers.length > 0 ? (
+                onCourtPlayers.map((player, index) => (
+                  <PlayerStatsRow
+                    key={player.playerId}
+                    player={{
+                      id: player.playerId,
+                      name: player.playerName,
+                      position: index < 2 ? 'G' : index < 4 ? 'F' : 'C',
+                      isCustomPlayer: player.isCustomPlayer || false,
+                      profilePhotoUrl: player.profilePhotoUrl
+                    }}
+                    stats={{
+                      minutes: player.minutes,
+                      points: player.points,
+                      rebounds: player.rebounds,
+                      assists: player.assists,
+                      steals: player.steals,
+                      blocks: player.blocks,
+                      fouls: player.fouls,
+                      plusMinus: player.plusMinus,
+                      fieldGoalsMade: player.fieldGoalsMade,
+                      fieldGoalsAttempted: player.fieldGoalsAttempted,
+                      threePointersMade: player.threePointersMade,
+                      threePointersAttempted: player.threePointersAttempted,
+                      freeThrowsMade: player.freeThrowsMade,
+                      freeThrowsAttempted: player.freeThrowsAttempted
+                    }}
+                    onPlayerClick={handlePlayerClick}
+                    isDark={isDark}
+                    gameId={gameId}
+                  />
+                ))
+              ) : (
+                <div className={`text-sm text-center p-5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>No players on court</div>
+              )}
+            </div>
+          </div>
 
-      {/* Bench Section */}
-      <div className={isDark ? 'bg-slate-900' : 'bg-orange-50/30'}>
-        <div className={`text-sm font-semibold uppercase tracking-wide px-4 py-3 border-b ${isDark ? 'text-slate-300 bg-slate-800/50 border-slate-700' : 'text-gray-600 bg-white border-orange-200'}`}>
-          Bench
-        </div>
-        <div className={isDark ? 'bg-slate-900' : 'bg-white'}>
-          {benchPlayers.length > 0 ? (
-            benchPlayers.map((player, index) => (
-              <PlayerStatsRow
-                key={player.playerId}
-                player={{
-                  id: player.playerId,
-                  name: player.playerName,
-                  position: index < 2 ? 'G' : index < 4 ? 'F' : 'C',
-                  isCustomPlayer: player.isCustomPlayer || false,
-                  profilePhotoUrl: player.profilePhotoUrl
-                }}
-                stats={{
-                  minutes: player.minutes,
-                  points: player.points,
-                  rebounds: player.rebounds,
-                  assists: player.assists,
-                  steals: player.steals,
-                  blocks: player.blocks,
-                  fouls: player.fouls,
-                  plusMinus: player.plusMinus,
-                  fieldGoalsMade: player.fieldGoalsMade,
-                  fieldGoalsAttempted: player.fieldGoalsAttempted,
-                  threePointersMade: player.threePointersMade,
-                  threePointersAttempted: player.threePointersAttempted,
-                  freeThrowsMade: player.freeThrowsMade,
-                  freeThrowsAttempted: player.freeThrowsAttempted
-                }}
-                onPlayerClick={handlePlayerClick}
-                isDark={isDark}
-                gameId={gameId}
-              />
-            ))
-          ) : (
-            <div className={`text-sm text-center p-5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>No bench players</div>
-          )}
-        </div>
-      </div>
+          {/* Bench Section */}
+          <div className={isDark ? 'bg-slate-900' : 'bg-orange-50/30'}>
+            <div className={`text-sm font-semibold uppercase tracking-wide px-4 py-3 border-b ${isDark ? 'text-slate-300 bg-slate-800/50 border-slate-700' : 'text-gray-600 bg-white border-orange-200'}`}>
+              Bench
+            </div>
+            <div className={isDark ? 'bg-slate-900' : 'bg-white'}>
+              {benchPlayers.length > 0 ? (
+                benchPlayers.map((player, index) => (
+                  <PlayerStatsRow
+                    key={player.playerId}
+                    player={{
+                      id: player.playerId,
+                      name: player.playerName,
+                      position: index < 2 ? 'G' : index < 4 ? 'F' : 'C',
+                      isCustomPlayer: player.isCustomPlayer || false,
+                      profilePhotoUrl: player.profilePhotoUrl
+                    }}
+                    stats={{
+                      minutes: player.minutes,
+                      points: player.points,
+                      rebounds: player.rebounds,
+                      assists: player.assists,
+                      steals: player.steals,
+                      blocks: player.blocks,
+                      fouls: player.fouls,
+                      plusMinus: player.plusMinus,
+                      fieldGoalsMade: player.fieldGoalsMade,
+                      fieldGoalsAttempted: player.fieldGoalsAttempted,
+                      threePointersMade: player.threePointersMade,
+                      threePointersAttempted: player.threePointersAttempted,
+                      freeThrowsMade: player.freeThrowsMade,
+                      freeThrowsAttempted: player.freeThrowsAttempted
+                    }}
+                    onPlayerClick={handlePlayerClick}
+                    isDark={isDark}
+                    gameId={gameId}
+                  />
+                ))
+              ) : (
+                <div className={`text-sm text-center p-5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>No bench players</div>
+              )}
+            </div>
+          </div>
 
-      {/* Player Profile Modal */}
-      {playerId && (
-        <PlayerProfileModal
-          isOpen={isOpen}
-          onClose={closeModal}
-          playerId={playerId}
-          isCustomPlayer={isCustomPlayer || false}
-        />
+          {/* Player Profile Modal */}
+          {playerId && (
+            <PlayerProfileModal
+              isOpen={isOpen}
+              onClose={closeModal}
+              playerId={playerId}
+              isCustomPlayer={isCustomPlayer || false}
+            />
+          )}
+        </>
       )}
     </div>
   );

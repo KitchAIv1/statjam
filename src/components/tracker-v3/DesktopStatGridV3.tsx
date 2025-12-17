@@ -53,6 +53,8 @@ interface DesktopStatGridV3Props {
   currentQuarter?: number;
   currentMinutes?: number;
   currentSeconds?: number;
+  // ✅ User ID for opponent stats in coach mode
+  currentUserId?: string;
 }
 
 export function DesktopStatGridV3({
@@ -88,7 +90,9 @@ export function DesktopStatGridV3({
   // ✅ Clock state for Add Stat modal
   currentQuarter = 1,
   currentMinutes = 10,
-  currentSeconds = 0
+  currentSeconds = 0,
+  // ✅ User ID for opponent stats in coach mode
+  currentUserId
 }: DesktopStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
@@ -597,6 +601,7 @@ export function DesktopStatGridV3({
           teamAName={teamAName}
           teamBName={teamBName}
           isCoachMode={isCoachMode}
+          currentUserId={currentUserId}
           currentQuarter={currentQuarter}
           currentMinutes={currentMinutes}
           currentSeconds={currentSeconds}

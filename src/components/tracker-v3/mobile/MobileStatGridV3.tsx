@@ -41,6 +41,8 @@ interface MobileStatGridV3Props {
   currentMinutes?: number;
   currentSeconds?: number;
   isCoachMode?: boolean;
+  // ✅ User ID for opponent stats in coach mode
+  currentUserId?: string;
 }
 
 export function MobileStatGridV3({
@@ -69,7 +71,9 @@ export function MobileStatGridV3({
   currentQuarter = 1,
   currentMinutes = 10,
   currentSeconds = 0,
-  isCoachMode = false
+  isCoachMode = false,
+  // ✅ User ID for opponent stats in coach mode
+  currentUserId
 }: MobileStatGridV3Props) {
   // ✅ UI OPTIMIZATION: Track full stat identity (type + modifier) to prevent visual coupling
   const [isRecording, setIsRecording] = useState<string | null>(null);
@@ -504,6 +508,7 @@ export function MobileStatGridV3({
           teamAName={teamAName}
           teamBName={teamBName}
           isCoachMode={isCoachMode}
+          currentUserId={currentUserId}
           currentQuarter={currentQuarter}
           currentMinutes={currentMinutes}
           currentSeconds={currentSeconds}

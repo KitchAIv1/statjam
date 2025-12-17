@@ -261,6 +261,15 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
       }
       
+      // 🔍 DEBUG: Log calculated scores
+      console.log('🔍 calculateScoresFromStats DEBUG:', {
+        totalStats: stats.length,
+        madeStats: stats.filter(s => s.modifier === 'made').length,
+        teamAScore,
+        teamBScore,
+        isCoachMode
+      });
+      
       // ✅ FIX: Use isCoachMode flag instead of comparing team IDs
       // Coach games may have different team_a_id and team_b_id in some cases
       if (isCoachMode) {

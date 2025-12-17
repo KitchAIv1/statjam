@@ -298,6 +298,7 @@ export function MobileLayoutV3({
           currentQuarter={tracker.quarter}
           currentMinutes={Math.floor(tracker.clock.secondsRemaining / 60)}
           currentSeconds={tracker.clock.secondsRemaining % 60}
+          currentUserId={userId}
         />
 
         {/* End Game & Cancel Buttons / Status - Clean Design */}

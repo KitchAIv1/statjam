@@ -35,6 +35,7 @@ interface GameData {
   team_b_fouls?: number;
   team_a_timeouts_remaining?: number;
   team_b_timeouts_remaining?: number;
+  is_coach_game?: boolean; // ✅ Coach mode support
 }
 
 interface GameStats {
@@ -95,16 +96,45 @@ function transformStatsToPlays(
   substitutions: any[] = [],
   timeouts: any[] = []
 ): PlayByPlayEntry[] {
-  // ✅ STEP 1: Sort all raw data chronologically (oldest first) BEFORE score calculation
-  const sortedStats = [...stats].sort((a, b) => 
-    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  );
-  const sortedSubs = [...substitutions].sort((a, b) => 
-    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  );
-  const sortedTimeouts = [...timeouts].sort((a, b) => 
-    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  );
+  // ✅ STEP 1: Sort all raw data chronologically by GAME TIME (oldest first) BEFORE score calculation
+  // ✅ FIX: Use game time (quarter, minutes, seconds) instead of created_at for accurate chronological order
+  // This ensures manually inserted stats appear in correct game timeline position
+  const sortedStats = [...stats].sort((a, b) => {
+    // First by quarter (ascending - Q1 before Q2)
+    if (a.quarter !== b.quarter) return a.quarter - b.quarter;
+    // Then by game time (descending minutes = earlier in quarter, so we reverse)
+    // Higher minutes = earlier in quarter, so Q1 8:00 comes before Q1 2:00
+    const aMinutes = a.game_time_minutes || 0;
+    const bMinutes = b.game_time_minutes || 0;
+    if (aMinutes !== bMinutes) return bMinutes - aMinutes; // Descending (8 min before 2 min)
+    const aSeconds = a.game_time_seconds || 0;
+    const bSeconds = b.game_time_seconds || 0;
+    if (aSeconds !== bSeconds) return bSeconds - aSeconds; // Descending
+    // Tie-breaker: use created_at for events at exact same game time
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+  const sortedSubs = [...substitutions].sort((a, b) => {
+    if (a.quarter !== b.quarter) return a.quarter - b.quarter;
+    const aMinutes = a.game_time_minutes || 0;
+    const bMinutes = b.game_time_minutes || 0;
+    if (aMinutes !== bMinutes) return bMinutes - aMinutes;
+    const aSeconds = a.game_time_seconds || 0;
+    const bSeconds = b.game_time_seconds || 0;
+    if (aSeconds !== bSeconds) return bSeconds - aSeconds;
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+  const sortedTimeouts = [...timeouts].sort((a, b) => {
+    const aQuarter = a.quarter || 1;
+    const bQuarter = b.quarter || 1;
+    if (aQuarter !== bQuarter) return aQuarter - bQuarter;
+    const aMinutes = a.game_clock_minutes || 0;
+    const bMinutes = b.game_clock_minutes || 0;
+    if (aMinutes !== bMinutes) return bMinutes - aMinutes;
+    const aSeconds = a.game_clock_seconds || 0;
+    const bSeconds = b.game_clock_seconds || 0;
+    if (aSeconds !== bSeconds) return bSeconds - aSeconds;
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
   
   let runningScoreHome = 0;
   let runningScoreAway = 0;
@@ -126,9 +156,20 @@ function transformStatsToPlays(
   });
   
   const statPlays = sortedStats.map(stat => {
-    const teamName = stat.team_id === teamAId ? teamAName : 
-                     stat.team_id === teamBId ? teamBName : 
-                     'Unknown Team';
+    // ✅ FIX: Coach mode support - check is_opponent_stat to determine team
+    // In coach mode, opponent stats have team_id = coach's team but is_opponent_stat = true
+    const statWithOpponent = stat as any;
+    let teamName: string;
+    if (statWithOpponent.is_opponent_stat === true) {
+      // Opponent stat in coach mode - display as opponent team (teamB)
+      teamName = teamBName;
+    } else if (stat.team_id === teamAId) {
+      teamName = teamAName;
+    } else if (stat.team_id === teamBId) {
+      teamName = teamBName;
+    } else {
+      teamName = 'Unknown Team';
+    }
     
     const playerName = stat.player_name || `Player ${stat.player_id?.substring(0, 8) || 'Unknown'}`;
     
@@ -302,9 +343,17 @@ function transformStatsToPlays(
     };
   });
 
-  // ✅ STEP 5: Merge all plays (already sorted chronologically with correct scores)
-  // Then sort by timestamp newest first for display
+  // ✅ STEP 5: Merge all plays and sort by GAME TIME (newest first for display)
+  // ✅ FIX: Use game time for correct chronological display, especially for manually inserted stats
   const allPlays = [...statPlays, ...substitutionPlays, ...timeoutPlays].sort((a, b) => {
+    // For display: most recent game events first (reverse chronological)
+    // Higher quarter = more recent
+    if (a.quarter !== b.quarter) return b.quarter - a.quarter;
+    // Lower minutes = more recent (closer to end of quarter)
+    if (a.gameTimeMinutes !== b.gameTimeMinutes) return a.gameTimeMinutes - b.gameTimeMinutes;
+    // Lower seconds = more recent
+    if (a.gameTimeSeconds !== b.gameTimeSeconds) return a.gameTimeSeconds - b.gameTimeSeconds;
+    // Tie-breaker: use timestamp for events at exact same game time
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });
 
@@ -581,8 +630,20 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       playersMapRef.current = playersMap;
 
       // Enrich stats with player names and photo URLs (check both player_id and custom_player_id)
+      // ✅ FIX: For opponent stats (is_opponent_stat=true), display "Opponent" instead of coach's name
       gameStats = gameStats.map(stat => {
         const statWithCustomId = stat as any;
+        
+        // ✅ Coach mode fix: opponent stats use coach's ID as proxy, show "Opponent" instead
+        if (statWithCustomId.is_opponent_stat === true) {
+          return {
+            ...stat,
+            custom_player_id: statWithCustomId.custom_player_id,
+            player_name: 'Opponent',
+            player_photo_url: null
+          };
+        }
+        
         const playerId = stat.player_id || statWithCustomId.custom_player_id;
         const playerInfo = playersMap.get(playerId) || { name: `Player ${playerId?.substring(0, 8)}`, photoUrl: null };
         return {
