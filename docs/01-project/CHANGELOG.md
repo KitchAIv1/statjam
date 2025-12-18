@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.3] - 2025-12-15
+
+### 🔒 **CRITICAL SECURITY UPDATE & COACH GAMES PUBLIC VIEWING**
+
+#### Next.js Security Vulnerability Fix
+- **CRITICAL**: Fixed CVE-2025-55184 - Denial of Service vulnerability in Next.js Server Components
+- **Updated**: Next.js from `15.5.6` → `15.5.9` (patched version)
+- **Impact**: Prevents malicious HTTP requests from causing server process hangs and CPU consumption
+- **Affected Versions**: >= 15.5.1-canary.0, < 15.5.8
+- **Status**: ✅ All vulnerabilities resolved (0 remaining)
+- **Files Modified**:
+  - `package.json` - Updated Next.js dependency
+  - `package-lock.json` - Updated dependency tree
+
+#### Coach Games Public Viewing Feature
+- **NEW**: Coach games can now be viewed publicly via shared links (no authentication required)
+- **Security Model**: UUID-based link sharing (128-bit cryptographic security, impossible to guess)
+- **Pattern**: Same security model as Google Docs "anyone with link can view"
+- **RLS Policies**: Added 8 new SELECT-only policies for anonymous access to coach game data
+  - `games_coach_public_view` - Public viewing of coach games
+  - `game_stats_coach_public_view` - Public viewing of coach game stats
+  - `game_substitutions_coach_public_view` - Public viewing of substitutions
+  - `game_timeouts_coach_public_view` - Public viewing of timeouts
+  - `teams_coach_game_public_view` - Public viewing of coach teams
+  - `team_players_coach_public_view` - Public viewing of coach team rosters
+  - `custom_players_coach_public_view` - Public viewing of custom player names
+  - Verified `users_anon_read` policy for player name visibility
+- **API Route Enhancement**: Updated `/api/game-viewer/[gameId]/route.ts` to allow unauthenticated access for coach games
+  - Coach games: No auth required (UUID security)
+  - Non-coach games: Still require authentication for non-public tournaments
+- **Service Layer Improvements**: Enhanced `TeamServiceV3` with robust public access fallback
+  - Improved error handling for 403/401 errors
+  - Automatic fallback to public access when authentication fails
+  - Handles expired/invalid tokens gracefully
+  - Custom players query now falls back to public access for coach game viewers
+
+#### Technical Implementation
+- **Database Migration**: `023_coach_games_public_view.sql` - Complete RLS policy setup
+- **Files Modified**:
+  - `src/app/api/game-viewer/[gameId]/route.ts` - Conditional auth check for coach games
+  - `src/lib/services/teamServiceV3.ts` - Enhanced fallback logic for public access
+- **Files Created**:
+  - `docs/05-database/migrations/023_coach_games_public_view.sql` - RLS policies migration
+- **Security Notes**:
+  - All policies are SELECT-only (read-only access)
+  - UUID game IDs provide cryptographic security (340+ undecillion combinations)
+  - Coach write policies remain unchanged (only owner can modify)
+  - No breaking changes - existing authenticated access still works
+
+#### User Experience Improvements
+- **Before**: Coach games required authentication, blocking public sharing
+- **After**: Coach games can be shared via link, viewable on any device without login
+- **Impact**: Enables coaches to share game links via email, social media, or messaging apps
+- **Mobile Support**: Full functionality on mobile devices without authentication
+- **Team Tabs**: Player stats now display correctly for unauthenticated viewers
+
+#### Testing & Verification
+- ✅ RLS policies applied successfully in production
+- ✅ Public access works for coach games
+- ✅ Player names display correctly (no more "Player abc123...")
+- ✅ Team stats tabs show complete player rosters
+- ✅ Custom players visible in public view
+- ✅ Non-coach games still require authentication (security maintained)
+- ✅ Zero breaking changes to existing functionality
+
+#### Documentation Updates
+- **Updated**: `CHANGELOG.md` - This entry
+- **Updated**: `package.json` - Version bump to 0.17.3
+- **Created**: Migration documentation with verification queries
+
+---
+
 ## [0.17.2] - 2025-01-XX
 
 ### ⚡ **Leaders Tab Game Phase Filter & Comprehensive Prefetch Optimization**

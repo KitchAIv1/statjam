@@ -14,11 +14,11 @@ Professional-grade sports tournament app for real-time stat tracking and tournam
 
 **Now live at**: **[www.statjam.net](https://www.statjam.net)** ✅
 
-## 🎯 **Current Status: 🚀 ALPHA v0.18 - PRODUCTION** 
+## 🎯 **Current Status: 🚀 ALPHA v0.17.3 - PRODUCTION** 
 
 **Phase**: Alpha - Feature Complete Platform  
-**Version**: 0.18.0  
-**Last Updated**: December 2, 2025  
+**Version**: 0.17.3  
+**Last Updated**: December 15, 2025  
 **Status**: ✅ **ALPHA LIVE** - Multi-role platform with NBA-level automation, player claim system, tournament management, and enhanced dashboard UX in production
 
 **Authentication**: ✅ Centralized Auth Context with JWT Auto-Refresh  

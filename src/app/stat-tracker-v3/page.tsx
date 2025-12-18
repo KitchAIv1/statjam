@@ -258,19 +258,10 @@ function StatTrackerV3Content() {
           (async () => {
             try {
               if (coachMode && coachTeamIdParam) {
-                // Coach mode: Load coach team players
-                const { CoachPlayerService } = await import('@/lib/services/coachPlayerService');
-                const coachPlayers = await CoachPlayerService.getCoachTeamPlayers(coachTeamIdParam);
-                
-                // Transform coach players to match Player interface
-                return coachPlayers.map(cp => ({
-                  id: cp.id,
-                  name: cp.name,
-                  jerseyNumber: cp.jersey_number,
-                  email: cp.email,
-                  is_custom_player: cp.is_custom_player,
-                  photo_url: cp.photo_url // Player avatar from profile
-                }));
+                // ✅ FIX: Coach mode now uses same logic as stat admin
+                // Uses TeamServiceV3.getTeamPlayersWithSubstitutions() to apply substitution state
+                // This ensures roster persists correctly on internet disruption/reconnection
+                return await TeamServiceV3.getTeamPlayersWithSubstitutions(coachTeamIdParam, game.id);
               } else {
                 // Tournament mode: Load tournament team players
                 return await TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_a_id, game.id);

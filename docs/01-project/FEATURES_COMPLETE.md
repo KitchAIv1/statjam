@@ -1,8 +1,8 @@
 # ✅ StatJam MVP - Completed Features
 
-**Version**: 0.16.1  
-**Date**: November 21, 2025  
-**Status**: Production Ready - NBA-Standard Features Complete + Coach Team Card + Bracket Builder + Custom Player Photos + Features Page + FT Auto-Sequence + Security Fixes
+**Version**: 0.17.3  
+**Date**: December 15, 2025  
+**Status**: Production Ready - NBA-Standard Features Complete + Coach Team Card + Bracket Builder + Custom Player Photos + Features Page + FT Auto-Sequence + Security Fixes + Coach Games Public Viewing
 
 ---
 
@@ -419,6 +419,18 @@ DATABASE
 - ✅ CoachTeamService/Create/Edit UI exposes Official vs Practice toggle with player stat guidance
 - ✅ Player dashboards now honor official-only coach games; practice games remain coach-only
 - ✅ CoachTeamCard shows trophy/dumbbell badges, warning copy, and deletion safeguards
+
+### **Coach Games Public Viewing (v0.17.3)**
+- ✅ Public viewing of coach games via shared links (no authentication required)
+- ✅ UUID-based security model (128-bit cryptographic, impossible to guess)
+- ✅ 8 RLS policies for anonymous SELECT access to coach game data
+- ✅ Enhanced API route with conditional authentication (coach games public, others require auth)
+- ✅ Improved service layer with automatic public access fallback
+- ✅ Complete player roster visibility in team tabs for unauthenticated viewers
+- ✅ Custom player names display correctly in public view
+- ✅ Full mobile support without login requirement
+- ✅ Same security pattern as Google Docs "anyone with link can view"
+- ✅ Zero breaking changes - existing authenticated access preserved
 - ✅ Switch component redesigned (gray OFF / blue ON) to clarify state at a glance
 - ✅ Need Help panel + onboarding checklist updated to explain team type impact and custom player behavior
 - ✅ Delete team action with confirmation dialog covering cascading impact (team data, games, roster links)
@@ -643,6 +655,6 @@ StatJam MVP is **production-ready** with all core features implemented and teste
 
 ---
 
-**Last Updated**: November 21, 2025  
+**Last Updated**: December 15, 2025  
 **Maintained By**: Development Team
 

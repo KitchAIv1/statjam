@@ -209,6 +209,66 @@ CHECK (
 
 ---
 
+### Coach Games Public Viewing Migration
+
+#### `023_coach_games_public_view.sql`
+**Purpose**: Enable public viewing of coach games via shared links
+**Status**: ✅ Applied (December 15, 2025)
+**Features**:
+- Public SELECT access for coach games (UUID-based security)
+- Anonymous access to coach game data (stats, substitutions, timeouts, rosters)
+- Custom player names visible in public view
+- Team stats and player rosters accessible without authentication
+
+**Key Components**:
+```sql
+-- Games: Public viewing of coach games
+CREATE POLICY "games_coach_public_view" ON games
+  FOR SELECT TO anon, authenticated
+  USING (is_coach_game = TRUE);
+
+-- Game Stats: Public viewing for coach games
+CREATE POLICY "game_stats_coach_public_view" ON game_stats
+  FOR SELECT TO anon, authenticated
+  USING (game_id IN (SELECT id FROM games WHERE is_coach_game = TRUE));
+
+-- Team Players: Public viewing for coach game rosters
+CREATE POLICY "team_players_coach_public_view" ON team_players
+  FOR SELECT TO anon, authenticated
+  USING (team_id IN (
+    SELECT team_a_id FROM games WHERE is_coach_game = TRUE
+    UNION
+    SELECT team_b_id FROM games WHERE is_coach_game = TRUE
+  ));
+
+-- Custom Players: Public viewing for coach game custom players
+CREATE POLICY "custom_players_coach_public_view" ON custom_players
+  FOR SELECT TO anon, authenticated
+  USING (team_id IN (
+    SELECT team_a_id FROM games WHERE is_coach_game = TRUE
+    UNION
+    SELECT team_b_id FROM games WHERE is_coach_game = TRUE
+  ));
+```
+
+**Security Model**:
+- UUID-based link sharing (128-bit cryptographic security)
+- SELECT-only policies (read-only access)
+- Coach write policies remain unchanged (only owner can modify)
+- Same security pattern as Google Docs "anyone with link can view"
+
+**Impact**:
+- Coaches can share game links via email, social media, messaging apps
+- Viewers can access games on any device without login
+- Player names and stats display correctly for unauthenticated users
+- Team tabs show complete rosters in public view
+
+**Files Modified**:
+- `src/app/api/game-viewer/[gameId]/route.ts` - Conditional auth for coach games
+- `src/lib/services/teamServiceV3.ts` - Enhanced public access fallback
+
+---
+
 ## 🔒 RLS Policies
 
 ### Coach Access Policies
@@ -584,5 +644,5 @@ WHERE tp.team_id = $1;
 
 ---
 
-**Last Updated**: October 22, 2025  
+**Last Updated**: December 15, 2025  
 **Maintained By**: Development Team

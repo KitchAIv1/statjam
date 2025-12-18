@@ -315,23 +315,48 @@ export class TeamStatsService {
    * ✅ Priority 1: quarter_length_minutes (preserved original setting)
    * ✅ Priority 2: Tournament ruleset config
    * ✅ Priority 3: Standard ruleset defaults (NBA=12, FIBA=10, NCAA=20)
+   * 
+   * ✅ FIX (Dec 2024): Coach games use simple query without tournament JOIN
+   * to avoid NULL tournament issues causing fallback to 12 min
    */
   private static async getQuarterLengthMinutes(gameId: string): Promise<number> {
     try {
-      // Fetch game with quarter_length_minutes and tournament's ruleset config
+      // ✅ STEP 1: Simple query to check if coach game and get quarter_length_minutes
+      // This avoids tournament JOIN issues for coach games (dummy tournament has NULL ruleset)
+      const basicGameData = await this.makeRequest<any>('games', {
+        'select': 'is_coach_game,quarter_length_minutes',
+        'id': `eq.${gameId}`
+      });
+
+      if (basicGameData.length > 0) {
+        const basicGame = basicGameData[0];
+        
+        // ✅ COACH GAME PATH: Direct access to quarter_length_minutes (no tournament JOIN)
+        if (basicGame.is_coach_game === true) {
+          if (basicGame.quarter_length_minutes && basicGame.quarter_length_minutes > 0) {
+            console.log(`📊 TeamStatsService: Coach game, using quarter_length_minutes: ${basicGame.quarter_length_minutes} min`);
+            return basicGame.quarter_length_minutes;
+          }
+          // Coach game without setting - default to 8 min (Youth/Rec default)
+          console.log('📊 TeamStatsService: Coach game without quarter_length_minutes, defaulting to 8 min');
+          return 8;
+        }
+        
+        // ✅ TOURNAMENT GAME PATH: Check quarter_length_minutes first (Priority 1)
+        if (basicGame.quarter_length_minutes && basicGame.quarter_length_minutes > 0) {
+          console.log(`📊 TeamStatsService: Using quarter_length_minutes: ${basicGame.quarter_length_minutes} min`);
+          return basicGame.quarter_length_minutes;
+        }
+      }
+
+      // ✅ STEP 2: For tournament games without quarter_length_minutes, fetch ruleset
       const gameData = await this.makeAuthenticatedRequest<any>('games', {
-        'select': 'tournament_id,quarter_length_minutes,tournaments(ruleset,ruleset_config)',
+        'select': 'tournament_id,tournaments(ruleset,ruleset_config)',
         'id': `eq.${gameId}`
       });
 
       if (gameData.length > 0) {
         const game = gameData[0];
-        
-        // ✅ Priority 1: Use preserved quarter_length_minutes (set at game start)
-        if (game.quarter_length_minutes && game.quarter_length_minutes > 0) {
-          console.log(`📊 TeamStatsService: Using quarter_length_minutes: ${game.quarter_length_minutes} min`);
-          return game.quarter_length_minutes;
-        }
         
         if (game.tournaments) {
           const ruleset = game.tournaments.ruleset || 'NBA';
@@ -508,16 +533,18 @@ export class TeamStatsService {
         console.warn('⚠️ Could not fetch game stats for DNP detection');
       }
       
-      for (const playerId of playerIds) {
+      // ✅ FIX: Use forEach to access index for array position check (matches plus/minus logic)
+      playerIds.forEach((playerId, index) => {
         if (!playersInSubs.has(playerId)) {
-          // Never appeared in substitutions - check if they have any stats
-          if (playersWithStats.has(playerId)) {
-            // Has stats but no subs = played full game (started, never subbed out)
+          // Never appeared in substitutions - check if they have stats OR are in first 5 (starter position)
+          // This aligns with plus/minus calculation (line 703) which uses index < 5 for starters
+          if (playersWithStats.has(playerId) || index < 5) {
+            // Has stats OR is in first 5 positions = starter (played full game)
             inferredStarters.add(playerId);
           }
-          // No subs + no stats = DNP bench player, leave at 0 minutes
+          // Only true DNP = no subs + no stats + NOT in first 5 positions
         }
-      }
+      });
       
       console.log(`📊 TeamStatsService: Inferred ${inferredStarters.size} starters from substitution data`);
 

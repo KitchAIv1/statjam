@@ -1,8 +1,8 @@
 # 🎯 StatJam MVP: Current Status
 
-**Date**: November 28, 2025  
-**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS + FT AUTO-SEQUENCE + SECURITY FIXES + DATABASE PERFORMANCE OPTIMIZATION + PLAYER PROFILE UI REFINEMENTS + ACCURATE MINUTES CALCULATION + CUSTOM PLAYER CLAIMING  
-**Version**: 0.16.5 (Custom Player Claiming Feature + Server-Side Security Improvements)  
+**Date**: December 15, 2025  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS + FT AUTO-SEQUENCE + SECURITY FIXES + DATABASE PERFORMANCE OPTIMIZATION + PLAYER PROFILE UI REFINEMENTS + ACCURATE MINUTES CALCULATION + CUSTOM PLAYER CLAIMING + COACH GAMES PUBLIC VIEWING  
+**Version**: 0.17.3 (Next.js Security Update + Coach Games Public Viewing)  
 **Branch**: `main`  
 **Live Site**: [www.statjam.net](https://www.statjam.net) ✅
 
@@ -20,7 +20,9 @@
 - Code quality is high with TypeScript throughout
 
 **Recent Achievements** ✅:
-1. **🔐 CUSTOM PLAYER CLAIMING (Nov 28, 2025)**: Complete custom player claiming system allowing players to claim their profiles and become full StatJam users. Server-side API route with service_role key for secure admin operations. Inline sign-up form for seamless account creation. Complete data transfer (profile, stats, team references). Claimed players appear as regular players in team management. Secure token-based system with expiration and one-time use.
+1. **🔒 NEXT.JS SECURITY UPDATE (Dec 15, 2025)**: Fixed CVE-2025-55184 - Critical DoS vulnerability in Next.js Server Components. Updated from 15.5.6 → 15.5.9. Prevents malicious HTTP requests from causing server hangs. All vulnerabilities resolved (0 remaining).
+2. **🌐 COACH GAMES PUBLIC VIEWING (Dec 15, 2025)**: Coach games can now be viewed publicly via shared links (no authentication required). UUID-based security (128-bit cryptographic). Added 8 RLS policies for anonymous SELECT access. Enhanced API route and service layer with public access fallback. Enables coaches to share game links via email/social media. Full mobile support without login.
+3. **🔐 CUSTOM PLAYER CLAIMING (Nov 28, 2025)**: Complete custom player claiming system allowing players to claim their profiles and become full StatJam users. Server-side API route with service_role key for secure admin operations. Inline sign-up form for seamless account creation. Complete data transfer (profile, stats, team references). Claimed players appear as regular players in team management. Secure token-based system with expiration and one-time use.
 2. **🎨 PLAYER PROFILE UI REFINEMENTS (Nov 27, 2025)**: Fixed player photo always on right side (mobile + desktop), prevented stat wrapping, fixed shooting efficiency overlap (2x2 grid on mobile), fixed game award percentage overflow. Consistent responsive UI across all screen sizes.
 3. **⏱️ ACCURATE MINUTES CALCULATION (Nov 27, 2025)**: Dynamic quarter length support (NBA/FIBA/NCAA/CUSTOM), cross-quarter stint calculation fix, "still on court" bug resolved using current game state. Respects stat admin's custom quarter clock edits. Accurate minutes for all game types.
 3. **⚡ DATABASE PERFORMANCE OPTIMIZATION (Nov 25, 2025)**: Disabled redundant database triggers causing lock contention. Eliminated timeout errors (code 57014). Stat writes now process in 0ms (instant) vs 4-13 seconds before. 50% write load reduction. Added WebSocket health monitoring. Optimized Game Viewer with 1s debounce. Fixed coach mode score calculation.
