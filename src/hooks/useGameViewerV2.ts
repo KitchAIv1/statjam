@@ -253,8 +253,13 @@ function transformStatsToPlays(
     }
     
     // ✅ Calculate running score
+    // ✅ FIX: Check is_opponent_stat for coach mode (matches calculateScoresFromStats logic)
     if (points > 0) {
-      if (stat.team_id === teamAId) {
+      const statWithOpponent = stat as any;
+      if (statWithOpponent.is_opponent_stat) {
+        // Coach mode: opponent stats go to away score
+        runningScoreAway += points;
+      } else if (stat.team_id === teamAId) {
         runningScoreHome += points;
       } else if (stat.team_id === teamBId) {
         runningScoreAway += points;

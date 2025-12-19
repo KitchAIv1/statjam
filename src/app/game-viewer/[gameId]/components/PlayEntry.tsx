@@ -184,8 +184,9 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
                 <span className={`truncate ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>{teamName}</span>
               </div>
 
-              {/* NBA-Style Shooting Stats - Only show for scoring plays */}
-              {typeof playerPoints === 'number' && playerStats && scoringInfo && play.statType && (
+              {/* NBA-Style Shooting Stats - Show for all shooting plays (made + missed) */}
+              {typeof playerPoints === 'number' && playerStats && play.statType && 
+               ['field_goal', 'three_pointer', 'free_throw'].includes(play.statType) && (
                 <div className={`mt-1 text-xs sm:text-sm font-semibold ${isDark ? 'text-muted-foreground' : 'text-gray-600'}`}>
                   {formatShootingStats(playerPoints, playerStats, play.statType)}
                 </div>
