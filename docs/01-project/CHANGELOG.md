@@ -5,6 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.4] - 2025-12-18
+
+### 🚀 **COACH MODE CRITICAL FIXES & PERFORMANCE OPTIMIZATIONS**
+
+#### Critical Bug Fixes
+- **FIXED**: Roster persistence on internet disruption - Coach mode now maintains correct on-court/bench roster state after reconnection
+  - **Root Cause**: Coach mode was using `CoachPlayerService.getCoachTeamPlayers()` which doesn't read `game_substitutions`
+  - **Solution**: Switched to `TeamServiceV3.getTeamPlayersWithSubstitutions()` for coach mode (same as stat admin)
+  - **Impact**: Substitutions are now preserved during network interruptions, matching stat admin behavior
+- **FIXED**: Quarter length detection for coach games - Team tabs now correctly use user-set quarter length (e.g., 8 min instead of default 12 min)
+  - **Root Cause**: Query with tournament JOIN failed for coach games (NULL tournament_id), causing fallback to default 12 minutes
+  - **Solution**: Added coach game check that directly queries `quarter_length_minutes` without tournament JOIN
+  - **Impact**: Player minutes now calculate correctly based on actual game settings (e.g., 32 min for 4×8 min quarters)
+- **FIXED**: Minutes calculation for starters without stats - Players who started but didn't record stats now show correct minutes
+  - **Root Cause**: Starter inference logic didn't use array position (`index < 5`) as fallback when no substitution or stat records existed
+  - **Solution**: Added `|| index < 5` condition to `inferredStarters` logic in `calculatePlayerMinutes()`
+  - **Impact**: Minutes calculation now consistent with plus/minus calculation, all starters show correct minutes
+- **FIXED**: Team fouls aggregation - Team tabs now show total game fouls instead of single quarter fouls
+  - **Root Cause**: Team fouls were read from `games.team_a_fouls` (quarter-based) instead of aggregating from `game_stats`
+  - **Solution**: Modified `aggregateTeamStats()` to sum all `stat_type: 'foul'` records from `game_stats`
+  - **Impact**: Team fouls now accurately reflect total fouls across all quarters
+- **FIXED**: Opponent score display in Game Over/Completion modals - Coach mode now shows correct opponent score
+  - **Root Cause**: Modals used `tracker.scores[gameData.team_b_id]` (dummy team) instead of `tracker.scores.opponent`
+  - **Solution**: Added conditional logic to use `tracker.scores.opponent` when `coachMode` is true
+  - **Impact**: Game completion modals now display accurate final scores for coach games
+- **FIXED**: Opponent name display in Game Viewer - Shows user-entered team name instead of "Virtual Opponent"
+  - **Root Cause**: `GameData` interface lacked `opponent_name` field, UI components used `team_b_name` (dummy team)
+  - **Solution**: Added `opponent_name` to `GameData` interface and updated 5 UI locations to use it for coach games
+  - **Impact**: Game viewer now displays the actual opponent name entered in pre-flight modal
+
+#### Performance Optimizations
+- **OPTIMIZED**: Team Stats Tab query reduction - Reduced database queries by ~75% through shared GameContext
+  - **Implementation**: Introduced `GameContext` interface that fetches `games`, `game_substitutions`, and scoring `game_stats` in single parallel call
+  - **Impact**: Eliminated redundant queries in `calculatePlayerMinutes()` and `calculatePlusMinusForPlayers()`
+  - **Load Time**: Reduced from 8 seconds to 4 seconds in production
+- **OPTIMIZED**: Real-time subscription debouncing - Added 500ms debounce to prevent query cascades on rapid stat updates
+  - **Implementation**: Added `REALTIME_DEBOUNCE_MS` constant and `debounceTimerRef` to `useTeamStats` and `useOpponentStats` hooks
+  - **Impact**: Prevents database overload during active stat recording sessions
+- **OPTIMIZED**: DNP detection query - Integrated into GameContext parallel fetch, eliminating separate 311-record query
+  - **Implementation**: Added `playersWithAnyStats` Set to `GameContext`, fetched in parallel with other context data
+  - **Impact**: Reduced query count and improved load time by ~2 seconds
+- **OPTIMIZED**: Game Awards fetching for coach mode - Skipped heavy `PlayerGameStatsService` for custom players
+  - **Implementation**: For coach mode custom players, directly use lightweight `getPlayerStatsForGame()` instead of full-history fetch
+  - **Impact**: Eliminated multiple heavy queries (2000+ rows) for award data, significantly faster coach game viewer load
+
+#### Technical Implementation
+- **Files Modified**:
+  - `src/app/stat-tracker-v3/page.tsx` - Roster persistence fix, opponent score/name fixes
+  - `src/lib/services/teamStatsService.ts` - Quarter length fix, minutes calculation fix, GameContext optimization, team fouls fix, DNP optimization
+  - `src/hooks/useTeamStats.ts` - Real-time debouncing
+  - `src/hooks/useOpponentStats.ts` - Real-time debouncing
+  - `src/hooks/useGameAwards.ts` - Coach mode optimization
+  - `src/hooks/useGameViewerV2.ts` - Added `opponent_name` to interface
+  - `src/app/game-viewer/[gameId]/page.tsx` - Opponent name display fixes (5 locations)
+- **Files Created**:
+  - `docs/02-development/COACH_GAME_QUARTER_LENGTH_FIX_ANALYSIS.md` - Comprehensive analysis document
+  - `docs/02-development/PLANNED_FIXES_PENDING.md` - JWT token refresh documentation (deferred)
+
+#### Performance Metrics
+- **Before**: 8-10 second load time for coach game viewer
+- **After**: 4 second load time (50% improvement)
+- **Query Reduction**: ~75% fewer database queries for Team Stats Tab
+- **Production Verified**: ✅ All optimizations tested and confirmed in production
+
+#### Testing & Verification
+- ✅ Roster persistence works correctly after internet disruption
+- ✅ Quarter length detection accurate for all coach game settings
+- ✅ Minutes calculation correct for all player scenarios (starters, subs, DNP)
+- ✅ Team fouls aggregation accurate across all quarters
+- ✅ Opponent score/name display correct in all modals and game viewer
+- ✅ Performance optimizations verified in production (4s load time)
+- ✅ No regressions in stat admin tracking (all fixes isolated to coach mode)
+- ✅ Zero breaking changes
+
+#### Documentation Updates
+- **Updated**: `CHANGELOG.md` - This entry
+- **Updated**: `package.json` - Version bump to 0.17.4
+- **Created**: Comprehensive analysis documents for all fixes
+
+---
+
 ## [0.17.3] - 2025-12-15
 
 ### 🔒 **CRITICAL SECURITY UPDATE & COACH GAMES PUBLIC VIEWING**

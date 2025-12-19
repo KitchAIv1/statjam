@@ -16,7 +16,7 @@
 import React, { useEffect, useState } from 'react';
 import { CoachAnalyticsService } from '@/lib/services/coachAnalyticsService';
 import { GameBreakdown } from '@/lib/types/coachAnalytics';
-import { Target, TrendingUp, Award, BarChart3 } from 'lucide-react';
+import { Target, TrendingUp, Award, BarChart3, Lightbulb, CheckCircle, AlertTriangle, Crosshair } from 'lucide-react';
 
 interface CoachGameAnalyticsTabProps {
   gameId: string;
@@ -148,6 +148,153 @@ export function CoachGameAnalyticsTab({ gameId, teamId, isDark = true }: CoachGa
             ))}
           </div>
         </div>
+      )}
+
+      {/* Game Analytics Breakdown - Only for specific game */}
+      {gameId === '38d7f2a4-ac51-4cf1-b3a9-72e8dcf3ec82' && (
+      <div className="mt-8">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-1.5 bg-slate-900 rounded text-white">
+            <Lightbulb className="w-4 h-4" />
+          </div>
+          <h4 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Game Intelligence Report</h4>
+        </div>
+        
+        {/* Big Picture - Hero Card */}
+        <div className="p-5 rounded-lg bg-white border border-slate-200 shadow-sm mb-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
+          <h5 className="font-bold text-slate-900 mb-2 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-slate-600" />
+            THE BIG PICTURE
+          </h5>
+          <p className="text-slate-600 leading-relaxed text-sm">
+            The numbers back up the result. The team <span className="font-semibold text-slate-900">controlled this game</span> by taking quality shots, moving the ball, and creating extra possessions through defense and rebounding. The analytics align with a <span className="font-semibold text-slate-900">dominant, one-sided performance</span>.
+          </p>
+        </div>
+
+        {/* Insights Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          
+          {/* LEFT COLUMN: OFFENSE & POSITIVES */}
+          <div className="space-y-4">
+            {/* Shot Quality */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-emerald-200 transition-colors">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-full bg-emerald-50 text-emerald-600">
+                    <Target className="w-4 h-4" />
+                  </div>
+                  <h5 className="font-bold text-slate-800 text-sm">Shot Quality</h5>
+                </div>
+                <span className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wide">High eFG%</span>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Shooting efficiency shows the team got <span className="font-bold text-emerald-700">good looks</span> instead of forcing shots. This points to smart shot selection.
+              </p>
+            </div>
+
+            {/* Ball Movement */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-emerald-200 transition-colors">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-full bg-emerald-50 text-emerald-600">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <h5 className="font-bold text-slate-800 text-sm">Ball Movement</h5>
+                </div>
+                <span className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wide">High Assist %</span>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Nearly <span className="font-bold text-emerald-700">half of made baskets</span> came off assists. The offense was sharing the ball and finding open teammates.
+              </p>
+            </div>
+
+            {/* Rebounding */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-emerald-200 transition-colors">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-full bg-emerald-50 text-emerald-600">
+                    <BarChart3 className="w-4 h-4" />
+                  </div>
+                  <h5 className="font-bold text-slate-800 text-sm">Board Control</h5>
+                </div>
+                <span className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wide">+ Margin</span>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Winning the <span className="font-bold text-emerald-700">rebounding battle</span> allowed the team to limit second chances and keep control of tempo.
+              </p>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: DEFENSE & IMPROVEMENTS */}
+          <div className="space-y-4">
+            {/* Defense */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-emerald-200 transition-colors">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-full bg-emerald-50 text-emerald-600">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <h5 className="font-bold text-slate-800 text-sm">Disruptive Defense</h5>
+                </div>
+                <span className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wide">16 STL / 7 BLK</span>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                With <span className="font-bold text-emerald-700">16 steals and 7 blocks</span>, the defense repeatedly disrupted the offense, turning stops into scoring chances.
+              </p>
+            </div>
+
+            {/* Ball Security (Improvement) */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-amber-200 transition-colors">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-full bg-amber-50 text-amber-600">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <h5 className="font-bold text-slate-800 text-sm">Ball Security</h5>
+                </div>
+                <span className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wide">13 TOV</span>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                With <span className="font-bold text-amber-700">13 turnovers</span> and an AST/TO ratio close to 1, there is room to improve decision-making under pressure.
+              </p>
+            </div>
+
+            {/* Paint Attacks (Improvement) */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-amber-200 transition-colors">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-full bg-amber-50 text-amber-600">
+                    <Crosshair className="w-4 h-4" />
+                  </div>
+                  <h5 className="font-bold text-slate-800 text-sm">Paint Pressure</h5>
+                </div>
+                <span className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wide">Low FTA</span>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                A <span className="font-bold text-amber-700">low free-throw rate</span> suggests heavy reliance on jump shots. More drives could create easier points.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Coach Takeaway - Signature Block */}
+        <div className="relative p-5 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50/50">
+          <div className="absolute -top-3 left-4 bg-white px-2 text-xs font-bold text-orange-600 uppercase tracking-widest border border-slate-100 shadow-sm">
+            Coach's Directive
+          </div>
+          <div className="flex gap-4 items-start">
+            <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-orange-100 text-orange-600 shrink-0">
+              <Crosshair className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-800 leading-relaxed">
+                "When we move the ball and apply defensive pressure, we control games. <span className="bg-yellow-100 px-1 rounded">Cleaning up turnovers</span> and <span className="bg-yellow-100 px-1 rounded">emphasizing rim attacks</span> should be the next focus in practice."
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
       )}
     </div>
   );

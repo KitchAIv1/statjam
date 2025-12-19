@@ -106,6 +106,8 @@
 - **SUPABASE_EMAIL_TEMPLATES_SETUP_GUIDE.md** - Email templates setup
 
 ### **10. SQL Scripts** (`sql/`)
+- **game_summary_analytics.sql** - PostgreSQL function for LLM-ready game summary generation (v0.17.4) ✨ NEW
+- **game_summary_analytics_query.sql** - Standalone query version for testing/debugging (v0.17.4) ✨ NEW
 - **recompute_tournament_leaders_by_phase.sql** - Re-compute tournament leaders with per-phase breakdown (v0.17.2)
 - **fix_tournament_leaders_constraint_and_recompute.sql** - Fix unique constraint + execution guide (v0.17.2)
 - **verify_tournament_leaders_trigger.sql** - Verification queries for triggers and functions (v0.17.2)
@@ -196,13 +198,13 @@
 
 ---
 
-**Last Updated**: January 2025  
+**Last Updated**: December 2025  
 **Maintained By**: Development Team  
 **Status**: ✅ Complete and Current
 
-### **Recent Updates (January 2025)**
+### **Recent Updates (December 2025)**
+- ✅ **v0.17.4**: Coach mode critical fixes + performance optimizations + game summary analytics SQL
+- ✅ **v0.17.3**: Next.js security update + coach games public viewing
 - ✅ **v0.17.2**: Leaders tab game phase filter + comprehensive prefetch optimization
 - ✅ Custom player photo upload feature completed
 - ✅ Player Management Modal UI improvements
-- ✅ Global focus outline removal
-- ✅ Component refactoring for `.cursorrules` compliance
