@@ -2307,9 +2307,9 @@ function StatTrackerV3Content() {
           <GameOverModal
             isOpen={tracker.showGameOverModal}
             teamAName={gameData.team_a?.name || 'Team A'}
-            teamBName={gameData.team_b?.name || 'Team B'}
+            teamBName={coachMode ? (opponentName || 'Opponent') : (gameData.team_b?.name || 'Team B')}
             teamAScore={tracker.scores[gameData.team_a_id] || 0}
-            teamBScore={tracker.scores[gameData.team_b_id] || 0}
+            teamBScore={coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)}
             isOvertime={tracker.quarter > 4}
             overtimeNumber={tracker.quarter > 4 ? tracker.quarter - 4 : undefined}
             onEditStats={() => {
@@ -2336,7 +2336,7 @@ function StatTrackerV3Content() {
             teamAName={gameData.team_a?.name || 'Team A'}
             teamBName={coachMode ? (opponentName || 'Opponent') : (gameData.team_b?.name || 'Team B')}
             teamAScore={tracker.scores[gameData.team_a_id] || 0}
-            teamBScore={tracker.scores[gameData.team_b_id] || 0}
+            teamBScore={coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)}
             isCoachGame={coachMode}
             opponentName={opponentName || 'Opponent'}
           />

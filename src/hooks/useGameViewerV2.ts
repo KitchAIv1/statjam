@@ -36,6 +36,7 @@ interface GameData {
   team_a_timeouts_remaining?: number;
   team_b_timeouts_remaining?: number;
   is_coach_game?: boolean; // ✅ Coach mode support
+  opponent_name?: string;  // ✅ Coach mode: User-entered opponent name
 }
 
 interface GameStats {

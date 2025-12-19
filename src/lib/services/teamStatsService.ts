@@ -53,6 +53,28 @@ export interface PlayerStats {
   freeThrowPercentage: number;
 }
 
+/**
+ * ✅ OPTIMIZATION: Shared game context to eliminate duplicate queries
+ * Fetched ONCE per aggregatePlayerStats call, passed to internal methods
+ */
+interface GameContext {
+  gameId: string;
+  teamId: string;
+  isCoachGame: boolean;
+  quarterLengthMinutes: number;
+  quarterLengthSeconds: number;
+  currentGameState: {
+    quarter: number;
+    clockMinutes: number;
+    clockSeconds: number;
+    status?: string;
+  };
+  teamAId: string | null;
+  teamBId: string | null;
+  substitutions: any[];
+  allGameStats: any[];  // All stats for this game (for plus/minus)
+}
+
 export class TeamStatsService {
   private static readonly SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   private static readonly SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -168,6 +190,76 @@ export class TeamStatsService {
   }
 
   /**
+   * ✅ OPTIMIZATION: Fetch game context ONCE for reuse across internal methods
+   * Eliminates 6x duplicate games queries, 3x substitutions queries, 2x game_stats queries
+   */
+  private static async fetchGameContext(gameId: string, teamId: string): Promise<GameContext> {
+    console.log('🚀 TeamStatsService: Fetching game context (OPTIMIZED - single fetch)');
+    
+    // ✅ PARALLEL FETCH: Get all shared data in one round-trip
+    const [gameData, substitutions, scoringStats] = await Promise.all([
+      // Game data with all needed fields
+      this.makeAuthenticatedRequest<any>('games', {
+        'select': 'id,is_coach_game,quarter_length_minutes,quarter,game_clock_minutes,game_clock_seconds,status,team_a_id,team_b_id,tournament_id,tournaments(ruleset,ruleset_config)',
+        'id': `eq.${gameId}`
+      }),
+      // All substitutions for this team
+      this.makeRequest<any>('game_substitutions', {
+        'select': 'player_in_id,player_out_id,custom_player_in_id,custom_player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
+        'game_id': `eq.${gameId}`,
+        'team_id': `eq.${teamId}`,
+        'order': 'created_at.asc'
+      }),
+      // All scoring stats for plus/minus calculation
+      this.makeAuthenticatedRequest<any>('game_stats', {
+        'select': 'player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,is_opponent_stat',
+        'game_id': `eq.${gameId}`,
+        'stat_type': 'in.(field_goal,two_pointer,three_pointer,3_pointer,free_throw)',
+        'modifier': 'eq.made',
+        'order': 'quarter.asc,game_time_minutes.desc,game_time_seconds.desc'
+      })
+    ]);
+
+    const game = gameData[0] || {};
+    const isCoachGame = game.is_coach_game === true;
+    
+    // Determine quarter length
+    let quarterLengthMinutes = 12; // Default
+    if (isCoachGame) {
+      quarterLengthMinutes = game.quarter_length_minutes > 0 ? game.quarter_length_minutes : 8;
+    } else if (game.quarter_length_minutes > 0) {
+      quarterLengthMinutes = game.quarter_length_minutes;
+    } else if (game.tournaments?.ruleset_config?.clockRules?.quarterLengthMinutes) {
+      quarterLengthMinutes = game.tournaments.ruleset_config.clockRules.quarterLengthMinutes;
+    } else if (game.tournaments?.ruleset === 'FIBA') {
+      quarterLengthMinutes = 10;
+    } else if (game.tournaments?.ruleset === 'NCAA') {
+      quarterLengthMinutes = 20;
+    }
+
+    const context: GameContext = {
+      gameId,
+      teamId,
+      isCoachGame,
+      quarterLengthMinutes,
+      quarterLengthSeconds: quarterLengthMinutes * 60,
+      currentGameState: {
+        quarter: game.quarter || 1,
+        clockMinutes: game.game_clock_minutes ?? quarterLengthMinutes,
+        clockSeconds: game.game_clock_seconds ?? 0,
+        status: game.status
+      },
+      teamAId: game.team_a_id || null,
+      teamBId: game.team_b_id || null,
+      substitutions,
+      allGameStats: scoringStats
+    };
+
+    console.log(`✅ TeamStatsService: Game context fetched - ${isCoachGame ? 'Coach' : 'Tournament'} game, ${quarterLengthMinutes}min quarters, ${substitutions.length} subs, ${scoringStats.length} scoring events`);
+    return context;
+  }
+
+  /**
    * Aggregate team statistics from game_stats table
    */
   static async aggregateTeamStats(gameId: string, teamId: string): Promise<TeamStats> {
@@ -215,6 +307,7 @@ export class TeamStatsService {
       let turnovers = 0;
       let rebounds = 0;
       let assists = 0;
+      let totalFouls = 0; // ✅ FIX: Aggregate from game_stats, not games table
 
       // Aggregate stats
       gameStats.forEach(stat => {
@@ -263,16 +356,16 @@ export class TeamStatsService {
           case 'turnover':
             turnovers += statValue;
             break;
+          case 'foul':
+            // ✅ FIX: Aggregate ALL fouls from game_stats (not just current quarter from games table)
+            totalFouls += statValue;
+            break;
         }
       });
 
-      // Get team fouls from game data (already fetched)
-      let teamFouls = 0;
-      if (game?.team_a_id === teamId) {
-        teamFouls = game.team_a_fouls || 0;
-      } else if (game?.team_b_id === teamId) {
-        teamFouls = game.team_b_fouls || 0;
-      }
+      // ✅ FIX: Use aggregated fouls from game_stats (totalFouls) instead of games table
+      // games.team_a_fouls/team_b_fouls only tracks CURRENT QUARTER fouls for bonus tracking
+      const teamFouls = totalFouls;
 
       // Calculate percentages
       const fieldGoalPercentage = fieldGoalsAttempted > 0 
@@ -427,18 +520,24 @@ export class TeamStatsService {
   /**
    * Calculate actual player minutes on floor using substitution game clock times
    * ✅ FIX: Now uses dynamic quarter length and handles cross-quarter stints
+   * ✅ OPTIMIZATION: Accepts optional context to avoid duplicate queries
    */
-  private static async calculatePlayerMinutes(gameId: string, teamId: string, playerIds: string[]): Promise<Map<string, number>> {
+  private static async calculatePlayerMinutes(
+    gameId: string, 
+    teamId: string, 
+    playerIds: string[],
+    context?: GameContext  // ✅ OPTIMIZATION: Optional pre-fetched context
+  ): Promise<Map<string, number>> {
     try {
       console.log('⏱️ TeamStatsService: Calculating actual player minutes from substitution times');
 
-      // ✅ NEW: Get dynamic quarter length from ruleset (not hardcoded 12)
-      const quarterLengthMinutes = await this.getQuarterLengthMinutes(gameId);
+      // ✅ OPTIMIZATION: Use context if provided, otherwise fetch
+      const quarterLengthMinutes = context?.quarterLengthMinutes ?? await this.getQuarterLengthMinutes(gameId);
       const quarterLengthSeconds = quarterLengthMinutes * 60;
-      console.log(`📊 TeamStatsService: Using quarter length: ${quarterLengthMinutes} minutes`);
+      console.log(`📊 TeamStatsService: Using quarter length: ${quarterLengthMinutes} minutes ${context ? '(from context)' : '(fetched)'}`);
 
-      // Get all substitutions for this game and team
-      const substitutions = await this.makeRequest<any>('game_substitutions', {
+      // ✅ OPTIMIZATION: Use context substitutions if provided
+      const substitutions = context?.substitutions ?? await this.makeRequest<any>('game_substitutions', {
         'select': 'player_in_id,player_out_id,custom_player_in_id,custom_player_out_id,quarter,game_time_minutes,game_time_seconds,created_at',
         'game_id': `eq.${gameId}`,
         'team_id': `eq.${teamId}`,
@@ -450,22 +549,24 @@ export class TeamStatsService {
       const playerMinutes = new Map<string, number>();
       playerIds.forEach(playerId => playerMinutes.set(playerId, 0));
 
-      // ✅ NEW: Always fetch current game state for accurate "still on court" calculation
-      let currentGameState = { quarter: 1, clockMinutes: quarterLengthMinutes, clockSeconds: 0 };
-      try {
-        const gameData = await this.makeAuthenticatedRequest<any>('games', {
-          'select': 'quarter,game_clock_minutes,game_clock_seconds,status',
-          'id': `eq.${gameId}`
-        });
-        if (gameData.length > 0) {
-          currentGameState = {
-            quarter: gameData[0].quarter || 1,
-            clockMinutes: gameData[0].game_clock_minutes ?? quarterLengthMinutes,
-            clockSeconds: gameData[0].game_clock_seconds ?? 0
-          };
+      // ✅ OPTIMIZATION: Use context game state if provided
+      let currentGameState = context?.currentGameState ?? { quarter: 1, clockMinutes: quarterLengthMinutes, clockSeconds: 0 };
+      if (!context) {
+        try {
+          const gameData = await this.makeAuthenticatedRequest<any>('games', {
+            'select': 'quarter,game_clock_minutes,game_clock_seconds,status',
+            'id': `eq.${gameId}`
+          });
+          if (gameData.length > 0) {
+            currentGameState = {
+              quarter: gameData[0].quarter || 1,
+              clockMinutes: gameData[0].game_clock_minutes ?? quarterLengthMinutes,
+              clockSeconds: gameData[0].game_clock_seconds ?? 0
+            };
+          }
+        } catch (e) {
+          console.warn('⚠️ Could not fetch current game state for minutes calculation');
         }
-      } catch (e) {
-        console.warn('⚠️ Could not fetch current game state for minutes calculation');
       }
 
       if (substitutions.length === 0) {
@@ -625,41 +726,55 @@ export class TeamStatsService {
    * - Coach Mode is_opponent_stat support
    * - Game time ordering (not created_at)
    * - Current game state cap for ongoing games
+   * ✅ OPTIMIZATION: Accepts optional context to avoid duplicate queries
    */
-  private static async calculatePlusMinusForPlayers(gameId: string, teamId: string, playerIds: string[]): Promise<Map<string, number>> {
+  private static async calculatePlusMinusForPlayers(
+    gameId: string, 
+    teamId: string, 
+    playerIds: string[],
+    context?: GameContext  // ✅ OPTIMIZATION: Optional pre-fetched context
+  ): Promise<Map<string, number>> {
     try {
       console.log('📊 TeamStatsService: Calculating NBA-standard plus/minus (v1.1.0)');
 
       const playerPlusMinus = new Map<string, number>();
       
-      // ✅ Step 1: Get dynamic quarter length (not hardcoded 12)
-      const quarterLengthMinutes = await this.getQuarterLengthMinutes(gameId);
+      // ✅ OPTIMIZATION: Use context if provided
+      const quarterLengthMinutes = context?.quarterLengthMinutes ?? await this.getQuarterLengthMinutes(gameId);
       const quarterLengthSeconds = quarterLengthMinutes * 60;
-      console.log(`📊 Plus/Minus: Using ${quarterLengthMinutes}-min quarters`);
+      console.log(`📊 Plus/Minus: Using ${quarterLengthMinutes}-min quarters ${context ? '(from context)' : '(fetched)'}`);
 
-      // ✅ Step 2: Get current game state for capping "still on court" players
-      let currentGameTimeSeconds = Infinity; // Default to infinity (include all events)
-      try {
-        const gameState = await this.makeAuthenticatedRequest<any>('games', {
-          'select': 'quarter,game_clock_minutes,game_clock_seconds,status,team_a_id,team_b_id,is_coach_game',
-          'id': `eq.${gameId}`
-        });
-        if (gameState.length > 0) {
-          const g = gameState[0];
-          const currentQuarter = g.quarter || 1;
-          const clockMinutes = g.game_clock_minutes ?? quarterLengthMinutes;
-          const clockSeconds = g.game_clock_seconds ?? 0;
-          currentGameTimeSeconds = this.convertGameTimeToSecondsWithLength(
-            currentQuarter, clockMinutes, clockSeconds, quarterLengthSeconds
-          );
-          console.log(`📊 Plus/Minus: Current game time = ${currentGameTimeSeconds}s (Q${currentQuarter} ${clockMinutes}:${clockSeconds.toString().padStart(2, '0')})`);
+      // ✅ OPTIMIZATION: Use context game state if provided
+      let currentGameTimeSeconds = Infinity;
+      if (context) {
+        const { quarter, clockMinutes, clockSeconds } = context.currentGameState;
+        currentGameTimeSeconds = this.convertGameTimeToSecondsWithLength(
+          quarter, clockMinutes, clockSeconds, quarterLengthSeconds
+        );
+        console.log(`📊 Plus/Minus: Current game time = ${currentGameTimeSeconds}s (from context)`);
+      } else {
+        try {
+          const gameState = await this.makeAuthenticatedRequest<any>('games', {
+            'select': 'quarter,game_clock_minutes,game_clock_seconds,status,team_a_id,team_b_id,is_coach_game',
+            'id': `eq.${gameId}`
+          });
+          if (gameState.length > 0) {
+            const g = gameState[0];
+            const currentQuarter = g.quarter || 1;
+            const clockMinutes = g.game_clock_minutes ?? quarterLengthMinutes;
+            const clockSeconds = g.game_clock_seconds ?? 0;
+            currentGameTimeSeconds = this.convertGameTimeToSecondsWithLength(
+              currentQuarter, clockMinutes, clockSeconds, quarterLengthSeconds
+            );
+            console.log(`📊 Plus/Minus: Current game time = ${currentGameTimeSeconds}s (Q${currentQuarter} ${clockMinutes}:${clockSeconds.toString().padStart(2, '0')})`);
+          }
+        } catch (e) {
+          console.warn('⚠️ Plus/Minus: Could not fetch current game state');
         }
-      } catch (e) {
-        console.warn('⚠️ Plus/Minus: Could not fetch current game state');
       }
       
-      // ✅ Step 3: Get all substitutions (ordered by game time, not created_at)
-      const substitutions = await this.makeRequest<any>('game_substitutions', {
+      // ✅ OPTIMIZATION: Use context substitutions if provided
+      const substitutions = context?.substitutions ?? await this.makeRequest<any>('game_substitutions', {
         'select': 'player_in_id,player_out_id,custom_player_in_id,custom_player_out_id,quarter,game_time_minutes,game_time_seconds',
         'game_id': `eq.${gameId}`,
         'order': 'quarter.asc,game_time_minutes.desc,game_time_seconds.desc'
@@ -667,8 +782,8 @@ export class TeamStatsService {
 
       console.log(`📊 Plus/Minus: Found ${substitutions.length} substitutions`);
 
-      // ✅ Step 4: Get all scoring events (ordered by game time, include is_opponent_stat for Coach Mode)
-      const allScoringStats = await this.makeAuthenticatedRequest<any>('game_stats', {
+      // ✅ OPTIMIZATION: Use context scoring stats if provided
+      const allScoringStats = context?.allGameStats ?? await this.makeAuthenticatedRequest<any>('game_stats', {
         'select': 'player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,is_opponent_stat',
         'game_id': `eq.${gameId}`,
         'stat_type': 'in.(field_goal,two_pointer,three_pointer,3_pointer,free_throw)',
@@ -678,23 +793,29 @@ export class TeamStatsService {
 
       console.log(`📊 Plus/Minus: Found ${allScoringStats.length} scoring events`);
 
-      // ✅ Step 5: Get game teams (for opponent detection)
-      const game = await this.makeAuthenticatedRequest<any>('games', {
-        'select': 'team_a_id,team_b_id,is_coach_game',
-        'id': `eq.${gameId}`
-      });
+      // ✅ OPTIMIZATION: Use context team IDs if provided
+      const isCoachGame = context?.isCoachGame ?? false;
+      const teamAId = context?.teamAId;
+      const teamBId = context?.teamBId;
+      
+      // Only fetch game if we don't have context
+      if (!context) {
+        const game = await this.makeAuthenticatedRequest<any>('games', {
+          'select': 'team_a_id,team_b_id,is_coach_game',
+          'id': `eq.${gameId}`
+        });
 
-      // ✅ Graceful fallback: If RLS blocks game fetch (admin viewing other coach's game),
-      // return 0 plus/minus for all players instead of throwing error
-      if (game.length === 0) {
-        console.warn('⚠️ TeamStatsService: Could not fetch game for plus/minus (RLS), returning 0 for all players');
-        const fallbackMap = new Map<string, number>();
-        playerIds.forEach(playerId => fallbackMap.set(playerId, 0));
-        return fallbackMap;
+        // ✅ Graceful fallback: If RLS blocks game fetch (admin viewing other coach's game),
+        // return 0 plus/minus for all players instead of throwing error
+        if (game.length === 0) {
+          console.warn('⚠️ TeamStatsService: Could not fetch game for plus/minus (RLS), returning 0 for all players');
+          const fallbackMap = new Map<string, number>();
+          playerIds.forEach(playerId => fallbackMap.set(playerId, 0));
+          return fallbackMap;
+        }
       }
 
-      const isCoachGame = game[0].is_coach_game || false;
-      const opponentTeamId = game[0].team_a_id === teamId ? game[0].team_b_id : game[0].team_a_id;
+      const opponentTeamId = teamAId === teamId ? teamBId : teamAId;
       console.log(`📊 Plus/Minus: Team ${teamId.substring(0, 8)} vs Opponent ${opponentTeamId?.substring(0, 8) || 'N/A'} (Coach Mode: ${isCoachGame})`);
 
       // ✅ Step 6: Build player on-court timeline with quarter-aware seconds
@@ -903,11 +1024,16 @@ export class TeamStatsService {
       const finalPlayerIdsArray = Array.from(finalPlayerIds);
       console.log(`📊 TeamStatsService: Processing ${finalPlayerIdsArray.length} total players (roster: ${playerIds.length}, custom: ${customPlayersResponse.length}, from stats: ${gameStats.length > 0 ? 'yes' : 'no'})`);
 
+      // ✅ OPTIMIZATION: Fetch game context ONCE, pass to internal methods
+      // This eliminates 6x duplicate games queries, 3x substitutions queries
+      const gameContext = await this.fetchGameContext(gameId, teamId);
+
+      // ✅ OPTIMIZATION: Pass context to avoid redundant fetches
       // Calculate accurate player minutes from substitutions (use finalPlayerIdsArray to include custom players)
-      const playerMinutesMap = await this.calculatePlayerMinutes(gameId, teamId, finalPlayerIdsArray);
+      const playerMinutesMap = await this.calculatePlayerMinutes(gameId, teamId, finalPlayerIdsArray, gameContext);
 
       // Calculate plus/minus for players (use finalPlayerIdsArray to include custom players)
-      const playerPlusMinusMap = await this.calculatePlusMinusForPlayers(gameId, teamId, finalPlayerIdsArray);
+      const playerPlusMinusMap = await this.calculatePlusMinusForPlayers(gameId, teamId, finalPlayerIdsArray, gameContext);
 
       // Aggregate stats per player
       const playerStatsMap = new Map<string, any>();

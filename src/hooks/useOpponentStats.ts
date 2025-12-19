@@ -13,9 +13,12 @@
  * Follows .cursorrules: <100 lines, single responsibility
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 import { GameServiceV3 } from '@/lib/services/gameServiceV3';
+
+// ✅ OPTIMIZATION: Debounce delay to prevent query cascade on rapid stat recording
+const REALTIME_DEBOUNCE_MS = 500;
 
 interface OpponentPlayerStats {
   playerId: string;
@@ -49,6 +52,9 @@ export function useOpponentStats(gameId: string) {
   const [teamStats, setTeamStats] = useState<OpponentTeamStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // ✅ OPTIMIZATION: Debounce timer ref to prevent query cascade
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchOpponentStats = useCallback(async (isUpdate = false) => {
     if (!gameId) return;
@@ -151,16 +157,29 @@ export function useOpponentStats(gameId: string) {
   }, [fetchOpponentStats]);
 
   // Real-time updates
+  // ✅ OPTIMIZATION: Debounced to prevent query cascade on rapid stat recording
   useEffect(() => {
     if (!gameId) return;
 
     const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string) => {
       if (table === 'game_stats') {
-        void fetchOpponentStats(true);
+        // ✅ OPTIMIZATION: Debounce to batch rapid updates
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = setTimeout(() => {
+          void fetchOpponentStats(true);
+        }, REALTIME_DEBOUNCE_MS);
       }
     });
 
-    return unsubscribe;
+    // Cleanup debounce timer on unmount
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      unsubscribe();
+    };
   }, [gameId, fetchOpponentStats]);
 
   return { players, teamStats, loading, error };

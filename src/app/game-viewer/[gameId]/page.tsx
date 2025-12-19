@@ -96,12 +96,13 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   });
 
   // Memoized game object
+  // ✅ FIX: Use opponent_name for coach games instead of team_b_name (dummy team)
   const memoizedGame = useMemo(() => ({
     teamAName: game?.team_a_name || 'Team A',
-    teamBName: game?.team_b_name || 'Team B',
+    teamBName: game?.is_coach_game ? (game?.opponent_name || 'Opponent') : (game?.team_b_name || 'Team B'),
     homeScore: game?.home_score || 0,
     awayScore: game?.away_score || 0
-  }), [game?.team_a_name, game?.team_b_name, game?.home_score, game?.away_score]);
+  }), [game?.team_a_name, game?.team_b_name, game?.opponent_name, game?.is_coach_game, game?.home_score, game?.away_score]);
 
   // Calculate cumulative player points
   const calculatePlayerPoints = useCallback((idx: number, id?: string) => {
@@ -195,7 +196,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
           game={{
             ...game,
             teamAName: game.team_a_name || 'Team A',
-            teamBName: game.team_b_name || 'Team B',
+            teamBName: game.is_coach_game ? (game.opponent_name || 'Opponent') : (game.team_b_name || 'Team B'),
             teamALogo: teamALogo || undefined,
             teamBLogo: teamBLogo || undefined,
             homeScore: game.home_score || 0,
@@ -229,7 +230,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               {game.team_a_name || 'Team A'}
             </TabsTrigger>
             <TabsTrigger value="teamB" className={`flex-1 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none py-3 ${isDark ? 'data-[state=active]:bg-slate-700/50 text-muted-foreground data-[state=active]:text-orange-400' : 'data-[state=active]:bg-orange-50 text-gray-600 data-[state=active]:text-orange-600'}`}>
-              {game.is_coach_game ? 'Opponent' : (game.team_b_name || 'Team B')}
+              {game.is_coach_game ? (game.opponent_name || 'Opponent') : (game.team_b_name || 'Team B')}
             </TabsTrigger>
             {/* ✅ Coach Analytics Tab - Only for coach games */}
             {game.is_coach_game && isCompleted && (
@@ -265,7 +266,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               
               {/* Team B Score Row */}
               <div className={`flex justify-between items-center py-3 border-b ${isDark ? 'border-slate-700' : 'border-orange-200'}`}>
-                <span className={`text-lg font-semibold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.team_b_name}</span>
+                <span className={`text-lg font-semibold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.is_coach_game ? (game.opponent_name || 'Opponent') : game.team_b_name}</span>
                 <span className={`text-2xl font-extrabold ${isDark ? 'text-foreground' : 'text-gray-900'}`}>{game.away_score}</span>
               </div>
               
@@ -315,7 +316,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
             <TeamStatsTab 
               gameId={gameId} 
               teamId={game.team_b_id} 
-              teamName={game.is_coach_game ? 'Opponent' : (game.team_b_name || 'Team B')}
+              teamName={game.is_coach_game ? (game.opponent_name || 'Opponent') : (game.team_b_name || 'Team B')}
               isDark={isDark}
               teamStatsOnly={game.is_coach_game || false}
               prefetchedData={!teamBPrefetch.loading && !teamBPrefetch.error ? {

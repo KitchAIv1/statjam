@@ -153,9 +153,30 @@ export function useGameAwards(
       if (potgId) {
         fetchPromises.push(
           (async () => {
+            // ✅ OPTIMIZATION: For coach mode (custom players), skip heavy PlayerGameStatsService
+            // and use lightweight single-game fetch directly
+            if (potgIsCustom) {
+              console.log('🏆 [DEBUG] POTG: Using optimized coach mode fetch (skipping PlayerGameStatsService)');
+              const [identity, stats] = await Promise.all([
+                PlayerDashboardService.getIdentity(potgId, true),
+                getPlayerStatsForGame(gameId, potgId, true)
+              ]);
+              
+              setPlayerOfTheGame({
+                id: potgId,
+                name: identity?.name || 'Unknown Player',
+                photoUrl: identity?.profilePhotoUrl,
+                jerseyNumber: identity?.jerseyNumber,
+                isCustomPlayer: true,
+                stats
+              });
+              return;
+            }
+            
+            // Regular player path (tournament games) - use full history fetch
             const [identity, gameStats] = await Promise.all([
-              PlayerDashboardService.getIdentity(potgId, potgIsCustom),
-              PlayerGameStatsService.getPlayerGameStats(potgId, potgIsCustom)
+              PlayerDashboardService.getIdentity(potgId, false),
+              PlayerGameStatsService.getPlayerGameStats(potgId, false)
             ]);
             
             console.log('🏆 [DEBUG] POTG Identity returned:', {
@@ -165,10 +186,8 @@ export function useGameAwards(
               fullIdentity: identity
             });
             
-            let thisGameStats = gameStats.find(g => g.gameId === gameId);
-            
-            // ✅ Coach mode fallback: If no stats found (RLS filtered), fetch directly from game_stats
-            let stats = {
+            const thisGameStats = gameStats.find(g => g.gameId === gameId);
+            const stats = {
               points: thisGameStats?.points || 0,
               rebounds: thisGameStats?.rebounds || 0,
               assists: thisGameStats?.assists || 0,
@@ -176,17 +195,12 @@ export function useGameAwards(
               blocks: thisGameStats?.blocks || 0
             };
             
-            if (!thisGameStats) {
-              console.log('🏆 [DEBUG] POTG: Using fallback stats fetch for coach mode');
-              stats = await getPlayerStatsForGame(gameId, potgId, potgIsCustom);
-            }
-            
             setPlayerOfTheGame({
               id: potgId,
               name: identity?.name || 'Unknown Player',
               photoUrl: identity?.profilePhotoUrl,
               jerseyNumber: identity?.jerseyNumber,
-              isCustomPlayer: potgIsCustom,
+              isCustomPlayer: false,
               stats
             });
           })()
@@ -202,9 +216,30 @@ export function useGameAwards(
       if (hustleId) {
         fetchPromises.push(
           (async () => {
+            // ✅ OPTIMIZATION: For coach mode (custom players), skip heavy PlayerGameStatsService
+            // and use lightweight single-game fetch directly
+            if (hustleIsCustom) {
+              console.log('🏆 [DEBUG] Hustle: Using optimized coach mode fetch (skipping PlayerGameStatsService)');
+              const [identity, stats] = await Promise.all([
+                PlayerDashboardService.getIdentity(hustleId, true),
+                getPlayerStatsForGame(gameId, hustleId, true)
+              ]);
+              
+              setHustlePlayer({
+                id: hustleId,
+                name: identity?.name || 'Unknown Player',
+                photoUrl: identity?.profilePhotoUrl,
+                jerseyNumber: identity?.jerseyNumber,
+                isCustomPlayer: true,
+                stats
+              });
+              return;
+            }
+            
+            // Regular player path (tournament games) - use full history fetch
             const [identity, gameStats] = await Promise.all([
-              PlayerDashboardService.getIdentity(hustleId, hustleIsCustom),
-              PlayerGameStatsService.getPlayerGameStats(hustleId, hustleIsCustom)
+              PlayerDashboardService.getIdentity(hustleId, false),
+              PlayerGameStatsService.getPlayerGameStats(hustleId, false)
             ]);
             
             console.log('🏆 [DEBUG] Hustle Identity returned:', {
@@ -214,10 +249,8 @@ export function useGameAwards(
               fullIdentity: identity
             });
             
-            let thisGameStats = gameStats.find(g => g.gameId === gameId);
-            
-            // ✅ Coach mode fallback: If no stats found (RLS filtered), fetch directly from game_stats
-            let stats = {
+            const thisGameStats = gameStats.find(g => g.gameId === gameId);
+            const stats = {
               points: thisGameStats?.points || 0,
               rebounds: thisGameStats?.rebounds || 0,
               assists: thisGameStats?.assists || 0,
@@ -225,17 +258,12 @@ export function useGameAwards(
               blocks: thisGameStats?.blocks || 0
             };
             
-            if (!thisGameStats) {
-              console.log('🏆 [DEBUG] Hustle: Using fallback stats fetch for coach mode');
-              stats = await getPlayerStatsForGame(gameId, hustleId, hustleIsCustom);
-            }
-            
             setHustlePlayer({
               id: hustleId,
               name: identity?.name || 'Unknown Player',
               photoUrl: identity?.profilePhotoUrl,
               jerseyNumber: identity?.jerseyNumber,
-              isCustomPlayer: hustleIsCustom,
+              isCustomPlayer: false,
               stats
             });
           })()

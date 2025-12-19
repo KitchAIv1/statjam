@@ -12,10 +12,13 @@
  * - Return structured data for UI consumption
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { TeamStatsService, TeamStats, PlayerStats } from '@/lib/services/teamStatsService';
+
+// ✅ OPTIMIZATION: Debounce delay to prevent query cascade on rapid stat recording
+const REALTIME_DEBOUNCE_MS = 500;
 
 export interface TeamStatsData {
   teamStats: TeamStats | null;
@@ -40,6 +43,9 @@ export function useTeamStats(
   const [benchPlayers, setBenchPlayers] = useState<PlayerStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // ✅ OPTIMIZATION: Debounce timer ref to prevent query cascade
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
    * Fetch team roster and aggregate statistics
@@ -119,9 +125,20 @@ export function useTeamStats(
 
   /**
    * Real-time subscription setup
+   * ✅ OPTIMIZATION: Debounced to prevent query cascade on rapid stat recording
    */
   useEffect(() => {
     if (!gameId || !teamId) return;
+    
+    // ✅ OPTIMIZATION: Debounced fetch to batch rapid updates
+    const debouncedFetch = () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        void fetchTeamData(true);
+      }, REALTIME_DEBOUNCE_MS);
+    };
     
     // Use the existing hybrid subscription system
     // ✅ CRITICAL FIX: Always refresh on games table UPDATE (trigger completion signal)
@@ -129,7 +146,7 @@ export function useTeamStats(
       // ✅ CRITICAL: Always refresh on games table UPDATE (trigger completion signal)
       // This is the MOST RELIABLE approach - games UPDATE = trigger completed
       if (table === 'games') {
-        void fetchTeamData(true);
+        debouncedFetch(); // ✅ OPTIMIZATION: Debounced
         return;
       }
       
@@ -137,13 +154,19 @@ export function useTeamStats(
       if (table === 'game_stats' || table === 'game_substitutions') {
         const isInsertEvent = payload?.new && !payload?.old;
         if (isInsertEvent) {
-        void fetchTeamData(true);
+          debouncedFetch(); // ✅ OPTIMIZATION: Debounced
         }
         // For DELETE events, don't refresh - wait for games UPDATE (trigger completion)
       }
     });
 
-    return unsubscribe;
+    // Cleanup debounce timer on unmount
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      unsubscribe();
+    };
   }, [gameId, teamId, fetchTeamData]);
 
   return {
