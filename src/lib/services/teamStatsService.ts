@@ -72,7 +72,8 @@ interface GameContext {
   teamAId: string | null;
   teamBId: string | null;
   substitutions: any[];
-  allGameStats: any[];  // All stats for this game (for plus/minus)
+  allGameStats: any[];  // Scoring stats for plus/minus calculation
+  playersWithAnyStats: Set<string>;  // ✅ OPTIMIZATION: Player IDs with ANY stat (for DNP detection)
 }
 
 export class TeamStatsService {
@@ -197,7 +198,7 @@ export class TeamStatsService {
     console.log('🚀 TeamStatsService: Fetching game context (OPTIMIZED - single fetch)');
     
     // ✅ PARALLEL FETCH: Get all shared data in one round-trip
-    const [gameData, substitutions, scoringStats] = await Promise.all([
+    const [gameData, substitutions, scoringStats, allTeamStats] = await Promise.all([
       // Game data with all needed fields
       this.makeAuthenticatedRequest<any>('games', {
         'select': 'id,is_coach_game,quarter_length_minutes,quarter,game_clock_minutes,game_clock_seconds,status,team_a_id,team_b_id,tournament_id,tournaments(ruleset,ruleset_config)',
@@ -210,15 +211,29 @@ export class TeamStatsService {
         'team_id': `eq.${teamId}`,
         'order': 'created_at.asc'
       }),
-      // All scoring stats for plus/minus calculation
+      // Scoring stats for plus/minus calculation
       this.makeAuthenticatedRequest<any>('game_stats', {
         'select': 'player_id,custom_player_id,team_id,stat_type,stat_value,modifier,quarter,game_time_minutes,game_time_seconds,is_opponent_stat',
         'game_id': `eq.${gameId}`,
         'stat_type': 'in.(field_goal,two_pointer,three_pointer,3_pointer,free_throw)',
         'modifier': 'eq.made',
         'order': 'quarter.asc,game_time_minutes.desc,game_time_seconds.desc'
+      }),
+      // ✅ OPTIMIZATION: Lightweight query for DNP detection (just player IDs)
+      this.makeRequest<any>('game_stats', {
+        'select': 'player_id,custom_player_id',
+        'game_id': `eq.${gameId}`,
+        'team_id': `eq.${teamId}`
       })
     ]);
+    
+    // ✅ Build Set of player IDs who have ANY stat (for DNP detection)
+    const playersWithAnyStats = new Set<string>();
+    for (const stat of allTeamStats) {
+      const pid = stat.player_id || stat.custom_player_id;
+      if (pid) playersWithAnyStats.add(pid);
+    }
+    console.log(`📊 TeamStatsService: Found ${playersWithAnyStats.size} players with stats (DNP detection)`);
 
     const game = gameData[0] || {};
     const isCoachGame = game.is_coach_game === true;
@@ -252,10 +267,11 @@ export class TeamStatsService {
       teamAId: game.team_a_id || null,
       teamBId: game.team_b_id || null,
       substitutions,
-      allGameStats: scoringStats
+      allGameStats: scoringStats,
+      playersWithAnyStats  // ✅ OPTIMIZATION: Pre-computed for DNP detection
     };
 
-    console.log(`✅ TeamStatsService: Game context fetched - ${isCoachGame ? 'Coach' : 'Tournament'} game, ${quarterLengthMinutes}min quarters, ${substitutions.length} subs, ${scoringStats.length} scoring events`);
+    console.log(`✅ TeamStatsService: Game context fetched - ${isCoachGame ? 'Coach' : 'Tournament'} game, ${quarterLengthMinutes}min quarters, ${substitutions.length} subs, ${scoringStats.length} scoring events, ${playersWithAnyStats.size} players with stats`);
     return context;
   }
 
@@ -619,19 +635,27 @@ export class TeamStatsService {
       // ✅ FIX v2: Players who NEVER appear in substitutions need stat check
       // Only count as "played full game" if they have at least 1 game stat action
       // DNP bench players (no subs + no stats) = 0 minutes
-      const playersWithStats = new Set<string>();
-      try {
-        const gameStats = await this.makeRequest<any>('game_stats', {
-          'select': 'player_id,custom_player_id',
-          'game_id': `eq.${gameId}`,
-          'team_id': `eq.${teamId}`
-        });
-        for (const stat of gameStats) {
-          const pid = stat.player_id || stat.custom_player_id;
-          if (pid) playersWithStats.add(pid);
+      // ✅ OPTIMIZATION: Use pre-fetched playersWithAnyStats from context if available
+      let playersWithStats: Set<string>;
+      if (context?.playersWithAnyStats) {
+        playersWithStats = context.playersWithAnyStats;
+        console.log(`📊 TeamStatsService: Using ${playersWithStats.size} players from context (DNP detection optimized)`);
+      } else {
+        // Fallback: fetch if no context (backward compatibility)
+        playersWithStats = new Set<string>();
+        try {
+          const gameStats = await this.makeRequest<any>('game_stats', {
+            'select': 'player_id,custom_player_id',
+            'game_id': `eq.${gameId}`,
+            'team_id': `eq.${teamId}`
+          });
+          for (const stat of gameStats) {
+            const pid = stat.player_id || stat.custom_player_id;
+            if (pid) playersWithStats.add(pid);
+          }
+        } catch (e) {
+          console.warn('⚠️ Could not fetch game stats for DNP detection');
         }
-      } catch (e) {
-        console.warn('⚠️ Could not fetch game stats for DNP detection');
       }
       
       // ✅ FIX: Use forEach to access index for array position check (matches plus/minus logic)
