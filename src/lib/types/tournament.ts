@@ -50,6 +50,7 @@ export interface TournamentCreateRequest {
 
 export interface TournamentUpdateRequest extends Partial<TournamentCreateRequest> {
   id: string;
+  status?: Tournament['status']; // Can update tournament status
 }
 
 export interface Player {

@@ -66,17 +66,13 @@ function getStatusClasses(status: Tournament['status']) {
   }
 }
 
-// Tournament Card Component with Real-time Team Count
+// Tournament Card Component with Real-time Team Count (Simplified)
 interface TournamentCardProps {
   tournament: Tournament;
-  onManageTeams: (tournament: Tournament) => void;
-  onManageSchedule: (tournament: Tournament) => void;
-  onOpenSettings: (tournament: Tournament) => void;
-  onDeleteTournament: (tournament: Tournament) => void;
   onViewTournament: (tournament: Tournament) => void;
 }
 
-function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSettings, onDeleteTournament, onViewTournament }: TournamentCardProps) {
+function TournamentCard({ tournament, onViewTournament }: TournamentCardProps) {
   const { currentTeams, maxTeams, loading: teamCountLoading } = useTournamentTeamCount(tournament.id, {
     maxTeams: tournament.maxTeams
   });
@@ -88,12 +84,12 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
   const [logoError, setLogoError] = useState(false);
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden cursor-pointer">
+    <Card 
+      className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-border/50 hover:border-primary/20 overflow-hidden cursor-pointer"
+      onClick={() => onViewTournament(tournament)}
+    >
       <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-accent to-orange-500"></div>
-      <CardHeader 
-        className="relative bg-gradient-to-br from-muted/30 to-transparent"
-        onClick={() => onViewTournament(tournament)}
-      >
+      <CardHeader className="relative bg-gradient-to-br from-muted/30 to-transparent">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 overflow-hidden relative">
@@ -158,10 +154,7 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div 
-          className="grid grid-cols-2 gap-4"
-          onClick={() => onViewTournament(tournament)}
-        >
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-3">
             <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
               <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md flex items-center justify-center">
@@ -213,113 +206,17 @@ function TournamentCard({ tournament, onManageTeams, onManageSchedule, onOpenSet
           </div>
         </div>
         
-        <div className="grid grid-cols-5 gap-1.5 pt-2 border-t border-border/50">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onManageTeams(tournament);
-                  }}
-                >
-                  <UserPlus className="w-3 h-3" />
-                  <span className="hidden sm:inline">Teams</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Add Players</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                size="sm" 
-                variant={hasGames ? "default" : "outline"}
-                className={`gap-1 ${
-                  hasGames 
-                    ? "bg-green-600 hover:bg-green-700 text-white border-green-600"
-                    : "hover:bg-orange/10 hover:text-orange-600 hover:border-orange/30"
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onManageSchedule(tournament);
-                }}
-                disabled={gameStatusLoading}
-              >
-                <CalendarDays className="w-3 h-3" />
-                <span className="hidden sm:inline">
-                  {gameStatusLoading ? "..." : hasGames ? "Schedule" : "Create"}
-                </span>
-                {hasGames && gameCount > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs px-1 py-0 h-4 min-w-4">
-                    {gameCount}
-                  </Badge>
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{hasGames ? "Manage Game Schedules" : "Create Game Schedules"}</p>
-            </TooltipContent>
-          </Tooltip>
-          
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="gap-1 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenSettings(tournament);
-            }}
-          >
-            <Settings className="w-3 h-3" />
-            <span className="hidden sm:inline">Settings</span>
-          </Button>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="gap-1 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 dark:hover:bg-blue-950/30"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(`/tournament/${tournament.id}`, '_blank');
-                }}
-              >
-                <ExternalLink className="w-3 h-3" />
-                <span className="hidden sm:inline">View</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>View Public Page</p>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="gap-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-950"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteTournament(tournament);
-                }}
-              >
-                <Trash2 className="w-3 h-3" />
-                <span className="hidden sm:inline">Delete</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Delete Tournament</p>
-            </TooltipContent>
-          </Tooltip>
+        {/* Compact footer with game count indicator */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Calendar className="w-3 h-3" />
+            <span>
+              {gameStatusLoading ? '...' : hasGames ? `${gameCount} games` : 'No games yet'}
+            </span>
+          </div>
+          <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+            Click to manage →
+          </span>
         </div>
       </CardContent>
     </Card>
@@ -667,8 +564,8 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
             <p className="text-muted-foreground">Create and manage your basketball tournaments</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2].map((i) => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-6">
                 <div className="h-6 bg-muted rounded mb-4"></div>
@@ -1039,15 +936,11 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
       </div>
 
       {/* Enhanced Tournament Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {tournaments.map((tournament) => (
           <TournamentCard 
             key={tournament.id} 
             tournament={tournament}
-            onManageTeams={handleManageTeams}
-            onManageSchedule={handleManageSchedule}
-            onOpenSettings={handleOpenSettings}
-            onDeleteTournament={handleDeleteTournament}
             onViewTournament={handleViewTournament}
           />
         ))}

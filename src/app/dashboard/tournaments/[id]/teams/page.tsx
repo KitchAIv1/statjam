@@ -310,11 +310,11 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => router.push('/dashboard?section=tournaments')}
+            onClick={() => router.push(`/dashboard/tournaments/${tournamentId}`)}
             className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Tournaments
+            Back to Tournament
           </button>
 
           <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">

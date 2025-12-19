@@ -278,11 +278,11 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => router.push('/dashboard?section=tournaments')}
+            onClick={() => router.push(`/dashboard/tournaments/${tournamentId}`)}
             className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Tournaments
+            Back to Tournament
           </button>
 
           <div className="flex justify-between items-start gap-6 flex-wrap mb-6">
