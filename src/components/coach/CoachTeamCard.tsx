@@ -30,6 +30,10 @@ import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
 import { invalidateCoachTeams } from '@/lib/utils/cache';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
+import { useAuthV2 } from '@/hooks/useAuthV2';
+import { useSubscription } from '@/hooks/useSubscription';
+import { SubscriptionService } from '@/lib/services/subscriptionService';
+import { UpgradeModal } from '@/components/subscription';
 
 interface CoachTeamCardProps {
   team: CoachTeam;
@@ -50,6 +54,12 @@ interface CoachTeamCardProps {
 export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  
+  // Auth and subscription
+  const { user } = useAuthV2();
+  const { tier: subscriptionTier, limits } = useSubscription('coach');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState('');
   
   // Modal states
   const [showQuickTrack, setShowQuickTrack] = useState(false);
@@ -264,8 +274,24 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
     }
   };
 
-  // Handle Quick Track with validation
+  // Handle Quick Track with validation AND subscription check
   const handleQuickTrack = async () => {
+    console.log('🔐 CoachTeamCard.handleQuickTrack: Called');
+    
+    // Check subscription limit first
+    if (user?.id) {
+      const gameLimit = limits.games === 'unlimited' ? Infinity : limits.games;
+      const freshCount = await SubscriptionService.getCoachGameCount(user.id);
+      console.log('🔐 CoachTeamCard: freshCount =', freshCount, 'limit =', gameLimit, 'tier =', subscriptionTier);
+      
+      if (subscriptionTier === 'free' && freshCount >= gameLimit) {
+        console.log('🚫 CoachTeamCard: At limit, showing upgrade modal');
+        setUpgradeReason(`You've tracked ${freshCount} games. Free tier allows ${gameLimit} games. Upgrade for unlimited.`);
+        setShowUpgradeModal(true);
+        return;
+      }
+    }
+    
     // Validate minimum players
     const validation = await CoachPlayerService.validateMinimumPlayers(team.id, 5);
     
@@ -275,6 +301,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
       return;
     }
     
+    console.log('✅ CoachTeamCard: Opening quick track modal');
     setShowQuickTrack(true);
   };
 
@@ -720,9 +747,10 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
       </Card>
 
       {/* Modals */}
-      {showQuickTrack && (
+      {showQuickTrack && user?.id && (
         <CoachQuickTrackModal
           team={team}
+          userId={user.id}
           onClose={() => setShowQuickTrack(false)}
           onGameCreated={() => {
             setShowQuickTrack(false);
@@ -734,6 +762,15 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
           }}
         />
       )}
+
+      {/* Subscription Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role="coach"
+        currentTier={subscriptionTier}
+        triggerReason={upgradeReason}
+      />
 
       {showTournamentSearch && (
         <CoachTournamentSearchModal

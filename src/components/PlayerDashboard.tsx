@@ -22,7 +22,9 @@ import { usePlayerTournaments } from "@/hooks/usePlayerTournaments";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { PlayerDataDebug } from "@/lib/utils/playerDataDebug";
 import { supabase } from "@/lib/supabase";
-import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3, Clock, MapPin } from "lucide-react";
+import { useSubscription } from "@/hooks/useSubscription";
+import { FeatureLockedOverlay, UpgradeModal } from "@/components/subscription";
+import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3, Clock, MapPin, BadgeCheck } from "lucide-react";
 import { logger } from "@/lib/utils/logger";
 import { GameAwardsService } from "@/lib/services/gameAwardsService";
 import { AwardDisplayCard } from "@/components/tournament/AwardDisplayCard";
@@ -64,6 +66,12 @@ export function PlayerDashboard() {
   const { user } = useAuthContext(); // ✅ Use centralized auth
   const { data, loading, refetch } = usePlayerDashboardData(user);
   const { tournaments, schedules, loading: tournamentsLoading } = usePlayerTournaments(user?.id || '');
+  
+  // Subscription state for feature gating
+  const { tier, limits, loading: subscriptionLoading } = useSubscription('player');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState('');
+  
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [currentPlayerData, setCurrentPlayerData] = useState(defaultPlayerData);
@@ -83,6 +91,12 @@ export function PlayerDashboard() {
     };
   }>>([]);
   const [loadingAwards, setLoadingAwards] = useState(true);
+
+  // Handle upgrade modal trigger for gated features
+  const handleUpgradeClick = (reason: string) => {
+    setUpgradeReason(reason);
+    setShowUpgradeModal(true);
+  };
 
   const handlePremiumFeatureClick = (e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -443,7 +457,16 @@ export function PlayerDashboard() {
                         {/* Player Info */}
                         <div className="flex-[1.5] p-8">
                           <div className="mb-4">
-                            <h1 className="text-4xl font-bold mb-2 text-white">{identityName}</h1>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h1 className="text-4xl font-bold text-white">{identityName}</h1>
+                              {/* Verified Badge - Only for paid players */}
+                              {limits.isVerified && (
+                                <Badge className="bg-blue-500 text-white border-0 gap-1 px-2.5 py-1">
+                                  <BadgeCheck className="w-4 h-4" />
+                                  Verified
+                                </Badge>
+                              )}
+                            </div>
                             <div className="flex items-center gap-3 text-orange-200 mb-2">
                               <span className="text-2xl">#{jerseyNumber}</span>
                               <span className="text-lg">•</span>
@@ -590,19 +613,26 @@ export function PlayerDashboard() {
                 {/* StatJam Social Footer */}
                 <SocialFooter />
 
-                {/* Performance Chart - Glass Effect */}
-                <Card className="glass-card-light relative overflow-hidden">
-                  {/* Glass effect overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-red-500/5 pointer-events-none" />
-                  <div className="relative">
-                    <CardHeader>
-                      <CardTitle className="text-foreground flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-primary" />
-                        <span className="bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent font-bold">
-                          PERFORMANCE ANALYTICS
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
+                {/* Performance Chart - Glass Effect - GATED for free users */}
+                <FeatureLockedOverlay
+                  isLocked={!limits.hasAnalytics}
+                  featureName="Performance Analytics"
+                  upgradeMessage="Unlock detailed performance analytics, trends, and insights to track your growth."
+                  onUpgrade={() => handleUpgradeClick('Access performance analytics and track your progress over time.')}
+                  blurIntensity="medium"
+                >
+                  <Card className="glass-card-light relative overflow-hidden">
+                    {/* Glass effect overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-red-500/5 pointer-events-none" />
+                    <div className="relative">
+                      <CardHeader>
+                        <CardTitle className="text-foreground flex items-center gap-2">
+                          <BarChart3 className="w-5 h-5 text-primary" />
+                          <span className="bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent font-bold">
+                            PERFORMANCE ANALYTICS
+                          </span>
+                        </CardTitle>
+                      </CardHeader>
                     <CardContent className="space-y-6">
                       {/* Performance Stats Row */}
                       <div className="grid grid-cols-3 gap-4 mb-6">
@@ -670,7 +700,8 @@ export function PlayerDashboard() {
                       />
                     </CardContent>
                   </div>
-                </Card>
+                  </Card>
+                </FeatureLockedOverlay>
 
                 {/* Game Stats Table - NBA Box Score */}
                 {/* ✅ UNLOCKED FOR TESTING - Premium check bypassed */}
@@ -1038,6 +1069,15 @@ export function PlayerDashboard() {
         onClose={() => setIsEditProfileModalOpen(false)} 
         onSave={handleSaveProfile} 
         playerData={currentPlayerData} 
+      />
+
+      {/* Subscription Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role="player"
+        currentTier={tier}
+        triggerReason={upgradeReason}
       />
     </div>
   );

@@ -7,9 +7,8 @@
  * Features clear hierarchy, visual emphasis on popular plans.
  */
 
-import { Check, Crown } from 'lucide-react';
+import { Check, Crown, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { TierBadge } from './TierBadge';
 import type { PricingTier } from '@/lib/types/subscription';
 
 interface PricingTierCardProps {
@@ -27,65 +26,82 @@ export function PricingTierCard({
 }: PricingTierCardProps) {
   const isPopular = tier.isPopular || highlighted;
   const isFree = tier.price === 0;
+  const isAnnual = tier.billingPeriod === 'annual';
+
+  // Determine card styling based on state
+  const getCardClasses = () => {
+    const base = 'relative flex flex-col rounded-2xl transition-all duration-200 h-full';
+    
+    if (isCurrentTier) {
+      return `${base} border-2 border-green-500 bg-green-50/30`;
+    }
+    if (isPopular) {
+      return `${base} border-2 border-orange-500 bg-gradient-to-b from-orange-50/50 to-white shadow-xl shadow-orange-500/10`;
+    }
+    return `${base} border border-gray-200 bg-white hover:border-gray-300 hover:shadow-md`;
+  };
+
+  // Checkmark color based on tier
+  const getCheckColor = () => {
+    if (isPopular) return 'bg-orange-100 text-orange-600';
+    if (isCurrentTier) return 'bg-green-100 text-green-600';
+    return 'bg-gray-100 text-gray-600';
+  };
 
   return (
-    <div 
-      className={`
-        relative flex flex-col rounded-2xl border-2 transition-all duration-200 min-w-[280px]
-        ${isPopular 
-          ? 'border-orange-500 bg-white shadow-lg shadow-orange-500/10 scale-[1.02]' 
-          : 'border-gray-200 bg-white hover:border-gray-300'
-        }
-        ${isCurrentTier ? 'ring-2 ring-green-500 ring-offset-2' : ''}
-      `}
-    >
-      {/* Top Badge */}
-      {isPopular && !isCurrentTier && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <TierBadge variant="popular" size="md" />
-        </div>
-      )}
-      {isCurrentTier && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <TierBadge variant="current" size="md" />
+    <div className={getCardClasses()}>
+      {/* Top Badge - Better positioning */}
+      {(isPopular || isCurrentTier) && (
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10">
+          {isCurrentTier ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-green-500 text-white shadow-sm">
+              <Check className="w-3.5 h-3.5" />
+              Current Plan
+            </span>
+          ) : isPopular ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-md">
+              <Sparkles className="w-3.5 h-3.5" />
+              Most Popular
+            </span>
+          ) : null}
         </div>
       )}
 
       {/* Card Content */}
-      <div className="p-6 flex-1 flex flex-col">
+      <div className="p-6 pt-8 flex-1 flex flex-col">
         {/* Header */}
         <div className="text-center mb-6">
-          {/* Tier Name with Badge */}
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <h3 className="text-lg font-bold text-gray-900">{tier.name}</h3>
-            {!isFree && !isPopular && (
-              <TierBadge variant="pro" size="sm" />
+          {/* Tier Name */}
+          <h3 className="text-xl font-bold text-gray-900 mb-1">{tier.name}</h3>
+
+          {/* Price Display */}
+          <div className="mt-3">
+            <div className="flex items-baseline justify-center gap-1">
+              <span className="text-4xl font-bold text-gray-900">
+                ${tier.price}
+              </span>
+              {!isFree && (
+                <span className="text-gray-500 text-base">
+                  /{getBillingLabel(tier.billingPeriod)}
+                </span>
+              )}
+            </div>
+            
+            {/* Duration Note */}
+            {tier.durationMonths > 1 && (
+              <p className="text-sm text-gray-500 mt-1">
+                {tier.durationMonths} months access
+              </p>
             )}
           </div>
 
-          {/* Price */}
-          <div className="flex items-baseline justify-center gap-1">
-            {isFree ? (
-              <span className="text-4xl font-bold text-gray-900">Free</span>
-            ) : (
-              <>
-                <span className="text-4xl font-bold text-gray-900">${tier.price}</span>
-                <span className="text-gray-500">/{getBillingLabel(tier.billingPeriod)}</span>
-              </>
-            )}
-          </div>
-
-          {/* Duration Note */}
-          {tier.durationMonths > 1 && tier.billingPeriod !== 'monthly' && (
-            <p className="text-sm text-gray-500 mt-1">
-              {tier.durationMonths} months access
-            </p>
-          )}
-
-          {/* Savings Badge for Annual */}
-          {tier.billingPeriod === 'annual' && (
-            <div className="mt-2">
-              <TierBadge variant="best-value" size="sm" />
+          {/* Best Value Badge for Annual */}
+          {isAnnual && !isCurrentTier && (
+            <div className="mt-3">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                <Sparkles className="w-3 h-3" />
+                Best Value
+              </span>
             </div>
           )}
         </div>
@@ -96,18 +112,18 @@ export function PricingTierCard({
             <li key={idx} className="flex items-start gap-3">
               <div className={`
                 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5
-                ${isPopular ? 'bg-orange-100' : 'bg-gray-100'}
+                ${getCheckColor()}
               `}>
-                <Check className={`w-3 h-3 ${isPopular ? 'text-orange-600' : 'text-gray-600'}`} />
+                <Check className="w-3 h-3" />
               </div>
-              <span className="text-sm text-gray-700">{feature}</span>
+              <span className="text-sm text-gray-700 leading-tight">{feature}</span>
             </li>
           ))}
         </ul>
 
-        {/* Best For */}
+        {/* Best For - Subtle footer */}
         {tier.bestFor && (
-          <p className="text-xs text-gray-500 mt-4 text-center border-t border-gray-100 pt-4">
+          <p className="text-xs text-gray-500 mt-5 text-center italic">
             {tier.bestFor}
           </p>
         )}
@@ -115,24 +131,27 @@ export function PricingTierCard({
 
       {/* Action Button */}
       <div className="p-6 pt-0">
-        {onSelect && !isCurrentTier ? (
+        {isCurrentTier ? (
+          <Button 
+            disabled 
+            className="w-full h-12 bg-green-100 text-green-700 border border-green-300 font-semibold cursor-default"
+          >
+            <Check className="w-4 h-4 mr-2" />
+            Current Plan
+          </Button>
+        ) : onSelect ? (
           <Button
             onClick={() => onSelect(tier)}
-            className={`w-full h-11 font-semibold ${
+            className={`w-full h-12 font-semibold transition-all ${
               isPopular 
-                ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md' 
+                ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/30' 
                 : isFree
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
                   : 'bg-gray-900 text-white hover:bg-gray-800'
             }`}
           >
-            {isFree ? 'Get Started Free' : 'Upgrade Now'}
+            {isFree ? 'Stay on Free' : 'Upgrade Now'}
             {isPopular && <Crown className="w-4 h-4 ml-2" />}
-          </Button>
-        ) : isCurrentTier ? (
-          <Button disabled className="w-full h-11 bg-green-50 text-green-700 border-green-200">
-            <Check className="w-4 h-4 mr-2" />
-            Current Plan
           </Button>
         ) : null}
       </div>

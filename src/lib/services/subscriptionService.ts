@@ -23,31 +23,44 @@ export async function getSubscription(
   userId: string, 
   role: UserRole
 ): Promise<Subscription | null> {
-  const { data, error } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('role', role)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('role', role)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(); // Use maybeSingle to return null when no rows (free tier users)
 
-  if (error || !data) return null;
+    // Handle errors gracefully - user is on free tier
+    if (error || !data) {
+      return null;
+    }
 
-  return transformSubscription(data);
+    return transformSubscription(data);
+  } catch {
+    // Network error - treat as free tier
+    return null;
+  }
 }
 
 export async function getAllSubscriptions(userId: string): Promise<Subscription[]> {
-  const { data, error } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('status', 'active');
+  try {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active');
 
-  if (error || !data) return [];
+    if (error || !data) return [];
 
-  return data.map(transformSubscription);
+    return data.map(transformSubscription);
+  } catch {
+    // Table doesn't exist yet - return empty array
+    return [];
+  }
 }
 
 // =============================================================================
@@ -105,17 +118,22 @@ async function getCurrentUsage(
   userId: string, 
   resourceType: string
 ): Promise<number> {
-  const periodStart = getMonthStart();
-  
-  const { data } = await supabase
-    .from('subscription_usage')
-    .select('current_count')
-    .eq('user_id', userId)
-    .eq('resource_type', resourceType)
-    .eq('period_start', periodStart)
-    .single();
+  try {
+    const periodStart = getMonthStart();
+    
+    const { data } = await supabase
+      .from('subscription_usage')
+      .select('current_count')
+      .eq('user_id', userId)
+      .eq('resource_type', resourceType)
+      .eq('period_start', periodStart)
+      .maybeSingle(); // Use maybeSingle to return null when no usage record exists
 
-  return data?.current_count ?? 0;
+    return data?.current_count ?? 0;
+  } catch {
+    // Table doesn't exist yet - return 0
+    return 0;
+  }
 }
 
 function getMaxForResource(
@@ -136,13 +154,17 @@ function getMaxForResource(
 // =============================================================================
 
 export async function isUserVerified(userId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('users')
-    .select('is_verified')
-    .eq('id', userId)
-    .single();
+  try {
+    const { data } = await supabase
+      .from('users')
+      .select('is_verified')
+      .eq('id', userId)
+      .maybeSingle();
 
-  return data?.is_verified ?? false;
+    return data?.is_verified ?? false;
+  } catch {
+    return false;
+  }
 }
 
 export async function updateVerifiedStatus(
@@ -155,6 +177,92 @@ export async function updateVerifiedStatus(
     .eq('id', userId);
 
   return !error;
+}
+
+// =============================================================================
+// COACH-SPECIFIC USAGE COUNTING
+// =============================================================================
+
+/**
+ * Count actual games tracked by a coach (across all their teams)
+ */
+export async function getCoachGameCount(userId: string): Promise<number> {
+  try {
+    // Get all teams owned by this coach
+    const { data: teams, error: teamsError } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('coach_id', userId);
+
+    console.log('🔍 getCoachGameCount: teams for user', userId, teams, teamsError);
+
+    if (teamsError || !teams || teams.length === 0) {
+      console.log('🔍 getCoachGameCount: No teams found, returning 0');
+      return 0;
+    }
+
+    const teamIds = teams.map(t => t.id);
+    console.log('🔍 getCoachGameCount: teamIds', teamIds);
+
+    // Count games by fetching IDs and counting (more reliable)
+    // Note: games table uses team_a_id and team_b_id, not home_team_id/away_team_id
+    const countedGameIds = new Set<string>();
+    
+    for (const teamId of teamIds) {
+      // Get games where this team is team_a
+      const { data: teamAGames, error: teamAError } = await supabase
+        .from('games')
+        .select('id')
+        .eq('team_a_id', teamId);
+      
+      if (!teamAError && teamAGames) {
+        teamAGames.forEach(g => countedGameIds.add(g.id));
+      }
+      
+      // Get games where this team is team_b
+      const { data: teamBGames, error: teamBError } = await supabase
+        .from('games')
+        .select('id')
+        .eq('team_b_id', teamId);
+      
+      if (!teamBError && teamBGames) {
+        teamBGames.forEach(g => countedGameIds.add(g.id));
+      }
+    }
+
+    const totalCount = countedGameIds.size;
+    console.log('🔍 getCoachGameCount: totalCount', totalCount, 'unique games');
+    return totalCount;
+  } catch (err) {
+    console.error('❌ getCoachGameCount error:', err);
+    return 0;
+  }
+}
+
+/**
+ * Check if coach can create more games based on subscription
+ */
+export async function checkCoachGameLimit(
+  userId: string
+): Promise<UsageCheckResult> {
+  const limits = await getUserLimits(userId, 'coach');
+  const maxAllowed = limits.games;
+
+  // If unlimited, always allow
+  if (maxAllowed === 'unlimited') {
+    return { allowed: true, currentCount: 0, maxAllowed: Infinity, remainingCount: Infinity };
+  }
+
+  // Get actual game count
+  const currentCount = await getCoachGameCount(userId);
+  const allowed = currentCount < maxAllowed;
+
+  return {
+    allowed,
+    currentCount,
+    maxAllowed,
+    remainingCount: Math.max(0, maxAllowed - currentCount),
+  };
 }
 
 // =============================================================================
@@ -194,7 +302,10 @@ export const SubscriptionService = {
   getUserLimits,
   isWithinLimit,
   checkUsageLimit,
+  checkCoachGameLimit,
+  getCoachGameCount,
   isUserVerified,
   updateVerifiedStatus,
 };
+
 

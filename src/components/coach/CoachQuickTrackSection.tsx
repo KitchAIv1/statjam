@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlayCircle, Users, Clock, Trophy } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { CoachTeam } from '@/lib/types/coach';
 import { CoachQuickTrackModal } from './CoachQuickTrackModal';
 import { UpgradeModal } from '@/components/subscription';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAuthV2 } from '@/hooks/useAuthV2';
+import { SubscriptionService } from '@/lib/services/subscriptionService';
 
 interface CoachQuickTrackSectionProps {
   teams: CoachTeam[];
@@ -31,24 +33,44 @@ export function CoachQuickTrackSection({ teams, loading, error }: CoachQuickTrac
   const [showQuickTrack, setShowQuickTrack] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
-  // Subscription gatekeeping
-  const { tier: subscriptionTier } = useSubscription('coach');
-  const FREE_GAME_LIMIT = 6;
+  // Auth and subscription gatekeeping
+  const { user } = useAuthV2();
+  const { tier: subscriptionTier, limits } = useSubscription('coach');
+  const [actualGameCount, setActualGameCount] = useState<number>(0);
   
-  // Calculate total games tracked across all teams
-  const totalGamesTracked = teams.reduce((sum, team) => sum + (team.games_count || 0), 0);
+  // Fetch actual game count for accurate limit checking
+  useEffect(() => {
+    if (user?.id) {
+      SubscriptionService.getCoachGameCount(user.id).then(setActualGameCount);
+    }
+  }, [user?.id, teams]); // Re-fetch when teams change (after game creation)
+  
+  const gameLimit = limits.games === 'unlimited' ? Infinity : limits.games;
 
   // Handle team selection and quick track with subscription check
-  const handleQuickTrack = (team: CoachTeam) => {
-    const isFreeTier = subscriptionTier === 'free';
-    const atLimit = isFreeTier && totalGamesTracked >= FREE_GAME_LIMIT;
+  const handleQuickTrack = async (team: CoachTeam) => {
+    console.log('🔐 handleQuickTrack: Called for team', team.name);
+    console.log('🔐 handleQuickTrack: user.id =', user?.id, 'tier =', subscriptionTier, 'gameLimit =', gameLimit);
     
-    if (atLimit) {
-      setShowUpgradeModal(true);
-    } else {
-      setSelectedTeam(team);
-      setShowQuickTrack(true);
+    // Double-check current count before proceeding
+    if (!user?.id) {
+      console.log('❌ handleQuickTrack: No user ID, blocking');
+      return;
     }
+    
+    const freshCount = await SubscriptionService.getCoachGameCount(user.id);
+    console.log('🔐 handleQuickTrack: freshCount =', freshCount);
+    setActualGameCount(freshCount);
+    
+    if (subscriptionTier === 'free' && freshCount >= gameLimit) {
+      console.log('🚫 handleQuickTrack: At limit, showing upgrade modal');
+      setShowUpgradeModal(true);
+      return;
+    }
+    
+    console.log('✅ handleQuickTrack: Under limit, opening modal');
+    setSelectedTeam(team);
+    setShowQuickTrack(true);
   };
 
   // Handle game created
@@ -288,9 +310,10 @@ export function CoachQuickTrackSection({ teams, loading, error }: CoachQuickTrac
       </div>
 
       {/* Quick Track Modal */}
-      {showQuickTrack && selectedTeam && (
+      {showQuickTrack && selectedTeam && user?.id && (
         <CoachQuickTrackModal
           team={selectedTeam}
+          userId={user.id}
           onClose={() => {
             setShowQuickTrack(false);
             setSelectedTeam(null);
@@ -305,7 +328,7 @@ export function CoachQuickTrackSection({ teams, loading, error }: CoachQuickTrac
         onClose={() => setShowUpgradeModal(false)}
         role="coach"
         currentTier={subscriptionTier}
-        triggerReason={`You've tracked ${totalGamesTracked} games. Free tier allows ${FREE_GAME_LIMIT} games. Upgrade for unlimited.`}
+        triggerReason={`You've tracked ${actualGameCount} games. Free tier allows ${gameLimit} games. Upgrade for unlimited.`}
       />
     </>
   );

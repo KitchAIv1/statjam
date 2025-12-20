@@ -10,6 +10,7 @@ import { CoachTeam, QuickTrackGameRequest } from '@/lib/types/coach';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { AutomationFlags, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation';
 import { GameServiceV3 } from '@/lib/services/gameServiceV3';
+import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
 
 // Quarter length options (same as stat admin pre-flight)
@@ -22,6 +23,7 @@ const QUARTER_LENGTH_OPTIONS = [
 
 interface CoachQuickTrackModalProps {
   team: CoachTeam;
+  userId: string;
   onClose: () => void;
   onGameCreated: () => void;
 }
@@ -38,7 +40,7 @@ interface CoachQuickTrackModalProps {
  * 
  * Follows .cursorrules: <200 lines, single responsibility
  */
-export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuickTrackModalProps) {
+export function CoachQuickTrackModal({ team, userId, onClose, onGameCreated }: CoachQuickTrackModalProps) {
   // Form state - ✅ EXTENDED: Added 'automation' step
   const [step, setStep] = useState<'opponent' | 'settings' | 'automation' | 'confirm'>('opponent');
   const [loading, setLoading] = useState(false);
@@ -137,6 +139,17 @@ export function CoachQuickTrackModal({ team, onClose, onGameCreated }: CoachQuic
     try {
       setLoading(true);
       setError(null);
+
+      // ✅ SUBSCRIPTION GATE: Check actual game count for coach
+      console.log('🔐 CoachQuickTrackModal: Checking game limit for user', userId);
+      const usageCheck = await SubscriptionService.checkCoachGameLimit(userId);
+      console.log('🔐 CoachQuickTrackModal: usageCheck result', usageCheck);
+      if (!usageCheck.allowed) {
+        console.log('🚫 CoachQuickTrackModal: Game limit reached, blocking creation');
+        setError(`Game limit reached (${usageCheck.currentCount}/${usageCheck.maxAllowed}). Upgrade to continue.`);
+        return;
+      }
+      console.log('✅ CoachQuickTrackModal: Under limit, proceeding with game creation');
 
       // Re-validate players before creating game
       const validation = await CoachPlayerService.validateMinimumPlayers(team.id, 5);
