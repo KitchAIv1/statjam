@@ -123,7 +123,7 @@ export class ProfileService {
       }
 
       // First, get all team IDs for this coach
-      const { data: teamsData, error: teamsError } = await supabase
+      const { data: teamsData, count: teamsCount, error: teamsError } = await supabase
         .from('teams')
         .select('id', { count: 'exact', head: false })
         .eq('coach_id', userId);
@@ -153,13 +153,10 @@ export class ProfileService {
           : Promise.resolve({ count: 0 })
       ]);
 
-      const gamesData = gamesResult;
-      const playersData = playersResult;
-
       const stats: CoachStats = {
-        totalTeams: teamsData.count || 0,
-        gamesTracked: gamesData.count || 0,
-        totalPlayers: playersData.count || 0
+        totalTeams: teamsCount || teamsData?.length || 0,
+        gamesTracked: gamesResult.count || 0,
+        totalPlayers: playersResult.count || 0
       };
 
       return {

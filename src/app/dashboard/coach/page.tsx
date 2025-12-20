@@ -14,6 +14,7 @@ import { coachChecklistSteps, coachFAQs } from '@/config/onboarding/coachOnboard
 import { useCoachTeams } from '@/hooks/useCoachTeams';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { ProfileCard, ProfileCardSkeleton } from '@/components/profile/ProfileCard';
+import { CoachQuickStats, CoachQuickStatsSkeleton } from '@/components/coach/CoachQuickStats';
 import { ProfileEditModal } from '@/components/profile/ProfileEditModal';
 import { ProfileService } from '@/lib/services/profileService';
 import { Card } from '@/components/ui/card';
@@ -148,37 +149,49 @@ const CoachDashboardContent = () => {
               subtitle="Complete these quick steps to get game-ready in minutes."
             />
 
-            {/* Profile Card - Replaces old page header with richer profile display */}
-            <div className="relative">
-              {profileLoading ? (
-                <ProfileCardSkeleton />
-              ) : profileData ? (
-                <>
-                  {/* Automation Guide Button - Inside Profile Card, Upper Right */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => router.push('/dashboard/coach/automation-guide')}
-                        className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
-                      >
-                        <BookOpen className="w-4 h-4" />
-                        <span className="text-xs font-medium">Guide</span>
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 bg-white/25 rounded">NEW</span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="bg-gray-900 text-white px-3 py-2">
-                      <p className="font-medium">Tracker Automation Guide</p>
-                      <p className="text-xs text-gray-300">Learn Minimal, Balanced & Full presets</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <ProfileCard
-                    profileData={profileData}
-                    shareData={ProfileService.generateShareData(profileData)}
-                    onEdit={() => setShowEditModal(true)}
-                    onShare={handleShare}
-                  />
-                </>
-              ) : null}
+            {/* Profile Card + Quick Stats - Side by side on desktop, stacked on mobile */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+              {/* Profile Card - Takes 2/3 width on desktop */}
+              <div className="lg:col-span-2 relative">
+                {profileLoading ? (
+                  <ProfileCardSkeleton />
+                ) : profileData ? (
+                  <>
+                    {/* Automation Guide Button - Inside Profile Card, Upper Right */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => router.push('/dashboard/coach/automation-guide')}
+                          className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
+                        >
+                          <BookOpen className="w-4 h-4" />
+                          <span className="text-xs font-medium">Guide</span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-white/25 rounded">NEW</span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="bg-gray-900 text-white px-3 py-2">
+                        <p className="font-medium">Tracker Automation Guide</p>
+                        <p className="text-xs text-gray-300">Learn Minimal, Balanced & Full presets</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <ProfileCard
+                      profileData={profileData}
+                      shareData={ProfileService.generateShareData(profileData)}
+                      onEdit={() => setShowEditModal(true)}
+                      onShare={handleShare}
+                    />
+                  </>
+                ) : null}
+              </div>
+
+              {/* Quick Stats - 2x2 grid of square cards, 1/3 width on desktop */}
+              <div className="lg:col-span-1">
+                {profileLoading || teamsLoading ? (
+                  <CoachQuickStatsSkeleton />
+                ) : (
+                  <CoachQuickStats teams={teams} loading={teamsLoading} />
+                )}
+              </div>
             </div>
 
             {/* Section Content */}
