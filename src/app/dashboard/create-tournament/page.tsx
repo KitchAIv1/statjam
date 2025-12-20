@@ -1,20 +1,36 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Trophy, Settings, Users, Check, ArrowLeft, ArrowRight, Calendar, MapPin, DollarSign } from 'lucide-react';
+import { Trophy, Settings, Users, Check, ArrowLeft, ArrowRight, Calendar, MapPin, DollarSign, Lock, Crown } from 'lucide-react';
 import { useTournamentForm } from '@/lib/hooks/useTournamentForm';
 import { useAuthV2 } from '@/hooks/useAuthV2';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { getRulesetDisplayName, getRulesetDescription } from '@/lib/types/ruleset';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
-import { TeamLimitSelector } from '@/components/subscription';
+import { TeamLimitSelector, UpgradeModal } from '@/components/subscription';
 
 const CreateTournamentV2 = () => {
   const { user, loading } = useAuthV2();
   const userRole = user?.role;
   const router = useRouter();
+  
+  // Subscription for time-gating calendar
+  const { tier } = useSubscription('organizer');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const isFreeOrganizer = tier === 'free';
+  
+  // Calculate max date for free users (end of current month)
+  const getMaxDateForFree = (): string => {
+    const now = new Date();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return endOfMonth.toISOString().split('T')[0];
+  };
+  
+  const maxDateForFree = getMaxDateForFree();
+  
   const {
     data,
     errors,
@@ -651,11 +667,20 @@ const CreateTournamentV2 = () => {
           <div style={styles.formGrid}>
             <div style={styles.formRow}>
               <div style={styles.fieldGroup}>
-                <label style={styles.label}>Start Date *</label>
+                <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  Start Date *
+                  {isFreeOrganizer && (
+                    <span style={{ fontSize: '11px', color: '#f97316', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Lock style={{ width: '12px', height: '12px' }} />
+                      Current month only
+                    </span>
+                  )}
+                </label>
                 <input
                   type="date"
                   value={data.startDate || ''}
                   onChange={(e) => updateData('startDate', e.target.value)}
+                  max={isFreeOrganizer ? maxDateForFree : undefined}
                   style={{
                     ...styles.input,
                     ...(errors.startDate ? styles.inputError : {})
@@ -667,11 +692,20 @@ const CreateTournamentV2 = () => {
               </div>
 
               <div style={styles.fieldGroup}>
-                <label style={styles.label}>End Date *</label>
+                <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  End Date *
+                  {isFreeOrganizer && (
+                    <span style={{ fontSize: '11px', color: '#f97316', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Lock style={{ width: '12px', height: '12px' }} />
+                      Current month only
+                    </span>
+                  )}
+                </label>
                 <input
                   type="date"
                   value={data.endDate || ''}
                   onChange={(e) => updateData('endDate', e.target.value)}
+                  max={isFreeOrganizer ? maxDateForFree : undefined}
                   style={{
                     ...styles.input,
                     ...(errors.endDate ? styles.inputError : {})
@@ -682,6 +716,49 @@ const CreateTournamentV2 = () => {
                 {errors.endDate && <span style={styles.errorText}>{errors.endDate}</span>}
               </div>
             </div>
+
+            {/* Free tier upgrade notice */}
+            {isFreeOrganizer && (
+              <div style={{
+                background: 'rgba(249, 115, 22, 0.1)',
+                border: '1px solid rgba(249, 115, 22, 0.3)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginTop: '8px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <Lock style={{ width: '20px', height: '20px', color: '#f97316', flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <p style={{ color: '#f97316', fontWeight: '600', marginBottom: '4px', fontSize: '14px' }}>
+                      Free tier: Current month scheduling only
+                    </p>
+                    <p style={{ color: '#fb923c', fontSize: '13px', marginBottom: '12px' }}>
+                      Upgrade to schedule tournaments beyond {new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()}.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowUpgradeModal(true)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Crown style={{ width: '14px', height: '14px' }} />
+                      Upgrade to Unlock
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div style={styles.formRow}>
               <div style={styles.fieldGroup}>
@@ -1044,6 +1121,15 @@ const CreateTournamentV2 = () => {
           )}
         </div>
       </div>
+
+      {/* Upgrade Modal for Free Users */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role="organizer"
+        currentTier={tier}
+        triggerReason="Schedule tournaments beyond the current month by upgrading your plan."
+      />
     </div>
   );
 };

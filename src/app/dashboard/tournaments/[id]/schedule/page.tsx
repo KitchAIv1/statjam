@@ -3,6 +3,7 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthV2 } from '@/hooks/useAuthV2';
+import { useSubscription } from '@/hooks/useSubscription';
 import { TournamentService, TeamService } from '@/lib/services/tournamentService';
 import { GameService } from '@/lib/services/gameService';
 import { Tournament, Team } from '@/lib/types/tournament';
@@ -13,6 +14,7 @@ import { BracketVisualization } from '@/components/bracket/BracketVisualization'
 import { DivisionBracketView } from '@/components/bracket/DivisionBracketView';
 import { hybridSupabaseService } from '@/lib/services/hybridSupabaseService';
 import { PhaseBadge } from '@/components/tournament/PhaseBadge';
+import { UpgradeModal } from '@/components/subscription';
 import { 
   Calendar, 
   ArrowLeft, 
@@ -29,7 +31,9 @@ import {
   CheckCircle,
   X,
   Eye,
-  Trophy
+  Trophy,
+  Lock,
+  Crown
 } from 'lucide-react';
 
 interface GameSchedulePageProps {
@@ -41,6 +45,12 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
   const { user, loading } = useAuthV2();
   const userRole = user?.role;
   const router = useRouter();
+  
+  // Subscription state for time-gating calendar
+  const { tier, limits } = useSubscription('organizer');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const isFreeOrganizer = tier === 'free';
+  
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [games, setGames] = useState<Game[]>([]);
@@ -630,6 +640,8 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
             teams={teams}
             statAdmins={statAdmins}
             game={selectedGame}
+            isFreeOrganizer={isFreeOrganizer}
+            onUpgrade={() => setShowUpgradeModal(true)}
             onClose={() => setShowCreateGame(false)}
             onSave={async (gameData) => {
               try {
@@ -683,6 +695,8 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
             teams={teams}
             games={games}
             checkEligibility={checkBracketRegenerationEligibility}
+            isFreeOrganizer={isFreeOrganizer}
+            onUpgrade={() => setShowUpgradeModal(true)}
             onClose={() => {
               setShowBracketBuilder(false);
               setShowRegenerateConfirm(false);
@@ -763,6 +777,15 @@ const GameSchedulePage = ({ params }: GameSchedulePageProps) => {
             }}
           />
         )}
+
+        {/* Upgrade Modal for Free Users */}
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          role="organizer"
+          currentTier={tier}
+          triggerReason="Schedule games beyond the current month by upgrading your plan."
+        />
 
         {/* Regeneration Confirmation Modal */}
         {showRegenerateConfirm && pendingBracketConfig && (
@@ -867,6 +890,8 @@ function CreateGameModal({
   teams, 
   statAdmins, 
   game, 
+  isFreeOrganizer = false,
+  onUpgrade,
   onClose, 
   onSave 
 }: { 
@@ -874,6 +899,8 @@ function CreateGameModal({
   teams: Team[]; 
   statAdmins: { id: string; name: string; email: string }[]; 
   game: Game | null; 
+  isFreeOrganizer?: boolean;
+  onUpgrade?: () => void;
   onClose: () => void; 
   onSave: (data: any) => void; 
 }) {
@@ -920,7 +947,29 @@ function CreateGameModal({
   };
   
   const minDate = formatDateTimeLocal(tournament.startDate);
-  const maxDate = formatDateTimeLocal(tournament.endDate);
+  
+  // Calculate max date based on subscription tier
+  // Free organizers: limited to end of current month
+  // Paid organizers: full tournament end date
+  const calculateMaxDate = (): string => {
+    const tournamentEnd = new Date(tournament.endDate);
+    
+    if (isFreeOrganizer) {
+      // Get end of current month
+      const now = new Date();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      
+      // Use the earlier of: end of month OR tournament end date
+      const effectiveMax = endOfMonth < tournamentEnd ? endOfMonth : tournamentEnd;
+      return formatDateTimeLocal(effectiveMax.toISOString());
+    }
+    
+    return formatDateTimeLocal(tournament.endDate);
+  };
+  
+  const maxDate = calculateMaxDate();
+  const fullTournamentMaxDate = formatDateTimeLocal(tournament.endDate);
+  const isDateRestricted = isFreeOrganizer && maxDate !== fullTournamentMaxDate;
   
   // Debug tournament dates
   console.log('🔍 Tournament dates for date picker constraints:');
@@ -928,6 +977,8 @@ function CreateGameModal({
   console.log('   End Date:', tournament.endDate);
   console.log('   Min constraint (formatted):', minDate);
   console.log('   Max constraint (formatted):', maxDate);
+  console.log('   Is Free Organizer:', isFreeOrganizer);
+  console.log('   Is Date Restricted:', isDateRestricted);
   
   const [formData, setFormData] = useState({
     teamAId: game?.team_a_id || '',
@@ -1099,9 +1150,16 @@ function CreateGameModal({
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Clock className="w-4 h-4 text-orange-600" />
               Date & Time
-              <span className="text-xs text-orange-600 font-normal">
-                ({tournament.startDate.split('T')[0]} to {tournament.endDate.split('T')[0]})
-              </span>
+              {isDateRestricted ? (
+                <span className="text-xs text-orange-600 font-normal flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  (Current month only - Free tier)
+                </span>
+              ) : (
+                <span className="text-xs text-orange-600 font-normal">
+                  ({tournament.startDate.split('T')[0]} to {tournament.endDate.split('T')[0]})
+                </span>
+              )}
             </label>
             <input
               type="datetime-local"
@@ -1112,6 +1170,32 @@ function CreateGameModal({
               max={maxDate}
               required
             />
+            {/* Free tier date restriction notice */}
+            {isDateRestricted && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-2">
+                <div className="flex items-start gap-2">
+                  <Lock className="w-4 h-4 text-orange-600 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm text-orange-800 font-medium">
+                      Free tier: Current month scheduling only
+                    </p>
+                    <p className="text-xs text-orange-700 mt-1">
+                      Upgrade to schedule games in future months and access the full tournament calendar.
+                    </p>
+                    {onUpgrade && (
+                      <button
+                        type="button"
+                        onClick={onUpgrade}
+                        className="mt-2 inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-semibold rounded-md hover:from-orange-600 hover:to-orange-700 transition-colors"
+                      >
+                        <Crown className="w-3 h-3" />
+                        Upgrade to Unlock
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Venue */}
@@ -1436,6 +1520,8 @@ function BracketBuilderModal({
   teams,
   games,
   checkEligibility,
+  isFreeOrganizer = false,
+  onUpgrade,
   onClose, 
   onGenerate 
 }: { 
@@ -1448,6 +1534,8 @@ function BracketBuilderModal({
     action: 'generate_new' | 'regenerate_with_warning' | 'edit_only';
     gamesToDelete: number;
   };
+  isFreeOrganizer?: boolean;
+  onUpgrade?: () => void;
   onClose: () => void; 
   onGenerate: (config: any) => void; 
 }) {
@@ -1478,7 +1566,24 @@ function BracketBuilderModal({
   };
 
   const minDate = formatDateTimeLocal(tournament.startDate);
-  const maxDate = formatDateTimeLocal(tournament.endDate);
+  
+  // Calculate max date based on subscription tier for bracket builder
+  const calculateMaxDate = (): string => {
+    const tournamentEnd = new Date(tournament.endDate);
+    
+    if (isFreeOrganizer) {
+      const now = new Date();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      const effectiveMax = endOfMonth < tournamentEnd ? endOfMonth : tournamentEnd;
+      return formatDateTimeLocal(effectiveMax.toISOString());
+    }
+    
+    return formatDateTimeLocal(tournament.endDate);
+  };
+  
+  const maxDate = calculateMaxDate();
+  const fullTournamentMaxDate = formatDateTimeLocal(tournament.endDate);
+  const isDateRestricted = isFreeOrganizer && maxDate !== fullTournamentMaxDate;
 
   // Initialize division selection: default to first division if tournament has divisions
   const divisionOptions = React.useMemo(() => {
@@ -2108,9 +2213,16 @@ function BracketBuilderModal({
           <div style={styles.formGroup}>
             <label style={styles.label}>
               Tournament Start Date
-              <span style={{ fontSize: '12px', color: '#9D4EDD', fontWeight: 'normal' }}>
-                (Only {tournament.startDate.split('T')[0]} to {tournament.endDate.split('T')[0]} allowed)
-              </span>
+              {isDateRestricted ? (
+                <span style={{ fontSize: '12px', color: '#FFA500', fontWeight: 'normal', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Lock style={{ width: '12px', height: '12px' }} />
+                  (Current month only - Free tier)
+                </span>
+              ) : (
+                <span style={{ fontSize: '12px', color: '#9D4EDD', fontWeight: 'normal' }}>
+                  (Only {tournament.startDate.split('T')[0]} to {tournament.endDate.split('T')[0]} allowed)
+                </span>
+              )}
             </label>
             <input
               type="datetime-local"
@@ -2124,6 +2236,40 @@ function BracketBuilderModal({
               max={maxDate} // Tournament end date (properly formatted)
               required
             />
+            {/* Free tier date restriction notice */}
+            {isDateRestricted && onUpgrade && (
+              <div style={{
+                marginTop: '8px',
+                padding: '12px',
+                background: 'rgba(255, 165, 0, 0.1)',
+                border: '1px solid rgba(255, 165, 0, 0.3)',
+                borderRadius: '8px',
+              }}>
+                <p style={{ fontSize: '12px', color: '#FFA500', marginBottom: '8px' }}>
+                  Free tier: Schedule games within the current month only. Upgrade to unlock future months.
+                </p>
+                <button
+                  type="button"
+                  onClick={onUpgrade}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Crown style={{ width: '12px', height: '12px' }} />
+                  Upgrade to Unlock
+                </button>
+              </div>
+            )}
           </div>
 
           <div style={styles.formGroup}>

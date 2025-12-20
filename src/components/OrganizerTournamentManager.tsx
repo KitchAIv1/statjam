@@ -244,6 +244,15 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   const { tier: subscriptionTier } = useSubscription('organizer');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const FREE_SEASON_LIMIT = 1;
+  
+  // Time-gate: Free users can only schedule within current month
+  const isFreeOrganizer = subscriptionTier === 'free';
+  const getMaxDateForFree = (): string => {
+    const now = new Date();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return endOfMonth.toISOString().split('T')[0];
+  };
+  const maxDateForFree = getMaxDateForFree();
   const [tournamentToEdit, setTournamentToEdit] = useState<Tournament | null>(null);
   const [isCreateTeamDialogOpen, setIsCreateTeamDialogOpen] = useState(false);
   
@@ -822,28 +831,72 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="startDate">Start Date <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="startDate" className="flex items-center gap-2">
+                    Start Date <span className="text-red-500">*</span>
+                    {isFreeOrganizer && (
+                      <span className="text-xs text-orange-600 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Current month
+                      </span>
+                    )}
+                  </Label>
                   <Input
                     id="startDate"
                     type="date"
                     value={newTournament.startDate}
                     onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
+                    max={isFreeOrganizer ? maxDateForFree : undefined}
                     className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
                     required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="endDate">End Date <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="endDate" className="flex items-center gap-2">
+                    End Date <span className="text-red-500">*</span>
+                    {isFreeOrganizer && (
+                      <span className="text-xs text-orange-600 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Current month
+                      </span>
+                    )}
+                  </Label>
                   <Input
                     id="endDate"
                     type="date"
                     value={newTournament.endDate}
                     onChange={(e) => setNewTournament({ ...newTournament, endDate: e.target.value })}
+                    max={isFreeOrganizer ? maxDateForFree : undefined}
                     className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
                     required
                   />
                 </div>
               </div>
+
+              {/* Free tier date restriction notice */}
+              {isFreeOrganizer && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <Clock className="w-4 h-4 text-orange-600 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm text-orange-800 font-medium">
+                        Free tier: Current month scheduling only
+                      </p>
+                      <p className="text-xs text-orange-700 mt-1">
+                        Upgrade to schedule tournaments beyond {new Date().toLocaleString('default', { month: 'long' })}.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setShowUpgradeModal(true)}
+                        className="mt-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-xs h-7"
+                      >
+                        <Award className="w-3 h-3 mr-1" />
+                        Upgrade to Unlock
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="grid gap-2">
                 <Label htmlFor="description">Description</Label>
@@ -1430,26 +1483,39 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                       <CardContent className="space-y-3 pt-0">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
-                            <Label htmlFor="edit-start-date" className="text-sm">Start Date</Label>
+                            <Label htmlFor="edit-start-date" className="text-sm flex items-center gap-1">
+                              Start Date
+                              {isFreeOrganizer && <Clock className="w-3 h-3 text-orange-500" />}
+                            </Label>
                             <Input
                               id="edit-start-date"
                               type="date"
                               value={tournamentToEdit.startDate}
                               onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, startDate: e.target.value })}
+                              max={isFreeOrganizer ? maxDateForFree : undefined}
                               className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <Label htmlFor="edit-end-date" className="text-sm">End Date</Label>
+                            <Label htmlFor="edit-end-date" className="text-sm flex items-center gap-1">
+                              End Date
+                              {isFreeOrganizer && <Clock className="w-3 h-3 text-orange-500" />}
+                            </Label>
                             <Input
                               id="edit-end-date"
                               type="date"
                               value={tournamentToEdit.endDate}
                               onChange={(e) => setTournamentToEdit({ ...tournamentToEdit, endDate: e.target.value })}
+                              max={isFreeOrganizer ? maxDateForFree : undefined}
                               className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20"
                             />
                           </div>
                         </div>
+                        {isFreeOrganizer && (
+                          <p className="text-xs text-orange-600 mt-2">
+                            Free tier: Limited to current month. Upgrade to schedule beyond {new Date().toLocaleString('default', { month: 'long' })}.
+                          </p>
+                        )}
                       </CardContent>
                     </Card>
 

@@ -2,14 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Calendar, TrendingUp, Lock, Crown } from "lucide-react";
 import { PlayerGameStatsService, GameStatsSummary } from "@/lib/services/playerGameStatsService";
 
 interface GameStatsTableProps {
   userId: string;
+  /** When false, detailed stats are hidden and user sees upgrade prompt */
+  showDetailedStats?: boolean;
+  /** Callback when user clicks upgrade */
+  onUpgrade?: () => void;
 }
 
-export function GameStatsTable({ userId }: GameStatsTableProps) {
+export function GameStatsTable({ userId, showDetailedStats = true, onUpgrade }: GameStatsTableProps) {
   const [gameStats, setGameStats] = useState<GameStatsSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -85,15 +90,26 @@ export function GameStatsTable({ userId }: GameStatsTableProps) {
                 <th className="text-left py-3 px-2 font-semibold text-muted-foreground">Date</th>
                 <th className="text-left py-3 px-2 font-semibold text-muted-foreground">Matchup</th>
                 <th className="text-center py-3 px-2 font-semibold text-muted-foreground">Result</th>
-                <th className="text-center py-3 px-2 font-semibold text-muted-foreground">MIN</th>
-                <th className="text-center py-3 px-2 font-semibold text-muted-foreground">PTS</th>
-                <th className="text-center py-3 px-2 font-semibold text-muted-foreground">REB</th>
-                <th className="text-center py-3 px-2 font-semibold text-muted-foreground">AST</th>
-                <th className="text-center py-3 px-2 font-semibold text-muted-foreground">STL</th>
-                <th className="text-center py-3 px-2 font-semibold text-muted-foreground">BLK</th>
-                <th className="text-center py-3 px-2 font-semibold text-muted-foreground">FG%</th>
-                <th className="text-center py-3 px-2 font-semibold text-muted-foreground">3P%</th>
-                <th className="text-center py-3 px-2 font-semibold text-muted-foreground">FT%</th>
+                {showDetailedStats ? (
+                  <>
+                    <th className="text-center py-3 px-2 font-semibold text-muted-foreground">MIN</th>
+                    <th className="text-center py-3 px-2 font-semibold text-muted-foreground">PTS</th>
+                    <th className="text-center py-3 px-2 font-semibold text-muted-foreground">REB</th>
+                    <th className="text-center py-3 px-2 font-semibold text-muted-foreground">AST</th>
+                    <th className="text-center py-3 px-2 font-semibold text-muted-foreground">STL</th>
+                    <th className="text-center py-3 px-2 font-semibold text-muted-foreground">BLK</th>
+                    <th className="text-center py-3 px-2 font-semibold text-muted-foreground">FG%</th>
+                    <th className="text-center py-3 px-2 font-semibold text-muted-foreground">3P%</th>
+                    <th className="text-center py-3 px-2 font-semibold text-muted-foreground">FT%</th>
+                  </>
+                ) : (
+                  <th className="text-center py-3 px-2 font-semibold text-muted-foreground" colSpan={9}>
+                    <span className="flex items-center justify-center gap-2 text-orange-600">
+                      <Lock className="w-4 h-4" />
+                      Detailed Stats
+                    </span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -128,27 +144,35 @@ export function GameStatsTable({ userId }: GameStatsTableProps) {
                       {game.result === 'LIVE' ? '🔴 LIVE' : `${game.result} ${game.finalScore}`}
                     </span>
                   </td>
-                  <td className="py-3 px-2 text-center text-card-foreground">{game.minutesPlayed}</td>
-                  <td className="py-3 px-2 text-center font-bold text-card-foreground">{game.points}</td>
-                  <td className="py-3 px-2 text-center text-card-foreground">{game.rebounds}</td>
-                  <td className="py-3 px-2 text-center text-card-foreground">{game.assists}</td>
-                  <td className="py-3 px-2 text-center text-card-foreground">{game.steals}</td>
-                  <td className="py-3 px-2 text-center text-card-foreground">{game.blocks}</td>
-                  <td className="py-3 px-2 text-center text-card-foreground">
-                    <span className="text-xs">
-                      {game.fieldGoalPercentage > 0 ? `${game.fieldGoalPercentage}%` : '-'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-2 text-center text-card-foreground">
-                    <span className="text-xs">
-                      {game.threePointPercentage > 0 ? `${game.threePointPercentage}%` : '-'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-2 text-center text-card-foreground">
-                    <span className="text-xs">
-                      {game.freeThrowPercentage > 0 ? `${game.freeThrowPercentage}%` : '-'}
-                    </span>
-                  </td>
+                  {showDetailedStats ? (
+                    <>
+                      <td className="py-3 px-2 text-center text-card-foreground">{game.minutesPlayed}</td>
+                      <td className="py-3 px-2 text-center font-bold text-card-foreground">{game.points}</td>
+                      <td className="py-3 px-2 text-center text-card-foreground">{game.rebounds}</td>
+                      <td className="py-3 px-2 text-center text-card-foreground">{game.assists}</td>
+                      <td className="py-3 px-2 text-center text-card-foreground">{game.steals}</td>
+                      <td className="py-3 px-2 text-center text-card-foreground">{game.blocks}</td>
+                      <td className="py-3 px-2 text-center text-card-foreground">
+                        <span className="text-xs">
+                          {game.fieldGoalPercentage > 0 ? `${game.fieldGoalPercentage}%` : '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-center text-card-foreground">
+                        <span className="text-xs">
+                          {game.threePointPercentage > 0 ? `${game.threePointPercentage}%` : '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-center text-card-foreground">
+                        <span className="text-xs">
+                          {game.freeThrowPercentage > 0 ? `${game.freeThrowPercentage}%` : '-'}
+                        </span>
+                      </td>
+                    </>
+                  ) : (
+                    <td className="py-3 px-2 text-center" colSpan={9}>
+                      <span className="text-muted-foreground/60 text-xs">🔒 Upgrade to view</span>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -164,7 +188,7 @@ export function GameStatsTable({ userId }: GameStatsTableProps) {
                 index === 0 ? 'bg-accent/20' : 'bg-card/50'
               }`}
             >
-              {/* Game Header */}
+              {/* Game Header - Always visible */}
               <div className="flex items-center justify-between mb-3 pb-3 border-b border-border/30">
                 <div>
                   <div className="text-sm text-muted-foreground">
@@ -196,69 +220,79 @@ export function GameStatsTable({ userId }: GameStatsTableProps) {
                 </div>
               </div>
 
-              {/* Single Row Stats - Compact Grid (NBA Mobile Style) */}
-              <div className="grid grid-cols-6 gap-1.5 text-center">
-                <div className="px-1">
-                  <div className="text-base font-bold text-primary">{game.minutesPlayed}</div>
-                  <div className="text-[10px] text-muted-foreground">MIN</div>
-                </div>
-                <div className="px-1">
-                  <div className="text-base font-bold text-primary">{game.points}</div>
-                  <div className="text-[10px] text-muted-foreground">PTS</div>
-                </div>
-                <div className="px-1">
-                  <div className="text-base font-bold text-card-foreground">{game.rebounds}</div>
-                  <div className="text-[10px] text-muted-foreground">REB</div>
-                </div>
-                <div className="px-1">
-                  <div className="text-base font-bold text-card-foreground">{game.assists}</div>
-                  <div className="text-[10px] text-muted-foreground">AST</div>
-                </div>
-                <div className="px-1">
-                  <div className="text-base font-bold text-card-foreground">{game.steals}</div>
-                  <div className="text-[10px] text-muted-foreground">STL</div>
-                </div>
-                <div className="px-1">
-                  <div className="text-base font-bold text-card-foreground">{game.blocks}</div>
-                  <div className="text-[10px] text-muted-foreground">BLK</div>
-                </div>
-              </div>
-              
-              {/* Second Row - Shooting & Other Stats */}
-              <div className="grid grid-cols-6 gap-1.5 text-center mt-2">
-                <div className="px-1">
-                  <div className="text-base font-bold text-card-foreground">
-                    {game.fieldGoalPercentage > 0 ? `${game.fieldGoalPercentage}%` : '-'}
+              {showDetailedStats ? (
+                <>
+                  {/* Single Row Stats - Compact Grid (NBA Mobile Style) */}
+                  <div className="grid grid-cols-6 gap-1.5 text-center">
+                    <div className="px-1">
+                      <div className="text-base font-bold text-primary">{game.minutesPlayed}</div>
+                      <div className="text-[10px] text-muted-foreground">MIN</div>
+                    </div>
+                    <div className="px-1">
+                      <div className="text-base font-bold text-primary">{game.points}</div>
+                      <div className="text-[10px] text-muted-foreground">PTS</div>
+                    </div>
+                    <div className="px-1">
+                      <div className="text-base font-bold text-card-foreground">{game.rebounds}</div>
+                      <div className="text-[10px] text-muted-foreground">REB</div>
+                    </div>
+                    <div className="px-1">
+                      <div className="text-base font-bold text-card-foreground">{game.assists}</div>
+                      <div className="text-[10px] text-muted-foreground">AST</div>
+                    </div>
+                    <div className="px-1">
+                      <div className="text-base font-bold text-card-foreground">{game.steals}</div>
+                      <div className="text-[10px] text-muted-foreground">STL</div>
+                    </div>
+                    <div className="px-1">
+                      <div className="text-base font-bold text-card-foreground">{game.blocks}</div>
+                      <div className="text-[10px] text-muted-foreground">BLK</div>
+                    </div>
                   </div>
-                  <div className="text-[10px] text-muted-foreground">FG%</div>
-                </div>
-                <div className="px-1">
-                  <div className="text-base font-bold text-card-foreground">
-                    {game.threePointPercentage > 0 ? `${game.threePointPercentage}%` : '-'}
+                  
+                  {/* Second Row - Shooting & Other Stats */}
+                  <div className="grid grid-cols-6 gap-1.5 text-center mt-2">
+                    <div className="px-1">
+                      <div className="text-base font-bold text-card-foreground">
+                        {game.fieldGoalPercentage > 0 ? `${game.fieldGoalPercentage}%` : '-'}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">FG%</div>
+                    </div>
+                    <div className="px-1">
+                      <div className="text-base font-bold text-card-foreground">
+                        {game.threePointPercentage > 0 ? `${game.threePointPercentage}%` : '-'}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">3P%</div>
+                    </div>
+                    <div className="px-1">
+                      <div className="text-base font-bold text-card-foreground">
+                        {game.freeThrowPercentage > 0 ? `${game.freeThrowPercentage}%` : '-'}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">FT%</div>
+                    </div>
+                    <div className="px-1">
+                      <div className="text-base font-bold text-card-foreground">{game.turnovers}</div>
+                      <div className="text-[10px] text-muted-foreground">TO</div>
+                    </div>
+                    <div className="px-1">
+                      <div className="text-base font-bold text-card-foreground">{game.fouls}</div>
+                      <div className="text-[10px] text-muted-foreground">PF</div>
+                    </div>
+                    <div className="px-1">
+                      <div className="text-base font-bold text-card-foreground">
+                        {game.plusMinus > 0 ? `+${game.plusMinus}` : game.plusMinus}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">+/-</div>
+                    </div>
                   </div>
-                  <div className="text-[10px] text-muted-foreground">3P%</div>
+                </>
+              ) : (
+                /* Locked stats placeholder for mobile */
+                <div className="text-center py-2 text-muted-foreground/70 text-sm">
+                  <Lock className="w-4 h-4 inline mr-1" />
+                  Stats locked • Upgrade to view
                 </div>
-                <div className="px-1">
-                  <div className="text-base font-bold text-card-foreground">
-                    {game.freeThrowPercentage > 0 ? `${game.freeThrowPercentage}%` : '-'}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">FT%</div>
-                </div>
-                <div className="px-1">
-                  <div className="text-base font-bold text-card-foreground">{game.turnovers}</div>
-                  <div className="text-[10px] text-muted-foreground">TO</div>
-                </div>
-                <div className="px-1">
-                  <div className="text-base font-bold text-card-foreground">{game.fouls}</div>
-                  <div className="text-[10px] text-muted-foreground">PF</div>
-                </div>
-                <div className="px-1">
-                  <div className="text-base font-bold text-card-foreground">
-                    {game.plusMinus > 0 ? `+${game.plusMinus}` : game.plusMinus}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">+/-</div>
-                </div>
-              </div>
+              )}
             </div>
           ))}
         </div>
@@ -277,6 +311,22 @@ export function GameStatsTable({ userId }: GameStatsTableProps) {
                 )}
               </span>
             </div>
+          </div>
+        )}
+
+        {/* Upgrade CTA when stats are locked */}
+        {!showDetailedStats && onUpgrade && (
+          <div className="mt-6 pt-4 border-t border-border/50 text-center">
+            <p className="text-sm text-muted-foreground mb-3">
+              Upgrade to see detailed stats for all {gameStats.length} games
+            </p>
+            <Button 
+              onClick={onUpgrade}
+              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+            >
+              <Crown className="w-4 h-4 mr-2" />
+              Unlock Game Stats
+            </Button>
           </div>
         )}
       </CardContent>

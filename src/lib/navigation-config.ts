@@ -94,24 +94,28 @@ export const navigationConfig: Record<string, NavigationConfig> = {
         icon: Trophy,
         description: 'Manage tournaments'
       },
-      {
-        label: 'Teams',
-        href: '/dashboard?section=teams',
-        icon: Users,
-        description: 'Manage teams'
-      },
+      // Teams nav disabled - team management is now integrated into Tournament Manager
+      // {
+      //   label: 'Teams',
+      //   href: '/dashboard?section=teams',
+      //   icon: Users,
+      //   description: 'Manage teams',
+      //   disabled: true
+      // },
       {
         label: 'Games',
         href: '/dashboard?section=games',
         icon: Calendar,
         description: 'Schedule games'
       },
-      {
-        label: 'Live Stream',
-        href: '/dashboard?section=live-stream',
-        icon: Video,
-        description: 'Live streaming'
-      }
+      // Live Stream nav disabled - feature not yet available
+      // {
+      //   label: 'Live Stream',
+      //   href: '/dashboard?section=live-stream',
+      //   icon: Video,
+      //   description: 'Live streaming',
+      //   disabled: true
+      // }
     ],
     secondary: [
       {

@@ -16,7 +16,7 @@ interface FeatureLockedOverlayProps {
   featureName: string;
   upgradeMessage?: string;
   onUpgrade: () => void;
-  blurIntensity?: 'light' | 'medium' | 'heavy';
+  blurIntensity?: 'teaser' | 'light' | 'medium' | 'heavy';
 }
 
 export function FeatureLockedOverlay({
@@ -32,9 +32,10 @@ export function FeatureLockedOverlay({
   }
 
   const blurClass = {
-    light: 'blur-sm',
-    medium: 'blur-md',
-    heavy: 'blur-lg',
+    teaser: 'blur-[6px]',  // Enticing - can see shapes, not details
+    light: 'blur-sm',      // Light blur
+    medium: 'blur-md',     // Standard blur
+    heavy: 'blur-lg',      // Heavy obscuring
   }[blurIntensity];
 
   return (
@@ -45,7 +46,7 @@ export function FeatureLockedOverlay({
       </div>
 
       {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/60 to-white/90 flex items-center justify-center">
+      <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-white/80 flex items-center justify-center">
         <div className="text-center p-6 max-w-sm">
           {/* Lock Icon */}
           <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
@@ -83,4 +84,5 @@ export function FeatureLockedOverlay({
     </div>
   );
 }
+
 

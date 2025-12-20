@@ -619,7 +619,7 @@ export function PlayerDashboard() {
                   featureName="Performance Analytics"
                   upgradeMessage="Unlock detailed performance analytics, trends, and insights to track your growth."
                   onUpgrade={() => handleUpgradeClick('Access performance analytics and track your progress over time.')}
-                  blurIntensity="medium"
+                  blurIntensity="teaser"
                 >
                   <Card className="glass-card-light relative overflow-hidden">
                     {/* Glass effect overlay */}
@@ -703,22 +703,12 @@ export function PlayerDashboard() {
                   </Card>
                 </FeatureLockedOverlay>
 
-                {/* Game Stats Table - NBA Box Score */}
-                {/* ✅ UNLOCKED FOR TESTING - Premium check bypassed */}
-                <Card className="glass-card">
-                  <CardHeader>
-                    <CardTitle className="text-card-foreground flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-primary" />
-                      My Stats
-                      {user?.premium_status && (
-                        <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">Premium</Badge>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <GameStatsTable userId={user?.id || ''} />
-                  </CardContent>
-                </Card>
+                {/* Game Stats Table - Shows games with conditional stats visibility */}
+                <GameStatsTable 
+                  userId={user?.id || ''} 
+                  showDetailedStats={limits.hasAnalytics}
+                  onUpgrade={() => handleUpgradeClick('Unlock detailed game-by-game stats to track your performance.')}
+                />
 
                 {/* Premium Features (Phase 1: hidden) */}
 
