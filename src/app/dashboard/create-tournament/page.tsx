@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { getRulesetDisplayName, getRulesetDescription } from '@/lib/types/ruleset';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
+import { TeamLimitSelector } from '@/components/subscription';
 
 const CreateTournamentV2 = () => {
   const { user, loading } = useAuthV2();
@@ -592,20 +593,11 @@ const CreateTournamentV2 = () => {
 
             <div style={styles.formRow}>
               <div style={styles.fieldGroup}>
-                <label style={styles.label}>Maximum Teams *</label>
-                <select
-                  value={data.maxTeams || 8}
-                  onChange={(e) => updateData('maxTeams', parseInt(e.target.value))}
-                  style={{
-                    ...styles.select,
-                    ...(errors.maxTeams ? styles.inputError : {})
-                  }}
-                >
-                  {[4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 18, 24, 32].map(num => (
-                    <option key={num} value={num}>{num} Teams</option>
-                  ))}
-                </select>
-                {errors.maxTeams && <span style={styles.errorText}>{errors.maxTeams}</span>}
+                <TeamLimitSelector
+                  value={data.maxTeams || 6}
+                  onChange={(value) => updateData('maxTeams', value)}
+                  error={errors.maxTeams}
+                />
               </div>
 
               <div style={styles.fieldGroup}>

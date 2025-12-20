@@ -33,6 +33,7 @@ import { useRouter } from 'next/navigation';
 import { notify } from '@/lib/services/notificationService';
 import { invalidateOrganizerDashboard, invalidateOrganizerTournaments } from '@/lib/utils/cache';
 import { getCountryName } from '@/data/countries';
+import { TeamLimitSelector } from '@/components/subscription';
 
 // Utility function for tournament status variants with enhanced styling
 function getStatusVariant(status: Tournament['status']) {
@@ -794,27 +795,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="maxTeams">Maximum Teams <span className="text-red-500">*</span></Label>
-                <Select value={newTournament.maxTeams} onValueChange={(value) => setNewTournament({ ...newTournament, maxTeams: value })}>
-                  <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
-                    <SelectValue placeholder="Select max teams" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="4">4 Teams</SelectItem>
-                    <SelectItem value="5">5 Teams</SelectItem>
-                    <SelectItem value="6">6 Teams</SelectItem>
-                    <SelectItem value="7">7 Teams</SelectItem>
-                    <SelectItem value="8">8 Teams</SelectItem>
-                    <SelectItem value="9">9 Teams</SelectItem>
-                    <SelectItem value="10">10 Teams</SelectItem>
-                    <SelectItem value="11">11 Teams</SelectItem>
-                    <SelectItem value="12">12 Teams</SelectItem>
-                    <SelectItem value="16">16 Teams</SelectItem>
-                    <SelectItem value="18">18 Teams</SelectItem>
-                    <SelectItem value="24">24 Teams</SelectItem>
-                    <SelectItem value="32">32 Teams</SelectItem>
-                  </SelectContent>
-                </Select>
+                <TeamLimitSelector
+                  value={parseInt(newTournament.maxTeams) || 6}
+                  onChange={(value) => setNewTournament({ ...newTournament, maxTeams: String(value) })}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1406,27 +1390,10 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                             </Select>
                           </div>
                           <div className="space-y-1.5">
-                            <Label htmlFor="edit-max-teams" className="text-sm">Maximum Teams</Label>
-                            <Select value={tournamentToEdit.maxTeams.toString()} onValueChange={(value) => setTournamentToEdit({ ...tournamentToEdit, maxTeams: parseInt(value) })}>
-                              <SelectTrigger className="bg-white border-gray-300 focus:border-primary focus:ring-primary/20">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="4">4 Teams</SelectItem>
-                                <SelectItem value="5">5 Teams</SelectItem>
-                                <SelectItem value="6">6 Teams</SelectItem>
-                                <SelectItem value="7">7 Teams</SelectItem>
-                                <SelectItem value="8">8 Teams</SelectItem>
-                                <SelectItem value="9">9 Teams</SelectItem>
-                                <SelectItem value="10">10 Teams</SelectItem>
-                                <SelectItem value="11">11 Teams</SelectItem>
-                                <SelectItem value="12">12 Teams</SelectItem>
-                                <SelectItem value="16">16 Teams</SelectItem>
-                                <SelectItem value="18">18 Teams</SelectItem>
-                                <SelectItem value="24">24 Teams</SelectItem>
-                                <SelectItem value="32">32 Teams</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <TeamLimitSelector
+                              value={tournamentToEdit.maxTeams || 6}
+                              onChange={(value) => setTournamentToEdit({ ...tournamentToEdit, maxTeams: value })}
+                            />
                           </div>
                         </div>
                       </CardContent>
