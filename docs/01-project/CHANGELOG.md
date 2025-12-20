@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-12-20
+
+### 🔒 **SUBSCRIPTION SYSTEM: PLAYER GATES, ORGANIZER CALENDAR TIME-GATE & NAVIGATION CLEANUP**
+
+#### Player Subscription Gates
+- **ADDED**: Performance Analytics gate with `FeatureLockedOverlay` for free players
+  - Free users see blurred analytics with teaser preview (6px blur, 50-80% opacity)
+  - Upgrade modal triggered when clicking locked analytics section
+  - Uses `limits.hasAnalytics` from `useSubscription('player')` hook
+- **ADDED**: Game Logs partial gate - Free users see date/opponent/result, detailed stats locked
+  - `GameStatsTable` accepts `showDetailedStats` prop
+  - Free users see "🔒 Upgrade to view" in stat columns
+  - Paid users see full MIN, PTS, REB, AST, STL, BLK, FG%, 3P%, FT%
+- **ADDED**: Stat Cards generation gate - Free users see upgrade prompt on `/dashboard/player/cards`
+  - Full page gate with clear messaging
+  - Upgrade CTA with Crown icon
+- **ADDED**: Verified badge for paid players - Shows "Verified" badge next to player name in hero section
+  - Uses `limits.isVerified` check
+  - Blue badge with BadgeCheck icon
+
+#### Organizer Calendar Time-Gate
+- **ADDED**: Current month date restriction for free organizers
+  - Free users limited to scheduling tournaments/games within current month only
+  - Applied to: Create Tournament modal, Create Tournament page, Schedule Game modal, Bracket Builder modal
+  - Date pickers show "Current month only" label with clock icon
+  - Upgrade notice boxes with CTA buttons
+  - Paid organizers have no date restrictions
+
+#### Coach Game Limit Enforcement
+- **ENHANCED**: Coach game tracking limit (6 games for free tier) now enforced at multiple points
+  - Pre-check in `CoachQuickTrackSection` before opening modal
+  - Validation in `CoachQuickTrackModal` before game creation
+  - Gate on `CoachTeamCard` Quick Track button
+  - Uses `SubscriptionService.getCoachGameCount()` for accurate counting
+
+#### Navigation Cleanup
+- **REMOVED**: Teams nav item from organizer dashboard (feature integrated into Tournament Manager)
+- **REMOVED**: Live Stream nav item from organizer dashboard (feature not yet available)
+- Remaining organizer nav: Overview, Tournaments, Games
+
+#### Technical Implementation
+- **Enhanced**: `FeatureLockedOverlay` component with new `teaser` blur level (6px blur for enticing preview)
+- **Enhanced**: `SubscriptionService` with `getCoachGameCount()` for direct game counting
+- **Files Modified**:
+  - `src/components/PlayerDashboard.tsx` - Analytics overlay, verified badge
+  - `src/components/GameStatsTable.tsx` - Conditional detailed stats
+  - `src/app/dashboard/player/cards/page.tsx` - Stat cards gate
+  - `src/app/dashboard/create-tournament/page.tsx` - Calendar time-gate
+  - `src/components/OrganizerTournamentManager.tsx` - Calendar time-gate
+  - `src/app/dashboard/tournaments/[id]/schedule/page.tsx` - Calendar time-gate
+  - `src/components/subscription/FeatureLockedOverlay.tsx` - Teaser blur level
+  - `src/lib/services/subscriptionService.ts` - Coach game count function
+  - `src/lib/navigation-config.ts` - Removed Teams/Live Stream nav
+
+#### Documentation Updates
+- **Updated**: `docs/06-monetization/SUBSCRIPTION_GATEKEEPING_AUDIT.md` - Implementation status
+- **Updated**: `docs/01-project/CHANGELOG.md` - This entry
+
+---
+
 ## [0.17.4] - 2025-12-18
 
 ### 🚀 **COACH MODE CRITICAL FIXES & PERFORMANCE OPTIMIZATIONS**
