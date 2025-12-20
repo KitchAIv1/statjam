@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { CoachTeam } from '@/lib/types/coach';
 import { CoachTeamCard } from './CoachTeamCard';
 import { CreateCoachTeamModal } from './CreateCoachTeamModal';
+import { UpgradeModal } from '@/components/subscription';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface CoachTeamsSectionProps {
   teams: CoachTeam[];
@@ -34,6 +36,11 @@ export function CoachTeamsSection({ teams, loading, error, userId, onTeamUpdate 
   const [searchTerm, setSearchTerm] = useState('');
   const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'public' | 'private'>('all');
   const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  
+  // Subscription gatekeeping
+  const { tier: subscriptionTier } = useSubscription('coach');
+  const FREE_TEAM_LIMIT = 1;
 
   // Filter teams
   const filteredTeams = teams.filter(team => {
@@ -45,9 +52,16 @@ export function CoachTeamsSection({ teams, loading, error, userId, onTeamUpdate 
     return matchesSearch && matchesVisibility;
   });
 
-  // Handle create team
+  // Handle create team with subscription check
   const handleCreateTeam = () => {
-    setShowCreateTeam(true);
+    const isFreeTier = subscriptionTier === 'free';
+    const atLimit = isFreeTier && teams.length >= FREE_TEAM_LIMIT;
+    
+    if (atLimit) {
+      setShowUpgradeModal(true);
+    } else {
+      setShowCreateTeam(true);
+    }
   };
 
   // Handle team created
@@ -184,6 +198,15 @@ export function CoachTeamsSection({ teams, loading, error, userId, onTeamUpdate 
           onTeamCreated={handleTeamCreated}
         />
       )}
+
+      {/* Subscription Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role="coach"
+        currentTier={subscriptionTier}
+        triggerReason={`You've reached your free limit of ${FREE_TEAM_LIMIT} team. Upgrade for unlimited teams.`}
+      />
     </>
   );
 }

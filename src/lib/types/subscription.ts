@@ -153,3 +153,4 @@ export interface VerifiedBadgeRequirement {
   badgeType: VerifiedBadgeType;
   requirements: string[];
 }
+

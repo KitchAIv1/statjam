@@ -33,7 +33,8 @@ import { useRouter } from 'next/navigation';
 import { notify } from '@/lib/services/notificationService';
 import { invalidateOrganizerDashboard, invalidateOrganizerTournaments } from '@/lib/utils/cache';
 import { getCountryName } from '@/data/countries';
-import { TeamLimitSelector } from '@/components/subscription';
+import { TeamLimitSelector, UpgradeModal } from '@/components/subscription';
+import { useSubscription } from '@/hooks/useSubscription';
 
 // Utility function for tournament status variants with enhanced styling
 function getStatusVariant(status: Tournament['status']) {
@@ -238,6 +239,11 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [isTeamManagerOpen, setIsTeamManagerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // Subscription gatekeeping
+  const { tier: subscriptionTier } = useSubscription('organizer');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const FREE_SEASON_LIMIT = 1;
   const [tournamentToEdit, setTournamentToEdit] = useState<Tournament | null>(null);
   const [isCreateTeamDialogOpen, setIsCreateTeamDialogOpen] = useState(false);
   
@@ -610,6 +616,25 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           <h2 className="text-2xl font-bold">Tournament Management</h2>
           <p className="text-muted-foreground">Create and manage your basketball tournaments</p>
         </div>
+        {/* Create Tournament Button with Subscription Check */}
+        <Button 
+          onClick={() => {
+            // Check season limit for free tier
+            const isFreeTier = subscriptionTier === 'free';
+            const atLimit = isFreeTier && tournaments.length >= FREE_SEASON_LIMIT;
+            
+            if (atLimit) {
+              setShowUpgradeModal(true);
+            } else {
+              setIsCreateDialogOpen(true);
+            }
+          }}
+          className="gap-2 relative overflow-hidden bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 animate-pulse-glow"
+        >
+          <Plus className="w-4 h-4" />
+          Create Tournament
+        </Button>
+        
         <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
           setIsCreateDialogOpen(open);
           if (!open) {
@@ -617,12 +642,6 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
             setValidationErrors([]);
           }
         }}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 relative overflow-hidden bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 animate-pulse-glow">
-              <Plus className="w-4 h-4" />
-              Create Tournament
-            </Button>
-          </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col p-0">
             <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
               <DialogTitle>Create New Tournament</DialogTitle>
@@ -1781,6 +1800,15 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
           isCoachTeam={!!teamToDelete.coach_id}
         />
       )}
+
+      {/* Subscription Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role="organizer"
+        currentTier={subscriptionTier}
+        triggerReason={`You've reached your free limit of ${FREE_SEASON_LIMIT} season. Upgrade for unlimited seasons.`}
+      />
     </div>
   );
 }

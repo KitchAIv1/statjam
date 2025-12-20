@@ -5,6 +5,8 @@ import { PlayCircle, Users, Clock, Trophy } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { CoachTeam } from '@/lib/types/coach';
 import { CoachQuickTrackModal } from './CoachQuickTrackModal';
+import { UpgradeModal } from '@/components/subscription';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface CoachQuickTrackSectionProps {
   teams: CoachTeam[];
@@ -27,11 +29,26 @@ export function CoachQuickTrackSection({ teams, loading, error }: CoachQuickTrac
   // State
   const [selectedTeam, setSelectedTeam] = useState<CoachTeam | null>(null);
   const [showQuickTrack, setShowQuickTrack] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  
+  // Subscription gatekeeping
+  const { tier: subscriptionTier } = useSubscription('coach');
+  const FREE_GAME_LIMIT = 6;
+  
+  // Calculate total games tracked across all teams
+  const totalGamesTracked = teams.reduce((sum, team) => sum + (team.games_count || 0), 0);
 
-  // Handle team selection and quick track
+  // Handle team selection and quick track with subscription check
   const handleQuickTrack = (team: CoachTeam) => {
-    setSelectedTeam(team);
-    setShowQuickTrack(true);
+    const isFreeTier = subscriptionTier === 'free';
+    const atLimit = isFreeTier && totalGamesTracked >= FREE_GAME_LIMIT;
+    
+    if (atLimit) {
+      setShowUpgradeModal(true);
+    } else {
+      setSelectedTeam(team);
+      setShowQuickTrack(true);
+    }
   };
 
   // Handle game created
@@ -281,6 +298,15 @@ export function CoachQuickTrackSection({ teams, loading, error }: CoachQuickTrac
           onGameCreated={handleGameCreated}
         />
       )}
+
+      {/* Subscription Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role="coach"
+        currentTier={subscriptionTier}
+        triggerReason={`You've tracked ${totalGamesTracked} games. Free tier allows ${FREE_GAME_LIMIT} games. Upgrade for unlimited.`}
+      />
     </>
   );
 }

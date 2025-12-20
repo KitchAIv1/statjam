@@ -3,14 +3,13 @@
 /**
  * UpgradeModal Component
  * 
- * Main upgrade modal showing all available pricing tiers for a role.
- * Allows users to select and upgrade their subscription.
+ * Professional pricing modal following SaaS best practices.
+ * Features billing toggle, clear hierarchy, and trust signals.
  */
 
 import { useState } from 'react';
-import { Crown, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/Button';
+import { Crown, X, Shield, RefreshCw, CreditCard } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { PricingTierCard } from './PricingTierCard';
 import { getTiersByRole } from '@/config/pricing';
 import type { PricingTier, UserRole, SubscriptionTier } from '@/lib/types/subscription';
@@ -45,55 +44,64 @@ export function UpgradeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden">
+      <DialogContent className="max-w-[95vw] md:max-w-[900px] lg:max-w-[1100px] p-0 overflow-hidden bg-gray-50 border-0 max-h-[90vh] overflow-y-auto">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 text-white">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-full">
-                <Crown className="w-6 h-6" />
-              </div>
-              <div>
-                <DialogTitle className="text-xl font-bold text-white">
-                  Upgrade Your {roleLabel} Plan
-                </DialogTitle>
-                <p className="text-white/80 text-sm mt-1">
-                  {triggerReason ?? 'Unlock more features and remove limits'}
-                </p>
-              </div>
+        <div className="bg-white border-b border-gray-200 px-8 py-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg shadow-orange-500/20">
+              <Crown className="w-6 h-6 text-white" />
             </div>
-          </DialogHeader>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Choose Your {roleLabel} Plan
+              </h2>
+              <p className="text-gray-500 mt-1">
+                {triggerReason ?? 'Unlock premium features and remove all limits'}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Pricing Cards */}
-        <div className="p-6">
-          <div className={`grid gap-4 ${getGridCols(tiers.length)}`}>
+        <div className="px-8 py-8">
+          <div className={`grid gap-6 ${getGridCols(tiers.length)}`}>
             {tiers.map((tier) => (
               <PricingTierCard
                 key={tier.id}
                 tier={tier}
                 isCurrentTier={tier.id === currentTier}
                 onSelect={tier.id !== currentTier ? handleSelectTier : undefined}
-                compact={tiers.length > 3}
+                highlighted={tier.isPopular}
               />
             ))}
           </div>
-
-          {/* Trust Indicators */}
-          <div className="mt-6 pt-4 border-t text-center">
-            <p className="text-xs text-gray-500">
-              🔒 Secure payment • Cancel anytime • 14-day money-back guarantee
-            </p>
-          </div>
         </div>
 
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* Trust Signals */}
+        <div className="bg-white border-t border-gray-200 px-8 py-5">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-green-500" />
+              <span>Secure Payment</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-blue-500" />
+              <span>Cancel Anytime</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-purple-500" />
+              <span>14-Day Money Back</span>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -104,12 +112,13 @@ function getRoleLabel(role: UserRole): string {
     case 'organizer': return 'Organizer';
     case 'coach': return 'Coach';
     case 'player': return 'Player';
-    default: return 'User';
+    default: return '';
   }
 }
 
 function getGridCols(count: number): string {
-  if (count <= 2) return 'md:grid-cols-2';
-  if (count === 3) return 'md:grid-cols-3';
-  return 'md:grid-cols-2 lg:grid-cols-4';
+  if (count <= 2) return 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto';
+  if (count === 3) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+  return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
 }
+

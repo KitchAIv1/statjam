@@ -360,3 +360,4 @@ export function getTierByRoleAndId(role: UserRole, tierId: SubscriptionTier): Pr
   const tiers = getTiersByRole(role);
   return tiers.find(t => t.id === tierId) ?? null;
 }
+
