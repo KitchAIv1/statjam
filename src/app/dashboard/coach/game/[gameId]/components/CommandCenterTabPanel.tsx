@@ -124,32 +124,29 @@ export function CommandCenterTabPanel({
                 <span className="text-xl font-bold text-gray-700">{game.awayScore}</span>
               </div>
               
-              {/* Game Info */}
-              <div className="grid grid-cols-3 gap-3 pt-3 text-xs">
-                <div className="text-center">
-                  <div className="text-gray-500">Status</div>
-                  <div className="text-gray-700 font-medium">{game.status}</div>
+              {/* Game Info - Single Row */}
+              <div className="flex items-center justify-between gap-2 pt-3 mt-1 border-t border-orange-100">
+                <div className="flex-1 text-center px-2 py-1.5 bg-gray-50 rounded">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide">Status</div>
+                  <div className="text-xs text-gray-700 font-semibold capitalize">{game.status}</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-gray-500">Quarter</div>
-                  <div className="text-gray-700 font-medium">Q{game.quarter}</div>
+                <div className="flex-1 text-center px-2 py-1.5 bg-orange-50 rounded">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide">Qtr</div>
+                  <div className="text-xs text-orange-600 font-bold">Q{game.quarter}</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-gray-500">Clock</div>
-                  <div className="text-gray-700 font-medium">
+                <div className="flex-1 text-center px-2 py-1.5 bg-gray-50 rounded">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide">Clock</div>
+                  <div className="text-xs text-gray-700 font-semibold tabular-nums">
                     {String(game.gameClockMinutes).padStart(2, '0')}:{String(game.gameClockSeconds).padStart(2, '0')}
                   </div>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 pt-3 text-xs">
-                <div className="text-center">
-                  <div className="text-gray-500">Fouls</div>
-                  <div className="text-gray-700 font-medium">{game.teamAFouls} - {game.teamBFouls}</div>
+                <div className="flex-1 text-center px-2 py-1.5 bg-gray-50 rounded">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide">Fouls</div>
+                  <div className="text-xs text-gray-700 font-semibold">{game.teamAFouls} - {game.teamBFouls}</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-gray-500">Timeouts</div>
-                  <div className="text-gray-700 font-medium">{game.teamATimeouts} - {game.teamBTimeouts}</div>
+                <div className="flex-1 text-center px-2 py-1.5 bg-gray-50 rounded">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide">T/O</div>
+                  <div className="text-xs text-gray-700 font-semibold">{game.teamATimeouts} - {game.teamBTimeouts}</div>
                 </div>
               </div>
             </div>
