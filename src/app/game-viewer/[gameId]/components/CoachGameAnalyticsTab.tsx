@@ -23,14 +23,27 @@ interface CoachGameAnalyticsTabProps {
   teamId: string;
   teamName: string;
   isDark?: boolean;
+  prefetchedData?: GameBreakdown | null;
 }
 
-export function CoachGameAnalyticsTab({ gameId, teamId, isDark = true }: CoachGameAnalyticsTabProps) {
-  const [analytics, setAnalytics] = useState<GameBreakdown | null>(null);
-  const [loading, setLoading] = useState(true);
+export function CoachGameAnalyticsTab({ 
+  gameId, 
+  teamId, 
+  isDark = true,
+  prefetchedData 
+}: CoachGameAnalyticsTabProps) {
+  const [analytics, setAnalytics] = useState<GameBreakdown | null>(prefetchedData || null);
+  const [loading, setLoading] = useState(!prefetchedData);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Skip fetch if prefetched data is provided
+    if (prefetchedData) {
+      setAnalytics(prefetchedData);
+      setLoading(false);
+      return;
+    }
+    
     const loadAnalytics = async () => {
       try {
         setLoading(true);
@@ -45,7 +58,7 @@ export function CoachGameAnalyticsTab({ gameId, teamId, isDark = true }: CoachGa
       }
     };
     loadAnalytics();
-  }, [gameId, teamId]);
+  }, [gameId, teamId, prefetchedData]);
 
   if (loading) {
     return (

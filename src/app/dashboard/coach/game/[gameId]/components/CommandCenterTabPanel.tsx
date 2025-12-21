@@ -55,6 +55,11 @@ interface CommandCenterTabPanelProps {
     playerOfTheGame: any;
     hustlePlayer: any;
   };
+  analyticsPrefetch?: {
+    loading: boolean;
+    error: string | null;
+    analytics: any;
+  };
 }
 
 export function CommandCenterTabPanel({
@@ -64,6 +69,7 @@ export function CommandCenterTabPanel({
   teamAPrefetch,
   teamBPrefetch,
   gameAwardsPrefetch,
+  analyticsPrefetch,
 }: CommandCenterTabPanelProps) {
   const tabTriggerClass = `flex-1 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 
     rounded-none py-2.5 text-xs font-medium
@@ -174,6 +180,9 @@ export function CommandCenterTabPanel({
               teamId={game.teamAId}
               teamName={game.teamAName}
               isDark={false}
+              prefetchedData={analyticsPrefetch && !analyticsPrefetch.loading && !analyticsPrefetch.error 
+                ? analyticsPrefetch.analytics 
+                : undefined}
             />
           </TabsContent>
         )}

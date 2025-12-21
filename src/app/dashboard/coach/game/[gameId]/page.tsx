@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useGameViewerV2 } from '@/hooks/useGameViewerV2';
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { useGameAwards } from '@/hooks/useGameAwards';
+import { useGameAnalytics } from '@/hooks/useGameAnalytics';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TeamService } from '@/lib/services/tournamentService';
 import { CommandCenterHeader } from './components/CommandCenterHeader';
@@ -81,6 +82,12 @@ export default function CoachCommandCenter({ params }: CoachCommandCenterProps) 
   const gameAwardsPrefetch = useGameAwards(gameId, {
     prefetch: true,
     enabled: isCompleted
+  });
+
+  // Prefetch analytics for completed games (instant tab switching)
+  const analyticsPrefetch = useGameAnalytics(gameId, game?.team_a_id || '', {
+    prefetch: true,
+    enabled: isCompleted && !!game?.team_a_id
   });
 
   // Auth check - must be coach
@@ -205,6 +212,7 @@ export default function CoachCommandCenter({ params }: CoachCommandCenterProps) 
             teamAPrefetch={teamAPrefetch}
             teamBPrefetch={teamBPrefetch}
             gameAwardsPrefetch={gameAwardsPrefetch}
+            analyticsPrefetch={analyticsPrefetch}
           />
         </main>
       </div>
