@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User } from 'lucide-react';
+import { User, Lock, Crown } from 'lucide-react';
 import { ShotChartButton } from '@/components/shot-chart';
 
 export interface PlayerStatsRowProps {
@@ -42,9 +42,21 @@ export interface PlayerStatsRowProps {
   isDark?: boolean;
   /** Game ID for shot chart - enables shot chart button */
   gameId?: string;
+  /** Whether user has access to advanced analytics (shot charts) */
+  hasAdvancedAnalytics?: boolean;
+  /** Callback when locked feature is clicked */
+  onUpgradeClick?: () => void;
 }
 
-export function PlayerStatsRow({ player, stats, onPlayerClick, isDark = true, gameId }: PlayerStatsRowProps) {
+export function PlayerStatsRow({ 
+  player, 
+  stats, 
+  onPlayerClick, 
+  isDark = true, 
+  gameId,
+  hasAdvancedAnalytics = true,
+  onUpgradeClick
+}: PlayerStatsRowProps) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -111,14 +123,32 @@ export function PlayerStatsRow({ player, stats, onPlayerClick, isDark = true, ga
         {/* Shot Chart Button - only shown if gameId provided */}
         {gameId && (
           <div onClick={(e) => e.stopPropagation()}>
-            <ShotChartButton
-              gameId={gameId}
-              playerId={id}
-              playerName={name}
-              variant="icon"
-              className={isDark ? 'hover:bg-slate-700' : ''}
-              hideIfNoData={false}
-            />
+            {hasAdvancedAnalytics ? (
+              <ShotChartButton
+                gameId={gameId}
+                playerId={id}
+                playerName={name}
+                variant="icon"
+                className={isDark ? 'hover:bg-slate-700' : ''}
+                hideIfNoData={false}
+              />
+            ) : (
+              /* Locked Shot Chart for Free Users */
+              <button
+                onClick={onUpgradeClick}
+                className={`flex items-center gap-1 px-1.5 py-1 rounded-md transition-colors ${
+                  isDark 
+                    ? 'bg-slate-700/50 hover:bg-slate-600 text-slate-400 hover:text-orange-400' 
+                    : 'bg-gray-100 hover:bg-orange-100 text-gray-400 hover:text-orange-500'
+                }`}
+                title="Upgrade to Pro for Shot Charts"
+              >
+                <Lock className={isMobile ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
+                <span className={`font-semibold ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}>
+                  PRO
+                </span>
+              </button>
+            )}
           </div>
         )}
       </div>

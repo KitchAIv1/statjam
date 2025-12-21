@@ -30,9 +30,21 @@ export interface TeamStatsTabProps {
     onCourtPlayers: any[];
     benchPlayers: any[];
   };
+  // ✅ Subscription gatekeeping for shot charts
+  hasAdvancedAnalytics?: boolean;
+  onUpgradeClick?: () => void;
 }
 
-export function TeamStatsTab({ gameId, teamId, teamName, isDark = true, teamStatsOnly = false, prefetchedData }: TeamStatsTabProps) {
+export function TeamStatsTab({ 
+  gameId, 
+  teamId, 
+  teamName, 
+  isDark = true, 
+  teamStatsOnly = false, 
+  prefetchedData,
+  hasAdvancedAnalytics = true,
+  onUpgradeClick
+}: TeamStatsTabProps) {
   // ✅ PHASE 2: Use prefetched data if available, otherwise fetch normally
   const hookData = useTeamStats(gameId, teamId, { 
     enabled: !prefetchedData // Skip hook if we have prefetched data
@@ -195,6 +207,8 @@ export function TeamStatsTab({ gameId, teamId, teamName, isDark = true, teamStat
                     onPlayerClick={handlePlayerClick}
                     isDark={isDark}
                     gameId={gameId}
+                    hasAdvancedAnalytics={hasAdvancedAnalytics}
+                    onUpgradeClick={onUpgradeClick}
                   />
                 ))
               ) : (
@@ -239,6 +253,8 @@ export function TeamStatsTab({ gameId, teamId, teamName, isDark = true, teamStat
                     onPlayerClick={handlePlayerClick}
                     isDark={isDark}
                     gameId={gameId}
+                    hasAdvancedAnalytics={hasAdvancedAnalytics}
+                    onUpgradeClick={onUpgradeClick}
                   />
                 ))
               ) : (

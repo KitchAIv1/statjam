@@ -9,12 +9,14 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamStatsTab } from '@/app/game-viewer/[gameId]/components/TeamStatsTab';
 import { CoachGameAnalyticsTab } from '@/app/game-viewer/[gameId]/components/CoachGameAnalyticsTab';
 import { GameAwardsSection } from '@/app/game-viewer/[gameId]/components/GameAwardsSection';
-import { BarChart3, Users, Target, Trophy } from 'lucide-react';
+import { UpgradeModal } from '@/components/subscription';
+import { useSubscription } from '@/hooks/useSubscription';
+import { BarChart3, Users, Target, Trophy, Lock, Crown } from 'lucide-react';
 
 interface CommandCenterTabPanelProps {
   gameId: string;
@@ -71,6 +73,11 @@ export function CommandCenterTabPanel({
   gameAwardsPrefetch,
   analyticsPrefetch,
 }: CommandCenterTabPanelProps) {
+  // Subscription check for analytics gate
+  const { limits } = useSubscription('coach');
+  const hasAdvancedAnalytics = limits?.hasAdvancedAnalytics ?? false;
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   const tabTriggerClass = `flex-1 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 
     rounded-none py-2.5 text-xs font-medium
     data-[state=active]:bg-orange-50 text-gray-500 data-[state=active]:text-orange-600
@@ -87,10 +94,22 @@ export function CommandCenterTabPanel({
         </TabsTrigger>
         
         {isCompleted && (
-          <TabsTrigger value="analytics" className={tabTriggerClass}>
-            <BarChart3 className="w-3.5 h-3.5" />
+          <TabsTrigger 
+            value="analytics" 
+            className={`${tabTriggerClass} ${!hasAdvancedAnalytics ? 'relative' : ''}`}
+          >
+            {hasAdvancedAnalytics ? (
+              <BarChart3 className="w-3.5 h-3.5" />
+            ) : (
+              <Lock className="w-3.5 h-3.5 text-gray-400" />
+            )}
             <span className="hidden sm:inline">Analytics</span>
             <span className="sm:hidden">Stats</span>
+            {!hasAdvancedAnalytics && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center">
+                <Crown className="w-2 h-2 text-white" />
+              </span>
+            )}
           </TabsTrigger>
         )}
         
@@ -175,15 +194,51 @@ export function CommandCenterTabPanel({
         {/* Analytics Tab - Only for completed games */}
         {isCompleted && (
           <TabsContent value="analytics" className="mt-0 h-full bg-gradient-to-br from-orange-50/30 via-white to-red-50/20">
-            <CoachGameAnalyticsTab
-              gameId={gameId}
-              teamId={game.teamAId}
-              teamName={game.teamAName}
-              isDark={false}
-              prefetchedData={analyticsPrefetch && !analyticsPrefetch.loading && !analyticsPrefetch.error 
-                ? analyticsPrefetch.analytics 
-                : undefined}
-            />
+            {hasAdvancedAnalytics ? (
+              <CoachGameAnalyticsTab
+                gameId={gameId}
+                teamId={game.teamAId}
+                teamName={game.teamAName}
+                isDark={false}
+                prefetchedData={analyticsPrefetch && !analyticsPrefetch.loading && !analyticsPrefetch.error 
+                  ? analyticsPrefetch.analytics 
+                  : undefined}
+              />
+            ) : (
+              /* Locked State for Free Users */
+              <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center">
+                <div className="w-20 h-20 mb-6 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center shadow-lg">
+                  <Lock className="w-10 h-10 text-orange-500" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Advanced Analytics
+                </h3>
+                <p className="text-gray-600 mb-6 max-w-sm">
+                  Unlock detailed game breakdowns, shooting efficiency metrics, shot selection analysis, and AI-powered coaching insights.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 mb-6 text-xs">
+                  <span className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full border border-orange-200">
+                    eFG% & TS%
+                  </span>
+                  <span className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full border border-orange-200">
+                    Shot Selection
+                  </span>
+                  <span className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full border border-orange-200">
+                    Game Intelligence
+                  </span>
+                  <span className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full border border-orange-200">
+                    Coach Insights
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-lg shadow-md hover:from-orange-600 hover:to-orange-700 transition-all flex items-center gap-2"
+                >
+                  <Crown className="w-4 h-4" />
+                  Upgrade to Pro
+                </button>
+              </div>
+            )}
           </TabsContent>
         )}
 
@@ -199,6 +254,8 @@ export function CommandCenterTabPanel({
               onCourtPlayers: teamAPrefetch.onCourtPlayers,
               benchPlayers: teamAPrefetch.benchPlayers
             } : undefined}
+            hasAdvancedAnalytics={hasAdvancedAnalytics}
+            onUpgradeClick={() => setShowUpgradeModal(true)}
           />
         </TabsContent>
 
@@ -215,9 +272,19 @@ export function CommandCenterTabPanel({
               onCourtPlayers: teamBPrefetch.onCourtPlayers,
               benchPlayers: teamBPrefetch.benchPlayers
             } : undefined}
+            hasAdvancedAnalytics={hasAdvancedAnalytics}
+            onUpgradeClick={() => setShowUpgradeModal(true)}
           />
         </TabsContent>
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role="coach"
+        triggerReason="Upgrade to unlock Advanced Analytics with detailed game breakdowns, efficiency metrics, and AI coaching insights."
+      />
     </Tabs>
   );
 }
