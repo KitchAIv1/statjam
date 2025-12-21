@@ -83,6 +83,7 @@ export function GameAwardsSection({
               awardType="player_of_the_game"
               stats={playerOfTheGame.stats}
               profilePhotoUrl={playerOfTheGame.photoUrl}
+              isDark={isDark}
               onClick={() => openModal(playerOfTheGame.id, {
                 gameId,
                 stats: playerOfTheGame.stats,
@@ -100,6 +101,7 @@ export function GameAwardsSection({
               awardType="hustle_player"
               stats={hustlePlayer.stats}
               profilePhotoUrl={hustlePlayer.photoUrl}
+              isDark={isDark}
               onClick={() => openModal(hustlePlayer.id, {
                 gameId,
                 stats: hustlePlayer.stats,
