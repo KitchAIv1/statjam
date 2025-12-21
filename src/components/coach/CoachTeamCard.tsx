@@ -702,11 +702,11 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                         </div>
                         <div className="flex gap-2 w-full sm:w-auto">
                           <Button
-                            onClick={() => window.open(`/game-viewer/${game.id}`, '_blank')}
+                            onClick={() => router.push(`/dashboard/coach/game/${game.id}`)}
                             size="sm"
                             variant="outline"
                             className="gap-2 flex-1 sm:flex-initial shrink-0"
-                            title="View play-by-play (shareable link)"
+                            title="View game in Command Center"
                           >
                             <Eye className="w-3 h-3" />
                             <span className="hidden sm:inline">View</span>

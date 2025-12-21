@@ -217,12 +217,13 @@ export const navigationConfig: Record<string, NavigationConfig> = {
         icon: PlayCircle,
         description: 'Start tracking a game'
       },
-      {
-        label: 'Game History',
-        href: '/dashboard/coach/games',
-        icon: Calendar,
-        description: 'View your game history'
-      },
+      // Game History nav disabled - games are accessible from team cards
+      // {
+      //   label: 'Game History',
+      //   href: '/dashboard/coach/games',
+      //   icon: Calendar,
+      //   description: 'View your game history'
+      // },
       {
         label: 'Tournaments',
         href: '/dashboard/coach/tournaments',
