@@ -20,7 +20,7 @@ export const PLAYER_CLAIM_ANNOUNCEMENT: AnnouncementConfig = {
   imageUrl: '/announcements/player-claim-announcement.png',
   dismissText: 'Got it!',
   ctaText: 'Try It Now',
-  showOnce: false, // ⚠️ TESTING: Set to true for production
+  showOnce: true, // ✅ Shows only once per user (stored in localStorage)
 };
 
 // ============================================================================
