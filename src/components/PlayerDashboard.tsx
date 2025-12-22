@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +24,7 @@ import { PlayerDataDebug } from "@/lib/utils/playerDataDebug";
 import { supabase } from "@/lib/supabase";
 import { useSubscription } from "@/hooks/useSubscription";
 import { FeatureLockedOverlay, UpgradeModal } from "@/components/subscription";
-import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3, Clock, MapPin, BadgeCheck } from "lucide-react";
+import { Play, Trophy, Star, Calendar, BarChart3, TrendingUp, Brain, Sparkles, Edit3, Clock, MapPin, BadgeCheck, CheckCircle } from "lucide-react";
 import { logger } from "@/lib/utils/logger";
 import { GameAwardsService } from "@/lib/services/gameAwardsService";
 import { AwardDisplayCard } from "@/components/tournament/AwardDisplayCard";
@@ -63,14 +63,32 @@ const defaultPlayerData = {
 
 export function PlayerDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuthContext(); // ✅ Use centralized auth
   const { data, loading, refetch } = usePlayerDashboardData(user);
   const { tournaments, schedules, loading: tournamentsLoading } = usePlayerTournaments(user?.id || '');
   
   // Subscription state for feature gating
-  const { tier, limits, loading: subscriptionLoading } = useSubscription('player');
+  const { tier, limits, loading: subscriptionLoading, refetch: refetchSubscription } = useSubscription('player');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState('');
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+
+  // Handle checkout success - refetch subscription when returning from Stripe
+  useEffect(() => {
+    const checkoutParam = searchParams.get('checkout');
+    if (checkoutParam === 'success') {
+      console.log('✅ Player checkout success detected, refreshing subscription...');
+      setCheckoutSuccess(true);
+      refetchSubscription();
+      
+      // Clear the query param after a short delay
+      setTimeout(() => {
+        router.replace('/dashboard/player', { scroll: false });
+        setCheckoutSuccess(false);
+      }, 3000);
+    }
+  }, [searchParams, refetchSubscription, router]);
   
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
@@ -393,6 +411,17 @@ export function PlayerDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 text-foreground p-4">
       <div className="max-w-7xl mx-auto">
+        {/* Checkout Success Banner */}
+        {checkoutSuccess && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+            <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-green-800">Payment Successful!</p>
+              <p className="text-sm text-green-700">Your subscription is now active. Enjoy full access to analytics and more!</p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-3">
