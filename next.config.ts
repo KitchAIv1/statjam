@@ -36,14 +36,14 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://plausible.io https://*.sentry.io", // ✅ Allow Sentry
-              "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://plausible.io https://*.sentry.io", // ✅ Allow Sentry scripts
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://plausible.io https://*.sentry.io https://js.stripe.com", // ✅ Allow Sentry + Stripe
+              "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://plausible.io https://*.sentry.io https://js.stripe.com", // ✅ Allow Sentry + Stripe scripts
               "worker-src 'self' blob:", // ✅ Allow web workers for image compression
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://images.unsplash.com https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://cdn.jsdelivr.net https://plausible.io https://*.sentry.io", // ✅ Allow Sentry
-              "frame-src 'self' https://plausible.io", // ✅ Allow Plausible iframes
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://images.unsplash.com https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://cdn.jsdelivr.net https://plausible.io https://*.sentry.io https://api.stripe.com", // ✅ Allow Sentry + Stripe API
+              "frame-src 'self' https://plausible.io https://js.stripe.com https://hooks.stripe.com", // ✅ Allow Plausible + Stripe 3DS iframes
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'"
