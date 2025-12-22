@@ -46,10 +46,22 @@ export async function redirectToCheckout(options: CheckoutOptions): Promise<void
     throw new Error('Stripe failed to load');
   }
 
-  // Create checkout session via our API
+  // Get auth token for server-side verification
+  const accessToken = typeof window !== 'undefined' 
+    ? localStorage.getItem('sb-access-token') 
+    : null;
+
+  if (!accessToken) {
+    throw new Error('Please sign in to continue');
+  }
+
+  // Create checkout session via our API with auth header
   const response = await fetch('/api/stripe/create-checkout-session', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
     body: JSON.stringify(options),
   });
 
@@ -80,9 +92,21 @@ export async function redirectToCheckout(options: CheckoutOptions): Promise<void
  * Redirect user to Stripe Customer Portal for subscription management
  */
 export async function redirectToPortal(userId: string, returnUrl?: string): Promise<void> {
+  // Get auth token for server-side verification
+  const accessToken = typeof window !== 'undefined' 
+    ? localStorage.getItem('sb-access-token') 
+    : null;
+
+  if (!accessToken) {
+    throw new Error('Please sign in to continue');
+  }
+
   const response = await fetch('/api/stripe/create-portal-session', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({ userId, returnUrl }),
   });
 
