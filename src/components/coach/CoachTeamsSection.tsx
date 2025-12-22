@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, Users, Search, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Plus, Users, Search, Filter, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
@@ -32,15 +33,35 @@ interface CoachTeamsSectionProps {
  * Follows .cursorrules: <200 lines, UI component only
  */
 export function CoachTeamsSection({ teams, loading, error, userId, onTeamUpdate }: CoachTeamsSectionProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
   // State
   const [searchTerm, setSearchTerm] = useState('');
   const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'public' | 'private'>('all');
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   
   // Subscription gatekeeping
-  const { tier: subscriptionTier } = useSubscription('coach');
+  const { tier: subscriptionTier, refetch: refetchSubscription } = useSubscription('coach');
   const FREE_TEAM_LIMIT = 1;
+
+  // Handle checkout success - refetch subscription when returning from Stripe
+  useEffect(() => {
+    const checkoutParam = searchParams.get('checkout');
+    if (checkoutParam === 'success') {
+      console.log('✅ Checkout success detected, refreshing subscription...');
+      setCheckoutSuccess(true);
+      refetchSubscription();
+      
+      // Clear the query param after a short delay
+      setTimeout(() => {
+        router.replace('/dashboard/coach?section=teams', { scroll: false });
+        setCheckoutSuccess(false);
+      }, 3000);
+    }
+  }, [searchParams, refetchSubscription, router]);
 
   // Filter teams
   const filteredTeams = teams.filter(team => {
@@ -90,6 +111,17 @@ export function CoachTeamsSection({ teams, loading, error, userId, onTeamUpdate 
   return (
     <>
       <div className="space-y-6 mt-6">
+        {/* Checkout Success Banner */}
+        {checkoutSuccess && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+            <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-green-800">Payment Successful!</p>
+              <p className="text-sm text-green-700">Your subscription is now active. Enjoy unlimited access!</p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">

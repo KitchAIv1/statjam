@@ -35,7 +35,7 @@ export function UpgradeModal({
   onSelectTier,
   triggerReason,
 }: UpgradeModalProps) {
-  const { user } = useAuthV2();
+  const { user, loading: authLoading } = useAuthV2();
   const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +54,12 @@ export function UpgradeModal({
     // If free tier or no price ID, just close
     if (tier.price === 0 || !tier.stripePriceId) {
       onClose();
+      return;
+    }
+
+    // Wait for auth to finish loading
+    if (authLoading) {
+      setError('Loading... please try again');
       return;
     }
 
