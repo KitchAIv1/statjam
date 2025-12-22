@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2, UserCheck, UserX, Target, CalendarDays, ExternalLink, Unlink } from "lucide-react";
+import { Trophy, Plus, Calendar, Users, Settings, Eye, UserPlus, MapPin, Award, Bell, Shield, Clock, Edit, Trash2, UserCheck, UserX, Target, CalendarDays, ExternalLink, Unlink, CheckCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,7 +29,7 @@ import { TeamCreationModal } from "@/components/shared/TeamCreationModal";
 import { TeamDeleteConfirmModal } from "@/components/shared/TeamDeleteConfirmModal";
 import { OrganizerPlayerManagementService } from "@/lib/services/organizerPlayerManagementService";
 import { TeamService, TournamentService } from "@/lib/services/tournamentService";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { notify } from '@/lib/services/notificationService';
 import { invalidateOrganizerDashboard, invalidateOrganizerTournaments } from '@/lib/utils/cache';
 import { getCountryName } from '@/data/countries';
@@ -241,9 +241,27 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   // Subscription gatekeeping
-  const { tier: subscriptionTier } = useSubscription('organizer');
+  const searchParams = useSearchParams();
+  const { tier: subscriptionTier, refetch: refetchSubscription } = useSubscription('organizer');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const FREE_SEASON_LIMIT = 1;
+
+  // Handle checkout success - refetch subscription when returning from Stripe
+  useEffect(() => {
+    const checkoutParam = searchParams.get('checkout');
+    if (checkoutParam === 'success') {
+      console.log('✅ Organizer checkout success detected, refreshing subscription...');
+      setCheckoutSuccess(true);
+      refetchSubscription();
+      
+      // Clear the query param after a short delay
+      setTimeout(() => {
+        router.replace('/dashboard?section=tournaments', { scroll: false });
+        setCheckoutSuccess(false);
+      }, 3000);
+    }
+  }, [searchParams, refetchSubscription, router]);
   
   // Time-gate: Free users can only schedule within current month
   const isFreeOrganizer = subscriptionTier === 'free';
@@ -620,6 +638,17 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
 
   return (
     <div className="space-y-6 mt-6">
+      {/* Checkout Success Banner */}
+      {checkoutSuccess && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+          <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-green-800">Payment Successful!</p>
+            <p className="text-sm text-green-700">Your subscription is now active. Enjoy unlimited tournaments and teams!</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Tournament Management</h2>
