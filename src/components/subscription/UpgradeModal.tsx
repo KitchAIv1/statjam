@@ -5,14 +5,17 @@
  * 
  * Professional pricing modal following SaaS best practices.
  * Features billing toggle, clear hierarchy, and trust signals.
+ * Connects to Stripe Checkout for payment processing.
  */
 
 import { useState } from 'react';
-import { Crown, X, Shield, RefreshCw, CreditCard, Zap } from 'lucide-react';
+import { Crown, X, Shield, RefreshCw, CreditCard, Zap, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { PricingTierCard } from './PricingTierCard';
 import { getTiersByRole } from '@/config/pricing';
+import { StripeService } from '@/lib/services/stripeService';
+import { useAuthV2 } from '@/hooks/useAuthV2';
 import type { PricingTier, UserRole, SubscriptionTier } from '@/lib/types/subscription';
 
 interface UpgradeModalProps {
@@ -32,14 +35,46 @@ export function UpgradeModal({
   onSelectTier,
   triggerReason,
 }: UpgradeModalProps) {
+  const { user } = useAuthV2();
   const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const tiers = getTiersByRole(role);
   const roleLabel = getRoleLabel(role);
 
-  const handleSelectTier = (tier: PricingTier) => {
+  const handleSelectTier = async (tier: PricingTier) => {
     setSelectedTier(tier);
+    setError(null);
+    
+    // Call external handler if provided
     if (onSelectTier) {
       onSelectTier(tier);
+    }
+
+    // If free tier or no price ID, just close
+    if (tier.price === 0 || !tier.stripePriceId) {
+      onClose();
+      return;
+    }
+
+    // Redirect to Stripe Checkout
+    if (!user?.id || !user?.email) {
+      setError('Please sign in to upgrade');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await StripeService.redirectToCheckout({
+        priceId: tier.stripePriceId,
+        userId: user.id,
+        userEmail: user.email,
+        role: role,
+      });
+    } catch (err) {
+      console.error('Checkout error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to start checkout');
+      setIsLoading(false);
     }
   };
 
@@ -87,6 +122,23 @@ export function UpgradeModal({
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mx-8 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/80 z-30 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+              <p className="text-gray-600 font-medium">Redirecting to checkout...</p>
+            </div>
+          </div>
+        )}
+
         {/* Pricing Cards */}
         <div className="px-6 md:px-8 py-10">
           <div className={`grid gap-5 ${getGridCols(tiers.length)} items-stretch`}>
@@ -95,7 +147,7 @@ export function UpgradeModal({
                 key={tier.id}
                 tier={tier}
                 isCurrentTier={tier.id === currentTier}
-                onSelect={tier.id !== currentTier ? handleSelectTier : undefined}
+                onSelect={tier.id !== currentTier && !isLoading ? handleSelectTier : undefined}
                 highlighted={tier.isPopular}
               />
             ))}

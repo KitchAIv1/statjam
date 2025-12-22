@@ -37,6 +37,7 @@
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@sentry/nextjs": "^10.26.0",
+    "@stripe/stripe-js": "^8.6.0",
     "@supabase/supabase-js": "^2.53.0",
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
@@ -53,6 +54,7 @@
     "recharts": "^3.1.0",
     "simple-peer": "^9.11.1",
     "sonner": "^2.0.7",
+    "stripe": "^20.1.0",
     "tailwind-merge": "^3.3.1",
     "uuid": "^13.0.0"
   },

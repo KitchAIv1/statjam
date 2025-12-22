@@ -95,6 +95,7 @@ export interface PricingTier {
   features: string[];
   bestFor: string;
   isPopular?: boolean;
+  stripePriceId?: string; // Stripe price ID for checkout
 }
 
 // =============================================================================
@@ -153,4 +154,6 @@ export interface VerifiedBadgeRequirement {
   badgeType: VerifiedBadgeType;
   requirements: string[];
 }
+
+
 

@@ -146,6 +146,7 @@ export const ORGANIZER_TIERS: PricingTier[] = [
     ],
     bestFor: 'Serious leagues and circuits',
     isPopular: true,
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ORGANIZER_PRO,
   },
   {
     id: 'seasonal_pass',
@@ -161,6 +162,7 @@ export const ORGANIZER_TIERS: PricingTier[] = [
       'Discounted video rates',
     ],
     bestFor: 'Leagues running a defined season',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ORGANIZER_SEASONAL,
   },
 ];
 
@@ -197,6 +199,7 @@ export const COACH_TIERS: PricingTier[] = [
       'StatJam Verified badge',
     ],
     bestFor: 'Year-round programs or testing',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_PRO,
   },
   {
     id: 'seasonal_pass',
@@ -212,6 +215,7 @@ export const COACH_TIERS: PricingTier[] = [
     ],
     bestFor: 'Standard 4-month seasons',
     isPopular: true,
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_SEASONAL,
   },
   {
     id: 'annual',
@@ -227,6 +231,7 @@ export const COACH_TIERS: PricingTier[] = [
       'Save $45 vs monthly',
     ],
     bestFor: 'Year-round coaches',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_ANNUAL,
   },
 ];
 
@@ -260,6 +265,7 @@ export const PLAYER_TIERS: PricingTier[] = [
     ],
     bestFor: 'Making your season count',
     isPopular: true,
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAYER_SEASONAL,
   },
   {
     id: 'annual',
@@ -273,6 +279,7 @@ export const PLAYER_TIERS: PricingTier[] = [
       'Year-round access',
     ],
     bestFor: 'Year-round players',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAYER_ANNUAL,
   },
   {
     id: 'family',
@@ -287,6 +294,7 @@ export const PLAYER_TIERS: PricingTier[] = [
       'Ideal for siblings',
     ],
     bestFor: 'Families with multiple players',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PLAYER_FAMILY,
   },
 ];
 
@@ -360,4 +368,6 @@ export function getTierByRoleAndId(role: UserRole, tierId: SubscriptionTier): Pr
   const tiers = getTiersByRole(role);
   return tiers.find(t => t.id === tierId) ?? null;
 }
+
+
 

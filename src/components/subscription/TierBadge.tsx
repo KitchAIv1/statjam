@@ -117,3 +117,4 @@ export function PlanIndicator({ isPro, size = 'sm' }: PlanIndicatorProps) {
   return <TierBadge variant={isPro ? 'pro' : 'free'} size={size} />;
 }
 
+
