@@ -96,6 +96,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   
   const tier = getTierFromPrice(subscription.items.data[0]?.price.id);
   const billingPeriod = getBillingPeriod(subscription.items.data[0]?.price);
+  
+  // Safely convert expires_at
+  const expiresAt = subscription.current_period_end 
+    ? new Date(subscription.current_period_end * 1000).toISOString()
+    : null;
 
   // Upsert subscription in Supabase
   const { error } = await supabaseAdmin
@@ -108,7 +113,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       status: 'active',
       stripe_customer_id: session.customer as string,
       stripe_subscription_id: subscriptionId,
-      expires_at: new Date(subscription.current_period_end * 1000).toISOString(),
+      expires_at: expiresAt,
       updated_at: new Date().toISOString(),
     }, {
       onConflict: 'user_id,role',
@@ -140,13 +145,18 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const status = subscription.status === 'active' ? 'active' : 
                  subscription.status === 'canceled' ? 'cancelled' : 'expired';
 
+  // Safely convert expires_at
+  const expiresAt = subscription.current_period_end 
+    ? new Date(subscription.current_period_end * 1000).toISOString()
+    : null;
+
   const { error } = await supabaseAdmin
     .from('subscriptions')
     .update({
       tier: tier,
       billing_period: billingPeriod,
       status: status,
-      expires_at: new Date(subscription.current_period_end * 1000).toISOString(),
+      expires_at: expiresAt,
       updated_at: new Date().toISOString(),
     })
     .eq('stripe_subscription_id', subscription.id);
