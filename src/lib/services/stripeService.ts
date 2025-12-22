@@ -55,7 +55,8 @@ export async function redirectToCheckout(options: CheckoutOptions): Promise<void
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to create checkout session');
+    const errorMsg = error.details ? `${error.error}: ${error.details}` : error.error;
+    throw new Error(errorMsg || 'Failed to create checkout session');
   }
 
   const { url, sessionId } = await response.json();
