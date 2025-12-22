@@ -76,6 +76,7 @@ export function UpgradeModal({
         userId: user.id,
         userEmail: user.email,
         role: role,
+        tierId: tier.id, // Pass tier ID for accurate webhook processing
       });
     } catch (err) {
       console.error('Checkout error:', err);

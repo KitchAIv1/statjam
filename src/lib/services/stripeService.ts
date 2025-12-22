@@ -32,6 +32,7 @@ export interface CheckoutOptions {
   userId: string;
   userEmail: string;
   role: UserRole;
+  tierId: string; // The tier being purchased (e.g., 'seasonal_pass', 'annual', 'pro')
   successUrl?: string;
   cancelUrl?: string;
 }

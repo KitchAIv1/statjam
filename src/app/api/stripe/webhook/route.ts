@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.supabase_user_id;
   const role = session.metadata?.role || 'player';
+  const tierFromMetadata = session.metadata?.tier; // Tier passed from checkout
 
   if (!userId) {
     console.error('No user ID in checkout session metadata');
@@ -94,7 +95,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const subscriptionId = session.subscription as string;
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
   
-  const tier = getTierFromPrice(subscription.items.data[0]?.price.id);
+  // Use tier from metadata if available, otherwise fallback to price mapping
+  const tier = tierFromMetadata || getTierFromPrice(subscription.items.data[0]?.price.id);
   const billingPeriod = getBillingPeriod(subscription.items.data[0]?.price);
   
   // Safely convert expires_at
@@ -134,13 +136,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const userId = subscription.metadata?.supabase_user_id;
+  const tierFromMetadata = subscription.metadata?.tier; // Tier passed from checkout
   
   if (!userId) {
     console.error('No user ID in subscription metadata');
     return;
   }
 
-  const tier = getTierFromPrice(subscription.items.data[0]?.price.id);
+  // Use tier from metadata if available, otherwise fallback to price mapping
+  const tier = tierFromMetadata || getTierFromPrice(subscription.items.data[0]?.price.id);
   const billingPeriod = getBillingPeriod(subscription.items.data[0]?.price);
   const status = subscription.status === 'active' ? 'active' : 
                  subscription.status === 'canceled' ? 'cancelled' : 'expired';

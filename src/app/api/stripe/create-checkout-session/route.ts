@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const stripe = new Stripe(stripeSecretKey, { typescript: true });
 
     const body = await request.json();
-    const { priceId, userId, userEmail, role, successUrl, cancelUrl } = body;
+    const { priceId, userId, userEmail, role, tierId, successUrl, cancelUrl } = body;
 
     // Validate required fields
     if (!priceId || !userId || !userEmail) {
@@ -110,11 +110,13 @@ export async function POST(request: NextRequest) {
         metadata: {
           supabase_user_id: userId,
           role: role || 'player',
+          tier: tierId || 'pro', // Tier ID for accurate subscription tracking
         },
       },
       metadata: {
         supabase_user_id: userId,
         role: role || 'player',
+        tier: tierId || 'pro', // Tier ID for accurate subscription tracking
       },
     });
 
