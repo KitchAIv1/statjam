@@ -93,6 +93,55 @@ export class CoachTeamService {
   }
 
   /**
+   * Get a single team by ID
+   */
+  static async getTeam(teamId: string): Promise<CoachTeam | null> {
+    try {
+      const { data: team, error } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          name,
+          logo_url,
+          coach_id,
+          tournament_id,
+          approval_status,
+          visibility,
+          is_official_team,
+          created_at,
+          updated_at
+        `)
+        .eq('id', teamId)
+        .single();
+
+      if (error || !team) return null;
+
+      const [playerCount, gamesCount] = await Promise.all([
+        CoachPlayerService.getTeamPlayerCount(team.id),
+        this.getTeamGamesCount(team.id)
+      ]);
+
+      return {
+        id: team.id,
+        name: team.name,
+        logo: team.logo_url || undefined,
+        coach_id: team.coach_id,
+        tournament_id: team.tournament_id,
+        approval_status: team.approval_status,
+        visibility: team.visibility,
+        is_official_team: team.is_official_team,
+        created_at: team.created_at,
+        updated_at: team.updated_at,
+        player_count: playerCount,
+        games_count: gamesCount
+      };
+    } catch (error) {
+      console.error('❌ Error fetching team:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get games count for a team
    */
   private static async getTeamGamesCount(teamId: string): Promise<number> {

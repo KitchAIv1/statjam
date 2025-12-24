@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Users, PlayCircle, Trophy, Settings, Share2, Eye, EyeOff, 
   MapPin, Calendar, MoreVertical, Edit, Trash2, UserPlus, AlertCircle, BarChart3,
-  Clock, CheckCircle, ChevronDown, ChevronUp, Info, AlertTriangle, Dumbbell
+  Clock, CheckCircle, ChevronDown, ChevronUp, Info, AlertTriangle, Dumbbell, Video
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
@@ -481,8 +481,8 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
               </Button>
             </div>
 
-            {/* Action Buttons - Responsive Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {/* Action Buttons - Responsive 3x2 Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <Button
                 onClick={handleQuickTrack}
                 size="sm"
@@ -494,6 +494,32 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 <PlayCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 <span className="hidden sm:inline truncate">Quick Track</span>
                 <span className="sm:hidden truncate">Track</span>
+              </Button>
+              
+              {/* Video Track - Premium Feature */}
+              <Button
+                onClick={() => {
+                  if (!limits.hasVideoAccess) {
+                    setUpgradeReason('Video Tracking is a premium feature. Upgrade to track games using video playback.');
+                    setShowUpgradeModal(true);
+                    return;
+                  }
+                  // Navigate to video game selection
+                  router.push(`/dashboard/coach/video-select?teamId=${team.id}`);
+                }}
+                size="sm"
+                disabled={playerCount < 5}
+                variant="outline"
+                className={`gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 ${
+                  limits.hasVideoAccess 
+                    ? '!border-purple-300 text-purple-600 hover:text-purple-700 hover:bg-purple-50 hover:!border-purple-400' 
+                    : '!border-gray-300'
+                }`}
+                aria-label={playerCount < 5 ? "Add at least 5 players first" : "Track game using video"}
+              >
+                <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="hidden sm:inline truncate">Video Track</span>
+                <span className="sm:hidden truncate">Video</span>
               </Button>
               
               <Button

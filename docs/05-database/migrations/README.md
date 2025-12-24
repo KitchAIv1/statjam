@@ -1,6 +1,6 @@
 # Database Migrations - StatJam
 
-**Last Updated**: October 22, 2025  
+**Last Updated**: December 24, 2025  
 **Status**: Production Ready  
 **Database**: PostgreSQL (Supabase)
 
@@ -266,6 +266,119 @@ CREATE POLICY "custom_players_coach_public_view" ON custom_players
 **Files Modified**:
 - `src/app/api/game-viewer/[gameId]/route.ts` - Conditional auth for coach games
 - `src/lib/services/teamServiceV3.ts` - Enhanced public access fallback
+
+---
+
+### Video Assignment Workflow Migration
+
+#### `027_video_assignment_workflow.sql`
+**Purpose**: Enable admin-to-stat-admin video assignment workflow
+**Status**: ✅ Applied (December 24, 2025)
+**Features**:
+- Assignment status tracking (pending, assigned, in_progress, completed, cancelled)
+- Stat admin assignment with 24-hour turnaround tracking
+- Timestamps for assignment lifecycle (assigned_at, due_at, completed_at)
+- Comprehensive RLS policies for admins, stat admins, and coaches
+- Performance indexes for efficient queue queries
+
+**Key Components**:
+```sql
+-- Assignment status column with CHECK constraint
+ALTER TABLE game_videos 
+ADD COLUMN IF NOT EXISTS assignment_status TEXT DEFAULT 'pending' 
+CHECK (assignment_status IN (
+  'pending',      -- Uploaded, waiting for admin to assign
+  'assigned',     -- Assigned to a stat admin, not yet started
+  'in_progress',  -- Stat admin has started tracking
+  'completed',    -- Tracking finished, stats delivered
+  'cancelled'     -- Video tracking cancelled
+));
+
+-- Assigned stat admin reference
+ALTER TABLE game_videos 
+ADD COLUMN IF NOT EXISTS assigned_stat_admin_id UUID REFERENCES users(id);
+
+-- Assignment lifecycle timestamps
+ALTER TABLE game_videos 
+ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMPTZ;
+ALTER TABLE game_videos 
+ADD COLUMN IF NOT EXISTS due_at TIMESTAMPTZ;
+ALTER TABLE game_videos 
+ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_game_videos_assignment_status 
+ON game_videos(assignment_status) 
+WHERE assignment_status IN ('pending', 'assigned', 'in_progress');
+
+CREATE INDEX IF NOT EXISTS idx_game_videos_assigned_stat_admin 
+ON game_videos(assigned_stat_admin_id) 
+WHERE assigned_stat_admin_id IS NOT NULL;
+```
+
+**RLS Policies**:
+```sql
+-- Admins can view all videos in queue
+CREATE POLICY "Admins can view all videos in queue" ON game_videos
+  FOR SELECT TO authenticated
+  USING (
+    auth.role() = 'admin' AND assignment_status IN ('pending', 'assigned', 'in_progress')
+  );
+
+-- Stat Admins can view their assigned videos
+CREATE POLICY "Stat Admins can view their assigned videos" ON game_videos
+  FOR SELECT TO authenticated
+  USING (
+    auth.role() = 'stat_admin' AND auth.uid() = assigned_stat_admin_id
+  );
+
+-- Coaches can view their uploaded videos and assignment status
+CREATE POLICY "Coaches can view their uploaded videos and assignment status" ON game_videos
+  FOR SELECT TO authenticated
+  USING (
+    auth.role() = 'coach' AND auth.uid() = uploaded_by
+  );
+
+-- Admins can update assignment status and assigned admin
+CREATE POLICY "Admins can update video assignments" ON game_videos
+  FOR UPDATE TO authenticated
+  USING (auth.role() = 'admin')
+  WITH CHECK (auth.role() = 'admin');
+
+-- Stat Admins can update their assigned video's status
+CREATE POLICY "Stat Admins can update their assigned video status" ON game_videos
+  FOR UPDATE TO authenticated
+  USING (auth.role() = 'stat_admin' AND auth.uid() = assigned_stat_admin_id)
+  WITH CHECK (auth.role() = 'stat_admin' AND auth.uid() = assigned_stat_admin_id);
+```
+
+**Workflow**:
+1. **Coach Experience**: Uploads video, sees "Processing" then "Uploaded" with 24-hour countdown for delivery
+2. **Admin Dashboard**: "Video Tracking Queue" lists all uploaded videos pending assignment
+3. **Admin Assignment**: Admin assigns video to a stat admin, sets 24-hour due date
+4. **Stat Admin Dashboard**: "Assigned Videos" shows videos assigned to that stat admin
+5. **Tracking**: Stat admin opens Video Tracking Studio, marks as complete when done
+
+**Impact**:
+- Coaches can upload videos and track assignment status
+- Admins can efficiently manage video tracking queue
+- Stat admins can see their assigned videos and update status
+- 24-hour turnaround tracking ensures timely delivery
+- Complete audit trail with timestamps
+
+**Files Created**:
+- `src/lib/services/videoAssignmentService.ts` - Video assignment service
+- `src/app/dashboard/admin/video-queue/page.tsx` - Admin video queue page
+- `src/components/stat-admin/AssignedVideosSection.tsx` - Stat admin assigned videos component
+- `src/components/video/CoachVideoStatusCard.tsx` - Coach video status card
+
+**Files Modified**:
+- `src/app/dashboard/stat-admin/page.tsx` - Added AssignedVideosSection
+- `src/app/admin/dashboard/page.tsx` - Added Video Tracking Queue link
+- `src/app/dashboard/coach/video-select/page.tsx` - Status card integration
+- `src/app/dashboard/coach/video/[gameId]/page.tsx` - Status display
+
+**Note**: This migration uses `DROP POLICY IF EXISTS` + `CREATE POLICY` pattern instead of `CREATE POLICY IF NOT EXISTS` because PostgreSQL doesn't support the latter syntax.
 
 ---
 

@@ -8,7 +8,7 @@ import { AdminService, UserStats } from '@/lib/services/adminService';
 import { AdminStatsCards } from '@/components/admin/AdminStatsCards';
 import { AdminUserList } from '@/components/admin/AdminUserList';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, ExternalLink, Users, ArrowRight } from 'lucide-react';
+import { BarChart3, ExternalLink, Users, ArrowRight, Video } from 'lucide-react';
 import Link from 'next/link';
 
 /**
@@ -103,6 +103,27 @@ const AdminDashboardPage = () => {
         <div className="mb-8">
           <h2 className="text-lg font-semibold mb-4">Quick Links</h2>
           <div className="grid md:grid-cols-2 gap-4">
+            <Link href="/dashboard/admin/video-queue">
+              <Card className="hover:border-purple-500 hover:shadow-md transition-all cursor-pointer">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Video className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Video Tracking Queue</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Assign uploaded videos to stat admins
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            
             <Link href="/dashboard/admin/coach-analytics">
               <Card className="hover:border-orange-500 hover:shadow-md transition-all cursor-pointer">
                 <CardContent className="pt-6">

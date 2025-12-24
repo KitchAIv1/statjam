@@ -5,6 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-12-24
+
+### 🎥 **VIDEO ASSIGNMENT WORKFLOW: ADMIN-TO-STAT-ADMIN VIDEO TRACKING QUEUE**
+
+#### Video Assignment System
+- **ADDED**: Admin video queue dashboard (`/dashboard/admin/video-queue`)
+  - Lists all uploaded videos pending assignment or in progress
+  - Shows coach name, team, opponent, upload time, video duration
+  - Admin can assign videos to stat admins with 24-hour turnaround
+  - Status workflow: `pending` → `assigned` → `in_progress` → `completed`
+- **ADDED**: Stat admin assigned videos section
+  - New "Assigned Videos" section in stat admin dashboard
+  - Lists videos assigned to the logged-in stat admin
+  - Click to open Video Tracking Studio
+  - Mark as complete when tracking is finished
+- **ADDED**: Coach video status card
+  - Shows upload/processing/tracking status with 24-hour countdown
+  - Displays opponent name, status badge, duration, and time remaining
+  - Integrated into coach video tracking page game list
+
+#### Database Migration
+- **ADDED**: Migration 027 - Video Assignment Workflow (`027_video_assignment_workflow.sql`)
+  - Added `assigned_stat_admin_id` column to `game_videos` table
+  - Added `assignment_status` column with CHECK constraint (pending, assigned, in_progress, completed, cancelled)
+  - Added `assigned_at`, `due_at`, `completed_at` timestamp columns
+  - Created indexes for efficient querying by assignment status and assigned admin
+  - Added RLS policies for admins, stat admins, and coaches
+  - **FIXED**: PostgreSQL syntax error - Changed `CREATE POLICY IF NOT EXISTS` to `DROP POLICY IF EXISTS` + `CREATE POLICY` pattern
+
+#### Service Layer
+- **ADDED**: `VideoAssignmentService` (`src/lib/services/videoAssignmentService.ts`)
+  - `getVideoQueue()` - Fetches videos for admin queue
+  - `getStatAdminOptions()` - Fetches stat admins for assignment dropdown
+  - `assignVideoToStatAdmin()` - Assigns video to stat admin with 24-hour due date
+  - `unassignVideo()` - Unassigns video (returns to pending)
+  - `getAssignedVideos()` - Fetches videos assigned to specific stat admin
+  - `updateAssignmentStatus()` - Updates video assignment status
+  - `getCoachVideos()` - Fetches videos uploaded by coach
+  - **FIXED**: Column name issue - Changed `full_name` to `name` in users table queries (following source of truth)
+
+#### UI/UX Improvements
+- **ENHANCED**: Coach video tracking page theme alignment
+  - Updated all coach video pages to warm cream theme (matching current branding)
+  - Changed from dark theme to cream colors with black accents
+- **ENHANCED**: Video setup panel
+  - Converted from modal to inline layout for better UX
+  - Integrated into video tracking flow
+- **ENHANCED**: Game card in video tracking list
+  - Removed progress bar, added status badge
+  - Shows opponent name, status, duration, and time remaining
+  - Added delete button for game cards (coach-only)
+
+#### Technical Implementation
+- **Files Created**:
+  - `src/lib/services/videoAssignmentService.ts` - Video assignment service
+  - `src/app/dashboard/admin/video-queue/page.tsx` - Admin video queue page
+  - `src/components/stat-admin/AssignedVideosSection.tsx` - Stat admin assigned videos component
+  - `src/components/video/CoachVideoStatusCard.tsx` - Coach video status card
+- **Files Modified**:
+  - `src/app/dashboard/stat-admin/page.tsx` - Added AssignedVideosSection
+  - `src/app/admin/dashboard/page.tsx` - Added Video Tracking Queue link
+  - `src/app/dashboard/coach/video-select/page.tsx` - Theme updates, status card integration
+  - `src/app/dashboard/coach/video/[gameId]/page.tsx` - Theme updates, simplified upload flow
+  - `src/components/video/VideoSetupPanel.tsx` - Theme updates, inline layout
+  - `docs/05-database/migrations/027_video_assignment_workflow.sql` - Migration file
+- **Database Changes**:
+  - Added 5 new columns to `game_videos` table
+  - Created 2 indexes for performance
+  - Added 4 RLS policies for secure access control
+
+#### Documentation Updates
+- **Updated**: `docs/05-database/migrations/README.md` - Added migration 027 documentation
+- **Updated**: `docs/01-project/CHANGELOG.md` - This entry
+
+---
+
 ## [Unreleased] - 2025-12-20
 
 ### 🔒 **SUBSCRIPTION SYSTEM: PLAYER GATES, ORGANIZER CALENDAR TIME-GATE & NAVIGATION CLEANUP**

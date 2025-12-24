@@ -10,13 +10,14 @@ import { NavigationHeader } from '@/components/NavigationHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar, Eye, Lightbulb, BookOpen } from 'lucide-react';
+import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar, Eye, Lightbulb, BookOpen, Video } from 'lucide-react';
 import { PreFlightCheckModal, PreFlightSettings } from '@/components/tracker-v3/modals/PreFlightCheckModal';
 import { AutomationFlags } from '@/lib/types/automation';
 import { ProfileCard, ProfileCardSkeleton } from '@/components/profile/ProfileCard';
 import { ProfileEditModal } from '@/components/profile/ProfileEditModal';
 import { useStatAdminProfile } from '@/hooks/useStatAdminProfile';
 import { ProfileService } from '@/lib/services/profileService';
+import { AssignedVideosSection } from '@/components/stat-admin/AssignedVideosSection';
 
 const StatAdminDashboard = () => {
   const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
@@ -506,6 +507,13 @@ const StatAdminDashboard = () => {
               </Card>
             </div>
 
+            {/* Assigned Videos Section - Videos from coaches pending tracking */}
+            {user?.id && (
+              <div className="mb-8">
+                <AssignedVideosSection userId={user.id} />
+              </div>
+            )}
+
             {/* Assigned Games Section */}
             <Card className="hover:shadow-lg transition-all duration-300">
               <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent">
@@ -732,6 +740,41 @@ const StatAdminDashboard = () => {
                             >
                               <Eye size={16} />
                               View Demo
+                            </button>
+                          )}
+                          
+                          {/* Video Track Button - For completed games */}
+                          {game.status === 'completed' && (
+                            <button
+                              onClick={() => {
+                                router.push(`/dashboard/stat-admin/video/${game.id}`);
+                              }}
+                              style={{
+                                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '10px 16px',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+                                transition: 'all 0.3s ease'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 92, 246, 0.4)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0px)';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)';
+                              }}
+                            >
+                              <Video size={16} />
+                              Video Track
                             </button>
                           )}
                           

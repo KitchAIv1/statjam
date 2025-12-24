@@ -1,0 +1,92 @@
+/**
+ * API Route: Check Video Processing Status
+ * 
+ * Polls Bunny.net to check if video processing is complete.
+ * Returns video status and metadata.
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+
+const BUNNY_STREAM_API_KEY = process.env.BUNNY_STREAM_API_KEY || '';
+const BUNNY_LIBRARY_ID = process.env.NEXT_PUBLIC_BUNNY_LIBRARY_ID || '';
+
+// Bunny.net video status codes
+const STATUS_LABELS: Record<number, string> = {
+  0: 'created',
+  1: 'uploaded',
+  2: 'processing',
+  3: 'transcoding',
+  4: 'ready',
+  5: 'error',
+  6: 'upload_failed',
+};
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const videoId = searchParams.get('videoId');
+
+    if (!videoId) {
+      return NextResponse.json(
+        { error: 'Missing videoId parameter' },
+        { status: 400 }
+      );
+    }
+
+    if (!BUNNY_STREAM_API_KEY || !BUNNY_LIBRARY_ID) {
+      return NextResponse.json(
+        { error: 'Bunny.net not configured' },
+        { status: 500 }
+      );
+    }
+
+    // Fetch video status from Bunny.net
+    const response = await fetch(
+      `https://video.bunnycdn.com/library/${BUNNY_LIBRARY_ID}/videos/${videoId}`,
+      {
+        headers: {
+          'AccessKey': BUNNY_STREAM_API_KEY,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Bunny status check error:', errorText);
+      return NextResponse.json(
+        { error: 'Failed to check video status' },
+        { status: 500 }
+      );
+    }
+
+    const video = await response.json();
+    
+    const statusCode = video.status ?? 0;
+    const statusLabel = STATUS_LABELS[statusCode] || 'unknown';
+    const isReady = statusCode >= 4;
+    const isError = statusCode >= 5;
+
+    return NextResponse.json({
+      success: true,
+      videoId: video.guid,
+      status: statusLabel,
+      statusCode,
+      isReady,
+      isError,
+      duration: video.length || 0, // Duration in seconds
+      thumbnail: video.thumbnailFileName 
+        ? `https://${process.env.NEXT_PUBLIC_BUNNY_CDN_HOSTNAME}/${video.guid}/${video.thumbnailFileName}`
+        : null,
+      encodeProgress: video.encodeProgress || 0,
+    });
+
+  } catch (error) {
+    console.error('Check status error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+

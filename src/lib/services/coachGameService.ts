@@ -237,6 +237,49 @@ export class CoachGameService {
   }
 
   /**
+   * Get a single game by ID
+   */
+  static async getGame(gameId: string): Promise<CoachGame | null> {
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select(`*, team_a:teams!games_team_a_id_fkey(id, name)`)
+        .eq('id', gameId)
+        .single();
+
+      if (error || !data) return null;
+
+      return {
+        id: data.id,
+        coach_id: data.stat_admin_id,
+        coach_team_id: data.team_a_id,
+        team_a_id: data.team_a_id,
+        team_a_name: data.team_a?.name || 'My Team',
+        opponent_name: data.opponent_name || 'Opponent',
+        opponent_tournament_name: data.meta_json?.opponent_tournament_name,
+        is_coach_game: true,
+        status: data.status,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        quarter: data.quarter,
+        game_clock_minutes: data.game_clock_minutes,
+        game_clock_seconds: data.game_clock_seconds,
+        is_clock_running: data.is_clock_running,
+        home_score: data.home_score,
+        away_score: data.away_score,
+        venue: data.venue,
+        game_date: data.start_time,
+        meta_json: data.meta_json,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+    } catch (error) {
+      console.error('❌ Error fetching game:', error);
+      return null;
+    }
+  }
+
+  /**
    * Update coach game
    */
   static async updateGame(gameId: string, updates: Partial<CoachGame>): Promise<void> {

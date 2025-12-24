@@ -1,0 +1,739 @@
+'use client';
+
+/**
+ * Video Stat Tracker Page - Stat Admin Only
+ * 
+ * PURPOSE: Video-based stat tracking with synchronized game clock.
+ * Split-screen layout: video on left, stat entry on right, timeline at bottom.
+ * 
+ * ACCESS: Stat Admin role only (authenticated)
+ * 
+ * @module VideoStatTrackerPage
+ */
+
+import React, { use, useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { NavigationHeader } from '@/components/NavigationHeader';
+import { Button } from '@/components/ui/Button';
+import { VideoPlayer } from '@/components/video/VideoPlayer';
+import { VideoUploader } from '@/components/video/VideoUploader';
+import { JumpballSyncModal } from '@/components/video/JumpballSyncModal';
+import { DualClockDisplay } from '@/components/video/DualClockDisplay';
+import { VideoStatEntryPanel, VideoStatHandlers } from '@/components/video/VideoStatEntryPanel';
+import { VideoStatsTimeline } from '@/components/video/VideoStatsTimeline';
+import { useVideoPlayer } from '@/hooks/useVideoPlayer';
+import { useVideoClockSync } from '@/hooks/useVideoClockSync';
+import { useKeyboardShortcuts, KEYBOARD_SHORTCUTS_REFERENCE } from '@/hooks/useKeyboardShortcuts';
+import { useVideoProcessingStatus } from '@/hooks/useVideoProcessingStatus';
+import { VideoStatService } from '@/lib/services/videoStatService';
+import { BunnyUploadService } from '@/lib/services/bunnyUploadService';
+import { isBunnyConfigured } from '@/lib/config/videoConfig';
+import type { GameVideo, ClockSyncConfig, GameClock } from '@/lib/types/video';
+import { 
+  Loader2, 
+  ArrowLeft, 
+  ShieldAlert, 
+  Upload, 
+  Video, 
+  Clock, 
+  Keyboard,
+  AlertCircle,
+  Settings,
+  Edit,
+  RefreshCw
+} from 'lucide-react';
+import { StatEditModalV2 } from '@/components/tracker-v3/modals/StatEditModalV2';
+import { GameService } from '@/lib/services/gameService';
+import { TeamService } from '@/lib/services/tournamentService';
+
+interface VideoStatTrackerPageProps {
+  params: Promise<{ gameId: string }>;
+}
+
+export default function VideoStatTrackerPage({ params }: VideoStatTrackerPageProps) {
+  const { gameId } = use(params);
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuthContext();
+  
+  // Video state
+  const [gameVideo, setGameVideo] = useState<GameVideo | null>(null);
+  const [videoLoading, setVideoLoading] = useState(true);
+  const [clockSyncConfig, setClockSyncConfig] = useState<ClockSyncConfig | null>(null);
+  const [uploadedVideoId, setUploadedVideoId] = useState<string | null>(null);
+  
+  // Modal state
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Game data for edit modal
+  const [gameData, setGameData] = useState<any>(null);
+  const [teamAPlayers, setTeamAPlayers] = useState<any[]>([]);
+  const [teamBPlayers, setTeamBPlayers] = useState<any[]>([]);
+  
+  // Track if we've already handled the ready state
+  const [hasHandledReady, setHasHandledReady] = useState(false);
+  
+  // Stat handlers from VideoStatEntryPanel (for keyboard shortcuts)
+  const statHandlersRef = useRef<VideoStatHandlers | null>(null);
+  
+  // Timeline refresh trigger - increments when a stat is recorded
+  const [timelineRefreshTrigger, setTimelineRefreshTrigger] = useState(0);
+  
+  // Last recorded stat for undo functionality
+  const [lastRecordedStatId, setLastRecordedStatId] = useState<string | null>(null);
+  
+  // Syncing existing stats state
+  const [isSyncingStats, setIsSyncingStats] = useState(false);
+  
+  // Poll for video processing status
+  const { status: processingStatus, isPolling, error: processingError } = useVideoProcessingStatus({
+    videoId: uploadedVideoId,
+    enabled: !!uploadedVideoId && gameVideo?.status === 'processing' && !hasHandledReady,
+    pollIntervalMs: 5000, // Check every 5 seconds
+    onReady: async (status) => {
+      // Prevent multiple callbacks
+      if (hasHandledReady) return;
+      setHasHandledReady(true);
+      
+      console.log('✅ Video processing complete:', status);
+      // Refresh video data from our database
+      const video = await VideoStatService.getGameVideo(gameId);
+      if (video) {
+        // Update status in our database
+        await VideoStatService.updateVideoStatus(video.id, 'ready', undefined, status.duration);
+        setGameVideo({ ...video, status: 'ready', durationSeconds: status.duration });
+        setUploadedVideoId(null);
+        // Show sync modal
+        setShowSyncModal(true);
+      }
+    },
+    onError: (error) => {
+      console.error('❌ Video processing error:', error);
+      setUploadedVideoId(null);
+      setHasHandledReady(false); // Allow retry
+    },
+  });
+  
+  // Video player
+  const {
+    state: videoState,
+    controls: videoControls,
+    videoRef,
+    currentTimeMs,
+  } = useVideoPlayer({
+    videoUrl: gameVideo ? BunnyUploadService.getVideoDirectUrl(gameVideo.bunnyVideoId) : undefined,
+    videoId: gameVideo?.bunnyVideoId,
+  });
+  
+  // Clock sync
+  const {
+    isCalibrated,
+    videoToGameClock,
+    formatGameClock,
+  } = useVideoClockSync({ config: clockSyncConfig });
+  
+  // Current game clock (derived from video position)
+  const gameClock: GameClock | null = isCalibrated 
+    ? videoToGameClock(currentTimeMs) 
+    : null;
+  
+  // 🔍 DEBUG: Log clock sync state on every render (remove after debugging)
+  useEffect(() => {
+    console.log(`🎬 VIDEO CLOCK DEBUG: hasConfig=${!!clockSyncConfig}, jumpballMs=${clockSyncConfig?.jumpballTimestampMs}, quarterLen=${clockSyncConfig?.quarterLengthMinutes}, isCalibrated=${isCalibrated}, currentTimeMs=${currentTimeMs}, gameClock=${gameClock ? `Q${gameClock.quarter} ${gameClock.minutesRemaining}:${gameClock.secondsRemaining}` : 'null'}`);
+  }, [clockSyncConfig, isCalibrated, currentTimeMs, gameClock]);
+  
+  // Auto-pause video before recording stat (for precision)
+  const handleBeforeStatRecord = useCallback(() => {
+    if (videoState.playing) {
+      videoControls.pause();
+    }
+  }, [videoState.playing, videoControls]);
+  
+  // Handle stat recorded - store ID for undo
+  const handleStatRecorded = useCallback((statType: string, statId?: string) => {
+    setTimelineRefreshTrigger(prev => prev + 1);
+    if (statId) {
+      setLastRecordedStatId(statId);
+    }
+  }, []);
+  
+  // Undo last recorded stat (Ctrl+Z)
+  const handleUndo = useCallback(async () => {
+    if (!lastRecordedStatId) {
+      console.log('⚠️ Nothing to undo');
+      return;
+    }
+    
+    try {
+      const { StatEditServiceV2 } = await import('@/lib/services/statEditServiceV2');
+      console.log('🔄 Undoing stat:', lastRecordedStatId);
+      await StatEditServiceV2.deleteStat(lastRecordedStatId, gameId);
+      setLastRecordedStatId(null);
+      setTimelineRefreshTrigger(prev => prev + 1);
+      console.log('✅ Stat undone successfully');
+    } catch (error) {
+      console.error('❌ Error undoing stat:', error);
+    }
+  }, [lastRecordedStatId, gameId]);
+  
+  // Manually sync existing stats with video timestamps
+  const handleSyncExistingStats = useCallback(async () => {
+    if (!clockSyncConfig) {
+      console.warn('⚠️ Cannot sync stats - no clock sync config');
+      return;
+    }
+    
+    try {
+      setIsSyncingStats(true);
+      const count = await VideoStatService.backfillVideoTimestamps(gameId, clockSyncConfig);
+      console.log(`✅ Synced ${count} existing stats`);
+      if (count > 0) {
+        setTimelineRefreshTrigger(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('❌ Error syncing stats:', error);
+    } finally {
+      setIsSyncingStats(false);
+    }
+  }, [clockSyncConfig, gameId]);
+  
+  // Register stat handlers from VideoStatEntryPanel
+  const handleRegisterStatHandlers = useCallback((handlers: VideoStatHandlers) => {
+    statHandlersRef.current = handlers;
+  }, []);
+  
+  // Keyboard shortcuts - video controls + stat shortcuts
+  useKeyboardShortcuts({
+    // Video controls
+    onPlayPause: videoControls.togglePlayPause,
+    onRewind10: () => videoControls.seekRelative(-10),
+    onForward10: () => videoControls.seekRelative(10),
+    onRewind1: () => videoControls.seekRelative(-1),
+    onForward1: () => videoControls.seekRelative(1),
+    onPrevFrame: () => videoControls.stepFrame('backward'),
+    onNextFrame: () => videoControls.stepFrame('forward'),
+    onSpeed05: () => videoControls.setPlaybackRate(0.5),
+    onSpeed1: () => videoControls.setPlaybackRate(1),
+    onSpeed2: () => videoControls.setPlaybackRate(2),
+    // Stat shortcuts - Made shots (P=2PT, Shift+P=3PT)
+    onQuickShot2PT: () => statHandlersRef.current?.recordShot2PT(),
+    onQuickShot3PT: () => statHandlersRef.current?.recordShot3PT(),
+    // Stat shortcuts - Missed shots (M=2PT, Shift+M=3PT)
+    onQuickMiss2PT: () => statHandlersRef.current?.recordMiss2PT(),
+    onQuickMiss3PT: () => statHandlersRef.current?.recordMiss3PT(),
+    // Stat shortcuts - Free throws (G=made, Shift+G=missed)
+    onQuickFTMade: () => statHandlersRef.current?.recordFTMade(),
+    onQuickFTMiss: () => statHandlersRef.current?.recordFTMiss(),
+    // Other stats (R=rebound, A=assist, S=steal, B=block, T=turnover, F=foul)
+    onQuickRebound: () => statHandlersRef.current?.recordRebound(),
+    onQuickAssist: () => statHandlersRef.current?.recordAssist(),
+    onQuickSteal: () => statHandlersRef.current?.recordSteal(),
+    onQuickBlock: () => statHandlersRef.current?.recordBlock(),
+    onQuickTurnover: () => statHandlersRef.current?.recordTurnover(),
+    onQuickFoul: () => statHandlersRef.current?.recordFoul(),
+    // Player selection (1-0 keys)
+    onSelectPlayer: (index) => statHandlersRef.current?.selectPlayerByIndex(index),
+    // Undo (Ctrl+Z)
+    onUndo: handleUndo,
+    // Enable when video is calibrated
+    enabled: isCalibrated,
+  });
+  
+  // Load video data
+  useEffect(() => {
+    async function loadVideo() {
+      if (!gameId) return;
+      
+      try {
+        setVideoLoading(true);
+        const video = await VideoStatService.getGameVideo(gameId);
+        console.log('🎬 Video loaded:', { 
+          status: video?.status, 
+          isCalibrated: video?.isCalibrated,
+          jumpballMs: video?.jumpballTimestampMs 
+        });
+        setGameVideo(video);
+        
+        // If video exists and is processing, start polling
+        if (video && video.status === 'processing' && video.bunnyVideoId) {
+          console.log('📡 Video is processing, starting polling...');
+          setUploadedVideoId(video.bunnyVideoId);
+        }
+        
+        if (video?.isCalibrated) {
+          const sync = await VideoStatService.getClockSync(video.id);
+          console.log('⏰ Clock sync loaded:', sync);
+          setClockSyncConfig(sync);
+        }
+      } catch (error) {
+        console.error('Error loading video:', error);
+      } finally {
+        setVideoLoading(false);
+      }
+    }
+    
+    loadVideo();
+  }, [gameId]);
+  
+  // Load game data for edit modal
+  useEffect(() => {
+    async function loadGameData() {
+      if (!gameId) return;
+      try {
+        const game = await GameService.getGame(gameId);
+        if (!game) return;
+        setGameData(game);
+        
+        const [playersA, playersB] = await Promise.all([
+          TeamService.getTeamPlayers(game.team_a_id),
+          TeamService.getTeamPlayers(game.team_b_id),
+        ]);
+        
+        setTeamAPlayers(playersA.map((p: any) => ({
+          id: p.id, name: p.name || 'Unknown',
+          jerseyNumber: p.jerseyNumber || p.jersey_number,
+        })));
+        setTeamBPlayers(playersB.map((p: any) => ({
+          id: p.id, name: p.name || 'Unknown',
+          jerseyNumber: p.jerseyNumber || p.jersey_number,
+        })));
+      } catch (error) {
+        console.error('Error loading game data:', error);
+      }
+    }
+    loadGameData();
+  }, [gameId]);
+  
+  // Handle video upload complete
+  const handleUploadComplete = async (bunnyVideoId: string) => {
+    console.log('📤 Upload complete, video ID:', bunnyVideoId);
+    
+    // Reset ready flag and start polling
+    setHasHandledReady(false);
+    setUploadedVideoId(bunnyVideoId);
+    
+    // Create/update video record in our database
+    try {
+      await VideoStatService.createGameVideo(
+        gameId,
+        process.env.NEXT_PUBLIC_BUNNY_LIBRARY_ID || '',
+        bunnyVideoId,
+        user?.id || ''
+      );
+    } catch (err) {
+      console.error('Error creating video record:', err);
+    }
+    
+    // Refresh video data
+    const video = await VideoStatService.getGameVideo(gameId);
+    setGameVideo(video);
+    
+    // If already ready (unlikely but possible), show sync modal
+    if (video && video.status === 'ready') {
+      setUploadedVideoId(null);
+      setShowSyncModal(true);
+    }
+  };
+  
+  // Handle clock sync complete
+  const handleSyncComplete = async (config: ClockSyncConfig) => {
+    if (!gameVideo) return;
+    
+    console.log('⏰ Sync complete, config:', config);
+    await VideoStatService.saveClockSync(gameVideo.id, config);
+    setClockSyncConfig(config);
+    setShowSyncModal(false);
+    
+    // Backfill video timestamps for existing stats (completed games)
+    try {
+      const backfilledCount = await VideoStatService.backfillVideoTimestamps(gameId, config);
+      if (backfilledCount > 0) {
+        console.log(`✅ Backfilled ${backfilledCount} existing stats with video timestamps`);
+        setTimelineRefreshTrigger(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error backfilling video timestamps:', error);
+    }
+    
+    // Refresh video data
+    const video = await VideoStatService.getGameVideo(gameId);
+    console.log('🎬 Video refreshed after sync:', { isCalibrated: video?.isCalibrated });
+    setGameVideo(video);
+  };
+  
+  // Auth check
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-white to-red-50/30 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+      </div>
+    );
+  }
+  
+  if (!user || user.role !== 'stat_admin') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-white to-red-50/30 flex items-center justify-center">
+        <div className="text-center p-6">
+          <ShieldAlert className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-700 mb-4">This page is only available to Stat Admins.</p>
+          <Button
+            onClick={() => router.push('/dashboard')}
+            className="bg-orange-500 hover:bg-orange-600 text-white"
+          >
+            Go to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Check if Bunny.net is configured
+  const bunnyConfigured = isBunnyConfigured();
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-white to-red-50/30">
+      <NavigationHeader />
+      
+      <main className="pt-20 pb-8 px-4">
+        <div className="max-w-[1800px] mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/dashboard/stat-admin')}
+                className="gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Dashboard
+              </Button>
+              
+              <div className="h-6 w-px bg-gray-300" />
+              
+              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Video className="w-5 h-5 text-orange-500" />
+                Video Stat Tracker
+              </h1>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {/* Sync Existing Stats */}
+              {clockSyncConfig && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSyncExistingStats}
+                  className="gap-2"
+                  disabled={isSyncingStats}
+                >
+                  <RefreshCw className={`w-4 h-4 ${isSyncingStats ? 'animate-spin' : ''}`} />
+                  {isSyncingStats ? 'Syncing...' : 'Sync Stats'}
+                </Button>
+              )}
+              
+              {/* Edit Stats */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditModal(true)}
+                className="gap-2"
+                disabled={!gameData}
+              >
+                <Edit className="w-4 h-4" />
+                Edit Stats
+              </Button>
+              
+              {/* Keyboard Help */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowKeyboardHelp(!showKeyboardHelp)}
+                className="gap-2"
+              >
+                <Keyboard className="w-4 h-4" />
+                Shortcuts
+              </Button>
+              
+              {/* Clock Sync Settings */}
+              {gameVideo && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSyncModal(true)}
+                  className="gap-2"
+                >
+                  <Clock className="w-4 h-4" />
+                  {isCalibrated ? 'Re-sync Clock' : 'Sync Clock'}
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          {/* Loading */}
+          {videoLoading && (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+            </div>
+          )}
+          
+          {/* Bunny.net not configured warning */}
+          {!videoLoading && !bunnyConfigured && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
+              <div className="flex items-start gap-4">
+                <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-yellow-800 mb-1">
+                    Bunny.net Not Configured
+                  </h3>
+                  <p className="text-yellow-700 text-sm mb-3">
+                    Video uploads require Bunny.net Stream to be configured. 
+                    Please add the following environment variables:
+                  </p>
+                  <ul className="text-yellow-700 text-sm list-disc list-inside space-y-1">
+                    <li>NEXT_PUBLIC_BUNNY_LIBRARY_ID</li>
+                    <li>NEXT_PUBLIC_BUNNY_CDN_HOSTNAME</li>
+                    <li>BUNNY_STREAM_API_KEY</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* No video yet - Show uploader */}
+          {!videoLoading && bunnyConfigured && !gameVideo && (
+            <div className="bg-white rounded-2xl shadow-lg border p-8">
+              <div className="max-w-2xl mx-auto">
+                <div className="text-center mb-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full flex items-center justify-center">
+                    <Upload className="w-8 h-8 text-orange-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Upload Game Video
+                  </h2>
+                  <p className="text-gray-600">
+                    Upload the game recording to begin video stat tracking.
+                  </p>
+                </div>
+                
+                <VideoUploader
+                  gameId={gameId}
+                  onUploadComplete={handleUploadComplete}
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* Video uploaded but processing */}
+          {!videoLoading && gameVideo && gameVideo.status === 'processing' && (
+            <div className="bg-white rounded-2xl shadow-lg border p-8 text-center">
+              <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                Processing Video
+              </h2>
+              <p className="text-gray-600 mb-4">
+                Your video is being processed by Bunny.net. This usually takes 1-5 minutes.
+              </p>
+              
+              {/* Processing progress from polling */}
+              {isPolling && processingStatus && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    Checking status...
+                  </div>
+                  {processingStatus.encodeProgress > 0 && (
+                    <div className="max-w-xs mx-auto">
+                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>Encoding</span>
+                        <span>{processingStatus.encodeProgress}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-orange-500 transition-all duration-500"
+                          style={{ width: `${processingStatus.encodeProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400">
+                    Status: {processingStatus.status}
+                  </p>
+                </div>
+              )}
+              
+              {processingError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{processingError}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Video ready but not calibrated */}
+          {!videoLoading && gameVideo && gameVideo.status === 'ready' && !isCalibrated && (
+            <div className="bg-white rounded-2xl shadow-lg border p-8">
+              <div className="max-w-2xl mx-auto text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full flex items-center justify-center">
+                  <Clock className="w-8 h-8 text-orange-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Sync Game Clock
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Before tracking stats, you need to sync the video with the game clock.
+                  This ensures stats are recorded with accurate game time.
+                </p>
+                <Button
+                  onClick={() => setShowSyncModal(true)}
+                  size="lg"
+                  className="bg-orange-500 hover:bg-orange-600"
+                >
+                  <Clock className="w-5 h-5 mr-2" />
+                  Start Clock Sync
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Video ready and calibrated - Show tracker */}
+          {!videoLoading && gameVideo && gameVideo.status === 'ready' && isCalibrated && (
+            <div className="space-y-4">
+              {/* Clock Display */}
+              <div className="bg-white rounded-xl shadow-sm border p-4">
+                <DualClockDisplay
+                  videoTimeMs={currentTimeMs}
+                  gameClock={gameClock}
+                  isCalibrated={isCalibrated}
+                />
+              </div>
+              
+              {/* Main Content - Split Screen */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Video Player (2/3 width) */}
+                <div className="lg:col-span-2">
+                  <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <VideoPlayer
+                      videoUrl={BunnyUploadService.getVideoDirectUrl(gameVideo.bunnyVideoId)}
+                      state={videoState}
+                      controls={videoControls}
+                      videoRef={videoRef}
+                      showGameClock={gameClock ? formatGameClock(gameClock) : undefined}
+                      className="aspect-video"
+                    />
+                  </div>
+                </div>
+                
+                {/* Stat Entry Panel (1/3 width) */}
+                <div className="lg:col-span-1">
+                  <div className="bg-white rounded-xl shadow-sm border h-full overflow-hidden">
+                    <VideoStatEntryPanel
+                      gameId={gameId}
+                      videoId={gameVideo.bunnyVideoId}
+                      currentVideoTimeMs={currentTimeMs}
+                      gameClock={gameClock}
+                      onBeforeRecord={handleBeforeStatRecord}
+                      onRegisterHandlers={handleRegisterStatHandlers}
+                      onStatRecorded={handleStatRecorded}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Stats Timeline (bottom) */}
+              <div className="bg-white rounded-xl shadow-sm border p-4">
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  Stats Timeline
+                </h3>
+                <VideoStatsTimeline
+                  gameId={gameId}
+                  onSeekToTimestamp={(ms) => videoControls.seek(ms / 1000)}
+                  refreshTrigger={timelineRefreshTrigger}
+                  teamAPlayers={teamAPlayers}
+                  teamBPlayers={teamBPlayers}
+                  teamAId={gameData?.team_a_id}
+                  teamBId={gameData?.team_b_id}
+                  teamAName={gameData?.team_a?.name || 'Team A'}
+                  teamBName={gameData?.team_b?.name || 'Team B'}
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* Keyboard Shortcuts Help */}
+          {showKeyboardHelp && (
+            <div className="fixed bottom-4 right-4 bg-white rounded-xl shadow-xl border p-4 w-80 z-50">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-gray-900">Keyboard Shortcuts</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowKeyboardHelp(false)}
+                  className="h-6 w-6 p-0"
+                >
+                  ×
+                </Button>
+              </div>
+              
+              {KEYBOARD_SHORTCUTS_REFERENCE.map((category) => (
+                <div key={category.category} className="mb-3">
+                  <h5 className="text-xs font-medium text-gray-500 uppercase mb-1">
+                    {category.category}
+                  </h5>
+                  <div className="space-y-1">
+                    {category.shortcuts.map((shortcut) => (
+                      <div key={shortcut.keys} className="flex justify-between text-sm">
+                        <span className="text-gray-600">{shortcut.action}</span>
+                        <kbd className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">
+                          {shortcut.keys}
+                        </kbd>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+      
+      {/* Jumpball Sync Modal */}
+      {gameVideo && (
+        <JumpballSyncModal
+          isOpen={showSyncModal}
+          onClose={() => setShowSyncModal(false)}
+          onComplete={handleSyncComplete}
+          videoId={gameVideo.bunnyVideoId}
+        />
+      )}
+      
+      {/* Stat Edit Modal */}
+      {gameData && (
+        <StatEditModalV2
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            // Refresh timeline after edit
+            setTimelineRefreshTrigger(prev => prev + 1);
+          }}
+          gameId={gameId}
+          teamAPlayers={teamAPlayers}
+          teamBPlayers={teamBPlayers}
+          teamAId={gameData.team_a_id}
+          teamBId={gameData.team_b_id}
+          teamAName={gameData.team_a?.name || 'Team A'}
+          teamBName={gameData.team_b?.name || 'Team B'}
+          isCoachMode={false}
+          currentQuarter={gameClock?.quarter || 1}
+          currentMinutes={gameClock?.minutesRemaining || 10}
+          currentSeconds={gameClock?.secondsRemaining || 0}
+        />
+      )}
+    </div>
+  );
+}
+
