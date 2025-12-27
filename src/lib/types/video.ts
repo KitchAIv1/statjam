@@ -143,6 +143,7 @@ export interface VideoStat {
   // Player info
   playerId: string | null;
   customPlayerId: string | null;
+  isOpponentStat?: boolean;  // Coach mode: stat for opponent team
   playerName: string;
   jerseyNumber: string;
   teamId: string;

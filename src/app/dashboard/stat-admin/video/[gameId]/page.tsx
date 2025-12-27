@@ -46,6 +46,7 @@ import {
 import { StatEditModalV2 } from '@/components/tracker-v3/modals/StatEditModalV2';
 import { GameService } from '@/lib/services/gameService';
 import { TeamService } from '@/lib/services/tournamentService';
+import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 
 interface VideoStatTrackerPageProps {
   params: Promise<{ gameId: string }>;
@@ -71,6 +72,10 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
   const [gameData, setGameData] = useState<any>(null);
   const [teamAPlayers, setTeamAPlayers] = useState<any[]>([]);
   const [teamBPlayers, setTeamBPlayers] = useState<any[]>([]);
+  
+  // Coach mode detection
+  const isCoachGame = gameData?.is_coach_game === true;
+  const opponentName = gameData?.opponent_name || gameData?.team_b?.name || 'Opponent';
   
   // Track if we've already handled the ready state
   const [hasHandledReady, setHasHandledReady] = useState(false);
@@ -233,6 +238,8 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     onQuickBlock: () => statHandlersRef.current?.recordBlock(),
     onQuickTurnover: () => statHandlersRef.current?.recordTurnover(),
     onQuickFoul: () => statHandlersRef.current?.recordFoul(),
+    // Substitution (U key)
+    onSubstitution: () => statHandlersRef.current?.openSubstitutionModal(),
     // Player selection (1-0 keys)
     onSelectPlayer: (index) => statHandlersRef.current?.selectPlayerByIndex(index),
     // Undo (Ctrl+Z)
@@ -286,19 +293,49 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
         if (!game) return;
         setGameData(game);
         
-        const [playersA, playersB] = await Promise.all([
-          TeamService.getTeamPlayers(game.team_a_id),
-          TeamService.getTeamPlayers(game.team_b_id),
-        ]);
+        // Check if this is a coach game (has is_coach_game flag or opponent_name)
+        // Cast to any to access potential coach game properties
+        const gameAny = game as any;
+        const isCoach = gameAny.is_coach_game === true || !!gameAny.opponent_name;
+        console.log('🎮 Game type detection:', { isCoach, opponent: gameAny.opponent_name, teamAId: game.team_a_id });
         
-        setTeamAPlayers(playersA.map((p: any) => ({
-          id: p.id, name: p.name || 'Unknown',
-          jerseyNumber: p.jerseyNumber || p.jersey_number,
-        })));
-        setTeamBPlayers(playersB.map((p: any) => ({
-          id: p.id, name: p.name || 'Unknown',
-          jerseyNumber: p.jerseyNumber || p.jersey_number,
-        })));
+        if (isCoach) {
+          // Coach game: Load custom players using CoachPlayerService
+          try {
+            const customPlayers = await CoachPlayerService.getCoachTeamPlayers(game.team_a_id);
+            setTeamAPlayers(customPlayers.map((p: any) => ({
+              id: p.id,
+              name: p.name || 'Unknown',
+              jerseyNumber: p.jersey_number || p.jerseyNumber,
+              is_custom_player: true,
+            })));
+            setTeamBPlayers([]); // No Team B players in coach mode
+            console.log('👥 Loaded coach team players:', customPlayers.length);
+          } catch (err) {
+            console.error('Error loading coach players:', err);
+            // Fallback to regular player loading
+            const playersA = await TeamService.getTeamPlayers(game.team_a_id);
+            setTeamAPlayers(playersA.map((p: any) => ({
+              id: p.id, name: p.name || 'Unknown',
+              jerseyNumber: p.jerseyNumber || p.jersey_number,
+            })));
+          }
+        } else {
+          // Regular game: Load both teams
+          const [playersA, playersB] = await Promise.all([
+            TeamService.getTeamPlayers(game.team_a_id),
+            TeamService.getTeamPlayers(game.team_b_id),
+          ]);
+          
+          setTeamAPlayers(playersA.map((p: any) => ({
+            id: p.id, name: p.name || 'Unknown',
+            jerseyNumber: p.jerseyNumber || p.jersey_number,
+          })));
+          setTeamBPlayers(playersB.map((p: any) => ({
+            id: p.id, name: p.name || 'Unknown',
+            jerseyNumber: p.jerseyNumber || p.jersey_number,
+          })));
+        }
       } catch (error) {
         console.error('Error loading game data:', error);
       }
@@ -638,6 +675,11 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                       onBeforeRecord={handleBeforeStatRecord}
                       onRegisterHandlers={handleRegisterStatHandlers}
                       onStatRecorded={handleStatRecorded}
+                      isCoachMode={isCoachGame}
+                      userId={user?.id}
+                      opponentName={opponentName}
+                      preloadedTeamAPlayers={teamAPlayers}
+                      preloadedGameData={gameData}
                     />
                   </div>
                 </div>
@@ -657,8 +699,10 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                   teamBPlayers={teamBPlayers}
                   teamAId={gameData?.team_a_id}
                   teamBId={gameData?.team_b_id}
-                  teamAName={gameData?.team_a?.name || 'Team A'}
-                  teamBName={gameData?.team_b?.name || 'Team B'}
+                  teamAName={gameData?.team_a?.name || gameData?.teamAName || 'My Team'}
+                  teamBName={isCoachGame ? opponentName : (gameData?.team_b?.name || 'Team B')}
+                  isCoachMode={isCoachGame}
+                  opponentName={opponentName}
                 />
               </div>
             </div>
@@ -725,9 +769,9 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
           teamBPlayers={teamBPlayers}
           teamAId={gameData.team_a_id}
           teamBId={gameData.team_b_id}
-          teamAName={gameData.team_a?.name || 'Team A'}
-          teamBName={gameData.team_b?.name || 'Team B'}
-          isCoachMode={false}
+          teamAName={gameData.team_a?.name || gameData.teamAName || 'My Team'}
+          teamBName={isCoachGame ? opponentName : (gameData.team_b?.name || 'Team B')}
+          isCoachMode={isCoachGame}
           currentQuarter={gameClock?.quarter || 1}
           currentMinutes={gameClock?.minutesRemaining || 10}
           currentSeconds={gameClock?.secondsRemaining || 0}

@@ -39,6 +39,9 @@ interface KeyboardShortcutHandlers {
   onQuickTurnover?: () => void;
   onQuickFoul?: () => void;
   
+  // Substitution
+  onSubstitution?: () => void;
+  
   // Player selection (numpad 1-0 = players 1-10)
   onSelectPlayer?: (playerIndex: number) => void;
   
@@ -215,6 +218,14 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
           handlers.onQuickFoul?.();
         }
         break;
+      
+      // Substitution (U for sUbstitution, since S is Steal)
+      case 'u':
+        if (!hasCtrl) {
+          event.preventDefault();
+          handlers.onSubstitution?.();
+        }
+        break;
         
       // Undo (Ctrl+Z)
       case 'z':
@@ -261,6 +272,7 @@ export const KEYBOARD_SHORTCUTS_REFERENCE = [
     { keys: 'B', action: 'Block' },
     { keys: 'T', action: 'Turnover (select type)' },
     { keys: 'F', action: 'Foul (select type)' },
+    { keys: 'U', action: 'Substitution' },
   ]},
   { category: 'Editing', shortcuts: [
     { keys: 'Ctrl + Z', action: 'Undo last stat' },

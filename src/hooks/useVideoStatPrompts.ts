@@ -8,7 +8,7 @@
 
 import { useState, useCallback } from 'react';
 
-export type PromptType = 'assist' | 'rebound' | 'turnover' | 'turnover_type' | 'foul_type' | null;
+export type PromptType = 'assist' | 'rebound' | 'turnover' | 'turnover_type' | 'foul_type' | 'blocked_shot' | 'blocked_shooter' | null;
 
 // Turnover type options - must match database constraint game_stats_modifier_check
 // Allowed values: bad_pass, travel, offensive_foul, steal, double_dribble, lost_ball, out_of_bounds, null
@@ -40,6 +40,8 @@ interface LastEventInfo {
   statType: string;
   shotValue: number;
   videoTimestampMs: number;
+  isOpponentStat?: boolean;  // Coach mode: tracks if this was an opponent stat
+  blockedShotType?: 'field_goal' | 'three_pointer';  // For blocked_shooter prompt
 }
 
 interface UseVideoStatPromptsReturn {
@@ -50,6 +52,8 @@ interface UseVideoStatPromptsReturn {
   showTurnoverPrompt: (eventInfo: LastEventInfo) => void;
   showTurnoverTypePrompt: (eventInfo: LastEventInfo) => void;
   showFoulTypePrompt: (eventInfo: LastEventInfo) => void;
+  showBlockedShotPrompt: (eventInfo: LastEventInfo) => void;
+  showBlockedShooterPrompt: (eventInfo: LastEventInfo) => void;
   closePrompt: () => void;
 }
 
@@ -82,6 +86,16 @@ export function useVideoStatPrompts(): UseVideoStatPromptsReturn {
     setPromptType('foul_type');
   }, []);
 
+  const showBlockedShotPrompt = useCallback((eventInfo: LastEventInfo) => {
+    setLastEvent(eventInfo);
+    setPromptType('blocked_shot');
+  }, []);
+
+  const showBlockedShooterPrompt = useCallback((eventInfo: LastEventInfo) => {
+    setLastEvent(eventInfo);
+    setPromptType('blocked_shooter');
+  }, []);
+
   const closePrompt = useCallback(() => {
     setPromptType(null);
     setLastEvent(null);
@@ -95,6 +109,8 @@ export function useVideoStatPrompts(): UseVideoStatPromptsReturn {
     showTurnoverPrompt,
     showTurnoverTypePrompt,
     showFoulTypePrompt,
+    showBlockedShotPrompt,
+    showBlockedShooterPrompt,
     closePrompt,
   };
 }

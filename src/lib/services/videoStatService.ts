@@ -199,7 +199,9 @@ export async function getClockSync(videoId: string): Promise<ClockSyncConfig | n
 interface RecordVideoStatParams {
   gameId: string;
   videoId: string;
-  playerId: string;
+  playerId?: string; // Optional for custom players or opponent stats
+  customPlayerId?: string; // For custom players (coach mode)
+  isOpponentStat?: boolean; // For coach mode opponent stats
   teamId: string;
   statType: string;
   modifier?: string;
@@ -220,6 +222,8 @@ export async function recordVideoStat(params: RecordVideoStatParams): Promise<st
   const {
     gameId,
     playerId,
+    customPlayerId,
+    isOpponentStat = false,
     teamId,
     statType,
     modifier,
@@ -260,6 +264,8 @@ export async function recordVideoStat(params: RecordVideoStatParams): Promise<st
   const payload = {
     game_id: gameId,
     player_id: playerId || null,
+    custom_player_id: customPlayerId || null,
+    is_opponent_stat: isOpponentStat,
     team_id: teamId,
     stat_type: statType,
     modifier: modifier || null,
@@ -273,7 +279,7 @@ export async function recordVideoStat(params: RecordVideoStatParams): Promise<st
     shot_zone: shotZone || null,
   };
   
-  console.log(`💾 recordVideoStat payload: quarter=${quarter}, gameTimeMin=${gameTimeMinutes}, gameTimeSec=${gameTimeSeconds}, videoMs=${videoTimestampMsInt}, statType=${statType}`);
+  console.log(`💾 recordVideoStat payload: quarter=${quarter}, gameTimeMin=${gameTimeMinutes}, gameTimeSec=${gameTimeSeconds}, videoMs=${videoTimestampMsInt}, statType=${statType}, isOpponentStat=${isOpponentStat}, customPlayerId=${customPlayerId || 'none'}`);
   
   // Use raw HTTP request with proper auth (bypasses broken Supabase client)
   const response = await fetch(`${supabaseUrl}/rest/v1/game_stats`, {
@@ -319,6 +325,7 @@ export async function getVideoStats(gameId: string): Promise<VideoStat[]> {
       game_id,
       player_id,
       custom_player_id,
+      is_opponent_stat,
       team_id,
       stat_type,
       modifier,
@@ -361,6 +368,7 @@ export async function getVideoStats(gameId: string): Promise<VideoStat[]> {
     const minutes = (stat.game_time_minutes as number) || 0;
     const seconds = (stat.game_time_seconds as number) || 0;
     const totalClockSeconds = minutes * 60 + seconds;
+    const isOpponentStat = stat.is_opponent_stat === true;
     
     return {
       id: stat.id as string,
@@ -370,7 +378,9 @@ export async function getVideoStats(gameId: string): Promise<VideoStat[]> {
       gameClockSeconds: totalClockSeconds,
       playerId: stat.player_id as string | null,
       customPlayerId: stat.custom_player_id as string | null,
-      playerName: getPlayerName(stat, players, customPlayers),
+      isOpponentStat,
+      // For opponent stats, return 'Opponent' as placeholder; timeline will use opponentName prop
+      playerName: isOpponentStat ? 'Opponent' : getPlayerName(stat, players, customPlayers),
       jerseyNumber: '', // TODO: Fetch from roster
       teamId: stat.team_id as string,
       statType: stat.stat_type as string,
