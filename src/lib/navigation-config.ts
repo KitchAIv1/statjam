@@ -108,14 +108,12 @@ export const navigationConfig: Record<string, NavigationConfig> = {
         icon: Calendar,
         description: 'Schedule games'
       },
-      // Live Stream nav disabled - feature not yet available
-      // {
-      //   label: 'Live Stream',
-      //   href: '/dashboard?section=live-stream',
-      //   icon: Video,
-      //   description: 'Live streaming',
-      //   disabled: true
-      // }
+      {
+        label: 'Live Stream',
+        href: '/dashboard?section=live-stream',
+        icon: Video,
+        description: 'Live streaming'
+      }
     ],
     secondary: [
       {

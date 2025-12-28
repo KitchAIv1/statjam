@@ -27,6 +27,7 @@ interface VideoInlinePromptProps {
   players: Player[];  // Players who can be selected
   onSelectPlayer: (playerId: string, index: number) => void;
   onSelectShotType?: (shotType: 'field_goal' | 'three_pointer') => void;  // For blocked shot
+  onSelectShotMadeMissed?: (made: boolean) => void;  // For shooting foul: was shot made?
   onSkip: () => void;
 }
 
@@ -38,6 +39,7 @@ export function VideoInlinePrompt({
   players,
   onSelectPlayer,
   onSelectShotType,
+  onSelectShotMadeMissed,
   onSkip,
 }: VideoInlinePromptProps) {
   // Handle keyboard events for the prompt
@@ -65,6 +67,21 @@ export function VideoInlinePrompt({
           return;
         }
         return; // Don't process other keys for blocked_shot
+      }
+
+      // For shot_made_missed prompt: Y = Made, N = Missed
+      if (promptType === 'shot_made_missed') {
+        if ((e.key === 'y' || e.key === 'Y') && onSelectShotMadeMissed) {
+          e.preventDefault();
+          onSelectShotMadeMissed(true);  // Shot was made (and-1)
+          return;
+        }
+        if ((e.key === 'n' || e.key === 'N') && onSelectShotMadeMissed) {
+          e.preventDefault();
+          onSelectShotMadeMissed(false);  // Shot was missed
+          return;
+        }
+        return; // Don't process other keys for shot_made_missed
       }
 
       // Number keys 1-9, 0 for player selection
@@ -108,6 +125,10 @@ export function VideoInlinePrompt({
         return { label: 'Shot Type?', bgColor: 'bg-orange-50 border-orange-200', iconColor: 'text-orange-600', icon: Shield };
       case 'blocked_shooter':
         return { label: 'Who got blocked?', bgColor: 'bg-orange-50 border-orange-200', iconColor: 'text-orange-600', icon: Shield };
+      case 'fouled_player':
+        return { label: 'Who was fouled?', bgColor: 'bg-blue-50 border-blue-200', iconColor: 'text-blue-600', icon: CheckCircle };
+      case 'shot_made_missed':
+        return { label: 'Was the shot made?', bgColor: 'bg-yellow-50 border-yellow-200', iconColor: 'text-yellow-600', icon: CheckCircle };
       default:
         return { label: '', bgColor: 'bg-gray-50 border-gray-200', iconColor: 'text-gray-600', icon: CheckCircle };
     }
@@ -115,6 +136,55 @@ export function VideoInlinePrompt({
 
   const config = getPromptConfig();
   const Icon = config.icon;
+
+  // Special UI for shot made/missed selection (shooting fouls)
+  if (promptType === 'shot_made_missed') {
+    return (
+      <div className={`p-3 rounded-lg border ${config.bgColor} animate-pulse`}>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Icon className={`w-4 h-4 ${config.iconColor}`} />
+            <span className="text-sm font-medium">
+              Shooting Foul - {playerName}
+            </span>
+          </div>
+          <button
+            onClick={onSkip}
+            className="w-5 h-5 rounded-full hover:bg-gray-200 flex items-center justify-center"
+            title="Skip (Esc)"
+          >
+            <X className="w-3 h-3 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Prompt */}
+        <div className="text-xs font-medium text-gray-700 mb-2">
+          Was the shot made or missed? Press <kbd className="bg-gray-200 px-1 rounded">Y</kbd> (Made) or <kbd className="bg-gray-200 px-1 rounded">N</kbd> (Missed) or <kbd className="bg-gray-200 px-1 rounded">Esc</kbd>
+        </div>
+
+        {/* Made/Missed buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => onSelectShotMadeMissed?.(true)}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 text-sm font-medium text-green-700"
+          >
+            <CheckCircle className="w-4 h-4" />
+            <kbd className="bg-green-100 px-1.5 py-0.5 rounded text-xs">Y</kbd>
+            <span>Made (And-1)</span>
+          </button>
+          <button
+            onClick={() => onSelectShotMadeMissed?.(false)}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 text-sm font-medium text-red-700"
+          >
+            <XCircle className="w-4 h-4" />
+            <kbd className="bg-red-100 px-1.5 py-0.5 rounded text-xs">N</kbd>
+            <span>Missed</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Special UI for blocked shot type selection
   if (promptType === 'blocked_shot') {

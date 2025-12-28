@@ -6,6 +6,9 @@ import { useWebRTCStream } from '@/hooks/useWebRTCStream';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { Video, Wifi, WifiOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useTournaments } from '@/lib/hooks/useTournaments';
+import { GameService } from '@/lib/services/gameService';
 
 interface LiveGame {
   id: string;
@@ -16,7 +19,62 @@ interface LiveGame {
   quarter: number;
 }
 
+/**
+ * Filter games by live status
+ */
+function filterLiveGames(games: any[]): any[] {
+  return games.filter(game => {
+    const status = String(game.status || '').toLowerCase();
+    return status === 'live' || status === 'in_progress';
+  });
+}
+
+/**
+ * Fetch team data for games
+ */
+async function fetchTeamsData(teamIds: string[]) {
+  if (teamIds.length === 0) return new Map();
+  
+  const { data: teamsData } = await supabase
+    .from('teams')
+    .select('id, name')
+    .in('id', teamIds);
+  
+  return new Map((teamsData || []).map(t => [t.id, t]));
+}
+
+/**
+ * Map game data to LiveGame format
+ */
+function mapGameToLiveGame(game: any, teamsMap: Map<string, any>): LiveGame {
+  const teamA = teamsMap.get(game.team_a_id);
+  const teamB = teamsMap.get(game.team_b_id);
+  
+  return {
+    id: game.id,
+    team_a_name: teamA?.name || 'Team A',
+    team_b_name: teamB?.name || 'Team B',
+    home_score: game.home_score || 0,
+    away_score: game.away_score || 0,
+    quarter: game.quarter || 1,
+  };
+}
+
+/**
+ * Sort games by created_at (latest first)
+ */
+function sortGamesByCreatedAt(games: LiveGame[], allGames: any[]): LiveGame[] {
+  return games.sort((a, b) => {
+    const gameA = allGames.find(g => g.id === a.id);
+    const gameB = allGames.find(g => g.id === b.id);
+    const dateA = gameA?.created_at ? new Date(gameA.created_at).getTime() : 0;
+    const dateB = gameB?.created_at ? new Date(gameB.created_at).getTime() : 0;
+    return dateB - dateA;
+  });
+}
+
 export default function MobileCameraPage() {
+  const { user } = useAuthContext();
   const [games, setGames] = useState<LiveGame[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -25,6 +83,9 @@ export default function MobileCameraPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Get organizer's tournaments (same pattern as OrganizerLiveStream)
+  const { tournaments } = useTournaments(user);
+
   // Initialize WebRTC connection
   const { connectionStatus, error: webrtcError } = useWebRTCStream({
     gameId: selectedGameId,
@@ -32,37 +93,39 @@ export default function MobileCameraPage() {
     localStream,
   });
 
-  // Fetch live games
+  // Fetch live games from organizer's tournaments (same pattern as OrganizerLiveStream)
   useEffect(() => {
     async function fetchLiveGames() {
+      if (!user?.id || tournaments.length === 0) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const { data, error } = await supabase
-          .from('games')
-          .select(`
-            id,
-            quarter,
-            home_score,
-            away_score,
-            team_a:teams!team_a_id(name),
-            team_b:teams!team_b_id(name)
-          `)
-          .in('status', ['live', 'in_progress', 'LIVE', 'IN_PROGRESS'])
-          .order('created_at', { ascending: false })
-          .limit(20);
+        setLoading(true);
+        
+        // ✅ SAME PATTERN AS OrganizerLiveStream: Get games per tournament
+        const tournamentGamesPromises = tournaments.map(tournament => 
+          GameService.getGamesByTournament(tournament.id)
+            .then(filterLiveGames)
+            .catch(error => {
+              console.error(`Failed to load games for tournament ${tournament.name}:`, error);
+              return [];
+            })
+        );
 
-        if (error) {
-          console.error('Error fetching games:', error);
-          return;
-        }
+        const tournamentGamesArrays = await Promise.all(tournamentGamesPromises);
+        const allGames = tournamentGamesArrays.flat();
 
-        const formattedGames: LiveGame[] = (data || []).map((game: any) => ({
-          id: game.id,
-          team_a_name: game.team_a?.name || 'Team A',
-          team_b_name: game.team_b?.name || 'Team B',
-          home_score: game.home_score || 0,
-          away_score: game.away_score || 0,
-          quarter: game.quarter || 1,
-        }));
+        // Fetch team data
+        const teamIds = [...new Set(allGames.flatMap(g => [g.team_a_id, g.team_b_id]).filter(Boolean))];
+        const teamsMap = await fetchTeamsData(teamIds);
+
+        // Map to LiveGame format and sort
+        const formattedGames = sortGamesByCreatedAt(
+          allGames.map(game => mapGameToLiveGame(game, teamsMap)),
+          allGames
+        );
 
         setGames(formattedGames);
       } catch (err) {
@@ -72,8 +135,12 @@ export default function MobileCameraPage() {
       }
     }
 
-    fetchLiveGames();
-  }, []);
+    if (tournaments.length > 0) {
+      fetchLiveGames();
+    } else {
+      setLoading(false);
+    }
+  }, [user?.id, tournaments.length]);
 
   // Request camera access
   useEffect(() => {

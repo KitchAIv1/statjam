@@ -116,6 +116,7 @@ export async function updateVideoStatus(
 
 /**
  * Save clock sync calibration
+ * Note: All timestamp values are rounded to integers (DB columns are INTEGER type)
  */
 export async function saveClockSync(
   videoId: string,
@@ -123,18 +124,22 @@ export async function saveClockSync(
 ): Promise<void> {
   if (!supabase) throw new Error('Supabase not initialized');
   
+  // Helper to safely round to integer (null-safe)
+  const toInt = (val: number | null | undefined): number | null => 
+    val != null ? Math.round(val) : null;
+  
   const { error } = await supabase
     .from('game_videos')
     .update({
-      jumpball_timestamp_ms: config.jumpballTimestampMs,
-      halftime_timestamp_ms: config.halftimeTimestampMs,
+      jumpball_timestamp_ms: toInt(config.jumpballTimestampMs),
+      halftime_timestamp_ms: toInt(config.halftimeTimestampMs),
       quarter_length_minutes: config.quarterLengthMinutes,
-      q2_start_timestamp_ms: config.q2StartTimestampMs,
-      q3_start_timestamp_ms: config.q3StartTimestampMs,
-      q4_start_timestamp_ms: config.q4StartTimestampMs,
-      ot1_start_timestamp_ms: config.ot1StartTimestampMs,
-      ot2_start_timestamp_ms: config.ot2StartTimestampMs,
-      ot3_start_timestamp_ms: config.ot3StartTimestampMs,
+      q2_start_timestamp_ms: toInt(config.q2StartTimestampMs),
+      q3_start_timestamp_ms: toInt(config.q3StartTimestampMs),
+      q4_start_timestamp_ms: toInt(config.q4StartTimestampMs),
+      ot1_start_timestamp_ms: toInt(config.ot1StartTimestampMs),
+      ot2_start_timestamp_ms: toInt(config.ot2StartTimestampMs),
+      ot3_start_timestamp_ms: toInt(config.ot3StartTimestampMs),
       is_calibrated: true,
       updated_at: new Date().toISOString(),
     })
@@ -309,6 +314,9 @@ export async function recordVideoStat(params: RecordVideoStatParams): Promise<st
   // Update stats count on video
   await updateStatsCount(gameId);
   
+  // ✅ FIX: Update game clock state for minutes calculation
+  await updateGameClockState(gameId, quarter, gameTimeMinutes, gameTimeSeconds);
+  
   return savedStat.id;
 }
 
@@ -420,6 +428,85 @@ export async function updateStatsCount(gameId: string): Promise<void> {
   
   if (error) {
     console.error('Error updating stats count:', error);
+  }
+}
+
+/**
+ * Update game clock state for minutes calculation
+ * ✅ FIX: Video tracking needs to keep game clock in sync for player minutes
+ */
+export async function updateGameClockState(
+  gameId: string,
+  quarter: number,
+  gameTimeMinutes: number,
+  gameTimeSeconds: number
+): Promise<void> {
+  if (!supabase) throw new Error('Supabase not initialized');
+  
+  try {
+    const { error } = await supabase
+      .from('games')
+      .update({
+        quarter,
+        game_clock_minutes: gameTimeMinutes,
+        game_clock_seconds: gameTimeSeconds,
+      })
+      .eq('id', gameId);
+    
+    if (error) {
+      console.error('Error updating game clock state:', error);
+    }
+  } catch (e) {
+    // Non-critical - don't throw, just log
+    console.warn('⚠️ Could not update game clock state:', e);
+  }
+}
+
+/**
+ * Backfill game clock state from the latest video stat
+ * ✅ FIX: For existing video-tracked games, sync game clock from latest stat
+ */
+export async function backfillGameClockFromStats(gameId: string): Promise<boolean> {
+  if (!supabase) throw new Error('Supabase not initialized');
+  
+  try {
+    // Get the latest stat with video timestamp (most recent in game)
+    const { data: stats, error: statsError } = await supabase
+      .from('game_stats')
+      .select('quarter, game_time_minutes, game_time_seconds')
+      .eq('game_id', gameId)
+      .not('video_timestamp_ms', 'is', null)
+      .order('video_timestamp_ms', { ascending: false })
+      .limit(1);
+    
+    if (statsError || !stats || stats.length === 0) {
+      console.warn('⚠️ No video stats found for game clock backfill');
+      return false;
+    }
+    
+    const latestStat = stats[0];
+    console.log(`📊 Backfilling game clock from latest stat: Q${latestStat.quarter} ${latestStat.game_time_minutes}:${latestStat.game_time_seconds}`);
+    
+    // Update the game's clock state
+    const { error: updateError } = await supabase
+      .from('games')
+      .update({
+        quarter: latestStat.quarter,
+        game_clock_minutes: latestStat.game_time_minutes,
+        game_clock_seconds: latestStat.game_time_seconds,
+      })
+      .eq('id', gameId);
+    
+    if (updateError) {
+      console.error('Error backfilling game clock:', updateError);
+      return false;
+    }
+    
+    console.log('✅ Game clock backfilled successfully');
+    return true;
+  } catch (e) {
+    console.error('Error in backfillGameClockFromStats:', e);
+    return false;
   }
 }
 
@@ -721,6 +808,10 @@ export const VideoStatService = {
   getVideoStats,
   updateStatsCount,
   backfillVideoTimestamps,
+  
+  // Game clock sync
+  updateGameClockState,
+  backfillGameClockFromStats,
   
   // Clip config
   getClipConfig,

@@ -138,6 +138,7 @@ export function VideoStatsTimeline({
   const [filterQuarter, setFilterQuarter] = useState<string>('all');
   const [editingStat, setEditingStat] = useState<GameStatRecord | null>(null);
   const [deletingStatId, setDeletingStatId] = useState<string | null>(null);
+  const [deletingSubId, setDeletingSubId] = useState<string | null>(null);
 
   // Helper to get player name by ID
   const getPlayerNameById = useCallback((playerId: string | null, customPlayerId: string | null): string => {
@@ -217,7 +218,7 @@ export function VideoStatsTimeline({
     return timelineEntries.filter(e => e.quarter === parseInt(filterQuarter, 10));
   }, [timelineEntries, filterQuarter]);
 
-  // Handle delete
+  // Handle delete stat
   const handleDelete = useCallback(async (statId: string) => {
     try {
       await StatEditServiceV2.deleteStat(statId, gameId);
@@ -229,6 +230,24 @@ export function VideoStatsTimeline({
       setDeletingStatId(null);
     }
   }, [gameId, loadStats]);
+
+  // Handle delete substitution
+  const handleDeleteSubstitution = useCallback(async (subId: string) => {
+    try {
+      const success = await SubstitutionsService.deleteSubstitution(subId);
+      if (success) {
+        setDeletingSubId(null);
+        await loadStats();
+      } else {
+        alert('Failed to delete substitution');
+        setDeletingSubId(null);
+      }
+    } catch (error) {
+      console.error('Error deleting substitution:', error);
+      alert('Failed to delete substitution');
+      setDeletingSubId(null);
+    }
+  }, [loadStats]);
 
   // Handle edit click - convert VideoStat to GameStatRecord format
   const handleEditClick = useCallback((stat: VideoStat) => {
@@ -316,7 +335,7 @@ export function VideoStatsTimeline({
             <tbody className="divide-y divide-gray-100">
               {filteredEntries.map((entry) => (
                 <tr key={entry.id} className="hover:bg-gray-50 group">
-                  {/* Video timestamp - clickable (only for stats with video timestamps) */}
+                  {/* Video timestamp - clickable (stats and substitutions with video timestamps) */}
                   <td className="px-2 py-1.5">
                     {entry.type === 'stat' && entry.stat?.videoTimestampMs ? (
                       <button
@@ -326,6 +345,15 @@ export function VideoStatsTimeline({
                       >
                         <Play className="w-3 h-3" />
                         {formatVideoTime(entry.stat!.videoTimestampMs)}
+                      </button>
+                    ) : entry.type === 'substitution' && entry.substitution?.video_timestamp_ms ? (
+                      <button
+                        onClick={() => onSeekToTimestamp(entry.substitution!.video_timestamp_ms!)}
+                        className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded text-xs font-mono transition-colors"
+                        title="Jump to this moment"
+                      >
+                        <Play className="w-3 h-3" />
+                        {formatVideoTime(entry.substitution!.video_timestamp_ms!)}
                       </button>
                     ) : (
                       <span className="text-gray-400 text-xs">--:--</span>
@@ -403,7 +431,35 @@ export function VideoStatsTimeline({
                         )}
                       </div>
                     )}
-                    {/* Substitutions: No edit/delete actions for now */}
+                    {/* Substitution actions: Delete only */}
+                    {entry.type === 'substitution' && entry.substitution && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {deletingSubId === entry.substitution.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleDeleteSubstitution(entry.substitution!.id)}
+                              className="px-1.5 py-0.5 bg-red-500 text-white text-xs rounded"
+                            >
+                              Yes
+                            </button>
+                            <button
+                              onClick={() => setDeletingSubId(null)}
+                              className="px-1.5 py-0.5 bg-gray-300 text-gray-700 text-xs rounded"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeletingSubId(entry.substitution!.id)}
+                            className="p-1 hover:bg-red-100 rounded transition-colors"
+                            title="Delete substitution"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

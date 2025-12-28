@@ -104,7 +104,17 @@ export function useWebRTCStream({
       // Initialize signaling service
       const signaling = new WebRTCSignalingService(role);
       signalingRef.current = signaling;
+      
+      if (!gameId) {
+        throw new Error('gameId is required for WebRTC connection');
+      }
+      
       await signaling.joinRoom(gameId);
+      
+      // Verify room join completed successfully
+      if (!signalingRef.current) {
+        throw new Error('Signaling service was cleared during room join');
+      }
 
       // Configure ICE servers (STUN for discovery + TURN for relay on localhost)
       const iceServers = [
@@ -203,6 +213,8 @@ export function useWebRTCStream({
           setError('Connection unstable. Click Reconnect to try again.');
         }
       });
+
+      // Ensure signaling service is ready (gameId should be set by joinRoom)
 
       // Listen for signaling messages
       if (isInitiator) {

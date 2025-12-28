@@ -77,7 +77,7 @@ export function OrganizerDashboard({ user }: OrganizerDashboardProps) {
       case 'games':
         return <OrganizerGameScheduler user={user} />;
       case 'live-stream':
-        return <OrganizerLiveStream />;
+        return <OrganizerLiveStream user={user} />;
       default:
         return <OrganizerDashboardOverview />;
     }

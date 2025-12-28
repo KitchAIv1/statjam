@@ -1,6 +1,6 @@
 # Database Migrations - StatJam
 
-**Last Updated**: December 24, 2025  
+**Last Updated**: December 28, 2025  
 **Status**: Production Ready  
 **Database**: PostgreSQL (Supabase)
 
@@ -380,6 +380,83 @@ CREATE POLICY "Stat Admins can update their assigned video status" ON game_video
 
 **Note**: This migration uses `DROP POLICY IF EXISTS` + `CREATE POLICY` pattern instead of `CREATE POLICY IF NOT EXISTS` because PostgreSQL doesn't support the latter syntax.
 
+**Coach Game Video Tracking Support**:
+- Video tracking fully supports coach-made games using existing database schema
+- Uses `custom_players` table (Migration 005) for coach team players
+- Uses `is_opponent_stat` flag (Migration 007) for opponent team stats
+- No additional migration required - leverages existing coach game infrastructure
+- See `docs/04-features/video-tracking/VIDEO_STAT_TRACKING.md` for implementation details
+
+---
+
+### Video Tracking RLS Migrations
+
+#### `028_video_tracking_stat_admin_rls.sql`
+**Purpose**: Allow stat admins assigned via video tracking to manage game_stats
+**Status**: ✅ Applied (December 28, 2025)
+**Features**:
+- INSERT policy for video-assigned stat admins
+- SELECT policy for video-assigned stat admins
+- UPDATE policy for video-assigned stat admins
+- DELETE policy for video-assigned stat admins
+
+**Issue Addressed**:
+- Coach games have `games.stat_admin_id = coach_id` (not the video tracker)
+- Video tracking assigns stat admins via `game_videos.assigned_stat_admin_id`
+- Existing RLS only checked `games.stat_admin_id`, blocking video trackers
+
+**Key Components**:
+```sql
+-- Allow stat admins assigned to video to insert stats
+CREATE POLICY "game_stats_video_stat_admin_insert" ON game_stats
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM game_videos gv
+      WHERE gv.game_id = game_stats.game_id 
+      AND gv.assigned_stat_admin_id = auth.uid()
+    )
+  );
+```
+
+#### `029_video_tracking_games_update_rls.sql`
+**Purpose**: Allow stat admins assigned via video tracking to UPDATE games table
+**Status**: ✅ Applied (December 28, 2025)
+**Features**:
+- SELECT policy for video-assigned stat admins on games table
+- UPDATE policy for video-assigned stat admins on games table
+
+**Issue Addressed**:
+- Video tracking needs to update `games.quarter`, `games.game_clock_minutes`, `games.game_clock_seconds` for accurate player minutes calculation
+- For coach games, `games.stat_admin_id = coach_id`, so video tracker couldn't update
+- This enables `TeamStatsService.calculatePlayerMinutes` to work correctly for video-tracked games
+
+**Key Components**:
+```sql
+-- Allow stat admins assigned to video to update game clock
+CREATE POLICY "games_video_stat_admin_update" ON games
+  FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM game_videos gv
+      WHERE gv.game_id = games.id 
+      AND gv.assigned_stat_admin_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM game_videos gv
+      WHERE gv.game_id = games.id 
+      AND gv.assigned_stat_admin_id = auth.uid()
+    )
+  );
+```
+
+**Impact**:
+- Video-tracked stats now trigger game clock updates
+- Player minutes calculated correctly for video-tracked games
+- Same logic as manual tracking (updates `games` table)
+
 ---
 
 ## 🔒 RLS Policies
@@ -757,5 +834,5 @@ WHERE tp.team_id = $1;
 
 ---
 
-**Last Updated**: December 15, 2025  
+**Last Updated**: December 28, 2025  
 **Maintained By**: Development Team

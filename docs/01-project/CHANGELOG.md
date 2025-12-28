@@ -81,6 +81,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] - 2025-12-27
+
+### 🎥 **VIDEO STAT TRACKING: COACH GAME SUPPORT**
+
+#### Coach Game Video Tracking
+- **ADDED**: Full support for coach-made games in video stat tracking
+  - Automatic detection of coach games via `is_coach_game` flag or `opponent_name` presence
+  - Custom player loading using `CoachPlayerService.getCoachTeamPlayers()`
+  - Opponent team stat tracking with `is_opponent_stat` flag
+  - Coach's user ID used as proxy player for opponent stats
+- **ADDED**: Coach mode UI adaptations
+  - `VideoPlayerRoster` shows "Opponent Team" button instead of Team B roster
+  - Keyboard shortcut `0` selects opponent team in coach mode
+  - Opponent name displayed instead of Team B name
+  - Visual styling differentiates opponent panel (red theme)
+
+#### Service Layer Enhancements
+- **ENHANCED**: `VideoStatService.recordVideoStat()`
+  - Added `customPlayerId?: string` parameter for custom players
+  - Added `isOpponentStat?: boolean` parameter for opponent stats
+  - Updated database payload to include `custom_player_id` and `is_opponent_stat` fields
+  - Enhanced logging to show coach mode fields
+- **ENHANCED**: `VideoStatEntryPanel`
+  - Added coach mode props: `isCoachMode`, `userId`, `opponentName`, `preloadedTeamAPlayers`, `preloadedGameData`
+  - Updated player selection to handle `OPPONENT_TEAM_ID` constant
+  - Modified stat recording logic to use `customPlayerId` for custom players
+  - Set `isOpponentStat: true` for opponent team stats
+  - Updated prompt handlers to work correctly in coach mode
+
+#### Component Updates
+- **ENHANCED**: `VideoPlayerRoster`
+  - Added `isCoachMode` and `opponentName` props
+  - Conditional rendering: Team B roster (regular) vs. Opponent button (coach mode)
+  - Updated keyboard shortcut hints for coach mode
+  - Visual styling for opponent panel (red theme)
+- **ENHANCED**: Stat-Admin Video Page (`/dashboard/stat-admin/video/[gameId]/page.tsx`)
+  - Added `CoachPlayerService` import
+  - Coach game detection logic (checks `is_coach_game` or `opponent_name`)
+  - Conditional player loading (custom players for coach games, regular players for organizer games)
+  - Passes coach mode props to `VideoStatEntryPanel`, `VideoStatsTimeline`, and `StatEditModalV2`
+- **ENHANCED**: `VideoStatsTimeline`
+  - Added `isCoachMode` prop to interface and function signature
+  - Ready to display opponent stats correctly in coach mode
+
+#### Technical Implementation
+- **Files Modified**:
+  - `src/lib/services/videoStatService.ts` - Added `customPlayerId` and `isOpponentStat` support
+  - `src/components/video/VideoStatEntryPanel.tsx` - Coach mode detection and stat recording
+  - `src/components/video/VideoPlayerRoster.tsx` - Coach mode UI adaptation
+  - `src/app/dashboard/stat-admin/video/[gameId]/page.tsx` - Coach game detection and player loading
+  - `src/components/video/VideoStatsTimeline.tsx` - Coach mode prop support
+- **Pattern Consistency**:
+  - Follows same pattern as existing `tracker-v3` components for coach mode
+  - Uses `OPPONENT_TEAM_ID = 'opponent-team'` constant (matches `OpponentTeamPanel.tsx`)
+  - Reuses `is_opponent_stat` flag from database schema (Migration 007)
+  - Maintains compatibility with existing organizer game video tracking
+
+#### Documentation Updates
+- **ADDED**: `docs/04-features/video-tracking/VIDEO_STAT_TRACKING.md` - Comprehensive video tracking documentation
+  - User workflows (stat admin and coach)
+  - Architecture and component structure
+  - Coach game support details
+  - Keyboard shortcuts reference
+  - Auto-sequences documentation
+  - Database schema
+  - Troubleshooting guide
+- **Updated**: `docs/01-project/CHANGELOG.md` - This entry
+
+---
+
 ## [Unreleased] - 2025-12-20
 
 ### 🔒 **SUBSCRIPTION SYSTEM: PLAYER GATES, ORGANIZER CALENDAR TIME-GATE & NAVIGATION CLEANUP**

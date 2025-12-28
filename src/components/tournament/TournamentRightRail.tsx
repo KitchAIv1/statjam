@@ -11,6 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Shield, Calendar, Video, Clock } from 'lucide-react';
 import { TournamentOrganizerCard } from './TournamentOrganizerCard';
 import { PhaseBadge } from './PhaseBadge';
+import { LiveStreamPlayer } from '@/components/live-streaming/LiveStreamPlayer';
 
 interface TournamentRightRailProps {
   data: TournamentPageData;
@@ -160,20 +161,18 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
         </div>
       </section>
 
-      {/* Section 2: Live Streaming - Coming Soon Teaser */}
-      <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
-        <div className="relative aspect-video bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a]">
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-            <Video className="h-10 w-10 text-[#FF3B30]/60 mb-3" />
-            <div className="text-sm font-semibold text-white mb-1">Live Streaming</div>
-            <div className="rounded bg-[#FF3B30]/20 px-2 py-0.5 text-[10px] font-medium text-[#FF3B30] mb-2">
-              COMING SOON
-            </div>
-            <div className="text-[10px] text-white/40 max-w-[180px]">
-              Watch games live with synced stats overlay
-            </div>
-          </div>
-        </div>
+      {/* Section 2: Live Streaming */}
+      <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212] p-4">
+        <header className="mb-3 flex items-center gap-2">
+          <Video className="h-4 w-4 text-[#FF3B30]" />
+          <span className="text-sm font-semibold text-white">Live Streaming</span>
+        </header>
+        <LiveStreamPlayer
+          tournamentId={data.tournament.id}
+          size="compact"
+          showControls={true}
+          className="w-full"
+        />
       </section>
 
       {/* Section 3: Upcoming Schedule */}

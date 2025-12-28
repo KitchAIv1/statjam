@@ -27,6 +27,7 @@ import { useVideoClockSync } from '@/hooks/useVideoClockSync';
 import { useKeyboardShortcuts, KEYBOARD_SHORTCUTS_REFERENCE } from '@/hooks/useKeyboardShortcuts';
 import { useVideoProcessingStatus } from '@/hooks/useVideoProcessingStatus';
 import { VideoStatService } from '@/lib/services/videoStatService';
+import { TeamStatsService } from '@/lib/services/teamStatsService';
 import { BunnyUploadService } from '@/lib/services/bunnyUploadService';
 import { isBunnyConfigured } from '@/lib/config/videoConfig';
 import type { GameVideo, ClockSyncConfig, GameClock } from '@/lib/types/video';
@@ -41,9 +42,12 @@ import {
   AlertCircle,
   Settings,
   Edit,
-  RefreshCw
+  RefreshCw,
+  FastForward,
+  Eye
 } from 'lucide-react';
 import { StatEditModalV2 } from '@/components/tracker-v3/modals/StatEditModalV2';
+import { VideoQuarterAdvancePrompt } from '@/components/video/VideoQuarterAdvancePrompt';
 import { GameService } from '@/lib/services/gameService';
 import { TeamService } from '@/lib/services/tournamentService';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
@@ -91,6 +95,14 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
   
   // Syncing existing stats state
   const [isSyncingStats, setIsSyncingStats] = useState(false);
+  
+  // Quarter advancement state
+  const [showQuarterPrompt, setShowQuarterPrompt] = useState(false);
+  const [lastPromptedQuarter, setLastPromptedQuarter] = useState<number>(0);
+  
+  // Live scores - calculated from TeamStatsService (source of truth)
+  const [teamAScore, setTeamAScore] = useState(0);
+  const [teamBScore, setTeamBScore] = useState(0);
   
   // Poll for video processing status
   const { status: processingStatus, isPolling, error: processingError } = useVideoProcessingStatus({
@@ -156,13 +168,42 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     }
   }, [videoState.playing, videoControls]);
   
-  // Handle stat recorded - store ID for undo
-  const handleStatRecorded = useCallback((statType: string, statId?: string) => {
+  // Load scores from TeamStatsService (source of truth)
+  const loadScores = useCallback(async () => {
+    if (!gameData?.team_a_id) return;
+    
+    try {
+      // Fetch team stats for both teams using source of truth
+      const [teamAStats, teamBStats] = await Promise.all([
+        TeamStatsService.aggregateTeamStats(gameId, gameData.team_a_id),
+        isCoachGame 
+          ? TeamStatsService.aggregateTeamStats(gameId, gameData.team_b_id || gameData.team_a_id)
+          : TeamStatsService.aggregateTeamStats(gameId, gameData.team_b_id),
+      ]);
+      
+      // Calculate points: (2PT made * 2) + (3PT made * 3) + (FT made * 1)
+      // Note: fieldGoalsMade includes 3PT, so: points = (FG-3PT)*2 + 3PT*3 + FT
+      const calcPoints = (stats: typeof teamAStats) => 
+        (stats.fieldGoalsMade - stats.threePointersMade) * 2 + 
+        stats.threePointersMade * 3 + 
+        stats.freeThrowsMade;
+      
+      setTeamAScore(calcPoints(teamAStats));
+      setTeamBScore(calcPoints(teamBStats));
+    } catch (error) {
+      console.error('Error loading scores:', error);
+    }
+  }, [gameId, gameData?.team_a_id, gameData?.team_b_id, isCoachGame]);
+  
+  // Handle stat recorded - store ID for undo + refresh scores
+  const handleStatRecorded = useCallback(async (statType: string, statId?: string) => {
     setTimelineRefreshTrigger(prev => prev + 1);
     if (statId) {
       setLastRecordedStatId(statId);
     }
-  }, []);
+    // Refresh scores from source of truth
+    await loadScores();
+  }, [loadScores]);
   
   // Undo last recorded stat (Ctrl+Z)
   const handleUndo = useCallback(async () => {
@@ -194,6 +235,11 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
       setIsSyncingStats(true);
       const count = await VideoStatService.backfillVideoTimestamps(gameId, clockSyncConfig);
       console.log(`✅ Synced ${count} existing stats`);
+      
+      // ✅ FIX: Also backfill game clock state for minutes calculation
+      await VideoStatService.backfillGameClockFromStats(gameId);
+      console.log('✅ Game clock synced for minutes calculation');
+      
       if (count > 0) {
         setTimelineRefreshTrigger(prev => prev + 1);
       }
@@ -208,6 +254,70 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
   const handleRegisterStatHandlers = useCallback((handlers: VideoStatHandlers) => {
     statHandlersRef.current = handlers;
   }, []);
+  
+  // Detect quarter expiry (clock at 0:00) and show prompt
+  useEffect(() => {
+    if (!gameClock || !isCalibrated) return;
+    
+    const isExpired = gameClock.minutesRemaining === 0 && gameClock.secondsRemaining === 0;
+    const currentQuarter = gameClock.quarter;
+    
+    // Show prompt only once per quarter (not repeatedly)
+    if (isExpired && currentQuarter !== lastPromptedQuarter) {
+      console.log(`⏰ Quarter ${currentQuarter} expired - showing advance prompt`);
+      setShowQuarterPrompt(true);
+      setLastPromptedQuarter(currentQuarter);
+    }
+  }, [gameClock, isCalibrated, lastPromptedQuarter]);
+  
+  // Handle quarter advancement
+  const handleAdvanceQuarter = useCallback(async (nextQuarter: number) => {
+    if (!clockSyncConfig || !gameVideo) {
+      console.warn('Cannot advance quarter - missing config or video');
+      return;
+    }
+    
+    console.log(`🏀 Advancing to Q${nextQuarter} at video time ${currentTimeMs}ms`);
+    
+    // Create updated config with the new quarter marker
+    const updatedConfig: ClockSyncConfig = {
+      ...clockSyncConfig,
+    };
+    
+    // Set the appropriate quarter start timestamp
+    switch (nextQuarter) {
+      case 2:
+        updatedConfig.q2StartTimestampMs = currentTimeMs;
+        break;
+      case 3:
+        updatedConfig.q3StartTimestampMs = currentTimeMs;
+        break;
+      case 4:
+        updatedConfig.q4StartTimestampMs = currentTimeMs;
+        break;
+      case 5:
+        updatedConfig.ot1StartTimestampMs = currentTimeMs;
+        break;
+      case 6:
+        updatedConfig.ot2StartTimestampMs = currentTimeMs;
+        break;
+      case 7:
+        updatedConfig.ot3StartTimestampMs = currentTimeMs;
+        break;
+      default:
+        console.warn(`Unsupported quarter: ${nextQuarter}`);
+    }
+    
+    try {
+      // Save the updated config
+      await VideoStatService.saveClockSync(gameVideo.id, updatedConfig);
+      setClockSyncConfig(updatedConfig);
+      setShowQuarterPrompt(false);
+      console.log(`✅ Quarter ${nextQuarter} start marked at ${currentTimeMs}ms`);
+    } catch (error) {
+      console.error('Error saving quarter marker:', error);
+    }
+  }, [clockSyncConfig, gameVideo, currentTimeMs]);
   
   // Keyboard shortcuts - video controls + stat shortcuts
   useKeyboardShortcuts({
@@ -343,6 +453,13 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     loadGameData();
   }, [gameId]);
   
+  // Load scores when gameData is available (source of truth: TeamStatsService)
+  useEffect(() => {
+    if (gameData?.team_a_id) {
+      loadScores();
+    }
+  }, [gameData?.team_a_id, gameData?.team_b_id, loadScores]);
+  
   // Handle video upload complete
   const handleUploadComplete = async (bunnyVideoId: string) => {
     console.log('📤 Upload complete, video ID:', bunnyVideoId);
@@ -471,6 +588,18 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                   {isSyncingStats ? 'Syncing...' : 'Sync Stats'}
                 </Button>
               )}
+              
+              {/* View Game */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/dashboard/stat-admin/game/${gameId}`)}
+                className="gap-2"
+                disabled={!gameData}
+              >
+                <Eye className="w-4 h-4" />
+                View Game
+              </Button>
               
               {/* Edit Stats */}
               <Button
@@ -639,13 +768,49 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
           {/* Video ready and calibrated - Show tracker */}
           {!videoLoading && gameVideo && gameVideo.status === 'ready' && isCalibrated && (
             <div className="space-y-4">
-              {/* Clock Display */}
+              {/* Clock Display with Quarter Prompt */}
               <div className="bg-white rounded-xl shadow-sm border p-4">
-                <DualClockDisplay
-                  videoTimeMs={currentTimeMs}
-                  gameClock={gameClock}
-                  isCalibrated={isCalibrated}
-                />
+                <div className="flex items-center justify-between">
+                  <DualClockDisplay
+                    videoTimeMs={currentTimeMs}
+                    gameClock={gameClock}
+                    isCalibrated={isCalibrated}
+                    showQuarterExpiredWarning={!showQuarterPrompt}
+                    // Live scores
+                    showScores={true}
+                    teamAName={gameData?.team_a?.name || gameData?.teamAName || 'My Team'}
+                    teamBName={isCoachGame ? opponentName : (gameData?.team_b?.name || 'Team B')}
+                    teamAScore={teamAScore}
+                    teamBScore={teamBScore}
+                  />
+                  
+                  {/* Manual Quarter Advance Button */}
+                  {gameClock && gameClock.quarter < 7 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowQuarterPrompt(true)}
+                      className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
+                    >
+                      <FastForward className="w-4 h-4" />
+                      Mark Q{gameClock.quarter + 1 > 4 ? `OT${gameClock.quarter - 3}` : gameClock.quarter + 1} Start
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Quarter Advance Prompt */}
+                {showQuarterPrompt && gameClock && (
+                  <div className="mt-4">
+                    <VideoQuarterAdvancePrompt
+                      currentQuarter={gameClock.quarter}
+                      onAdvanceQuarter={handleAdvanceQuarter}
+                      onDismiss={() => setShowQuarterPrompt(false)}
+                      isOvertime={gameClock.isOvertime}
+                      teamAScore={teamAScore}
+                      teamBScore={teamBScore}
+                    />
+                  </div>
+                )}
               </div>
               
               {/* Main Content - Split Screen */}

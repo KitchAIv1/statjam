@@ -15,7 +15,7 @@ import { FOUL_TYPES } from '@/hooks/useVideoStatPrompts';
 
 interface VideoFoulTypePromptProps {
   playerName: string;
-  onSelectType: (foulType: string) => void;
+  onSelectType: (foulType: string, ftCount: number) => void;  // Now includes FT count
   onSkip: () => void;
 }
 
@@ -34,12 +34,12 @@ export function VideoFoulTypePrompt({
         return;
       }
 
-      // Number keys 1-6 for foul type selection
+      // Number keys 1-7 for foul type selection
       const key = e.key;
       const typeOption = FOUL_TYPES.find(t => t.key === key);
       if (typeOption) {
         e.preventDefault();
-        onSelectType(typeOption.value);
+        onSelectType(typeOption.value, typeOption.ftCount);
       }
     };
 
@@ -68,15 +68,15 @@ export function VideoFoulTypePrompt({
 
       {/* Prompt */}
       <div className="text-xs font-medium text-gray-700 mb-2">
-        Select type: Press <kbd className="bg-gray-200 px-1 rounded">1-6</kbd> or <kbd className="bg-gray-200 px-1 rounded">Esc</kbd> to cancel
+        Select type: Press <kbd className="bg-gray-200 px-1 rounded">1-7</kbd> or <kbd className="bg-gray-200 px-1 rounded">Esc</kbd> to cancel
       </div>
 
       {/* Foul type buttons */}
-      <div className="grid grid-cols-3 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {FOUL_TYPES.map((type) => (
           <button
-            key={type.value}
-            onClick={() => onSelectType(type.value)}
+            key={type.key}
+            onClick={() => onSelectType(type.value, type.ftCount)}
             className="flex items-center gap-1 px-2 py-1.5 bg-white rounded border hover:bg-red-100 text-xs"
           >
             <kbd className="bg-red-100 px-1 rounded text-[10px] font-bold">{type.key}</kbd>

@@ -277,5 +277,10 @@ export const KEYBOARD_SHORTCUTS_REFERENCE = [
   { category: 'Editing', shortcuts: [
     { keys: 'Ctrl + Z', action: 'Undo last stat' },
   ]},
+  { category: 'Quarter Control', shortcuts: [
+    { keys: 'Q', action: 'Mark next quarter start (when prompted)' },
+    { keys: 'Enter', action: 'Confirm quarter advance' },
+    { keys: 'Esc', action: 'Dismiss quarter prompt' },
+  ]},
 ];
 

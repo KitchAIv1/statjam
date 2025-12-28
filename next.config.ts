@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
               "media-src 'self' https://*.b-cdn.net blob:", // ✅ Allow Bunny.net video streaming
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://images.unsplash.com https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://cdn.jsdelivr.net https://plausible.io https://*.sentry.io https://api.stripe.com https://video.bunnycdn.com https://*.b-cdn.net", // ✅ Allow Sentry + Stripe API + Bunny.net
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://images.unsplash.com https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://cdn.jsdelivr.net https://plausible.io https://*.sentry.io https://api.stripe.com https://video.bunnycdn.com https://*.b-cdn.net ws://localhost:8080 wss://localhost:8080 ws://* wss://*", // ✅ Allow Sentry + Stripe API + Bunny.net + Relay Server WebSocket
               "frame-src 'self' https://plausible.io https://js.stripe.com https://hooks.stripe.com https://iframe.mediadelivery.net", // ✅ Allow Plausible + Stripe 3DS + Bunny.net iframes
               "frame-ancestors 'none'",
               "base-uri 'self'",

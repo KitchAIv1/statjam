@@ -7,8 +7,12 @@ import { Video, Smartphone, Wifi, WifiOff, AlertCircle, CheckCircle, RefreshCw, 
 import { supabase } from '@/lib/supabase';
 import { useWebRTCStream, ConnectionStatus } from '@/hooks/useWebRTCStream';
 import { isFirebaseConfigured } from '@/lib/firebase';
+import { EnhancedScoreOverlay } from '@/components/live-streaming/EnhancedScoreOverlay';
+import { useTournaments } from '@/lib/hooks/useTournaments';
+import { GameService } from '@/lib/services/gameService';
 
 interface LiveGame {
+  // Existing required fields
   id: string;
   team_a_id: string;
   team_b_id: string;
@@ -21,6 +25,23 @@ interface LiveGame {
   game_clock_minutes: number;
   game_clock_seconds: number;
   shot_clock_seconds?: number;
+  
+  // Enhanced fields (all optional)
+  team_a_logo?: string;
+  team_b_logo?: string;
+  team_a_primary_color?: string;
+  team_b_primary_color?: string;
+  team_a_secondary_color?: string;
+  team_b_secondary_color?: string;
+  team_a_accent_color?: string;
+  team_b_accent_color?: string;
+  team_a_fouls?: number;
+  team_b_fouls?: number;
+  team_a_timeouts?: number;
+  team_b_timeouts?: number;
+  current_possession_team_id?: string;
+  jump_ball_arrow_team_id?: string;
+  venue?: string;
 }
 
 interface ScoreOverlayProps {
@@ -119,6 +140,81 @@ function ScoreOverlay({
   );
 }
 
+/**
+ * Fetch team data for games
+ */
+async function fetchTeamsData(teamIds: string[]) {
+  if (teamIds.length === 0) return new Map();
+  
+  const { data: teamsData } = await supabase
+    .from('teams')
+    .select('id, name, logo_url, primary_color, secondary_color, accent_color')
+    .in('id', teamIds);
+  
+  return new Map((teamsData || []).map(t => [t.id, t]));
+}
+
+/**
+ * Map game data to LiveGame format
+ */
+function mapGameToLiveGame(game: any, teamsMap: Map<string, any>): LiveGame {
+  const teamA = teamsMap.get(game.team_a_id);
+  const teamB = teamsMap.get(game.team_b_id);
+  
+  return {
+    id: game.id,
+    team_a_id: game.team_a_id,
+    team_b_id: game.team_b_id,
+    team_a_name: teamA?.name || 'Team A',
+    team_b_name: teamB?.name || 'Team B',
+    home_score: game.home_score || 0,
+    away_score: game.away_score || 0,
+    quarter: game.quarter || 1,
+    status: game.status,
+    game_clock_minutes: game.game_clock_minutes || 10,
+    game_clock_seconds: game.game_clock_seconds || 0,
+    shot_clock_seconds: undefined,
+    team_a_logo: teamA?.logo_url,
+    team_b_logo: teamB?.logo_url,
+    team_a_primary_color: teamA?.primary_color,
+    team_b_primary_color: teamB?.primary_color,
+    team_a_secondary_color: teamA?.secondary_color,
+    team_b_secondary_color: teamB?.secondary_color,
+    team_a_accent_color: teamA?.accent_color,
+    team_b_accent_color: teamB?.accent_color,
+    team_a_fouls: game.team_a_fouls,
+    team_b_fouls: game.team_b_fouls,
+    team_a_timeouts: game.team_a_timeouts_remaining,
+    team_b_timeouts: game.team_b_timeouts_remaining,
+    current_possession_team_id: game.current_possession_team_id,
+    jump_ball_arrow_team_id: game.jump_ball_arrow_team_id,
+    venue: game.venue,
+  };
+}
+
+/**
+ * Filter games by live status
+ */
+function filterLiveGames(games: any[]): any[] {
+  return games.filter(game => {
+    const status = String(game.status || '').toLowerCase();
+    return status === 'live' || status === 'in_progress';
+  });
+}
+
+/**
+ * Sort games by created_at (latest first)
+ */
+function sortGamesByCreatedAt(games: LiveGame[], allGames: any[]): LiveGame[] {
+  return games.sort((a, b) => {
+    const gameA = allGames.find(g => g.id === a.id);
+    const gameB = allGames.find(g => g.id === b.id);
+    const dateA = gameA?.created_at ? new Date(gameA.created_at).getTime() : 0;
+    const dateB = gameB?.created_at ? new Date(gameB.created_at).getTime() : 0;
+    return dateB - dateA;
+  });
+}
+
 function StatusIndicator({ status }: { status: ConnectionStatus }) {
   let icon = <WifiOff className="w-5 h-5" />;
   let text = 'Not Connected';
@@ -146,13 +242,62 @@ function StatusIndicator({ status }: { status: ConnectionStatus }) {
   );
 }
 
-export function OrganizerLiveStream() {
+interface GameStat {
+  id: string;
+  game_id: string;
+  player_id?: string;
+  team_id: string;
+  stat_type: string;
+  stat_value: number;
+  modifier?: string | null;
+  is_opponent_stat?: boolean;
+}
+
+/**
+ * Calculate scores from game_stats (same logic as useGameViewerV2)
+ */
+function calculateScoresFromStats(
+  stats: GameStat[],
+  teamAId: string,
+  teamBId: string
+): { homeScore: number; awayScore: number } {
+  let homeScore = 0;
+  let awayScore = 0;
+  
+  stats.forEach(stat => {
+    if (stat.modifier === 'made') {
+      const points = stat.stat_value || 0;
+      
+      // Check is_opponent_stat flag (matches Tracker logic for coach mode)
+      if (stat.is_opponent_stat) {
+        // Opponent stats go to away score (matches Tracker's teamBScore logic)
+        awayScore += points;
+      } else if (stat.team_id === teamAId) {
+        homeScore += points;
+      } else if (stat.team_id === teamBId) {
+        awayScore += points;
+      }
+    }
+  });
+  
+  return { homeScore, awayScore };
+}
+
+interface OrganizerLiveStreamProps {
+  user: { id: string } | null;
+}
+
+export function OrganizerLiveStream({ user }: OrganizerLiveStreamProps) {
   const [games, setGames] = useState<LiveGame[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<LiveGame | null>(null);
+  const [gameStats, setGameStats] = useState<GameStat[]>([]);
   const [loading, setLoading] = useState(true);
   
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Get organizer's tournaments (same pattern as OrganizerGameScheduler)
+  const { tournaments, loading: tournamentsLoading } = useTournaments(user);
 
   // Initialize WebRTC connection to receive stream
   const { connectionStatus, remoteStream, error, reconnect } = useWebRTCStream({
@@ -161,48 +306,39 @@ export function OrganizerLiveStream() {
     localStream: null, // Dashboard doesn't send video
   });
 
-  // Fetch live games
+  // Fetch live games from organizer's tournaments (same pattern as OrganizerGameScheduler)
   useEffect(() => {
     async function fetchLiveGames() {
+      if (!user?.id || tournaments.length === 0) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const { data, error } = await supabase
-          .from('games')
-          .select(`
-            id,
-            quarter,
-            home_score,
-            away_score,
-            status,
-            team_a_id,
-            team_b_id,
-            game_clock_minutes,
-            game_clock_seconds,
-            team_a:teams!team_a_id(name),
-            team_b:teams!team_b_id(name)
-          `)
-          .in('status', ['live', 'in_progress', 'LIVE', 'IN_PROGRESS'])
-          .order('created_at', { ascending: false })
-          .limit(20);
+        setLoading(true);
+        
+        // ✅ SAME PATTERN AS OrganizerGameScheduler: Get games per tournament
+        const tournamentGamesPromises = tournaments.map(tournament => 
+          GameService.getGamesByTournament(tournament.id)
+            .then(filterLiveGames)
+            .catch(error => {
+              console.error(`Failed to load games for tournament ${tournament.name}:`, error);
+              return [];
+            })
+        );
 
-        if (error) {
-          console.error('Error fetching games:', error);
-          return;
-        }
+        const tournamentGamesArrays = await Promise.all(tournamentGamesPromises);
+        const allGames = tournamentGamesArrays.flat();
 
-        const formattedGames: LiveGame[] = (data || []).map((game: any) => ({
-          id: game.id,
-          team_a_id: game.team_a_id,
-          team_b_id: game.team_b_id,
-          team_a_name: game.team_a?.name || 'Team A',
-          team_b_name: game.team_b?.name || 'Team B',
-          home_score: game.home_score || 0,
-          away_score: game.away_score || 0,
-          quarter: game.quarter || 1,
-          status: game.status,
-          game_clock_minutes: game.game_clock_minutes || 10,
-          game_clock_seconds: game.game_clock_seconds || 0,
-          shot_clock_seconds: undefined, // Shot clock not implemented yet
-        }));
+        // Fetch team data
+        const teamIds = [...new Set(allGames.flatMap(g => [g.team_a_id, g.team_b_id]).filter(Boolean))];
+        const teamsMap = await fetchTeamsData(teamIds);
+
+        // Map to LiveGame format and sort
+        const formattedGames = sortGamesByCreatedAt(
+          allGames.map(game => mapGameToLiveGame(game, teamsMap)),
+          allGames
+        );
 
         setGames(formattedGames);
       } catch (err) {
@@ -212,27 +348,113 @@ export function OrganizerLiveStream() {
       }
     }
 
-    fetchLiveGames();
-    
-    // Refresh game list every 30 seconds
-    const interval = setInterval(fetchLiveGames, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    if (tournaments.length > 0) {
+      fetchLiveGames();
+      const interval = setInterval(fetchLiveGames, 30000);
+      return () => clearInterval(interval);
+    } else {
+      setLoading(false);
+    }
+  }, [user?.id, tournaments.length]);
 
-  // Subscribe to real-time score updates for selected game
+  // Fetch game_stats and calculate scores when game is selected
+  useEffect(() => {
+    if (!selectedGameId) {
+      setGameStats([]);
+      return;
+    }
+
+    async function fetchGameStats() {
+      try {
+        const { data, error } = await supabase
+          .from('game_stats')
+          .select('id, game_id, player_id, team_id, stat_type, stat_value, modifier, is_opponent_stat')
+          .eq('game_id', selectedGameId)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching game stats:', error);
+          return;
+        }
+
+        setGameStats(data || []);
+      } catch (err) {
+        console.error('Error loading game stats:', err);
+      }
+    }
+
+    fetchGameStats();
+  }, [selectedGameId]);
+
+  // Calculate scores from stats and update selectedGame
+  useEffect(() => {
+    if (!selectedGame || !selectedGame.team_a_id || !selectedGame.team_b_id) return;
+
+    const calculatedScores = calculateScoresFromStats(
+      gameStats,
+      selectedGame.team_a_id,
+      selectedGame.team_b_id
+    );
+
+    // Update scores only if they changed (prevent infinite loop)
+    setSelectedGame(prev => {
+      if (!prev) return null;
+      if (prev.home_score === calculatedScores.homeScore && 
+          prev.away_score === calculatedScores.awayScore) {
+        return prev; // No change, return same reference
+      }
+      return {
+        ...prev,
+        home_score: calculatedScores.homeScore,
+        away_score: calculatedScores.awayScore,
+      };
+    });
+  }, [gameStats, selectedGame?.id, selectedGame?.team_a_id, selectedGame?.team_b_id]);
+
+  // Subscribe to real-time updates for selected game
   useEffect(() => {
     if (!selectedGameId) return;
 
-    console.log('🔔 Subscribing to score updates for game:', selectedGameId);
+    console.log('🔔 Subscribing to updates for game:', selectedGameId);
 
-    // Set initial game data
-    const game = games.find(g => g.id === selectedGameId);
-    if (game) {
-      setSelectedGame(game);
+    // Set initial game data (only if selectedGame doesn't match selectedGameId - prevents overwriting calculated scores)
+    if (!selectedGame || selectedGame.id !== selectedGameId) {
+      const game = games.find(g => g.id === selectedGameId);
+      if (game) {
+        setSelectedGame(game);
+      }
     }
 
-    // Subscribe to game updates
-    const channel = supabase
+    // Subscribe to game_stats changes (source of truth for scores)
+    const statsChannel = supabase
+      .channel(`game_stats:${selectedGameId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'game_stats',
+          filter: `game_id=eq.${selectedGameId}`,
+        },
+        async (payload) => {
+          console.log('📊 Game stat change received:', payload.eventType);
+          
+          // Refetch all stats to recalculate scores
+          const { data, error } = await supabase
+            .from('game_stats')
+            .select('id, game_id, player_id, team_id, stat_type, stat_value, modifier, is_opponent_stat')
+            .eq('game_id', selectedGameId)
+            .order('created_at', { ascending: true });
+
+          if (!error && data) {
+            setGameStats(data);
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to games table updates (for clock, quarter, fouls, etc.)
+    const gamesChannel = supabase
       .channel(`game:${selectedGameId}`)
       .on(
         'postgres_changes',
@@ -243,18 +465,28 @@ export function OrganizerLiveStream() {
           filter: `id=eq.${selectedGameId}`,
         },
         (payload) => {
-          console.log('📊 Score update received:', payload.new);
+          console.log('📊 Game update received:', payload.new);
           
-          // Update selected game with new scores and clock
+          // Update selected game with clock, quarter, fouls, etc. (NOT scores)
           setSelectedGame(prev => {
             if (!prev) return null;
             return {
               ...prev,
-              home_score: payload.new.home_score || 0,
-              away_score: payload.new.away_score || 0,
+              // Clock and quarter
               quarter: payload.new.quarter || prev.quarter,
               game_clock_minutes: payload.new.game_clock_minutes ?? prev.game_clock_minutes,
               game_clock_seconds: payload.new.game_clock_seconds ?? prev.game_clock_seconds,
+              // Enhanced fields
+              team_a_fouls: payload.new.team_a_fouls,
+              team_b_fouls: payload.new.team_b_fouls,
+              team_a_timeouts: payload.new.team_a_timeouts_remaining,
+              team_b_timeouts: payload.new.team_b_timeouts_remaining,
+              current_possession_team_id: payload.new.current_possession_team_id,
+              jump_ball_arrow_team_id: payload.new.jump_ball_arrow_team_id,
+              venue: payload.new.venue,
+              // ✅ Preserve calculated scores (NOT from games table)
+              home_score: prev.home_score,
+              away_score: prev.away_score,
             };
           });
         }
@@ -262,10 +494,11 @@ export function OrganizerLiveStream() {
       .subscribe();
 
     return () => {
-      console.log('🔕 Unsubscribing from score updates');
-      supabase.removeChannel(channel);
+      console.log('🔕 Unsubscribing from updates');
+      supabase.removeChannel(statsChannel);
+      supabase.removeChannel(gamesChannel);
     };
-  }, [selectedGameId, games]);
+  }, [selectedGameId]); // ✅ Removed 'games' dependency - prevents re-running when games array refreshes
 
   // Update video element when remote stream is available
   useEffect(() => {
@@ -395,7 +628,8 @@ export function OrganizerLiveStream() {
                     className="w-full h-full object-contain"
                   />
                   {selectedGame && (
-                    <ScoreOverlay
+                    <EnhancedScoreOverlay
+                      // Existing props
                       teamAName={selectedGame.team_a_name}
                       teamBName={selectedGame.team_b_name}
                       homeScore={selectedGame.home_score}
@@ -404,6 +638,23 @@ export function OrganizerLiveStream() {
                       gameClockMinutes={selectedGame.game_clock_minutes}
                       gameClockSeconds={selectedGame.game_clock_seconds}
                       shotClockSeconds={selectedGame.shot_clock_seconds}
+                      
+                      // Enhanced props (with fallbacks)
+                      teamALogo={selectedGame.team_a_logo}
+                      teamBLogo={selectedGame.team_b_logo}
+                      teamAPrimaryColor={selectedGame.team_a_primary_color}
+                      teamBPrimaryColor={selectedGame.team_b_primary_color}
+                      teamASecondaryColor={selectedGame.team_a_secondary_color}
+                      teamBSecondaryColor={selectedGame.team_b_secondary_color}
+                      teamAFouls={selectedGame.team_a_fouls ?? 0}
+                      teamBFouls={selectedGame.team_b_fouls ?? 0}
+                      teamATimeouts={selectedGame.team_a_timeouts ?? 5}
+                      teamBTimeouts={selectedGame.team_b_timeouts ?? 5}
+                      currentPossessionTeamId={selectedGame.current_possession_team_id}
+                      jumpBallArrowTeamId={selectedGame.jump_ball_arrow_team_id}
+                      teamAId={selectedGame.team_a_id}
+                      teamBId={selectedGame.team_b_id}
+                      venue={selectedGame.venue}
                     />
                   )}
                 </>

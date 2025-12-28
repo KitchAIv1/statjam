@@ -796,6 +796,7 @@ export class GameService {
     gameTimeSeconds: number;
     isCustomPlayerIn?: boolean; // ✅ NEW: Flag to indicate if player coming in is custom
     isCustomPlayerOut?: boolean; // ✅ NEW: Flag to indicate if player going out is custom
+    videoTimestampMs?: number; // ✅ Video tracking: milliseconds in video when sub occurred
   }): Promise<boolean> {
     try {
       // ✅ CUSTOM PLAYER SUPPORT: Determine which columns to use based on player type
@@ -804,7 +805,8 @@ export class GameService {
         team_id: subData.teamId,
         quarter: subData.quarter,
         game_time_minutes: subData.gameTimeMinutes,
-        game_time_seconds: subData.gameTimeSeconds
+        game_time_seconds: subData.gameTimeSeconds,
+        video_timestamp_ms: subData.videoTimestampMs ?? null, // ✅ Video tracking support
       };
 
       // Handle player coming in (either regular or custom)
@@ -854,6 +856,21 @@ export class GameService {
         void this.createAuditLog(subData.gameId, 'substitution', subData);
       } catch (_e) {}
       
+      // ✅ FIX: Update game clock state for video-tracked subs (for minutes calculation)
+      if (subData.videoTimestampMs !== undefined) {
+        try {
+          await supabase
+            .from('games')
+            .update({
+              quarter: subData.quarter,
+              game_clock_minutes: subData.gameTimeMinutes,
+              game_clock_seconds: subData.gameTimeSeconds,
+            })
+            .eq('id', subData.gameId);
+        } catch (_e) {
+          // Non-critical, don't block
+        }
+      }
 
       return true;
     } catch (error) {
