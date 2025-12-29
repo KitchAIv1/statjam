@@ -17,6 +17,7 @@ import type { VideoUploadProgress } from '@/lib/types/video';
 export interface UploadOptions {
   file: File;
   gameId: string;
+  userId?: string; // For ownership verification
   onProgress?: (progress: VideoUploadProgress) => void;
   abortSignal?: AbortSignal;
 }
@@ -104,7 +105,7 @@ async function createBunnyVideo(
  * Uses server-side API route to keep BUNNY_STREAM_API_KEY secure
  */
 export async function uploadVideo(options: UploadOptions): Promise<UploadResult> {
-  const { file, gameId, onProgress, abortSignal } = options;
+  const { file, gameId, userId, onProgress, abortSignal } = options;
   
   // Validate file first
   const validation = validateVideoFile(file);
@@ -122,6 +123,7 @@ export async function uploadVideo(options: UploadOptions): Promise<UploadResult>
     });
     
     // Call our API route to create video and get upload credentials
+    // Include userId for ownership verification
     const createResponse = await fetch('/api/video/create-upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -129,6 +131,7 @@ export async function uploadVideo(options: UploadOptions): Promise<UploadResult>
         gameId,
         filename: file.name,
         fileSize: file.size,
+        userId, // For server-side ownership verification
       }),
     });
     

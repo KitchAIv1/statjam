@@ -207,7 +207,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
                       Upload your game video. Our stat trackers will track your game within 24 hours.
                     </p>
                   </div>
-                  <VideoUploader gameId={gameId} onUploadComplete={handleUploadComplete} />
+                  <VideoUploader gameId={gameId} userId={user?.id} onUploadComplete={handleUploadComplete} />
                 </div>
               ) : (
                 <div className="text-center">

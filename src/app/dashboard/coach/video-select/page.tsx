@@ -45,9 +45,14 @@ function VideoSelectContent() {
   const { tier: subscriptionTier, limits, loading: subLoading } = useSubscription('coach');
   
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [team, setTeam] = useState<any>(null);
   const [games, setGames] = useState<GameWithVideo[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalGames, setTotalGames] = useState(0);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  
+  const GAMES_PER_PAGE = 10;
   
   // New game form state
   const [showNewGameForm, setShowNewGameForm] = useState(false);
@@ -70,16 +75,18 @@ function VideoSelectContent() {
       
       try {
         setLoading(true);
-        const [teamData, gamesData] = await Promise.all([
+        const [teamData, gamesResult] = await Promise.all([
           CoachTeamService.getTeam(teamId),
-          CoachGameService.getTeamGames(teamId),
+          CoachGameService.getTeamGames(teamId, GAMES_PER_PAGE, 0),
         ]);
         
         setTeam(teamData);
+        setHasMore(gamesResult.hasMore);
+        setTotalGames(gamesResult.total);
         
         // Load video data for each game
         const gamesWithVideos = await Promise.all(
-          (gamesData || []).map(async (game: any) => {
+          gamesResult.games.map(async (game: any) => {
             try {
               const video = await VideoStatService.getGameVideo(game.id);
               return { ...game, video };
@@ -101,6 +108,40 @@ function VideoSelectContent() {
       loadData();
     }
   }, [user, teamId]);
+  
+  // Load more games
+  const handleLoadMore = async () => {
+    if (!teamId || loadingMore) return;
+    
+    try {
+      setLoadingMore(true);
+      const gamesResult = await CoachGameService.getTeamGames(
+        teamId, 
+        GAMES_PER_PAGE, 
+        games.length
+      );
+      
+      setHasMore(gamesResult.hasMore);
+      
+      // Load video data for new games
+      const newGamesWithVideos = await Promise.all(
+        gamesResult.games.map(async (game: any) => {
+          try {
+            const video = await VideoStatService.getGameVideo(game.id);
+            return { ...game, video };
+          } catch {
+            return { ...game, video: null };
+          }
+        })
+      );
+      
+      setGames(prev => [...prev, ...newGamesWithVideos]);
+    } catch (error) {
+      console.error('Error loading more games:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
   
   const handleSelectGame = (gameId: string) => {
     router.push(`/dashboard/coach/video/${gameId}`);
@@ -404,6 +445,32 @@ function VideoSelectContent() {
                     </div>
                   );
                 })}
+                
+                {/* Load More Button */}
+                {hasMore && (
+                  <div className="pt-4 text-center">
+                    <Button
+                      variant="outline"
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
+                      className="gap-2"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          Load More Games
+                          <span className="text-muted-foreground text-xs">
+                            ({games.length} of {totalGames})
+                          </span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>

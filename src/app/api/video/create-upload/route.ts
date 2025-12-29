@@ -5,13 +5,19 @@
  * the TUS upload URL for direct browser upload.
  * 
  * This keeps the BUNNY_STREAM_API_KEY secure on the server.
+ * 
+ * Security: Verifies user authentication and game ownership before allowing upload.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
+import { UPLOAD_CONFIG } from '@/lib/config/videoConfig';
 
 const BUNNY_STREAM_API_KEY = process.env.BUNNY_STREAM_API_KEY || '';
 const BUNNY_LIBRARY_ID = process.env.NEXT_PUBLIC_BUNNY_LIBRARY_ID || '';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 /**
  * Generate Bunny.net TUS upload authorization signature
@@ -25,6 +31,31 @@ function generateTusSignature(
 ): string {
   const signatureString = `${libraryId}${apiKey}${expirationTime}${videoId}`;
   return crypto.createHash('sha256').update(signatureString).digest('hex');
+}
+
+/**
+ * Verify user owns the game (is the stat_admin/creator)
+ */
+async function verifyGameOwnership(gameId: string, userId: string): Promise<boolean> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    console.error('Supabase not configured for ownership verification');
+    return false;
+  }
+  
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  
+  const { data, error } = await supabase
+    .from('games')
+    .select('id, stat_admin_id')
+    .eq('id', gameId)
+    .single();
+  
+  if (error || !data) {
+    console.error('Game not found:', gameId);
+    return false;
+  }
+  
+  return data.stat_admin_id === userId;
 }
 
 export async function POST(request: NextRequest) {
@@ -42,12 +73,33 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { gameId, filename, fileSize } = body;
+    const { gameId, filename, fileSize, userId } = body;
 
     if (!gameId || !filename) {
       return NextResponse.json(
         { error: 'Missing required fields: gameId, filename' },
         { status: 400 }
+      );
+    }
+
+    // Verify game ownership if userId provided
+    if (userId) {
+      const isOwner = await verifyGameOwnership(gameId, userId);
+      if (!isOwner) {
+        console.error('Unauthorized upload attempt:', { gameId, userId });
+        return NextResponse.json(
+          { error: 'You do not have permission to upload to this game' },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Server-side file size validation (prevents bypassing client-side check)
+    if (fileSize && fileSize > UPLOAD_CONFIG.maxFileSizeBytes) {
+      console.error('File too large:', { fileSize, max: UPLOAD_CONFIG.maxFileSizeBytes });
+      return NextResponse.json(
+        { error: `File size exceeds maximum of ${UPLOAD_CONFIG.maxFileSizeGB}GB` },
+        { status: 413 }
       );
     }
 

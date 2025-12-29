@@ -17,6 +17,26 @@ export class CoachGameService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // SECURITY: Verify team ownership before creating game
+      const { data: team, error: teamError } = await supabase
+        .from('teams')
+        .select('id, coach_id')
+        .eq('id', request.coach_team_id)
+        .single();
+      
+      if (teamError || !team) {
+        throw new Error('Team not found');
+      }
+      
+      if (team.coach_id !== user.id) {
+        console.error('❌ Unauthorized game creation attempt:', { 
+          userId: user.id, 
+          teamId: request.coach_team_id, 
+          teamOwnerId: team.coach_id 
+        });
+        throw new Error('You do not have permission to create games for this team');
+      }
+
       // TEMPORARY WORKAROUND: Create a dummy tournament for coach games
       // This will be removed once tournament_id is made nullable
       
@@ -191,26 +211,36 @@ export class CoachGameService {
   }
 
   /**
-   * Get games for a specific team
-   * ✅ FIX: Remove is_coach_game filter to find existing games (they have default FALSE)
+   * Get games for a specific team with pagination support
    * Uses team_a_id to identify coach team games (coach team is always team_a)
    */
-  static async getTeamGames(teamId: string, limit: number = 10): Promise<CoachGame[]> {
+  static async getTeamGames(
+    teamId: string, 
+    limit: number = 10, 
+    offset: number = 0
+  ): Promise<{ games: CoachGame[]; hasMore: boolean; total: number }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+
+      // Get total count for pagination
+      const { count } = await supabase
+        .from('games')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_a_id', teamId)
+        .eq('stat_admin_id', user.id);
 
       const { data, error } = await supabase
         .from('games')
         .select('*')
         .eq('team_a_id', teamId)
-        .eq('stat_admin_id', user.id) // Only games created by this coach
+        .eq('stat_admin_id', user.id)
         .order('start_time', { ascending: false })
-        .limit(limit);
+        .range(offset, offset + limit - 1);
 
       if (error) throw error;
 
-      return (data || []).map(game => ({
+      const games = (data || []).map(game => ({
         id: game.id,
         coach_id: game.stat_admin_id,
         coach_team_id: game.team_a_id,
@@ -230,6 +260,12 @@ export class CoachGameService {
         created_at: game.created_at,
         updated_at: game.updated_at
       }));
+
+      return {
+        games,
+        hasMore: (count || 0) > offset + games.length,
+        total: count || 0
+      };
     } catch (error) {
       console.error('❌ Error fetching team games:', error);
       throw error;

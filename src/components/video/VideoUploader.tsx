@@ -19,6 +19,7 @@ import type { VideoUploadProgress } from '@/lib/types/video';
 
 interface VideoUploaderProps {
   gameId: string;
+  userId?: string; // For ownership verification
   onUploadComplete: (videoId: string) => void;
   onUploadError?: (error: string) => void;
   className?: string;
@@ -26,6 +27,7 @@ interface VideoUploaderProps {
 
 export function VideoUploader({
   gameId,
+  userId,
   onUploadComplete,
   onUploadError,
   className = '',
@@ -90,6 +92,7 @@ export function VideoUploader({
     const result = await BunnyUploadService.uploadVideo({
       file,
       gameId,
+      userId, // Pass userId for ownership verification
       onProgress: setProgress,
       abortSignal: abortControllerRef.current.signal,
     });
@@ -197,27 +200,40 @@ export function VideoUploader({
       
       {/* Drop zone */}
       {!file && (
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`
-            border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
-            transition-colors duration-200
-            ${isDragging 
-              ? 'border-orange-500 bg-orange-50' 
-              : 'border-gray-300 hover:border-orange-400 hover:bg-gray-50'
-            }
-          `}
-        >
-          <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-lg font-medium text-gray-700 mb-1">
-            Drop video file here or click to browse
-          </p>
-          <p className="text-sm text-gray-500">
-            Supports MP4, MOV, WebM, AVI, MKV (max {UPLOAD_CONFIG.maxFileSizeGB}GB)
-          </p>
+        <div className="space-y-4">
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`
+              border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
+              transition-colors duration-200
+              ${isDragging 
+                ? 'border-orange-500 bg-orange-50' 
+                : 'border-gray-300 hover:border-orange-400 hover:bg-gray-50'
+              }
+            `}
+          >
+            <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-lg font-medium text-gray-700 mb-1">
+              Drop video file here or click to browse
+            </p>
+            <p className="text-sm text-gray-500">
+              Supports MP4, MOV, WebM, AVI, MKV (max {UPLOAD_CONFIG.maxFileSizeGB}GB)
+            </p>
+          </div>
+          
+          {/* Explicit browse button as fallback */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Browse Files
+          </Button>
         </div>
       )}
       
