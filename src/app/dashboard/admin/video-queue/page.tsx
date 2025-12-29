@@ -9,7 +9,7 @@
  * 3. Clip Generation - Monitor clip generation progress
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { 
@@ -49,7 +49,28 @@ interface JobWithGame extends ClipGenerationJob {
   gameName: string;
 }
 
+// Loading fallback for Suspense
+function VideoQueueLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white flex items-center justify-center">
+      <div className="flex items-center gap-3 text-orange-600">
+        <Loader2 className="w-6 h-6 animate-spin" />
+        <span>Loading video queue...</span>
+      </div>
+    </div>
+  );
+}
+
+// Main page wrapper with Suspense
 export default function AdminVideoQueuePage() {
+  return (
+    <Suspense fallback={<VideoQueueLoading />}>
+      <AdminVideoQueueContent />
+    </Suspense>
+  );
+}
+
+function AdminVideoQueueContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuthV2();

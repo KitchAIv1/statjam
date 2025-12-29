@@ -57,6 +57,12 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
 
   const handleStartTracking = async (videoItem: VideoQueueItem) => {
     try {
+      // For completed videos, navigate to game viewer
+      if (videoItem.video.assignmentStatus === 'completed') {
+        router.push(`/dashboard/coach/game/${videoItem.video.gameId}`);
+        return;
+      }
+      
       // Update status to in_progress
       if (videoItem.video.assignmentStatus === 'assigned') {
         await updateAssignmentStatus(videoItem.video.id, 'in_progress');
@@ -98,6 +104,14 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
   };
 
   const getStatusBadge = (status: string) => {
+    if (status === 'completed') {
+      return (
+        <span className="px-2 py-1 text-xs font-medium rounded bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1">
+          <CheckCircle className="w-3 h-3" />
+          Completed
+        </span>
+      );
+    }
     if (status === 'in_progress') {
       return (
         <span className="px-2 py-1 text-xs font-medium rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
@@ -207,11 +221,18 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
                 
                 <button
                   onClick={() => handleStartTracking(item)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 
-                             text-white rounded-lg font-medium hover:from-purple-600 hover:to-purple-700 
-                             transition-all shadow-md hover:shadow-lg flex-shrink-0"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex-shrink-0 ${
+                    item.video.assignmentStatus === 'completed'
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                      : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white'
+                  }`}
                 >
-                  {item.video.assignmentStatus === 'in_progress' ? (
+                  {item.video.assignmentStatus === 'completed' ? (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      View Stats
+                    </>
+                  ) : item.video.assignmentStatus === 'in_progress' ? (
                     <>
                       <Play className="w-4 h-4" />
                       Continue
