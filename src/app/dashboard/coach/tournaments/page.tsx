@@ -21,6 +21,8 @@ interface TournamentWithTeams {
     id: string;
     name: string;
     approval_status?: string;
+    joined_at?: string;
+    is_primary?: boolean;
   }[];
 }
 
@@ -91,6 +93,8 @@ function CoachTournamentsContent() {
                   id: link.team_id,
                   name: link.team_name,
                   approval_status: link.approval_status,
+                  joined_at: link.joined_at,
+                  is_primary: link.is_primary,
                 }],
               });
             } catch (error) {
@@ -103,6 +107,8 @@ function CoachTournamentsContent() {
               id: link.team_id,
               name: link.team_name,
               approval_status: link.approval_status,
+              joined_at: link.joined_at,
+              is_primary: link.is_primary,
             });
           }
         }
@@ -224,23 +230,46 @@ function CoachTournamentsContent() {
                         {tournament.teams.map((team) => (
                           <div 
                             key={team.id}
-                            className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                            className="p-3 rounded-lg bg-muted/50 space-y-2"
                           >
-                            <span className="text-sm font-medium">{team.name}</span>
-                            {team.approval_status === 'pending' && (
-                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                                Pending
-                              </Badge>
-                            )}
-                            {team.approval_status === 'rejected' && (
-                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                Denied
-                              </Badge>
-                            )}
-                            {(!team.approval_status || team.approval_status === 'approved') && (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                Approved
-                              </Badge>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium">{team.name}</span>
+                                {team.is_primary && (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                                    Primary
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {team.approval_status === 'pending' && (
+                                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                    Pending
+                                  </Badge>
+                                )}
+                                {team.approval_status === 'rejected' && (
+                                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                    Denied
+                                  </Badge>
+                                )}
+                                {(!team.approval_status || team.approval_status === 'approved') && (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                    Approved
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            {team.joined_at && (
+                              <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                Joined {new Date(team.joined_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                              </div>
                             )}
                           </div>
                         ))}
