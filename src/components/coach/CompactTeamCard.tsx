@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { Users, PlayCircle, Video, MoreHorizontal } from 'lucide-react';
+import { Users, PlayCircle, Video, MoreHorizontal, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -27,6 +27,7 @@ interface CompactTeamCardProps {
   onVideoTrack: (team: CoachTeam) => void;
   onManage: (team: CoachTeam) => void;
   onAnalytics: (team: CoachTeam) => void;
+  onJoinTournament: (team: CoachTeam) => void;
   hasVideoAccess: boolean;
 }
 
@@ -36,6 +37,7 @@ export function CompactTeamCard({
   onVideoTrack,
   onManage,
   onAnalytics,
+  onJoinTournament,
   hasVideoAccess,
 }: CompactTeamCardProps) {
   const canTrack = (team.player_count || 0) >= 5;
@@ -88,7 +90,7 @@ export function CompactTeamCard({
               <MoreHorizontal className="w-3.5 h-3.5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuContent align="end" className="w-44">
             {hasVideoAccess && (
               <DropdownMenuItem onClick={() => onVideoTrack(team)} disabled={!canTrack}>
                 <Video className="w-4 h-4 mr-2" />
@@ -103,6 +105,12 @@ export function CompactTeamCard({
               <PlayCircle className="w-4 h-4 mr-2" />
               Analytics
             </DropdownMenuItem>
+            {!team.tournament_id && (
+              <DropdownMenuItem onClick={() => onJoinTournament(team)}>
+                <Trophy className="w-4 h-4 mr-2" />
+                Join Tournament
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

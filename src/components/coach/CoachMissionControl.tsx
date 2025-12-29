@@ -23,6 +23,7 @@ import { RecentGamesWidget } from './RecentGamesWidget';
 import { TournamentsCompactWidget } from './TournamentsCompactWidget';
 import { CoachQuickTrackModal } from './CoachQuickTrackModal';
 import { CreateCoachTeamModal } from './CreateCoachTeamModal';
+import { CoachTournamentSearchModal } from './CoachTournamentSearchModal';
 import { PlayerManagementModal } from '@/components/shared/PlayerManagementModal';
 import { CoachPlayerManagementService } from '@/lib/services/coachPlayerManagementService';
 import { CoachTeamAnalyticsTab } from './CoachTeamAnalyticsTab';
@@ -59,6 +60,7 @@ export function CoachMissionControl({
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showPlayerManagement, setShowPlayerManagement] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showTournamentSearch, setShowTournamentSearch] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<CoachTeam | null>(null);
 
@@ -89,6 +91,11 @@ export function CoachMissionControl({
   const handleAnalytics = (team: CoachTeam) => {
     setSelectedTeam(team);
     setShowAnalytics(true);
+  };
+
+  const handleJoinTournament = (team: CoachTeam) => {
+    setSelectedTeam(team);
+    setShowTournamentSearch(true);
   };
 
   const handleStartGame = () => {
@@ -164,6 +171,7 @@ export function CoachMissionControl({
         onVideoTrack={handleVideoTrack}
         onManage={handleManage}
         onAnalytics={handleAnalytics}
+        onJoinTournament={handleJoinTournament}
         onCreateTeam={() => setShowCreateTeam(true)}
       />
 
@@ -218,6 +226,18 @@ export function CoachMissionControl({
             <CoachTeamAnalyticsTab teamId={selectedTeam.id} teamName={selectedTeam.name} />
           </DialogContent>
         </Dialog>
+      )}
+
+      {showTournamentSearch && selectedTeam && (
+        <CoachTournamentSearchModal
+          team={selectedTeam}
+          onClose={() => { setShowTournamentSearch(false); setSelectedTeam(null); }}
+          onTournamentAttached={() => {
+            setShowTournamentSearch(false);
+            setSelectedTeam(null);
+            onTeamUpdate();
+          }}
+        />
       )}
 
       <UpgradeModal
