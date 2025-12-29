@@ -27,6 +27,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { VideoStatService } from '@/lib/services/videoStatService';
 import { CoachGameService } from '@/lib/services/coachGameService';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
+import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { isBunnyConfigured } from '@/lib/config/videoConfig';
 import { UpgradeModal, VideoCreditsModal } from '@/components/subscription';
 import type { GameVideo } from '@/lib/types/video';
@@ -40,7 +41,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
   const { gameId } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuthV2();
-  const { tier: subscriptionTier, limits, loading: subLoading } = useSubscription('coach');
+  const { tier: subscriptionTier, limits, videoCredits, refetch: refetchSubscription, loading: subLoading } = useSubscription('coach');
   
   // State
   const [gameVideo, setGameVideo] = useState<GameVideo | null>(null);
@@ -130,6 +131,14 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
         bunnyVideoId,
         user?.id || ''
       );
+      
+      // Consume one video credit
+      if (user?.id) {
+        const consumed = await SubscriptionService.consumeVideoCredit(user.id, 'coach');
+        if (consumed) {
+          refetchSubscription(); // Update credits in UI
+        }
+      }
     } catch (err) {
       console.error('Error creating video record:', err);
     }
@@ -209,18 +218,33 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
                     </p>
                   </div>
                   
-                  {/* Buy Credits Upsell */}
+                  {/* Credits Status / Buy Credits */}
                   <button
                     onClick={() => setShowVideoCreditsModal(true)}
-                    className="w-full mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 
-                               rounded-lg flex items-center justify-between hover:shadow-md transition-all"
+                    className={`w-full mb-4 p-3 rounded-lg flex items-center justify-between hover:shadow-md transition-all
+                      ${videoCredits > 0 
+                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200' 
+                        : 'bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200'
+                      }`}
                   >
                     <div className="flex items-center gap-2">
-                      <CreditCard className="w-5 h-5 text-amber-600" />
-                      <span className="text-sm font-medium text-amber-800">Buy Video Credits</span>
+                      <CreditCard className={`w-5 h-5 ${videoCredits > 0 ? 'text-green-600' : 'text-amber-600'}`} />
+                      <span className={`text-sm font-medium ${videoCredits > 0 ? 'text-green-800' : 'text-amber-800'}`}>
+                        {videoCredits > 0 ? `${videoCredits} Credits Available` : 'Buy Video Credits'}
+                      </span>
                     </div>
-                    <span className="text-xs text-amber-600">Save up to 31%</span>
+                    <span className={`text-xs ${videoCredits > 0 ? 'text-green-600' : 'text-amber-600'}`}>
+                      {videoCredits > 0 ? 'Uses 1 credit' : 'Save up to 31%'}
+                    </span>
                   </button>
+                  
+                  {videoCredits === 0 && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-center">
+                      <p className="text-sm text-red-700">
+                        No video credits available. Purchase credits to upload.
+                      </p>
+                    </div>
+                  )}
                   
                   <VideoUploader gameId={gameId} userId={user?.id} onUploadComplete={handleUploadComplete} />
                 </div>
@@ -287,7 +311,8 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
         isOpen={showVideoCreditsModal}
         onClose={() => setShowVideoCreditsModal(false)}
         role="coach"
-        currentCredits={0}
+        currentCredits={videoCredits}
+        onPurchaseComplete={refetchSubscription}
       />
     </div>
   );

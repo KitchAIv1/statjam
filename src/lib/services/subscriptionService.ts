@@ -292,6 +292,53 @@ function getMonthStart(): string {
 }
 
 // =============================================================================
+// VIDEO CREDITS
+// =============================================================================
+
+/**
+ * Get current video credits for a user
+ */
+export async function getVideoCredits(userId: string, role: UserRole): Promise<number> {
+  const subscription = await getSubscription(userId, role);
+  return subscription?.videoCredits ?? 0;
+}
+
+/**
+ * Consume one video credit (for video upload)
+ * Returns true if successful, false if no credits available
+ */
+export async function consumeVideoCredit(userId: string, role: UserRole): Promise<boolean> {
+  try {
+    const currentCredits = await getVideoCredits(userId, role);
+    
+    if (currentCredits <= 0) {
+      console.log(`❌ No video credits available for user ${userId}`);
+      return false;
+    }
+
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({ 
+        video_credits: currentCredits - 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('role', role);
+
+    if (error) {
+      console.error('Error consuming video credit:', error);
+      return false;
+    }
+
+    console.log(`✅ Video credit consumed for user ${userId}: ${currentCredits} → ${currentCredits - 1}`);
+    return true;
+  } catch (err) {
+    console.error('Error consuming video credit:', err);
+    return false;
+  }
+}
+
+// =============================================================================
 // EXPORT SERVICE OBJECT
 // =============================================================================
 
@@ -306,6 +353,8 @@ export const SubscriptionService = {
   getCoachGameCount,
   isUserVerified,
   updateVerifiedStatus,
+  getVideoCredits,
+  consumeVideoCredit,
 };
 
 

@@ -24,6 +24,7 @@ interface VideoCreditsModalProps {
   onClose: () => void;
   role: UserRole;
   currentCredits?: number;
+  onPurchaseComplete?: () => void;
 }
 
 export function VideoCreditsModal({

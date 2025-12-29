@@ -91,8 +91,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
-  // Get subscription details
+  // Check if this is a one-time payment (video credits) or subscription
+  if (session.mode === 'payment') {
+    await handleVideoCreditsPurchase(session, userId, role);
+    return;
+  }
+
+  // Handle subscription checkout
   const subscriptionId = session.subscription as string;
+  if (!subscriptionId) {
+    console.error('No subscription ID in session');
+    return;
+  }
+
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
   
   // Use tier from metadata if available, otherwise fallback to price mapping
@@ -132,6 +143,65 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     .eq('id', userId);
 
   console.log(`✅ Subscription created for user ${userId} - ${tier}`);
+}
+
+/**
+ * Handle one-time video credits purchase
+ */
+async function handleVideoCreditsPurchase(
+  session: Stripe.Checkout.Session,
+  userId: string,
+  role: string
+) {
+  // Get the line items to determine which package was purchased
+  const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+  const priceId = lineItems.data[0]?.price?.id;
+
+  if (!priceId) {
+    console.error('No price ID found in line items');
+    return;
+  }
+
+  // Map price ID to credits amount
+  const creditsToAdd = getCreditsFromPriceId(priceId);
+  
+  if (creditsToAdd === 0) {
+    console.error('Unknown price ID for video credits:', priceId);
+    return;
+  }
+
+  // Get current credits and add new ones
+  const { data: existingSub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('video_credits')
+    .eq('user_id', userId)
+    .eq('role', role)
+    .single();
+
+  const currentCredits = existingSub?.video_credits || 0;
+  const newCredits = currentCredits + creditsToAdd;
+
+  // Upsert subscription with updated credits
+  const { error } = await supabaseAdmin
+    .from('subscriptions')
+    .upsert({
+      user_id: userId,
+      role: role,
+      tier: 'free', // Credits don't change tier
+      status: 'active',
+      stripe_customer_id: session.customer as string,
+      video_credits: newCredits,
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'user_id,role',
+    });
+
+  if (error) {
+    console.error('Error updating video credits:', error);
+    return;
+  }
+
+  console.log(`✅ Video credits added for user ${userId}: +${creditsToAdd} (total: ${newCredits})`);
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
@@ -244,5 +314,20 @@ function getBillingPeriod(price: Stripe.Price | undefined): string | null {
   if (interval === 'year') return 'annual';
   
   return 'monthly';
+}
+
+/**
+ * Map video credits price ID to number of credits
+ * Uses env vars for flexibility between test/live modes
+ */
+function getCreditsFromPriceId(priceId: string): number {
+  const priceToCredits: Record<string, number> = {
+    [process.env.NEXT_PUBLIC_STRIPE_PRICE_VIDEO_SINGLE || '']: 1,
+    [process.env.NEXT_PUBLIC_STRIPE_PRICE_VIDEO_STARTER || '']: 5,
+    [process.env.NEXT_PUBLIC_STRIPE_PRICE_VIDEO_SEASON || '']: 11,
+    [process.env.NEXT_PUBLIC_STRIPE_PRICE_VIDEO_PRO_SEASON || '']: 23,
+  };
+  
+  return priceToCredits[priceId] || 0;
 }
 

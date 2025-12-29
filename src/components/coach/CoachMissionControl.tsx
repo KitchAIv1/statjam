@@ -50,7 +50,7 @@ export function CoachMissionControl({
   onEditProfile,
 }: CoachMissionControlProps) {
   const router = useRouter();
-  const { limits, tier } = useSubscription('coach');
+  const { limits, tier, videoCredits, refetch: refetchSubscription } = useSubscription('coach');
   
   // Dashboard data hook
   const dashboardData = useCoachDashboardData(user?.id);
@@ -259,7 +259,11 @@ export function CoachMissionControl({
         isOpen={showVideoCreditsModal}
         onClose={() => setShowVideoCreditsModal(false)}
         role="coach"
-        currentCredits={0}
+        currentCredits={videoCredits}
+        onPurchaseComplete={() => {
+          refetchSubscription();
+          setShowVideoCreditsModal(false);
+        }}
       />
     </div>
   );

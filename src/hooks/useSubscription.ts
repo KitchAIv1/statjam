@@ -23,6 +23,7 @@ interface UseSubscriptionResult {
   tier: SubscriptionTier;
   limits: TierLimits;
   isVerified: boolean;
+  videoCredits: number;
   loading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
@@ -72,17 +73,20 @@ export function useSubscription(roleOverride?: UserRole): UseSubscriptionResult 
   // Derive tier and limits from subscription
   const tier: SubscriptionTier = subscription?.tier ?? 'free';
   const limits = getTierLimits(role, tier);
+  const videoCredits = subscription?.videoCredits ?? 0;
 
   return {
     subscription,
     tier,
     limits,
     isVerified,
+    videoCredits,
     loading: authLoading || loading,
     error,
     refetch: fetchSubscription,
   };
 }
+
 
 
 
