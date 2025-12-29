@@ -46,46 +46,68 @@ function CoachTournamentsContent() {
         // Fetch coach teams
         const teams = await CoachTeamService.getCoachTeams(user.id);
         
-        // Extract unique tournament IDs
-        const tournamentIds = [...new Set(
-          teams
-            .filter(t => t.tournament_id)
-            .map(t => t.tournament_id!)
-        )];
-
-        if (tournamentIds.length === 0) {
+        if (teams.length === 0) {
           setTournaments([]);
           setLoading(false);
           return;
         }
 
-        // Fetch tournament details
-        const tournamentData = await Promise.all(
-          tournamentIds.map(async (tid) => {
+        // Fetch all tournament links from junction table for each team
+        const allTeamTournaments = await Promise.all(
+          teams.map(async (team) => {
+            const links = await CoachTeamService.getTeamTournaments(team.id);
+            return links.map(link => ({
+              ...link,
+              team_id: team.id,
+              team_name: team.name,
+            }));
+          })
+        );
+
+        // Flatten all links
+        const allLinks = allTeamTournaments.flat();
+
+        if (allLinks.length === 0) {
+          setTournaments([]);
+          setLoading(false);
+          return;
+        }
+
+        // Group by tournament_id
+        const tournamentMap = new Map<string, TournamentWithTeams>();
+        
+        for (const link of allLinks) {
+          if (!tournamentMap.has(link.tournament_id)) {
+            // Fetch tournament details for first occurrence
             try {
-              const tournament = await TournamentService.getTournament(tid);
-              const connectedTeams = teams.filter(t => t.tournament_id === tid);
-              
-              return {
+              const tournament = await TournamentService.getTournament(link.tournament_id);
+              tournamentMap.set(link.tournament_id, {
                 id: tournament.id,
                 name: tournament.name,
                 start_date: tournament.start_date,
                 end_date: tournament.end_date,
                 venue: tournament.venue,
-                teams: connectedTeams.map(t => ({
-                  id: t.id,
-                  name: t.name,
-                  approval_status: t.approval_status
-                }))
-              };
+                teams: [{
+                  id: link.team_id,
+                  name: link.team_name,
+                  approval_status: link.approval_status,
+                }],
+              });
             } catch (error) {
-              console.error('❌ Error fetching tournament:', tid, error);
-              return null;
+              console.error('❌ Error fetching tournament:', link.tournament_id, error);
             }
-          })
-        );
+          } else {
+            // Add team to existing tournament entry
+            const existing = tournamentMap.get(link.tournament_id)!;
+            existing.teams.push({
+              id: link.team_id,
+              name: link.team_name,
+              approval_status: link.approval_status,
+            });
+          }
+        }
 
-        setTournaments(tournamentData.filter(Boolean) as TournamentWithTeams[]);
+        setTournaments(Array.from(tournamentMap.values()));
       } catch (error) {
         console.error('❌ Error loading tournaments:', error);
       } finally {
