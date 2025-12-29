@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Video, Smartphone, Wifi, WifiOff, AlertCircle, CheckCircle, RefreshCw, ExternalLink } from "lucide-react";
 import { supabase } from '@/lib/supabase';
 import { useWebRTCStream, ConnectionStatus } from '@/hooks/useWebRTCStream';
-import { isFirebaseConfigured } from '@/lib/firebase';
+import { isRealtimeConfigured } from '@/lib/services/webrtcService';
 import { EnhancedScoreOverlay } from '@/components/live-streaming/EnhancedScoreOverlay';
 import { useTournaments } from '@/lib/hooks/useTournaments';
 import { GameService } from '@/lib/services/gameService';
@@ -517,8 +517,8 @@ export function OrganizerLiveStream({ user }: OrganizerLiveStreamProps) {
     }
   };
 
-  // Check Firebase configuration
-  if (!isFirebaseConfigured()) {
+  // Check Supabase Realtime configuration
+  if (!isRealtimeConfigured()) {
     return (
       <div className="space-y-6">
         <div>
@@ -530,26 +530,15 @@ export function OrganizerLiveStream({ user }: OrganizerLiveStreamProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-destructive" />
-              <CardTitle>Firebase Not Configured</CardTitle>
+              <CardTitle>Supabase Not Configured</CardTitle>
             </div>
-            <CardDescription>Live streaming requires Firebase Realtime Database for signaling</CardDescription>
+            <CardDescription>Live streaming requires Supabase Realtime for signaling</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="bg-muted rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-3">
-                To enable live streaming, you need to set up Firebase:
+              <p className="text-sm text-muted-foreground">
+                Please ensure Supabase environment variables are configured in your .env.local file.
               </p>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground mb-4">
-                <li>Create a Firebase project at console.firebase.google.com</li>
-                <li>Enable Realtime Database</li>
-                <li>Add Firebase config to your .env.local file</li>
-              </ol>
-              <Button variant="outline" className="gap-2" asChild>
-                <a href="/docs/04-features/live-streaming/FIREBASE_SETUP.md" target="_blank">
-                  <ExternalLink className="w-4 h-4" />
-                  View Setup Guide
-                </a>
-              </Button>
             </div>
           </CardContent>
         </Card>

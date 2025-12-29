@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWebRTCStream } from '@/hooks/useWebRTCStream';
-import { isFirebaseConfigured } from '@/lib/firebase';
+import { isRealtimeConfigured } from '@/lib/services/webrtcService';
 import { Video, Wifi, WifiOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -189,18 +189,15 @@ export default function MobileCameraPage() {
     }
   }, [localStream]);
 
-  // Check Firebase configuration
-  if (!isFirebaseConfigured()) {
+  // Check Supabase Realtime configuration
+  if (!isRealtimeConfigured()) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
         <div className="max-w-md text-center">
           <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Firebase Not Configured</h1>
+          <h1 className="text-2xl font-bold mb-2">Supabase Not Configured</h1>
           <p className="text-muted-foreground mb-4">
-            Please set up Firebase configuration to use live streaming.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            See <code className="bg-muted px-2 py-1 rounded">docs/04-features/live-streaming/FIREBASE_SETUP.md</code>
+            Please set up Supabase configuration to use live streaming.
           </p>
         </div>
       </div>

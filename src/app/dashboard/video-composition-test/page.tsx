@@ -2,12 +2,12 @@
  * Video Composition Test Page
  * 
  * Tests video composition with webcam + Canvas overlay.
- * Shows composed stream preview.
+ * Shows composed stream preview with real game data.
  */
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { VideoCompositionPreview } from '@/components/live-streaming/VideoCompositionPreview';
 import { BroadcastControls } from '@/components/live-streaming/BroadcastControls';
 import { useWebcam } from '@/hooks/useWebcam';
@@ -17,33 +17,42 @@ import { useBroadcast } from '@/hooks/useBroadcast';
 import { GameOverlayData } from '@/lib/services/canvas-overlay';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
-import { Video, Camera, CameraOff, Smartphone } from 'lucide-react';
+import { Video, Camera, Smartphone, RefreshCw } from 'lucide-react';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useTournaments } from '@/lib/hooks/useTournaments';
+import { GameService } from '@/lib/services/gameService';
+import { supabase } from '@/lib/supabase';
+import { useGameOverlayData } from '@/hooks/useGameOverlayData';
+
+interface LiveGame {
+  id: string;
+  team_a_id: string;
+  team_b_id: string;
+  team_a_name: string;
+  team_b_name: string;
+  home_score: number;
+  away_score: number;
+  quarter: number;
+  status: string;
+  game_clock_minutes: number;
+  game_clock_seconds: number;
+}
 
 export default function VideoCompositionTestPage() {
+  const { user } = useAuthContext();
   const [videoSource, setVideoSource] = useState<'webcam' | 'iphone' | null>(null);
   const [webcamEnabled, setWebcamEnabled] = useState(false);
-  const [gameId, setGameId] = useState<string | null>(null);
+  const [games, setGames] = useState<LiveGame[]>([]);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [loadingGames, setLoadingGames] = useState(true);
   
-  // Mock game overlay data
-  const overlayData: GameOverlayData = useMemo(() => ({
-    teamAName: 'Celtics',
-    teamBName: 'Lakers',
-    teamAId: 'team-a',
-    teamBId: 'team-b',
-    homeScore: 85,
-    awayScore: 92,
-    quarter: 4,
-    gameClockMinutes: 2,
-    gameClockSeconds: 34,
-    shotClockSeconds: 18,
-    teamAFouls: 3,
-    teamBFouls: 4,
-    teamATimeouts: 2,
-    teamBTimeouts: 3,
-  }), []);
+  // Get tournaments
+  const { tournaments, loading: tournamentsLoading } = useTournaments(user);
   
-  // Webcam hook - manual control only (no auto-start)
-  // Request high resolution for broadcast quality
+  // Get real-time overlay data for selected game
+  const { overlayData, loading: overlayLoading } = useGameOverlayData(selectedGameId);
+  
+  // Webcam hook
   const {
     stream: webcamStream,
     error: webcamError,
@@ -70,14 +79,11 @@ export default function VideoCompositionTestPage() {
     reconnect: reconnectWebRTC,
     disconnect: disconnectWebRTC,
   } = useWebRTCStream({
-    gameId: gameId || null,
-    role: 'dashboard', // Dashboard receives stream from iPhone
-    onRemoteStream: () => {
-      console.log('iPhone stream received');
-    },
+    gameId: selectedGameId,
+    role: 'dashboard',
   });
   
-  // Select active video stream based on source
+  // Active video stream
   const activeVideoStream = videoSource === 'webcam' ? webcamStream : 
                            videoSource === 'iphone' ? iphoneStream : 
                            null;
@@ -91,8 +97,8 @@ export default function VideoCompositionTestPage() {
     stop: stopComposition,
   } = useVideoComposition({
     videoStream: activeVideoStream,
-    overlayData,
-    enabled: false, // Manual control
+    overlayData: overlayData || undefined,
+    enabled: false,
   });
 
   // Broadcast hook
@@ -104,21 +110,82 @@ export default function VideoCompositionTestPage() {
     relayServerUrl: process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8080',
   });
   
+  // Fetch games from tournaments
+  useEffect(() => {
+    async function fetchGames() {
+      if (!user?.id || tournaments.length === 0) {
+        setLoadingGames(false);
+        return;
+      }
+
+      try {
+        setLoadingGames(true);
+        
+        const tournamentGamesPromises = tournaments.map(tournament => 
+          GameService.getGamesByTournament(tournament.id)
+            .then(games => games.filter((g: any) => {
+              const status = String(g.status || '').toLowerCase();
+              return status === 'live' || status === 'in_progress';
+            }))
+            .catch(() => [])
+        );
+
+        const tournamentGamesArrays = await Promise.all(tournamentGamesPromises);
+        const allGames = tournamentGamesArrays.flat();
+
+        // Fetch team names
+        const teamIds = [...new Set(allGames.flatMap((g: any) => [g.team_a_id, g.team_b_id]).filter(Boolean))];
+        
+        let teamsMap = new Map<string, any>();
+        if (teamIds.length > 0 && supabase) {
+          const { data: teamsData } = await supabase
+            .from('teams')
+            .select('id, name')
+            .in('id', teamIds);
+          teamsMap = new Map((teamsData || []).map(t => [t.id, t]));
+        }
+
+        const formattedGames: LiveGame[] = allGames.map((game: any) => ({
+          id: game.id,
+          team_a_id: game.team_a_id,
+          team_b_id: game.team_b_id,
+          team_a_name: teamsMap.get(game.team_a_id)?.name || 'Team A',
+          team_b_name: teamsMap.get(game.team_b_id)?.name || 'Team B',
+          home_score: game.home_score || 0,
+          away_score: game.away_score || 0,
+          quarter: game.quarter || 1,
+          status: game.status,
+          game_clock_minutes: game.game_clock_minutes || 10,
+          game_clock_seconds: game.game_clock_seconds || 0,
+        }));
+
+        setGames(formattedGames);
+      } catch (err) {
+        console.error('Error loading games:', err);
+      } finally {
+        setLoadingGames(false);
+      }
+    }
+
+    if (!tournamentsLoading && tournaments.length > 0) {
+      fetchGames();
+    } else if (!tournamentsLoading) {
+      setLoadingGames(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, tournaments.length, tournamentsLoading]);
+  
   const handleSelectWebcam = async () => {
-    // Stop iPhone if active
     if (videoSource === 'iphone') {
       disconnectWebRTC();
-      setGameId(null);
     }
     
     if (videoSource === 'webcam' && webcamEnabled) {
-      // Stop webcam
       setVideoSource(null);
       setWebcamEnabled(false);
       stopComposition();
       stopWebcam();
     } else {
-      // Start webcam
       setVideoSource('webcam');
       setWebcamEnabled(true);
       await startWebcam();
@@ -126,7 +193,11 @@ export default function VideoCompositionTestPage() {
   };
   
   const handleSelectiPhone = () => {
-    // Stop webcam if active
+    if (!selectedGameId) {
+      alert('Please select a game first');
+      return;
+    }
+    
     if (videoSource === 'webcam' && webcamEnabled) {
       stopComposition();
       stopWebcam();
@@ -134,14 +205,9 @@ export default function VideoCompositionTestPage() {
     }
     
     if (videoSource === 'iphone') {
-      // Stop iPhone
       setVideoSource(null);
       disconnectWebRTC();
-      setGameId(null);
     } else {
-      // Start iPhone connection (need gameId)
-      const testGameId = prompt('Enter Game ID for iPhone connection (or use "test"):') || 'test';
-      setGameId(testGameId);
       setVideoSource('iphone');
     }
   };
@@ -150,15 +216,15 @@ export default function VideoCompositionTestPage() {
     if (state.isComposing) {
       stopComposition();
     } else {
-      console.log('Starting composition...', { webcamStream, overlayData });
-      try {
-        await startComposition();
-        console.log('Composition started successfully');
-      } catch (err) {
-        console.error('Failed to start composition:', err);
+      if (!overlayData) {
+        alert('Please select a game first');
+        return;
       }
+      await startComposition();
     }
   };
+  
+  const selectedGame = games.find(g => g.id === selectedGameId);
   
   return (
     <div className="container mx-auto p-8 space-y-6">
@@ -169,6 +235,41 @@ export default function VideoCompositionTestPage() {
         </p>
       </div>
       
+      {/* Game Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Game</CardTitle>
+          <CardDescription>Choose a live game to display overlay data</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingGames || tournamentsLoading ? (
+            <p className="text-sm text-muted-foreground">Loading games...</p>
+          ) : games.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No live games available</p>
+          ) : (
+            <select
+              value={selectedGameId || ''}
+              onChange={(e) => setSelectedGameId(e.target.value || null)}
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">-- Select a game --</option>
+              {games.map((game) => (
+                <option key={game.id} value={game.id}>
+                  {game.team_b_name} vs {game.team_a_name} (Q{game.quarter}) - {game.away_score}:{game.home_score}
+                </option>
+              ))}
+            </select>
+          )}
+          {selectedGame && overlayData && (
+            <div className="mt-3 p-3 bg-muted rounded-lg text-sm">
+              <p><strong>Game:</strong> {overlayData.teamBName} vs {overlayData.teamAName}</p>
+              <p><strong>Score:</strong> {overlayData.awayScore} - {overlayData.homeScore}</p>
+              <p><strong>Quarter:</strong> Q{overlayData.quarter} | {overlayData.gameClockMinutes}:{String(overlayData.gameClockSeconds).padStart(2, '0')}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
       {/* Video Source Selection */}
       <Card>
         <CardHeader>
@@ -176,9 +277,7 @@ export default function VideoCompositionTestPage() {
             <Video className="h-5 w-5" />
             Video Source
           </CardTitle>
-          <CardDescription>
-            Choose webcam or iPhone WebRTC stream
-          </CardDescription>
+          <CardDescription>Choose webcam or iPhone WebRTC stream</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -208,12 +307,13 @@ export default function VideoCompositionTestPage() {
                 <div>
                   <p className="font-semibold">iPhone WebRTC</p>
                   <p className="text-sm text-muted-foreground">
-                    Connect via WebRTC. iPhone must be on /dashboard/mobile-camera page and streaming first.
+                    {selectedGameId ? 'Ready to connect' : 'Select a game first'}
                   </p>
                 </div>
               </div>
               <Button
                 onClick={handleSelectiPhone}
+                disabled={!selectedGameId}
                 variant={videoSource === 'iphone' ? 'destructive' : 'outline'}
                 size="sm"
               >
@@ -221,21 +321,12 @@ export default function VideoCompositionTestPage() {
               </Button>
             </div>
             
-            {/* Status Messages */}
-            {webcamError && (
-              <p className="text-sm text-destructive">Webcam: {webcamError}</p>
-            )}
-            {webrtcError && (
-              <p className="text-sm text-destructive">WebRTC: {webrtcError}</p>
-            )}
-            {videoSource === 'webcam' && webcamStream && (
-              <p className="text-sm text-muted-foreground">
-                Webcam active ({webcamStream.getVideoTracks().length} track(s))
-              </p>
-            )}
+            {/* Status */}
+            {webcamError && <p className="text-sm text-destructive">Webcam: {webcamError}</p>}
+            {webrtcError && <p className="text-sm text-destructive">WebRTC: {webrtcError}</p>}
             {videoSource === 'iphone' && (
               <p className="text-sm text-muted-foreground">
-                WebRTC Status: {connectionStatus} {gameId && `(Game ID: ${gameId})`}
+                WebRTC Status: {connectionStatus}
               </p>
             )}
           </div>
@@ -275,26 +366,14 @@ export default function VideoCompositionTestPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm">
-            <div>
-              <span className="font-semibold">Composing:</span>{' '}
-              {state.isComposing ? 'Yes' : 'No'}
-            </div>
-            <div>
-              <span className="font-semibold">Frames Rendered:</span>{' '}
-              {state.frameCount}
-            </div>
-            <div>
-              <span className="font-semibold">Webcam Stream:</span>{' '}
-              {webcamStream ? 'Active' : 'Inactive'}
-            </div>
-            <div>
-              <span className="font-semibold">Composed Stream:</span>{' '}
-              {composedStream ? 'Active' : 'Inactive'}
-            </div>
+            <div><span className="font-semibold">Game Selected:</span> {selectedGameId ? 'Yes' : 'No'}</div>
+            <div><span className="font-semibold">Composing:</span> {state.isComposing ? 'Yes' : 'No'}</div>
+            <div><span className="font-semibold">Frames Rendered:</span> {state.frameCount}</div>
+            <div><span className="font-semibold">Video Stream:</span> {activeVideoStream ? 'Active' : 'Inactive'}</div>
+            <div><span className="font-semibold">Composed Stream:</span> {composedStream ? 'Active' : 'Inactive'}</div>
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-

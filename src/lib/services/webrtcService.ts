@@ -1,5 +1,5 @@
-import { getFirebaseDatabase } from '@/lib/firebase';
-import { ref, set, get, onValue, off, remove, DatabaseReference } from 'firebase/database';
+import { supabase } from '@/lib/supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 export type SignalType = 'offer' | 'answer' | 'candidate';
 export type PeerRole = 'mobile' | 'dashboard';
@@ -18,14 +18,14 @@ export interface RoomStatus {
 }
 
 /**
- * WebRTC signaling service using Firebase Realtime Database
+ * WebRTC signaling service using Supabase Realtime
  * Handles offer/answer/ICE candidate exchange between mobile camera and dashboard viewer
  */
 export class WebRTCSignalingService {
   private gameId: string | null = null;
   private role: PeerRole;
-  private roomRef: DatabaseReference | null = null;
-  private listeners: Map<string, (snapshot: any) => void> = new Map();
+  private channel: RealtimeChannel | null = null;
+  private presenceState: Record<string, any> = {};
 
   constructor(role: PeerRole) {
     this.role = role;
@@ -37,64 +37,54 @@ export class WebRTCSignalingService {
   async joinRoom(gameId: string): Promise<void> {
     console.log(`🔌 [WebRTC] ${this.role} joining room:`, gameId);
     
+    if (!supabase) {
+      throw new Error('Supabase client not initialized');
+    }
+
     this.gameId = gameId;
-    const db = getFirebaseDatabase();
-    this.roomRef = ref(db, `rooms/${gameId}`);
 
-    // Clean up stale signaling data before joining
-    console.log(`🧹 [WebRTC] Cleaning up stale data for ${this.role}`);
-    await this.cleanupStaleData();
+    // Create a Realtime channel for this game
+    this.channel = supabase.channel(`webrtc:${gameId}`, {
+      config: {
+        broadcast: { self: false }, // Don't receive own broadcasts
+        presence: { key: this.role },
+      },
+    });
 
-    // Update presence
-    await this.updatePresence(true);
+    // Track presence
+    await this.channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`✅ [WebRTC] ${this.role} subscribed to channel`);
+        
+        // Track presence
+        await this.channel?.track({
+          role: this.role,
+          online_at: new Date().toISOString(),
+        });
+      }
+    });
 
     console.log(`✅ [WebRTC] ${this.role} joined room successfully`);
-  }
-
-  /**
-   * Clean up stale signaling data before connecting
-   */
-  private async cleanupStaleData(): Promise<void> {
-    if (!this.gameId) return;
-
-    const db = getFirebaseDatabase();
-    
-    // Clear own candidates
-    const ownCandidatesRef = ref(db, `rooms/${this.gameId}/candidates/${this.role}`);
-    await remove(ownCandidatesRef);
-
-    // If mobile (initiator), clear offer and answer to start fresh
-    if (this.role === 'mobile') {
-      const offerRef = ref(db, `rooms/${this.gameId}/offer`);
-      const answerRef = ref(db, `rooms/${this.gameId}/answer`);
-      await remove(offerRef);
-      await remove(answerRef);
-    }
   }
 
   /**
    * Leave the current room and cleanup
    */
   async leaveRoom(): Promise<void> {
-    if (!this.roomRef || !this.gameId) {
+    if (!this.channel || !this.gameId) {
       return;
     }
 
     console.log(`👋 [WebRTC] ${this.role} leaving room:`, this.gameId);
 
-    // Remove all listeners
-    this.listeners.forEach((listener, path) => {
-      const db = getFirebaseDatabase();
-      const pathRef = ref(db, `rooms/${this.gameId}/${path}`);
-      off(pathRef);
-    });
-    this.listeners.clear();
+    try {
+      await this.channel.untrack();
+      await supabase?.removeChannel(this.channel);
+    } catch (err) {
+      console.warn('⚠️ Error leaving room:', err);
+    }
 
-    // Update presence to false
-    await this.updatePresence(false);
-
-    // Clear local state
-    this.roomRef = null;
+    this.channel = null;
     this.gameId = null;
 
     console.log('✅ [WebRTC] Left room successfully');
@@ -104,19 +94,20 @@ export class WebRTCSignalingService {
    * Send WebRTC offer (mobile camera initiates)
    */
   async sendOffer(offerSdp: string): Promise<void> {
-    if (!this.roomRef || !this.gameId) {
+    if (!this.channel || !this.gameId) {
       throw new Error('Not connected to a room');
     }
 
     console.log('📤 [WebRTC] Sending offer...');
     
-    const db = getFirebaseDatabase();
-    const offerRef = ref(db, `rooms/${this.gameId}/offer`);
-    
-    await set(offerRef, {
-      sdp: offerSdp,
-      from: this.role,
-      timestamp: Date.now(),
+    await this.channel.send({
+      type: 'broadcast',
+      event: 'offer',
+      payload: {
+        sdp: offerSdp,
+        from: this.role,
+        timestamp: Date.now(),
+      },
     });
 
     console.log('✅ [WebRTC] Offer sent');
@@ -126,19 +117,20 @@ export class WebRTCSignalingService {
    * Send WebRTC answer (dashboard responds)
    */
   async sendAnswer(answerSdp: string): Promise<void> {
-    if (!this.roomRef || !this.gameId) {
+    if (!this.channel || !this.gameId) {
       throw new Error('Not connected to a room');
     }
 
     console.log('📤 [WebRTC] Sending answer...');
     
-    const db = getFirebaseDatabase();
-    const answerRef = ref(db, `rooms/${this.gameId}/answer`);
-    
-    await set(answerRef, {
-      sdp: answerSdp,
-      from: this.role,
-      timestamp: Date.now(),
+    await this.channel.send({
+      type: 'broadcast',
+      event: 'answer',
+      payload: {
+        sdp: answerSdp,
+        from: this.role,
+        timestamp: Date.now(),
+      },
     });
 
     console.log('✅ [WebRTC] Answer sent');
@@ -148,18 +140,20 @@ export class WebRTCSignalingService {
    * Send ICE candidate
    */
   async sendCandidate(candidateData: string): Promise<void> {
-    if (!this.roomRef || !this.gameId) {
+    if (!this.channel || !this.gameId) {
       throw new Error('Not connected to a room');
     }
 
     console.log('📤 [WebRTC] Sending ICE candidate...');
     
-    const db = getFirebaseDatabase();
-    const candidateRef = ref(db, `rooms/${this.gameId}/candidates/${this.role}/${Date.now()}`);
-    
-    await set(candidateRef, {
-      candidate: candidateData,
-      timestamp: Date.now(),
+    await this.channel.send({
+      type: 'broadcast',
+      event: 'candidate',
+      payload: {
+        candidate: candidateData,
+        from: this.role,
+        timestamp: Date.now(),
+      },
     });
   }
 
@@ -167,151 +161,118 @@ export class WebRTCSignalingService {
    * Listen for WebRTC offer
    */
   onOffer(callback: (offerSdp: string) => void): void {
-    if (!this.gameId) {
+    if (!this.channel) {
       throw new Error('Not connected to a room');
     }
 
     console.log('👂 [WebRTC] Listening for offer...');
     
-    const db = getFirebaseDatabase();
-    const offerRef = ref(db, `rooms/${this.gameId}/offer`);
-    
-    const listener = (snapshot: any) => {
-      const data = snapshot.val();
+    this.channel.on('broadcast', { event: 'offer' }, (payload) => {
+      const data = payload.payload;
       if (data && data.sdp && data.from !== this.role) {
         console.log('📥 [WebRTC] Received offer');
         callback(data.sdp);
       }
-    };
-
-    onValue(offerRef, listener);
-    this.listeners.set('offer', listener);
+    });
   }
 
   /**
    * Listen for WebRTC answer
    */
   onAnswer(callback: (answerSdp: string) => void): void {
-    if (!this.gameId) {
+    if (!this.channel) {
       throw new Error('Not connected to a room');
     }
 
     console.log('👂 [WebRTC] Listening for answer...');
     
-    const db = getFirebaseDatabase();
-    const answerRef = ref(db, `rooms/${this.gameId}/answer`);
-    
-    const listener = (snapshot: any) => {
-      const data = snapshot.val();
+    this.channel.on('broadcast', { event: 'answer' }, (payload) => {
+      const data = payload.payload;
       if (data && data.sdp && data.from !== this.role) {
         console.log('📥 [WebRTC] Received answer');
         callback(data.sdp);
       }
-    };
-
-    onValue(answerRef, listener);
-    this.listeners.set('answer', listener);
+    });
   }
 
   /**
    * Listen for ICE candidates from the other peer
    */
   onCandidate(callback: (candidateData: string) => void): void {
-    if (!this.gameId) {
+    if (!this.channel) {
       throw new Error('Not connected to a room');
     }
 
     console.log('👂 [WebRTC] Listening for ICE candidates...');
     
-    // Listen to the OTHER peer's candidates
-    const otherRole = this.role === 'mobile' ? 'dashboard' : 'mobile';
-    const db = getFirebaseDatabase();
-    const candidatesRef = ref(db, `rooms/${this.gameId}/candidates/${otherRole}`);
-    
-    const listener = (snapshot: any) => {
-      const data = snapshot.val();
-      if (data) {
-        // Firebase returns an object with timestamp keys
-        Object.values(data).forEach((candidate: any) => {
-          if (candidate && candidate.candidate) {
-            console.log('📥 [WebRTC] Received ICE candidate');
-            callback(candidate.candidate);
-          }
-        });
+    this.channel.on('broadcast', { event: 'candidate' }, (payload) => {
+      const data = payload.payload;
+      if (data && data.candidate && data.from !== this.role) {
+        console.log('📥 [WebRTC] Received ICE candidate');
+        callback(data.candidate);
       }
-    };
-
-    onValue(candidatesRef, listener);
-    this.listeners.set('candidates', listener);
+    });
   }
 
   /**
-   * Get current room status
+   * Get current room status from presence
    */
   async getRoomStatus(): Promise<RoomStatus | null> {
-    if (!this.gameId) {
+    if (!this.channel) {
       return null;
     }
 
-    const db = getFirebaseDatabase();
-    const statusRef = ref(db, `rooms/${this.gameId}/status`);
-    const snapshot = await get(statusRef);
+    const presenceState = this.channel.presenceState();
     
-    return snapshot.val() as RoomStatus | null;
-  }
-
-  /**
-   * Update presence status
-   */
-  private async updatePresence(connected: boolean): Promise<void> {
-    if (!this.gameId) {
-      return;
-    }
-
-    const db = getFirebaseDatabase();
-    const presenceKey = this.role === 'mobile' ? 'mobileConnected' : 'dashboardConnected';
-    const statusRef = ref(db, `rooms/${this.gameId}/status/${presenceKey}`);
-    
-    await set(statusRef, connected);
-
-    // Update last activity
-    const activityRef = ref(db, `rooms/${this.gameId}/status/lastActivity`);
-    await set(activityRef, Date.now());
-  }
-
-  /**
-   * Clean up old room data (optional, for cleanup tasks)
-   */
-  static async cleanupRoom(gameId: string): Promise<void> {
-    console.log('🧹 [WebRTC] Cleaning up room:', gameId);
-    
-    const db = getFirebaseDatabase();
-    const roomRef = ref(db, `rooms/${gameId}`);
-    await remove(roomRef);
-    
-    console.log('✅ [WebRTC] Room cleaned up');
+    return {
+      mobileConnected: !!presenceState['mobile']?.length,
+      dashboardConnected: !!presenceState['dashboard']?.length,
+      lastActivity: Date.now(),
+    };
   }
 
   /**
    * Check if both peers are present in the room
    */
   onPeerPresence(callback: (status: RoomStatus) => void): void {
-    if (!this.gameId) {
+    if (!this.channel) {
       throw new Error('Not connected to a room');
     }
 
-    const db = getFirebaseDatabase();
-    const statusRef = ref(db, `rooms/${this.gameId}/status`);
-    
-    const listener = (snapshot: any) => {
-      const status = snapshot.val();
-      if (status) {
-        callback(status as RoomStatus);
-      }
-    };
+    this.channel.on('presence', { event: 'sync' }, () => {
+      const presenceState = this.channel?.presenceState() || {};
+      
+      const status: RoomStatus = {
+        mobileConnected: !!presenceState['mobile']?.length,
+        dashboardConnected: !!presenceState['dashboard']?.length,
+        lastActivity: Date.now(),
+      };
+      
+      callback(status);
+    });
 
-    onValue(statusRef, listener);
-    this.listeners.set('status', listener);
+    this.channel.on('presence', { event: 'join' }, ({ key }) => {
+      console.log(`👋 [WebRTC] ${key} joined the room`);
+    });
+
+    this.channel.on('presence', { event: 'leave' }, ({ key }) => {
+      console.log(`👋 [WebRTC] ${key} left the room`);
+    });
+  }
+
+  /**
+   * Clean up room data (no-op for Supabase - channels are ephemeral)
+   */
+  static async cleanupRoom(gameId: string): Promise<void> {
+    console.log('🧹 [WebRTC] Cleaning up room:', gameId);
+    // Supabase Realtime channels are ephemeral - no cleanup needed
+    console.log('✅ [WebRTC] Room cleaned up');
   }
 }
 
+/**
+ * Check if Supabase Realtime is configured
+ */
+export function isRealtimeConfigured(): boolean {
+  return !!supabase;
+}
