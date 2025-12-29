@@ -12,7 +12,6 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Users } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { CoachTeam } from '@/lib/types/coach';
 import { CompactTeamCard } from './CompactTeamCard';
@@ -41,7 +40,7 @@ export function TeamsStrip({
   const router = useRouter();
 
   return (
-    <Card className="p-4 bg-white border-gray-200">
+    <div>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
           <Users className="w-4 h-4 text-orange-600" />
@@ -102,7 +101,7 @@ export function TeamsStrip({
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 

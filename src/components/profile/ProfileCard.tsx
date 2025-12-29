@@ -98,7 +98,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
   const statsDisplay = getStatsDisplay();
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden">
+    <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full">
       {/* Gradient Top Bar */}
       <div className="h-2 bg-gradient-to-r from-primary via-accent to-orange-500"></div>
       

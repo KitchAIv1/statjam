@@ -5,6 +5,74 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.5] - 2025-01-XX
+
+### 🎨 **COACH MISSION CONTROL DASHBOARD REDESIGN**
+
+#### Dashboard Redesign
+- **REDESIGNED**: Coach Dashboard into compact "Mission Control" layout
+  - Single-screen layout displaying all essential information
+  - Clear visual hierarchy with primary actions, status widgets, and data displays
+  - Perfect card height alignment between Profile Card and Action Hub
+  - Floating team cards without container constraints
+  - Three compact widgets in bottom row (Video Tracking, Recent Games, Tournaments)
+- **ADDED**: New dashboard components
+  - `CoachMissionControl` - Main dashboard orchestrator
+  - `LiveActionHub` - Primary action center with CTAs and status counters
+  - `TeamsStrip` - Horizontal scrollable team cards container
+  - `CompactTeamCard` - Compact team card component
+  - `VideoTrackingWidget` - Video tracking status display
+  - `RecentGamesWidget` - Recent games display
+  - `TournamentsCompactWidget` - Tournaments display
+  - `useCoachDashboardData` - Consolidated data fetching hook
+
+#### UI Refinements
+- **ENHANCED**: Action Hub UI
+  - Perfect height matching with Profile Card using flexbox
+  - Uniform button sizing (h-11/h-12) throughout
+  - Improved spacing with reduced padding and margins
+  - Status counters positioned at bottom using `mt-auto`
+  - More compact live game alert design
+- **ENHANCED**: Teams Strip
+  - Removed Card container for floating appearance
+  - Cleaner visual separation between sections
+  - Improved horizontal scrolling experience
+- **ENHANCED**: Card Height Alignment
+  - CSS Grid-based system for perfect card matching
+  - Profile Card uses `h-full` class
+  - Action Hub uses `h-full flex flex-col` with `flex-1` content
+  - Automatic stretching to match tallest card
+
+#### Navigation Simplification
+- **REMOVED**: Redundant navigation items from coach dashboard
+  - Removed "My Teams" (integrated into dashboard)
+  - Removed "Quick Track" (accessible via Action Hub)
+  - Kept "Dashboard" and "Tournaments" as primary navigation
+
+#### Technical Implementation
+- **Files Created**:
+  - `src/components/coach/CoachMissionControl.tsx` - Main orchestrator
+  - `src/components/coach/LiveActionHub.tsx` - Action hub component
+  - `src/components/coach/TeamsStrip.tsx` - Teams strip container
+  - `src/components/coach/CompactTeamCard.tsx` - Compact team card
+  - `src/components/coach/VideoTrackingWidget.tsx` - Video tracking widget
+  - `src/components/coach/RecentGamesWidget.tsx` - Recent games widget
+  - `src/components/coach/TournamentsCompactWidget.tsx` - Tournaments widget
+  - `src/hooks/useCoachDashboardData.ts` - Consolidated data hook
+- **Files Modified**:
+  - `package.json` - Version bump to 0.17.5
+  - `src/app/dashboard/coach/page.tsx` - Integrated CoachMissionControl
+  - `src/components/profile/ProfileCard.tsx` - Added `h-full` for alignment
+  - `src/components/coach/LiveActionHub.tsx` - UI refinements
+  - `src/components/coach/TeamsStrip.tsx` - Container removal
+  - `src/lib/navigation-config.ts` - Navigation simplification
+
+#### Documentation Updates
+- **ADDED**: `docs/01-project/VERSION_0.17.5_RELEASE_NOTES.md` - Comprehensive release notes
+- **Updated**: `docs/01-project/CHANGELOG.md` - This entry
+
+---
+
 ## [Unreleased] - 2025-12-24
 
 ### 🎥 **VIDEO ASSIGNMENT WORKFLOW: ADMIN-TO-STAT-ADMIN VIDEO TRACKING QUEUE**

@@ -3,10 +3,10 @@
 /**
  * LiveActionHub - Primary action center for Coach Mission Control
  * 
- * Shows:
- * - Primary CTAs (Start Game, Upload Video)
- * - Live game alert with resume button
- * - Video & Clips status counters
+ * V3 Refinement:
+ * - Height matches ProfileCard
+ * - Uniform button sizes
+ * - Proper spacing
  * 
  * Follows .cursorrules: <150 lines, UI only, single responsibility
  */
@@ -15,7 +15,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { PlayCircle, Upload, Video, Film, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { CoachGame } from '@/lib/types/coach';
 import { VideoQueueSummary, ClipsSummary } from '@/hooks/useCoachDashboardData';
 
@@ -36,96 +36,96 @@ export function LiveActionHub({
 }: LiveActionHubProps) {
   const router = useRouter();
   const hasLiveGame = liveGames.length > 0;
-  const liveGame = liveGames[0]; // Show first live game
+  const liveGame = liveGames[0];
 
   const handleResume = (game: CoachGame) => {
     const url = `/stat-tracker-v3?gameId=${game.id}&coachMode=true&coachTeamId=${game.coach_team_id}`;
     router.push(url);
   };
 
+  const videosInPipeline = videoQueue.inProgress + videoQueue.assigned + videoQueue.pending;
+
   return (
-    <Card className="p-4 bg-white border-gray-200 h-full">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-        🎯 Action Hub
-      </h3>
+    <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full flex flex-col">
+      {/* Gradient Top Bar - matches ProfileCard */}
+      <div className="h-2 bg-gradient-to-r from-primary via-accent to-orange-500 flex-shrink-0"></div>
+      
+      <CardContent className="p-4 pt-3 flex flex-col flex-1">
+        {/* Header */}
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Quick Actions
+        </h3>
 
-      {/* Primary CTAs */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <Button
-          onClick={onStartGame}
-          className="h-12 flex-col gap-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-        >
-          <PlayCircle className="w-5 h-5" />
-          <span className="text-xs">Start Game</span>
-        </Button>
-        <Button
-          onClick={onUploadVideo}
-          variant="outline"
-          className="h-12 flex-col gap-1 !border-purple-300 text-purple-600 hover:bg-purple-50"
-        >
-          <Upload className="w-5 h-5" />
-          <span className="text-xs">Upload Video</span>
-        </Button>
-      </div>
+        {/* Primary Actions - Same size buttons */}
+        <div className="space-y-2 mb-4">
+          <Button
+            onClick={onStartGame}
+            className="w-full h-11 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 transition-all gap-2"
+          >
+            <PlayCircle className="w-5 h-5" />
+            <span className="font-semibold">Start New Game</span>
+          </Button>
 
-      {/* Live Game Alert */}
-      {hasLiveGame && liveGame && (
-        <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-            </span>
-            <span className="text-xs font-semibold text-green-700">LIVE</span>
-          </div>
-          <div className="text-sm font-medium text-gray-900 mb-1">
-            vs {liveGame.opponent_name}
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-600">
-              Q{liveGame.quarter || 1} • {liveGame.home_score || 0}-{liveGame.away_score || 0}
+          <Button
+            onClick={onUploadVideo}
+            variant="outline"
+            className="w-full h-11 border-2 border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-800 hover:border-gray-300 gap-2"
+          >
+            <Upload className="w-5 h-5" />
+            <span className="font-medium">Upload Video</span>
+          </Button>
+        </div>
+
+        {/* Live Game Alert */}
+        {hasLiveGame && liveGame && (
+          <div className="mb-4 p-2.5 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="text-[10px] font-bold text-green-700 uppercase tracking-wide">Live</span>
+              </div>
+              <span className="text-[10px] font-medium text-gray-500">Q{liveGame.quarter || 1}</span>
             </div>
-            <Button
-              size="sm"
-              onClick={() => handleResume(liveGame)}
-              className="h-7 text-xs gap-1"
-            >
-              Resume <ArrowRight className="w-3 h-3" />
-            </Button>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-gray-900">vs {liveGame.opponent_name}</div>
+                <div className="text-[11px] text-gray-500">{liveGame.home_score || 0} - {liveGame.away_score || 0}</div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => handleResume(liveGame)}
+                className="h-7 px-3 text-[11px] bg-green-600 hover:bg-green-700 gap-1"
+              >
+                Resume <ArrowRight className="w-3 h-3" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Status Counters */}
-      <div className="grid grid-cols-2 gap-2">
-        {/* Video Tracking Status */}
-        <div className="p-2.5 bg-purple-50 border border-purple-100 rounded-lg">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Video className="w-3.5 h-3.5 text-purple-600" />
-            <span className="text-xs font-medium text-purple-700">Videos</span>
+        {/* Status Counters - pushed to bottom */}
+        <div className="grid grid-cols-2 gap-3 mt-auto">
+          {/* Videos */}
+          <div className="bg-primary/10 rounded-lg p-2.5 text-center border border-primary/20">
+            <div className="flex items-center justify-center mb-0.5">
+              <Video className="w-4 h-4 text-primary" />
+            </div>
+            <div className="text-xl font-bold text-primary">{videosInPipeline}</div>
+            <div className="text-[10px] text-foreground/70">Videos</div>
           </div>
-          <div className="text-lg font-bold text-purple-900">
-            {videoQueue.inProgress + videoQueue.assigned}
-          </div>
-          <div className="text-[10px] text-purple-600">
-            {videoQueue.pending > 0 && `${videoQueue.pending} queued`}
-            {videoQueue.pending === 0 && 'in pipeline'}
+          
+          {/* Clips */}
+          <div className="bg-primary/10 rounded-lg p-2.5 text-center border border-primary/20">
+            <div className="flex items-center justify-center mb-0.5">
+              <Film className="w-4 h-4 text-primary" />
+            </div>
+            <div className="text-xl font-bold text-primary">{clips.readyClips}</div>
+            <div className="text-[10px] text-foreground/70">Clips</div>
           </div>
         </div>
-
-        {/* Clips Ready */}
-        <div className="p-2.5 bg-orange-50 border border-orange-100 rounded-lg">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Film className="w-3.5 h-3.5 text-orange-600" />
-            <span className="text-xs font-medium text-orange-700">Clips</span>
-          </div>
-          <div className="text-lg font-bold text-orange-900">
-            {clips.readyClips}
-          </div>
-          <div className="text-[10px] text-orange-600">ready to view</div>
-        </div>
-      </div>
+      </CardContent>
     </Card>
   );
 }
-
