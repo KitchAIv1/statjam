@@ -6,6 +6,7 @@
 
 // Modals
 export { UpgradeModal } from './UpgradeModal';
+export { VideoCreditsModal } from './VideoCreditsModal';
 
 // Cards
 export { PricingTierCard } from './PricingTierCard';
@@ -21,6 +22,7 @@ export { TeamLimitSelector } from './TeamLimitSelector';
 // Badges (Professional SaaS-style)
 export { TierBadge, PlanIndicator } from './TierBadge';
 export { FreeTierBadge, ProFeatureBadge, LockedFeatureBadge } from './FreeTierBadge';
+
 
 
 

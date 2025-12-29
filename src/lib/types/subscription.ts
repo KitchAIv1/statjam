@@ -141,6 +141,24 @@ export interface VideoTrackingPricing {
 }
 
 // =============================================================================
+// VIDEO CREDIT PACKAGES
+// =============================================================================
+
+export type VideoCreditPackageId = 'single' | 'starter' | 'season' | 'pro_season';
+
+export interface VideoCreditPackage {
+  id: VideoCreditPackageId;
+  name: string;
+  games: number;
+  price: number;
+  pricePerGame: number;
+  savings: number; // percentage
+  description: string;
+  isPopular?: boolean;
+  stripePriceId?: string;
+}
+
+// =============================================================================
 // VERIFIED BADGES
 // =============================================================================
 

@@ -10,7 +10,8 @@ import type {
   UserRole, 
   TierLimits,
   VideoTrackingPricing,
-  SubscriptionTier 
+  SubscriptionTier,
+  VideoCreditPackage,
 } from '@/lib/types/subscription';
 
 // =============================================================================
@@ -338,6 +339,54 @@ export const VIDEO_TRACKING_PRICING: VideoTrackingPricing[] = [
       'Verified performance from video',
       'Appears on player profile',
     ],
+  },
+];
+
+// =============================================================================
+// VIDEO CREDIT PACKAGES (Introductory Pricing - 6 months)
+// =============================================================================
+
+export const VIDEO_CREDIT_PACKAGES: VideoCreditPackage[] = [
+  {
+    id: 'single',
+    name: 'Single Game',
+    games: 1,
+    price: 25,
+    pricePerGame: 25,
+    savings: 0,
+    description: 'Try it out',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_VIDEO_SINGLE,
+  },
+  {
+    id: 'starter',
+    name: 'Starter Pack',
+    games: 5,
+    price: 99,
+    pricePerGame: 19.80,
+    savings: 21,
+    description: 'Perfect for tournament weekends',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_VIDEO_STARTER,
+  },
+  {
+    id: 'season',
+    name: 'Season Pack',
+    games: 11,
+    price: 199,
+    pricePerGame: 18.09,
+    savings: 28,
+    description: 'Best for regular season',
+    isPopular: true,
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_VIDEO_SEASON,
+  },
+  {
+    id: 'pro_season',
+    name: 'Pro Season',
+    games: 23,
+    price: 399,
+    pricePerGame: 17.35,
+    savings: 31,
+    description: 'Best value for year-round programs',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_VIDEO_PRO_SEASON,
   },
 ];
 
