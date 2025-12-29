@@ -28,9 +28,9 @@ import { VideoStatService } from '@/lib/services/videoStatService';
 import { CoachGameService } from '@/lib/services/coachGameService';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { isBunnyConfigured } from '@/lib/config/videoConfig';
-import { UpgradeModal } from '@/components/subscription';
+import { UpgradeModal, VideoCreditsModal } from '@/components/subscription';
 import type { GameVideo } from '@/lib/types/video';
-import { Loader2, ArrowLeft, Video, AlertCircle, Upload } from 'lucide-react';
+import { Loader2, ArrowLeft, Video, AlertCircle, Upload, CreditCard } from 'lucide-react';
 
 interface CoachVideoPageProps {
   params: Promise<{ gameId: string }>;
@@ -50,6 +50,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
   const [teamPlayers, setTeamPlayers] = useState<any[]>([]);
   const [setupComplete, setSetupComplete] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showVideoCreditsModal, setShowVideoCreditsModal] = useState(false);
   const [hasHandledReady, setHasHandledReady] = useState(false);
   
   // Check premium access
@@ -207,6 +208,20 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
                       Upload your game video. Our stat trackers will track your game within 24 hours.
                     </p>
                   </div>
+                  
+                  {/* Buy Credits Upsell */}
+                  <button
+                    onClick={() => setShowVideoCreditsModal(true)}
+                    className="w-full mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 
+                               rounded-lg flex items-center justify-between hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-amber-600" />
+                      <span className="text-sm font-medium text-amber-800">Buy Video Credits</span>
+                    </div>
+                    <span className="text-xs text-amber-600">Save up to 31%</span>
+                  </button>
+                  
                   <VideoUploader gameId={gameId} userId={user?.id} onUploadComplete={handleUploadComplete} />
                 </div>
               ) : (
@@ -265,6 +280,14 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
         role="coach"
         currentTier={subscriptionTier}
         triggerReason="Video Tracking is a premium feature. Upgrade to have your games tracked using video playback."
+      />
+
+      {/* Video Credits Modal */}
+      <VideoCreditsModal
+        isOpen={showVideoCreditsModal}
+        onClose={() => setShowVideoCreditsModal(false)}
+        role="coach"
+        currentCredits={0}
       />
     </div>
   );

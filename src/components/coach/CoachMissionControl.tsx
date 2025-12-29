@@ -28,7 +28,7 @@ import { PlayerManagementModal } from '@/components/shared/PlayerManagementModal
 import { CoachPlayerManagementService } from '@/lib/services/coachPlayerManagementService';
 import { CoachTeamAnalyticsTab } from './CoachTeamAnalyticsTab';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { UpgradeModal } from '@/components/subscription';
+import { UpgradeModal, VideoCreditsModal } from '@/components/subscription';
 
 interface CoachMissionControlProps {
   user: any;
@@ -62,6 +62,7 @@ export function CoachMissionControl({
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showTournamentSearch, setShowTournamentSearch] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showVideoCreditsModal, setShowVideoCreditsModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<CoachTeam | null>(null);
 
   // Handlers
@@ -115,9 +116,15 @@ export function CoachMissionControl({
 
   const handleUploadVideo = () => {
     if (!limits.hasVideoAccess) {
+      // Show upgrade modal for non-premium users
       setShowUpgradeModal(true);
       return;
     }
+    // For premium users, show video credits purchase modal
+    setShowVideoCreditsModal(true);
+  };
+
+  const handleContinueToUpload = () => {
     if (teams.length === 0) {
       setShowCreateTeam(true);
       return;
@@ -246,6 +253,13 @@ export function CoachMissionControl({
         role="coach"
         currentTier={tier}
         triggerReason="Video Tracking is a premium feature. Upgrade to unlock."
+      />
+
+      <VideoCreditsModal
+        isOpen={showVideoCreditsModal}
+        onClose={() => setShowVideoCreditsModal(false)}
+        role="coach"
+        currentCredits={0}
       />
     </div>
   );
