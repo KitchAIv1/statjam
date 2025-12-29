@@ -17,6 +17,7 @@ export interface ClipGenerationJob {
   total_clips: number;
   completed_clips: number;
   failed_clips: number;
+  skipped_clips: number;
   approved_at: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -190,6 +191,43 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
 export async function countClipEligibleStats(gameId: string): Promise<number> {
   const stats = await getStatsForQCReview(gameId);
   return stats.filter(s => s.is_clip_eligible).length;
+}
+
+// ============================================================================
+// CLIP VALIDATION
+// ============================================================================
+
+export interface ClipValidationResult {
+  videoDurationMs: number;
+  totalClips: number;
+  validClips: number;
+  invalidClips: number;
+  validStats: ClipEligibleStat[];
+  invalidStats: ClipEligibleStat[];
+  hasIssue: boolean;
+}
+
+/**
+ * Validate clip timestamps against video duration
+ * Returns which clips are within video range vs out of range
+ */
+export function validateClipsAgainstVideoDuration(
+  stats: ClipEligibleStat[],
+  videoDurationMs: number
+): ClipValidationResult {
+  const eligibleStats = stats.filter(s => s.is_clip_eligible);
+  const validStats = eligibleStats.filter(s => s.video_timestamp_ms <= videoDurationMs);
+  const invalidStats = eligibleStats.filter(s => s.video_timestamp_ms > videoDurationMs);
+
+  return {
+    videoDurationMs,
+    totalClips: eligibleStats.length,
+    validClips: validStats.length,
+    invalidClips: invalidStats.length,
+    validStats,
+    invalidStats,
+    hasIssue: invalidStats.length > 0,
+  };
 }
 
 // ============================================================================

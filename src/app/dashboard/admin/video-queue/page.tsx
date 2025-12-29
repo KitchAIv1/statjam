@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { 
   getVideoQueue, 
@@ -51,10 +51,16 @@ interface JobWithGame extends ClipGenerationJob {
 
 export default function AdminVideoQueuePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuthV2();
   
-  // Tab state
-  const [activeTab, setActiveTab] = useState<TabType>('assignment');
+  // Tab state - initialize from URL param if present
+  const tabFromUrl = searchParams.get('tab') as TabType | null;
+  const [activeTab, setActiveTab] = useState<TabType>(
+    tabFromUrl && ['assignment', 'qc_review', 'clip_generation'].includes(tabFromUrl)
+      ? tabFromUrl
+      : 'assignment'
+  );
   
   // Assignment Queue state
   const [queue, setQueue] = useState<VideoQueueItem[]>([]);

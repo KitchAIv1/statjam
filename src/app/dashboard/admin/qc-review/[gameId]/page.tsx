@@ -12,13 +12,17 @@ import {
   createClipJob,
   approveClipJob,
   requestCorrections,
+  validateClipsAgainstVideoDuration,
   ClipEligibleStat,
   ClipGenerationJob,
+  ClipValidationResult,
 } from '@/lib/services/clipService';
+import { ClipValidationBanner } from '@/components/clips/ClipValidationBanner';
 import { QCReviewTimeline } from '@/components/clips/QCReviewTimeline';
 import { StatEditForm } from '@/components/tracker-v3/modals/StatEditForm';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { GameStatRecord } from '@/lib/services/statEditService';
+import { supabase } from '@/lib/supabase';
 import {
   Loader2,
   AlertCircle,
@@ -32,6 +36,7 @@ import {
   SkipBack,
   SkipForward,
 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 
 interface QCReviewPageProps {
   params: Promise<{ gameId: string }>;
@@ -69,6 +74,9 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
   const [editingStatId, setEditingStatId] = useState<string | null>(null); // Track ID separately
   const [allPlayers, setAllPlayers] = useState<any[]>([]);
   const [clockSyncConfig, setClockSyncConfig] = useState<ClockSyncConfig | null>(null);
+
+  // Clip validation state
+  const [clipValidation, setClipValidation] = useState<ClipValidationResult | null>(null);
 
   // Load data
   useEffect(() => {
@@ -146,6 +154,14 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
     }
   }, []);
 
+  // Validate clips against video duration when both are available
+  useEffect(() => {
+    if (duration > 0 && stats.length > 0) {
+      const validation = validateClipsAgainstVideoDuration(stats, duration);
+      setClipValidation(validation);
+    }
+  }, [duration, stats]);
+
   const handlePlayPause = useCallback(() => {
     if (videoRef.current) {
       if (isPlaying) {
@@ -168,9 +184,38 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
     }
   }, [stats]);
 
+  // Handle "Mark at current position" - update stat's video_timestamp_ms
+  const handleMarkAtCurrentPosition = useCallback(async (statId: string) => {
+    if (currentTime === 0) return;
+    
+    try {
+      const { error } = await supabase
+        .from('game_stats')
+        .update({ video_timestamp_ms: Math.round(currentTime) })
+        .eq('id', statId);
+      
+      if (error) throw error;
+      
+      console.log(`✅ Marked stat ${statId} at ${Math.round(currentTime)}ms`);
+      // Reload stats to reflect the change
+      const updatedStats = await getStatsForQCReview(gameId);
+      setStats(updatedStats);
+    } catch (err) {
+      console.error('❌ Error marking stat:', err);
+      alert('Failed to mark stat at current position');
+    }
+  }, [currentTime, gameId]);
+
   const handleSkip = useCallback((seconds: number) => {
     if (videoRef.current) {
       videoRef.current.currentTime += seconds;
+    }
+  }, []);
+
+  // Handle slider scrub - seek to position
+  const handleSliderSeek = useCallback((values: number[]) => {
+    if (videoRef.current && values[0] !== undefined) {
+      videoRef.current.currentTime = values[0] / 1000; // Convert ms to seconds
     }
   }, []);
 
@@ -252,8 +297,8 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
         // Refresh job status
         const updatedJob = await getClipJob(gameId);
         setJob(updatedJob);
-        // Redirect to clip jobs dashboard
-        router.push('/dashboard/admin/clip-jobs');
+        // Redirect to video queue with Clip Generation tab
+        router.push('/dashboard/admin/video-queue?tab=clip_generation');
       }
     } catch (err) {
       console.error('Error approving job:', err);
@@ -428,6 +473,13 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
         </div>
       </header>
 
+      {/* Clip Validation Banner */}
+      {clipValidation && (
+        <div className="px-6 pt-4 bg-gray-50 border-b border-gray-200">
+          <ClipValidationBanner validation={clipValidation} />
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Video Player Section */}
@@ -480,17 +532,21 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
                 <SkipForward className="w-4 h-4 text-white/70" />
               </button>
 
-              {/* Time Display */}
-              <div className="text-sm text-white/70">
-                {formatTime(currentTime)} / {formatTime(duration)}
+              {/* Scrubber Slider */}
+              <div className="flex-1 mx-2">
+                <Slider
+                  value={[currentTime]}
+                  min={0}
+                  max={duration > 0 ? duration : 100}
+                  step={100}
+                  onValueChange={handleSliderSeek}
+                  className="cursor-pointer [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/20 [&_[data-slot=slider-range]]:bg-orange-500 [&_[data-slot=slider-thumb]]:border-orange-500 [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:w-4 [&_[data-slot=slider-thumb]]:h-4 [&_[data-slot=slider-thumb]]:shadow-lg"
+                />
               </div>
 
-              {/* Progress Bar */}
-              <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-orange-500"
-                  style={{ width: `${(currentTime / duration) * 100}%` }}
-                />
+              {/* Time Display */}
+              <div className="text-sm text-white/70 tabular-nums min-w-[100px] text-right">
+                {formatTime(currentTime)} / {formatTime(duration)}
               </div>
             </div>
           </div>
@@ -504,6 +560,9 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
             onStatSelect={setSelectedStatId}
             onEditStat={handleEditStat}
             selectedStatId={selectedStatId}
+            videoDurationMs={duration}
+            currentVideoTimeMs={currentTime}
+            onMarkAtCurrentPosition={handleMarkAtCurrentPosition}
           />
         </div>
       </div>

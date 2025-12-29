@@ -1,0 +1,136 @@
+'use client';
+
+/**
+ * TournamentsCompactWidget - Compact tournament connections display
+ * 
+ * Shows connected tournaments with status badges.
+ * 
+ * Follows .cursorrules: <100 lines, UI only, single responsibility
+ */
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Trophy, Calendar, Users, ArrowRight } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/badge';
+import { CoachTeamService } from '@/lib/services/coachTeamService';
+import { TournamentService } from '@/lib/services/tournamentService';
+
+interface TournamentInfo {
+  id: string;
+  name: string;
+  startDate?: string;
+  teamCount: number;
+}
+
+interface TournamentsCompactWidgetProps {
+  userId: string;
+}
+
+export function TournamentsCompactWidget({ userId }: TournamentsCompactWidgetProps) {
+  const router = useRouter();
+  const [tournaments, setTournaments] = useState<TournamentInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTournaments = async () => {
+      try {
+        const teams = await CoachTeamService.getCoachTeams(userId);
+        const tournamentIds = [...new Set(teams.filter(t => t.tournament_id).map(t => t.tournament_id!))];
+
+        if (tournamentIds.length === 0) {
+          setTournaments([]);
+          setLoading(false);
+          return;
+        }
+
+        const data = await Promise.all(
+          tournamentIds.slice(0, 3).map(async (tid) => {
+            try {
+              const t = await TournamentService.getTournament(tid);
+              return {
+                id: t.id,
+                name: t.name,
+                startDate: t.start_date,
+                teamCount: teams.filter(team => team.tournament_id === tid).length,
+              };
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        setTournaments(data.filter(Boolean) as TournamentInfo[]);
+      } catch (err) {
+        console.error('❌ TournamentsCompactWidget error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTournaments();
+  }, [userId]);
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  return (
+    <Card className="p-4 bg-white border-gray-200">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <Trophy className="w-4 h-4 text-yellow-600" />
+          Tournaments
+        </h3>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => router.push('/dashboard/coach/tournaments')} 
+          className="h-6 text-xs text-gray-500"
+        >
+          Browse <ArrowRight className="w-3 h-3 ml-1" />
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : tournaments.length === 0 ? (
+        <div className="text-center py-4 text-gray-400 text-sm">
+          No tournaments connected
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {tournaments.map((t) => (
+            <div key={t.id} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-100 rounded-lg">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">{t.name}</div>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  {t.startDate && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {formatDate(t.startDate)}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1">
+                    <Users className="w-3 h-3" />
+                    {t.teamCount} teams
+                  </span>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-green-600 border-green-300 text-[10px]">
+                Active
+              </Badge>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+

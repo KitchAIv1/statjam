@@ -125,14 +125,15 @@ export async function processClipJob(jobId: string): Promise<void> {
 
       // Process batch in parallel
       await Promise.all(
-        pendingClips.map((clip) => processClip(clip, sourceUrl))
+        pendingClips.map((clip) => processClip(clip, sourceUrl, video.duration_seconds))
       );
     }
 
     // 8. Check final status
     const updatedJob = await getJob(jobId);
     if (updatedJob) {
-      const allComplete = updatedJob.completed_clips + updatedJob.failed_clips >= updatedJob.total_clips;
+      const processedCount = updatedJob.completed_clips + updatedJob.failed_clips + (updatedJob.skipped_clips || 0);
+      const allComplete = processedCount >= updatedJob.total_clips;
       
       if (allComplete) {
         const finalStatus = updatedJob.failed_clips === 0 ? 'completed' : 'completed';
@@ -144,7 +145,8 @@ export async function processClipJob(jobId: string): Promise<void> {
         // 9. Update video assignment status to completed (connects to admin pipeline)
         await updateVideoAssignmentStatus(job.video_id, 'completed');
         
-        logger.info(`✅ Job ${jobId} finished: ${updatedJob.completed_clips} success, ${updatedJob.failed_clips} failed`);
+        const skippedCount = updatedJob.skipped_clips || 0;
+        logger.info(`✅ Job ${jobId} finished: ${updatedJob.completed_clips} success, ${updatedJob.failed_clips} failed, ${skippedCount} skipped`);
       }
     }
 
@@ -165,10 +167,29 @@ export async function processClipJob(jobId: string): Promise<void> {
 
 /**
  * Process a single clip
+ * @param clip - The clip record to process
+ * @param sourceUrl - Source video URL
+ * @param videoDurationSeconds - Optional video duration for validation
  */
-async function processClip(clip: GeneratedClip, sourceUrl: string): Promise<void> {
+async function processClip(
+  clip: GeneratedClip, 
+  sourceUrl: string, 
+  videoDurationSeconds: number | null
+): Promise<void> {
   const clipId = clip.id;
   logger.info(`🎬 Processing clip: ${clipId}`);
+
+  // Pre-validation: Check if clip exceeds video duration
+  if (videoDurationSeconds !== null && clip.video_timestamp_start > videoDurationSeconds) {
+    logger.warn(`⏭️ Skipping clip ${clipId}: timestamp ${clip.video_timestamp_start}s exceeds video duration ${videoDurationSeconds}s`);
+    
+    await updateClipStatus(clipId, {
+      status: 'skipped',
+      error_message: `Clip timestamp (${clip.video_timestamp_start}s) exceeds video duration (${videoDurationSeconds}s)`,
+    });
+    await incrementJobProgress(clip.job_id, 'skipped_clips');
+    return;
+  }
 
   // Update status to processing
   await updateClipStatus(clipId, {

@@ -33,6 +33,7 @@ export interface ClipGenerationJob {
   total_clips: number;
   completed_clips: number;
   failed_clips: number;
+  skipped_clips: number;
   approved_at: string | null;
   approved_by: string | null;
   started_at: string | null;
@@ -45,6 +46,7 @@ export interface GameVideo {
   game_id: string;
   bunny_video_id: string;
   status: string;
+  duration_seconds: number | null;
 }
 
 export interface ClipEligibleStat {
@@ -81,10 +83,11 @@ export interface GeneratedClip {
   stat_type: string;
   stat_modifier: string | null;
   points_value: number | null;
-  status: 'pending' | 'processing' | 'ready' | 'failed';
+  status: 'pending' | 'processing' | 'ready' | 'failed' | 'skipped';
   generation_attempts: number;
   generated_at: string | null;
   error_message: string | null;
+  skip_reason: string | null;
 }
 
 // ============================================================================
@@ -135,7 +138,7 @@ export async function updateJobStatus(
 export async function getVideo(videoId: string): Promise<GameVideo | null> {
   const { data, error } = await supabase
     .from('game_videos')
-    .select('id, game_id, bunny_video_id, status')
+    .select('id, game_id, bunny_video_id, status, duration_seconds')
     .eq('id', videoId)
     .single();
 
@@ -299,11 +302,11 @@ export async function updateClipStatus(
  */
 export async function incrementJobProgress(
   jobId: string,
-  field: 'completed_clips' | 'failed_clips'
+  field: 'completed_clips' | 'failed_clips' | 'skipped_clips'
 ): Promise<void> {
   const { data: job } = await supabase
     .from('clip_generation_jobs')
-    .select('completed_clips, failed_clips')
+    .select('completed_clips, failed_clips, skipped_clips')
     .eq('id', jobId)
     .single();
 

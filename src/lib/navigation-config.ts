@@ -201,27 +201,8 @@ export const navigationConfig: Record<string, NavigationConfig> = {
         label: 'Dashboard',
         href: '/dashboard/coach',
         icon: Home,
-        description: 'Coach dashboard overview'
+        description: 'Coach mission control'
       },
-      {
-        label: 'My Teams',
-        href: '/dashboard/coach?section=teams',
-        icon: Users,
-        description: 'Manage your teams'
-      },
-      {
-        label: 'Quick Track',
-        href: '/dashboard/coach?section=quick-track',
-        icon: PlayCircle,
-        description: 'Start tracking a game'
-      },
-      // Game History nav disabled - games are accessible from team cards
-      // {
-      //   label: 'Game History',
-      //   href: '/dashboard/coach/games',
-      //   icon: Calendar,
-      //   description: 'View your game history'
-      // },
       {
         label: 'Tournaments',
         href: '/dashboard/coach/tournaments',

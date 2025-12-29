@@ -579,6 +579,9 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
   const handleSubConfirm = useCallback(async (substitutions: Array<{ playerOutId: string; playerInId: string }>) => {
     if (!gameData || substitutions.length === 0) return;
     
+    // Track if selected player was subbed out
+    const subbedOutPlayerIds = substitutions.map(s => s.playerOutId);
+    
     for (const sub of substitutions) {
       const isTeamAPlayer = onCourtA.some(p => p.id === sub.playerOutId);
       
@@ -618,8 +621,15 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       // Trigger timeline refresh for each substitution
       onStatRecorded?.('substitution');
     }
+    
+    // ✅ CRITICAL: Clear selectedPlayer if they were subbed out to prevent stale stat attribution
+    if (selectedPlayer && subbedOutPlayerIds.includes(selectedPlayer)) {
+      console.log('🔄 Clearing selectedPlayer - player was subbed out:', selectedPlayer);
+      setSelectedPlayer(null);
+    }
+    
     setShowSubModal(false);
-  }, [gameData, gameId, gameClock, currentVideoTimeMs, onCourtA, benchA, onCourtB, benchB, setOnCourtA, setBenchA, setOnCourtB, setBenchB, setShowSubModal, onStatRecorded]);
+  }, [gameData, gameId, gameClock, currentVideoTimeMs, onCourtA, benchA, onCourtB, benchB, setOnCourtA, setBenchA, setOnCourtB, setBenchB, setShowSubModal, onStatRecorded, selectedPlayer, setSelectedPlayer]);
 
   return {
     handleStatRecord,

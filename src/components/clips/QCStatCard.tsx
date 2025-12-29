@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Check, X, Film, Clock, User, Edit2 } from 'lucide-react';
+import { Check, X, Film, Clock, User, Edit2, AlertTriangle, Crosshair } from 'lucide-react';
 import { ClipEligibleStat } from '@/lib/services/clipService';
 
 interface QCStatCardProps {
@@ -10,13 +10,28 @@ interface QCStatCardProps {
   onSelect: () => void;
   onSeekToTime: () => void;
   onEdit?: () => void;
+  /** Indicates this clip's timestamp exceeds video duration */
+  isOutOfRange?: boolean;
+  /** Current video position for "Mark at current position" */
+  currentVideoTimeMs?: number;
+  /** Callback to mark stat at current video position */
+  onMarkAtCurrentPosition?: () => void;
 }
 
 /**
  * Individual stat card for QC review
  * Shows stat details and clip eligibility status
  */
-export function QCStatCard({ stat, isSelected, onSelect, onSeekToTime, onEdit }: QCStatCardProps) {
+export function QCStatCard({ 
+  stat, 
+  isSelected, 
+  onSelect, 
+  onSeekToTime, 
+  onEdit, 
+  isOutOfRange = false,
+  currentVideoTimeMs,
+  onMarkAtCurrentPosition,
+}: QCStatCardProps) {
   // Format stat type for display
   const formatStatType = (type: string, modifier: string | null, points: number | null): string => {
     if (type === 'field_goal') {
@@ -51,9 +66,11 @@ export function QCStatCard({ stat, isSelected, onSelect, onSeekToTime, onEdit }:
     <div
       className={`
         relative p-3 rounded-lg border transition-all cursor-pointer
-        ${isSelected 
-          ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200' 
-          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+        ${isOutOfRange && stat.is_clip_eligible
+          ? 'border-red-300 bg-red-50/50 opacity-75'
+          : isSelected 
+            ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200' 
+            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
         }
       `}
       onClick={() => {
@@ -63,7 +80,15 @@ export function QCStatCard({ stat, isSelected, onSelect, onSeekToTime, onEdit }:
     >
       {/* Clip Eligibility Badge */}
       <div className="absolute top-2 right-2">
-        {stat.is_clip_eligible ? (
+        {isOutOfRange && stat.is_clip_eligible ? (
+          <span 
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700"
+            title="Timestamp exceeds video duration - will be skipped"
+          >
+            <AlertTriangle className="w-3 h-3" />
+            Out of Range
+          </span>
+        ) : stat.is_clip_eligible ? (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
             <Film className="w-3 h-3" />
             Clip
@@ -112,6 +137,19 @@ export function QCStatCard({ stat, isSelected, onSelect, onSeekToTime, onEdit }:
         </button>
         <div className="flex items-center gap-2">
           <span>Q{stat.quarter} {formatGameClock(stat.game_time_minutes, stat.game_time_seconds)}</span>
+          {/* Mark at current position button */}
+          {onMarkAtCurrentPosition && currentVideoTimeMs !== undefined && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMarkAtCurrentPosition();
+              }}
+              className="p-1 hover:bg-green-100 text-green-600 hover:text-green-700 rounded transition-colors"
+              title={`Mark at current position (${formatVideoTime(currentVideoTimeMs)})`}
+            >
+              <Crosshair className="w-3.5 h-3.5" />
+            </button>
+          )}
           {onEdit && (
             <button
               onClick={(e) => {

@@ -34,9 +34,11 @@ export function ClipJobProgress({
   onRetry,
   onCancel,
 }: ClipJobProgressProps) {
-  // Calculate progress percentage
+  // Calculate progress percentage (includes skipped)
+  const skippedClips = job.skipped_clips || 0;
+  const processedClips = job.completed_clips + job.failed_clips + skippedClips;
   const progress = job.total_clips > 0
-    ? ((job.completed_clips + job.failed_clips) / job.total_clips) * 100
+    ? (processedClips / job.total_clips) * 100
     : 0;
 
   // Status icon and color
@@ -104,7 +106,7 @@ export function ClipJobProgress({
   const getEstimatedTime = (): string | null => {
     if (job.status !== 'processing' || job.completed_clips === 0) return null;
     
-    const remaining = job.total_clips - job.completed_clips - job.failed_clips;
+    const remaining = job.total_clips - processedClips;
     // Assume ~30 seconds per clip
     const secondsRemaining = remaining * 30;
     const minutes = Math.ceil(secondsRemaining / 60);
@@ -173,6 +175,9 @@ export function ClipJobProgress({
         )}
         {job.failed_clips > 0 && (
           <span className="text-red-500">{job.failed_clips} failed</span>
+        )}
+        {skippedClips > 0 && (
+          <span className="text-amber-500">{skippedClips} skipped</span>
         )}
       </div>
 

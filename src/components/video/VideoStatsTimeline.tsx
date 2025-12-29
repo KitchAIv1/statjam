@@ -13,10 +13,11 @@
  */
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Loader2, Clock, Trash2, Play, Edit, Filter, X, RefreshCw } from 'lucide-react';
-import { VideoStatService } from '@/lib/services/videoStatService';
+import { Loader2, Clock, Trash2, Play, Edit, Filter, X, RefreshCw, Crosshair } from 'lucide-react';
+import { VideoStatService, ClockSyncConfig } from '@/lib/services/videoStatService';
 import { StatEditServiceV2 } from '@/lib/services/statEditServiceV2';
 import { SubstitutionsService, SubstitutionRow } from '@/lib/services/substitutionsService';
+import { supabase } from '@/lib/supabase';
 import { StatEditForm } from '@/components/tracker-v3/modals/StatEditForm';
 import type { VideoStat } from '@/lib/types/video';
 import type { GameStatRecord } from '@/lib/services/statEditService';
@@ -41,6 +42,10 @@ interface VideoStatsTimelineProps {
   // Coach mode
   isCoachMode?: boolean;
   opponentName?: string;  // Coach mode: name of opponent team
+  // Clock sync config for video timestamp sync when editing stats
+  clockSyncConfig?: ClockSyncConfig | null;
+  // Current video position for "Mark at current position" feature
+  currentVideoTimeMs?: number;
 }
 
 // Format milliseconds to MM:SS
@@ -123,6 +128,8 @@ export function VideoStatsTimeline({
   teamBName = 'Team B',
   isCoachMode = false,
   opponentName = 'Opponent',
+  clockSyncConfig,
+  currentVideoTimeMs,
 }: VideoStatsTimelineProps) {
   
   // Helper to get display name for a stat (handles opponent stats)
@@ -281,6 +288,29 @@ export function VideoStatsTimeline({
     await loadStats();
   }, [loadStats]);
 
+  // Handle "Mark at current position" - update stat's video_timestamp_ms to current playhead
+  const handleMarkAtCurrentPosition = useCallback(async (statId: string) => {
+    if (currentVideoTimeMs === undefined) {
+      console.warn('⚠️ Cannot mark - no current video time available');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('game_stats')
+        .update({ video_timestamp_ms: Math.round(currentVideoTimeMs) })
+        .eq('id', statId);
+      
+      if (error) throw error;
+      
+      console.log(`✅ Marked stat ${statId} at ${formatVideoTime(currentVideoTimeMs)}`);
+      await loadStats();
+    } catch (error) {
+      console.error('❌ Error marking stat:', error);
+      alert('Failed to mark stat at current position');
+    }
+  }, [currentVideoTimeMs, loadStats]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -396,6 +426,16 @@ export function VideoStatsTimeline({
                   <td className="px-2 py-1.5">
                     {entry.type === 'stat' && entry.stat && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Mark at current position */}
+                        {currentVideoTimeMs !== undefined && (
+                          <button
+                            onClick={() => handleMarkAtCurrentPosition(entry.stat!.id)}
+                            className="p-1 hover:bg-green-100 rounded transition-colors"
+                            title={`Mark at current position (${formatVideoTime(currentVideoTimeMs)})`}
+                          >
+                            <Crosshair className="w-3.5 h-3.5 text-green-600" />
+                          </button>
+                        )}
                         {/* Edit */}
                         <button
                           onClick={() => handleEditClick(entry.stat!)}
@@ -486,6 +526,7 @@ export function VideoStatsTimeline({
               players={[...teamAPlayers, ...teamBPlayers]}
               onClose={() => setEditingStat(null)}
               onSuccess={handleEditSuccess}
+              clockSyncConfig={clockSyncConfig}
             />
           </div>
         </div>

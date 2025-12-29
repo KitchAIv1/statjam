@@ -868,6 +868,8 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                   teamBName={isCoachGame ? opponentName : (gameData?.team_b?.name || 'Team B')}
                   isCoachMode={isCoachGame}
                   opponentName={opponentName}
+                  clockSyncConfig={clockSyncConfig}
+                  currentVideoTimeMs={currentTimeMs}
                 />
               </div>
             </div>

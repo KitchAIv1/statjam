@@ -11,6 +11,12 @@ interface QCReviewTimelineProps {
   onStatSelect: (statId: string) => void;
   onEditStat?: (statId: string) => void;
   selectedStatId: string | null;
+  /** Video duration in ms - used to mark out-of-range clips */
+  videoDurationMs?: number;
+  /** Current video position in ms - for "Mark at current position" */
+  currentVideoTimeMs?: number;
+  /** Callback when marking a stat at current position */
+  onMarkAtCurrentPosition?: (statId: string) => void;
 }
 
 type FilterType = 'all' | 'clip_eligible' | 'not_eligible';
@@ -25,6 +31,9 @@ export function QCReviewTimeline({
   onStatSelect,
   onEditStat,
   selectedStatId,
+  videoDurationMs,
+  currentVideoTimeMs,
+  onMarkAtCurrentPosition,
 }: QCReviewTimelineProps) {
   const [filter, setFilter] = useState<FilterType>('all');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -138,16 +147,23 @@ export function QCReviewTimeline({
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 gap-2">
-                  {quarterStats.map((stat) => (
-                    <QCStatCard
-                      key={`${stat.id}-${stat.video_timestamp_ms}`}
-                      stat={stat}
-                      isSelected={selectedStatId === stat.id}
-                      onSelect={() => onStatSelect(stat.id)}
-                      onSeekToTime={() => onSeekToTime(stat.video_timestamp_ms)}
-                      onEdit={onEditStat ? () => onEditStat(stat.id) : undefined}
-                    />
-                  ))}
+                  {quarterStats.map((stat) => {
+                    const isOutOfRange = videoDurationMs !== undefined && 
+                      stat.video_timestamp_ms > videoDurationMs;
+                    return (
+                      <QCStatCard
+                        key={`${stat.id}-${stat.video_timestamp_ms}`}
+                        stat={stat}
+                        isSelected={selectedStatId === stat.id}
+                        onSelect={() => onStatSelect(stat.id)}
+                        onSeekToTime={() => onSeekToTime(stat.video_timestamp_ms)}
+                        onEdit={onEditStat ? () => onEditStat(stat.id) : undefined}
+                        isOutOfRange={isOutOfRange}
+                        currentVideoTimeMs={currentVideoTimeMs}
+                        onMarkAtCurrentPosition={onMarkAtCurrentPosition ? () => onMarkAtCurrentPosition(stat.id) : undefined}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}
