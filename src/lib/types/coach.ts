@@ -11,12 +11,22 @@ import { User } from './user';
 // CORE COACH TYPES
 // ========================================
 
+// Team-Tournament relationship (from junction table)
+export interface TeamTournamentLink {
+  id: string;
+  tournament_id: string;
+  tournament_name?: string;
+  approval_status: 'pending' | 'approved' | 'rejected';
+  is_primary: boolean;
+  joined_at: string;
+}
+
 export interface CoachTeam {
   id: string;
   name: string;
   logo?: string; // Team logo URL from Supabase Storage
   coach_id: string;
-  tournament_id?: string; // Optional - null for independent teams
+  tournament_id?: string; // Optional - null for independent teams (kept for backward compat)
   approval_status?: 'pending' | 'approved' | 'rejected'; // Tournament join approval status
   visibility: 'private' | 'public';
   is_official_team?: boolean; // NEW: Controls if games count toward player stats (default: false)
@@ -34,6 +44,9 @@ export interface CoachTeam {
   player_count?: number;
   games_count?: number;
   recent_games?: CoachGame[];
+  
+  // Multi-tournament support (from team_tournaments junction table)
+  tournaments?: TeamTournamentLink[];
 }
 
 // Player types for coach teams

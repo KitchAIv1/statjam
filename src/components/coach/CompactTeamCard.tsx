@@ -105,12 +105,10 @@ export function CompactTeamCard({
               <PlayCircle className="w-4 h-4 mr-2" />
               Analytics
             </DropdownMenuItem>
-            {!team.tournament_id && (
-              <DropdownMenuItem onClick={() => onJoinTournament(team)}>
-                <Trophy className="w-4 h-4 mr-2" />
-                Join Tournament
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={() => onJoinTournament(team)}>
+              <Trophy className="w-4 h-4 mr-2" />
+              {team.tournament_id ? 'Add to Tournament' : 'Join Tournament'}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

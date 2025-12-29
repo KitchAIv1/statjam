@@ -372,22 +372,45 @@ export class CoachTeamService {
 
   /**
    * Attach team to tournament (existing or stub)
+   * Now uses team_tournaments junction table for multi-tournament support
    */
   static async attachToTournament(request: TournamentAttachmentRequest): Promise<void> {
     try {
       if (request.attachment_type === 'existing' && request.tournament_id) {
-        // Attach to existing tournament with pending approval status
-        const { error } = await supabase
-          .from('teams')
-          .update({ 
+        // Check if this is the first tournament for the team
+        const { data: existingLinks } = await supabase
+          .from('team_tournaments')
+          .select('id')
+          .eq('team_id', request.coach_team_id);
+        
+        const isFirstTournament = !existingLinks || existingLinks.length === 0;
+        
+        // Insert into junction table (allows multiple tournaments)
+        const { error: junctionError } = await supabase
+          .from('team_tournaments')
+          .upsert({
+            team_id: request.coach_team_id,
             tournament_id: request.tournament_id,
-            approval_status: 'pending' // Requires organizer approval
-          })
-          .eq('id', request.coach_team_id);
+            approval_status: 'pending',
+            is_primary: isFirstTournament, // First tournament is primary
+          }, { onConflict: 'team_id,tournament_id' });
 
-        if (error) throw error;
+        if (junctionError) throw junctionError;
 
-        console.log('✅ Team attached to tournament, awaiting organizer approval');
+        // Also update teams.tournament_id for backward compatibility (only if first/primary)
+        if (isFirstTournament) {
+          const { error } = await supabase
+            .from('teams')
+            .update({ 
+              tournament_id: request.tournament_id,
+              approval_status: 'pending'
+            })
+            .eq('id', request.coach_team_id);
+
+          if (error) throw error;
+        }
+
+        console.log('✅ Team attached to tournament via junction table, awaiting approval');
       } else if (request.attachment_type === 'stub' && request.tournament_stub) {
         // Create tournament stub
         // TODO: Implement tournament stub creation
@@ -396,6 +419,47 @@ export class CoachTeamService {
     } catch (error) {
       console.error('❌ Error attaching to tournament:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get all tournaments a team is linked to
+   */
+  static async getTeamTournaments(teamId: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('team_tournaments')
+        .select(`
+          id,
+          tournament_id,
+          approval_status,
+          is_primary,
+          joined_at,
+          tournaments:tournament_id (
+            id,
+            name,
+            status,
+            start_date,
+            end_date
+          )
+        `)
+        .eq('team_id', teamId)
+        .order('is_primary', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((link: any) => ({
+        id: link.id,
+        tournament_id: link.tournament_id,
+        tournament_name: link.tournaments?.name || 'Unknown',
+        approval_status: link.approval_status,
+        is_primary: link.is_primary,
+        joined_at: link.joined_at,
+        status: link.tournaments?.status,
+      }));
+    } catch (error) {
+      console.error('❌ Error fetching team tournaments:', error);
+      return [];
     }
   }
 }
