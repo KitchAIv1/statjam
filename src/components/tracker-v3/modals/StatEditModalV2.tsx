@@ -28,6 +28,7 @@ import { StatDeleteConfirmation } from './StatDeleteConfirmation';
 import { getPlayerName, formatStatDisplay, createPlayerNameMap } from '@/lib/utils/statEditUtils';
 import { deleteStatHandler, invalidateTeamStatsCache } from '@/lib/utils/statEditHandlers';
 import { cache } from '@/lib/utils/cache';
+import { ClockSyncConfig } from '@/lib/services/videoStatService';
 
 interface Player {
   id: string;
@@ -49,6 +50,8 @@ interface StatEditModalV2Props {
   currentQuarter?: number;
   currentMinutes?: number;
   currentSeconds?: number;
+  /** Optional: For video-tracked games, auto-sync video_timestamp_ms when game clock is edited */
+  clockSyncConfig?: ClockSyncConfig | null;
 }
 
 export function StatEditModalV2({
@@ -65,7 +68,8 @@ export function StatEditModalV2({
   currentUserId,
   currentQuarter = 1,
   currentMinutes = 10,
-  currentSeconds = 0
+  currentSeconds = 0,
+  clockSyncConfig
 }: StatEditModalV2Props) {
   const [filterQuarter, setFilterQuarter] = useState<string>('all');
   const [editingStat, setEditingStat] = useState<GameStatRecord | null>(null);
@@ -234,6 +238,7 @@ export function StatEditModalV2({
           players={[...teamAPlayers, ...teamBPlayers]}
           onClose={() => setEditingStat(null)}
           onSuccess={handleUpdateSuccess}
+          clockSyncConfig={clockSyncConfig}
         />
       )}
 

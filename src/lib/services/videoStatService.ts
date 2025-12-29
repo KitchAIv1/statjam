@@ -14,6 +14,9 @@ import type {
   VideoStat,
   ClipConfig 
 } from '@/lib/types/video';
+
+// Re-export types for consumers
+export type { ClockSyncConfig };
 import { VIDEO_CONFIG } from '@/lib/config/videoConfig';
 
 // =============================================================================
@@ -668,8 +671,9 @@ function transformClipConfig(data: Record<string, unknown>): ClipConfig {
 /**
  * Calculate video timestamp from game clock
  * Used for backfilling existing stats after jumpball sync
+ * Also used by StatEditForm to recalculate video_timestamp_ms when game clock is edited
  */
-function calculateVideoTimestamp(
+export function calculateVideoTimestamp(
   config: ClockSyncConfig,
   quarter: number,
   gameTimeMinutes: number,
@@ -815,5 +819,8 @@ export const VideoStatService = {
   
   // Clip config
   getClipConfig,
+  
+  // Video timestamp calculation (for edit sync)
+  calculateVideoTimestamp,
 };
 

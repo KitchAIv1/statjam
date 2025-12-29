@@ -16,7 +16,8 @@ import { CoachGameAnalyticsTab } from '@/app/game-viewer/[gameId]/components/Coa
 import { GameAwardsSection } from '@/app/game-viewer/[gameId]/components/GameAwardsSection';
 import { UpgradeModal } from '@/components/subscription';
 import { useSubscription } from '@/hooks/useSubscription';
-import { BarChart3, Users, Target, Trophy, Lock, Crown } from 'lucide-react';
+import { BarChart3, Users, Target, Trophy, Lock, Crown, Film } from 'lucide-react';
+import { ClipsTab } from './ClipsTab';
 
 interface CommandCenterTabPanelProps {
   gameId: string;
@@ -112,6 +113,13 @@ export function CommandCenterTabPanel({
             )}
           </TabsTrigger>
         )}
+
+        {/* Clips Tab - Always visible for upsell */}
+        <TabsTrigger value="clips" className={tabTriggerClass}>
+          <Film className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Clips</span>
+          <span className="sm:hidden">🎬</span>
+        </TabsTrigger>
         
         <TabsTrigger value="team" className={tabTriggerClass}>
           <Users className="w-3.5 h-3.5" />
@@ -241,6 +249,11 @@ export function CommandCenterTabPanel({
             )}
           </TabsContent>
         )}
+
+        {/* Clips Tab */}
+        <TabsContent value="clips" className="mt-0 h-full bg-gradient-to-br from-orange-50/30 via-white to-red-50/20">
+          <ClipsTab gameId={gameId} teamId={game.teamAId} />
+        </TabsContent>
 
         {/* Team Stats Tab */}
         <TabsContent value="team" className="mt-0 h-full bg-gradient-to-br from-orange-50/30 via-white to-red-50/20">

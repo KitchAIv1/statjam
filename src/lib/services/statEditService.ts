@@ -309,22 +309,27 @@ export class StatEditService {
 
       const url = `${this.SUPABASE_URL}/rest/v1/game_stats?id=eq.${statId}`;
       
+      console.log('📤 StatEditService: Sending PATCH to', url, 'with:', JSON.stringify(updates));
+      
       const response = await fetch(url, {
         method: 'PATCH',
         headers: {
           'apikey': this.SUPABASE_ANON_KEY!,
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
+          'Prefer': 'return=representation'  // Get the updated row back
         },
         body: JSON.stringify(updates)
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ StatEditService: PATCH failed:', response.status, errorText);
         throw new Error(`Failed to update stat: ${response.status}`);
       }
-
-      console.log('✅ StatEditService: Stat updated successfully');
+      
+      const result = await response.json();
+      console.log('✅ StatEditService: Stat updated. DB returned:', JSON.stringify(result));
     } catch (error: any) {
       console.error('❌ StatEditService: Failed to update stat:', error);
       throw error;

@@ -112,9 +112,9 @@ const AdminDashboardPage = () => {
                         <Video className="h-5 w-5 text-purple-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">Video Tracking Queue</h3>
+                        <h3 className="font-semibold">Video Tracking Pipeline</h3>
                         <p className="text-sm text-muted-foreground">
-                          Assign uploaded videos to stat admins
+                          Assignments, QC review, and clip generation
                         </p>
                       </div>
                     </div>

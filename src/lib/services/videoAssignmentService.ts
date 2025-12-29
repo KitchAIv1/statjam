@@ -69,11 +69,11 @@ export async function getVideoQueue(): Promise<VideoQueueItem[]> {
 
     if (error) throw error;
 
-    // Filter videos that need tracking (no stats yet or not completed)
+    // Include all videos in the pipeline (pending through completed)
     const pendingVideos = (data || []).filter(item => {
       // If assignment_status exists, use it; otherwise treat all ready videos as pending
       const status = item.assignment_status || 'pending';
-      return ['pending', 'assigned', 'in_progress'].includes(status);
+      return ['pending', 'assigned', 'in_progress', 'completed'].includes(status);
     });
 
     // Fetch uploader info separately

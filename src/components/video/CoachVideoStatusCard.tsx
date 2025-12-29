@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Video, 
   Clock, 
@@ -35,8 +36,15 @@ export function CoachVideoStatusCard({
   opponentName,
   compact = false 
 }: CoachVideoStatusCardProps) {
+  const router = useRouter();
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
   const [hoursRemaining, setHoursRemaining] = useState<number | null>(null);
+
+  const handleViewStats = () => {
+    if (video.gameId) {
+      router.push(`/dashboard/coach/game/${video.gameId}`);
+    }
+  };
 
   // Calculate time remaining
   useEffect(() => {
@@ -196,7 +204,9 @@ export function CoachVideoStatusCard({
             )}
             
             {video.assignmentStatus === 'completed' && (
-              <button className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white 
+              <button 
+                onClick={handleViewStats}
+                className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white 
                                  rounded-lg text-sm font-medium hover:bg-green-600 transition-colors">
                 <BarChart3 className="w-4 h-4" />
                 View Stats
@@ -284,7 +294,9 @@ export function CoachVideoStatusCard({
         {/* View Stats Button (only if completed) */}
         {video.assignmentStatus === 'completed' && (
           <div className="mt-4">
-            <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 
+            <button 
+              onClick={handleViewStats}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 
                                bg-green-500 text-white rounded-lg font-medium 
                                hover:bg-green-600 transition-colors shadow-sm">
               <BarChart3 className="w-4 h-4" />

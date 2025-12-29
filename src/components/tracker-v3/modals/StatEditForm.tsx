@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { StatEditService, GameStatRecord } from '@/lib/services/statEditService';
 import { ShotLocationEditor } from './ShotLocationEditor';
 import { STAT_TYPES, getModifiersForStatType } from '@/lib/constants/statTypes';
+import { VideoStatService, ClockSyncConfig } from '@/lib/services/videoStatService';
 
 interface Player {
   id: string;
@@ -29,13 +30,16 @@ interface StatEditFormProps {
   players: Player[];
   onClose: () => void;
   onSuccess: () => void;
+  /** Optional: For video-tracked games, auto-sync video_timestamp_ms when game clock is edited */
+  clockSyncConfig?: ClockSyncConfig | null;
 }
 
 export function StatEditForm({
   stat,
   players,
   onClose,
-  onSuccess
+  onSuccess,
+  clockSyncConfig
 }: StatEditFormProps) {
   const [playerId, setPlayerId] = useState(stat.player_id || stat.custom_player_id || '');
   const [statType, setStatType] = useState(stat.stat_type);
@@ -117,7 +121,27 @@ export function StatEditForm({
         })
       };
 
+      // ✅ Auto-sync video_timestamp_ms when game clock is edited (for video-tracked games)
+      if (clockSyncConfig) {
+        const newVideoTimestampMs = VideoStatService.calculateVideoTimestamp(
+          clockSyncConfig,
+          quarter,
+          minutes,
+          seconds
+        );
+        (updates as any).video_timestamp_ms = Math.round(newVideoTimestampMs);
+        console.log(`🎬 StatEditForm: Auto-synced video_timestamp_ms to ${newVideoTimestampMs}ms`);
+      }
+
+      console.log('📝 StatEditForm: Sending update:', JSON.stringify({
+        id: stat.id,
+        game_time_minutes: updates.game_time_minutes,
+        game_time_seconds: updates.game_time_seconds,
+        video_timestamp_ms: (updates as any).video_timestamp_ms,
+      }));
+      
       await StatEditService.updateStat(stat.id, updates);
+      console.log('✅ StatEditForm: Calling onSuccess callback');
       onSuccess();
     } catch (error) {
       console.error('Failed to update stat:', error);
