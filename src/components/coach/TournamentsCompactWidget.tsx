@@ -15,7 +15,6 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { CoachTeamService } from '@/lib/services/coachTeamService';
-import { TournamentService } from '@/lib/services/tournamentService';
 
 interface TournamentInfo {
   id: string;
@@ -36,32 +35,38 @@ export function TournamentsCompactWidget({ userId }: TournamentsCompactWidgetPro
   useEffect(() => {
     const loadTournaments = async () => {
       try {
+        // Get all coach teams
         const teams = await CoachTeamService.getCoachTeams(userId);
-        const tournamentIds = [...new Set(teams.filter(t => t.tournament_id).map(t => t.tournament_id!))];
-
-        if (tournamentIds.length === 0) {
+        
+        if (teams.length === 0) {
           setTournaments([]);
           setLoading(false);
           return;
         }
 
-        const data = await Promise.all(
-          tournamentIds.slice(0, 3).map(async (tid) => {
-            try {
-              const t = await TournamentService.getTournament(tid);
-              return {
-                id: t.id,
-                name: t.name,
-                startDate: t.start_date,
-                teamCount: teams.filter(team => team.tournament_id === tid).length,
-              };
-            } catch {
-              return null;
-            }
-          })
+        // Fetch tournaments from junction table for all teams
+        const allTournamentLinks = await Promise.all(
+          teams.map(team => CoachTeamService.getTeamTournaments(team.id))
         );
 
-        setTournaments(data.filter(Boolean) as TournamentInfo[]);
+        // Flatten and deduplicate by tournament_id
+        const tournamentMap = new Map<string, TournamentInfo>();
+        allTournamentLinks.flat().forEach(link => {
+          if (!tournamentMap.has(link.tournament_id)) {
+            tournamentMap.set(link.tournament_id, {
+              id: link.tournament_id,
+              name: link.tournament_name || 'Unknown Tournament',
+              startDate: undefined,
+              teamCount: 1,
+            });
+          } else {
+            // Increment team count if same tournament
+            const existing = tournamentMap.get(link.tournament_id)!;
+            existing.teamCount++;
+          }
+        });
+
+        setTournaments(Array.from(tournamentMap.values()).slice(0, 3));
       } catch (err) {
         console.error('❌ TournamentsCompactWidget error:', err);
       } finally {
