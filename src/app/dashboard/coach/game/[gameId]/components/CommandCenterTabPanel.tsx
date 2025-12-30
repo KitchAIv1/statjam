@@ -16,6 +16,7 @@ import { CoachGameAnalyticsTab } from '@/app/game-viewer/[gameId]/components/Coa
 import { GameAwardsSection } from '@/app/game-viewer/[gameId]/components/GameAwardsSection';
 import { UpgradeModal } from '@/components/subscription';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { BarChart3, Users, Target, Trophy, Lock, Crown, Film } from 'lucide-react';
 import { ClipsTab } from './ClipsTab';
 
@@ -76,7 +77,12 @@ export function CommandCenterTabPanel({
 }: CommandCenterTabPanelProps) {
   // Subscription check for analytics gate
   const { limits } = useSubscription('coach');
-  const hasAdvancedAnalytics = limits?.hasAdvancedAnalytics ?? false;
+  const { user } = useAuthContext();
+  
+  // ✅ Stat Admins are exempt from premium gates (they're tracking the game as a service)
+  const isStatAdmin = user?.role === 'stat_admin';
+  const hasAdvancedAnalytics = isStatAdmin || (limits?.hasAdvancedAnalytics ?? false);
+  
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const tabTriggerClass = `flex-1 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 

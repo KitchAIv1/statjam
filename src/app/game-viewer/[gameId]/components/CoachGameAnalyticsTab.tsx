@@ -17,6 +17,7 @@ import React, { useEffect, useState } from 'react';
 import { CoachAnalyticsService } from '@/lib/services/coachAnalyticsService';
 import { GameBreakdown } from '@/lib/types/coachAnalytics';
 import { Target, TrendingUp, Award, BarChart3, Lightbulb, CheckCircle, AlertTriangle, Crosshair } from 'lucide-react';
+import { AIGameAnalysisReport } from '@/components/analytics/AIGameAnalysisReport';
 
 interface CoachGameAnalyticsTabProps {
   gameId: string;
@@ -308,6 +309,171 @@ export function CoachGameAnalyticsTab({
           </div>
         </div>
       </div>
+      )}
+
+      {/* AI Game Analysis Report - For Completed Games */}
+      {gameId === 'ddf6af58-7cc3-4f1e-a353-8971fd4088cb' && (
+        <AIGameAnalysisReport
+          gameId={gameId}
+          winningTeam="Winslow"
+          losingTeam="Burlington City"
+          finalScore={{ home: 65, away: 50 }}
+          margin={15}
+          gameType="Dominant"
+          overview="Winslow controlled this game from start to finish and pulled away decisively late. This was not a back-and-forth game that slipped late. Winslow consistently executed better, took care of defensive responsibilities, and punished Burlington City's mistakes. The knockout blow came in the 4th quarter, where Winslow closed the game 21–0."
+          winningFactors={[
+            {
+              factor: 'Field Goal Percentage',
+              value: '50%',
+              impactScore: 50,
+              courtMeaning: [
+                'Winslow generated higher-quality shots (inside touches, open looks, better spacing)',
+                'Burlington City likely rushed shots or settled for low-percentage attempts'
+              ],
+              coachingTakeaway: [
+                'Emphasize shot selection in practice',
+                'Track shot quality, not just makes and misses',
+                'Good offense beats good defense when shots are taken in rhythm'
+              ]
+            },
+            {
+              factor: 'Rebounding Margin',
+              value: 36,
+              impactScore: 43.2,
+              courtMeaning: [
+                'Winslow likely controlled the paint',
+                'More second-chance points',
+                'Fewer transition opportunities for Burlington City'
+              ],
+              coachingTakeaway: [
+                'Rebounding is effort plus positioning',
+                'Identify which players are consistently boxing out',
+                'Guards must rebound too, not just bigs'
+              ]
+            },
+            {
+              factor: 'Steals & Blocks',
+              value: 19,
+              impactScore: 22.8,
+              courtMeaning: [
+                'Winslow disrupted passing lanes',
+                'Forced Burlington City into uncomfortable decisions',
+                'Converted defense into offense'
+              ],
+              coachingTakeaway: [
+                'Defense created offense in this game',
+                'Teach active hands without overreaching',
+                'Pressure works when help defense is ready behind it'
+              ]
+            }
+          ]}
+          keyPlayers={[
+            {
+              name: 'Ward Jr',
+              rank: 1,
+              points: 28,
+              rebounds: 1,
+              assists: 2,
+              steals: 5,
+              blocks: 0,
+              turnovers: 6,
+              impactScore: 30.2,
+              strengths: [
+                'Scored efficiently and aggressively',
+                'Created turnovers with active hands',
+                'Put constant pressure on the defense'
+              ],
+              riskToManage: '6 turnovers is high',
+              coachingFocus: [
+                'Keep Ward Jr aggressive, but tighten decision-making',
+                'Work on reading help defense and passing out of pressure',
+                'This is a lead guard who needs structure, not restriction'
+              ]
+            },
+            {
+              name: 'Murrell',
+              rank: 2,
+              points: 12,
+              rebounds: 16,
+              assists: 1,
+              steals: 1,
+              blocks: 1,
+              turnovers: 2,
+              impactScore: 25.8,
+              strengths: [
+                'Elite rebounding effort',
+                'Finished plays created by teammates',
+                'Anchored possessions defensively'
+              ],
+              coachingFocus: [
+                'Reinforce his role as a possession-winner',
+                'Make sure guards reward him inside',
+                'He sets the tone for effort'
+              ]
+            },
+            {
+              name: 'Haines',
+              rank: 3,
+              points: 6,
+              rebounds: 5,
+              assists: 0,
+              steals: 4,
+              blocks: 1,
+              turnovers: 2,
+              impactScore: 13.9,
+              strengths: [
+                'Forced turnovers',
+                'Played disruptive defense'
+              ],
+              coachingFocus: [
+                'Keep him as a defensive stopper',
+                'Work on confidence and offensive reads',
+                'Not every contributor needs to score to matter'
+              ]
+            }
+          ]}
+          momentum={{
+            quarter: 4,
+            teamScore: 21,
+            opponentScore: 0,
+            description: 'Burlington City lost composure. Turnovers increased. Winslow stayed disciplined and aggressive. This is where the game was decided.'
+          }}
+          opponentBreakdown={{
+            fgPercentage: 27.6,
+            turnovers: 26,
+            fouls: 19,
+            keyIssues: [
+              '27.6% shooting',
+              '26 turnovers',
+              '19 fouls',
+              'Lost rebounding battle'
+            ],
+            correctableIssues: [
+              'Decision-making under pressure',
+              'Ball-handling fundamentals',
+              'Shot selection'
+            ],
+            deeperProblems: [
+              'Poor spacing',
+              'Lack of composure when trailing',
+              'Defensive discipline'
+            ]
+          }}
+          actionItems={{
+            winner: [
+              'Maintain defensive pressure, it\'s your identity',
+              'Reduce turnovers from primary scorers',
+              'Continue emphasizing rebounding as a team responsibility'
+            ],
+            loser: [
+              'Simplify offense, fewer reads',
+              'Drill ball security daily',
+              'Slow the game when momentum shifts',
+              'Reinforce defensive fundamentals instead of gambling'
+            ]
+          }}
+          bottomLine="Winslow won because they valued possessions, rebounded, and defended together. Burlington City lost because they couldn't handle pressure or control tempo. This game is a textbook example of how discipline beats talent when execution collapses."
+        />
       )}
     </div>
   );

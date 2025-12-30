@@ -677,24 +677,35 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       });
 
       // 7. Calculate real-time scores from game_stats (always use calculated scores for accuracy)
-      // ✅ FIX: Match Tracker logic - check is_opponent_stat for coach mode consistency
+      // ✅ FIX: Infer points from stat_type, NOT stat_value (stat_value can be unreliable)
       const calculateScoresFromStats = (stats: GameStats[], teamAId: string, teamBId: string) => {
         let homeScore = 0;
         let awayScore = 0;
         
         stats.forEach(stat => {
           if (stat.modifier === 'made') {
-            const points = stat.stat_value || 0;
+            // ✅ FIX: Infer points from stat_type for accuracy (matches SQL calculation)
+            let points = 0;
+            const statType = stat.stat_type;
+            if (statType === 'three_pointer' || statType === '3_pointer') {
+              points = 3;
+            } else if (statType === 'free_throw') {
+              points = 1;
+            } else if (statType === 'field_goal' || statType === 'two_pointer') {
+              points = 2;
+            }
             
-            // ✅ FIX: Check is_opponent_stat flag (matches Tracker logic for coach mode)
-            const statWithOpponent = stat as any;
-            if (statWithOpponent.is_opponent_stat) {
-              // Opponent stats go to away score (matches Tracker's teamBScore logic)
-              awayScore += points;
-            } else if (stat.team_id === teamAId) {
-              homeScore += points;
-            } else if (stat.team_id === teamBId) {
-              awayScore += points;
+            if (points > 0) {
+              // ✅ FIX: Check is_opponent_stat flag (matches Tracker logic for coach mode)
+              const statWithOpponent = stat as any;
+              if (statWithOpponent.is_opponent_stat) {
+                // Opponent stats go to away score (matches Tracker's teamBScore logic)
+                awayScore += points;
+              } else if (stat.team_id === teamAId) {
+                homeScore += points;
+              } else if (stat.team_id === teamBId) {
+                awayScore += points;
+              }
             }
           }
         });

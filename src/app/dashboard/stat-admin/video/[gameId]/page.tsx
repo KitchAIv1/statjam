@@ -46,14 +46,17 @@ import {
   FastForward,
   Eye,
   Play,
-  Pause
+  Pause,
+  Trophy
 } from 'lucide-react';
 import { StatEditModalV2 } from '@/components/tracker-v3/modals/StatEditModalV2';
+import { GameCompletionModal } from '@/components/tracker-v3/modals/GameCompletionModal';
 import { VideoQuarterAdvancePrompt } from '@/components/video/VideoQuarterAdvancePrompt';
 import { GameService } from '@/lib/services/gameService';
 import { TeamService } from '@/lib/services/tournamentService';
 import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
+import { GameAwardsService } from '@/lib/services/gameAwardsService';
 
 interface VideoStatTrackerPageProps {
   params: Promise<{ gameId: string }>;
@@ -74,6 +77,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAwardsModal, setShowAwardsModal] = useState(false);
   
   // Game data for edit modal
   const [gameData, setGameData] = useState<any>(null);
@@ -335,6 +339,23 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     }
   }, [gameClock, isCalibrated, lastPromptedQuarter]);
   
+  // Detect game end (Q4 expired, not tied) - show awards modal
+  useEffect(() => {
+    if (!gameClock || !isCalibrated || !gameData) return;
+    
+    const isQ4Expired = gameClock.quarter === 4 && 
+                        gameClock.minutesRemaining === 0 && 
+                        gameClock.secondsRemaining === 0;
+    const isNotTied = teamAScore !== teamBScore;
+    const gameNotCompleted = gameData.status !== 'completed';
+    
+    // Show awards modal when Q4 ends and game is not tied
+    if (isQ4Expired && isNotTied && gameNotCompleted && !showAwardsModal) {
+      console.log(`🏆 Game ended - Q4 expired, score ${teamAScore}-${teamBScore}, showing awards modal`);
+      setShowAwardsModal(true);
+    }
+  }, [gameClock, isCalibrated, gameData, teamAScore, teamBScore, showAwardsModal]);
+  
   // Handle quarter advancement
   const handleAdvanceQuarter = useCallback(async (nextQuarter: number) => {
     if (!clockSyncConfig || !gameVideo) {
@@ -383,6 +404,45 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
       console.error('Error saving quarter marker:', error);
     }
   }, [clockSyncConfig, gameVideo, currentTimeMs]);
+
+  // Handle game completion with awards (Player of the Game, Hustle Player)
+  const handleCompleteGameWithAwards = useCallback(async (awards: {
+    playerOfTheGameId: string;
+    hustlePlayerId: string;
+    isPlayerOfGameCustom?: boolean;
+    isHustlePlayerCustom?: boolean;
+    finalOpponentScore?: number;
+  }) => {
+    if (!gameData) return;
+    
+    try {
+      console.log('🏆 Completing game with awards:', awards);
+      
+      // Save awards to database
+      await GameAwardsService.saveGameAwards(gameId, {
+        playerOfTheGameId: awards.playerOfTheGameId,
+        hustlePlayerId: awards.hustlePlayerId,
+        isPlayerOfGameCustom: awards.isPlayerOfGameCustom,
+        isHustlePlayerCustom: awards.isHustlePlayerCustom
+      });
+      
+      // Update game status to completed
+      await GameService.updateGameStatus(gameId, 'completed');
+      
+      // Close modal
+      setShowAwardsModal(false);
+      
+      // Refresh game data
+      const updatedGame = await GameService.getGame(gameId);
+      if (updatedGame) {
+        setGameData(updatedGame);
+      }
+      
+      console.log('✅ Game completed with awards saved');
+    } catch (error) {
+      console.error('❌ Error completing game with awards:', error);
+    }
+  }, [gameId, gameData]);
 
   // Handle manual clock edit
   const handleClockEdit = useCallback(async (
@@ -756,6 +816,19 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                 <Edit className="w-4 h-4" />
                 Edit Stats
               </Button>
+              
+              {/* Complete Game / Edit Awards */}
+              {gameData && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowAwardsModal(true)}
+                  className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Trophy className="w-4 h-4" />
+                  {gameData.status === 'completed' ? 'Edit Awards' : 'Complete Game'}
+                </Button>
+              )}
               
               {/* Keyboard Help */}
               <Button
@@ -1182,6 +1255,24 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
           currentQuarter={gameClock?.quarter || 1}
           currentMinutes={gameClock?.minutesRemaining || 10}
           currentSeconds={gameClock?.secondsRemaining || 0}
+        />
+      )}
+      
+      {/* Game Completion Modal with Awards Selection */}
+      {gameData && (
+        <GameCompletionModal
+          isOpen={showAwardsModal}
+          onClose={() => setShowAwardsModal(false)}
+          onComplete={handleCompleteGameWithAwards}
+          gameId={gameId}
+          teamAId={gameData.team_a_id}
+          teamBId={gameData.team_b_id}
+          teamAName={gameData.team_a?.name || gameData.teamAName || 'My Team'}
+          teamBName={isCoachGame ? opponentName : (gameData.team_b?.name || 'Team B')}
+          teamAScore={teamAScore}
+          teamBScore={teamBScore}
+          isCoachGame={isCoachGame}
+          opponentName={opponentName}
         />
       )}
     </div>
