@@ -10,10 +10,10 @@
  */
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Upload, X, CheckCircle, AlertCircle, Loader2, Film } from 'lucide-react';
+import { Upload, X, CheckCircle, AlertCircle, Loader2, Film, RefreshCw, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/progress';
-import { BunnyUploadService, validateVideoFile } from '@/lib/services/bunnyUploadService';
+import { BunnyUploadService, validateVideoFile, getUploadErrorMessage } from '@/lib/services/bunnyUploadService';
 import { UPLOAD_CONFIG } from '@/lib/config/videoConfig';
 import type { VideoUploadProgress } from '@/lib/types/video';
 
@@ -36,8 +36,20 @@ export function VideoUploader({
   const [progress, setProgress] = useState<VideoUploadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [canRetry, setCanRetry] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Large file threshold (1GB)
+  const LARGE_FILE_THRESHOLD = 1 * 1024 * 1024 * 1024;
+  const isLargeFile = file && file.size > LARGE_FILE_THRESHOLD;
+  
+  // Estimate upload time (rough: assumes 10 Mbps average)
+  const estimateUploadMinutes = (bytes: number): number => {
+    const mbps = 10; // Conservative estimate
+    const seconds = (bytes * 8) / (mbps * 1000000);
+    return Math.ceil(seconds / 60);
+  };
   
   // Handle file selection
   const handleFileSelect = useCallback((selectedFile: File) => {
@@ -87,6 +99,7 @@ export function VideoUploader({
     if (!file) return;
     
     setError(null);
+    setCanRetry(false);
     abortControllerRef.current = new AbortController();
     
     const result = await BunnyUploadService.uploadVideo({
@@ -98,12 +111,23 @@ export function VideoUploader({
     });
     
     if (result.success && result.videoId) {
+      setCanRetry(false);
       onUploadComplete(result.videoId);
     } else {
-      const errorMsg = result.error || 'Upload failed';
-      setError(errorMsg);
-      onUploadError?.(errorMsg);
+      const rawError = result.error || 'Upload failed';
+      const friendlyError = getUploadErrorMessage(rawError);
+      setError(friendlyError);
+      setCanRetry(true); // Enable retry button
+      onUploadError?.(friendlyError);
     }
+  };
+  
+  // Retry upload
+  const retryUpload = () => {
+    setProgress(null);
+    setError(null);
+    setCanRetry(false);
+    startUpload();
   };
   
   // Cancel upload
@@ -118,6 +142,7 @@ export function VideoUploader({
     setFile(null);
     setError(null);
     setProgress(null);
+    setCanRetry(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -258,6 +283,23 @@ export function VideoUploader({
             </Button>
           </div>
           
+          {/* Large file warning */}
+          {isLargeFile && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <Clock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800">
+                    Large file (~{estimateUploadMinutes(file.size)} min upload)
+                  </p>
+                  <p className="text-amber-700 mt-0.5">
+                    Do not close this page during upload. You can switch tabs.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="mt-4 flex gap-3">
             <Button
               onClick={startUpload}
@@ -278,24 +320,53 @@ export function VideoUploader({
       
       {/* Upload progress */}
       {progress && (
-        <div className="bg-gray-50 rounded-xl p-4">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-orange-100 rounded-lg p-3">
-              <Film className="w-6 h-6 text-orange-600" />
+        <div className="space-y-3">
+          {/* Persistent warning during upload */}
+          {progress.status === 'uploading' && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-blue-700">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm font-medium">
+                  Do not close this page — upload in progress
+                </span>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-900 truncate">{file?.name}</p>
+          )}
+          
+          <div className="bg-gray-50 rounded-xl p-4">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-orange-100 rounded-lg p-3">
+                <Film className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 truncate">{file?.name}</p>
+              </div>
             </div>
+            {renderStatus()}
           </div>
-          {renderStatus()}
         </div>
       )}
       
-      {/* Error message */}
+      {/* Error message with retry */}
       {error && !progress && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <p className="text-red-700">{error}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-red-700">{error}</p>
+              {canRetry && file && (
+                <Button
+                  onClick={retryUpload}
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 text-red-600 border-red-300 hover:bg-red-100"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry Upload
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

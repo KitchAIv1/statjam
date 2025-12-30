@@ -132,13 +132,13 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
         user?.id || ''
       );
       
-      // Consume one video credit
-      if (user?.id) {
-        const consumed = await SubscriptionService.consumeVideoCredit(user.id, 'coach');
-        if (consumed) {
-          refetchSubscription(); // Update credits in UI
-        }
-      }
+      // TODO: Re-enable credit consumption after testing
+      // if (user?.id) {
+      //   const consumed = await SubscriptionService.consumeVideoCredit(user.id, 'coach');
+      //   if (consumed) {
+      //     refetchSubscription(); // Update credits in UI
+      //   }
+      // }
     } catch (err) {
       console.error('Error creating video record:', err);
     }

@@ -120,8 +120,10 @@ export function CoachMissionControl({
       setShowUpgradeModal(true);
       return;
     }
-    // For premium users, show video credits purchase modal
-    setShowVideoCreditsModal(true);
+    // TODO: Re-enable video credits modal after testing
+    // setShowVideoCreditsModal(true);
+    // For now, go directly to upload
+    handleContinueToUpload();
   };
 
   const handleContinueToUpload = () => {

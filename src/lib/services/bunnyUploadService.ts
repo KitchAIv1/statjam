@@ -242,7 +242,93 @@ async function initiateTusUpload(
 }
 
 /**
- * Perform chunked upload with progress tracking
+ * Retry configuration for chunk uploads
+ */
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 10000,
+};
+
+/**
+ * Sleep utility for retry delays
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Upload a single chunk with retry logic
+ */
+async function uploadChunkWithRetry(
+  uploadUrl: string,
+  chunk: Blob,
+  offset: number,
+  authSignature: string,
+  authExpire: number,
+  libraryId: string,
+  videoId: string,
+  abortSignal?: AbortSignal
+): Promise<void> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < RETRY_CONFIG.maxRetries; attempt++) {
+    // Check for abort before each attempt
+    if (abortSignal?.aborted) {
+      throw new Error('Upload cancelled');
+    }
+    
+    try {
+      const response = await fetch(uploadUrl, {
+        method: 'PATCH',
+        headers: {
+          'AuthorizationSignature': authSignature,
+          'AuthorizationExpire': String(authExpire),
+          'LibraryId': libraryId,
+          'VideoId': videoId,
+          'Tus-Resumable': '1.0.0',
+          'Upload-Offset': String(offset),
+          'Content-Type': 'application/offset+octet-stream',
+        },
+        body: chunk,
+        signal: abortSignal,
+      });
+      
+      if (response.ok) {
+        return; // Success
+      }
+      
+      const errorText = await response.text();
+      lastError = new Error(`Chunk upload failed: ${response.status} - ${errorText}`);
+      console.warn(`Chunk upload attempt ${attempt + 1} failed:`, response.status);
+      
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error('Network error');
+      
+      // Don't retry on abort
+      if (abortSignal?.aborted || lastError.message === 'Upload cancelled') {
+        throw lastError;
+      }
+      
+      console.warn(`Chunk upload attempt ${attempt + 1} network error:`, lastError.message);
+    }
+    
+    // Wait before retry (exponential backoff with jitter)
+    if (attempt < RETRY_CONFIG.maxRetries - 1) {
+      const delay = Math.min(
+        RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt) + Math.random() * 500,
+        RETRY_CONFIG.maxDelayMs
+      );
+      console.log(`Retrying chunk upload in ${Math.round(delay)}ms...`);
+      await sleep(delay);
+    }
+  }
+  
+  throw lastError || new Error('Chunk upload failed after retries');
+}
+
+/**
+ * Perform chunked upload with progress tracking and retry logic
  */
 async function performChunkedUpload(
   uploadUrl: string,
@@ -272,26 +358,17 @@ async function performChunkedUpload(
     
     const chunk = file.slice(bytesUploaded, bytesUploaded + chunkSize);
     
-    const response = await fetch(uploadUrl, {
-      method: 'PATCH',
-      headers: {
-        'AuthorizationSignature': authSignature,
-        'AuthorizationExpire': String(authExpire),
-        'LibraryId': libraryId,
-        'VideoId': videoId,
-        'Tus-Resumable': '1.0.0',
-        'Upload-Offset': String(bytesUploaded),
-        'Content-Type': 'application/offset+octet-stream',
-      },
-      body: chunk,
-      signal: abortSignal,
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Chunk upload error:', response.status, errorText);
-      throw new Error(`Chunk upload failed: ${response.statusText}`);
-    }
+    // Upload chunk with automatic retry
+    await uploadChunkWithRetry(
+      uploadUrl,
+      chunk,
+      bytesUploaded,
+      authSignature,
+      authExpire,
+      libraryId,
+      videoId,
+      abortSignal
+    );
     
     bytesUploaded += chunk.size;
     
@@ -303,6 +380,29 @@ async function performChunkedUpload(
       status: bytesUploaded >= file.size ? 'processing' : 'uploading',
     });
   }
+}
+
+/**
+ * Translate technical errors to user-friendly messages
+ */
+export function getUploadErrorMessage(error: string): string {
+  const errorMap: Record<string, string> = {
+    'Failed to fetch': 'Connection interrupted. Please check your internet and try again.',
+    'Network error': 'Network connection lost. Please check your internet and retry.',
+    'Upload cancelled': 'Upload was cancelled.',
+    'Chunk upload failed after retries': 'Upload failed after multiple attempts. Please try again.',
+    'Failed to initiate upload': 'Could not start upload. Please refresh and try again.',
+    'No upload URL returned': 'Server error. Please try again later.',
+  };
+  
+  // Check for partial matches
+  for (const [key, message] of Object.entries(errorMap)) {
+    if (error.includes(key)) {
+      return message;
+    }
+  }
+  
+  return error;
 }
 
 /**
@@ -374,5 +474,6 @@ export const BunnyUploadService = {
   getVideoEmbedUrl,
   getVideoDirectUrl,
   getVideoHlsUrl,
+  getUploadErrorMessage,
 };
 
