@@ -12,8 +12,8 @@
  * @module VideoStatsTimeline
  */
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Loader2, Clock, Trash2, Play, Edit, Filter, X, RefreshCw, Crosshair, CheckSquare, Square } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { Loader2, Clock, Trash2, Play, Edit, Filter, X, RefreshCw, Crosshair, CheckSquare, Square, Pause } from 'lucide-react';
 import { VideoStatService, ClockSyncConfig } from '@/lib/services/videoStatService';
 import { StatEditServiceV2 } from '@/lib/services/statEditServiceV2';
 import { SubstitutionsService, SubstitutionRow } from '@/lib/services/substitutionsService';
@@ -52,6 +52,12 @@ interface VideoStatsTimelineProps {
   clockSyncConfig?: ClockSyncConfig | null;
   // Current video position for "Mark at current position" feature
   currentVideoTimeMs?: number;
+  // Clock control props (optional - only show if provided)
+  clockFrozen?: boolean;
+  frozenClockValue?: { quarter: number; minutesRemaining: number; secondsRemaining: number } | null;
+  gameClock?: { quarter: number; minutesRemaining: number; secondsRemaining: number } | null;
+  onClockPause?: () => void;
+  onClockResume?: () => void;
 }
 
 // Format milliseconds to MM:SS
@@ -136,6 +142,12 @@ export function VideoStatsTimeline({
   opponentName = 'Opponent',
   clockSyncConfig,
   currentVideoTimeMs,
+  // Clock control props
+  clockFrozen = false,
+  frozenClockValue,
+  gameClock,
+  onClockPause,
+  onClockResume,
 }: VideoStatsTimelineProps) {
   
   // Helper to get display name for a stat (handles opponent stats)
@@ -147,7 +159,7 @@ export function VideoStatsTimeline({
   };
   const [stats, setStats] = useState<VideoStat[]>([]);
   const [substitutions, setSubstitutions] = useState<SubstitutionRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true); // Only true on first load
   const [filterQuarter, setFilterQuarter] = useState<string>('all');
   const [editingStat, setEditingStat] = useState<GameStatRecord | null>(null);
   const [deletingStatId, setDeletingStatId] = useState<string | null>(null);
@@ -157,6 +169,9 @@ export function VideoStatsTimeline({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+  
+  // Scroll position preservation
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Helper to get player name by ID
   const getPlayerNameById = useCallback((playerId: string | null, customPlayerId: string | null): string => {
@@ -166,10 +181,12 @@ export function VideoStatsTimeline({
     return player?.name || 'Unknown';
   }, [teamAPlayers, teamBPlayers]);
 
-  // Load stats and substitutions
-  const loadStats = useCallback(async () => {
+  // Load stats and substitutions (initial load only shows spinner)
+  const loadStats = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading && stats.length === 0) {
+        setInitialLoading(true);
+      }
       const [videoStats, subs] = await Promise.all([
         VideoStatService.getVideoStats(gameId),
         SubstitutionsService.getByGameId(gameId),
@@ -179,12 +196,24 @@ export function VideoStatsTimeline({
     } catch (error) {
       console.error('Error loading video stats:', error);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
-  }, [gameId]);
+  }, [gameId, stats.length]);
+
+  // Silent background refresh (preserves scroll, no UI disruption)
+  const silentRefresh = useCallback(async () => {
+    const scrollTop = scrollContainerRef.current?.scrollTop || 0;
+    await loadStats(false);
+    // Restore scroll position after state update
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollTop;
+      }
+    });
+  }, [loadStats]);
 
   useEffect(() => {
-    loadStats();
+    loadStats(true);
   }, [loadStats, refreshTrigger]);
 
   // Build unified timeline entries
@@ -236,36 +265,61 @@ export function VideoStatsTimeline({
     return timelineEntries.filter(e => e.quarter === parseInt(filterQuarter, 10));
   }, [timelineEntries, filterQuarter]);
 
-  // Handle delete stat
+  // Handle delete stat (optimistic update - remove from UI immediately)
   const handleDelete = useCallback(async (statId: string) => {
+    // Save scroll position
+    const scrollTop = scrollContainerRef.current?.scrollTop || 0;
+    
+    // Optimistic update: remove from local state immediately
+    setStats(prev => prev.filter(s => s.id !== statId));
+    setDeletingStatId(null);
+    
     try {
       await StatEditServiceV2.deleteStat(statId, gameId);
-      setDeletingStatId(null);
-      await loadStats();
+      // Success - item already removed from UI
     } catch (error) {
       console.error('Error deleting stat:', error);
-      alert('Failed to delete stat');
-      setDeletingStatId(null);
+      alert('Failed to delete stat. Refreshing...');
+      // Rollback: reload from server
+      await silentRefresh();
     }
-  }, [gameId, loadStats]);
+    
+    // Restore scroll position
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollTop;
+      }
+    });
+  }, [gameId, silentRefresh]);
 
-  // Handle delete substitution
+  // Handle delete substitution (optimistic update)
   const handleDeleteSubstitution = useCallback(async (subId: string) => {
+    // Save scroll position
+    const scrollTop = scrollContainerRef.current?.scrollTop || 0;
+    
+    // Optimistic update: remove from local state immediately
+    setSubstitutions(prev => prev.filter(s => s.id !== subId));
+    setDeletingSubId(null);
+    
     try {
       const success = await SubstitutionsService.deleteSubstitution(subId);
-      if (success) {
-        setDeletingSubId(null);
-        await loadStats();
-      } else {
-        alert('Failed to delete substitution');
-        setDeletingSubId(null);
+      if (!success) {
+        alert('Failed to delete substitution. Refreshing...');
+        await silentRefresh();
       }
     } catch (error) {
       console.error('Error deleting substitution:', error);
-      alert('Failed to delete substitution');
-      setDeletingSubId(null);
+      alert('Failed to delete substitution. Refreshing...');
+      await silentRefresh();
     }
-  }, [loadStats]);
+    
+    // Restore scroll position
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollTop;
+      }
+    });
+  }, [silentRefresh]);
 
   // Toggle selection for a single item
   const toggleSelection = useCallback((id: string, type: 'stat' | 'substitution') => {
@@ -293,12 +347,31 @@ export function VideoStatsTimeline({
     }
   }, [filteredEntries, selectedIds.size]);
 
-  // Batch delete selected items
+  // Batch delete selected items (optimistic update)
   const handleBatchDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
     
+    // Save scroll position
+    const scrollTop = scrollContainerRef.current?.scrollTop || 0;
+    
     setIsDeleting(true);
-    let successCount = 0;
+    
+    // Optimistic update: remove all selected items from UI immediately
+    const statIdsToDelete = new Set<string>();
+    const subIdsToDelete = new Set<string>();
+    
+    for (const key of selectedIds) {
+      const [type, id] = key.split(':');
+      if (type === 'stat') statIdsToDelete.add(id);
+      else if (type === 'substitution') subIdsToDelete.add(id);
+    }
+    
+    setStats(prev => prev.filter(s => !statIdsToDelete.has(s.id)));
+    setSubstitutions(prev => prev.filter(s => !subIdsToDelete.has(s.id)));
+    setSelectedIds(new Set());
+    setShowBatchDeleteConfirm(false);
+    
+    // Now delete from server in background
     let failCount = 0;
     
     try {
@@ -307,11 +380,9 @@ export function VideoStatsTimeline({
         try {
           if (type === 'stat') {
             await StatEditServiceV2.deleteStat(id, gameId);
-            successCount++;
           } else if (type === 'substitution') {
             const success = await SubstitutionsService.deleteSubstitution(id);
-            if (success) successCount++;
-            else failCount++;
+            if (!success) failCount++;
           }
         } catch (error) {
           console.error(`Failed to delete ${type} ${id}:`, error);
@@ -319,23 +390,26 @@ export function VideoStatsTimeline({
         }
       }
       
-      console.log(`✅ Batch delete complete: ${successCount} deleted, ${failCount} failed`);
-      
-      // Clear selection and refresh
-      setSelectedIds(new Set());
-      setShowBatchDeleteConfirm(false);
-      await loadStats();
+      console.log(`✅ Batch delete complete: ${selectedIds.size - failCount} deleted, ${failCount} failed`);
       
       if (failCount > 0) {
-        alert(`Deleted ${successCount} items. ${failCount} failed.`);
+        alert(`Some items failed to delete. Refreshing...`);
+        await silentRefresh();
       }
     } catch (error) {
       console.error('Batch delete error:', error);
-      alert('Error during batch delete');
+      alert('Error during batch delete. Refreshing...');
+      await silentRefresh();
     } finally {
       setIsDeleting(false);
+      // Restore scroll position
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollTop;
+        }
+      });
     }
-  }, [selectedIds, gameId, loadStats]);
+  }, [selectedIds, gameId, silentRefresh]);
 
   // Handle edit click - convert VideoStat to GameStatRecord format
   const handleEditClick = useCallback((stat: VideoStat) => {
@@ -363,11 +437,11 @@ export function VideoStatsTimeline({
     setEditingStat(gameStatRecord);
   }, [gameId]);
 
-  // Handle edit success
+  // Handle edit success (silent refresh, preserves scroll position)
   const handleEditSuccess = useCallback(async () => {
     setEditingStat(null);
-    await loadStats();
-  }, [loadStats]);
+    await silentRefresh();
+  }, [silentRefresh]);
 
   // Handle "Mark at current position" - update stat's video_timestamp_ms to current playhead
   const handleMarkAtCurrentPosition = useCallback(async (statId: string) => {
@@ -376,23 +450,41 @@ export function VideoStatsTimeline({
       return;
     }
     
+    // Save scroll position
+    const scrollTop = scrollContainerRef.current?.scrollTop || 0;
+    const newTimestamp = Math.round(currentVideoTimeMs);
+    
+    // Optimistic update: update local state immediately
+    setStats(prev => prev.map(s => 
+      s.id === statId 
+        ? { ...s, videoTimestampMs: newTimestamp }
+        : s
+    ));
+    
     try {
       const { error } = await supabase
         .from('game_stats')
-        .update({ video_timestamp_ms: Math.round(currentVideoTimeMs) })
+        .update({ video_timestamp_ms: newTimestamp })
         .eq('id', statId);
       
       if (error) throw error;
       
       console.log(`✅ Marked stat ${statId} at ${formatVideoTime(currentVideoTimeMs)}`);
-      await loadStats();
     } catch (error) {
       console.error('❌ Error marking stat:', error);
-      alert('Failed to mark stat at current position');
+      alert('Failed to mark stat at current position. Refreshing...');
+      await silentRefresh();
     }
-  }, [currentVideoTimeMs, loadStats]);
+    
+    // Restore scroll position
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollTop;
+      }
+    });
+  }, [currentVideoTimeMs, silentRefresh]);
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
@@ -437,6 +529,43 @@ export function VideoStatsTimeline({
         </div>
       </div>
       
+      {/* Clock Pause/Resume Controls */}
+      {(onClockPause || onClockResume) && (
+        <div className="mb-3 flex items-center gap-2">
+          {/* Clock Frozen: Resume Button */}
+          {clockFrozen && frozenClockValue && onClockResume && (
+            <button
+              onClick={onClockResume}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors animate-pulse"
+            >
+              <Play className="w-4 h-4" />
+              Resume Clock
+            </button>
+          )}
+          
+          {/* Clock Running: Pause Button */}
+          {!clockFrozen && gameClock && onClockPause && (
+            <button
+              onClick={onClockPause}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm border border-blue-300 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              <Pause className="w-4 h-4" />
+              Pause Clock
+            </button>
+          )}
+          
+          {/* Frozen Clock Indicator */}
+          {clockFrozen && frozenClockValue && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span className="text-blue-700 text-xs font-medium">
+                ❄️ Frozen at Q{frozenClockValue.quarter > 4 ? `OT${frozenClockValue.quarter - 4}` : frozenClockValue.quarter} {frozenClockValue.minutesRemaining}:{frozenClockValue.secondsRemaining.toString().padStart(2, '0')}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+      
       {/* Batch Delete Confirmation Modal */}
       {showBatchDeleteConfirm && (
         <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -470,7 +599,7 @@ export function VideoStatsTimeline({
           <p className="text-sm">No stats recorded yet</p>
         </div>
       ) : (
-        <div className="overflow-y-auto max-h-60">
+        <div ref={scrollContainerRef} className="overflow-y-auto max-h-60">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 sticky top-0">
               <tr className="text-left text-xs text-gray-500 uppercase">

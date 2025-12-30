@@ -1098,6 +1098,18 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                   opponentName={opponentName}
                   clockSyncConfig={clockSyncConfig}
                   currentVideoTimeMs={currentTimeMs}
+                  // Clock control props
+                  clockFrozen={clockFrozen}
+                  frozenClockValue={frozenClockValue}
+                  gameClock={gameClock}
+                  onClockPause={() => {
+                    if (gameClock) {
+                      console.log('⏸️ Clock paused from timeline:', `Q${gameClock.quarter} ${gameClock.minutesRemaining}:${gameClock.secondsRemaining}`);
+                      setClockFrozen(true);
+                      setFrozenClockValue(gameClock);
+                    }
+                  }}
+                  onClockResume={handleClockResume}
                 />
               </div>
             </div>
