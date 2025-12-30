@@ -44,7 +44,9 @@ import {
   Edit,
   RefreshCw,
   FastForward,
-  Eye
+  Eye,
+  Play,
+  Pause
 } from 'lucide-react';
 import { StatEditModalV2 } from '@/components/tracker-v3/modals/StatEditModalV2';
 import { VideoQuarterAdvancePrompt } from '@/components/video/VideoQuarterAdvancePrompt';
@@ -105,6 +107,10 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
   const [teamAScore, setTeamAScore] = useState(0);
   const [teamBScore, setTeamBScore] = useState(0);
   
+  // Clock freeze state - auto-pauses game clock on fouls (like manual tracker)
+  const [clockFrozen, setClockFrozen] = useState(false);
+  const [frozenClockValue, setFrozenClockValue] = useState<GameClock | null>(null);
+  
   // Poll for video processing status
   const { status: processingStatus, isPolling, error: processingError } = useVideoProcessingStatus({
     videoId: uploadedVideoId,
@@ -152,15 +158,20 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     formatGameClock,
   } = useVideoClockSync({ config: clockSyncConfig });
   
-  // Current game clock (derived from video position using clock sync config)
-  const gameClock: GameClock | null = isCalibrated 
+  // Current game clock (derived from video position, or frozen value if clock is frozen)
+  const derivedGameClock: GameClock | null = isCalibrated 
     ? videoToGameClock(currentTimeMs) 
     : null;
   
+  // Use frozen clock when frozen (foul committed), otherwise use derived clock
+  const gameClock: GameClock | null = clockFrozen && frozenClockValue 
+    ? frozenClockValue 
+    : derivedGameClock;
+  
   // 🔍 DEBUG: Log clock sync state on every render (remove after debugging)
   useEffect(() => {
-    console.log(`🎬 VIDEO CLOCK DEBUG: hasConfig=${!!clockSyncConfig}, jumpballMs=${clockSyncConfig?.jumpballTimestampMs}, quarterLen=${clockSyncConfig?.quarterLengthMinutes}, isCalibrated=${isCalibrated}, currentTimeMs=${currentTimeMs}, gameClock=${gameClock ? `Q${gameClock.quarter} ${gameClock.minutesRemaining}:${gameClock.secondsRemaining}` : 'null'}`);
-  }, [clockSyncConfig, isCalibrated, currentTimeMs, gameClock]);
+    console.log(`🎬 VIDEO CLOCK DEBUG: hasConfig=${!!clockSyncConfig}, jumpballMs=${clockSyncConfig?.jumpballTimestampMs}, quarterLen=${clockSyncConfig?.quarterLengthMinutes}, isCalibrated=${isCalibrated}, currentTimeMs=${currentTimeMs}, gameClock=${gameClock ? `Q${gameClock.quarter} ${gameClock.minutesRemaining}:${gameClock.secondsRemaining}` : 'null'}${clockFrozen ? ' ❄️ FROZEN' : ''}`);
+  }, [clockSyncConfig, isCalibrated, currentTimeMs, gameClock, clockFrozen]);
   
   // Auto-pause video before recording stat (for precision)
   const handleBeforeStatRecord = useCallback(() => {
@@ -196,15 +207,68 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     }
   }, [gameId, gameData?.team_a_id, gameData?.team_b_id, isCoachGame]);
   
-  // Handle stat recorded - store ID for undo + refresh scores
+  // Handle stat recorded - store ID for undo + refresh scores + auto-freeze on foul
   const handleStatRecorded = useCallback(async (statType: string, statId?: string) => {
     setTimelineRefreshTrigger(prev => prev + 1);
     if (statId) {
       setLastRecordedStatId(statId);
     }
+    
+    // Auto-freeze game clock on foul (NBA rule: clock stops on whistle)
+    if (statType === 'foul' && gameClock && !clockFrozen) {
+      console.log('❄️ Auto-freezing game clock on foul:', `Q${gameClock.quarter} ${gameClock.minutesRemaining}:${gameClock.secondsRemaining}`);
+      setClockFrozen(true);
+      setFrozenClockValue(gameClock);
+    }
+    
     // Refresh scores from source of truth
     await loadScores();
-  }, [loadScores]);
+  }, [loadScores, gameClock, clockFrozen]);
+  
+  // Resume (unfreeze) game clock and recalibrate to current video position
+  const handleClockResume = useCallback(async () => {
+    if (!clockFrozen || !frozenClockValue || !clockSyncConfig || !gameVideo) {
+      console.warn('Cannot resume clock - missing frozen value or config');
+      setClockFrozen(false);
+      setFrozenClockValue(null);
+      return;
+    }
+    
+    console.log('▶️ Resuming game clock from frozen state:', `Q${frozenClockValue.quarter} ${frozenClockValue.minutesRemaining}:${frozenClockValue.secondsRemaining}`);
+    
+    // Recalibrate: set the quarter start marker so that current video position = frozen clock value
+    const quarterLengthMs = clockSyncConfig.quarterLengthMinutes * 60 * 1000;
+    const overtimeLengthMs = 5 * 60 * 1000;
+    const isOvertime = frozenClockValue.quarter > 4;
+    const currentQuarterLengthMs = isOvertime ? overtimeLengthMs : quarterLengthMs;
+    const timeRemainingMs = (frozenClockValue.minutesRemaining * 60 + frozenClockValue.secondsRemaining) * 1000;
+    const elapsedInQuarterMs = currentQuarterLengthMs - timeRemainingMs;
+    const newQuarterStartMs = Math.max(0, currentTimeMs - elapsedInQuarterMs);
+    
+    // Update the clock sync config
+    const updatedConfig = { ...clockSyncConfig };
+    switch (frozenClockValue.quarter) {
+      case 1: updatedConfig.jumpballTimestampMs = newQuarterStartMs; break;
+      case 2: updatedConfig.q2StartTimestampMs = newQuarterStartMs; break;
+      case 3: updatedConfig.q3StartTimestampMs = newQuarterStartMs; break;
+      case 4: updatedConfig.q4StartTimestampMs = newQuarterStartMs; break;
+      case 5: updatedConfig.ot1StartTimestampMs = newQuarterStartMs; break;
+      case 6: updatedConfig.ot2StartTimestampMs = newQuarterStartMs; break;
+      case 7: updatedConfig.ot3StartTimestampMs = newQuarterStartMs; break;
+    }
+    
+    try {
+      await VideoStatService.saveClockSync(gameVideo.id, updatedConfig);
+      setClockSyncConfig(updatedConfig);
+      console.log(`✅ Clock resumed and recalibrated: Q${frozenClockValue.quarter} start at ${newQuarterStartMs}ms`);
+    } catch (error) {
+      console.error('Error saving clock recalibration:', error);
+    }
+    
+    // Unfreeze
+    setClockFrozen(false);
+    setFrozenClockValue(null);
+  }, [clockFrozen, frozenClockValue, clockSyncConfig, gameVideo, currentTimeMs]);
   
   // Undo last recorded stat (Ctrl+Z)
   const handleUndo = useCallback(async () => {
@@ -867,19 +931,64 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                     quarterLength={clockSyncConfig?.quarterLengthMinutes || 12}
                   />
                   
-                  {/* Manual Quarter Advance Button */}
-                  {gameClock && gameClock.quarter < 7 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowQuarterPrompt(true)}
-                      className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
-                    >
-                      <FastForward className="w-4 h-4" />
-                      Mark Q{gameClock.quarter + 1 > 4 ? `OT${gameClock.quarter - 3}` : gameClock.quarter + 1} Start
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {/* Clock Frozen: Resume Button */}
+                    {clockFrozen && frozenClockValue && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleClockResume}
+                        className="gap-2 bg-blue-600 hover:bg-blue-700 text-white animate-pulse"
+                      >
+                        <Play className="w-4 h-4" />
+                        Resume Clock
+                      </Button>
+                    )}
+                    
+                    {/* Clock Running: Pause Button */}
+                    {!clockFrozen && gameClock && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (gameClock) {
+                            console.log('⏸️ Manual clock pause:', `Q${gameClock.quarter} ${gameClock.minutesRemaining}:${gameClock.secondsRemaining}`);
+                            setClockFrozen(true);
+                            setFrozenClockValue(gameClock);
+                          }
+                        }}
+                        className="gap-2 text-blue-600 border-blue-300 hover:bg-blue-50"
+                      >
+                        <Pause className="w-4 h-4" />
+                        Pause Clock
+                      </Button>
+                    )}
+                    
+                    {/* Manual Quarter Advance Button */}
+                    {gameClock && gameClock.quarter < 7 && !clockFrozen && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowQuarterPrompt(true)}
+                        className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
+                      >
+                        <FastForward className="w-4 h-4" />
+                        Mark Q{gameClock.quarter + 1 > 4 ? `OT${gameClock.quarter - 3}` : gameClock.quarter + 1} Start
+                      </Button>
+                    )}
+                  </div>
                 </div>
+                
+                {/* Frozen Clock Banner */}
+                {clockFrozen && frozenClockValue && (
+                  <div className="mt-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+                    <span className="text-blue-700 font-medium text-sm">
+                      ❄️ Game clock frozen at Q{frozenClockValue.quarter > 4 ? `OT${frozenClockValue.quarter - 4}` : frozenClockValue.quarter} {frozenClockValue.minutesRemaining}:{frozenClockValue.secondsRemaining.toString().padStart(2, '0')} (foul committed)
+                    </span>
+                    <span className="text-blue-500 text-xs">Click Resume when play resumes</span>
+                  </div>
+                )}
                 
                 {/* Quarter Advance Prompt */}
                 {showQuarterPrompt && gameClock && (
@@ -944,6 +1053,13 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                   onSeekToTimestamp={(ms, clockData) => {
                     // Seek video to the timestamp
                     videoControls.seek(ms / 1000);
+                    
+                    // Unfreeze clock if frozen (so the recalibration takes effect)
+                    if (clockFrozen) {
+                      setClockFrozen(false);
+                      setFrozenClockValue(null);
+                    }
+                    
                     // Recalibrate game clock sync based on the stat's recorded game clock
                     // This permanently fixes the clock for this quarter, not just a temporary override
                     if (clockData && clockSyncConfig) {

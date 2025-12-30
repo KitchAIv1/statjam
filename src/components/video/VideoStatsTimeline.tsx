@@ -13,7 +13,7 @@
  */
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Loader2, Clock, Trash2, Play, Edit, Filter, X, RefreshCw, Crosshair } from 'lucide-react';
+import { Loader2, Clock, Trash2, Play, Edit, Filter, X, RefreshCw, Crosshair, CheckSquare, Square } from 'lucide-react';
 import { VideoStatService, ClockSyncConfig } from '@/lib/services/videoStatService';
 import { StatEditServiceV2 } from '@/lib/services/statEditServiceV2';
 import { SubstitutionsService, SubstitutionRow } from '@/lib/services/substitutionsService';
@@ -152,6 +152,11 @@ export function VideoStatsTimeline({
   const [editingStat, setEditingStat] = useState<GameStatRecord | null>(null);
   const [deletingStatId, setDeletingStatId] = useState<string | null>(null);
   const [deletingSubId, setDeletingSubId] = useState<string | null>(null);
+  
+  // Batch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
 
   // Helper to get player name by ID
   const getPlayerNameById = useCallback((playerId: string | null, customPlayerId: string | null): string => {
@@ -262,6 +267,76 @@ export function VideoStatsTimeline({
     }
   }, [loadStats]);
 
+  // Toggle selection for a single item
+  const toggleSelection = useCallback((id: string, type: 'stat' | 'substitution') => {
+    const key = `${type}:${id}`;
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  // Select/deselect all visible entries
+  const toggleSelectAll = useCallback(() => {
+    if (selectedIds.size === filteredEntries.length) {
+      // Deselect all
+      setSelectedIds(new Set());
+    } else {
+      // Select all
+      const allIds = new Set(filteredEntries.map(e => `${e.type}:${e.id}`));
+      setSelectedIds(allIds);
+    }
+  }, [filteredEntries, selectedIds.size]);
+
+  // Batch delete selected items
+  const handleBatchDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    
+    setIsDeleting(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    try {
+      for (const key of selectedIds) {
+        const [type, id] = key.split(':');
+        try {
+          if (type === 'stat') {
+            await StatEditServiceV2.deleteStat(id, gameId);
+            successCount++;
+          } else if (type === 'substitution') {
+            const success = await SubstitutionsService.deleteSubstitution(id);
+            if (success) successCount++;
+            else failCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to delete ${type} ${id}:`, error);
+          failCount++;
+        }
+      }
+      
+      console.log(`✅ Batch delete complete: ${successCount} deleted, ${failCount} failed`);
+      
+      // Clear selection and refresh
+      setSelectedIds(new Set());
+      setShowBatchDeleteConfirm(false);
+      await loadStats();
+      
+      if (failCount > 0) {
+        alert(`Deleted ${successCount} items. ${failCount} failed.`);
+      }
+    } catch (error) {
+      console.error('Batch delete error:', error);
+      alert('Error during batch delete');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [selectedIds, gameId, loadStats]);
+
   // Handle edit click - convert VideoStat to GameStatRecord format
   const handleEditClick = useCallback((stat: VideoStat) => {
     // Convert gameClockSeconds (total seconds) to minutes/seconds
@@ -344,10 +419,49 @@ export function VideoStatsTimeline({
             <option value="5">OT1</option>
           </select>
         </div>
-        <span className="text-xs text-gray-500">
-          {filteredEntries.length} entries
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Batch delete button */}
+          {selectedIds.size > 0 && (
+            <button
+              onClick={() => setShowBatchDeleteConfirm(true)}
+              disabled={isDeleting}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-3 h-3" />
+              Delete ({selectedIds.size})
+            </button>
+          )}
+          <span className="text-xs text-gray-500">
+            {filteredEntries.length} entries
+          </span>
+        </div>
       </div>
+      
+      {/* Batch Delete Confirmation Modal */}
+      {showBatchDeleteConfirm && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700 font-medium mb-2">
+            Delete {selectedIds.size} selected item{selectedIds.size > 1 ? 's' : ''}?
+          </p>
+          <p className="text-xs text-red-600 mb-3">This action cannot be undone.</p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleBatchDelete}
+              disabled={isDeleting}
+              className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Yes, Delete All'}
+            </button>
+            <button
+              onClick={() => setShowBatchDeleteConfirm(false)}
+              disabled={isDeleting}
+              className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats table */}
       {filteredEntries.length === 0 ? (
@@ -360,6 +474,19 @@ export function VideoStatsTimeline({
           <table className="w-full text-sm">
             <thead className="bg-gray-50 sticky top-0">
               <tr className="text-left text-xs text-gray-500 uppercase">
+                <th className="px-2 py-1.5 w-8">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="p-0.5 hover:bg-gray-200 rounded transition-colors"
+                    title={selectedIds.size === filteredEntries.length ? 'Deselect all' : 'Select all'}
+                  >
+                    {selectedIds.size === filteredEntries.length && filteredEntries.length > 0 ? (
+                      <CheckSquare className="w-4 h-4 text-orange-600" />
+                    ) : (
+                      <Square className="w-4 h-4 text-gray-400" />
+                    )}
+                  </button>
+                </th>
                 <th className="px-2 py-1.5 font-medium">Video</th>
                 <th className="px-2 py-1.5 font-medium">Q</th>
                 <th className="px-2 py-1.5 font-medium">Time</th>
@@ -369,8 +496,24 @@ export function VideoStatsTimeline({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredEntries.map((entry) => (
-                <tr key={entry.id} className="hover:bg-gray-50 group">
+              {filteredEntries.map((entry) => {
+                const selectionKey = `${entry.type}:${entry.id}`;
+                const isSelected = selectedIds.has(selectionKey);
+                return (
+                <tr key={entry.id} className={`hover:bg-gray-50 group ${isSelected ? 'bg-orange-50' : ''}`}>
+                  {/* Selection checkbox */}
+                  <td className="px-2 py-1.5">
+                    <button
+                      onClick={() => toggleSelection(entry.id, entry.type)}
+                      className="p-0.5 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      {isSelected ? (
+                        <CheckSquare className="w-4 h-4 text-orange-600" />
+                      ) : (
+                        <Square className="w-4 h-4 text-gray-300" />
+                      )}
+                    </button>
+                  </td>
                   {/* Video timestamp - clickable (stats and substitutions with video timestamps) */}
                   <td className="px-2 py-1.5">
                     {entry.type === 'stat' && entry.stat?.videoTimestampMs ? (
@@ -516,7 +659,8 @@ export function VideoStatsTimeline({
                     )}
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
