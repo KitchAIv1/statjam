@@ -10,9 +10,10 @@
  * @module DualClockDisplay
  */
 
-import React from 'react';
-import { Clock, Film, AlertTriangle, Trophy } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, Film, AlertTriangle, Trophy, Pencil } from 'lucide-react';
 import type { GameClock } from '@/lib/types/video';
+import { GameClockEditModal } from './GameClockEditModal';
 
 interface DualClockDisplayProps {
   videoTimeMs: number;
@@ -26,6 +27,9 @@ interface DualClockDisplayProps {
   teamAScore?: number;
   teamBScore?: number;
   showScores?: boolean;
+  // Clock edit callback (optional - only show edit if provided)
+  onClockEdit?: (quarter: number, minutes: number, seconds: number, isOvertime?: boolean) => void;
+  quarterLength?: number;
 }
 
 export function DualClockDisplay({
@@ -39,7 +43,10 @@ export function DualClockDisplay({
   teamAScore = 0,
   teamBScore = 0,
   showScores = false,
+  onClockEdit,
+  quarterLength = 12,
 }: DualClockDisplayProps) {
+  const [showEditModal, setShowEditModal] = useState(false);
   // Format video time as MM:SS or HH:MM:SS
   const formatVideoTime = (ms: number): string => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -92,32 +99,44 @@ export function DualClockDisplay({
       
       {/* Game Clock */}
       {isCalibrated && gameClock ? (
-        <div 
-          className={`
-            flex items-center gap-2 px-3 py-2 rounded-lg transition-all
-            ${isClockExpired 
-              ? 'bg-red-100 border-2 border-red-300 animate-pulse' 
-              : isClockLow 
-                ? 'bg-amber-100 border border-amber-300'
-                : 'bg-orange-100'
-            }
-          `}
-        >
-          {isClockExpired ? (
-            <AlertTriangle className="w-4 h-4 text-red-600" />
-          ) : (
-            <Clock className={`w-4 h-4 ${isClockLow ? 'text-amber-600' : 'text-orange-600'}`} />
-          )}
-          <span className={`font-bold ${isClockExpired ? 'text-red-700' : isClockLow ? 'text-amber-700' : 'text-orange-700'}`}>
-            {getQuarterLabel(gameClock)}
-          </span>
-          <span className={`font-mono font-bold text-lg ${isClockExpired ? 'text-red-900' : isClockLow ? 'text-amber-900' : 'text-orange-900'}`}>
-            {formatGameClock(gameClock)}
-          </span>
-          {isClockExpired && showQuarterExpiredWarning && (
-            <span className="text-xs text-red-600 font-medium ml-2">
-              Press Q to advance
+        <div className="flex items-center gap-1">
+          <div 
+            className={`
+              flex items-center gap-2 px-3 py-2 rounded-lg transition-all
+              ${isClockExpired 
+                ? 'bg-red-100 border-2 border-red-300 animate-pulse' 
+                : isClockLow 
+                  ? 'bg-amber-100 border border-amber-300'
+                  : 'bg-orange-100'
+              }
+            `}
+          >
+            {isClockExpired ? (
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+            ) : (
+              <Clock className={`w-4 h-4 ${isClockLow ? 'text-amber-600' : 'text-orange-600'}`} />
+            )}
+            <span className={`font-bold ${isClockExpired ? 'text-red-700' : isClockLow ? 'text-amber-700' : 'text-orange-700'}`}>
+              {getQuarterLabel(gameClock)}
             </span>
+            <span className={`font-mono font-bold text-lg ${isClockExpired ? 'text-red-900' : isClockLow ? 'text-amber-900' : 'text-orange-900'}`}>
+              {formatGameClock(gameClock)}
+            </span>
+            {isClockExpired && showQuarterExpiredWarning && (
+              <span className="text-xs text-red-600 font-medium ml-2">
+                Press Q to advance
+              </span>
+            )}
+          </div>
+          {/* Edit Clock Button */}
+          {onClockEdit && (
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors group"
+              title="Edit game clock"
+            >
+              <Pencil className="w-4 h-4 text-gray-400 group-hover:text-orange-600" />
+            </button>
           )}
         </div>
       ) : (
@@ -151,6 +170,23 @@ export function DualClockDisplay({
             </span>
           </div>
         </div>
+      )}
+      
+      {/* Game Clock Edit Modal */}
+      {onClockEdit && (
+        <GameClockEditModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          currentQuarter={gameClock?.quarter || 1}
+          currentMinutes={gameClock?.minutesRemaining || quarterLength}
+          currentSeconds={gameClock?.secondsRemaining || 0}
+          isOvertime={gameClock?.isOvertime || false}
+          quarterLength={quarterLength}
+          onSave={(quarter, minutes, seconds, isOvertime) => {
+            onClockEdit(quarter, minutes, seconds, isOvertime);
+            setShowEditModal(false);
+          }}
+        />
       )}
     </div>
   );

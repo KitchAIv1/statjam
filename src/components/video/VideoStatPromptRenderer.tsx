@@ -39,6 +39,7 @@ interface VideoStatPromptRendererProps {
   onFreeThrowComplete: (results: { made: boolean }[]) => void;
   onPromptPlayerSelect: (playerId: string, index: number) => void;
   onBlockedShotTypeSelect: (shotType: 'field_goal' | 'three_pointer') => void;
+  onReboundTypeSelect: (reboundType: 'offensive' | 'defensive') => void;
   onShotMadeMissed: (made: boolean) => void;
   onClosePrompt: () => void;
 }
@@ -52,6 +53,7 @@ export function VideoStatPromptRenderer({
   onFreeThrowComplete,
   onPromptPlayerSelect,
   onBlockedShotTypeSelect,
+  onReboundTypeSelect,
   onShotMadeMissed,
   onClosePrompt,
 }: VideoStatPromptRendererProps) {
@@ -98,9 +100,10 @@ export function VideoStatPromptRenderer({
     );
   }
 
-  // Inline Prompts (assist, rebound, turnover, blocked_shot, blocked_shooter, fouled_player, shot_made_missed)
+  // Inline Prompts (assist, rebound, rebound_type, turnover, blocked_shot, blocked_shooter, fouled_player, shot_made_missed)
   const getEventDescription = () => {
     if (promptType === 'blocked_shot' || promptType === 'blocked_shooter') return 'Block';
+    if (promptType === 'rebound_type') return 'Rebound';
     if (promptType === 'fouled_player') return `Shooting Foul (${lastEvent.ftCount || 2} FTs)`;
     if (promptType === 'shot_made_missed') {
       const shotType = (lastEvent as any).shootingFoulShotType === '3pt' ? '3PT' : '2PT';
@@ -121,6 +124,7 @@ export function VideoStatPromptRenderer({
         players={promptPlayers}
         onSelectPlayer={onPromptPlayerSelect}
         onSelectShotType={onBlockedShotTypeSelect}
+        onSelectReboundType={onReboundTypeSelect}
         onSelectShotMadeMissed={onShotMadeMissed}
         onSkip={onClosePrompt}
       />

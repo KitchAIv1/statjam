@@ -27,6 +27,7 @@ interface VideoInlinePromptProps {
   players: Player[];  // Players who can be selected
   onSelectPlayer: (playerId: string, index: number) => void;
   onSelectShotType?: (shotType: 'field_goal' | 'three_pointer') => void;  // For blocked shot
+  onSelectReboundType?: (reboundType: 'offensive' | 'defensive') => void;  // For standalone rebound
   onSelectShotMadeMissed?: (made: boolean) => void;  // For shooting foul: was shot made?
   onSkip: () => void;
 }
@@ -39,6 +40,7 @@ export function VideoInlinePrompt({
   players,
   onSelectPlayer,
   onSelectShotType,
+  onSelectReboundType,
   onSelectShotMadeMissed,
   onSkip,
 }: VideoInlinePromptProps) {
@@ -67,6 +69,21 @@ export function VideoInlinePrompt({
           return;
         }
         return; // Don't process other keys for blocked_shot
+      }
+
+      // For rebound_type prompt: O = Offensive, D = Defensive
+      if (promptType === 'rebound_type') {
+        if ((e.key === 'o' || e.key === 'O') && onSelectReboundType) {
+          e.preventDefault();
+          onSelectReboundType('offensive');
+          return;
+        }
+        if ((e.key === 'd' || e.key === 'D') && onSelectReboundType) {
+          e.preventDefault();
+          onSelectReboundType('defensive');
+          return;
+        }
+        return; // Don't process other keys for rebound_type
       }
 
       // For shot_made_missed prompt: Y = Made, N = Missed
@@ -108,7 +125,7 @@ export function VideoInlinePrompt({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [promptType, players, onSelectPlayer, onSelectShotType, onSkip]);
+  }, [promptType, players, onSelectPlayer, onSelectShotType, onSelectReboundType, onSkip]);
 
   if (!promptType) return null;
 
@@ -123,6 +140,8 @@ export function VideoInlinePrompt({
         return { label: 'Turnover by?', bgColor: 'bg-purple-50 border-purple-200', iconColor: 'text-purple-600', icon: ArrowRightLeft };
       case 'blocked_shot':
         return { label: 'Shot Type?', bgColor: 'bg-orange-50 border-orange-200', iconColor: 'text-orange-600', icon: Shield };
+      case 'rebound_type':
+        return { label: 'Rebound Type?', bgColor: 'bg-blue-50 border-blue-200', iconColor: 'text-blue-600', icon: XCircle };
       case 'blocked_shooter':
         return { label: 'Who got blocked?', bgColor: 'bg-orange-50 border-orange-200', iconColor: 'text-orange-600', icon: Shield };
       case 'fouled_player':
@@ -227,6 +246,53 @@ export function VideoInlinePrompt({
           >
             <kbd className="bg-green-100 px-1.5 py-0.5 rounded text-xs">3</kbd>
             <span>3PT</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Special UI for standalone rebound type selection (O = Offensive, D = Defensive)
+  if (promptType === 'rebound_type') {
+    return (
+      <div className={`p-3 rounded-lg border ${config.bgColor} animate-pulse`}>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Icon className={`w-4 h-4 ${config.iconColor}`} />
+            <span className="text-sm font-medium">
+              Rebound - {playerName}
+            </span>
+          </div>
+          <button
+            onClick={onSkip}
+            className="w-5 h-5 rounded-full hover:bg-gray-200 flex items-center justify-center"
+            title="Skip (Esc)"
+          >
+            <X className="w-3 h-3 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Prompt */}
+        <div className="text-xs font-medium text-gray-700 mb-2">
+          Rebound type? Press <kbd className="bg-gray-200 px-1 rounded">O</kbd> (Offensive) or <kbd className="bg-gray-200 px-1 rounded">D</kbd> (Defensive) or <kbd className="bg-gray-200 px-1 rounded">Esc</kbd>
+        </div>
+
+        {/* Rebound type buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => onSelectReboundType?.('offensive')}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 text-sm font-medium text-orange-700"
+          >
+            <kbd className="bg-orange-100 px-1.5 py-0.5 rounded text-xs">O</kbd>
+            <span>Offensive</span>
+          </button>
+          <button
+            onClick={() => onSelectReboundType?.('defensive')}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 text-sm font-medium text-blue-700"
+          >
+            <kbd className="bg-blue-100 px-1.5 py-0.5 rounded text-xs">D</kbd>
+            <span>Defensive</span>
           </button>
         </div>
       </div>

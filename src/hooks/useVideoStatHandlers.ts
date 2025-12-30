@@ -73,6 +73,7 @@ interface UseVideoStatHandlersProps {
   // Prompt functions
   showAssistPrompt: (e: LastEventInfo) => void;
   showReboundPrompt: (e: LastEventInfo) => void;
+  showReboundTypePrompt: (e: LastEventInfo) => void;
   showTurnoverPrompt: (e: LastEventInfo) => void;
   showTurnoverTypePrompt: (e: LastEventInfo) => void;
   showFoulTypePrompt: (e: LastEventInfo) => void;
@@ -93,7 +94,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     setIsRecording, setSelectedPlayer, setShowSubModal,
     setOnCourtA, setBenchA, setOnCourtB, setBenchB,
     onStatRecorded, onBeforeRecord,
-    showAssistPrompt, showReboundPrompt, showTurnoverPrompt,
+    showAssistPrompt, showReboundPrompt, showReboundTypePrompt, showTurnoverPrompt,
     showTurnoverTypePrompt, showFoulTypePrompt, showBlockedShotPrompt,
     showBlockedShooterPrompt, showFreeThrowPrompt, showFouledPlayerPrompt,
     showShotMadeMissedPrompt, closePrompt,
@@ -222,6 +223,61 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       setSelectedPlayer(null);
     } catch (error) {
       console.error('Error recording turnover:', error);
+    } finally {
+      setIsRecording(false);
+      closePrompt();
+    }
+  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, isCoachMode, userId, teamAPlayers, setIsRecording, setSelectedPlayer]);
+
+  // Rebound handlers (standalone R key press - not sequence after missed shot)
+  const handleInitiateRebound = useCallback(() => {
+    if (!selectedPlayer || !gameData || !gameClock) return;
+    onBeforeRecord?.();
+    
+    const isOpponentStat = isCoachMode && selectedPlayer === OPPONENT_TEAM_ID;
+    const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+    const playerName = isOpponentStat ? (opponentName || 'Opponent') : (playerData?.name || 'Player');
+    const teamId = isOpponentStat ? gameData.team_a_id : (selectedTeam === 'A' ? gameData.team_a_id : gameData.team_b_id);
+    
+    showReboundTypePrompt({ 
+      playerId: selectedPlayer, 
+      playerName, 
+      teamId, 
+      statType: 'rebound', 
+      shotValue: 0, 
+      videoTimestampMs: currentVideoTimeMs,
+      isOpponentStat,
+    });
+  }, [selectedPlayer, gameData, gameClock, selectedTeam, teamAPlayers, teamBPlayers, currentVideoTimeMs, onBeforeRecord, showReboundTypePrompt, isCoachMode, opponentName]);
+
+  const handleReboundTypeSelect = useCallback(async (reboundType: 'offensive' | 'defensive') => {
+    if (!lastEvent || !gameClock || !gameData) return;
+    
+    const isOpponentStat = lastEvent.isOpponentStat === true;
+    let playerId: string | undefined = lastEvent.playerId;
+    let customPlayerId: string | undefined;
+    let teamId = lastEvent.teamId;
+    
+    if (isOpponentStat) {
+      playerId = userId;
+      teamId = gameData.team_a_id;
+    } else if (isCoachMode) {
+      const playerData = teamAPlayers.find(p => p.id === lastEvent.playerId);
+      const isCustomPlayer = playerData?.is_custom_player || lastEvent.playerId.startsWith('custom-');
+      if (isCustomPlayer) { customPlayerId = lastEvent.playerId; playerId = undefined; }
+    }
+    
+    try {
+      setIsRecording(true);
+      await VideoStatService.recordVideoStat({
+        gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
+        statType: 'rebound', modifier: reboundType, videoTimestampMs: lastEvent.videoTimestampMs,
+        quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+      });
+      onStatRecorded?.('rebound');
+      setSelectedPlayer(null);
+    } catch (error) {
+      console.error('Error recording rebound:', error);
     } finally {
       setIsRecording(false);
       closePrompt();
@@ -633,6 +689,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
 
   return {
     handleStatRecord,
+    handleInitiateRebound, handleReboundTypeSelect,
     handleInitiateTurnover, handleTurnoverTypeSelect,
     handleInitiateFoul, handleFoulTypeSelect, handleFreeThrowComplete,
     handleShotMadeMissed,

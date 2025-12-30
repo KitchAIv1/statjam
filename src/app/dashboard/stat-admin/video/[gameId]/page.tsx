@@ -50,6 +50,7 @@ import { StatEditModalV2 } from '@/components/tracker-v3/modals/StatEditModalV2'
 import { VideoQuarterAdvancePrompt } from '@/components/video/VideoQuarterAdvancePrompt';
 import { GameService } from '@/lib/services/gameService';
 import { TeamService } from '@/lib/services/tournamentService';
+import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 
 interface VideoStatTrackerPageProps {
@@ -151,7 +152,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     formatGameClock,
   } = useVideoClockSync({ config: clockSyncConfig });
   
-  // Current game clock (derived from video position)
+  // Current game clock (derived from video position using clock sync config)
   const gameClock: GameClock | null = isCalibrated 
     ? videoToGameClock(currentTimeMs) 
     : null;
@@ -318,6 +319,82 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
       console.error('Error saving quarter marker:', error);
     }
   }, [clockSyncConfig, gameVideo, currentTimeMs]);
+
+  // Handle manual clock edit
+  const handleClockEdit = useCallback(async (
+    quarter: number,
+    minutes: number,
+    seconds: number,
+    isOvertime?: boolean
+  ) => {
+    if (!clockSyncConfig || !gameVideo) {
+      console.warn('Cannot edit clock - missing config or video');
+      return;
+    }
+
+    const effectiveQuarter = isOvertime ? quarter + 4 : quarter;
+    console.log(`✏️ Editing clock to ${isOvertime ? 'OT' : 'Q'}${quarter} ${minutes}:${seconds} at video ${currentTimeMs}ms (effective Q${effectiveQuarter})`);
+
+    const quarterLengthMs = clockSyncConfig.quarterLengthMinutes * 60 * 1000;
+    const overtimeLengthMs = 5 * 60 * 1000; // 5 minutes OT
+    
+    // Time remaining in the quarter (what user entered)
+    const timeRemainingMs = (minutes * 60 + seconds) * 1000;
+    
+    // Current quarter length
+    const currentQuarterLengthMs = isOvertime ? overtimeLengthMs : quarterLengthMs;
+    
+    // Elapsed time in this quarter
+    const elapsedInQuarterMs = currentQuarterLengthMs - timeRemainingMs;
+    
+    // Calculate new quarter start timestamp
+    // newQuarterStart = currentVideoTime - elapsedInQuarter
+    const newQuarterStartMs = Math.max(0, currentTimeMs - elapsedInQuarterMs);
+    
+    // Create updated config - update the CORRECT quarter marker
+    const updatedConfig: ClockSyncConfig = { ...clockSyncConfig };
+    
+    switch (effectiveQuarter) {
+      case 1:
+        updatedConfig.jumpballTimestampMs = newQuarterStartMs;
+        console.log(`✅ Clock adjusted: Q1 start (jumpball) at ${newQuarterStartMs}ms`);
+        break;
+      case 2:
+        updatedConfig.q2StartTimestampMs = newQuarterStartMs;
+        console.log(`✅ Clock adjusted: Q2 start at ${newQuarterStartMs}ms`);
+        break;
+      case 3:
+        updatedConfig.q3StartTimestampMs = newQuarterStartMs;
+        console.log(`✅ Clock adjusted: Q3 start at ${newQuarterStartMs}ms`);
+        break;
+      case 4:
+        updatedConfig.q4StartTimestampMs = newQuarterStartMs;
+        console.log(`✅ Clock adjusted: Q4 start at ${newQuarterStartMs}ms`);
+        break;
+      case 5:
+        updatedConfig.ot1StartTimestampMs = newQuarterStartMs;
+        console.log(`✅ Clock adjusted: OT1 start at ${newQuarterStartMs}ms`);
+        break;
+      case 6:
+        updatedConfig.ot2StartTimestampMs = newQuarterStartMs;
+        console.log(`✅ Clock adjusted: OT2 start at ${newQuarterStartMs}ms`);
+        break;
+      case 7:
+        updatedConfig.ot3StartTimestampMs = newQuarterStartMs;
+        console.log(`✅ Clock adjusted: OT3 start at ${newQuarterStartMs}ms`);
+        break;
+      default:
+        console.warn(`Unknown quarter ${effectiveQuarter}, defaulting to jumpball`);
+        updatedConfig.jumpballTimestampMs = newQuarterStartMs;
+    }
+
+    try {
+      await VideoStatService.saveClockSync(gameVideo.id, updatedConfig);
+      setClockSyncConfig(updatedConfig);
+    } catch (error) {
+      console.error('Error saving clock edit:', error);
+    }
+  }, [clockSyncConfig, gameVideo, currentTimeMs]);
   
   // Keyboard shortcuts - video controls + stat shortcuts
   useKeyboardShortcuts({
@@ -410,31 +487,34 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
         console.log('🎮 Game type detection:', { isCoach, opponent: gameAny.opponent_name, teamAId: game.team_a_id });
         
         if (isCoach) {
-          // Coach game: Load custom players using CoachPlayerService
+          // Coach game: Load custom players with substitutions applied
           try {
-            const customPlayers = await CoachPlayerService.getCoachTeamPlayers(game.team_a_id);
-            setTeamAPlayers(customPlayers.map((p: any) => ({
+            // Use the new method that applies substitution state
+            const playersWithSubs = await CoachPlayerService.getCoachTeamPlayersWithSubstitutions(game.team_a_id, gameId);
+            
+            setTeamAPlayers(playersWithSubs.map((p: any) => ({
               id: p.id,
               name: p.name || 'Unknown',
               jerseyNumber: p.jersey_number || p.jerseyNumber,
-              is_custom_player: true,
+              is_custom_player: p.is_custom_player || true,
             })));
             setTeamBPlayers([]); // No Team B players in coach mode
-            console.log('👥 Loaded coach team players:', customPlayers.length);
+            console.log('👥 Loaded coach team players with substitutions:', playersWithSubs.length);
           } catch (err) {
             console.error('Error loading coach players:', err);
-            // Fallback to regular player loading
-            const playersA = await TeamService.getTeamPlayers(game.team_a_id);
-            setTeamAPlayers(playersA.map((p: any) => ({
+            // Fallback to base roster without substitutions
+            const basePlayers = await CoachPlayerService.getCoachTeamPlayers(game.team_a_id);
+            setTeamAPlayers(basePlayers.map((p: any) => ({
               id: p.id, name: p.name || 'Unknown',
-              jerseyNumber: p.jerseyNumber || p.jersey_number,
+              jerseyNumber: p.jersey_number || p.jerseyNumber,
+              is_custom_player: true,
             })));
           }
         } else {
-          // Regular game: Load both teams
+          // Regular game: Load both teams with substitutions applied
           const [playersA, playersB] = await Promise.all([
-            TeamService.getTeamPlayers(game.team_a_id),
-            TeamService.getTeamPlayers(game.team_b_id),
+            TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_a_id, gameId),
+            TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_b_id, gameId),
           ]);
           
           setTeamAPlayers(playersA.map((p: any) => ({
@@ -782,6 +862,9 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                     teamBName={isCoachGame ? opponentName : (gameData?.team_b?.name || 'Team B')}
                     teamAScore={teamAScore}
                     teamBScore={teamBScore}
+                    // Clock edit
+                    onClockEdit={handleClockEdit}
+                    quarterLength={clockSyncConfig?.quarterLengthMinutes || 12}
                   />
                   
                   {/* Manual Quarter Advance Button */}
@@ -858,7 +941,36 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                 </h3>
                 <VideoStatsTimeline
                   gameId={gameId}
-                  onSeekToTimestamp={(ms) => videoControls.seek(ms / 1000)}
+                  onSeekToTimestamp={(ms, clockData) => {
+                    // Seek video to the timestamp
+                    videoControls.seek(ms / 1000);
+                    // Recalibrate game clock sync based on the stat's recorded game clock
+                    // This permanently fixes the clock for this quarter, not just a temporary override
+                    if (clockData && clockSyncConfig) {
+                      // Calculate the new quarter start timestamp based on this stat's data
+                      const isOvertime = clockData.quarter > 4;
+                      const quarterLengthMs = clockSyncConfig.quarterLengthMinutes * 60 * 1000;
+                      const overtimeLengthMs = 5 * 60 * 1000;
+                      const currentQuarterLengthMs = isOvertime ? overtimeLengthMs : quarterLengthMs;
+                      const timeRemainingMs = (clockData.minutes * 60 + clockData.seconds) * 1000;
+                      const elapsedInQuarterMs = currentQuarterLengthMs - timeRemainingMs;
+                      const newQuarterStartMs = Math.max(0, ms - elapsedInQuarterMs);
+                      
+                      // Update the clock sync config locally (recalibrate)
+                      const updatedConfig = { ...clockSyncConfig };
+                      switch (clockData.quarter) {
+                        case 1: updatedConfig.jumpballTimestampMs = newQuarterStartMs; break;
+                        case 2: updatedConfig.q2StartTimestampMs = newQuarterStartMs; break;
+                        case 3: updatedConfig.q3StartTimestampMs = newQuarterStartMs; break;
+                        case 4: updatedConfig.q4StartTimestampMs = newQuarterStartMs; break;
+                        case 5: updatedConfig.ot1StartTimestampMs = newQuarterStartMs; break;
+                        case 6: updatedConfig.ot2StartTimestampMs = newQuarterStartMs; break;
+                        case 7: updatedConfig.ot3StartTimestampMs = newQuarterStartMs; break;
+                      }
+                      setClockSyncConfig(updatedConfig);
+                      console.log(`🔄 Clock recalibrated: Q${clockData.quarter} start at ${newQuarterStartMs}ms (based on stat at ${ms}ms)`);
+                    }
+                  }}
                   refreshTrigger={timelineRefreshTrigger}
                   teamAPlayers={teamAPlayers}
                   teamBPlayers={teamBPlayers}

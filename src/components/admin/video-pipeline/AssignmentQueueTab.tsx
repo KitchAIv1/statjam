@@ -17,7 +17,9 @@ import {
   MapPin, 
   Calendar,
   UserCheck,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface AssignmentQueueTabProps {
@@ -26,6 +28,11 @@ interface AssignmentQueueTabProps {
   assigningVideoId: string | null;
   onAssign: (videoId: string, statAdminId: string) => void;
   onUnassign: (videoId: string) => void;
+  // Pagination props
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
 }
 
 export function AssignmentQueueTab({
@@ -34,6 +41,10 @@ export function AssignmentQueueTab({
   assigningVideoId,
   onAssign,
   onUnassign,
+  currentPage,
+  totalPages,
+  totalCount,
+  onPageChange,
 }: AssignmentQueueTabProps) {
   const getStatusBadge = (item: VideoQueueItem) => {
     const status = item.video.assignmentStatus;
@@ -70,22 +81,22 @@ export function AssignmentQueueTab({
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="text-3xl font-bold text-orange-600">
+            {totalCount}
+          </div>
+          <div className="text-sm text-gray-500">Total Videos</div>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <div className="text-3xl font-bold text-amber-600">
             {queue.filter(q => q.video.assignmentStatus === 'pending').length}
           </div>
-          <div className="text-sm text-gray-500">Pending Assignment</div>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="text-3xl font-bold text-blue-600">
-            {queue.filter(q => q.video.assignmentStatus === 'assigned').length}
-          </div>
-          <div className="text-sm text-gray-500">Assigned</div>
+          <div className="text-sm text-gray-500">Pending (this page)</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <div className="text-3xl font-bold text-purple-600">
             {queue.filter(q => q.video.assignmentStatus === 'in_progress').length}
           </div>
-          <div className="text-sm text-gray-500">In Progress</div>
+          <div className="text-sm text-gray-500">In Progress (this page)</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <div className="text-3xl font-bold text-gray-600">
@@ -222,6 +233,42 @@ export function AssignmentQueueTab({
               ))}
             </tbody>
           </table>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+              <div className="text-sm text-gray-500">
+                Showing {((currentPage - 1) * 20) + 1} - {Math.min(currentPage * 20, totalCount)} of {totalCount} videos
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onPageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded-lg border transition-colors ${
+                    currentPage === 1
+                      ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                      : 'border-gray-300 text-gray-600 hover:bg-white hover:border-orange-500'
+                  }`}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-sm font-medium text-gray-700 px-3">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => onPageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`p-2 rounded-lg border transition-colors ${
+                    currentPage === totalPages
+                      ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                      : 'border-gray-300 text-gray-600 hover:bg-white hover:border-orange-500'
+                  }`}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>

@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { GameService } from '@/lib/services/gameService';
-import { TeamService } from '@/lib/services/tournamentService';
+import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { useVideoStatPrompts } from '@/hooks/useVideoStatPrompts';
 import { useVideoStatHandlers, OPPONENT_TEAM_ID, type Player } from '@/hooks/useVideoStatHandlers';
 import type { GameClock } from '@/lib/types/video';
@@ -76,8 +76,8 @@ export function useVideoStatEntry(props: UseVideoStatEntryProps) {
   
   // Prompts
   const prompts = useVideoStatPrompts();
-  const { promptType, lastEvent, closePrompt, showAssistPrompt, showReboundPrompt, 
-          showTurnoverPrompt, showTurnoverTypePrompt, showFoulTypePrompt,
+  const { promptType, lastEvent, closePrompt, showAssistPrompt, showReboundPrompt,
+          showReboundTypePrompt, showTurnoverPrompt, showTurnoverTypePrompt, showFoulTypePrompt,
           showBlockedShotPrompt, showBlockedShooterPrompt, showFreeThrowPrompt,
           showFouledPlayerPrompt, showShotMadeMissedPrompt } = prompts;
 
@@ -90,7 +90,7 @@ export function useVideoStatEntry(props: UseVideoStatEntryProps) {
     setIsRecording, setSelectedPlayer, setShowSubModal,
     setOnCourtA, setBenchA, setOnCourtB, setBenchB,
     onStatRecorded, onBeforeRecord,
-    showAssistPrompt, showReboundPrompt, showTurnoverPrompt,
+    showAssistPrompt, showReboundPrompt, showReboundTypePrompt, showTurnoverPrompt,
     showTurnoverTypePrompt, showFoulTypePrompt, showBlockedShotPrompt,
     showBlockedShooterPrompt, showFreeThrowPrompt, showFouledPlayerPrompt,
     showShotMadeMissedPrompt, closePrompt,
@@ -115,16 +115,31 @@ export function useVideoStatEntry(props: UseVideoStatEntryProps) {
         if (!game) throw new Error('Game not found');
         setGameData(game);
 
+        // Use getTeamPlayersWithSubstitutions to get roster with substitutions applied
+        // Returns players in order: on-court first (0-4), then bench (5+)
         const [playersA, playersB] = await Promise.all([
-          TeamService.getTeamPlayers(game.team_a_id),
-          game.team_b_id ? TeamService.getTeamPlayers(game.team_b_id) : Promise.resolve([])
+          TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_a_id, gameId),
+          game.team_b_id ? TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_b_id, gameId) : Promise.resolve([])
         ]);
         
-        const mappedA = playersA.map((p: any) => ({ id: p.id, name: p.name, jerseyNumber: p.jersey_number, teamId: game.team_a_id }));
-        const mappedB = playersB.map((p: any) => ({ id: p.id, name: p.name, jerseyNumber: p.jersey_number, teamId: game.team_b_id }));
+        const mappedA = playersA.map((p: any) => ({ 
+          id: p.id, 
+          name: p.name, 
+          jerseyNumber: p.jersey_number, 
+          teamId: game.team_a_id,
+          is_custom_player: p.is_custom_player 
+        }));
+        const mappedB = playersB.map((p: any) => ({ 
+          id: p.id, 
+          name: p.name, 
+          jerseyNumber: p.jersey_number, 
+          teamId: game.team_b_id,
+          is_custom_player: p.is_custom_player 
+        }));
         
         setTeamAPlayers(mappedA);
         setTeamBPlayers(mappedB);
+        // First 5 are on-court (already ordered by getTeamPlayersWithSubstitutions)
         setOnCourtA(mappedA.slice(0, 5));
         setBenchA(mappedA.slice(5));
         setOnCourtB(mappedB.slice(0, 5));
@@ -150,44 +165,65 @@ export function useVideoStatEntry(props: UseVideoStatEntryProps) {
   }, [teamAPlayers]);
 
   const handlePlayerSelectByIndex = useCallback((index: number) => {
+    // Coach mode: key 0 (index 9) = opponent
     if (isCoachMode && index === 9) {
       handlePlayerSelect(OPPONENT_TEAM_ID);
       return;
     }
-    const allPlayers = [...teamAPlayers, ...teamBPlayers];
-    if (index < allPlayers.length) handlePlayerSelect(allPlayers[index].id);
-  }, [teamAPlayers, teamBPlayers, handlePlayerSelect, isCoachMode]);
+    
+    // Keys 1-5 (indices 0-4) → Team A on-court
+    if (index < 5) {
+      if (index < onCourtA.length) {
+        handlePlayerSelect(onCourtA[index].id);
+      }
+      return;
+    }
+    
+    // Keys 6-0 (indices 5-9) → Team B on-court (organizer mode only)
+    if (!isCoachMode) {
+      const teamBIndex = index - 5;  // 5→0, 6→1, 7→2, 8→3, 9→4
+      if (teamBIndex < onCourtB.length) {
+        handlePlayerSelect(onCourtB[teamBIndex].id);
+      }
+    }
+  }, [onCourtA, onCourtB, handlePlayerSelect, isCoachMode]);
 
-  // Helpers
+  // Helpers - Use on-court players for prompts (not full roster)
   const getPromptPlayers = useCallback(() => {
     if (!lastEvent) return [];
     if (promptType === 'assist') {
-      if (isCoachMode) return teamAPlayers.filter(p => p.id !== lastEvent.playerId);
-      const sameTeam = lastEvent.teamId === gameData?.team_a_id ? teamAPlayers : teamBPlayers;
+      // Assist: same team on-court players (excluding the scorer)
+      if (isCoachMode) return onCourtA.filter(p => p.id !== lastEvent.playerId);
+      const sameTeam = lastEvent.teamId === gameData?.team_a_id ? onCourtA : onCourtB;
       return sameTeam.filter(p => p.id !== lastEvent.playerId);
     } else if (promptType === 'turnover') {
-      if (isCoachMode) return lastEvent.isOpponentStat ? teamAPlayers : [];
-      return lastEvent.teamId === gameData?.team_a_id ? teamBPlayers : teamAPlayers;
+      // Turnover: opposing team's on-court players
+      if (isCoachMode) return lastEvent.isOpponentStat ? onCourtA : [];
+      return lastEvent.teamId === gameData?.team_a_id ? onCourtB : onCourtA;
     } else if (promptType === 'rebound') {
+      // Rebound: all on-court players (both teams)
       if (isCoachMode) {
-        return [...teamAPlayers, { id: OPPONENT_TEAM_ID, name: opponentName || 'Opponent', teamId: 'opponent' }];
+        return [...onCourtA, { id: OPPONENT_TEAM_ID, name: opponentName || 'Opponent', teamId: 'opponent' }];
       }
-      return [...teamAPlayers, ...teamBPlayers];
+      return [...onCourtA, ...onCourtB];
     } else if (promptType === 'blocked_shooter') {
-      if (isCoachMode) return teamAPlayers;
-      return lastEvent.teamId === gameData?.team_a_id ? teamBPlayers : teamAPlayers;
+      // Blocked shooter: opposing team's on-court players
+      if (isCoachMode) return onCourtA;
+      return lastEvent.teamId === gameData?.team_a_id ? onCourtB : onCourtA;
     } else if (promptType === 'fouled_player') {
-      // Opponent fouled someone: show coach's players to select who shoots FTs
-      return teamAPlayers;
+      // Opponent fouled someone: show coach's on-court players to select who shoots FTs
+      return onCourtA;
     }
-    return isCoachMode ? teamAPlayers : [...teamAPlayers, ...teamBPlayers];
-  }, [lastEvent, promptType, gameData, teamAPlayers, teamBPlayers, isCoachMode, opponentName]);
+    return isCoachMode ? onCourtA : [...onCourtA, ...onCourtB];
+  }, [lastEvent, promptType, gameData, onCourtA, onCourtB, isCoachMode, opponentName]);
 
   const getSelectedPlayerData = useCallback(() => {
     if (!selectedPlayer) return null;
     if (selectedPlayer === OPPONENT_TEAM_ID) return { id: OPPONENT_TEAM_ID, name: opponentName || 'Opponent' };
-    return [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
-  }, [selectedPlayer, teamAPlayers, teamBPlayers, opponentName]);
+    // Look in on-court players first (current state), then fallback to full roster
+    return [...onCourtA, ...onCourtB, ...benchA, ...benchB].find(p => p.id === selectedPlayer)
+      || [...teamAPlayers, ...teamBPlayers].find(p => p.id === selectedPlayer);
+  }, [selectedPlayer, teamAPlayers, teamBPlayers, onCourtA, onCourtB, benchA, benchB, opponentName]);
 
   return {
     // State

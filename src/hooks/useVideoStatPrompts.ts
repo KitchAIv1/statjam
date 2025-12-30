@@ -8,7 +8,7 @@
 
 import { useState, useCallback } from 'react';
 
-export type PromptType = 'assist' | 'rebound' | 'turnover' | 'turnover_type' | 'foul_type' | 'blocked_shot' | 'blocked_shooter' | 'free_throw_sequence' | 'fouled_player' | 'shot_made_missed' | null;
+export type PromptType = 'assist' | 'rebound' | 'rebound_type' | 'turnover' | 'turnover_type' | 'foul_type' | 'blocked_shot' | 'blocked_shooter' | 'free_throw_sequence' | 'fouled_player' | 'shot_made_missed' | null;
 
 // Turnover type options - must match database constraint game_stats_modifier_check
 // Allowed values: bad_pass, travel, offensive_foul, steal, double_dribble, lost_ball, out_of_bounds, null
@@ -55,6 +55,7 @@ interface UseVideoStatPromptsReturn {
   lastEvent: LastEventInfo | null;
   showAssistPrompt: (eventInfo: LastEventInfo) => void;
   showReboundPrompt: (eventInfo: LastEventInfo) => void;
+  showReboundTypePrompt: (eventInfo: LastEventInfo) => void;
   showTurnoverPrompt: (eventInfo: LastEventInfo) => void;
   showTurnoverTypePrompt: (eventInfo: LastEventInfo) => void;
   showFoulTypePrompt: (eventInfo: LastEventInfo) => void;
@@ -78,6 +79,11 @@ export function useVideoStatPrompts(): UseVideoStatPromptsReturn {
   const showReboundPrompt = useCallback((eventInfo: LastEventInfo) => {
     setLastEvent(eventInfo);
     setPromptType('rebound');
+  }, []);
+
+  const showReboundTypePrompt = useCallback((eventInfo: LastEventInfo) => {
+    setLastEvent(eventInfo);
+    setPromptType('rebound_type');
   }, []);
 
   const showTurnoverPrompt = useCallback((eventInfo: LastEventInfo) => {
@@ -130,6 +136,7 @@ export function useVideoStatPrompts(): UseVideoStatPromptsReturn {
     lastEvent,
     showAssistPrompt,
     showReboundPrompt,
+    showReboundTypePrompt,
     showTurnoverPrompt,
     showTurnoverTypePrompt,
     showFoulTypePrompt,

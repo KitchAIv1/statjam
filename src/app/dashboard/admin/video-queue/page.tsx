@@ -18,7 +18,8 @@ import {
   assignVideoToStatAdmin,
   unassignVideo,
   VideoQueueItem,
-  StatAdminOption 
+  StatAdminOption,
+  VideoQueueResult,
 } from '@/lib/services/videoAssignmentService';
 import {
   getAllClipJobs,
@@ -89,20 +90,29 @@ function AdminVideoQueueContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assigningVideoId, setAssigningVideoId] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 20;
 
   // Clip Jobs state
   const [clipJobs, setClipJobs] = useState<JobWithGame[]>([]);
   const [clipJobsLoading, setClipJobsLoading] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (page: number = currentPage) => {
     try {
       setLoading(true);
       setError(null);
-      const [queueData, adminsData] = await Promise.all([
-        getVideoQueue(),
+      const [queueResult, adminsData] = await Promise.all([
+        getVideoQueue({ page, pageSize: PAGE_SIZE }),
         getStatAdminOptions()
       ]);
-      setQueue(queueData);
+      setQueue(queueResult.items);
+      setTotalPages(queueResult.totalPages);
+      setTotalCount(queueResult.totalCount);
+      setCurrentPage(queueResult.page);
       setStatAdmins(adminsData);
     } catch (err) {
       console.error('Error loading video queue:', err);
@@ -110,7 +120,7 @@ function AdminVideoQueueContent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage]);
 
   const loadClipJobs = useCallback(async () => {
     try {
@@ -319,6 +329,10 @@ function AdminVideoQueueContent() {
             assigningVideoId={assigningVideoId}
             onAssign={handleAssign}
             onUnassign={handleUnassign}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            onPageChange={(page) => loadData(page)}
           />
         )}
 

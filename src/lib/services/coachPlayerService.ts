@@ -138,6 +138,88 @@ export class CoachPlayerService {
   }
 
   /**
+   * Get coach team players with substitutions applied for a specific game.
+   * Returns players ordered: on-court first (0-4), then bench (5+).
+   * This is the source of truth for current on-court state.
+   */
+  static async getCoachTeamPlayersWithSubstitutions(
+    teamId: string, 
+    gameId: string
+  ): Promise<CoachPlayer[]> {
+    try {
+      console.log('🏀 CoachPlayerService: Fetching players with substitutions for team:', teamId, 'game:', gameId);
+
+      // Get base roster
+      const basePlayers = await this.getCoachTeamPlayers(teamId);
+      
+      if (basePlayers.length === 0) {
+        return basePlayers;
+      }
+
+      // Get substitutions for this game and team
+      const { data: substitutions, error } = await supabase
+        .from('game_substitutions')
+        .select('player_in_id, player_out_id, custom_player_in_id, custom_player_out_id, created_at')
+        .eq('game_id', gameId)
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('❌ Error fetching substitutions:', error);
+        return basePlayers;
+      }
+
+      console.log('✅ Found', substitutions?.length || 0, 'substitutions for this game/team');
+
+      if (!substitutions || substitutions.length === 0) {
+        return basePlayers;
+      }
+
+      // Start with first 5 players as on-court, rest as bench
+      const onCourtPlayerIds = new Set(basePlayers.slice(0, 5).map(p => p.id));
+      const benchPlayerIds = new Set(basePlayers.slice(5).map(p => p.id));
+
+      // Apply each substitution to update on-court status
+      for (const sub of substitutions) {
+        // Use either regular or custom player ID
+        const playerOutId = sub.player_out_id || sub.custom_player_out_id;
+        const playerInId = sub.player_in_id || sub.custom_player_in_id;
+
+        // Move player out from on-court to bench
+        if (onCourtPlayerIds.has(playerOutId)) {
+          onCourtPlayerIds.delete(playerOutId);
+          benchPlayerIds.add(playerOutId);
+        }
+
+        // Move player in from bench to on-court
+        if (benchPlayerIds.has(playerInId)) {
+          benchPlayerIds.delete(playerInId);
+          onCourtPlayerIds.add(playerInId);
+        }
+      }
+
+      // Rebuild roster with on-court players first, then bench players
+      const onCourtPlayers = basePlayers.filter(p => onCourtPlayerIds.has(p.id));
+      const benchPlayers = basePlayers.filter(p => benchPlayerIds.has(p.id));
+      const currentRoster = [...onCourtPlayers, ...benchPlayers];
+
+      console.log('🎯 CoachPlayerService: Final roster state:', {
+        totalSubstitutions: substitutions.length,
+        onCourtCount: onCourtPlayers.length,
+        benchCount: benchPlayers.length,
+        firstFive: currentRoster.slice(0, 5).map(p => ({ id: p.id, name: p.name }))
+      });
+
+      return currentRoster;
+
+    } catch (error) {
+      console.error('❌ Error in getCoachTeamPlayersWithSubstitutions:', error);
+      // Fallback to base roster if substitution logic fails
+      return this.getCoachTeamPlayers(teamId);
+    }
+  }
+
+  /**
    * Search available players (StatJam users with player role)
    */
   static async searchAvailablePlayers(request: SearchPlayersRequest): Promise<CoachPlayer[]> {

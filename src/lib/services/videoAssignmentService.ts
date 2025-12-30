@@ -44,14 +44,45 @@ export interface StatAdminOption {
 // =============================================================================
 
 /**
+ * Pagination options for video queue
+ */
+export interface VideoQueuePaginationOptions {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface VideoQueueResult {
+  items: VideoQueueItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/**
  * Get all videos pending assignment or in progress (admin only)
+ * Sorted by latest first, with pagination support
  * Note: Works with or without the assignment_status column (pre/post migration)
  */
-export async function getVideoQueue(): Promise<VideoQueueItem[]> {
+export async function getVideoQueue(
+  options: VideoQueuePaginationOptions = {}
+): Promise<VideoQueueResult> {
+  const { page = 1, pageSize = 20 } = options;
+  const offset = (page - 1) * pageSize;
+  
   try {
     const db = getSupabase();
     
+    // First get total count
+    const { count: totalCount, error: countError } = await db
+      .from('game_videos')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'ready');
+    
+    if (countError) throw countError;
+    
     // Simple query that works before and after migration
+    // Sorted by created_at descending (latest first)
     const { data, error } = await db
       .from('game_videos')
       .select(`
@@ -65,7 +96,8 @@ export async function getVideoQueue(): Promise<VideoQueueItem[]> {
         )
       `)
       .eq('status', 'ready')
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
 
     if (error) throw error;
 
@@ -94,7 +126,7 @@ export async function getVideoQueue(): Promise<VideoQueueItem[]> {
     
     const teamMap = new Map((teams || []).map(t => [t.id, t.name]));
 
-    return pendingVideos.map((item) => {
+    const items = pendingVideos.map((item) => {
       const dueAt = item.due_at ? new Date(item.due_at) : null;
       const hoursRemaining = dueAt 
         ? Math.max(0, (dueAt.getTime() - Date.now()) / (1000 * 60 * 60))
@@ -115,6 +147,14 @@ export async function getVideoQueue(): Promise<VideoQueueItem[]> {
         assignedAdminName: null, // Will be populated after migration
       };
     });
+
+    return {
+      items,
+      totalCount: totalCount || 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((totalCount || 0) / pageSize),
+    };
   } catch (error) {
     console.error('❌ Error fetching video queue:', error);
     throw error;
@@ -224,6 +264,7 @@ export async function unassignVideo(videoId: string): Promise<void> {
 
 /**
  * Get videos assigned to the current stat admin
+ * Sorted by latest first
  */
 export async function getAssignedVideos(
   statAdminId: string
@@ -232,6 +273,7 @@ export async function getAssignedVideos(
     const db = getSupabase();
     
     // Simplified query that works before migration
+    // Sorted by created_at descending (latest first)
     const { data, error } = await db
       .from('game_videos')
       .select(`
@@ -244,7 +286,7 @@ export async function getAssignedVideos(
         )
       `)
       .eq('status', 'ready')
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
 

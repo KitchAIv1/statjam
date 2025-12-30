@@ -28,9 +28,15 @@ interface Player {
   jerseyNumber?: number;
 }
 
+export interface GameClockData {
+  quarter: number;
+  minutes: number;
+  seconds: number;
+}
+
 interface VideoStatsTimelineProps {
   gameId: string;
-  onSeekToTimestamp: (timestampMs: number) => void;
+  onSeekToTimestamp: (timestampMs: number, gameClock?: GameClockData) => void;
   refreshTrigger?: number;
   // Team data for edit form
   teamAPlayers?: Player[];
@@ -369,18 +375,26 @@ export function VideoStatsTimeline({
                   <td className="px-2 py-1.5">
                     {entry.type === 'stat' && entry.stat?.videoTimestampMs ? (
                       <button
-                        onClick={() => onSeekToTimestamp(entry.stat!.videoTimestampMs)}
+                        onClick={() => onSeekToTimestamp(entry.stat!.videoTimestampMs, {
+                          quarter: entry.quarter,
+                          minutes: entry.gameTimeMinutes,
+                          seconds: entry.gameTimeSeconds,
+                        })}
                         className="flex items-center gap-1 px-1.5 py-0.5 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded text-xs font-mono transition-colors"
-                        title="Jump to this moment"
+                        title="Jump to this moment (video + game clock)"
                       >
                         <Play className="w-3 h-3" />
                         {formatVideoTime(entry.stat!.videoTimestampMs)}
                       </button>
                     ) : entry.type === 'substitution' && entry.substitution?.video_timestamp_ms ? (
                       <button
-                        onClick={() => onSeekToTimestamp(entry.substitution!.video_timestamp_ms!)}
+                        onClick={() => onSeekToTimestamp(entry.substitution!.video_timestamp_ms!, {
+                          quarter: entry.quarter,
+                          minutes: entry.gameTimeMinutes,
+                          seconds: entry.gameTimeSeconds,
+                        })}
                         className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded text-xs font-mono transition-colors"
-                        title="Jump to this moment"
+                        title="Jump to this moment (video + game clock)"
                       >
                         <Play className="w-3 h-3" />
                         {formatVideoTime(entry.substitution!.video_timestamp_ms!)}

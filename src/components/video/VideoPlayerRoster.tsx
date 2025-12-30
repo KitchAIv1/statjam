@@ -94,7 +94,7 @@ export function VideoPlayerRoster({
             {teamAName}
             <span className="text-gray-400 font-normal">({displayOnCourtA.length})</span>
           </div>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
+          <div className="space-y-1 max-h-40 overflow-y-auto">
             {displayOnCourtA.map((player, idx) => (
               <button
                 key={player.id}
@@ -153,7 +153,7 @@ export function VideoPlayerRoster({
                 {teamBName}
                 <span className="text-gray-400 font-normal">({displayOnCourtB.length})</span>
               </div>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
+              <div className="space-y-1 max-h-40 overflow-y-auto">
                 {displayOnCourtB.map((player, idx) => (
                   <button
                     key={player.id}

@@ -13,6 +13,12 @@ The Video Stat Tracking system enables stat admins to record basketball statisti
 ### Key Features
 
 - **Video Upload & Processing**: Upload game videos up to 40GB (MP4/MOV) via Bunny.net Stream
+  - **Reliable Large File Uploads**: Automatic retry logic with exponential backoff for network interruptions
+  - **Resumable Uploads**: TUS protocol support for chunked uploads (5MB chunks)
+  - **Upload Progress Tracking**: Real-time progress with persistent status banner across pages
+  - **User-Friendly Error Handling**: Clear error messages with retry buttons
+  - **Large File Warnings**: Automatic warnings for files >1GB with estimated upload time
+  - **Navigation Protection**: Full-screen overlay prevents accidental navigation during upload
 - **Clock Synchronization**: Sync video playback with game clock using jumpball timestamp
 - **Keyboard-Driven Workflow**: Full keyboard shortcuts for video controls and stat entry
 - **Real-Time Stat Recording**: Record stats with precise video timestamps
@@ -80,7 +86,12 @@ The Video Stat Tracking system enables stat admins to record basketball statisti
 4. **Upload Video**
    - Click "Upload Video"
    - Select MP4 or MOV file (up to 40GB)
-   - Video uploads to Bunny.net
+   - **Large File Warning**: Files >1GB show estimated upload time
+   - **Full-Screen Upload Overlay**: Prevents navigation during upload
+   - **Progress Tracking**: Real-time progress bar with percentage and bytes uploaded
+   - **Automatic Retry**: Failed chunks automatically retry up to 3 times
+   - **Error Recovery**: User-friendly error messages with retry button
+   - Video uploads to Bunny.net via TUS protocol (resumable chunks)
    - Status shows "Processing" then "Uploaded"
    - 24-hour countdown timer for stat admin delivery
 
@@ -114,7 +125,8 @@ src/
 ├── components/
 │   └── video/
 │       ├── VideoPlayer.tsx               # HTML5 video player component
-│       ├── VideoUploader.tsx             # Bunny.net upload component
+│       ├── VideoUploader.tsx             # Bunny.net upload component with retry logic
+│       ├── GlobalUploadBanner.tsx        # Persistent upload status banner
 │       ├── JumpballSyncModal.tsx         # Clock sync modal
 │       ├── DualClockDisplay.tsx          # Video + game clock display
 │       ├── VideoStatEntryPanel.tsx      # Stat entry UI (roster + buttons)
@@ -128,6 +140,9 @@ src/
 │       ├── VideoProcessingStatus.tsx    # Video processing UI
 │       └── CoachVideoStatusCard.tsx      # Coach video status display
 │
+├── contexts/
+│   └── VideoUploadContext.tsx            # Global upload state management
+│
 ├── hooks/
 │   ├── useVideoPlayer.ts                 # Video playback state/controls
 │   ├── useVideoClockSync.ts              # Clock sync calculations
@@ -140,7 +155,7 @@ src/
     ├── services/
     │   ├── videoStatService.ts           # Video stat database operations
     │   ├── videoAssignmentService.ts     # Video assignment workflow
-    │   └── bunnyUploadService.ts         # Bunny.net API integration
+    │   └── bunnyUploadService.ts         # Bunny.net API integration with retry logic
     └── types/
         └── video.ts                      # Video-related TypeScript types
 ```
@@ -149,8 +164,12 @@ src/
 
 ```
 1. Video Upload
-   Coach/Stat Admin → VideoUploader → Bunny.net Stream API
+   Coach/Stat Admin → VideoUploader → VideoUploadContext (global state)
+   → TUS Protocol (chunked uploads, 5MB chunks)
+   → Automatic retry on chunk failures (3 attempts, exponential backoff)
+   → Bunny.net Stream API
    → game_videos table (status: 'processing')
+   → GlobalUploadBanner shows progress across all coach pages
 
 2. Video Processing
    Bunny.net transcodes video → Status polling (15s interval)
@@ -480,6 +499,17 @@ CREATE POLICY "Coaches can view their uploaded videos" ON game_videos
 
 ## 🐛 Troubleshooting
 
+### Upload Failures
+
+**Issue**: Upload fails with "Failed to fetch" or network errors  
+**Solution**:
+- **Automatic Retry**: System automatically retries failed chunks up to 3 times
+- **Check Network**: Ensure stable internet connection (large files require consistent connection)
+- **Large File Warning**: Files >1GB may take 20-45 minutes to upload
+- **Do Not Navigate**: Full-screen overlay prevents accidental navigation during upload
+- **Retry Button**: If upload fails completely, use "Retry Upload" button
+- **Browser Warning**: Browser will warn if trying to close tab during upload
+
 ### Video Not Loading
 
 **Issue**: Video shows "Format error" or fails to load  
@@ -528,11 +558,21 @@ CREATE POLICY "Coaches can view their uploaded videos" ON game_videos
 
 ## 📈 Performance Considerations
 
+### Video Upload
+
+- **Chunked Uploads**: Files uploaded in 5MB chunks via TUS protocol
+- **Automatic Retry**: Failed chunks retry up to 3 times with exponential backoff (1s → 2s → 4s)
+- **Resumable**: TUS protocol supports resuming from last successful chunk
+- **Progress Tracking**: Real-time progress updates with bytes uploaded/total
+- **Large File Support**: Optimized for files up to 40GB (2-5GB typical for basketball games)
+- **Network Resilience**: Handles network interruptions gracefully with automatic recovery
+
 ### Video Processing
 
 - **Polling Interval**: 15 seconds (reduced from 5 seconds to prevent rate limiting)
 - **Exponential Backoff**: Automatically increases interval on 429 errors
 - **Background Processing**: Users can continue working while video processes
+- **Encoding Time**: Bunny.net encoding takes 5-30 minutes depending on video length/resolution
 
 ### Stat Recording
 
@@ -583,6 +623,21 @@ CREATE POLICY "Coaches can view their uploaded videos" ON game_videos
 
 ---
 
-**Last Updated**: December 27, 2025  
+---
+
+## 🔄 Recent Updates (January 2025)
+
+### Upload Reliability Improvements
+
+- **Retry Logic**: Automatic retry for failed upload chunks (3 attempts with exponential backoff)
+- **User-Friendly Errors**: Replaced "Failed to fetch" with actionable error messages
+- **Large File Warnings**: Automatic warnings for files >1GB with estimated upload time
+- **Persistent Status Banner**: Upload progress visible across all coach dashboard pages
+- **Full-Screen Overlay**: Prevents accidental navigation during upload
+- **Browser Protection**: `beforeunload` warning prevents tab closure during upload
+- **Global State Management**: `VideoUploadContext` tracks upload state across pages
+- **Resume Capability**: localStorage persistence for interrupted uploads (future enhancement)
+
+**Last Updated**: January 2025  
 **Maintained By**: Development Team
 

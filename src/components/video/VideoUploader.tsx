@@ -9,13 +9,15 @@
  * @module VideoUploader
  */
 
-import React, { useState, useRef, useCallback } from 'react';
-import { Upload, X, CheckCircle, AlertCircle, Loader2, Film, RefreshCw, Clock } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Upload, X, CheckCircle, AlertCircle, Loader2, Film, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/progress';
 import { BunnyUploadService, validateVideoFile, getUploadErrorMessage } from '@/lib/services/bunnyUploadService';
 import { UPLOAD_CONFIG } from '@/lib/config/videoConfig';
 import type { VideoUploadProgress } from '@/lib/types/video';
+import { useVideoUpload } from '@/contexts/VideoUploadContext';
 
 interface VideoUploaderProps {
   gameId: string;
@@ -39,6 +41,23 @@ export function VideoUploader({
   const [canRetry, setCanRetry] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Global upload context for cross-page status
+  const uploadContext = useVideoUpload();
+  
+  // Warn user before leaving page during upload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (progress && progress.status === 'uploading') {
+        e.preventDefault();
+        e.returnValue = 'Upload in progress. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [progress]);
   
   // Large file threshold (1GB)
   const LARGE_FILE_THRESHOLD = 1 * 1024 * 1024 * 1024;
@@ -94,6 +113,12 @@ export function VideoUploader({
     }
   };
   
+  // Handle progress updates - sync with local and global state
+  const handleProgress = useCallback((newProgress: VideoUploadProgress) => {
+    setProgress(newProgress);
+    uploadContext.updateProgress(newProgress);
+  }, [uploadContext]);
+
   // Start upload
   const startUpload = async () => {
     if (!file) return;
@@ -102,22 +127,27 @@ export function VideoUploader({
     setCanRetry(false);
     abortControllerRef.current = new AbortController();
     
+    // Update global context
+    uploadContext.startUpload(gameId, file.name, file.size);
+    
     const result = await BunnyUploadService.uploadVideo({
       file,
       gameId,
       userId, // Pass userId for ownership verification
-      onProgress: setProgress,
+      onProgress: handleProgress,
       abortSignal: abortControllerRef.current.signal,
     });
     
     if (result.success && result.videoId) {
       setCanRetry(false);
+      uploadContext.completeUpload();
       onUploadComplete(result.videoId);
     } else {
       const rawError = result.error || 'Upload failed';
       const friendlyError = getUploadErrorMessage(rawError);
       setError(friendlyError);
       setCanRetry(true); // Enable retry button
+      uploadContext.cancelUpload();
       onUploadError?.(friendlyError);
     }
   };
@@ -135,6 +165,7 @@ export function VideoUploader({
     abortControllerRef.current?.abort();
     setProgress(null);
     setFile(null);
+    uploadContext.cancelUpload();
   };
   
   // Clear selection
@@ -368,6 +399,59 @@ export function VideoUploader({
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Full-screen upload overlay - blocks navigation during upload */}
+      {progress && progress.status === 'uploading' && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-orange-100 rounded-lg p-3">
+                <Upload className="w-6 h-6 text-orange-600 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Uploading Video</h3>
+                <p className="text-sm text-gray-500 truncate max-w-[250px]">{file?.name}</p>
+              </div>
+            </div>
+            
+            {/* Progress */}
+            <div className="space-y-2 mb-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">
+                  {formatSize(progress.bytesUploaded)} / {formatSize(progress.totalBytes)}
+                </span>
+                <span className="font-bold text-orange-600">{progress.percentage}%</span>
+              </div>
+              <Progress value={progress.percentage} className="h-3" />
+            </div>
+            
+            {/* Warning */}
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800">Do not navigate away</p>
+                  <p className="text-amber-700 mt-0.5">
+                    Closing this page or navigating will cancel the upload.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Cancel button */}
+            <Button
+              variant="outline"
+              onClick={cancelUpload}
+              className="w-full text-red-600 border-red-200 hover:bg-red-50"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel Upload
+            </Button>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

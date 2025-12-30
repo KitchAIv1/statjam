@@ -60,7 +60,7 @@ export function VideoStatEntryPanel({
       recordMiss3PT: () => entry.handleStatRecord('three_pointer', 'missed'),
       recordFTMade: () => entry.handleStatRecord('free_throw', 'made'),
       recordFTMiss: () => entry.handleStatRecord('free_throw', 'missed'),
-      recordRebound: () => entry.handleStatRecord('rebound'),
+      recordRebound: entry.handleInitiateRebound,
       recordAssist: () => entry.handleStatRecord('assist'),
       recordSteal: () => entry.handleStatRecord('steal'),
       recordBlock: () => entry.handleStatRecord('block'),
@@ -135,6 +135,7 @@ export function VideoStatEntryPanel({
           onFreeThrowComplete={entry.handleFreeThrowComplete}
           onPromptPlayerSelect={entry.handlePromptPlayerSelect}
           onBlockedShotTypeSelect={entry.handleBlockedShotTypeSelect}
+          onReboundTypeSelect={entry.handleReboundTypeSelect}
           onShotMadeMissed={entry.handleShotMadeMissed}
           onClosePrompt={entry.closePrompt}
         />
@@ -158,6 +159,8 @@ export function VideoStatEntryPanel({
                   entry.handleInitiateTurnover();
                 } else if (statType === 'foul') {
                   entry.handleInitiateFoul();
+                } else if (statType === 'rebound') {
+                  entry.handleInitiateRebound();
                 } else {
                   entry.handleStatRecord(statType, modifier);
                 }

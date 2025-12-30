@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-01-XX
+
+### 🎥 **VIDEO UPLOAD RELIABILITY IMPROVEMENTS**
+
+#### Upload Reliability
+- **ADDED**: Automatic retry logic for failed upload chunks
+  - Exponential backoff: 1s → 2s → 4s delays between retries
+  - Up to 3 retry attempts per failed chunk
+  - Handles network interruptions gracefully
+- **ADDED**: User-friendly error messages
+  - Replaced generic "Failed to fetch" with actionable messages
+  - Clear instructions for network issues
+  - Retry button on upload failures
+- **ADDED**: Large file warnings
+  - Automatic detection for files >1GB
+  - Estimated upload time display (based on 10 Mbps connection)
+  - Clear instructions to stay on page during upload
+
+#### Upload Experience
+- **ADDED**: Full-screen upload overlay
+  - Blocks navigation during active upload
+  - Prominent progress display with percentage and bytes
+  - Clear warning: "Do not navigate away"
+  - Cancel button for explicit upload cancellation
+- **ADDED**: Persistent upload status banner
+  - `GlobalUploadBanner` component shows progress across all coach pages
+  - Visible on dashboard, teams, tournaments, etc.
+  - Real-time progress updates
+- **ADDED**: Browser protection
+  - `beforeunload` event warns users before closing tab
+  - Prevents accidental upload cancellation
+- **ADDED**: Global upload state management
+  - `VideoUploadContext` for cross-page upload tracking
+  - localStorage persistence for interrupted uploads
+  - Resume capability (future enhancement)
+
+#### Technical Implementation
+- **Files Created**:
+  - `src/contexts/VideoUploadContext.tsx` - Global upload state management
+  - `src/components/video/GlobalUploadBanner.tsx` - Persistent status banner
+  - `src/app/dashboard/coach/layout.tsx` - Coach layout with upload provider
+- **Files Modified**:
+  - `src/components/video/VideoUploader.tsx` - Added retry logic, overlay, warnings
+  - `src/lib/services/bunnyUploadService.ts` - Added chunk retry with exponential backoff
+  - `src/components/video/index.ts` - Export GlobalUploadBanner
+
+#### Documentation Updates
+- **UPDATED**: `docs/04-features/video-tracking/VIDEO_STAT_TRACKING.md`
+  - Added upload reliability section
+  - Updated troubleshooting guide
+  - Added performance considerations for large files
+- **UPDATED**: `docs/01-project/CHANGELOG.md` - This entry
+
+---
+
 ## [0.17.5] - 2025-01-XX
 
 ### 🎨 **COACH MISSION CONTROL DASHBOARD REDESIGN**
