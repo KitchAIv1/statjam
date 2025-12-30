@@ -65,6 +65,7 @@ export interface ClipEligibleStat {
   game_time_seconds: number;
   video_timestamp_ms: number;
   is_clip_eligible: boolean;
+  is_opponent_stat?: boolean;
 }
 
 // ============================================================================
@@ -106,6 +107,7 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
         game_time_minutes,
         game_time_seconds,
         video_timestamp_ms,
+        is_opponent_stat,
         users:player_id (name),
         custom_players:custom_player_id (name)
       `)
@@ -131,6 +133,7 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
           game_time_minutes,
           game_time_seconds,
           video_timestamp_ms,
+          is_opponent_stat,
           users:player_id (name),
           custom_players:custom_player_id (name)
         `)
@@ -161,6 +164,7 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
         game_time_seconds: stat.game_time_seconds || 0,
         video_timestamp_ms: stat.video_timestamp_ms,
         is_clip_eligible: isClipEligible(stat.stat_type, stat.modifier),
+        is_opponent_stat: stat.is_opponent_stat ?? false,
       }));
     }
 
@@ -178,6 +182,7 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
       game_time_seconds: stat.game_time_seconds || 0,
       video_timestamp_ms: stat.video_timestamp_ms,
       is_clip_eligible: isClipEligible(stat.stat_type, stat.modifier),
+      is_opponent_stat: stat.is_opponent_stat ?? false,
     }));
   } catch (err) {
     console.error('❌ Exception in getStatsForQCReview:', err);

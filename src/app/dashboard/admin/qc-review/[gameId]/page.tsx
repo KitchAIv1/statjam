@@ -78,6 +78,9 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
   // Clip validation state
   const [clipValidation, setClipValidation] = useState<ClipValidationResult | null>(null);
 
+  // Team filter for clips: 'all' | 'my_team' | 'opponent'
+  const [teamFilter, setTeamFilter] = useState<'all' | 'my_team' | 'opponent'>('all');
+
   // Load data
   useEffect(() => {
     async function loadData() {
@@ -337,8 +340,17 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Clip count
-  const clipEligibleCount = stats.filter(s => s.is_clip_eligible).length;
+  // Filter stats by team
+  const filteredStats = stats.filter(stat => {
+    if (teamFilter === 'all') return true;
+    if (teamFilter === 'my_team') return !stat.is_opponent_stat;
+    if (teamFilter === 'opponent') return stat.is_opponent_stat;
+    return true;
+  });
+
+  // Clip count (from filtered stats)
+  const clipEligibleCount = filteredStats.filter(s => s.is_clip_eligible).length;
+  const totalClipEligibleCount = stats.filter(s => s.is_clip_eligible).length;
 
   // Auth check
   if (authLoading) {
@@ -432,10 +444,46 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
               </span>
             )}
 
+            {/* Team Filter */}
+            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setTeamFilter('all')}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                  teamFilter === 'all'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                All ({totalClipEligibleCount})
+              </button>
+              <button
+                onClick={() => setTeamFilter('my_team')}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                  teamFilter === 'my_team'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {game?.team_a_name || 'My Team'}
+              </button>
+              <button
+                onClick={() => setTeamFilter('opponent')}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                  teamFilter === 'opponent'
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {game?.opponent_name || game?.team_b_name || 'Opponent'}
+              </button>
+            </div>
+
             {/* Clip Count */}
             <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 rounded-full">
               <Film className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-green-700">{clipEligibleCount} clips</span>
+              <span className="text-sm font-medium text-green-700">
+                {clipEligibleCount}{teamFilter !== 'all' ? ` / ${totalClipEligibleCount}` : ''} clips
+              </span>
             </div>
 
             {/* Submit / Approve Buttons */}
@@ -555,7 +603,7 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
         {/* Stats Timeline */}
         <div className="w-[400px] flex-shrink-0 border-l border-gray-200">
           <QCReviewTimeline
-            stats={stats}
+            stats={filteredStats}
             onSeekToTime={handleSeekToTime}
             onStatSelect={setSelectedStatId}
             onEditStat={handleEditStat}
