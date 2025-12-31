@@ -48,11 +48,20 @@ const STAT_CONFIG: Record<string, { label: string; shortLabel: string; icon: Rea
  */
 export function ClipGrid({ clips, players = [], playerName }: ClipGridProps) {
   const [filter, setFilter] = useState<StatTypeFilter>('all');
+  const [playerFilter, setPlayerFilter] = useState<string>('all');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showPlayerMenu, setShowPlayerMenu] = useState(false);
   const [activeClip, setActiveClip] = useState<GeneratedClip | null>(null);
 
   // Create player lookup map
   const playerMap = new Map(players.map(p => [p.id, p]));
+
+  // Get players who have clips (for filter dropdown)
+  const playersWithClips = players.filter(player => 
+    clips.some(clip => 
+      (clip.custom_player_id === player.id) || (clip.player_id === player.id)
+    )
+  );
 
   // Get player name for a clip
   const getPlayerName = (clip: GeneratedClip): string | null => {
@@ -70,10 +79,17 @@ export function ClipGrid({ clips, players = [], playerName }: ClipGridProps) {
     return player?.jersey_number ?? null;
   };
 
-  // Filter clips - stat_type is stored directly (e.g., 'three_pointer', 'field_goal')
-  const filteredClips = filter === 'all'
-    ? clips
-    : clips.filter(c => c.stat_type === filter);
+  // Filter clips by stat type and player
+  const filteredClips = clips.filter(clip => {
+    // Stat type filter
+    const passesStatFilter = filter === 'all' || clip.stat_type === filter;
+    
+    // Player filter
+    const clipPlayerId = clip.custom_player_id || clip.player_id;
+    const passesPlayerFilter = playerFilter === 'all' || clipPlayerId === playerFilter;
+    
+    return passesStatFilter && passesPlayerFilter;
+  });
 
   // Stat type labels for filter
   const statTypeLabels: Record<StatTypeFilter, string> = {
@@ -143,47 +159,128 @@ export function ClipGrid({ clips, players = [], playerName }: ClipGridProps) {
             <h3 className="font-semibold text-gray-900">
               {playerName ? `${playerName}'s Clips` : 'Game Clips'}
             </h3>
-            <p className="text-sm text-gray-500">{clips.length} total clips</p>
+            <p className="text-sm text-gray-500">
+              {filteredClips.length === clips.length 
+                ? `${clips.length} total clips` 
+                : `${filteredClips.length} of ${clips.length} clips`}
+            </p>
           </div>
         </div>
 
-        {/* Filter Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setShowFilterMenu(!showFilterMenu)}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Filter className="w-4 h-4 text-gray-500" />
-            <span>{statTypeLabels[filter]}</span>
-            <ChevronDown className="w-4 h-4 text-gray-400" />
-          </button>
+        {/* Filters */}
+        <div className="flex items-center gap-2">
+          {/* Player Filter Dropdown */}
+          {playersWithClips.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowPlayerMenu(!showPlayerMenu);
+                  setShowFilterMenu(false);
+                }}
+                className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors ${
+                  playerFilter !== 'all' ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-gray-200'
+                }`}
+              >
+                <span className="truncate max-w-[120px]">
+                  {playerFilter === 'all' 
+                    ? 'All Players' 
+                    : playerMap.get(playerFilter)?.name || 'Player'}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+              </button>
 
-          {showFilterMenu && (
-            <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-              {(Object.keys(statTypeLabels) as StatTypeFilter[]).map((key) => {
-                const count = key === 'all' ? clips.length : (statCounts[key] || 0);
-                if (key !== 'all' && count === 0) return null;
-                
-                return (
+              {showPlayerMenu && (
+                <div className="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
                   <button
-                    key={key}
                     onClick={() => {
-                      setFilter(key);
-                      setShowFilterMenu(false);
+                      setPlayerFilter('all');
+                      setShowPlayerMenu(false);
                     }}
                     className={`
                       w-full px-3 py-2 text-left text-sm flex items-center justify-between
-                      hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg
-                      ${filter === key ? 'bg-orange-50 text-orange-600' : 'text-gray-700'}
+                      hover:bg-gray-50 rounded-t-lg
+                      ${playerFilter === 'all' ? 'bg-purple-50 text-purple-600' : 'text-gray-700'}
                     `}
                   >
-                    <span>{statTypeLabels[key]}</span>
-                    <span className="text-xs text-gray-400">{count}</span>
+                    <span>All Players</span>
+                    <span className="text-xs text-gray-400">{clips.length}</span>
                   </button>
-                );
-              })}
+                  {playersWithClips.map((player) => {
+                    const playerClipCount = clips.filter(c => 
+                      c.custom_player_id === player.id || c.player_id === player.id
+                    ).length;
+                    
+                    return (
+                      <button
+                        key={player.id}
+                        onClick={() => {
+                          setPlayerFilter(player.id);
+                          setShowPlayerMenu(false);
+                        }}
+                        className={`
+                          w-full px-3 py-2 text-left text-sm flex items-center justify-between
+                          hover:bg-gray-50 last:rounded-b-lg
+                          ${playerFilter === player.id ? 'bg-purple-50 text-purple-600' : 'text-gray-700'}
+                        `}
+                      >
+                        <span className="flex items-center gap-2">
+                          {player.jersey_number && (
+                            <span className="text-xs text-gray-400">#{player.jersey_number}</span>
+                          )}
+                          <span className="truncate">{player.name}</span>
+                        </span>
+                        <span className="text-xs text-gray-400">{playerClipCount}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
+
+          {/* Stat Type Filter Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowFilterMenu(!showFilterMenu);
+                setShowPlayerMenu(false);
+              }}
+              className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors ${
+                filter !== 'all' ? 'border-orange-300 bg-orange-50 text-orange-700' : 'border-gray-200'
+              }`}
+            >
+              <Filter className="w-4 h-4 text-gray-500" />
+              <span>{statTypeLabels[filter]}</span>
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            </button>
+
+            {showFilterMenu && (
+              <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                {(Object.keys(statTypeLabels) as StatTypeFilter[]).map((key) => {
+                  const count = key === 'all' ? clips.length : (statCounts[key] || 0);
+                  if (key !== 'all' && count === 0) return null;
+                  
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        setFilter(key);
+                        setShowFilterMenu(false);
+                      }}
+                      className={`
+                        w-full px-3 py-2 text-left text-sm flex items-center justify-between
+                        hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg
+                        ${filter === key ? 'bg-orange-50 text-orange-600' : 'text-gray-700'}
+                      `}
+                    >
+                      <span>{statTypeLabels[key]}</span>
+                      <span className="text-xs text-gray-400">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
