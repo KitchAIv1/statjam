@@ -64,6 +64,12 @@ interface CommandCenterTabPanelProps {
     error: string | null;
     analytics: any;
   };
+  clipsPrefetch?: {
+    loading: boolean;
+    error: string | null;
+    clips: any[];
+    players: any[];
+  };
 }
 
 export function CommandCenterTabPanel({
@@ -74,6 +80,7 @@ export function CommandCenterTabPanel({
   teamBPrefetch,
   gameAwardsPrefetch,
   analyticsPrefetch,
+  clipsPrefetch,
 }: CommandCenterTabPanelProps) {
   // Subscription check for analytics gate
   const { limits } = useSubscription('coach');
@@ -258,7 +265,14 @@ export function CommandCenterTabPanel({
 
         {/* Clips Tab */}
         <TabsContent value="clips" className="mt-0 h-full bg-gradient-to-br from-orange-50/30 via-white to-red-50/20">
-          <ClipsTab gameId={gameId} teamId={game.teamAId} />
+          <ClipsTab 
+            gameId={gameId} 
+            teamId={game.teamAId} 
+            prefetchedData={clipsPrefetch && !clipsPrefetch.loading && !clipsPrefetch.error ? {
+              clips: clipsPrefetch.clips,
+              players: clipsPrefetch.players
+            } : undefined}
+          />
         </TabsContent>
 
         {/* Team Stats Tab */}

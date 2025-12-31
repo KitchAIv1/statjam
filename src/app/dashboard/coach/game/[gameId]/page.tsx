@@ -18,6 +18,7 @@ import { useGameViewerV2 } from '@/hooks/useGameViewerV2';
 import { useTeamStats } from '@/hooks/useTeamStats';
 import { useGameAwards } from '@/hooks/useGameAwards';
 import { useGameAnalytics } from '@/hooks/useGameAnalytics';
+import { useClips } from '@/hooks/useClips';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { TeamService } from '@/lib/services/tournamentService';
 import { CommandCenterHeader } from './components/CommandCenterHeader';
@@ -88,6 +89,12 @@ export default function CoachCommandCenter({ params }: CoachCommandCenterProps) 
   const analyticsPrefetch = useGameAnalytics(gameId, game?.team_a_id || '', {
     prefetch: true,
     enabled: isCompleted && !!game?.team_a_id
+  });
+
+  // Prefetch clips for instant tab switching
+  const clipsPrefetch = useClips(gameId, game?.team_a_id || '', {
+    prefetch: true,
+    enabled: !!game?.team_a_id
   });
 
   // Auth check - must be coach
@@ -213,6 +220,7 @@ export default function CoachCommandCenter({ params }: CoachCommandCenterProps) 
             teamBPrefetch={teamBPrefetch}
             gameAwardsPrefetch={gameAwardsPrefetch}
             analyticsPrefetch={analyticsPrefetch}
+            clipsPrefetch={clipsPrefetch}
           />
         </main>
       </div>

@@ -24,19 +24,32 @@ interface Player {
 interface ClipsTabProps {
   gameId: string;
   teamId: string;
+  prefetchedData?: {
+    clips: GeneratedClip[];
+    players: Player[];
+  };
 }
 
 /**
  * ClipsTab Component
  * Displays game clips with player filtering
+ * Supports prefetched data for instant tab switching
  */
-export function ClipsTab({ gameId, teamId }: ClipsTabProps) {
-  const [clips, setClips] = useState<GeneratedClip[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [loading, setLoading] = useState(true);
+export function ClipsTab({ gameId, teamId, prefetchedData }: ClipsTabProps) {
+  const [clips, setClips] = useState<GeneratedClip[]>(prefetchedData?.clips || []);
+  const [players, setPlayers] = useState<Player[]>(prefetchedData?.players || []);
+  const [loading, setLoading] = useState(!prefetchedData);
 
-  // Load clips and players
+  // Load clips and players (skip if prefetched)
   useEffect(() => {
+    // Skip fetch if we have prefetched data
+    if (prefetchedData) {
+      setClips(prefetchedData.clips);
+      setPlayers(prefetchedData.players);
+      setLoading(false);
+      return;
+    }
+
     async function loadData() {
       setLoading(true);
       try {
@@ -61,7 +74,7 @@ export function ClipsTab({ gameId, teamId }: ClipsTabProps) {
     }
 
     loadData();
-  }, [gameId, teamId]);
+  }, [gameId, teamId, prefetchedData]);
 
   // Loading state
   if (loading) {
