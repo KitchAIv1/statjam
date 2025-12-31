@@ -587,6 +587,7 @@ export class TeamStatsService {
 
       if (substitutions.length === 0) {
         // No substitutions - calculate from current game clock
+        // ✅ v1.2.0: Check stats to determine who played (not array index)
         console.log('📝 TeamStatsService: No substitutions found, calculating from game clock');
         
         const { quarter, clockMinutes, clockSeconds } = currentGameState;
@@ -598,9 +599,25 @@ export class TeamStatsService {
         
         console.log(`📊 TeamStatsService: Q${quarter}, clock ${clockMinutes}:${clockSeconds.toString().padStart(2, '0')}, elapsed: ${minutesElapsed.toFixed(1)} min`);
         
-        playerIds.forEach((playerId, index) => {
-          // First 5 are starters, bench has 0 minutes without subs
-          const minutes = index < 5 ? Math.round(minutesElapsed) : 0;
+        // Fetch stats to determine who actually played
+        let playersWithStats = new Set<string>();
+        try {
+          const gameStats = await this.makeRequest<any>('game_stats', {
+            'select': 'player_id,custom_player_id',
+            'game_id': `eq.${gameId}`,
+            'team_id': `eq.${teamId}`
+          });
+          for (const stat of gameStats) {
+            const pid = stat.player_id || stat.custom_player_id;
+            if (pid) playersWithStats.add(pid);
+          }
+        } catch (e) {
+          console.warn('⚠️ Could not fetch game stats for no-sub minutes calculation');
+        }
+        
+        playerIds.forEach((playerId) => {
+          // Only players who have stats = actually played
+          const minutes = playersWithStats.has(playerId) ? Math.round(minutesElapsed) : 0;
           playerMinutes.set(playerId, minutes);
         });
         
@@ -658,16 +675,15 @@ export class TeamStatsService {
         }
       }
       
-      // ✅ FIX: Use forEach to access index for array position check (matches plus/minus logic)
-      playerIds.forEach((playerId, index) => {
+      // ✅ v1.2.0 FIX: Only use stats to determine if player played (not array index)
+      playerIds.forEach((playerId) => {
         if (!playersInSubs.has(playerId)) {
-          // Never appeared in substitutions - check if they have stats OR are in first 5 (starter position)
-          // This aligns with plus/minus calculation (line 703) which uses index < 5 for starters
-          if (playersWithStats.has(playerId) || index < 5) {
-            // Has stats OR is in first 5 positions = starter (played full game)
+          // Never appeared in substitutions - only count as starter if they have stats
+          if (playersWithStats.has(playerId)) {
+            // Has stats but no subs = starter who played full game
             inferredStarters.add(playerId);
           }
-          // Only true DNP = no subs + no stats + NOT in first 5 positions
+          // No subs + no stats = DNP (0 minutes)
         }
       });
       
@@ -724,7 +740,9 @@ export class TeamStatsService {
           totalSeconds += stintSeconds;
         }
 
-        const totalMinutes = Math.round(totalSeconds / 60);
+        // ✅ v1.2.0: Ensure players who played show at least 1 minute (not 0 due to rounding)
+        // DNP players (0 seconds) still show 0 minutes
+        const totalMinutes = totalSeconds > 0 ? Math.max(1, Math.round(totalSeconds / 60)) : 0;
         playerMinutes.set(playerId, totalMinutes);
       }
 
@@ -843,16 +861,70 @@ export class TeamStatsService {
       console.log(`📊 Plus/Minus: Team ${teamId.substring(0, 8)} vs Opponent ${opponentTeamId?.substring(0, 8) || 'N/A'} (Coach Mode: ${isCoachGame})`);
 
       // ✅ Step 6: Build player on-court timeline with quarter-aware seconds
-      const playerTimeline = new Map<string, Array<{ start: number; end: number | null }>>();
+      // ✅ v1.2.0 (Dec 30, 2025): Fixed starter detection & duplicate sub handling
       
-      // Initialize all players (assume first 5 are starters at game start = 0 seconds)
-      playerIds.forEach((playerId, index) => {
-        const isStarter = index < 5;
-        playerTimeline.set(playerId, isStarter ? [{ start: 0, end: null }] : []);
+      // Sort substitutions by game time (not created_at) to handle retroactive entries
+      const sortedSubs = [...substitutions].sort((a: any, b: any) => {
+        const aTime = this.convertGameTimeToSecondsWithLength(
+          a.quarter, a.game_time_minutes, a.game_time_seconds, quarterLengthSeconds
+        );
+        const bTime = this.convertGameTimeToSecondsWithLength(
+          b.quarter, b.game_time_minutes, b.game_time_seconds, quarterLengthSeconds
+        );
+        return aTime - bTime;
       });
 
-      // Process substitutions to build timeline
-      substitutions.forEach((sub: any) => {
+      // ✅ FIX 1: Detect actual starters from substitution data
+      // Starters = players whose FIRST sub action is OUT (they were on court from the start)
+      const starterIds = new Set<string>();
+      const playerFirstAction = new Map<string, 'in' | 'out'>();
+      
+      sortedSubs.forEach((sub: any) => {
+        const playerInId = sub.player_in_id || sub.custom_player_in_id;
+        const playerOutId = sub.player_out_id || sub.custom_player_out_id;
+        
+        // First action is OUT = starter (was on court from beginning)
+        if (playerOutId && playerIds.includes(playerOutId) && !playerFirstAction.has(playerOutId)) {
+          playerFirstAction.set(playerOutId, 'out');
+          starterIds.add(playerOutId);
+        }
+        // First action is IN = bench player (came off bench)
+        if (playerInId && playerIds.includes(playerInId) && !playerFirstAction.has(playerInId)) {
+          playerFirstAction.set(playerInId, 'in');
+        }
+      });
+
+      // Players with NO subs who scored = starters who played full game
+      // Players with NO subs and NO scoring = DNP (Did Not Play)
+      playerIds.forEach(playerId => {
+        if (!playerFirstAction.has(playerId)) {
+          const playerScored = allScoringStats.some(
+            (stat: any) => stat.player_id === playerId || stat.custom_player_id === playerId
+          );
+          if (playerScored) {
+            starterIds.add(playerId); // Scored but no subs = played full game as starter
+          }
+          // Else: DNP - don't add to starters
+        }
+      });
+
+      console.log(`📊 Plus/Minus: Detected ${starterIds.size} starters from sub data`);
+
+      // ✅ FIX 2: Initialize timeline based on actual starters (not array index)
+      const playerTimeline = new Map<string, Array<{ start: number; end: number | null }>>();
+      const currentlyOnCourt = new Set<string>(); // Track actual on-court state
+      
+      playerIds.forEach(playerId => {
+        if (starterIds.has(playerId)) {
+          playerTimeline.set(playerId, [{ start: 0, end: null }]);
+          currentlyOnCourt.add(playerId);
+        } else {
+          playerTimeline.set(playerId, []);
+        }
+      });
+
+      // ✅ FIX 3: Process substitutions with state validation (prevent duplicates)
+      sortedSubs.forEach((sub: any) => {
         const subTime = this.convertGameTimeToSecondsWithLength(
           sub.quarter, sub.game_time_minutes, sub.game_time_seconds, quarterLengthSeconds
         );
@@ -861,23 +933,21 @@ export class TeamStatsService {
         const playerInId = sub.player_in_id || sub.custom_player_in_id;
         const playerOutId = sub.player_out_id || sub.custom_player_out_id;
         
-        // Player coming in
-        if (playerInId && playerIds.includes(playerInId)) {
-          const timeline = playerTimeline.get(playerInId) || [];
-          timeline.push({ start: subTime, end: null });
-          playerTimeline.set(playerInId, timeline);
+        // Player going out - only if they're actually on court (prevents duplicate OUTs)
+        if (playerOutId && playerIds.includes(playerOutId) && currentlyOnCourt.has(playerOutId)) {
+          const timeline = playerTimeline.get(playerOutId)!;
+          const lastStint = timeline[timeline.length - 1];
+          if (lastStint && lastStint.end === null) {
+            lastStint.end = subTime;
+          }
+          currentlyOnCourt.delete(playerOutId);
         }
         
-        // Player going out
-        if (playerOutId && playerIds.includes(playerOutId)) {
-          const timeline = playerTimeline.get(playerOutId) || [];
-          if (timeline.length > 0) {
-            const lastStint = timeline[timeline.length - 1];
-            if (lastStint.end === null) {
-              lastStint.end = subTime;
-            }
-          }
-          playerTimeline.set(playerOutId, timeline);
+        // Player coming in - only if they're NOT already on court (prevents duplicate INs)
+        if (playerInId && playerIds.includes(playerInId) && !currentlyOnCourt.has(playerInId)) {
+          const timeline = playerTimeline.get(playerInId)!;
+          timeline.push({ start: subTime, end: null });
+          currentlyOnCourt.add(playerInId);
         }
       });
 
