@@ -25,6 +25,7 @@ export interface ClipGenerationJob {
   approved_by: string | null;
   created_at: string;
   updated_at: string;
+  team_filter?: 'all' | 'my_team' | 'opponent';
 }
 
 export interface GeneratedClip {
@@ -269,16 +270,27 @@ export async function getClipJob(gameId: string): Promise<ClipGenerationJob | nu
   }
 }
 
+// Team filter type for clip generation
+export type TeamFilter = 'all' | 'my_team' | 'opponent';
+
 /**
  * Create a new clip generation job (submit for QC)
  */
 export async function createClipJob(
   gameId: string,
-  videoId: string
+  videoId: string,
+  teamFilter: TeamFilter = 'all'
 ): Promise<ClipGenerationJob | null> {
   try {
-    // Count clip-eligible stats
-    const clipCount = await countClipEligibleStats(gameId);
+    // Count clip-eligible stats (filtered)
+    const allStats = await getStatsForQCReview(gameId);
+    const filteredStats = allStats.filter(stat => {
+      if (teamFilter === 'all') return true;
+      if (teamFilter === 'my_team') return !stat.is_opponent_stat;
+      if (teamFilter === 'opponent') return stat.is_opponent_stat;
+      return true;
+    });
+    const clipCount = filteredStats.filter(s => s.is_clip_eligible).length;
 
     const { data, error } = await supabase
       .from('clip_generation_jobs')
@@ -287,6 +299,7 @@ export async function createClipJob(
         video_id: videoId,
         status: 'pending',
         total_clips: clipCount,
+        team_filter: teamFilter,
       })
       .select()
       .single();
@@ -313,15 +326,23 @@ export async function createClipJob(
  */
 export async function approveClipJob(
   jobId: string,
-  approvedBy: string
+  approvedBy: string,
+  teamFilter?: TeamFilter
 ): Promise<boolean> {
+  const updateData: Record<string, unknown> = {
+    status: 'approved',
+    approved_at: new Date().toISOString(),
+    approved_by: approvedBy,
+  };
+
+  // Update team filter if provided (allows changing filter at approval time)
+  if (teamFilter) {
+    updateData.team_filter = teamFilter;
+  }
+
   const { error } = await supabase
     .from('clip_generation_jobs')
-    .update({
-      status: 'approved',
-      approved_at: new Date().toISOString(),
-      approved_by: approvedBy,
-    })
+    .update(updateData)
     .eq('id', jobId);
 
   if (error) {

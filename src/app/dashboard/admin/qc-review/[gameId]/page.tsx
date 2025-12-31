@@ -16,6 +16,7 @@ import {
   ClipEligibleStat,
   ClipGenerationJob,
   ClipValidationResult,
+  TeamFilter,
 } from '@/lib/services/clipService';
 import { ClipValidationBanner } from '@/components/clips/ClipValidationBanner';
 import { QCReviewTimeline } from '@/components/clips/QCReviewTimeline';
@@ -79,7 +80,7 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
   const [clipValidation, setClipValidation] = useState<ClipValidationResult | null>(null);
 
   // Team filter for clips: 'all' | 'my_team' | 'opponent'
-  const [teamFilter, setTeamFilter] = useState<'all' | 'my_team' | 'opponent'>('all');
+  const [teamFilter, setTeamFilter] = useState<TeamFilter>('all');
 
   // Load data
   useEffect(() => {
@@ -277,7 +278,8 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
         return;
       }
 
-      const newJob = await createClipJob(gameId, videoData.id);
+      // Pass team filter to create job with correct clip count
+      const newJob = await createClipJob(gameId, videoData.id, teamFilter);
       if (newJob) {
         setJob(newJob);
       }
@@ -295,7 +297,8 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
 
     try {
       setIsApproving(true);
-      const success = await approveClipJob(job.id, user.id);
+      // Pass team filter at approval time (allows changing filter before approval)
+      const success = await approveClipJob(job.id, user.id, teamFilter);
       if (success) {
         // Refresh job status
         const updatedJob = await getClipJob(gameId);

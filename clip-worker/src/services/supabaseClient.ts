@@ -39,6 +39,7 @@ export interface ClipGenerationJob {
   started_at: string | null;
   completed_at: string | null;
   error_message: string | null;
+  team_filter?: 'all' | 'my_team' | 'opponent';
 }
 
 export interface GameVideo {
@@ -150,10 +151,18 @@ export async function getVideo(videoId: string): Promise<GameVideo | null> {
   return data;
 }
 
+// Team filter type (matches frontend)
+export type TeamFilter = 'all' | 'my_team' | 'opponent';
+
 /**
  * Get clip-eligible stats for a game
+ * @param gameId - The game ID
+ * @param teamFilter - Filter by team: 'all', 'my_team', or 'opponent'
  */
-export async function getClipEligibleStats(gameId: string): Promise<ClipEligibleStat[]> {
+export async function getClipEligibleStats(
+  gameId: string,
+  teamFilter: TeamFilter = 'all'
+): Promise<ClipEligibleStat[]> {
   // Get all stats with video timestamps that are clip-eligible
   const { data, error } = await supabase
     .from('game_stats')
@@ -169,7 +178,8 @@ export async function getClipEligibleStats(gameId: string): Promise<ClipEligible
       quarter,
       game_time_minutes,
       game_time_seconds,
-      video_timestamp_ms
+      video_timestamp_ms,
+      is_opponent_stat
     `)
     .eq('game_id', gameId)
     .not('video_timestamp_ms', 'is', null)
@@ -180,8 +190,20 @@ export async function getClipEligibleStats(gameId: string): Promise<ClipEligible
     return [];
   }
 
-  // Filter to clip-eligible stats only
-  return (data || []).filter((stat) => isClipEligible(stat.stat_type, stat.modifier));
+  // Filter by team first
+  let filteredData = data || [];
+  if (teamFilter === 'my_team') {
+    filteredData = filteredData.filter((stat) => !stat.is_opponent_stat);
+    logger.info(`📊 Team filter: my_team - filtered from ${data?.length || 0} to ${filteredData.length} stats`);
+  } else if (teamFilter === 'opponent') {
+    filteredData = filteredData.filter((stat) => stat.is_opponent_stat === true);
+    logger.info(`📊 Team filter: opponent - filtered from ${data?.length || 0} to ${filteredData.length} stats`);
+  } else {
+    logger.info(`📊 Team filter: all - using all ${filteredData.length} stats`);
+  }
+
+  // Then filter to clip-eligible stats only
+  return filteredData.filter((stat) => isClipEligible(stat.stat_type, stat.modifier));
 }
 
 /**

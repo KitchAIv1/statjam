@@ -73,9 +73,11 @@ export async function processClipJob(jobId: string): Promise<void> {
   });
 
   try {
-    // 4. Get clip-eligible stats
-    const stats = await getClipEligibleStats(job.game_id);
-    logger.info(`📊 Found ${stats.length} clip-eligible stats`);
+    // 4. Get clip-eligible stats (filtered by team if specified)
+    const teamFilter = job.team_filter || 'all';
+    logger.info(`🎯 Using team filter: ${teamFilter}`);
+    const stats = await getClipEligibleStats(job.game_id, teamFilter);
+    logger.info(`📊 Found ${stats.length} clip-eligible stats (filter: ${teamFilter})`);
 
     if (stats.length === 0) {
       await updateJobStatus(jobId, {
