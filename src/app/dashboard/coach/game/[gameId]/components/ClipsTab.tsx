@@ -2,18 +2,18 @@
  * ClipsTab - Game Highlights Tab for Coach Game Viewer
  * 
  * PURPOSE: Display generated video clips for a game.
- * Shows ClipGrid with filters, or upsell message if no clips available.
+ * PURE COMPONENT - receives all data via props, no internal fetching.
+ * Parent component (page.tsx) handles data fetching via useClips hook.
  * 
  * @module ClipsTab
  */
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Film, Loader2, Sparkles } from 'lucide-react';
 import { ClipGrid } from '@/components/clips/ClipGrid';
-import { getGameClips, GeneratedClip } from '@/lib/services/clipService';
-import { CoachPlayerService } from '@/lib/services/coachPlayerService';
+import { GeneratedClip } from '@/lib/services/clipService';
 
 interface Player {
   id: string;
@@ -22,60 +22,17 @@ interface Player {
 }
 
 interface ClipsTabProps {
-  gameId: string;
-  teamId: string;
-  prefetchedData?: {
-    clips: GeneratedClip[];
-    players: Player[];
-  };
+  clips: GeneratedClip[];
+  players: Player[];
+  loading: boolean;
 }
 
 /**
- * ClipsTab Component
+ * ClipsTab Component (Pure)
  * Displays game clips with player filtering
- * Supports prefetched data for instant tab switching
+ * All data passed via props - no internal state or fetching
  */
-export function ClipsTab({ gameId, teamId, prefetchedData }: ClipsTabProps) {
-  const [clips, setClips] = useState<GeneratedClip[]>(prefetchedData?.clips || []);
-  const [players, setPlayers] = useState<Player[]>(prefetchedData?.players || []);
-  const [loading, setLoading] = useState(!prefetchedData);
-
-  // Load clips and players (skip if prefetched)
-  useEffect(() => {
-    // Skip fetch if we have prefetched data
-    if (prefetchedData) {
-      setClips(prefetchedData.clips);
-      setPlayers(prefetchedData.players);
-      setLoading(false);
-      return;
-    }
-
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [gameClips, teamPlayers] = await Promise.all([
-          getGameClips(gameId),
-          CoachPlayerService.getCoachTeamPlayers(teamId),
-        ]);
-
-        setClips(gameClips);
-        setPlayers(
-          teamPlayers.map((p) => ({
-            id: p.id,
-            name: p.name,
-            jersey_number: p.jersey_number,
-          }))
-        );
-      } catch (error) {
-        console.error('Error loading clips:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, [gameId, teamId, prefetchedData]);
-
+export function ClipsTab({ clips, players, loading }: ClipsTabProps) {
   // Loading state
   if (loading) {
     return (
@@ -114,4 +71,3 @@ export function ClipsTab({ gameId, teamId, prefetchedData }: ClipsTabProps) {
     </div>
   );
 }
-

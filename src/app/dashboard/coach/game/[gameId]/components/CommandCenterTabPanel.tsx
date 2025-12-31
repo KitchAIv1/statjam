@@ -263,15 +263,12 @@ export function CommandCenterTabPanel({
           </TabsContent>
         )}
 
-        {/* Clips Tab */}
+        {/* Clips Tab - Pure component, all data from parent */}
         <TabsContent value="clips" className="mt-0 h-full bg-gradient-to-br from-orange-50/30 via-white to-red-50/20">
           <ClipsTab 
-            gameId={gameId} 
-            teamId={game.teamAId} 
-            prefetchedData={clipsPrefetch && !clipsPrefetch.loading && !clipsPrefetch.error ? {
-              clips: clipsPrefetch.clips,
-              players: clipsPrefetch.players
-            } : undefined}
+            clips={clipsPrefetch?.clips || []}
+            players={clipsPrefetch?.players || []}
+            loading={clipsPrefetch?.loading ?? true}
           />
         </TabsContent>
 
