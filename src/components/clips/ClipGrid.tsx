@@ -190,7 +190,7 @@ export function ClipGrid({ clips, players = [], playerName }: ClipGridProps) {
               </button>
 
               {showPlayerMenu && (
-                <div className="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
+                <div className="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
                   <button
                     onClick={() => {
                       setPlayerFilter('all');
@@ -255,7 +255,7 @@ export function ClipGrid({ clips, players = [], playerName }: ClipGridProps) {
             </button>
 
             {showFilterMenu && (
-              <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+              <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
                 {(Object.keys(statTypeLabels) as StatTypeFilter[]).map((key) => {
                   const count = key === 'all' ? clips.length : (statCounts[key] || 0);
                   if (key !== 'all' && count === 0) return null;

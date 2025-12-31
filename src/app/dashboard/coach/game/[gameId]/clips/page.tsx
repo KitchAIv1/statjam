@@ -12,8 +12,6 @@ import {
   AlertCircle,
   ArrowLeft,
   Film,
-  Users,
-  ChevronDown,
 } from 'lucide-react';
 
 interface CoachClipsPageProps {
@@ -29,6 +27,7 @@ interface Player {
 /**
  * Coach Clip Viewer
  * Allows coaches to view all generated clips for their games (FREE access)
+ * Player and stat filtering is handled by ClipGrid component
  */
 export default function CoachClipsPage({ params }: CoachClipsPageProps) {
   const { gameId } = use(params);
@@ -40,8 +39,6 @@ export default function CoachClipsPage({ params }: CoachClipsPageProps) {
   const [game, setGame] = useState<any>(null);
   const [clips, setClips] = useState<GeneratedClip[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [showPlayerMenu, setShowPlayerMenu] = useState(false);
 
   // Load data
   useEffect(() => {
@@ -85,22 +82,6 @@ export default function CoachClipsPage({ params }: CoachClipsPageProps) {
       loadData();
     }
   }, [gameId, user, authLoading]);
-
-  // Filter clips by player
-  const filteredClips = selectedPlayerId
-    ? clips.filter(c => c.player_id === selectedPlayerId || c.custom_player_id === selectedPlayerId)
-    : clips;
-
-  // Get selected player name
-  const selectedPlayer = selectedPlayerId
-    ? players.find(p => p.id === selectedPlayerId)
-    : null;
-
-  // Get clip counts per player
-  const playerClipCounts = players.map(player => ({
-    ...player,
-    clipCount: clips.filter(c => c.player_id === player.id || c.custom_player_id === player.id).length,
-  }));
 
   // Auth check
   if (authLoading) {
@@ -188,82 +169,7 @@ export default function CoachClipsPage({ params }: CoachClipsPageProps) {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-6">
-        {/* Player Filter */}
-        {players.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center gap-4 mb-4">
-              <Users className="w-5 h-5 text-gray-400" />
-              <span className="text-sm font-medium text-gray-700">Filter by Player:</span>
-              
-              <div className="relative">
-                <button
-                  onClick={() => setShowPlayerMenu(!showPlayerMenu)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <span>
-                    {selectedPlayer
-                      ? `#${selectedPlayer.jersey_number || '-'} ${selectedPlayer.name}`
-                      : 'All Players'
-                    }
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                </button>
-
-                {showPlayerMenu && (
-                  <div className="absolute left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
-                    <button
-                      onClick={() => {
-                        setSelectedPlayerId(null);
-                        setShowPlayerMenu(false);
-                      }}
-                      className={`
-                        w-full px-4 py-2 text-left text-sm flex items-center justify-between
-                        hover:bg-gray-50 rounded-t-lg
-                        ${!selectedPlayerId ? 'bg-orange-50 text-orange-600' : 'text-gray-700'}
-                      `}
-                    >
-                      <span>All Players</span>
-                      <span className="text-xs text-gray-400">{clips.length}</span>
-                    </button>
-                    
-                    {playerClipCounts
-                      .filter(p => p.clipCount > 0)
-                      .sort((a, b) => b.clipCount - a.clipCount)
-                      .map((player) => (
-                        <button
-                          key={player.id}
-                          onClick={() => {
-                            setSelectedPlayerId(player.id);
-                            setShowPlayerMenu(false);
-                          }}
-                          className={`
-                            w-full px-4 py-2 text-left text-sm flex items-center justify-between
-                            hover:bg-gray-50 last:rounded-b-lg
-                            ${selectedPlayerId === player.id ? 'bg-orange-50 text-orange-600' : 'text-gray-700'}
-                          `}
-                        >
-                          <span>#{player.jersey_number || '-'} {player.name}</span>
-                          <span className="text-xs text-gray-400">{player.clipCount}</span>
-                        </button>
-                      ))
-                    }
-                  </div>
-                )}
-              </div>
-
-              {selectedPlayerId && (
-                <button
-                  onClick={() => setSelectedPlayerId(null)}
-                  className="text-sm text-orange-600 hover:text-orange-700"
-                >
-                  Clear filter
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Clips Grid */}
+        {/* Clips Grid - ClipGrid handles player & stat filtering */}
         {clips.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
             <Film className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -273,14 +179,9 @@ export default function CoachClipsPage({ params }: CoachClipsPageProps) {
             </p>
           </div>
         ) : (
-          <ClipGrid
-            clips={filteredClips}
-            players={players}
-            playerName={selectedPlayer?.name}
-          />
+          <ClipGrid clips={clips} players={players} />
         )}
       </main>
     </div>
   );
 }
-
