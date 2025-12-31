@@ -24,6 +24,7 @@ import { TeamService } from '@/lib/services/tournamentService';
 import { CommandCenterHeader } from '@/app/dashboard/coach/game/[gameId]/components/CommandCenterHeader';
 import { CompactPlayByPlayFeed } from '@/app/dashboard/coach/game/[gameId]/components/CompactPlayByPlayFeed';
 import { CommandCenterTabPanel } from '@/app/dashboard/coach/game/[gameId]/components/CommandCenterTabPanel';
+import { GameViewerSkeleton } from '@/app/dashboard/coach/game/[gameId]/components/GameViewerSkeleton';
 import { Loader2, AlertCircle, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -119,16 +120,9 @@ export default function StatAdminGameViewer({ params }: StatAdminGameViewerProps
     );
   }
 
-  // Loading state
+  // Loading state - show skeleton instead of spinner
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-white to-red-50/30 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-500">Loading game data...</p>
-        </div>
-      </div>
-    );
+    return <GameViewerSkeleton />;
   }
 
   // Error state

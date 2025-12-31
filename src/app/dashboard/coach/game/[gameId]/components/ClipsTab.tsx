@@ -2,18 +2,18 @@
  * ClipsTab - Game Highlights Tab for Coach Game Viewer
  * 
  * PURPOSE: Display generated video clips for a game.
- * PURE COMPONENT - receives all data via props, no internal fetching.
- * Parent component (page.tsx) handles data fetching via useClips hook.
+ * Shows ClipGrid with filters, or upsell message if no clips available.
  * 
  * @module ClipsTab
  */
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Film, Loader2, Sparkles } from 'lucide-react';
 import { ClipGrid } from '@/components/clips/ClipGrid';
-import { GeneratedClip } from '@/lib/services/clipService';
+import { getGameClips, GeneratedClip } from '@/lib/services/clipService';
+import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 
 interface Player {
   id: string;
@@ -22,17 +22,47 @@ interface Player {
 }
 
 interface ClipsTabProps {
-  clips: GeneratedClip[];
-  players: Player[];
-  loading: boolean;
+  gameId: string;
+  teamId: string;
 }
 
 /**
- * ClipsTab Component (Pure)
+ * ClipsTab Component
  * Displays game clips with player filtering
- * All data passed via props - no internal state or fetching
  */
-export function ClipsTab({ clips, players, loading }: ClipsTabProps) {
+export function ClipsTab({ gameId, teamId }: ClipsTabProps) {
+  const [clips, setClips] = useState<GeneratedClip[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load clips and players
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [gameClips, teamPlayers] = await Promise.all([
+          getGameClips(gameId),
+          CoachPlayerService.getCoachTeamPlayers(teamId),
+        ]);
+
+        setClips(gameClips);
+        setPlayers(
+          teamPlayers.map((p) => ({
+            id: p.id,
+            name: p.name,
+            jersey_number: p.jersey_number,
+          }))
+        );
+      } catch (error) {
+        console.error('Error loading clips:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [gameId, teamId]);
+
   // Loading state
   if (loading) {
     return (
