@@ -80,6 +80,11 @@ export class GameService {
         return false;
       }
 
+      // Clear game cache so next fetch gets fresh data
+      const cacheKey = CacheKeys.gameBasic(gameId);
+      cache.delete(cacheKey);
+      logger.debug('🗑️ Game cache cleared for:', gameId);
+
       logger.debug('✅ Game status updated successfully');
       return true;
     } catch (error) {

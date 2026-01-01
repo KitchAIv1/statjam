@@ -57,6 +57,8 @@ import { TeamService } from '@/lib/services/tournamentService';
 import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { GameAwardsService } from '@/lib/services/gameAwardsService';
+import { StatAdminDashboardService } from '@/lib/services/statAdminDashboardService';
+import { updateAssignmentStatus } from '@/lib/services/videoAssignmentService';
 
 interface VideoStatTrackerPageProps {
   params: Promise<{ gameId: string }>;
@@ -331,13 +333,17 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     const isExpired = gameClock.minutesRemaining === 0 && gameClock.secondsRemaining === 0;
     const currentQuarter = gameClock.quarter;
     
-    // Show prompt only once per quarter (not repeatedly)
-    if (isExpired && currentQuarter !== lastPromptedQuarter) {
+    // Check if this is a game-ending situation (Q4 expired, not tied)
+    // If so, don't show quarter prompt - the awards modal will handle it
+    const isGameEnd = currentQuarter === 4 && teamAScore !== teamBScore;
+    
+    // Show prompt only once per quarter (not repeatedly), skip if game should end
+    if (isExpired && currentQuarter !== lastPromptedQuarter && !isGameEnd) {
       console.log(`⏰ Quarter ${currentQuarter} expired - showing advance prompt`);
       setShowQuarterPrompt(true);
       setLastPromptedQuarter(currentQuarter);
     }
-  }, [gameClock, isCalibrated, lastPromptedQuarter]);
+  }, [gameClock, isCalibrated, lastPromptedQuarter, teamAScore, teamBScore]);
   
   // Detect game end (Q4 expired, not tied) - show awards modal
   useEffect(() => {
@@ -426,23 +432,45 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
         isHustlePlayerCustom: awards.isHustlePlayerCustom
       });
       
-      // Update game status to completed
-      await GameService.updateGameStatus(gameId, 'completed');
+      // Update game status to completed (also clears game cache)
+      const gameStatusUpdated = await GameService.updateGameStatus(gameId, 'completed');
+      console.log('🎯 Game status update result:', gameStatusUpdated ? 'SUCCESS' : 'FAILED');
+      
+      // Update video assignment status to completed (for Admin pipeline)
+      if (gameVideo?.id) {
+        try {
+          await updateAssignmentStatus(gameVideo.id, 'completed');
+          console.log('✅ Video assignment status updated to completed, videoId:', gameVideo.id);
+        } catch (err) {
+          console.error('❌ Failed to update video assignment status:', err);
+        }
+      } else {
+        console.warn('⚠️ gameVideo.id not available - video assignment status NOT updated');
+      }
+      
+      // Clear stat admin dashboard cache so they see the update immediately
+      if (user?.id) {
+        StatAdminDashboardService.clearCache(user.id);
+        console.log('🗑️ Cleared stat admin dashboard cache for user:', user.id);
+      } else {
+        console.warn('⚠️ user.id not available - stat admin cache NOT cleared');
+      }
       
       // Close modal
       setShowAwardsModal(false);
       
-      // Refresh game data
+      // Refresh game data (force fresh fetch, cache was cleared)
       const updatedGame = await GameService.getGame(gameId);
       if (updatedGame) {
         setGameData(updatedGame);
+        console.log('🔄 Game data refreshed, status:', updatedGame.status);
       }
       
       console.log('✅ Game completed with awards saved');
     } catch (error) {
       console.error('❌ Error completing game with awards:', error);
     }
-  }, [gameId, gameData]);
+  }, [gameId, gameData, user?.id, gameVideo?.id]);
 
   // Handle manual clock edit
   const handleClockEdit = useCallback(async (

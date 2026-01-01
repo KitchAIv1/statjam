@@ -225,18 +225,64 @@ function isClipEligible(statType: string, modifier: string | null): boolean {
 }
 
 /**
+ * Get stat-specific clip timing windows
+ * Returns {before, after} in seconds for context-aware clip durations
+ */
+function getClipTimingWindow(statType: string, modifier: string | null): { before: number; after: number } {
+  // Assists need to capture the pass AND the made shot
+  if (statType === 'assist') {
+    return { before: 2, after: 4 };
+  }
+  
+  // Rebounds need to capture the missed shot attempt
+  if (statType === 'rebound') {
+    // Offensive rebounds may lead to put-back, defensive just secures
+    return { before: 4, after: 2 };
+  }
+  
+  // Steals often lead to fast breaks
+  if (statType === 'steal') {
+    return { before: 2, after: 4 };
+  }
+  
+  // Blocks need to show the shot attempt and recovery
+  if (statType === 'block') {
+    return { before: 2, after: 3 };
+  }
+  
+  // Made shots - need to see setup/pass before
+  if (statType === 'field_goal' && modifier === 'made') {
+    return { before: 3, after: 2 };
+  }
+  if (statType === 'three_pointer' && modifier === 'made') {
+    return { before: 3, after: 2 };
+  }
+  
+  // Free throws - less context needed
+  if (statType === 'free_throw') {
+    return { before: 1, after: 2 };
+  }
+  
+  // Default fallback
+  return { before: 2, after: 2 };
+}
+
+/**
  * Create pending clips for a job
  */
 export async function createPendingClips(
   jobId: string,
   gameId: string,
   stats: ClipEligibleStat[],
-  clipWindowSeconds: number = 2
+  clipWindowSeconds: number = 2 // Kept for backwards compatibility, now unused
 ): Promise<string[]> {
   const clips = stats.map((stat) => {
     const timestampSeconds = stat.video_timestamp_ms / 1000;
-    const startTime = Math.max(0, timestampSeconds - clipWindowSeconds);
-    const endTime = timestampSeconds + clipWindowSeconds;
+    
+    // Use stat-specific timing windows for better context
+    const timing = getClipTimingWindow(stat.stat_type, stat.modifier);
+    const startTime = Math.max(0, timestampSeconds - timing.before);
+    const endTime = timestampSeconds + timing.after;
 
     return {
       job_id: jobId,

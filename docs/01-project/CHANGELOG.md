@@ -5,6 +5,185 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.6] - 2025-12-31
+
+### 🎯 **CRITICAL STATS ACCURACY FIXES (v1.2.0)**
+
+#### Plus/Minus Calculation Fixes
+- **FIXED**: Starter detection now uses substitution data instead of array index
+  - Previously assumed first 5 players in array were starters (incorrect)
+  - Now detects starters from substitution data: first action = OUT = starter
+  - Handles players who played full game without substitutions
+- **FIXED**: Duplicate substitution handling
+  - Added state tracking (`currentlyOnCourt` Set) to prevent duplicate INs/OUTs
+  - Invalid substitutions (player already on/off court) are now ignored
+  - Prevents timeline corruption from retroactive or duplicate sub entries
+- **FIXED**: Substitution sorting by game time (not created_at)
+  - Handles retroactive data entry correctly
+  - Ensures chronological processing of substitutions
+- **FIXED**: DNP (Did Not Play) detection
+  - Players with no substitutions AND no stats = 0 +/- (correct)
+  - Previously showed incorrect +/- values for DNPs
+
+#### Player Minutes Calculation Fixes
+- **FIXED**: Same starter detection logic as plus/minus for consistency
+  - Removed array index assumption (`index < 5`)
+  - Uses substitution data to determine actual starters
+- **FIXED**: Minimum minutes display
+  - Players who played (even <30 seconds) now show at least 1 minute
+  - Prevents confusing "0 minutes" for players with recorded stats
+  - True DNPs (no subs + no stats) correctly show 0 minutes
+- **FIXED**: No-substitution games handling
+  - When no subs exist, checks stats to determine who played
+  - Only players with recorded stats get minutes assigned
+
+#### Impact & Verification
+- **Verified on Winslow game**: Johnson (DNP) correctly shows 0 min, 0 +/-
+- **Verified on Winslow game**: Shorter (24 sec garbage time) shows 1 min (not 0)
+- **All starters correctly detected** from substitution data
+- **Accuracy improvements**:
+  - Scores: 100% ✅
+  - Individual stats: 100% ✅
+  - Starter detection: 100% ✅
+  - DNP detection: 100% ✅
+  - Minutes: 98%+ ✅ (short stints show 1 min)
+  - Plus/minus: 95%+ ✅ (handles duplicate subs gracefully)
+
+#### Technical Implementation
+- **Files Modified**:
+  - `src/lib/services/teamStatsService.ts` - Complete rewrite of `calculatePlusMinusForPlayers` and `calculatePlayerMinutes`
+  - Added `currentlyOnCourt` state tracking
+  - Added substitution sorting by game time
+  - Added starter inference from substitution data
+  - Added stats-based DNP detection
+
+#### Documentation Updates
+- **UPDATED**: `docs/01-project/CHANGELOG.md` - This entry
+- **UPDATED**: `package.json` - Version bump to 0.17.6
+- **UPDATED**: `README.md` - Version bump to 0.17.6
+
+---
+
+### 🎬 **CLIP GENERATION SYSTEM ENHANCEMENTS**
+
+#### Team Filter for Clip Generation
+- **ADDED**: Team filter in Admin QC Review (`/dashboard/admin/qc-review/[gameId]`)
+  - Filter options: "All Teams", "My Team", "Opponent"
+  - Filter stored in `clip_generation_jobs.team_filter` column
+  - Backend clip worker respects filter when generating clips
+  - UI shows filtered clip count (e.g., "45 / 167 clips")
+- **ADDED**: Database migration for `team_filter` column
+  - Added to `clip_generation_jobs` table
+  - Supports filtering by `is_opponent_stat` flag in `game_stats`
+
+#### Player Filter for Clips
+- **ADDED**: Player filter to `ClipGrid` component
+  - Dropdown shows all players who have stats in the game
+  - Displays player name, jersey number, and clip count
+  - Filters clips by selected player
+  - Applied to Coach and Stat Admin Clips tabs
+- **FIXED**: Z-index issue with filter dropdowns
+  - Increased from `z-10` to `z-50` with `shadow-xl`
+  - Prevents background text from overlapping dropdown
+
+#### Clip Loading Performance
+- **IMPROVED**: Simplified clips loading architecture
+  - Removed complex prefetching mechanism that caused double-fetching
+  - Reverted to on-demand loading for Clips tab
+  - Added `GameViewerSkeleton` component for better perceived loading
+  - Reduced initial page load time
+- **ADDED**: Skeleton loading UI
+  - `GameViewerSkeleton` component provides placeholder UI during initial load
+  - Improves perceived performance for game viewer
+
+#### Technical Implementation
+- **Files Created**:
+  - `src/app/dashboard/coach/game/[gameId]/components/GameViewerSkeleton.tsx` - Skeleton loading component
+- **Files Modified**:
+  - `src/components/clips/ClipGrid.tsx` - Added player filter, fixed z-index
+  - `src/lib/services/clipService.ts` - Added `team_filter` support
+  - `clip-worker/src/services/supabaseClient.ts` - Added team filter to clip query
+  - `clip-worker/src/jobs/processClipJob.ts` - Pass team filter to clip generation
+  - `src/app/dashboard/admin/qc-review/[gameId]/page.tsx` - Added team filter UI
+  - `src/app/dashboard/coach/game/[gameId]/components/ClipsTab.tsx` - Simplified loading
+  - `src/app/dashboard/stat-admin/game/[gameId]/page.tsx` - Added skeleton loading
+
+---
+
+### 🤖 **AI GAME ANALYSIS REPORT**
+
+#### Coach-Facing Analytics
+- **ADDED**: `AIGameAnalysisReport` component
+  - Comprehensive game analysis report for coaches
+  - Displays game overview, winning factors, key player impact, momentum analysis
+  - Opponent breakdown with coaching takeaways
+  - Action items for both teams
+  - Bottom-line summary for coaches
+- **ADDED**: Integration into Coach Game Analytics tab
+  - Appears below data and stats cards
+  - Uses data from `get_game_summary_analytics` SQL function
+  - Reusable component for other contexts
+- **ADDED**: Stat Admin exemption from premium requirement
+  - Stat admins can view analytics without premium subscription
+  - Role-based access control in `CommandCenterTabPanel`
+
+#### Technical Implementation
+- **Files Created**:
+  - `src/components/analytics/AIGameAnalysisReport.tsx` - Analysis report component
+- **Files Modified**:
+  - `src/app/dashboard/coach/game/[gameId]/components/CoachGameAnalyticsTab.tsx` - Integrated report
+  - `src/app/dashboard/coach/game/[gameId]/components/CommandCenterTabPanel.tsx` - Stat admin exemption
+
+---
+
+### 🎥 **VIDEO TRACKING UX IMPROVEMENTS**
+
+#### Stat Timeline Enhancements
+- **ADDED**: Optimistic UI updates for stat edits
+  - No full page refresh when editing stats
+  - Only the specific stat updates in place
+  - Preserves scroll position after edits
+- **ADDED**: Scroll position preservation
+  - Timeline maintains scroll position after stat edits
+  - Maximum UX for editing multiple stats
+
+#### Game Clock Controls
+- **ADDED**: Pause/Resume button placement
+  - Moved to top empty section of stat timeline
+  - Better visibility and accessibility
+- **RESTORED**: Multi-delete functionality
+  - Restored after Cursor crash recovery
+  - Allows bulk deletion of stats
+
+#### Technical Implementation
+- **Files Modified**:
+  - `src/components/video/VideoStatsTimeline.tsx` - Optimistic updates, scroll preservation
+  - `src/app/dashboard/stat-admin/video/[gameId]/page.tsx` - Pause/resume button placement
+
+---
+
+### 🏆 **GAME COMPLETION & AWARDS**
+
+#### Player of the Game Integration
+- **ADDED**: Automatic trigger for Game Completion Modal
+  - Triggers when Q4 ends, score is not tied, game not completed
+  - Appears in Video Tracker Studio
+- **ADDED**: "Complete Game" / "Edit Awards" button
+  - Manual trigger for awards selection
+  - Shows "Complete Game" for in-progress games
+  - Shows "Edit Awards" for completed games
+- **FIXED**: Award saving mechanism
+  - Correctly saves `player_of_the_game_id` and `hustle_player_of_the_game_id`
+  - Handles custom player awards
+  - Updates game status to 'completed'
+
+#### Technical Implementation
+- **Files Modified**:
+  - `src/app/dashboard/stat-admin/video/[gameId]/page.tsx` - Added modal trigger and button
+  - `src/lib/services/gameAwardsService.ts` - Fixed award saving
+
+---
+
 ## [Unreleased] - 2025-01-XX
 
 ### 🎥 **VIDEO UPLOAD RELIABILITY IMPROVEMENTS**

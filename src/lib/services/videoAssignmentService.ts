@@ -30,6 +30,8 @@ export interface VideoQueueItem {
   country: string | null;
   hoursRemaining: number | null;
   assignedAdminName: string | null;
+  gameStatus: string | null; // Actual game status (scheduled/in_progress/completed)
+  assignedAt: string | null; // When video was assigned to stat admin
 }
 
 export interface StatAdminOption {
@@ -83,6 +85,7 @@ export async function getVideoQueue(
     
     // Simple query that works before and after migration
     // Sorted by created_at descending (latest first)
+    // Include game status for accurate display across dashboards
     const { data, error } = await db
       .from('game_videos')
       .select(`
@@ -92,7 +95,8 @@ export async function getVideoQueue(
           team_a_id,
           opponent_name,
           start_time,
-          stat_admin_id
+          stat_admin_id,
+          status
         )
       `)
       .eq('status', 'ready')
@@ -145,6 +149,8 @@ export async function getVideoQueue(
         country: uploader?.country || null,
         hoursRemaining,
         assignedAdminName: null, // Will be populated after migration
+        gameStatus: item.games?.status || null, // Actual game status for accurate display
+        assignedAt: item.assigned_at || null,
       };
     });
 
@@ -272,8 +278,7 @@ export async function getAssignedVideos(
   try {
     const db = getSupabase();
     
-    // Simplified query that works before migration
-    // Sorted by created_at descending (latest first)
+    // Fetch assigned videos with game data
     const { data, error } = await db
       .from('game_videos')
       .select(`
@@ -282,35 +287,59 @@ export async function getAssignedVideos(
           id,
           team_a_id,
           opponent_name,
-          start_time
+          start_time,
+          status
         )
       `)
       .eq('status', 'ready')
-      .order('created_at', { ascending: false });
+      .eq('assigned_stat_admin_id', statAdminId)
+      .order('assigned_at', { ascending: false });
 
     if (error) throw error;
 
-    // Filter by assigned_stat_admin_id (may not exist before migration)
-    const assignedVideos = (data || []).filter(item => 
-      item.assigned_stat_admin_id === statAdminId
-    );
+    if (!data || data.length === 0) {
+      return [];
+    }
 
-    return assignedVideos.map((item) => {
+    // Fetch team names for all assigned videos
+    const teamIds = [...new Set(data.map(v => v.games?.team_a_id).filter(Boolean))];
+    const { data: teams } = await db
+      .from('teams')
+      .select('id, name')
+      .in('id', teamIds.length > 0 ? teamIds : ['none']);
+    
+    const teamMap = new Map((teams || []).map(t => [t.id, t.name]));
+
+    // Fetch coach names (uploaders)
+    const uploaderIds = [...new Set(data.map(v => v.uploaded_by).filter(Boolean))];
+    const { data: uploaders } = await db
+      .from('users')
+      .select('id, name, email, country')
+      .in('id', uploaderIds.length > 0 ? uploaderIds : ['none']);
+    
+    const uploaderMap = new Map((uploaders || []).map(u => [u.id, u]));
+
+    return data.map((item) => {
       const dueAt = item.due_at ? new Date(item.due_at) : null;
       const hoursRemaining = dueAt 
         ? Math.max(0, (dueAt.getTime() - Date.now()) / (1000 * 60 * 60))
         : null;
 
+      const uploader = uploaderMap.get(item.uploaded_by);
+      const teamName = teamMap.get(item.games?.team_a_id);
+
       return {
         video: transformGameVideo(item),
-        coachName: 'Unknown Coach',
-        coachEmail: '',
-        teamName: 'Unknown Team',
+        coachName: uploader?.name || uploader?.email?.split('@')[0] || 'Unknown Coach',
+        coachEmail: uploader?.email || '',
+        teamName: teamName || 'Unknown Team',
         opponentName: item.games?.opponent_name || 'Unknown Opponent',
         gameDate: item.games?.start_time || null,
-        country: null,
+        country: uploader?.country || null,
         hoursRemaining,
         assignedAdminName: null,
+        gameStatus: item.games?.status || null,
+        assignedAt: item.assigned_at || null,
       };
     });
   } catch (error) {

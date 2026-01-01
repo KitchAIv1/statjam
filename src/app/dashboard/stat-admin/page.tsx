@@ -18,6 +18,8 @@ import { ProfileEditModal } from '@/components/profile/ProfileEditModal';
 import { useStatAdminProfile } from '@/hooks/useStatAdminProfile';
 import { ProfileService } from '@/lib/services/profileService';
 import { AssignedVideosSection } from '@/components/stat-admin/AssignedVideosSection';
+import { DashboardCoreCards } from '@/components/stat-admin/DashboardCoreCards';
+import { getAssignedVideos, VideoQueueItem } from '@/lib/services/videoAssignmentService';
 
 const StatAdminDashboard = () => {
   const { user, loading } = useAuthContext(); // ✅ NO API CALL - Uses context
@@ -37,6 +39,16 @@ const StatAdminDashboard = () => {
   // ⚡ Profile data
   const { profileData, loading: profileLoading, updateProfile } = useStatAdminProfile(user?.id || '');
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // 🎬 Video tracking stats
+  const [videoStats, setVideoStats] = useState({
+    total: 0,
+    assigned: 0,
+    inProgress: 0,
+    completed: 0,
+    overdue: 0
+  });
+  const [videosLoading, setVideosLoading] = useState(true);
   
   // Handle profile share
   const handleShare = async () => {
@@ -110,6 +122,43 @@ const StatAdminDashboard = () => {
     } else {
       // Set loading to false if conditions aren't met to prevent infinite loading
       setGamesLoading(false);
+    }
+  }, [user, userRole]);
+
+  // Load video tracking stats
+  useEffect(() => {
+    const loadVideoStats = async () => {
+      if (!user || userRole !== 'stat_admin') {
+        setVideosLoading(false);
+        return;
+      }
+      
+      try {
+        setVideosLoading(true);
+        const videos = await getAssignedVideos(user.id);
+        
+        // Calculate stats from videos
+        const now = Date.now();
+        const stats = {
+          total: videos.length,
+          assigned: videos.filter((v: VideoQueueItem) => v.video.assignmentStatus === 'assigned').length,
+          inProgress: videos.filter((v: VideoQueueItem) => v.video.assignmentStatus === 'in_progress').length,
+          completed: videos.filter((v: VideoQueueItem) => v.video.assignmentStatus === 'completed').length,
+          overdue: videos.filter((v: VideoQueueItem) => {
+            if (!v.hoursRemaining) return false;
+            return v.hoursRemaining <= 0 && v.video.assignmentStatus !== 'completed';
+          }).length
+        };
+        setVideoStats(stats);
+      } catch (error) {
+        console.error('❌ Error loading video stats:', error);
+      } finally {
+        setVideosLoading(false);
+      }
+    };
+
+    if (user && userRole === 'stat_admin') {
+      loadVideoStats();
     }
   }, [user, userRole]);
 
@@ -348,132 +397,22 @@ const StatAdminDashboard = () => {
       <ErrorBoundary>
         <main className="pt-24 px-6 pb-6">
           <div className="max-w-7xl mx-auto space-y-6">
-            {/* Profile Card */}
-            {profileLoading ? (
-              <ProfileCardSkeleton />
-            ) : profileData ? (
-              <ProfileCard
-                profileData={profileData}
-                shareData={ProfileService.generateShareData(profileData)}
-                onEdit={() => setShowEditModal(true)}
-                onShare={handleShare}
-              />
-            ) : null}
-
-            {/* Modern Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
-                <div className="bg-gradient-to-br from-primary to-primary/80 relative">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
-                    <CardTitle className="text-sm font-medium text-white/90">Games Assigned</CardTitle>
-                    <div className="relative">
-                      <Trophy className="h-5 w-5 text-white" />
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse"></div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="text-white">
-                    <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">
-                        {gamesLoading ? (
-                          <div className="w-12 h-9 bg-white/20 rounded animate-pulse"></div>
-                        ) : (
-                          totalGames
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
-                        <TrendingUp className="w-3 h-3" />
-                        Active
-                      </div>
-                    </div>
-                    <p className="text-xs text-white/80 mt-1">Total assigned games</p>
-                  </CardContent>
-                </div>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 relative">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
-                    <CardTitle className="text-sm font-medium text-white/90">Completed Games</CardTitle>
-                    <div className="relative">
-                      <Target className="h-5 w-5 text-white" />
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse"></div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="text-white">
-                    <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">
-                        {gamesLoading ? (
-                          <div className="w-12 h-9 bg-white/20 rounded animate-pulse"></div>
-                        ) : (
-                          completedGames
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
-                        <TrendingUp className="w-3 h-3" />
-                        Done
-                      </div>
-                    </div>
-                    <p className="text-xs text-white/80 mt-1">Successfully tracked</p>
-                  </CardContent>
-                </div>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
-                <div className="bg-gradient-to-br from-orange-500 to-orange-600 relative">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
-                    <CardTitle className="text-sm font-medium text-white/90">Pending Games</CardTitle>
-                    <div className="relative">
-                      <Calendar className="h-5 w-5 text-white" />
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse"></div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="text-white">
-                    <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">
-                        {gamesLoading ? (
-                          <div className="w-12 h-9 bg-white/20 rounded animate-pulse"></div>
-                        ) : (
-                          pendingGames
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
-                        <Clock className="w-3 h-3" />
-                        Waiting
-                      </div>
-                    </div>
-                    <p className="text-xs text-white/80 mt-1">Upcoming assignments</p>
-                  </CardContent>
-                </div>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden">
-                <div className="bg-gradient-to-br from-red-500 to-red-600 relative">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 text-white">
-                    <CardTitle className="text-sm font-medium text-white/90">Completion Rate</CardTitle>
-                    <div className="relative">
-                      <TrendingUp className="h-5 w-5 text-white" />
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/30 rounded-full animate-pulse"></div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="text-white">
-                    <div className="flex items-end justify-between">
-                      <div className="text-3xl font-bold">
-                        {gamesLoading ? (
-                          <div className="w-16 h-9 bg-white/20 rounded animate-pulse"></div>
-                        ) : (
-                          `${completionRate}%`
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
-                        <TrendingUp className="w-3 h-3" />
-                        Rate
-                      </div>
-                    </div>
-                    <p className="text-xs text-white/80 mt-1">Games completed</p>
-                  </CardContent>
-                </div>
-              </Card>
-            </div>
+            {/* 3-Card Core Stats - Profile | Games | Videos */}
+            <DashboardCoreCards
+              profileData={profileData}
+              profileLoading={profileLoading}
+              gameStats={{
+                total: totalGames ?? 0,
+                completed: completedGames ?? 0,
+                pending: pendingGames ?? 0,
+                completionRate: completionRate ?? 0
+              }}
+              gamesLoading={gamesLoading}
+              videoStats={videoStats}
+              videosLoading={videosLoading}
+              onEditProfile={() => setShowEditModal(true)}
+              onShareProfile={handleShare}
+            />
 
             {/* Quick Access - Automation Guide */}
             <div className="mb-8">

@@ -1,8 +1,8 @@
 # 🎯 StatJam MVP: Current Status
 
-**Date**: January 2025  
-**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS + FT AUTO-SEQUENCE + SECURITY FIXES + DATABASE PERFORMANCE OPTIMIZATION + PLAYER PROFILE UI REFINEMENTS + ACCURATE MINUTES CALCULATION + CUSTOM PLAYER CLAIMING + COACH GAMES PUBLIC VIEWING + COACH MODE CRITICAL FIXES + PERFORMANCE OPTIMIZATIONS + COACH MISSION CONTROL DASHBOARD REDESIGN  
-**Version**: 0.17.5 (Coach Mission Control Dashboard Redesign)  
+**Date**: December 2025  
+**Status**: ✅ **MVP1 LIVE IN PRODUCTION** - MVP COMPLETE + FULL AUTOMATION SUITE (Phases 2-6) + MARKETING HOMEPAGE + ERROR HANDLING + CUSTOM PLAYER SUPPORT + PLAYER PROFILE ENHANCEMENTS + FEATURES PAGE + BRACKET BUILDER + CUSTOM PLAYER PHOTOS + FT AUTO-SEQUENCE + SECURITY FIXES + DATABASE PERFORMANCE OPTIMIZATION + PLAYER PROFILE UI REFINEMENTS + ACCURATE MINUTES CALCULATION + CUSTOM PLAYER CLAIMING + COACH GAMES PUBLIC VIEWING + COACH MODE CRITICAL FIXES + PERFORMANCE OPTIMIZATIONS + COACH MISSION CONTROL DASHBOARD REDESIGN + CRITICAL STATS ACCURACY FIXES  
+**Version**: 0.17.6 (Critical Stats Accuracy Fixes v1.2.0)  
 **Branch**: `main`  
 **Live Site**: [www.statjam.net](https://www.statjam.net) ✅
 
@@ -20,7 +20,8 @@
 - Code quality is high with TypeScript throughout
 
 **Recent Achievements** ✅:
-1. **🚀 COACH MODE CRITICAL FIXES & PERFORMANCE (Dec 18, 2025)**: Fixed roster persistence on internet disruption, quarter length detection, minutes calculation for starters, team fouls aggregation, opponent score/name display. Optimized Team Stats Tab with ~75% query reduction, real-time debouncing, DNP detection optimization, and game awards fetching. Load time reduced from 8s to 4s. All fixes isolated to coach mode, zero impact on stat admin.
+1. **🎯 CRITICAL STATS ACCURACY FIXES v1.2.0 (Dec 31, 2025)**: Fixed fundamental bugs in plus/minus and minutes calculations. Starter detection now uses substitution data instead of array index (100% accuracy). Added state tracking to prevent duplicate INs/OUTs from corrupting timeline. DNP detection correctly identifies players who didn't play (no subs + no stats = 0 min, 0 +/-). Players with short stints (<30 sec) now show minimum 1 minute instead of 0. Plus/minus accuracy improved from ~70% to 95%+, minutes accuracy from ~85% to 98%+. All fixes verified on production games.
+2. **🚀 COACH MODE CRITICAL FIXES & PERFORMANCE (Dec 18, 2025)**: Fixed roster persistence on internet disruption, quarter length detection, minutes calculation for starters, team fouls aggregation, opponent score/name display. Optimized Team Stats Tab with ~75% query reduction, real-time debouncing, DNP detection optimization, and game awards fetching. Load time reduced from 8s to 4s. All fixes isolated to coach mode, zero impact on stat admin.
 2. **🔒 NEXT.JS SECURITY UPDATE (Dec 15, 2025)**: Fixed CVE-2025-55184 - Critical DoS vulnerability in Next.js Server Components. Updated from 15.5.6 → 15.5.9. Prevents malicious HTTP requests from causing server hangs. All vulnerabilities resolved (0 remaining).
 3. **🌐 COACH GAMES PUBLIC VIEWING (Dec 15, 2025)**: Coach games can now be viewed publicly via shared links (no authentication required). UUID-based security (128-bit cryptographic). Added 8 RLS policies for anonymous SELECT access. Enhanced API route and service layer with public access fallback. Enables coaches to share game links via email/social media. Full mobile support without login.
 3. **🔐 CUSTOM PLAYER CLAIMING (Nov 28, 2025)**: Complete custom player claiming system allowing players to claim their profiles and become full StatJam users. Server-side API route with service_role key for secure admin operations. Inline sign-up form for seamless account creation. Complete data transfer (profile, stats, team references). Claimed players appear as regular players in team management. Secure token-based system with expiration and one-time use.

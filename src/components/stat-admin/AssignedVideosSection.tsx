@@ -22,18 +22,24 @@ import {
   AlertTriangle, 
   RefreshCw,
   CheckCircle,
-  MapPin
+  MapPin,
+  Calendar,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 interface AssignedVideosSectionProps {
   userId: string;
 }
 
+const VIDEOS_PER_PAGE = 5;
+
 export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
   const router = useRouter();
   const [videos, setVideos] = useState<VideoQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const loadVideos = useCallback(async () => {
     if (!userId) return;
@@ -79,7 +85,7 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
     
     if (hours <= 0) {
       return (
-        <span className="flex items-center gap-1 text-red-400">
+        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">
           <AlertTriangle className="w-3 h-3" />
           Overdue
         </span>
@@ -88,7 +94,7 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
     
     if (hours < 6) {
       return (
-        <span className="flex items-center gap-1 text-amber-400">
+        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
           <Clock className="w-3 h-3" />
           {hours.toFixed(1)}h left
         </span>
@@ -96,7 +102,7 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
     }
     
     return (
-      <span className="flex items-center gap-1 text-green-400">
+      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
         <Clock className="w-3 h-3" />
         {hours.toFixed(1)}h left
       </span>
@@ -106,7 +112,7 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
   const getStatusBadge = (status: string) => {
     if (status === 'completed') {
       return (
-        <span className="px-2 py-1 text-xs font-medium rounded bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-600 text-white shadow-sm flex items-center gap-1">
           <CheckCircle className="w-3 h-3" />
           Completed
         </span>
@@ -114,13 +120,13 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
     }
     if (status === 'in_progress') {
       return (
-        <span className="px-2 py-1 text-xs font-medium rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-600 text-white shadow-sm">
           In Progress
         </span>
       );
     }
     return (
-      <span className="px-2 py-1 text-xs font-medium rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white shadow-sm">
         Assigned
       </span>
     );
@@ -132,13 +138,13 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Video className="w-5 h-5 text-purple-500" />
-            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-48" />
+            <div className="h-6 bg-gray-200 rounded w-48" />
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {[1, 2].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div key={i} className="h-24 bg-gray-200 rounded" />
             ))}
           </div>
         </CardContent>
@@ -150,22 +156,37 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
     return null; // Don't show section if no videos assigned
   }
 
+  // Pagination logic
+  const displayedVideos = showAll ? videos : videos.slice(0, VIDEOS_PER_PAGE);
+  const hasMore = videos.length > VIDEOS_PER_PAGE;
+
+  const formatAssignedDate = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
   return (
-    <Card className="border-2 border-purple-500/30 hover:shadow-lg transition-all">
-      <CardHeader className="bg-gradient-to-r from-purple-500/10 to-transparent">
+    <Card className="border-2 border-orange-500/30 hover:shadow-lg transition-all">
+      <CardHeader className="bg-gradient-to-r from-orange-500/10 to-transparent">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Video className="w-5 h-5 text-purple-500" />
+            <Video className="w-5 h-5 text-orange-500" />
             <CardTitle>Assigned Videos</CardTitle>
-            <span className="text-xs px-2 py-1 bg-purple-500 text-white rounded-full font-medium">
+            <span className="text-xs px-2 py-1 bg-orange-500 text-white rounded-full font-medium">
               {videos.length}
             </span>
           </div>
           <button
             onClick={loadVideos}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-orange-100 rounded-lg transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4 text-orange-600" />
           </button>
         </div>
         <CardDescription>
@@ -175,32 +196,38 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
       
       <CardContent className="space-y-4 pt-4">
         {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-600 text-sm">
             {error}
           </div>
         )}
         
         <div className="grid gap-4">
-          {videos.map((item) => (
+          {displayedVideos.map((item) => (
             <div 
               key={item.video.id}
-              className="p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 
-                         rounded-lg hover:border-purple-500/50 transition-all"
+              className="p-4 bg-white border-2 border-orange-200 
+                         rounded-xl hover:border-orange-400 hover:shadow-lg transition-all"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     {getStatusBadge(item.video.assignmentStatus)}
                     {getTimeRemainingDisplay(item.hoursRemaining)}
+                    {item.assignedAt && (
+                      <span className="flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
+                        <Calendar className="w-3 h-3" />
+                        Assigned {formatAssignedDate(item.assignedAt)}
+                      </span>
+                    )}
                   </div>
                   
-                  <h4 className="font-semibold text-gray-900 dark:text-white truncate">
+                  <h4 className="font-bold text-gray-900 text-lg">
                     {item.teamName} vs {item.opponentName}
                   </h4>
                   
-                  <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span>Coach: {item.coachName}</span>
+                  <div className="mt-2 text-sm text-gray-600 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">Coach: {item.coachName}</span>
                       {item.country && (
                         <>
                           <span>•</span>
@@ -212,7 +239,7 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
                       )}
                     </div>
                     {item.video.durationSeconds && (
-                      <div>
+                      <div className="text-gray-500">
                         Duration: {Math.floor(item.video.durationSeconds / 60)} minutes
                       </div>
                     )}
@@ -224,7 +251,7 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex-shrink-0 ${
                     item.video.assignmentStatus === 'completed'
                       ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
-                      : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white'
+                      : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
                   }`}
                 >
                   {item.video.assignmentStatus === 'completed' ? (
@@ -248,8 +275,29 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
             </div>
           ))}
         </div>
+
+        {/* Show More/Less Button */}
+        {hasMore && (
+          <button
+            onClick={() => setShowAll(!showAll)}
+            className="w-full py-3 text-sm font-medium text-orange-600 hover:text-orange-700 
+                       bg-orange-50 hover:bg-orange-100
+                       rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            {showAll ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                Show Less
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Show All ({videos.length} videos)
+              </>
+            )}
+          </button>
+        )}
       </CardContent>
     </Card>
   );
 }
-

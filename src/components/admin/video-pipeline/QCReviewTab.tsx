@@ -64,12 +64,21 @@ export function QCReviewTab({ qcReadyGames }: QCReviewTabProps) {
                       <User className="w-3 h-3" />
                       {item.assignedAdminName || 'Unassigned'}
                     </span>
+                    {/* Game Status - actual completion state */}
+                    <span className={`px-2 py-0.5 rounded text-xs ${
+                      item.gameStatus === 'completed'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-orange-100 text-orange-700'
+                    }`}>
+                      {item.gameStatus === 'completed' ? 'Game Complete' : 'Game In Progress'}
+                    </span>
+                    {/* Pipeline Status - tracking/clips status */}
                     <span className={`px-2 py-0.5 rounded text-xs ${
                       item.video.assignmentStatus === 'completed'
-                        ? 'bg-green-100 text-green-700'
+                        ? 'bg-blue-100 text-blue-700'
                         : 'bg-purple-100 text-purple-700'
                     }`}>
-                      {item.video.assignmentStatus === 'completed' ? 'Tracking Complete' : 'In Progress'}
+                      {item.video.assignmentStatus === 'completed' ? 'Clips Ready' : 'Tracking'}
                     </span>
                   </div>
                 </div>
