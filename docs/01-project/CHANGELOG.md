@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.7] - 2025-01-01
+
+### 🎨 **STAT ADMIN DASHBOARD REDESIGN**
+
+#### 3-Card Core Layout
+- **ADDED**: New `DashboardCoreCards` component with 3 standalone cards
+  - Profile Card: Avatar, name, role badge, location, bio preview, edit/share buttons
+  - Game Stats Card: Total assigned, completed, pending, completion rate (2x2 grid)
+  - Video Tracking Card: Status breakdown (assigned, in progress, completed, overdue)
+- **ADDED**: Responsive grid layout (`grid-cols-1 md:grid-cols-3`)
+- **ADDED**: Skeleton loading states for each card
+- **ADDED**: Gradient top bars for visual hierarchy (orange, blue, orange/red)
+- **ADDED**: Hover effects with shadow and border highlights
+
+#### Video Stats Integration
+- **ADDED**: Real-time video stats calculation from `getAssignedVideos()`
+- **ADDED**: Status breakdown display (assigned, in progress, completed, overdue)
+- **ADDED**: Total videos count in card header
+- **ADDED**: Video stats loading state management
+
+#### UI/UX Improvements
+- **REMOVED**: All dark mode variants for consistent light theme
+- **IMPROVED**: AssignedVideosSection with better contrast and readability
+- **IMPROVED**: Status badges with solid backgrounds and white text
+- **IMPROVED**: Team names bolder and larger for better visibility
+- **IMPROVED**: Card backgrounds changed to `bg-white` for better contrast
+
+#### Game Completion Status Consistency
+- **FIXED**: Game completion now updates both `games.status` and `game_videos.assignment_status`
+- **FIXED**: Cache invalidation on game completion for real-time status updates
+- **FIXED**: Quarter advance prompt no longer shows when game should end (Q4 expired, not tied)
+- **ADDED**: `updateAssignmentStatus()` function for explicit video assignment status updates
+- **ADDED**: Logging for game status and video assignment status updates
+
+#### Stat-Specific Clip Timing Windows
+- **ADDED**: Context-aware clip timing for different stat types
+  - Assist: -2s / +5s (covers shot made)
+  - Rebound: -4s / +2s
+  - Shot Made: -3s / +2s
+  - Shot Missed: -2s / +2s
+  - Steal: -2s / +4s
+  - Block: -2s / +3s
+  - Free Throw: -1s / +2s
+- **ADDED**: `getClipTimingWindow()` function in clip worker
+- **IMPROVED**: Clip generation now uses stat-specific timing instead of fixed ±2s
+
+#### Technical Implementation
+- **Files Created**:
+  - `src/components/stat-admin/DashboardCoreCards.tsx` - 3-card layout component
+- **Files Modified**:
+  - `src/app/dashboard/stat-admin/page.tsx` - Integrated DashboardCoreCards, added video stats
+  - `src/components/stat-admin/AssignedVideosSection.tsx` - Removed dark variants, improved UI
+  - `src/app/dashboard/stat-admin/video/[gameId]/page.tsx` - Game completion flow fixes
+  - `src/lib/services/gameService.ts` - Cache invalidation on status update
+  - `src/lib/services/videoAssignmentService.ts` - Added `updateAssignmentStatus()` function
+  - `clip-worker/src/services/supabaseClient.ts` - Stat-specific clip timing windows
+
+#### Documentation Updates
+- **CREATED**: `docs/04-features/dashboards/STAT_ADMIN_DASHBOARD.md` - Comprehensive dashboard documentation
+- **UPDATED**: `docs/01-project/CHANGELOG.md` - This entry
+- **UPDATED**: `docs/01-project/PROJECT_STATUS.md` - Added new achievement
+
+---
+
 ## [0.17.6] - 2025-12-31
 
 ### 🎯 **CRITICAL STATS ACCURACY FIXES (v1.2.0)**
