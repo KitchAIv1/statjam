@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 import { EditableJerseyNumber } from '@/components/tracker-v3/EditableJerseyNumber';
 import { 
-  Video, Users, Trophy, Calendar, ArrowRight, Loader2, CheckCircle
+  Video, Users, Trophy, Calendar, ArrowRight, Loader2, AlertCircle
 } from 'lucide-react';
 
 interface Player {
@@ -66,15 +66,22 @@ export function VideoSetupPanel({
   };
 
   const handleContinue = async () => {
-    setIsSaving(true);
     setSaveError(null);
 
-    try {
-      const homeScoreNum = homeScore ? parseInt(homeScore, 10) : undefined;
-      const awayScoreNum = awayScore ? parseInt(awayScore, 10) : undefined;
+    // Validate final score is entered (mandatory for tracking)
+    const homeScoreNum = homeScore ? parseInt(homeScore, 10) : 0;
+    const awayScoreNum = awayScore ? parseInt(awayScore, 10) : 0;
+    
+    if (homeScoreNum === 0 && awayScoreNum === 0) {
+      setSaveError('Please enter the final score. Both teams cannot have 0 points for video tracking.');
+      return;
+    }
 
-      // Save score if callback provided and scores entered
-      if (onSaveScore && (homeScoreNum !== undefined || awayScoreNum !== undefined)) {
+    setIsSaving(true);
+
+    try {
+      // Save score if callback provided
+      if (onSaveScore) {
         await onSaveScore(gameData.id, homeScoreNum, awayScoreNum);
         onGameDataUpdate?.({ home_score: homeScoreNum, away_score: awayScoreNum });
       }
@@ -131,19 +138,27 @@ export function VideoSetupPanel({
         </div>
       </div>
 
-      {/* Score Input Card */}
-      <div className="bg-white rounded-xl border border-green-200 shadow-sm overflow-hidden">
-        <div className="bg-green-50 px-4 py-3 border-b border-green-200">
-          <div className="flex items-center gap-2 text-green-700">
-            <CheckCircle className="w-4 h-4" />
-            <span className="font-semibold text-sm">Final Score (Optional)</span>
+      {/* Score Input Card - REQUIRED */}
+      <div className="bg-white rounded-xl border border-orange-200 shadow-sm overflow-hidden">
+        <div className="bg-orange-50 px-4 py-3 border-b border-orange-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-orange-700">
+              <AlertCircle className="w-4 h-4" />
+              <span className="font-semibold text-sm">Final Score</span>
+            </div>
+            <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-0.5 rounded">
+              Required
+            </span>
           </div>
         </div>
         
-        <div className="p-4">
+        <div className="p-5">
+          <p className="text-sm text-muted-foreground text-center mb-4">
+            Enter the final score for accurate stat tracking
+          </p>
           <div className="flex items-center justify-center gap-6">
             <div className="text-center">
-              <label className="block text-xs text-muted-foreground mb-2">
+              <label className="block text-xs font-medium text-foreground mb-2">
                 {gameData.team_a_name || 'Your Team'}
               </label>
               <Input
@@ -152,15 +167,16 @@ export function VideoSetupPanel({
                 max="999"
                 value={homeScore}
                 onChange={(e) => setHomeScore(e.target.value)}
-                className="w-20 text-center text-xl font-bold"
-                placeholder="0"
+                className="w-24 h-14 text-center text-2xl font-bold border-2 border-orange-200 
+                           focus:border-orange-500 focus:ring-orange-500 bg-orange-50/50"
+                placeholder="--"
               />
             </div>
             
-            <span className="text-2xl font-bold text-muted-foreground mt-5">vs</span>
+            <span className="text-2xl font-bold text-muted-foreground mt-6">vs</span>
             
             <div className="text-center">
-              <label className="block text-xs text-muted-foreground mb-2">
+              <label className="block text-xs font-medium text-foreground mb-2">
                 {gameData.opponent_name || 'Opponent'}
               </label>
               <Input
@@ -169,8 +185,9 @@ export function VideoSetupPanel({
                 max="999"
                 value={awayScore}
                 onChange={(e) => setAwayScore(e.target.value)}
-                className="w-20 text-center text-xl font-bold"
-                placeholder="0"
+                className="w-24 h-14 text-center text-2xl font-bold border-2 border-orange-200 
+                           focus:border-orange-500 focus:ring-orange-500 bg-orange-50/50"
+                placeholder="--"
               />
             </div>
           </div>
@@ -178,9 +195,9 @@ export function VideoSetupPanel({
       </div>
 
       {/* Player Roster Card */}
-      <div className="bg-white rounded-xl border border-blue-200 shadow-sm overflow-hidden">
-        <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
-          <div className="flex items-center gap-2 text-blue-700">
+      <div className="bg-white rounded-xl border border-orange-200 shadow-sm overflow-hidden">
+        <div className="bg-orange-50 px-4 py-3 border-b border-orange-200">
+          <div className="flex items-center gap-2 text-orange-700">
             <Users className="w-4 h-4" />
             <span className="font-semibold text-sm">Player Roster - Click to Edit Jersey</span>
           </div>
