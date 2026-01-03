@@ -60,6 +60,7 @@ export function VideoCreditsModal({
         userEmail: user.email,
         role: role,
         tierId: `video_${pkg.id}`,
+        mode: 'payment', // One-time payment for video credits
         successUrl: `${window.location.origin}/dashboard/${role}?checkout=video_success`,
         cancelUrl: `${window.location.origin}/dashboard/${role}?checkout=cancelled`,
       });

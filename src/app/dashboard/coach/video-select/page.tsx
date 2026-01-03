@@ -24,6 +24,8 @@ import {
   Trophy, Clock, CheckCircle, AlertCircle, Plus, X, Trash2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { VideoCreditsDisplay } from '@/components/shared/VideoCreditsDisplay';
+import { VideoCreditsModal } from '@/components/subscription/VideoCreditsModal';
 import type { GameVideo } from '@/lib/types/video';
 
 interface GameWithVideo {
@@ -42,7 +44,10 @@ function VideoSelectContent() {
   const teamId = searchParams.get('teamId');
   
   const { user, loading: authLoading } = useAuthV2();
-  const { tier: subscriptionTier, limits, loading: subLoading } = useSubscription('coach');
+  const { tier: subscriptionTier, limits, videoCredits, loading: subLoading } = useSubscription('coach');
+  
+  // User has video access if subscribed OR has video credits
+  const hasVideoAccess = limits.hasVideoAccess || videoCredits > 0;
   
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -60,13 +65,17 @@ function VideoSelectContent() {
   const [creatingGame, setCreatingGame] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
   
-  // Check premium access
+  // Refetch subscription after purchase
+  const { refetch: refetchSubscription } = useSubscription('coach');
+  
+  // Check video access (subscription OR credits)
   useEffect(() => {
-    if (!authLoading && !subLoading && !limits.hasVideoAccess) {
+    if (!authLoading && !subLoading && !hasVideoAccess) {
       setShowUpgradeModal(true);
     }
-  }, [authLoading, subLoading, limits.hasVideoAccess]);
+  }, [authLoading, subLoading, hasVideoAccess]);
   
   // Load team, games, and video data
   useEffect(() => {
@@ -251,6 +260,13 @@ function VideoSelectContent() {
                 </p>
               )}
             </div>
+            
+            {/* Video Credits Display */}
+            <VideoCreditsDisplay
+              credits={videoCredits}
+              onBuyCredits={() => setShowCreditsModal(true)}
+              size="md"
+            />
           </div>
           
           {/* New Game Form */}
@@ -486,6 +502,14 @@ function VideoSelectContent() {
         role="coach"
         currentTier={subscriptionTier}
         triggerReason="Video Tracking is a premium feature. Upgrade to track games using video playback with frame-by-frame precision."
+      />
+      
+      <VideoCreditsModal
+        isOpen={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+        role="coach"
+        currentCredits={videoCredits}
+        onPurchaseComplete={refetchSubscription}
       />
     </div>
   );

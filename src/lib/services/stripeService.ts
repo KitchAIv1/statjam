@@ -33,6 +33,7 @@ export interface CheckoutOptions {
   userEmail: string;
   role: UserRole;
   tierId: string; // The tier being purchased (e.g., 'seasonal_pass', 'annual', 'pro')
+  mode?: 'subscription' | 'payment'; // 'payment' for one-time purchases like video credits
   successUrl?: string;
   cancelUrl?: string;
 }

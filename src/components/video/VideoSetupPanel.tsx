@@ -14,7 +14,6 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 import { EditableJerseyNumber } from '@/components/tracker-v3/EditableJerseyNumber';
-import { CoachGameService } from '@/lib/services/coachGameService';
 import { 
   Video, Users, Trophy, Calendar, ArrowRight, Loader2, CheckCircle
 } from 'lucide-react';
@@ -42,6 +41,8 @@ interface VideoSetupPanelProps {
   onPlayersUpdate: (players: Player[]) => void;
   onSetupComplete: () => void;
   onGameDataUpdate?: (data: Partial<GameData>) => void;
+  /** Optional callback to save score - if not provided, skips saving */
+  onSaveScore?: (gameId: string, homeScore?: number, awayScore?: number) => Promise<void>;
 }
 
 export function VideoSetupPanel({
@@ -50,6 +51,7 @@ export function VideoSetupPanel({
   onPlayersUpdate,
   onSetupComplete,
   onGameDataUpdate,
+  onSaveScore,
 }: VideoSetupPanelProps) {
   const [homeScore, setHomeScore] = useState<string>(gameData.home_score?.toString() || '');
   const [awayScore, setAwayScore] = useState<string>(gameData.away_score?.toString() || '');
@@ -71,11 +73,9 @@ export function VideoSetupPanel({
       const homeScoreNum = homeScore ? parseInt(homeScore, 10) : undefined;
       const awayScoreNum = awayScore ? parseInt(awayScore, 10) : undefined;
 
-      if (homeScoreNum !== undefined || awayScoreNum !== undefined) {
-        await CoachGameService.updateGame(gameData.id, {
-          home_score: homeScoreNum,
-          away_score: awayScoreNum,
-        });
+      // Save score if callback provided and scores entered
+      if (onSaveScore && (homeScoreNum !== undefined || awayScoreNum !== undefined)) {
+        await onSaveScore(gameData.id, homeScoreNum, awayScoreNum);
         onGameDataUpdate?.({ home_score: homeScoreNum, away_score: awayScoreNum });
       }
 

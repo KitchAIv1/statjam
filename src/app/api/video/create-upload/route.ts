@@ -34,7 +34,8 @@ function generateTusSignature(
 }
 
 /**
- * Verify user owns the game (is the stat_admin/creator)
+ * Verify user owns the game
+ * Checks: stat_admin (coach games) OR tournament organizer (organizer games)
  */
 async function verifyGameOwnership(gameId: string, userId: string): Promise<boolean> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
@@ -44,18 +45,37 @@ async function verifyGameOwnership(gameId: string, userId: string): Promise<bool
   
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
   
-  const { data, error } = await supabase
+  // Fetch game with tournament info
+  const { data: game, error } = await supabase
     .from('games')
-    .select('id, stat_admin_id')
+    .select('id, stat_admin_id, tournament_id')
     .eq('id', gameId)
     .single();
   
-  if (error || !data) {
+  if (error || !game) {
     console.error('Game not found:', gameId);
     return false;
   }
   
-  return data.stat_admin_id === userId;
+  // Check 1: User is stat_admin (works for coach games)
+  if (game.stat_admin_id === userId) {
+    return true;
+  }
+  
+  // Check 2: User is organizer of the tournament (for organizer games)
+  if (game.tournament_id) {
+    const { data: tournament } = await supabase
+      .from('tournaments')
+      .select('organizer_id')
+      .eq('id', game.tournament_id)
+      .single();
+    
+    if (tournament?.organizer_id === userId) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 export async function POST(request: NextRequest) {

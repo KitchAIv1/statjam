@@ -32,16 +32,14 @@ export async function getSubscription(
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle(); // Use maybeSingle to return null when no rows (free tier users)
+      .maybeSingle();
 
-    // Handle errors gracefully - user is on free tier
     if (error || !data) {
       return null;
     }
 
     return transformSubscription(data);
   } catch {
-    // Network error - treat as free tier
     return null;
   }
 }
@@ -305,35 +303,30 @@ export async function getVideoCredits(userId: string, role: UserRole): Promise<n
 
 /**
  * Consume one video credit (for video upload)
+ * Uses server-side API to bypass RLS restrictions
  * Returns true if successful, false if no credits available
  */
 export async function consumeVideoCredit(userId: string, role: UserRole): Promise<boolean> {
   try {
-    const currentCredits = await getVideoCredits(userId, role);
+    console.log(`💳 Calling consume-credit API for user ${userId}, role ${role}`);
     
-    if (currentCredits <= 0) {
-      console.log(`❌ No video credits available for user ${userId}`);
+    const response = await fetch('/api/subscription/consume-credit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, role }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('❌ API error consuming credit:', data.error, data.details);
       return false;
     }
-
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({ 
-        video_credits: currentCredits - 1,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
-      .eq('role', role);
-
-    if (error) {
-      console.error('Error consuming video credit:', error);
-      return false;
-    }
-
-    console.log(`✅ Video credit consumed for user ${userId}: ${currentCredits} → ${currentCredits - 1}`);
+    
+    console.log(`✅ Video credit consumed via API: ${data.previousCredits} → ${data.currentCredits}`);
     return true;
   } catch (err) {
-    console.error('Error consuming video credit:', err);
+    console.error('❌ Error calling consume-credit API:', err);
     return false;
   }
 }

@@ -5,12 +5,13 @@ import { OrganizerDashboardOverview } from "./OrganizerDashboardOverview";
 import { OrganizerTournamentManager } from "./OrganizerTournamentManager";
 import { OrganizerGameScheduler } from "./OrganizerGameScheduler";
 import { OrganizerLiveStream } from "./OrganizerLiveStream";
+import { OrganizerVideoTracking } from "./OrganizerVideoTracking";
 import { ProfileCard, ProfileCardSkeleton } from "./profile/ProfileCard";
 import { ProfileEditModal } from "./profile/ProfileEditModal";
 import { useOrganizerProfile } from "@/hooks/useOrganizerProfile";
 import { ProfileService } from "@/lib/services/profileService";
 
-type ActiveSection = 'overview' | 'tournaments' | 'teams' | 'games' | 'live-stream';
+type ActiveSection = 'overview' | 'tournaments' | 'teams' | 'games' | 'video-tracking' | 'live-stream';
 
 interface OrganizerDashboardProps {
   user: { id: string } | null;
@@ -76,10 +77,12 @@ export function OrganizerDashboard({ user }: OrganizerDashboardProps) {
         );
       case 'games':
         return <OrganizerGameScheduler user={user} />;
+      case 'video-tracking':
+        return <OrganizerVideoTracking user={user} />;
       case 'live-stream':
         return <OrganizerLiveStream user={user} />;
       default:
-        return <OrganizerDashboardOverview />;
+        return <OrganizerDashboardOverview user={user} />;
     }
   };
 

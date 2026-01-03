@@ -57,7 +57,10 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   
   // Auth and subscription
   const { user } = useAuthV2();
-  const { tier: subscriptionTier, limits } = useSubscription('coach');
+  const { tier: subscriptionTier, limits, videoCredits } = useSubscription('coach');
+  
+  // User has video access if subscribed OR has video credits
+  const hasVideoAccess = limits.hasVideoAccess || videoCredits > 0;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState('');
   
@@ -499,8 +502,8 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
               {/* Video Track - Premium Feature */}
               <Button
                 onClick={() => {
-                  if (!limits.hasVideoAccess) {
-                    setUpgradeReason('Video Tracking is a premium feature. Upgrade to track games using video playback.');
+                  if (!hasVideoAccess) {
+                    setUpgradeReason('Video Tracking is a premium feature. Upgrade or buy video credits to track games using video playback.');
                     setShowUpgradeModal(true);
                     return;
                   }
@@ -511,7 +514,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 disabled={playerCount < 5}
                 variant="outline"
                 className={`gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 ${
-                  limits.hasVideoAccess 
+                  hasVideoAccess 
                     ? '!border-purple-300 text-purple-600 hover:text-purple-700 hover:bg-purple-50 hover:!border-purple-400' 
                     : '!border-gray-300'
                 }`}

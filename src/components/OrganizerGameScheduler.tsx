@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Eye, Filter, Trophy } from "lucide-react";
+import { Calendar, Clock, MapPin, Eye, Filter, Trophy, Video } from "lucide-react";
 import { GameService } from '@/lib/services/gameService';
 import { useTournaments } from '@/lib/hooks/useTournaments';
 import { Game } from '@/lib/types/game';
@@ -239,14 +239,28 @@ export function OrganizerGameScheduler({ user }: OrganizerGameSchedulerProps) {
                     </div>
                   </div>
 
-                  {/* View Button */}
-                  <button
-                    onClick={() => router.push(`/game-viewer/${game.id}`)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium hover:bg-blue-100 transition-colors"
-                  >
-                    <Eye className="w-4 h-4" />
-                    View
-                  </button>
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2">
+                    {/* Video Track Button - Only for completed games */}
+                    {game.status === 'completed' && (
+                      <button
+                        onClick={() => router.push(`/dashboard/organizer-video/${game.id}`)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-600 rounded-lg font-medium hover:bg-orange-100 transition-colors"
+                      >
+                        <Video className="w-4 h-4" />
+                        Video Track
+                      </button>
+                    )}
+                    
+                    {/* View Button */}
+                    <button
+                      onClick={() => router.push(`/game-viewer/${game.id}`)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium hover:bg-blue-100 transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View
+                    </button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

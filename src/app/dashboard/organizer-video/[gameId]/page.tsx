@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * Coach Video Upload Page
+ * Organizer Video Upload Page
  * 
- * Allows coaches to upload game videos for stat tracking.
- * Videos are tracked by assigned stat admins, NOT by coaches.
+ * Mirrors the coach video upload flow exactly.
+ * Allows organizers to upload game videos for stat tracking.
  * 
  * Flow:
  * 1. Setup game details & player roster
@@ -25,23 +25,24 @@ import { useVideoProcessingStatus } from '@/hooks/useVideoProcessingStatus';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useSubscription } from '@/hooks/useSubscription';
 import { VideoStatService } from '@/lib/services/videoStatService';
-import { CoachGameService } from '@/lib/services/coachGameService';
-import { CoachPlayerService } from '@/lib/services/coachPlayerService';
+import { GameService } from '@/lib/services/gameService';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
+import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { isBunnyConfigured } from '@/lib/config/videoConfig';
 import { UpgradeModal, VideoCreditsModal } from '@/components/subscription';
 import type { GameVideo } from '@/lib/types/video';
 import { Loader2, ArrowLeft, Video, AlertCircle, Upload, CreditCard } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
-interface CoachVideoPageProps {
+interface OrganizerVideoPageProps {
   params: Promise<{ gameId: string }>;
 }
 
-export default function CoachVideoPage({ params }: CoachVideoPageProps) {
+export default function OrganizerVideoPage({ params }: OrganizerVideoPageProps) {
   const { gameId } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuthV2();
-  const { tier: subscriptionTier, limits, videoCredits, refetch: refetchSubscription, loading: subLoading } = useSubscription('coach');
+  const { tier: subscriptionTier, limits, videoCredits, refetch: refetchSubscription, loading: subLoading } = useSubscription('organizer');
   
   // State
   const [gameVideo, setGameVideo] = useState<GameVideo | null>(null);
@@ -86,24 +87,50 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
     },
   });
   
-  // Load game and video data
+  // Load game and video data (organizer uses regular games table)
   useEffect(() => {
     async function loadData() {
       if (!gameId || !user) return;
       
       try {
         setVideoLoading(true);
-        const game = await CoachGameService.getGame(gameId);
-        setGameData(game);
         
-        if (game?.coach_team_id) {
-          const players = await CoachPlayerService.getCoachTeamPlayers(game.coach_team_id);
-          setTeamPlayers(players.map((p: any) => ({
-            id: p.id,
-            name: p.name || 'Unknown',
-            jerseyNumber: p.jersey_number,
-            is_custom_player: p.is_custom_player || p.id?.startsWith('custom-'),
-          })));
+        if (!supabase) {
+          console.error('Supabase client not available');
+          return;
+        }
+        
+        // Fetch game with team names
+        const { data: game } = await supabase
+          .from('games')
+          .select(`
+            *,
+            team_a:teams!games_team_a_id_fkey(id, name),
+            team_b:teams!games_team_b_id_fkey(id, name)
+          `)
+          .eq('id', gameId)
+          .single();
+        
+        if (game) {
+          setGameData({
+            id: game.id,
+            team_a_name: game.team_a?.name || 'Team A',
+            opponent_name: game.team_b?.name || 'Team B',
+            game_date: game.start_time,
+            venue: game.venue,
+            home_score: game.team_a_score,
+            away_score: game.team_b_score,
+          });
+          
+          // Fetch players from team_a using same source as coach dashboard
+          if (game.team_a_id) {
+            const players = await CoachPlayerService.getCoachTeamPlayers(game.team_a_id);
+            setTeamPlayers(players.map((p: any) => ({
+              id: p.id,
+              name: p.name || 'Unknown',
+              jerseyNumber: p.jersey_number,
+            })));
+          }
         }
         
         const video = await VideoStatService.getGameVideo(gameId);
@@ -124,49 +151,39 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
   
   // Handle upload complete
   const handleUploadComplete = async (bunnyVideoId: string) => {
-    console.log('🎬 handleUploadComplete called with bunnyVideoId:', bunnyVideoId);
     setHasHandledReady(false);
     setUploadedVideoId(bunnyVideoId);
     
-    // Check if this is a new upload or re-upload
     const existingVideo = await VideoStatService.getGameVideo(gameId);
     const isNewUpload = !existingVideo || existingVideo.bunnyVideoId !== bunnyVideoId;
-    console.log('📊 Upload type:', isNewUpload ? 'NEW' : 'RE-UPLOAD', 'existingVideoId:', existingVideo?.bunnyVideoId);
     
     try {
-      console.log('📝 Creating/updating game video record...');
       await VideoStatService.createGameVideo(
         gameId,
         process.env.NEXT_PUBLIC_BUNNY_LIBRARY_ID || '',
         bunnyVideoId,
         user?.id || ''
       );
-      console.log('✅ Game video record created/updated');
       
-      // Consume video credit only for NEW uploads (not re-uploads to same game)
+      // Consume video credit only for NEW uploads
       if (isNewUpload && user?.id) {
-        console.log('💳 NEW upload - consuming video credit for user:', user.id);
-        const consumed = await SubscriptionService.consumeVideoCredit(user.id, 'coach');
-        console.log('💳 Credit consumed result:', consumed);
+        const consumed = await SubscriptionService.consumeVideoCredit(user.id, 'organizer');
         if (consumed) {
-          // Small delay to ensure DB commit is fully propagated
-          console.log('🔄 Waiting for DB propagation...');
           await new Promise(resolve => setTimeout(resolve, 500));
-          console.log('🔄 Refetching subscription to update UI...');
           await refetchSubscription();
-          console.log('✅ Subscription refetched');
         }
-      } else if (!isNewUpload) {
-        console.log('♻️ Re-upload detected - NOT consuming credit (already paid)');
-      } else {
-        console.log('⚠️ No user.id - cannot consume credit');
       }
     } catch (err) {
-      console.error('❌ Error in handleUploadComplete:', err);
+      console.error('Error in handleUploadComplete:', err);
     }
     
     const video = await VideoStatService.getGameVideo(gameId);
     setGameVideo(video);
+  };
+  
+  // Handle save score (organizer updates games table)
+  const handleSaveScore = async (gId: string, homeScore?: number, awayScore?: number) => {
+    await GameService.updateGameScore(gId, { home_score: homeScore, away_score: awayScore });
   };
   
   // Loading state
@@ -192,7 +209,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push('/dashboard/coach')}
+                onClick={() => router.push('/dashboard/organizer-video/select')}
                 className="gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -206,7 +223,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
                 </h1>
                 {gameData && (
                   <p className="text-sm text-muted-foreground">
-                    vs {gameData.opponent_name || 'Opponent'}
+                    {gameData.team_a_name} vs {gameData.opponent_name}
                   </p>
                 )}
               </div>
@@ -223,9 +240,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
                 onPlayersUpdate={setTeamPlayers}
                 onSetupComplete={() => setSetupComplete(true)}
                 onGameDataUpdate={(updates) => setGameData((prev: any) => ({ ...prev, ...updates }))}
-                onSaveScore={async (gId, home, away) => {
-                  await CoachGameService.updateGame(gId, { home_score: home, away_score: away });
-                }}
+                onSaveScore={handleSaveScore}
               />
             </div>
           ) : !gameVideo ? (
@@ -282,15 +297,15 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
             </div>
           ) : gameVideo.status === 'processing' ? (
             /* Processing Status */
-            <VideoProcessingStatus processingStatus={processingStatus} backUrl="/dashboard/coach" />
+            <VideoProcessingStatus processingStatus={processingStatus} backUrl="/dashboard" />
           ) : (
             /* Video Uploaded - Show Status Card */
             <div className="flex items-center justify-center py-8">
               <div className="max-w-lg w-full">
                 <CoachVideoStatusCard
                   video={gameVideo}
-                  teamName={gameData?.team_a_name || 'My Team'}
-                  opponentName={gameData?.opponent_name || 'Opponent'}
+                  teamName={gameData?.team_a_name || 'Team A'}
+                  opponentName={gameData?.opponent_name || 'Team B'}
                 />
                 
                 <div className="mt-6 text-center text-muted-foreground text-sm">
@@ -306,7 +321,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
                 <div className="mt-6 flex justify-center">
                   <Button
                     variant="outline"
-                    onClick={() => router.push('/dashboard/coach')}
+                    onClick={() => router.push('/dashboard')}
                     className="gap-2"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -324,9 +339,9 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
         isOpen={showUpgradeModal}
         onClose={() => {
           setShowUpgradeModal(false);
-          router.push('/dashboard/coach');
+          router.push('/dashboard');
         }}
-        role="coach"
+        role="organizer"
         currentTier={subscriptionTier}
         triggerReason="Video Tracking is a premium feature. Upgrade to have your games tracked using video playback."
       />
@@ -335,7 +350,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
       <VideoCreditsModal
         isOpen={showVideoCreditsModal}
         onClose={() => setShowVideoCreditsModal(false)}
-        role="coach"
+        role="organizer"
         currentCredits={videoCredits}
         onPurchaseComplete={refetchSubscription}
       />

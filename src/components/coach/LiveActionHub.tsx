@@ -3,36 +3,36 @@
 /**
  * LiveActionHub - Primary action center for Coach Mission Control
  * 
- * V3 Refinement:
- * - Height matches ProfileCard
- * - Uniform button sizes
- * - Proper spacing
+ * V4 Apple-Inspired Redesign:
+ * - Integrated button states (credits inside Upload button)
+ * - Removed redundant counters (shown in VideoTrackingWidget)
+ * - Clear hierarchy: one hero action
+ * - Contextual value messaging
  * 
  * Follows .cursorrules: <150 lines, UI only, single responsibility
  */
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { PlayCircle, Upload, Video, Film, ArrowRight } from 'lucide-react';
+import { PlayCircle, Upload, Video, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CoachGame } from '@/lib/types/coach';
-import { VideoQueueSummary, ClipsSummary } from '@/hooks/useCoachDashboardData';
 
 interface LiveActionHubProps {
   liveGames: CoachGame[];
-  videoQueue: VideoQueueSummary;
-  clips: ClipsSummary;
+  videoCredits?: number;
   onStartGame: () => void;
   onUploadVideo: () => void;
+  onBuyCredits?: () => void;
 }
 
 export function LiveActionHub({
   liveGames,
-  videoQueue,
-  clips,
+  videoCredits,
   onStartGame,
   onUploadVideo,
+  onBuyCredits,
 }: LiveActionHubProps) {
   const router = useRouter();
   const hasLiveGame = liveGames.length > 0;
@@ -43,11 +43,13 @@ export function LiveActionHub({
     router.push(url);
   };
 
-  const videosInPipeline = videoQueue.inProgress + videoQueue.assigned + videoQueue.pending;
+  // Credits state helpers
+  const hasCredits = videoCredits !== undefined && videoCredits > 0;
+  const isLowCredits = videoCredits !== undefined && videoCredits > 0 && videoCredits <= 2;
 
   return (
     <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full flex flex-col">
-      {/* Gradient Top Bar - matches ProfileCard */}
+      {/* Gradient Top Bar */}
       <div className="h-2 bg-gradient-to-r from-primary via-accent to-orange-500 flex-shrink-0"></div>
       
       <CardContent className="p-4 pt-3 flex flex-col flex-1">
@@ -56,75 +58,87 @@ export function LiveActionHub({
           Quick Actions
         </h3>
 
-        {/* Primary Actions - Same size buttons */}
-        <div className="space-y-2 mb-4">
+        {/* Actions */}
+        <div className="space-y-3 flex-1">
+          {/* Hero CTA: Start New Game */}
           <Button
             onClick={onStartGame}
-            className="w-full h-11 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 transition-all gap-2"
+            className="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 transition-all gap-2"
           >
             <PlayCircle className="w-5 h-5" />
             <span className="font-semibold">Start New Game</span>
           </Button>
 
-          <Button
-            onClick={onUploadVideo}
-            variant="outline"
-            className="w-full h-11 border-2 border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-800 hover:border-gray-300 gap-2"
-          >
-            <Upload className="w-5 h-5" />
-            <span className="font-medium">Upload Video</span>
-          </Button>
+          {/* Upload Video - State-aware integrated button */}
+          {hasCredits ? (
+            <button
+              onClick={onUploadVideo}
+              className="w-full text-left p-3 rounded-xl border border-gray-200 
+                         hover:border-gray-300 hover:bg-gray-50 transition-all group/upload"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gray-100 group-hover/upload:bg-gray-200 transition-colors">
+                  <Upload className="w-5 h-5 text-gray-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-900">Upload Video</div>
+                  <div className={`text-xs ${isLowCredits ? 'text-amber-600' : 'text-orange-600'}`}>
+                    {isLowCredits 
+                      ? `⚠ ${videoCredits} credit${videoCredits === 1 ? '' : 's'} left`
+                      : `✓ ${videoCredits} video credit${videoCredits === 1 ? '' : 's'}`}
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-400 group-hover/upload:text-gray-600 transition-colors flex-shrink-0" />
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={onBuyCredits}
+              className="w-full text-left p-3 rounded-xl border-2 border-dashed border-primary/30 
+                         bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all group/buy"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Video className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-900">Buy Video Credits</div>
+                  <div className="text-xs text-gray-500">Track games with AI highlight clips</div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-primary/50 group-hover/buy:text-primary transition-colors flex-shrink-0" />
+              </div>
+            </button>
+          )}
         </div>
 
-        {/* Live Game Alert */}
+        {/* Live Game Alert - Only shown when there's a live game */}
         {hasLiveGame && liveGame && (
-          <div className="mb-4 p-2.5 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center justify-between mb-1.5">
+          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-                <span className="text-[10px] font-bold text-green-700 uppercase tracking-wide">Live</span>
+                <span className="text-[10px] font-bold text-green-700 uppercase tracking-wide">Live Game</span>
               </div>
               <span className="text-[10px] font-medium text-gray-500">Q{liveGame.quarter || 1}</span>
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-gray-900">vs {liveGame.opponent_name}</div>
-                <div className="text-[11px] text-gray-500">{liveGame.home_score || 0} - {liveGame.away_score || 0}</div>
+                <div className="text-xs text-gray-500">{liveGame.home_score || 0} - {liveGame.away_score || 0}</div>
               </div>
               <Button
                 size="sm"
                 onClick={() => handleResume(liveGame)}
-                className="h-7 px-3 text-[11px] bg-green-600 hover:bg-green-700 gap-1"
+                className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 gap-1"
               >
                 Resume <ArrowRight className="w-3 h-3" />
               </Button>
             </div>
           </div>
         )}
-
-        {/* Status Counters - pushed to bottom */}
-        <div className="grid grid-cols-2 gap-3 mt-auto">
-          {/* Videos */}
-          <div className="bg-primary/10 rounded-lg p-2.5 text-center border border-primary/20">
-            <div className="flex items-center justify-center mb-0.5">
-              <Video className="w-4 h-4 text-primary" />
-            </div>
-            <div className="text-xl font-bold text-primary">{videosInPipeline}</div>
-            <div className="text-[10px] text-foreground/70">Videos</div>
-          </div>
-          
-          {/* Clips */}
-          <div className="bg-primary/10 rounded-lg p-2.5 text-center border border-primary/20">
-            <div className="flex items-center justify-center mb-0.5">
-              <Film className="w-4 h-4 text-primary" />
-            </div>
-            <div className="text-xl font-bold text-primary">{clips.readyClips}</div>
-            <div className="text-[10px] text-foreground/70">Clips</div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

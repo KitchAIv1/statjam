@@ -8,17 +8,17 @@ export function OrganizerGuideButton() {
   // Safety check: only render if provider is available
   const guideContext = useOrganizerGuideSafe();
   
-  // If no provider available (not on dashboard page), don't render
-  if (!guideContext) {
-    return null;
-  }
-
-  const { openGuide, showBadge, isGuideOpen } = guideContext;
+  // If no provider available, show inactive button (preserves layout)
+  const openGuide = guideContext?.openGuide;
+  const showBadge = guideContext?.showBadge ?? false;
+  const isContextAvailable = !!guideContext;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    openGuide();
+    if (openGuide) {
+      openGuide();
+    }
   };
 
   return (

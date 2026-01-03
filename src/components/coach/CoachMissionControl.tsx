@@ -9,8 +9,8 @@
  * Follows .cursorrules: <200 lines, UI orchestration, single responsibility
  */
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CoachTeam } from '@/lib/types/coach';
 import { useCoachDashboardData } from '@/hooks/useCoachDashboardData';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -50,10 +50,20 @@ export function CoachMissionControl({
   onEditProfile,
 }: CoachMissionControlProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { limits, tier, videoCredits, refetch: refetchSubscription } = useSubscription('coach');
   
   // Dashboard data hook
   const dashboardData = useCoachDashboardData(user?.id);
+
+  // Refetch subscription after successful checkout
+  useEffect(() => {
+    const checkout = searchParams.get('checkout');
+    if (checkout === 'video_success') {
+      refetchSubscription();
+      router.replace('/dashboard/coach', { scroll: false });
+    }
+  }, [searchParams, refetchSubscription, router]);
   
   // Modal states
   const [showQuickTrack, setShowQuickTrack] = useState(false);
@@ -77,7 +87,10 @@ export function CoachMissionControl({
   };
 
   const handleVideoTrack = (team: CoachTeam) => {
-    if (!limits.hasVideoAccess) {
+    // Allow video track if user has subscription access OR video credits
+    const hasAccess = limits.hasVideoAccess || videoCredits > 0;
+    
+    if (!hasAccess) {
       setShowUpgradeModal(true);
       return;
     }
@@ -115,14 +128,14 @@ export function CoachMissionControl({
   };
 
   const handleUploadVideo = () => {
-    if (!limits.hasVideoAccess) {
-      // Show upgrade modal for non-premium users
+    // Allow upload if user has subscription access OR video credits
+    const hasAccess = limits.hasVideoAccess || videoCredits > 0;
+    
+    if (!hasAccess) {
       setShowUpgradeModal(true);
       return;
     }
-    // TODO: Re-enable video credits modal after testing
-    // setShowVideoCreditsModal(true);
-    // For now, go directly to upload
+    
     handleContinueToUpload();
   };
 
@@ -163,10 +176,10 @@ export function CoachMissionControl({
         <div className="lg:col-span-1">
           <LiveActionHub
             liveGames={dashboardData.liveGames}
-            videoQueue={dashboardData.videoQueue}
-            clips={dashboardData.clips}
+            videoCredits={videoCredits}
             onStartGame={handleStartGame}
             onUploadVideo={handleUploadVideo}
+            onBuyCredits={() => setShowVideoCreditsModal(true)}
           />
         </div>
       </div>
@@ -175,7 +188,7 @@ export function CoachMissionControl({
       <TeamsStrip
         teams={teams}
         loading={teamsLoading}
-        hasVideoAccess={limits.hasVideoAccess}
+        hasVideoAccess={limits.hasVideoAccess || videoCredits > 0}
         onQuickTrack={handleQuickTrack}
         onVideoTrack={handleVideoTrack}
         onManage={handleManage}
@@ -186,7 +199,11 @@ export function CoachMissionControl({
 
       {/* Row 3: Video Tracking + Recent Games + Tournaments */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <VideoTrackingWidget videoQueue={dashboardData.videoQueue} />
+        <VideoTrackingWidget 
+          videoQueue={dashboardData.videoQueue}
+          videoCredits={videoCredits}
+          onBuyCredits={() => setShowVideoCreditsModal(true)}
+        />
         <RecentGamesWidget games={dashboardData.recentGames} />
         <TournamentsCompactWidget userId={user?.id || ''} />
       </div>

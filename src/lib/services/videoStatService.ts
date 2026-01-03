@@ -56,9 +56,11 @@ export async function createGameVideo(
 ): Promise<GameVideo> {
   if (!supabase) throw new Error('Supabase not initialized');
   
+  // Use upsert to handle re-uploads to the same game
+  // This updates the video ID if a record already exists
   const { data, error } = await supabase
     .from('game_videos')
-    .insert({
+    .upsert({
       game_id: gameId,
       bunny_library_id: bunnyLibraryId,
       bunny_video_id: bunnyVideoId,
@@ -66,15 +68,22 @@ export async function createGameVideo(
       original_filename: originalFilename,
       file_size_bytes: fileSizeBytes,
       status: 'processing',
+      // Reset calibration on re-upload
+      is_calibrated: false,
+      jumpball_timestamp_ms: null,
+      stats_count: 0,
+    }, {
+      onConflict: 'game_id',
     })
     .select()
     .single();
   
   if (error) {
-    console.error('Error creating game video:', error);
+    console.error('Error creating/updating game video:', error);
     throw new Error('Failed to create game video record');
   }
   
+  console.log('✅ Game video record created/updated:', data.id);
   return transformGameVideo(data);
 }
 

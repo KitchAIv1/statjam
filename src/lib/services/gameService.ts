@@ -1003,4 +1003,44 @@ export class GameService {
       return null;
     }
   }
+
+  /**
+   * Get completed games with video status for organizer video tracking
+   * Optimized: Single JOIN query instead of N+1 queries
+   */
+  static async getCompletedGamesWithVideoStatus(
+    tournamentIds: string[]
+  ): Promise<Array<Game & { video_id: string | null; video_status: string | null }>> {
+    if (!tournamentIds.length || !supabase) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select(`
+          *,
+          team_a:teams!games_team_a_id_fkey(id, name),
+          team_b:teams!games_team_b_id_fkey(id, name),
+          game_videos(id, status)
+        `)
+        .in('tournament_id', tournamentIds)
+        .eq('status', 'completed')
+        .order('start_time', { ascending: false });
+      
+      if (error) {
+        logger.error('Error fetching completed games with video:', error);
+        return [];
+      }
+      
+      return (data || []).map((game: any) => ({
+        ...game,
+        team_a_name: game.team_a?.name || 'Team A',
+        team_b_name: game.team_b?.name || 'Team B',
+        video_id: game.game_videos?.[0]?.id || null,
+        video_status: game.game_videos?.[0]?.status || null,
+      }));
+    } catch (error) {
+      logger.error('Error in getCompletedGamesWithVideoStatus:', error);
+      return [];
+    }
+  }
 } 

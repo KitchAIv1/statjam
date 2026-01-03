@@ -17,13 +17,21 @@ import { Video, Clock, UserCheck, Loader2, CheckCircle, ArrowRight } from 'lucid
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { VideoQueueSummary } from '@/hooks/useCoachDashboardData';
+import { VideoCreditsInline } from '@/components/shared/VideoCreditsInline';
 
 interface VideoTrackingWidgetProps {
   videoQueue: VideoQueueSummary;
+  videoCredits?: number;
   onViewAll?: () => void;
+  onBuyCredits?: () => void;
 }
 
-export function VideoTrackingWidget({ videoQueue, onViewAll }: VideoTrackingWidgetProps) {
+export function VideoTrackingWidget({ 
+  videoQueue, 
+  videoCredits,
+  onViewAll, 
+  onBuyCredits,
+}: VideoTrackingWidgetProps) {
   const statusItems = [
     { 
       label: 'Queue', 
@@ -66,10 +74,20 @@ export function VideoTrackingWidget({ videoQueue, onViewAll }: VideoTrackingWidg
   return (
     <Card className="p-4 bg-white border-gray-200">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <Video className="w-4 h-4 text-purple-600" />
-          Video Tracking
-        </h3>
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Video className="w-4 h-4 text-purple-600" />
+            Video Tracking
+          </h3>
+          {/* Video Credits - inline under header */}
+          {videoCredits !== undefined && onBuyCredits && (
+            <VideoCreditsInline
+              credits={videoCredits}
+              onBuyCredits={onBuyCredits}
+              className="mt-0.5"
+            />
+          )}
+        </div>
         {onViewAll && (
           <Button variant="ghost" size="sm" onClick={onViewAll} className="h-6 text-xs text-gray-500">
             View All <ArrowRight className="w-3 h-3 ml-1" />

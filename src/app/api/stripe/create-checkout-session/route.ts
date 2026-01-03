@@ -1,7 +1,10 @@
 /**
  * Create Stripe Checkout Session API
  * 
- * Creates a checkout session for subscription purchases.
+ * Creates a checkout session for:
+ * - Subscription purchases (mode: 'subscription')
+ * - One-time video credit purchases (mode: 'payment')
+ * 
  * Redirects user to Stripe's hosted checkout page.
  */
 
@@ -47,7 +50,16 @@ export async function POST(request: NextRequest) {
     const stripe = new Stripe(stripeSecretKey, { typescript: true });
 
     const body = await request.json();
-    const { priceId, userId, userEmail, role, tierId, successUrl, cancelUrl } = body;
+    const { 
+      priceId, 
+      userId, 
+      userEmail, 
+      role, 
+      tierId, 
+      successUrl, 
+      cancelUrl,
+      mode = 'subscription' // NEW: support 'payment' for one-time purchases
+    } = body;
 
     // Validate required fields
     if (!priceId || !userId || !userEmail) {
@@ -93,10 +105,9 @@ export async function POST(request: NextRequest) {
       customerId = customer.id;
     }
 
-    // Create checkout session
-    const session = await stripe.checkout.sessions.create({
+    // Build session config based on mode
+    const baseConfig: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
-      mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [
         {
@@ -106,19 +117,45 @@ export async function POST(request: NextRequest) {
       ],
       success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
       cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=cancelled`,
-      subscription_data: {
-        metadata: {
-          supabase_user_id: userId,
-          role: role || 'player',
-          tier: tierId || 'pro', // Tier ID for accurate subscription tracking
-        },
-      },
       metadata: {
         supabase_user_id: userId,
         role: role || 'player',
-        tier: tierId || 'pro', // Tier ID for accurate subscription tracking
+        tier: tierId || 'pro',
       },
-    });
+    };
+
+    let session: Stripe.Checkout.Session;
+
+    if (mode === 'payment') {
+      // One-time payment (video credits)
+      session = await stripe.checkout.sessions.create({
+        ...baseConfig,
+        mode: 'payment',
+        // For one-time payments, we use payment_intent_data instead of subscription_data
+        payment_intent_data: {
+          metadata: {
+            supabase_user_id: userId,
+            role: role || 'player',
+            tier: tierId || 'video_credits',
+          },
+        },
+      });
+      console.log(`💳 Created one-time payment session for user ${userId}: ${session.id}`);
+    } else {
+      // Subscription
+      session = await stripe.checkout.sessions.create({
+        ...baseConfig,
+        mode: 'subscription',
+        subscription_data: {
+          metadata: {
+            supabase_user_id: userId,
+            role: role || 'player',
+            tier: tierId || 'pro',
+          },
+        },
+      });
+      console.log(`📅 Created subscription session for user ${userId}: ${session.id}`);
+    }
 
     return NextResponse.json({ 
       sessionId: session.id,
@@ -141,4 +178,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
