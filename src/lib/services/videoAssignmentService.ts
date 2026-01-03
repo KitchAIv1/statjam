@@ -9,6 +9,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { GameVideo, VideoAssignmentStatus } from '@/lib/types/video';
+import { getNextMidnightEST } from '@/lib/utils/dueDate';
 
 // Helper to ensure supabase is initialized
 function getSupabase() {
@@ -221,8 +222,8 @@ export async function assignVideoToStatAdmin(
 ): Promise<void> {
   try {
     const db = getSupabase();
-    const dueAt = new Date();
-    dueAt.setHours(dueAt.getHours() + 24); // 24-hour turnaround
+    // Due at midnight EST of the next day
+    const dueAt = getNextMidnightEST();
 
     const { error } = await db
       .from('game_videos')

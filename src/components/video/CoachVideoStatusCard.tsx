@@ -3,7 +3,7 @@
 /**
  * Coach Video Status Card
  * 
- * Displays the status of an uploaded video with 24-hour countdown.
+ * Displays the status of an uploaded video with countdown to midnight EST deadline.
  * Shows progress through: Uploading → Processing → Pending → Tracking → Complete
  * 
  * Theme: Warm cream (orange-50, white, orange accents) to match coach dashboard

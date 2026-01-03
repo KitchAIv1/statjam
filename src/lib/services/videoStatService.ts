@@ -18,6 +18,7 @@ import type {
 // Re-export types for consumers
 export type { ClockSyncConfig };
 import { VIDEO_CONFIG } from '@/lib/config/videoConfig';
+import { getNextMidnightESTISOString } from '@/lib/utils/dueDate';
 
 // =============================================================================
 // GAME VIDEOS
@@ -98,8 +99,8 @@ export async function updateVideoStatus(
 ): Promise<void> {
   if (!supabase) throw new Error('Supabase not initialized');
   
-  // Calculate due date (24 hours from now) when video becomes ready
-  const dueAt = status === 'ready' ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : undefined;
+  // Calculate due date (midnight EST next day) when video becomes ready
+  const dueAt = status === 'ready' ? getNextMidnightESTISOString() : undefined;
   
   const { error } = await supabase
     .from('game_videos')

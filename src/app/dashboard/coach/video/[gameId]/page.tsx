@@ -239,7 +239,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
                     </div>
                     <h2 className="text-xl font-semibold text-foreground">Upload Game Video</h2>
                     <p className="text-muted-foreground mt-2 text-sm">
-                      Upload your game video. Our stat trackers will track your game within 24 hours.
+                      Upload your game video. Our stat trackers will complete tracking by midnight tomorrow (EST).
                     </p>
                   </div>
                   
@@ -296,7 +296,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
                 <div className="mt-6 text-center text-muted-foreground text-sm">
                   <p>
                     Your video has been uploaded and is in the tracking queue.
-                    A StatJam stat tracker will track your game within 24 hours.
+                    A StatJam stat tracker will complete tracking by midnight tomorrow (EST).
                   </p>
                   <p className="mt-2">
                     You&apos;ll receive a notification when tracking is complete.
