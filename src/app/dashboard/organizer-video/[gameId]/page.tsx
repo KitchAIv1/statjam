@@ -31,7 +31,7 @@ import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { isBunnyConfigured } from '@/lib/config/videoConfig';
 import { UpgradeModal, VideoCreditsModal } from '@/components/subscription';
 import type { GameVideo } from '@/lib/types/video';
-import { Loader2, ArrowLeft, Video, AlertCircle, Upload, CreditCard } from 'lucide-react';
+import { Loader2, ArrowLeft, Video, AlertCircle, Upload, CreditCard, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface OrganizerVideoPageProps {
@@ -55,6 +55,10 @@ export default function OrganizerVideoPage({ params }: OrganizerVideoPageProps) 
   const [showVideoCreditsModal, setShowVideoCreditsModal] = useState(false);
   const [hasHandledReady, setHasHandledReady] = useState(false);
   
+  // Daily upload limit state
+  const [dailyUploads, setDailyUploads] = useState({ uploadsToday: 0, limit: 2, remaining: 2, isExempt: false });
+  const [limitLoading, setLimitLoading] = useState(true);
+  
   // User has video access if subscribed OR has video credits
   const hasVideoAccess = limits.hasVideoAccess || videoCredits > 0;
   
@@ -64,6 +68,23 @@ export default function OrganizerVideoPage({ params }: OrganizerVideoPageProps) 
       setShowUpgradeModal(true);
     }
   }, [authLoading, subLoading, hasVideoAccess]);
+  
+  // Check daily upload limit
+  useEffect(() => {
+    async function checkLimit() {
+      if (!user?.id) return;
+      setLimitLoading(true);
+      try {
+        const status = await VideoStatService.getDailyUploadStatus(user.id, 'organizer');
+        setDailyUploads(status);
+      } catch (error) {
+        console.error('Error checking daily limit:', error);
+      } finally {
+        setLimitLoading(false);
+      }
+    }
+    if (user?.id) checkLimit();
+  }, [user?.id]);
   
   // Poll for video processing status
   const { status: processingStatus } = useVideoProcessingStatus({
@@ -286,7 +307,42 @@ export default function OrganizerVideoPage({ params }: OrganizerVideoPageProps) 
                     </div>
                   )}
                   
-                  <VideoUploader gameId={gameId} userId={user?.id} onUploadComplete={handleUploadComplete} />
+                  {/* Daily Upload Limit Indicator */}
+                  {!limitLoading && !dailyUploads.isExempt && (
+                    <div className={`mb-4 p-3 rounded-lg flex items-center justify-between
+                      ${dailyUploads.remaining > 0 
+                        ? 'bg-blue-50 border border-blue-200' 
+                        : 'bg-red-50 border border-red-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Calendar className={`w-4 h-4 ${dailyUploads.remaining > 0 ? 'text-blue-600' : 'text-red-600'}`} />
+                        <span className={`text-sm font-medium ${dailyUploads.remaining > 0 ? 'text-blue-800' : 'text-red-700'}`}>
+                          Daily Limit: {dailyUploads.uploadsToday}/{dailyUploads.limit} today
+                        </span>
+                      </div>
+                      <span className={`text-xs ${dailyUploads.remaining > 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                        {dailyUploads.remaining > 0 
+                          ? `${dailyUploads.remaining} remaining` 
+                          : 'Resets at midnight EST'
+                        }
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Block upload if daily limit reached */}
+                  {!dailyUploads.isExempt && dailyUploads.remaining === 0 ? (
+                    <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+                      <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                      <p className="text-foreground font-medium">Daily Upload Limit Reached</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        You can upload a maximum of {dailyUploads.limit} games per day.
+                        Your limit resets at midnight EST.
+                      </p>
+                    </div>
+                  ) : (
+                    <VideoUploader gameId={gameId} userId={user?.id} onUploadComplete={handleUploadComplete} />
+                  )}
                 </div>
               ) : (
                 <div className="text-center">

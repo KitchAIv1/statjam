@@ -17,11 +17,12 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { CoachGameService } from '@/lib/services/coachGameService';
 import { CoachTeamService } from '@/lib/services/coachTeamService';
 import { VideoStatService } from '@/lib/services/videoStatService';
+import { useCoachTeams } from '@/hooks/useCoachTeams';
+import { cache, CacheTTL } from '@/lib/utils/cache';
 import { UpgradeModal } from '@/components/subscription';
-import { CoachVideoStatusCard } from '@/components/video/CoachVideoStatusCard';
+import { VideoSelectGameCard } from '@/components/video/VideoSelectGameCard';
 import { 
-  Loader2, ArrowLeft, Video, PlayCircle, Calendar, 
-  Trophy, Clock, CheckCircle, AlertCircle, Plus, X, Trash2
+  Loader2, ArrowLeft, Video, Trophy, AlertCircle, Plus, X
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { VideoCreditsDisplay } from '@/components/shared/VideoCreditsDisplay';
@@ -41,18 +42,49 @@ interface GameWithVideo {
 function VideoSelectContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const teamId = searchParams.get('teamId');
+  const urlTeamId = searchParams.get('teamId');
   
   const { user, loading: authLoading } = useAuthV2();
   const { tier: subscriptionTier, limits, videoCredits, loading: subLoading } = useSubscription('coach');
+  const { teams, loading: teamsLoading } = useCoachTeams(user ? { id: user.id, role: user.role || 'coach' } : null);
   
   // User has video access if subscribed OR has video credits
   const hasVideoAccess = limits.hasVideoAccess || videoCredits > 0;
   
-  const [loading, setLoading] = useState(true);
+  // Use URL teamId if provided, otherwise default to first team
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(urlTeamId);
+  const teamId = selectedTeamId || (teams.length > 0 ? teams[0].id : null);
+  
+  // Update selectedTeamId when teams load and no URL teamId
+  React.useEffect(() => {
+    if (!selectedTeamId && teams.length > 0 && !urlTeamId) {
+      setSelectedTeamId(teams[0].id);
+    }
+  }, [teams, selectedTeamId, urlTeamId]);
+  
+  // Handle team change from dropdown
+  const handleTeamChange = (newTeamId: string) => {
+    setSelectedTeamId(newTeamId);
+    router.replace(`/dashboard/coach/video-select?teamId=${newTeamId}`, { scroll: false });
+  };
+  
+  // ⚡ Initialize with cached data to prevent spinner flash
+  const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [team, setTeam] = useState<any>(null);
-  const [games, setGames] = useState<GameWithVideo[]>([]);
+  const [team, setTeam] = useState<any>(() => {
+    if (teamId) {
+      const cached = cache.get<any>(`coach_video_team_${teamId}`);
+      return cached || null;
+    }
+    return null;
+  });
+  const [games, setGames] = useState<GameWithVideo[]>(() => {
+    if (teamId) {
+      const cached = cache.get<GameWithVideo[]>(`coach_video_games_${teamId}`);
+      return cached || [];
+    }
+    return [];
+  });
   const [hasMore, setHasMore] = useState(false);
   const [totalGames, setTotalGames] = useState(0);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -77,13 +109,30 @@ function VideoSelectContent() {
     }
   }, [authLoading, subLoading, hasVideoAccess]);
   
-  // Load team, games, and video data
+  // Load team, games, and video data - with caching for instant navigation
   useEffect(() => {
     async function loadData() {
-      if (!teamId || !user) return;
+      if (!teamId || !user) {
+        return;
+      }
+      
+      const cacheKey = `coach_video_games_${teamId}`;
+      const teamCacheKey = `coach_video_team_${teamId}`;
+      
+      // ⚡ Check cache first - NO spinner for cached data
+      const cachedGames = cache.get<GameWithVideo[]>(cacheKey);
+      const cachedTeam = cache.get<any>(teamCacheKey);
+      
+      if (cachedGames && cachedTeam) {
+        setGames(cachedGames);
+        setTeam(cachedTeam);
+        return; // Use cached data, no loading spinner
+      }
       
       try {
+        // Only show loading if no cached data
         setLoading(true);
+        
         const [teamData, gamesResult] = await Promise.all([
           CoachTeamService.getTeam(teamId),
           CoachGameService.getTeamGames(teamId, GAMES_PER_PAGE, 0),
@@ -106,6 +155,10 @@ function VideoSelectContent() {
         );
         
         setGames(gamesWithVideos);
+        
+        // ⚡ Cache for 3 minutes (same as organizer)
+        cache.set(cacheKey, gamesWithVideos, CacheTTL.coachGames);
+        cache.set(teamCacheKey, teamData, CacheTTL.coachGames);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -113,9 +166,7 @@ function VideoSelectContent() {
       }
     }
     
-    if (user && teamId) {
-      loadData();
-    }
+    loadData();
   }, [user, teamId]);
   
   // Load more games
@@ -206,30 +257,10 @@ function VideoSelectContent() {
     }
   };
   
-  if (authLoading || subLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 
-                      flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-      </div>
-    );
-  }
-  
-  if (!teamId) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30 
-                      flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-foreground">No Team Selected</h2>
-          <p className="text-muted-foreground mt-2">Please select a team from your dashboard.</p>
-          <Button onClick={() => router.push('/dashboard/coach')} className="mt-4">
-            Go to Dashboard
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // ⚡ Never show inline spinner - just let data populate
+  // This prevents the jarring spinner flash on navigation
+  const hasNoTeams = !teamsLoading && !authLoading && teams.length === 0;
+  const isDataLoading = authLoading || subLoading || teamsLoading || loading;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-red-50/30">
@@ -250,15 +281,30 @@ function VideoSelectContent() {
             </Button>
             
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Video className="w-6 h-6 text-orange-500" />
-                Video Tracking
-              </h1>
-              {team && (
-                <p className="text-muted-foreground mt-1">
-                  Select a game for <span className="font-medium text-foreground">{team.name}</span>
-                </p>
-              )}
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <Video className="w-6 h-6 text-orange-500" />
+                  Video Tracking
+                </h1>
+                
+                {/* Team Dropdown */}
+                {teams.length > 0 && (
+                  <select
+                    value={teamId || ''}
+                    onChange={(e) => handleTeamChange(e.target.value)}
+                    className="px-3 py-1.5 text-sm font-medium bg-white border border-orange-200 
+                               rounded-lg text-foreground focus:outline-none focus:ring-2 
+                               focus:ring-orange-500 focus:border-orange-500 cursor-pointer"
+                  >
+                    {teams.map((t: any) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <p className="text-muted-foreground mt-1">
+                Select a game to upload video
+              </p>
             </div>
             
             {/* Video Credits Display */}
@@ -331,20 +377,35 @@ function VideoSelectContent() {
           {/* Games List */}
           <div className="bg-white rounded-xl shadow-sm border border-orange-100 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-foreground">Your Games</h2>
+              <h2 className="font-semibold text-foreground">
+                Your Games
+                {isDataLoading && (
+                  <Loader2 className="w-4 h-4 text-orange-400 animate-spin inline ml-2" />
+                )}
+              </h2>
               <Button
                 onClick={handleToggleNewGameForm}
                 size="sm"
                 variant="outline"
                 className="gap-2"
-                disabled={showNewGameForm}
+                disabled={showNewGameForm || isDataLoading}
               >
                 <Plus className="w-4 h-4" />
                 New Game
               </Button>
             </div>
             
-            {games.length === 0 ? (
+            {/* Content States - NO full spinner, just content */}
+            {hasNoTeams ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Trophy className="w-16 h-16 mx-auto mb-4 text-orange-300" />
+                <h2 className="text-xl font-semibold text-foreground">No Teams Yet</h2>
+                <p className="mt-2">Create a team to start video tracking</p>
+                <Button onClick={() => router.push('/dashboard/coach')} className="mt-4">
+                  Go to Dashboard
+                </Button>
+              </div>
+            ) : games.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p className="font-medium">No games yet</p>
@@ -356,111 +417,16 @@ function VideoSelectContent() {
               </div>
             ) : (
               <div className="space-y-4">
-                {games.map((game) => {
-                  // If game has a video uploaded, show the status card with delete option
-                  if (game.video && game.video.status !== 'uploading') {
-                    return (
-                      <div key={game.id} className="relative group">
-                        <div 
-                          onClick={() => handleSelectGame(game.id)} 
-                          className="cursor-pointer"
-                        >
-                          <CoachVideoStatusCard
-                            video={game.video}
-                            teamName={team?.name || 'My Team'}
-                            opponentName={game.opponent_name || 'Opponent'}
-                            compact
-                          />
-                        </div>
-                        <button
-                          onClick={(e) => handleDeleteGame(game.id, e)}
-                          disabled={deletingGameId === game.id}
-                          className="absolute top-3 right-3 p-2 text-gray-400 hover:text-red-500 
-                                     hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50
-                                     opacity-0 group-hover:opacity-100"
-                          title="Delete game"
-                        >
-                          {deletingGameId === game.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    );
-                  }
-                  
-                  // Otherwise show the regular game card
-                  const isCompleted = game.status === 'completed';
-                  const isInProgress = game.status === 'in_progress';
-                  
-                  return (
-                    <div
-                      key={game.id}
-                      className="flex items-center gap-4 p-4 rounded-lg border border-gray-200 
-                                 hover:border-orange-200 hover:bg-orange-50/50 transition-colors cursor-pointer"
-                      onClick={() => handleSelectGame(game.id)}
-                    >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        isCompleted ? 'bg-green-100' : isInProgress ? 'bg-orange-100' : 'bg-gray-100'
-                      }`}>
-                        {isCompleted ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                        ) : isInProgress ? (
-                          <Clock className="w-5 h-5 text-orange-600" />
-                        ) : (
-                          <PlayCircle className="w-5 h-5 text-gray-500" />
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-foreground truncate">
-                          vs {game.opponent_name || 'Opponent'}
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {game.game_date ? new Date(game.game_date).toLocaleDateString() : 'No date'}
-                          </span>
-                          {isCompleted && game.home_score !== undefined && (
-                            <span className="font-medium">
-                              {game.home_score} - {game.away_score}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-2 border-orange-300 text-orange-600 hover:bg-orange-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectGame(game.id);
-                          }}
-                        >
-                          <Video className="w-4 h-4" />
-                          Upload
-                        </Button>
-                        
-                        <button
-                          onClick={(e) => handleDeleteGame(game.id, e)}
-                          disabled={deletingGameId === game.id}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 
-                                     rounded-lg transition-colors disabled:opacity-50"
-                          title="Delete game"
-                        >
-                          {deletingGameId === game.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {games.map((game) => (
+                  <VideoSelectGameCard
+                    key={game.id}
+                    game={game}
+                    teamName={team?.name || 'My Team'}
+                    onSelect={handleSelectGame}
+                    onDelete={handleDeleteGame}
+                    deletingGameId={deletingGameId}
+                  />
+                ))}
                 
                 {/* Load More Button */}
                 {hasMore && (

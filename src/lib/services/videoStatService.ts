@@ -804,6 +804,44 @@ export async function backfillVideoTimestamps(
 }
 
 // =============================================================================
+// DAILY UPLOAD LIMIT
+// =============================================================================
+
+export interface DailyUploadStatus {
+  uploadsToday: number;
+  limit: number;
+  remaining: number;
+  isExempt: boolean;
+}
+
+/**
+ * Get daily upload status for a user
+ * Calls the server API to get accurate count
+ */
+export async function getDailyUploadStatus(
+  userId: string, 
+  role: string
+): Promise<DailyUploadStatus> {
+  try {
+    const response = await fetch(
+      `/api/video/upload-limit?userId=${userId}&role=${role}`
+    );
+    
+    if (!response.ok) {
+      console.error('Error fetching upload limit:', response.status);
+      // Fail open - allow upload if check fails
+      return { uploadsToday: 0, limit: 2, remaining: 2, isExempt: false };
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error checking daily upload status:', error);
+    // Fail open
+    return { uploadsToday: 0, limit: 2, remaining: 2, isExempt: false };
+  }
+}
+
+// =============================================================================
 // SERVICE EXPORT
 // =============================================================================
 
@@ -832,5 +870,8 @@ export const VideoStatService = {
   
   // Video timestamp calculation (for edit sync)
   calculateVideoTimestamp,
+  
+  // Daily upload limit
+  getDailyUploadStatus,
 };
 

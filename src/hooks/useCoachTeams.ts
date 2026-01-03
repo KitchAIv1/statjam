@@ -10,10 +10,16 @@ interface CoachTeamsState {
 }
 
 export function useCoachTeams(user: { id: string; role: string } | null) {
-  const [state, setState] = useState<CoachTeamsState>({
-    teams: [],
-    loading: true,
-    error: null
+  // ⚡ Check cache SYNCHRONOUSLY on initial render - prevents spinner flash
+  const [state, setState] = useState<CoachTeamsState>(() => {
+    if (user?.id && user.role === 'coach') {
+      const cacheKey = CacheKeys.coachTeams(user.id);
+      const cachedTeams = cache.get<CoachTeam[]>(cacheKey);
+      if (cachedTeams) {
+        return { teams: cachedTeams, loading: false, error: null };
+      }
+    }
+    return { teams: [], loading: true, error: null };
   });
 
   const refetch = useCallback(async (skipCache: boolean = false) => {

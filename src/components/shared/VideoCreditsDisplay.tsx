@@ -7,12 +7,21 @@
  * for use in page headers and key locations.
  * Uses StatJam brand colors (orange/amber).
  * 
+ * Also displays daily upload limit status.
+ * 
  * @module VideoCreditsDisplay
  */
 
 import React from 'react';
-import { Video, CreditCard, Sparkles, AlertTriangle } from 'lucide-react';
+import { Video, CreditCard, Sparkles, AlertTriangle, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+
+interface DailyUploadStatus {
+  uploadsToday: number;
+  limit: number;
+  remaining: number;
+  isExempt: boolean;
+}
 
 interface VideoCreditsDisplayProps {
   credits: number;
@@ -20,6 +29,8 @@ interface VideoCreditsDisplayProps {
   showBuyButton?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  /** Daily upload limit status (optional) */
+  dailyUploads?: DailyUploadStatus;
 }
 
 export function VideoCreditsDisplay({
@@ -28,9 +39,11 @@ export function VideoCreditsDisplay({
   showBuyButton = true,
   size = 'md',
   className = '',
+  dailyUploads,
 }: VideoCreditsDisplayProps) {
   const isLow = credits > 0 && credits <= 2;
   const isEmpty = credits === 0;
+  const dailyLimitReached = dailyUploads && !dailyUploads.isExempt && dailyUploads.remaining === 0;
   
   // Size variants
   const sizeClasses = {
@@ -100,6 +113,21 @@ export function VideoCreditsDisplay({
             : 'Video tracking ready'}
         </span>
       </div>
+      
+      {/* Daily Limit Indicator */}
+      {dailyUploads && !dailyUploads.isExempt && (
+        <div className={`flex items-center gap-1 border-l border-current/20 pl-3 ml-1 ${
+          dailyLimitReached ? 'text-red-600' : 'text-blue-600'
+        }`}>
+          <Calendar className={s.icon} />
+          <span className={`text-xs font-medium`}>
+            {dailyUploads.remaining > 0 
+              ? `${dailyUploads.remaining}/${dailyUploads.limit} today`
+              : 'Limit reached'
+            }
+          </span>
+        </div>
+      )}
       
       {/* Buy Button */}
       {showBuyButton && onBuyCredits && (

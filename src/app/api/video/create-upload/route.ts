@@ -33,6 +33,87 @@ function generateTusSignature(
   return crypto.createHash('sha256').update(signatureString).digest('hex');
 }
 
+// Daily upload limit (resets at midnight EST)
+const DAILY_UPLOAD_LIMIT = 2;
+
+/**
+ * Check if user is a stat_admin (exempt from daily limit)
+ */
+async function isStatAdmin(userId: string): Promise<boolean> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return false;
+  
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const { data: user } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  
+  return user?.role === 'stat_admin';
+}
+
+/**
+ * Check daily upload limit for user (resets at midnight EST)
+ * Returns: { allowed: boolean, count: number, limit: number }
+ */
+async function checkDailyUploadLimit(
+  userId: string, 
+  gameId: string
+): Promise<{ allowed: boolean; count: number; limit: number }> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    return { allowed: true, count: 0, limit: DAILY_UPLOAD_LIMIT }; // Fail open
+  }
+  
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  
+  // Get start of today in EST (midnight EST as UTC)
+  const now = new Date();
+  const estDateStr = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  
+  // Determine EST offset (handle DST)
+  const testDate = new Date(`${estDateStr}T12:00:00Z`);
+  const tzName = testDate.toLocaleString('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' });
+  const isDST = tzName.includes('EDT');
+  const offset = isDST ? '-04:00' : '-05:00';
+  
+  const todayMidnightEST = new Date(`${estDateStr}T00:00:00${offset}`);
+  
+  // Check if this is a re-upload (existing video for this game)
+  const { data: existingVideo } = await supabase
+    .from('game_videos')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('uploaded_by', userId)
+    .single();
+  
+  // Re-uploads don't count toward the limit
+  if (existingVideo) {
+    console.log('📹 Re-upload detected for game:', gameId, '- not counting toward limit');
+    return { allowed: true, count: 0, limit: DAILY_UPLOAD_LIMIT };
+  }
+  
+  // Count NEW uploads today by this user
+  const { count, error } = await supabase
+    .from('game_videos')
+    .select('id', { count: 'exact', head: true })
+    .eq('uploaded_by', userId)
+    .gte('created_at', todayMidnightEST.toISOString());
+  
+  if (error) {
+    console.error('Error checking upload limit:', error);
+    return { allowed: true, count: 0, limit: DAILY_UPLOAD_LIMIT }; // Fail open
+  }
+  
+  const uploadCount = count || 0;
+  console.log('📊 Daily upload check:', { userId, uploadsToday: uploadCount, limit: DAILY_UPLOAD_LIMIT });
+  
+  return {
+    allowed: uploadCount < DAILY_UPLOAD_LIMIT,
+    count: uploadCount,
+    limit: DAILY_UPLOAD_LIMIT,
+  };
+}
+
 /**
  * Verify user owns the game
  * Checks: stat_admin (coach games) OR tournament organizer (organizer games)
@@ -111,6 +192,26 @@ export async function POST(request: NextRequest) {
           { error: 'You do not have permission to upload to this game' },
           { status: 403 }
         );
+      }
+      
+      // Check daily upload limit (stat_admins are exempt)
+      const userIsStatAdmin = await isStatAdmin(userId);
+      if (!userIsStatAdmin) {
+        const limitCheck = await checkDailyUploadLimit(userId, gameId);
+        if (!limitCheck.allowed) {
+          console.log('🚫 Daily upload limit reached:', { userId, count: limitCheck.count });
+          return NextResponse.json(
+            { 
+              error: 'Daily upload limit reached',
+              message: `You can upload a maximum of ${DAILY_UPLOAD_LIMIT} games per day. Your limit resets at midnight EST.`,
+              uploadsToday: limitCheck.count,
+              limit: limitCheck.limit,
+            },
+            { status: 429 }
+          );
+        }
+      } else {
+        console.log('✅ Stat admin exempt from upload limit:', userId);
       }
     }
 

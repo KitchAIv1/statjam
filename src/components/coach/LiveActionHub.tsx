@@ -14,14 +14,22 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { PlayCircle, Upload, Video, ArrowRight } from 'lucide-react';
+import { PlayCircle, Upload, Video, ArrowRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CoachGame } from '@/lib/types/coach';
 
+interface DailyUploadStatus {
+  uploadsToday: number;
+  limit: number;
+  remaining: number;
+  isExempt: boolean;
+}
+
 interface LiveActionHubProps {
   liveGames: CoachGame[];
   videoCredits?: number;
+  dailyUploads?: DailyUploadStatus;
   onStartGame: () => void;
   onUploadVideo: () => void;
   onBuyCredits?: () => void;
@@ -30,6 +38,7 @@ interface LiveActionHubProps {
 export function LiveActionHub({
   liveGames,
   videoCredits,
+  dailyUploads,
   onStartGame,
   onUploadVideo,
   onBuyCredits,
@@ -46,6 +55,10 @@ export function LiveActionHub({
   // Credits state helpers
   const hasCredits = videoCredits !== undefined && videoCredits > 0;
   const isLowCredits = videoCredits !== undefined && videoCredits > 0 && videoCredits <= 2;
+  
+  // Daily limit helpers
+  const dailyLimitReached = dailyUploads && !dailyUploads.isExempt && dailyUploads.remaining === 0;
+  const showDailyLimit = dailyUploads && !dailyUploads.isExempt;
 
   return (
     <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full flex flex-col">
@@ -72,20 +85,32 @@ export function LiveActionHub({
           {/* Upload Video - State-aware integrated button */}
           {hasCredits ? (
             <button
-              onClick={onUploadVideo}
-              className="w-full text-left p-3 rounded-xl border border-gray-200 
-                         hover:border-gray-300 hover:bg-gray-50 transition-all group/upload"
+              onClick={dailyLimitReached ? undefined : onUploadVideo}
+              disabled={dailyLimitReached}
+              className={`w-full text-left p-3 rounded-xl border transition-all group/upload
+                ${dailyLimitReached 
+                  ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60' 
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gray-100 group-hover/upload:bg-gray-200 transition-colors">
+                <div className={`p-2 rounded-lg transition-colors ${dailyLimitReached ? 'bg-gray-100' : 'bg-gray-100 group-hover/upload:bg-gray-200'}`}>
                   <Upload className="w-5 h-5 text-gray-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-gray-900">Upload Video</div>
-                  <div className={`text-xs ${isLowCredits ? 'text-amber-600' : 'text-orange-600'}`}>
-                    {isLowCredits 
-                      ? `⚠ ${videoCredits} credit${videoCredits === 1 ? '' : 's'} left`
-                      : `✓ ${videoCredits} video credit${videoCredits === 1 ? '' : 's'}`}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs ${isLowCredits ? 'text-amber-600' : 'text-orange-600'}`}>
+                      {isLowCredits 
+                        ? `⚠ ${videoCredits} credit${videoCredits === 1 ? '' : 's'} left`
+                        : `✓ ${videoCredits} credit${videoCredits === 1 ? '' : 's'}`}
+                    </span>
+                    {showDailyLimit && (
+                      <span className={`text-xs flex items-center gap-0.5 ${dailyLimitReached ? 'text-red-500' : 'text-blue-600'}`}>
+                        <Calendar className="w-3 h-3" />
+                        {dailyLimitReached ? 'Limit reached' : `${dailyUploads!.remaining}/${dailyUploads!.limit} today`}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-gray-400 group-hover/upload:text-gray-600 transition-colors flex-shrink-0" />

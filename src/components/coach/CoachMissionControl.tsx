@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CoachTeam } from '@/lib/types/coach';
 import { useCoachDashboardData } from '@/hooks/useCoachDashboardData';
 import { useSubscription } from '@/hooks/useSubscription';
+import { VideoStatService, DailyUploadStatus } from '@/lib/services/videoStatService';
 import { ProfileCard, ProfileCardSkeleton } from '@/components/profile/ProfileCard';
 import { ProfileService } from '@/lib/services/profileService';
 import { LiveActionHub } from './LiveActionHub';
@@ -74,6 +75,25 @@ export function CoachMissionControl({
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showVideoCreditsModal, setShowVideoCreditsModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<CoachTeam | null>(null);
+  
+  // Daily upload limit
+  const [dailyUploads, setDailyUploads] = useState<DailyUploadStatus>({ 
+    uploadsToday: 0, limit: 2, remaining: 2, isExempt: false 
+  });
+  
+  // Fetch daily upload limit
+  useEffect(() => {
+    async function checkLimit() {
+      if (!user?.id) return;
+      try {
+        const status = await VideoStatService.getDailyUploadStatus(user.id, 'coach');
+        setDailyUploads(status);
+      } catch (error) {
+        console.error('Error checking daily limit:', error);
+      }
+    }
+    if (user?.id) checkLimit();
+  }, [user?.id]);
 
   // Handlers
   const handleQuickTrack = (team: CoachTeam) => {
@@ -177,6 +197,7 @@ export function CoachMissionControl({
           <LiveActionHub
             liveGames={dashboardData.liveGames}
             videoCredits={videoCredits}
+            dailyUploads={dailyUploads}
             onStartGame={handleStartGame}
             onUploadVideo={handleUploadVideo}
             onBuyCredits={() => setShowVideoCreditsModal(true)}

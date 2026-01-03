@@ -205,6 +205,12 @@ export const navigationConfig: Record<string, NavigationConfig> = {
         description: 'Coach mission control'
       },
       {
+        label: 'Video Tracking',
+        href: '/dashboard/coach/video-select',
+        icon: Video,
+        description: 'Upload & track game videos'
+      },
+      {
         label: 'Tournaments',
         href: '/dashboard/coach/tournaments',
         icon: Trophy,

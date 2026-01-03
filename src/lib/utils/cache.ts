@@ -135,6 +135,7 @@ export const CacheTTL = {
   organizerTournaments: 3,
   organizerGames: 3,
   coachTeams: 3,
+  coachGames: 3, // 3 minutes TTL for coach games with video status
   tournamentSchedule: 5,
   tournamentLeaders: 2,
   tournamentStandings: 3,
