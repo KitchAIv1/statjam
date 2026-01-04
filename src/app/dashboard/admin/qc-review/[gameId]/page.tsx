@@ -38,6 +38,7 @@ import {
   SkipForward,
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 interface QCReviewPageProps {
   params: Promise<{ gameId: string }>;
@@ -215,6 +216,16 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
       videoRef.current.currentTime += seconds;
     }
   }, []);
+
+  // Keyboard shortcuts for video controls (Space, Arrow keys)
+  useKeyboardShortcuts({
+    onPlayPause: handlePlayPause,
+    onRewind10: () => handleSkip(-10),
+    onForward10: () => handleSkip(10),
+    onRewind1: () => handleSkip(-1),
+    onForward1: () => handleSkip(1),
+    enabled: !!videoUrl, // Enable when video is loaded
+  });
 
   // Handle slider scrub - seek to position
   const handleSliderSeek = useCallback((values: number[]) => {

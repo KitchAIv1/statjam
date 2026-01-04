@@ -224,10 +224,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create video in Bunny Stream
+    // Create video in Bunny Stream with metadata for webhook fallback
     const videoTitle = `Game_${gameId}_${Date.now()}`;
     
-    console.log('Creating video in Bunny Stream:', { videoTitle, libraryId: BUNNY_LIBRARY_ID });
+    // Store gameId and userId in metaTags for webhook to use if client callback fails
+    const metaTags = [
+      { property: 'gameId', value: gameId },
+      { property: 'userId', value: userId || '' },
+      { property: 'libraryId', value: BUNNY_LIBRARY_ID },
+    ];
+    
+    console.log('Creating video in Bunny Stream:', { videoTitle, libraryId: BUNNY_LIBRARY_ID, metaTags });
     
     const createResponse = await fetch(
       `https://video.bunnycdn.com/library/${BUNNY_LIBRARY_ID}/videos`,
@@ -237,7 +244,10 @@ export async function POST(request: NextRequest) {
           'AccessKey': BUNNY_STREAM_API_KEY,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title: videoTitle }),
+        body: JSON.stringify({ 
+          title: videoTitle,
+          metaTags, // Include metadata for webhook fallback
+        }),
       }
     );
 

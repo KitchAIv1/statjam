@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.8] - 2025-01-04
+
+### 🎬 **VIDEO UPLOAD RELIABILITY & STATUS FIXES**
+
+#### Bunny.net Webhook Fallback System
+- **ADDED**: Server-side webhook endpoint `/api/webhook/bunny` for video processing notifications
+  - Receives webhook callbacks from Bunny.net when video processing completes
+  - Creates/updates `game_videos` database record if client-side callback failed
+  - Extracts `gameId` and `userId` from video metadata stored during upload
+  - Handles large file uploads (13GB+) that may fail client-side due to browser closure
+  - Only processes when status = READY (4) or FAILED (5)
+  - Uses upsert logic to prevent duplicate records
+- **ADDED**: Video metadata storage in Bunny.net `metaTags` during upload
+  - Stores `gameId`, `userId`, and `libraryId` in video metadata
+  - Enables webhook to identify game and user even if client callback fails
+- **ADDED**: Webhook configuration documentation
+  - Webhook URL: `https://www.statjam.net/api/webhook/bunny`
+  - Setup instructions for Bunny.net dashboard configuration
+
+#### Video Status Update Fix
+- **FIXED**: `/api/video/check-status` endpoint now updates database when Bunny reports ready
+  - Previously only polled Bunny and returned status to client
+  - Now automatically updates `game_videos.status` from `processing` → `ready` when Bunny completes
+  - Sets `due_at` timestamp (midnight EST next day) when status becomes ready
+  - Updates `duration_seconds` from Bunny video metadata
+  - Prevents videos from being stuck in `processing` status indefinitely
+- **FIXED**: Videos now appear in Admin video pipeline immediately after Bunny processing
+  - Admin queue filters for `status = 'ready'`
+  - Status update ensures videos are visible for assignment
+  - Resolves issue where videos uploaded successfully but didn't appear in pipeline
+
+#### Video Upload Flow Improvements
+- **IMPROVED**: Upload reliability for large files
+  - Client-side callback (`handleUploadComplete`) can fail for large files
+  - Webhook provides server-side backup to ensure DB record is created
+  - Both client callback and webhook use upsert to prevent duplicates
+- **IMPROVED**: Status synchronization between Bunny.net and database
+  - Real-time status updates during polling
+  - Automatic DB updates when processing completes
+  - Consistent status across all dashboards
+
+#### Technical Implementation
+- **Files Created**:
+  - `src/app/api/webhook/bunny/route.ts` - Bunny.net webhook endpoint (217 lines)
+- **Files Modified**:
+  - `src/app/api/video/create-upload/route.ts` - Added metadata storage in Bunny video creation
+  - `src/app/api/video/check-status/route.ts` - Added automatic DB status updates when ready
+
+#### Known Issues & Future Work
+- **IDENTIFIED**: Game completion flow bug - games marked `completed` before clips are generated
+  - Stat Admin completion sets `game.status = 'completed'` immediately
+  - Coach/Organizer sees "Completed" game with no clips available
+  - **Fix Required**: Delay game completion until clip worker finishes
+  - **Status**: Investigation complete, fix pending implementation
+
+#### Documentation Updates
+- **UPDATED**: `docs/01-project/CHANGELOG.md` - This entry
+- **UPDATED**: `package.json` - Version bump to 0.17.8
+
+---
+
 ## [0.17.7] - 2025-01-01
 
 ### 🎨 **STAT ADMIN DASHBOARD REDESIGN**
