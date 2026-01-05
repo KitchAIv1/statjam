@@ -475,6 +475,175 @@ export function CoachGameAnalyticsTab({
           bottomLine="Winslow won because they valued possessions, rebounded, and defended together. Burlington City lost because they couldn't handle pressure or control tempo. This game is a textbook example of how discipline beats talent when execution collapses."
         />
       )}
+
+      {/* AI Game Analysis Report - Winslow vs Vorhees (75-59) */}
+      {gameId === '7c04dbb2-47c5-4b74-bdb4-640b8b09e207' && (
+        <AIGameAnalysisReport
+          gameId={gameId}
+          winningTeam="Winslow"
+          losingTeam="Vorhees"
+          finalScore={{ home: 75, away: 59 }}
+          margin={16}
+          gameType="Dominant"
+          overview="Winslow controlled this game through sheer physicality. Despite committing 25 turnovers—a number that would doom most teams—Winslow's dominance on the glass (54-28 rebounding margin) created so many second-chance opportunities that the turnovers became manageable. The game was decided in Q2 when Winslow outscored Vorhees 20-11 to take control, and they never looked back, closing with a 19-12 fourth quarter to seal the victory."
+          winningFactors={[
+            {
+              factor: 'Rebounding Margin',
+              value: '+26',
+              impactScore: 31.2,
+              courtMeaning: [
+                '54 total rebounds vs 28 for Vorhees',
+                '22 offensive boards created extra possessions',
+                'Limited Vorhees to one-shot possessions'
+              ],
+              coachingTakeaway: [
+                'Rebounding won this game despite turnover issues',
+                'Physical presence on the glass is Winslow\'s identity',
+                'Continue emphasizing boxing out and pursuit'
+              ]
+            },
+            {
+              factor: 'Free Throw Attempts',
+              value: '+19',
+              impactScore: 20.9,
+              courtMeaning: [
+                '26 FT attempts vs only 7 for Vorhees',
+                'Aggressive driving drew fouls (Vorhees had 20 fouls)',
+                'Put Vorhees in foul trouble early'
+              ],
+              coachingTakeaway: [
+                'Attack the paint mentality paid off',
+                'Must improve FT% (57.7%) to maximize this advantage',
+                'Aggressive offense creates free points'
+              ]
+            },
+            {
+              factor: 'Offensive Rebounds',
+              value: '+10',
+              impactScore: 15.0,
+              courtMeaning: [
+                '22 offensive boards extended possessions',
+                'Second-chance points offset turnover damage',
+                'Physical advantage underneath'
+              ],
+              coachingTakeaway: [
+                'Offensive rebounding masked poor ball security',
+                'This won\'t work against every opponent',
+                'Reduce turnovers AND keep crashing the glass'
+              ]
+            }
+          ]}
+          keyPlayers={[
+            {
+              name: 'Ward Jr',
+              rank: 1,
+              points: 28,
+              rebounds: 5,
+              assists: 1,
+              steals: 1,
+              blocks: 0,
+              turnovers: 8,
+              impactScore: 25.9,
+              strengths: [
+                'Dominant scoring performance (28 points)',
+                'Drew fouls and got to the line',
+                'Took over when Winslow needed buckets'
+              ],
+              riskToManage: '8 turnovers is very high',
+              coachingFocus: [
+                'Continue aggressive scoring mentality',
+                'Work on decision-making under pressure',
+                'Reduce careless turnovers without losing aggression'
+              ]
+            },
+            {
+              name: 'Murrell',
+              rank: 2,
+              points: 9,
+              rebounds: 16,
+              assists: 1,
+              steals: 1,
+              blocks: 0,
+              turnovers: 2,
+              impactScore: 21.7,
+              strengths: [
+                'Elite rebounding effort (16 boards!)',
+                'Controlled the paint defensively',
+                'Efficient with low turnover count'
+              ],
+              coachingFocus: [
+                'Continue as the anchor on the glass',
+                'Look for more scoring opportunities inside',
+                'His effort sets the tone for the team'
+              ]
+            },
+            {
+              name: 'DeGrais',
+              rank: 3,
+              points: 12,
+              rebounds: 7,
+              assists: 2,
+              steals: 6,
+              blocks: 2,
+              turnovers: 7,
+              impactScore: 21.4,
+              strengths: [
+                'Defensive playmaker (6 steals, 2 blocks)',
+                'Created turnovers and disrupted offense',
+                'Versatile two-way contributor'
+              ],
+              riskToManage: '7 turnovers offensively',
+              coachingFocus: [
+                'Keep the defensive intensity',
+                'Simplify offensive decisions',
+                'His defense creates offense for teammates'
+              ]
+            }
+          ]}
+          momentum={{
+            quarter: 2,
+            teamScore: 20,
+            opponentScore: 11,
+            description: 'After a tight first quarter (13-14), Winslow exploded in Q2 with a 20-11 run. Vorhees started picking up fouls trying to stop paint attacks, and Winslow\'s offensive rebounding extended possessions. By halftime, Winslow led and never trailed again.'
+          }}
+          opponentBreakdown={{
+            fgPercentage: 34.2,
+            turnovers: 18,
+            fouls: 20,
+            keyIssues: [
+              '34.2% shooting from the field',
+              'Outrebounded by 26',
+              '20 fouls committed',
+              'Over-reliant on 3-pointers (32 attempts, 31.3%)'
+            ],
+            correctableIssues: [
+              'Shot selection and patience',
+              'Boxing out fundamentals',
+              'Foul discipline'
+            ],
+            deeperProblems: [
+              'Physical disadvantage on the glass',
+              'Lack of paint presence',
+              'No answer for Winslow\'s aggression'
+            ]
+          }}
+          actionItems={{
+            winner: [
+              'Maintain rebounding intensity—it\'s your identity',
+              'Address turnover issue (25 is too many)',
+              'Improve free throw shooting (57.7% leaves points)',
+              'Keep attacking the paint and drawing fouls'
+            ],
+            loser: [
+              'Develop paint scoring presence',
+              'Improve rebounding fundamentals',
+              'Better foul discipline',
+              'More balanced shot selection (less 3-point reliant)'
+            ]
+          }}
+          bottomLine="Winslow won this game on the glass. 54 rebounds—including 22 offensive boards—created enough second-chance opportunities to overcome 25 turnovers. When you dominate the boards by 26 and draw 26 free throws, you can survive mistakes. But this game is also a warning: turnovers will cost you against better teams. Clean up the ball handling, keep crashing the boards, and this team can beat anyone."
+        />
+      )}
     </div>
   );
 }
