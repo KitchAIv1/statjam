@@ -250,17 +250,17 @@ function getClipTimingWindow(statType: string, modifier: string | null): { befor
     return { before: 2, after: 3 };
   }
   
-  // Made shots - need to see setup/pass before
+  // Made shots - need to see setup/pass before + extra 1.5s after for celebration/reaction
   if (statType === 'field_goal' && modifier === 'made') {
-    return { before: 3, after: 2 };
+    return { before: 3, after: 3.5 };
   }
   if (statType === 'three_pointer' && modifier === 'made') {
-    return { before: 3, after: 2 };
+    return { before: 3, after: 3.5 };
   }
   
-  // Free throws - less context needed
-  if (statType === 'free_throw') {
-    return { before: 1, after: 2 };
+  // Free throws - less context needed + extra 1.5s after
+  if (statType === 'free_throw' && modifier === 'made') {
+    return { before: 1, after: 3.5 };
   }
   
   // Default fallback
