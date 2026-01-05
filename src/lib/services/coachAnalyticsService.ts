@@ -458,7 +458,7 @@ export class CoachAnalyticsService {
 
       // ✅ Fetch custom_players for coach mode (uses `name` field, not first_name/last_name)
       const customPlayersRes = await fetch(
-        `${this.SUPABASE_URL}/rest/v1/custom_players?coach_team_id=eq.${teamId}&select=id,name`,
+        `${this.SUPABASE_URL}/rest/v1/custom_players?team_id=eq.${teamId}&select=id,name`,
         { headers }
       );
       const customPlayers = await customPlayersRes.json();
@@ -685,7 +685,7 @@ export class CoachAnalyticsService {
 
       // Fetch team players
       const playersRes = await fetch(
-        `${this.SUPABASE_URL}/rest/v1/team_players?coach_team_id=eq.${teamId}&select=id,first_name,last_name,profile_player_id`,
+        `${this.SUPABASE_URL}/rest/v1/team_players?team_id=eq.${teamId}&select=id,first_name,last_name,profile_player_id`,
         { headers }
       );
       const players = await playersRes.json();
