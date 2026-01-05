@@ -66,6 +66,20 @@ export function CoachMissionControl({
     }
   }, [searchParams, refetchSubscription, router]);
   
+  // ⚡ Quick Track from URL param (for "Track Another Game" flow)
+  useEffect(() => {
+    const quickTrackTeamId = searchParams.get('quickTrack');
+    if (quickTrackTeamId && teams.length > 0) {
+      const targetTeam = teams.find(t => t.id === quickTrackTeamId);
+      if (targetTeam) {
+        setSelectedTeam(targetTeam);
+        setShowQuickTrack(true);
+        // Clear URL param to prevent re-triggering
+        router.replace('/dashboard/coach', { scroll: false });
+      }
+    }
+  }, [searchParams, teams, router]);
+  
   // Modal states
   const [showQuickTrack, setShowQuickTrack] = useState(false);
   const [showCreateTeam, setShowCreateTeam] = useState(false);

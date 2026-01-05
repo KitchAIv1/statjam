@@ -2328,7 +2328,11 @@ function StatTrackerV3Content() {
         {gameData && (
           <GameCompletionModal
             isOpen={tracker.showAwardsModal}
-            onClose={() => tracker.setShowAwardsModal(false)}
+            onClose={() => {
+              tracker.setShowAwardsModal(false);
+              // Navigate to dashboard on close
+              router.push('/dashboard/coach');
+            }}
             onComplete={tracker.completeGameWithAwards}
             gameId={gameData.id}
             teamAId={gameData.team_a_id}
@@ -2339,6 +2343,10 @@ function StatTrackerV3Content() {
             teamBScore={coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)}
             isCoachGame={coachMode}
             opponentName={opponentName || 'Opponent'}
+            onTrackAnother={coachMode && coachTeamIdParam ? () => {
+              // ⚡ Quick restart: Go directly to dashboard with quick-track modal trigger
+              router.push(`/dashboard/coach?quickTrack=${coachTeamIdParam}`);
+            } : undefined}
           />
         )}
 

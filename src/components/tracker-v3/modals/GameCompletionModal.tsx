@@ -13,7 +13,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle } from 'lucide-react';
+import { X, CheckCircle, PlayCircle, Home, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { TeamStatsTab } from '@/app/game-viewer/[gameId]/components/TeamStatsTab';
 import { AwardSelectionSection } from './AwardSelectionSection';
@@ -44,6 +44,7 @@ export interface GameCompletionModalProps {
   teamBScore: number;
   isCoachGame?: boolean;  // ✅ Coach mode flag
   opponentName?: string;  // ✅ Coach mode: opponent name
+  onTrackAnother?: () => void;  // ✅ Quick restart: callback to start new game
 }
 
 export function GameCompletionModal({
@@ -58,7 +59,8 @@ export function GameCompletionModal({
   teamAScore,
   teamBScore,
   isCoachGame = false,
-  opponentName = 'Opponent'
+  opponentName = 'Opponent',
+  onTrackAnother
 }: GameCompletionModalProps) {
   const [selectedPlayerOfGame, setSelectedPlayerOfGame] = useState<string | null>(null);
   const [selectedHustlePlayer, setSelectedHustlePlayer] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export function GameCompletionModal({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false); // ✅ Success state for quick actions
   // ✅ Coach mode: editable opponent score
   const [finalOpponentScore, setFinalOpponentScore] = useState<number>(teamBScore);
 
@@ -88,6 +91,7 @@ export function GameCompletionModal({
       setWinningTeamPlayers([]);
       setRosterWithCustomInfo(new Map());
       setFinalOpponentScore(teamBScore); // Reset to current opponent score
+      setShowSuccess(false); // Reset success state
       return;
     }
 
@@ -158,7 +162,13 @@ export function GameCompletionModal({
         isHustlePlayerCustom,
         ...(isCoachGame && { finalOpponentScore })
       });
-      onClose();
+      
+      // ✅ Show success state with quick actions (coach mode only)
+      if (isCoachGame && onTrackAnother) {
+        setShowSuccess(true);
+      } else {
+        onClose();
+      }
     } catch (error) {
       console.error('Failed to complete game:', error);
       alert('Failed to complete game. Please try again.');
@@ -170,6 +180,55 @@ export function GameCompletionModal({
   if (!isOpen) return null;
 
   const canComplete = selectedPlayerOfGame && selectedHustlePlayer;
+
+  // ✅ Success state with quick actions (coach mode)
+  if (showSuccess && isCoachGame) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+          {/* Success Header */}
+          <div className="text-center pt-8 pb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4">
+              <Trophy className="w-8 h-8 text-green-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Game Complete!</h2>
+            <p className="text-green-200 text-sm mt-1">
+              {teamAName} vs {opponentName}
+            </p>
+            <p className="text-white font-bold text-xl mt-2">
+              {teamAScore} - {finalOpponentScore}
+            </p>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="px-6 pb-8">
+            <p className="text-center text-green-200 text-sm mb-6">
+              What would you like to do next?
+            </p>
+            
+            <div className="space-y-3">
+              {onTrackAnother && (
+                <button
+                  onClick={onTrackAnother}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors"
+                >
+                  <PlayCircle className="w-5 h-5" />
+                  Track Another Game
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg transition-colors border border-white/20"
+              >
+                <Home className="w-5 h-5" />
+                Return to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">

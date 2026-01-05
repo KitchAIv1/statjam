@@ -109,6 +109,7 @@ export const CacheKeys = {
   organizerTournaments: (userId: string) => `organizer_tournaments:${userId}`,
   organizerGames: (userId: string) => `organizer_games:${userId}`,
   coachTeams: (coachId: string) => `coach_teams:${coachId}`,
+  coachDashboard: (coachId: string) => `coach_dashboard:${coachId}`,
   tournamentSchedule: (tournamentId: string) => `tournament_schedule:${tournamentId}`,
   tournamentLeaders: (tournamentId: string, category: string, minGames: number) => `tournament_leaders:${tournamentId}:${category}:${minGames}`,
   tournamentStandings: (tournamentId: string) => `tournament_standings:${tournamentId}`,
@@ -135,6 +136,7 @@ export const CacheTTL = {
   organizerTournaments: 3,
   organizerGames: 3,
   coachTeams: 3,
+  coachDashboard: 2, // 2 minutes TTL for coach dashboard data (video queue, live/recent games)
   coachGames: 3, // 3 minutes TTL for coach games with video status
   tournamentSchedule: 5,
   tournamentLeaders: 2,
@@ -197,4 +199,14 @@ export function invalidateCoachTeams(coachId: string): void {
   const cacheKey = CacheKeys.coachTeams(coachId);
   cache.delete(cacheKey);
   logger.debug('🗑️ Cache invalidated: coach teams for coach', coachId);
+}
+
+/**
+ * ⚡ Cache invalidation helper for coach dashboard data
+ * Call this after game completion or video upload changes
+ */
+export function invalidateCoachDashboard(coachId: string): void {
+  const cacheKey = CacheKeys.coachDashboard(coachId);
+  cache.delete(cacheKey);
+  logger.debug('🗑️ Cache invalidated: coach dashboard for coach', coachId);
 }
