@@ -25,6 +25,7 @@ interface TeamsStripProps {
   onManage: (team: CoachTeam) => void;
   onAnalytics: (team: CoachTeam) => void;
   onJoinTournament: (team: CoachTeam) => void;
+  onViewGames: (team: CoachTeam) => void;
   onCreateTeam: () => void;
 }
 
@@ -37,6 +38,7 @@ export function TeamsStrip({
   onManage,
   onAnalytics,
   onJoinTournament,
+  onViewGames,
   onCreateTeam,
 }: TeamsStripProps) {
   const router = useRouter();
@@ -89,6 +91,7 @@ export function TeamsStrip({
               onManage={onManage}
               onAnalytics={onAnalytics}
               onJoinTournament={onJoinTournament}
+              onViewGames={onViewGames}
             />
           ))}
           

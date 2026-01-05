@@ -146,6 +146,10 @@ export function CoachMissionControl({
     setShowTournamentSearch(true);
   };
 
+  const handleViewGames = (team: CoachTeam) => {
+    router.push(`/dashboard/coach/games?teamId=${team.id}`);
+  };
+
   const handleStartGame = () => {
     if (teams.length === 0) {
       setShowCreateTeam(true);
@@ -229,6 +233,7 @@ export function CoachMissionControl({
         onManage={handleManage}
         onAnalytics={handleAnalytics}
         onJoinTournament={handleJoinTournament}
+        onViewGames={handleViewGames}
         onCreateTeam={() => setShowCreateTeam(true)}
       />
 
