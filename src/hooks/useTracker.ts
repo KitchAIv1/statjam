@@ -606,11 +606,15 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
                 }
               }
             } else {
-              // No tournament_id - use coach defaults if in coach mode
+              // No tournament_id - check game.automation_settings first, then use role-based defaults
               console.warn('⚠️ Phase 1: No tournament_id found');
               setRuleset(RulesetService.getRuleset('NBA'));
               
-              if (isCoachMode) {
+              // ✅ FIX: Load game-specific automation settings if saved (from coach preset selection)
+              if (game.automation_settings) {
+                console.log('✅ Phase 1: Using saved game automation settings');
+                setAutomationFlags(game.automation_settings);
+              } else if (isCoachMode) {
                 setAutomationFlags(COACH_AUTOMATION_FLAGS);
               } else {
                 setAutomationFlags(DEFAULT_AUTOMATION_FLAGS);

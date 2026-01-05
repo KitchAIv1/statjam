@@ -170,10 +170,10 @@ async function handleVideoCreditsPurchase(
     return;
   }
 
-  // Get current credits and add new ones
+  // Get current credits and tier to preserve existing subscription
   const { data: existingSub } = await supabaseAdmin
     .from('subscriptions')
-    .select('video_credits')
+    .select('video_credits, tier')
     .eq('user_id', userId)
     .eq('role', role)
     .single();
@@ -181,13 +181,13 @@ async function handleVideoCreditsPurchase(
   const currentCredits = existingSub?.video_credits || 0;
   const newCredits = currentCredits + creditsToAdd;
 
-  // Upsert subscription with updated credits
+  // Upsert subscription with updated credits - preserve existing tier
   const { error } = await supabaseAdmin
     .from('subscriptions')
     .upsert({
       user_id: userId,
       role: role,
-      tier: 'free', // Credits don't change tier
+      tier: existingSub?.tier || 'free', // Preserve existing tier, default to free for new users
       status: 'active',
       stripe_customer_id: session.customer as string,
       video_credits: newCredits,
