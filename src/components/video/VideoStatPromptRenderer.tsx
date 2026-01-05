@@ -42,6 +42,8 @@ interface VideoStatPromptRendererProps {
   onReboundTypeSelect: (reboundType: 'offensive' | 'defensive') => void;
   onShotMadeMissed: (made: boolean) => void;
   onClosePrompt: () => void;
+  // ✅ FIX: Disable buttons when recording to prevent duplicates
+  isRecording?: boolean;
 }
 
 export function VideoStatPromptRenderer({
@@ -56,6 +58,7 @@ export function VideoStatPromptRenderer({
   onReboundTypeSelect,
   onShotMadeMissed,
   onClosePrompt,
+  isRecording = false,
 }: VideoStatPromptRendererProps) {
   if (!promptType || !lastEvent) return null;
 
@@ -127,6 +130,7 @@ export function VideoStatPromptRenderer({
         onSelectReboundType={onReboundTypeSelect}
         onSelectShotMadeMissed={onShotMadeMissed}
         onSkip={onClosePrompt}
+        isRecording={isRecording}
       />
     </div>
   );

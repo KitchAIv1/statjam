@@ -138,6 +138,7 @@ export function VideoStatEntryPanel({
           onReboundTypeSelect={entry.handleReboundTypeSelect}
           onShotMadeMissed={entry.handleShotMadeMissed}
           onClosePrompt={entry.closePrompt}
+          isRecording={entry.isRecording}
         />
         
         {/* Normal stat entry UI (when no prompt active) */}

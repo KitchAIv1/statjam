@@ -30,6 +30,8 @@ interface VideoInlinePromptProps {
   onSelectReboundType?: (reboundType: 'offensive' | 'defensive') => void;  // For standalone rebound
   onSelectShotMadeMissed?: (made: boolean) => void;  // For shooting foul: was shot made?
   onSkip: () => void;
+  // ✅ FIX: Disable buttons when recording to prevent duplicates
+  isRecording?: boolean;
 }
 
 export function VideoInlinePrompt({
@@ -43,12 +45,16 @@ export function VideoInlinePrompt({
   onSelectReboundType,
   onSelectShotMadeMissed,
   onSkip,
+  isRecording = false,
 }: VideoInlinePromptProps) {
   // Handle keyboard events for the prompt
   useEffect(() => {
     if (!promptType) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // ✅ FIX: Block keyboard input when recording to prevent duplicates
+      if (isRecording) return;
+      
       // Escape to skip
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -125,7 +131,7 @@ export function VideoInlinePrompt({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [promptType, players, onSelectPlayer, onSelectShotType, onSelectReboundType, onSkip]);
+  }, [promptType, players, onSelectPlayer, onSelectShotType, onSelectReboundType, onSelectShotMadeMissed, onSkip, isRecording]);
 
   if (!promptType) return null;
 
@@ -186,19 +192,21 @@ export function VideoInlinePrompt({
         <div className="flex gap-2">
           <button
             onClick={() => onSelectShotMadeMissed?.(true)}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 text-sm font-medium text-green-700"
+            disabled={isRecording}
+            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200 text-sm font-medium text-green-700 ${isRecording ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100'}`}
           >
             <CheckCircle className="w-4 h-4" />
             <kbd className="bg-green-100 px-1.5 py-0.5 rounded text-xs">Y</kbd>
-            <span>Made (And-1)</span>
+            <span>{isRecording ? 'Saving...' : 'Made (And-1)'}</span>
           </button>
           <button
             onClick={() => onSelectShotMadeMissed?.(false)}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 text-sm font-medium text-red-700"
+            disabled={isRecording}
+            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 rounded-lg border border-red-200 text-sm font-medium text-red-700 ${isRecording ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-100'}`}
           >
             <XCircle className="w-4 h-4" />
             <kbd className="bg-red-100 px-1.5 py-0.5 rounded text-xs">N</kbd>
-            <span>Missed</span>
+            <span>{isRecording ? 'Saving...' : 'Missed'}</span>
           </button>
         </div>
       </div>
@@ -235,17 +243,19 @@ export function VideoInlinePrompt({
         <div className="flex gap-2">
           <button
             onClick={() => onSelectShotType?.('field_goal')}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 text-sm font-medium text-blue-700"
+            disabled={isRecording}
+            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200 text-sm font-medium text-blue-700 ${isRecording ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100'}`}
           >
             <kbd className="bg-blue-100 px-1.5 py-0.5 rounded text-xs">2</kbd>
-            <span>2PT</span>
+            <span>{isRecording ? 'Saving...' : '2PT'}</span>
           </button>
           <button
             onClick={() => onSelectShotType?.('three_pointer')}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 text-sm font-medium text-green-700"
+            disabled={isRecording}
+            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200 text-sm font-medium text-green-700 ${isRecording ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100'}`}
           >
             <kbd className="bg-green-100 px-1.5 py-0.5 rounded text-xs">3</kbd>
-            <span>3PT</span>
+            <span>{isRecording ? 'Saving...' : '3PT'}</span>
           </button>
         </div>
       </div>
@@ -282,17 +292,19 @@ export function VideoInlinePrompt({
         <div className="flex gap-2">
           <button
             onClick={() => onSelectReboundType?.('offensive')}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 text-sm font-medium text-orange-700"
+            disabled={isRecording}
+            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-orange-50 rounded-lg border border-orange-200 text-sm font-medium text-orange-700 ${isRecording ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-100'}`}
           >
             <kbd className="bg-orange-100 px-1.5 py-0.5 rounded text-xs">O</kbd>
-            <span>Offensive</span>
+            <span>{isRecording ? 'Saving...' : 'Offensive'}</span>
           </button>
           <button
             onClick={() => onSelectReboundType?.('defensive')}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 text-sm font-medium text-blue-700"
+            disabled={isRecording}
+            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200 text-sm font-medium text-blue-700 ${isRecording ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100'}`}
           >
             <kbd className="bg-blue-100 px-1.5 py-0.5 rounded text-xs">D</kbd>
-            <span>Defensive</span>
+            <span>{isRecording ? 'Saving...' : 'Defensive'}</span>
           </button>
         </div>
       </div>
@@ -329,6 +341,11 @@ export function VideoInlinePrompt({
 
       {/* Quick player list - show first 5 regular players (excluding opponent) */}
       <div className="flex flex-wrap gap-1">
+        {isRecording && (
+          <div className="w-full text-center text-xs text-orange-600 font-medium py-1">
+            Saving...
+          </div>
+        )}
         {players
           .filter(p => p.id !== 'opponent-team')
           .slice(0, 5)
@@ -340,7 +357,8 @@ export function VideoInlinePrompt({
                 const actualIdx = players.findIndex(p => p.id === player.id);
                 onSelectPlayer(player.id, actualIdx);
               }}
-              className="flex items-center gap-1 px-2 py-1 bg-white rounded border hover:bg-gray-50 text-xs"
+              disabled={isRecording}
+              className={`flex items-center gap-1 px-2 py-1 bg-white rounded border text-xs ${isRecording ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
             >
               <kbd className="bg-gray-100 px-1 rounded text-[10px]">{idx + 1}</kbd>
               <span className="truncate max-w-[60px]">{player.name}</span>
@@ -354,7 +372,8 @@ export function VideoInlinePrompt({
               const oppIndex = players.findIndex(p => p.id === 'opponent-team');
               if (oppIndex >= 0) onSelectPlayer('opponent-team', oppIndex);
             }}
-            className="flex items-center gap-1 px-2 py-1 bg-red-50 rounded border border-red-200 hover:bg-red-100 text-xs text-red-700"
+            disabled={isRecording}
+            className={`flex items-center gap-1 px-2 py-1 bg-red-50 rounded border border-red-200 text-xs text-red-700 ${isRecording ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-100'}`}
           >
             <kbd className="bg-red-100 px-1 rounded text-[10px]">0</kbd>
             <span className="truncate max-w-[60px]">

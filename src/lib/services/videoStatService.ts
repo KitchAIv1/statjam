@@ -230,6 +230,9 @@ interface RecordVideoStatParams {
   shotLocationX?: number;
   shotLocationY?: number;
   shotZone?: string;
+  // ✅ OPTIMIZATION: Skip post-insert updates for batch operations
+  // Caller should call updateStatsCount and updateGameClockState once after batch
+  skipPostUpdates?: boolean;
 }
 
 /**
@@ -252,6 +255,7 @@ export async function recordVideoStat(params: RecordVideoStatParams): Promise<st
     shotLocationX,
     shotLocationY,
     shotZone,
+    skipPostUpdates = false, // ✅ OPTIMIZATION: Skip for batch operations
   } = params;
   
   // Determine stat value based on type
@@ -324,11 +328,15 @@ export async function recordVideoStat(params: RecordVideoStatParams): Promise<st
     throw new Error('Failed to record stat - no ID returned');
   }
   
-  // Update stats count on video
-  await updateStatsCount(gameId);
-  
-  // ✅ FIX: Update game clock state for minutes calculation
-  await updateGameClockState(gameId, quarter, gameTimeMinutes, gameTimeSeconds);
+  // ✅ OPTIMIZATION: Skip post-insert updates for batch operations
+  // Caller should call these once after the entire batch is complete
+  if (!skipPostUpdates) {
+    // Update stats count on video
+    await updateStatsCount(gameId);
+    
+    // Update game clock state for minutes calculation
+    await updateGameClockState(gameId, quarter, gameTimeMinutes, gameTimeSeconds);
+  }
   
   return savedStat.id;
 }
@@ -873,5 +881,10 @@ export const VideoStatService = {
   
   // Daily upload limit
   getDailyUploadStatus,
+  
+  // ✅ OPTIMIZATION: Batch cleanup helpers (call once after batch inserts)
+  // These are already exported above but explicitly listed for batch callers
+  // updateStatsCount - call once after batch to update video stats_count
+  // updateGameClockState - call once after batch with final clock state
 };
 

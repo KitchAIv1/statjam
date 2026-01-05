@@ -213,8 +213,11 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     }
   }, [gameId, gameData?.team_a_id, gameData?.team_b_id, isCoachGame]);
   
+  // ✅ OPTIMIZED: Debounced score refresh to prevent DB timeouts from rapid stat recording
+  const scoreRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Handle stat recorded - store ID for undo + refresh scores + auto-freeze on foul
-  const handleStatRecorded = useCallback(async (statType: string, statId?: string) => {
+  const handleStatRecorded = useCallback((statType: string, statId?: string) => {
     setTimelineRefreshTrigger(prev => prev + 1);
     if (statId) {
       setLastRecordedStatId(statId);
@@ -227,8 +230,13 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
       setFrozenClockValue(gameClock);
     }
     
-    // Refresh scores from source of truth
-    await loadScores();
+    // ✅ DEBOUNCED: Refresh scores with 500ms debounce to prevent rapid query timeouts
+    if (scoreRefreshTimeoutRef.current) {
+      clearTimeout(scoreRefreshTimeoutRef.current);
+    }
+    scoreRefreshTimeoutRef.current = setTimeout(() => {
+      loadScores();
+    }, 500);
   }, [loadScores, gameClock, clockFrozen]);
   
   // Resume (unfreeze) game clock and recalibrate to current video position

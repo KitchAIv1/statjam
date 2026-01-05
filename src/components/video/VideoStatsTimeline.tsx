@@ -169,6 +169,7 @@ export function VideoStatsTimeline({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Scroll position preservation
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -523,6 +524,21 @@ export function VideoStatsTimeline({
               Delete ({selectedIds.size})
             </button>
           )}
+          {/* ✅ Manual refresh button */}
+          <button
+            type="button"
+            onClick={async () => {
+              setIsRefreshing(true);
+              await silentRefresh();
+              setIsRefreshing(false);
+            }}
+            disabled={isRefreshing}
+            title="Refresh timeline"
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-600 rounded transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Loading...' : 'Refresh'}
+          </button>
           <span className="text-xs text-gray-500">
             {filteredEntries.length} entries
           </span>
