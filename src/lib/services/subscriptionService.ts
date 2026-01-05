@@ -183,54 +183,37 @@ export async function updateVerifiedStatus(
 
 /**
  * Count actual games tracked by a coach (across all their teams)
+ * Optimized: Uses single OR query instead of N×2 sequential queries
  */
 export async function getCoachGameCount(userId: string): Promise<number> {
   try {
-    // Get all teams owned by this coach
+    // Query 1: Get all teams owned by this coach
     const { data: teams, error: teamsError } = await supabase
       .from('teams')
       .select('id')
       .eq('coach_id', userId);
 
-    console.log('🔍 getCoachGameCount: teams for user', userId, teams, teamsError);
-
     if (teamsError || !teams || teams.length === 0) {
-      console.log('🔍 getCoachGameCount: No teams found, returning 0');
       return 0;
     }
 
     const teamIds = teams.map(t => t.id);
-    console.log('🔍 getCoachGameCount: teamIds', teamIds);
 
-    // Count games by fetching IDs and counting (more reliable)
-    // Note: games table uses team_a_id and team_b_id, not home_team_id/away_team_id
-    const countedGameIds = new Set<string>();
-    
-    for (const teamId of teamIds) {
-      // Get games where this team is team_a
-      const { data: teamAGames, error: teamAError } = await supabase
-        .from('games')
-        .select('id')
-        .eq('team_a_id', teamId);
-      
-      if (!teamAError && teamAGames) {
-        teamAGames.forEach(g => countedGameIds.add(g.id));
-      }
-      
-      // Get games where this team is team_b
-      const { data: teamBGames, error: teamBError } = await supabase
-        .from('games')
-        .select('id')
-        .eq('team_b_id', teamId);
-      
-      if (!teamBError && teamBGames) {
-        teamBGames.forEach(g => countedGameIds.add(g.id));
-      }
+    // Query 2: Single query with OR + IN filters for all team games
+    // Finds games where ANY of the coach's teams is team_a OR team_b
+    const { data: games, error: gamesError } = await supabase
+      .from('games')
+      .select('id')
+      .or(`team_a_id.in.(${teamIds.join(',')}),team_b_id.in.(${teamIds.join(',')})`);
+
+    if (gamesError) {
+      console.error('❌ getCoachGameCount games query error:', gamesError);
+      return 0;
     }
 
-    const totalCount = countedGameIds.size;
-    console.log('🔍 getCoachGameCount: totalCount', totalCount, 'unique games');
-    return totalCount;
+    // Games are unique by ID, but use Set for safety (handles any edge cases)
+    const uniqueGameIds = new Set(games?.map(g => g.id) || []);
+    return uniqueGameIds.size;
   } catch (err) {
     console.error('❌ getCoachGameCount error:', err);
     return 0;
