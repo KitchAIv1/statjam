@@ -125,10 +125,12 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     }
 
     // ✅ FIRE-AND-FORGET: Fire DB write, update UI immediately
+    // ✅ PERFORMANCE: skipPostUpdates prevents COUNT query + games table UPDATE per stat
     VideoStatService.recordVideoStat({
-      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId, statType, modifier,
-      videoTimestampMs: currentVideoTimeMs, quarter: gameClock.quarter,
-      gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId, statType, modifier,
+        videoTimestampMs: currentVideoTimeMs, quarter: gameClock.quarter,
+        gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+      skipPostUpdates: true,
     })
       .then((statId) => {
         onStatRecorded?.(statType, statId);
@@ -138,40 +140,41 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       });
     
     // ✅ UI updates happen IMMEDIATELY (no await)
-    // Auto-sequence prompts
-    if (isOpponentStat) {
-      if (modifier === 'missed') {
-        showReboundPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
-      } else if (statType === 'steal') {
-        showTurnoverPrompt({ playerId: selectedPlayer, playerName: opponentName || 'Opponent', teamId, statType: 'steal', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
-      } else if (statType === 'block') {
-        showBlockedShotPrompt({ playerId: selectedPlayer, playerName: opponentName || 'Opponent', teamId, statType: 'block', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
-      }
-    } else {
-      if (modifier === 'made' && (statType === 'field_goal' || statType === 'three_pointer')) {
-        showAssistPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: getShotValue(statType), videoTimestampMs: currentVideoTimeMs });
-      } else if (modifier === 'missed') {
-        showReboundPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: false });
-      } else if (statType === 'steal') {
-        if (isCoachMode) {
+      // Auto-sequence prompts
+      if (isOpponentStat) {
+        if (modifier === 'missed') {
+          showReboundPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
+        } else if (statType === 'steal') {
+          showTurnoverPrompt({ playerId: selectedPlayer, playerName: opponentName || 'Opponent', teamId, statType: 'steal', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
+        } else if (statType === 'block') {
+          showBlockedShotPrompt({ playerId: selectedPlayer, playerName: opponentName || 'Opponent', teamId, statType: 'block', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
+        }
+      } else {
+        if (modifier === 'made' && (statType === 'field_goal' || statType === 'three_pointer')) {
+          showAssistPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: getShotValue(statType), videoTimestampMs: currentVideoTimeMs });
+        } else if (modifier === 'missed') {
+          showReboundPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: false });
+        } else if (statType === 'steal') {
+          if (isCoachMode) {
           // ✅ OPTIMIZED: Trigger timeline refresh immediately
           onStatRecorded?.('turnover');
           // Fire-and-forget for auto turnover
           VideoStatService.recordVideoStat({
-            gameId, videoId, playerId: userId, isOpponentStat: true, teamId: gameData.team_a_id,
-            statType: 'turnover', modifier: 'steal', videoTimestampMs: currentVideoTimeMs,
-            quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+              gameId, videoId, playerId: userId, isOpponentStat: true, teamId: gameData.team_a_id,
+              statType: 'turnover', modifier: 'steal', videoTimestampMs: currentVideoTimeMs,
+              quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+            skipPostUpdates: true,
           })
             .catch((error) => console.error('Error recording auto turnover:', error));
-        } else {
-          showTurnoverPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs });
+          } else {
+            showTurnoverPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs });
+          }
+        } else if (statType === 'block') {
+          showBlockedShotPrompt({ playerId: selectedPlayer, playerName, teamId, statType: 'block', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: false });
         }
-      } else if (statType === 'block') {
-        showBlockedShotPrompt({ playerId: selectedPlayer, playerName, teamId, statType: 'block', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: false });
       }
-    }
-    
-    setSelectedPlayer(null);
+      
+      setSelectedPlayer(null);
   }, [selectedPlayer, gameData, gameClock, selectedTeam, gameId, videoId, currentVideoTimeMs, onStatRecorded, onBeforeRecord, teamAPlayers, teamBPlayers, showAssistPrompt, showReboundPrompt, showTurnoverPrompt, showBlockedShotPrompt, isCoachMode, userId, opponentName, setSelectedPlayer]);
 
   // Turnover handlers
@@ -219,15 +222,16 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     
     // Fire-and-forget
     VideoStatService.recordVideoStat({
-      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
-      statType: 'turnover', modifier, videoTimestampMs: lastEvent.videoTimestampMs,
-      quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
+        statType: 'turnover', modifier, videoTimestampMs: lastEvent.videoTimestampMs,
+        quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        skipPostUpdates: true,
     })
       .catch((error) => console.error('Error recording turnover:', error));
     
     // UI updates immediately
-    setSelectedPlayer(null);
-    closePrompt();
+      setSelectedPlayer(null);
+      closePrompt();
   }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, isCoachMode, userId, teamAPlayers, setSelectedPlayer]);
 
   // Rebound handlers (standalone R key press - not sequence after missed shot)
@@ -274,15 +278,16 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     
     // Fire-and-forget
     VideoStatService.recordVideoStat({
-      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
-      statType: 'rebound', modifier: reboundType, videoTimestampMs: lastEvent.videoTimestampMs,
-      quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
+        statType: 'rebound', modifier: reboundType, videoTimestampMs: lastEvent.videoTimestampMs,
+        quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        skipPostUpdates: true,
     })
       .catch((error) => console.error('Error recording rebound:', error));
     
     // UI updates immediately
-    setSelectedPlayer(null);
-    closePrompt();
+      setSelectedPlayer(null);
+      closePrompt();
   }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, isCoachMode, userId, teamAPlayers, setSelectedPlayer]);
 
   // Foul handlers
@@ -329,44 +334,45 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     
     // Fire-and-forget
     VideoStatService.recordVideoStat({
-      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
-      statType: 'foul', modifier: foulType, videoTimestampMs: lastEvent.videoTimestampMs,
-      quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
+        statType: 'foul', modifier: foulType, videoTimestampMs: lastEvent.videoTimestampMs,
+        quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        skipPostUpdates: true,
     })
       .catch((error) => console.error('Error recording foul:', error));
-    
+      
     // UI updates immediately - For shooting fouls, trigger FT sequence
-    if (ftCount > 0) {
-      if (isOpponentStat) {
-        showFouledPlayerPrompt({ 
-          playerId: lastEvent.playerId, 
-          playerName: opponentName || 'Opponent', 
-          teamId: gameData.team_a_id, 
-          statType: 'foul', 
-          shotValue: 0, 
-          videoTimestampMs: lastEvent.videoTimestampMs, 
-          ftCount, 
-          foulType,
-          isOpponentStat: true,
-        });
-      } else {
-        showFreeThrowPrompt({ 
-          playerId: lastEvent.playerId, 
-          playerName: lastEvent.playerName, 
-          teamId: lastEvent.teamId, 
-          statType: 'free_throw', 
-          shotValue: 1, 
-          videoTimestampMs: lastEvent.videoTimestampMs, 
-          ftCount, 
-          foulType 
-        });
+      if (ftCount > 0) {
+        if (isOpponentStat) {
+          showFouledPlayerPrompt({ 
+            playerId: lastEvent.playerId, 
+            playerName: opponentName || 'Opponent', 
+            teamId: gameData.team_a_id, 
+            statType: 'foul', 
+            shotValue: 0, 
+            videoTimestampMs: lastEvent.videoTimestampMs, 
+            ftCount, 
+            foulType,
+            isOpponentStat: true,
+          });
+        } else {
+          showFreeThrowPrompt({ 
+            playerId: lastEvent.playerId, 
+            playerName: lastEvent.playerName, 
+            teamId: lastEvent.teamId, 
+            statType: 'free_throw', 
+            shotValue: 1, 
+            videoTimestampMs: lastEvent.videoTimestampMs, 
+            ftCount, 
+            foulType 
+          });
+        }
+        return;
       }
-      return;
-    }
-    
-    // No follow-up prompt needed
-    setSelectedPlayer(null);
-    closePrompt();
+      
+      // No follow-up prompt needed
+      setSelectedPlayer(null);
+      closePrompt();
   }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, showFreeThrowPrompt, showFouledPlayerPrompt, isCoachMode, userId, opponentName, teamAPlayers, setSelectedPlayer]);
 
   // Free throw handler - ✅ OPTIMIZED: Batch inserts with Promise.all
@@ -449,36 +455,37 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       onStatRecorded?.(statTypeName);
       
       VideoStatService.recordVideoStat({
-        gameId, videoId, 
-        playerId: actualPlayerId, 
-        customPlayerId,
+          gameId, videoId, 
+          playerId: actualPlayerId, 
+          customPlayerId,
         teamId: gameData.team_a_id,
         statType: statTypeName,
-        modifier: 'made',
-        videoTimestampMs: lastEvent.videoTimestampMs,
-        quarter: gameClock.quarter,
-        gameTimeMinutes: gameClock.minutesRemaining,
-        gameTimeSeconds: gameClock.secondsRemaining,
+          modifier: 'made',
+          videoTimestampMs: lastEvent.videoTimestampMs,
+          quarter: gameClock.quarter,
+          gameTimeMinutes: gameClock.minutesRemaining,
+          gameTimeSeconds: gameClock.secondsRemaining,
+          skipPostUpdates: true,
       })
         .catch((error) => console.error('Error recording and-1 shot:', error));
-    }
-    
+      }
+      
     // UI updates immediately
-    closePrompt();
-    
-    // Determine FT count: made = 1 FT (and-1), missed = original FT count
-    const ftCount = made ? 1 : originalFtCount;
-    
-    // Trigger FT sequence for the victim
-    showFreeThrowPrompt({
-      playerId: victimPlayerId,
-      playerName: victimPlayerName,
-      teamId: gameData.team_a_id,
-      statType: 'free_throw',
-      shotValue: 1,
-      videoTimestampMs: lastEvent.videoTimestampMs,
-      ftCount,
-      foulType: 'shooting',
+      closePrompt();
+      
+      // Determine FT count: made = 1 FT (and-1), missed = original FT count
+      const ftCount = made ? 1 : originalFtCount;
+      
+      // Trigger FT sequence for the victim
+      showFreeThrowPrompt({
+        playerId: victimPlayerId,
+        playerName: victimPlayerName,
+        teamId: gameData.team_a_id,
+        statType: 'free_throw',
+        shotValue: 1,
+        videoTimestampMs: lastEvent.videoTimestampMs,
+        ftCount,
+        foulType: 'shooting',
       isOpponentStat: false,
     });
   }, [lastEvent, gameClock, gameData, gameId, videoId, teamAPlayers, isCoachMode, onStatRecorded, closePrompt, showFreeThrowPrompt]);
@@ -499,16 +506,17 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     
     // Fire-and-forget: Coach's player blocked opponent's shot: record opponent's missed shot
     VideoStatService.recordVideoStat({
-      gameId, videoId, playerId: isCoachMode ? userId : undefined, isOpponentStat: true,
-      teamId: gameData.team_a_id, statType: shotType, modifier: 'missed',
-      videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
-      gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        gameId, videoId, playerId: isCoachMode ? userId : undefined, isOpponentStat: true,
+        teamId: gameData.team_a_id, statType: shotType, modifier: 'missed',
+        videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
+        gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        skipPostUpdates: true,
     })
       .catch((error) => console.error('Error recording blocked shot:', error));
     
     // UI updates immediately
-    closePrompt();
-    showReboundPrompt({ playerId: lastEvent.playerId, playerName: lastEvent.playerName, teamId: lastEvent.teamId, statType: 'block', shotValue: 0, videoTimestampMs: lastEvent.videoTimestampMs, isOpponentStat: true });
+      closePrompt();
+      showReboundPrompt({ playerId: lastEvent.playerId, playerName: lastEvent.playerName, teamId: lastEvent.teamId, statType: 'block', shotValue: 0, videoTimestampMs: lastEvent.videoTimestampMs, isOpponentStat: true });
   }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, showReboundPrompt, showBlockedShooterPrompt, isCoachMode, userId]);
 
   // Prompt player selection handler - ✅ OPTIMIZED: Fire-and-forget pattern
@@ -575,6 +583,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
         teamId: gameData.team_a_id, statType: shotType, modifier: 'missed',
         videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
         gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        skipPostUpdates: true,
       })
         .catch((error) => console.error('Error recording blocked shooter:', error));
       
@@ -591,6 +600,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
         gameId, videoId, playerId: actualPlayerId, customPlayerId, teamId: lastEvent.teamId,
         statType: 'assist', videoTimestampMs: lastEvent.videoTimestampMs,
         quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        skipPostUpdates: true,
       })
         .catch((error) => console.error('Error recording assist:', error));
     } else if (promptType === 'rebound') {
@@ -606,6 +616,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
           statType: 'rebound', modifier: isOffensive ? 'offensive' : 'defensive',
           videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
           gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+          skipPostUpdates: true,
         })
           .catch((error) => console.error('Error recording opponent rebound:', error));
       } else {
@@ -615,6 +626,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
           statType: 'rebound', modifier: isOffensive ? 'offensive' : 'defensive',
           videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
           gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+          skipPostUpdates: true,
         })
           .catch((error) => console.error('Error recording rebound:', error));
       }
@@ -626,6 +638,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
           teamId: gameData.team_a_id, statType: 'turnover', modifier: 'steal',
           videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
           gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+          skipPostUpdates: true,
         })
           .catch((error) => console.error('Error recording turnover:', error));
       } else {
@@ -633,6 +646,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
           gameId, videoId, playerId: actualPlayerId, customPlayerId, teamId: playerTeamId,
           statType: 'turnover', modifier: 'steal', videoTimestampMs: lastEvent.videoTimestampMs,
           quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+          skipPostUpdates: true,
         })
           .catch((error) => console.error('Error recording turnover:', error));
       }

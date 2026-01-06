@@ -644,6 +644,172 @@ export function CoachGameAnalyticsTab({
           bottomLine="Winslow won this game on the glass. 54 rebounds—including 22 offensive boards—created enough second-chance opportunities to overcome 25 turnovers. When you dominate the boards by 26 and draw 26 free throws, you can survive mistakes. But this game is also a warning: turnovers will cost you against better teams. Clean up the ball handling, keep crashing the boards, and this team can beat anyone."
         />
       )}
+
+      {/* AI Game Analysis Report - Winslow vs Medford (47-43) COMEBACK */}
+      {gameId === '34ef2b6b-ad6d-4c58-8326-916e9a7c4e98' && (
+        <AIGameAnalysisReport
+          gameId={gameId}
+          winningTeam="Winslow Township 7th Grade"
+          losingTeam="Medford"
+          finalScore={{ home: 47, away: 43 }}
+          margin={4}
+          gameType="Comeback"
+          overview="Winslow pulled off a gutsy comeback after a disastrous first quarter. Down 2-12 after Q1, Winslow's defense tightened and their rebounding took over. The turning point came in the 4th quarter when Winslow outscored Medford 15-6 to complete the comeback. This was a character win—Winslow found a way when their shots weren't falling (21.7% from three). Murrell's 18 rebounds and the team's 14 offensive boards created second chances that kept them alive."
+          winningFactors={[
+            {
+              factor: '4th Quarter Dominance',
+              value: '15-6',
+              impactScore: 35.0,
+              courtMeaning: [
+                'Outscored Medford 15-6 in the final quarter',
+                'Closed the game on a run when it mattered most',
+                'Defensive intensity peaked at the right time'
+              ],
+              coachingTakeaway: [
+                'This team has closer mentality',
+                'Conditioning paid off in crunch time',
+                'Trust the defense to create offense'
+              ]
+            },
+            {
+              factor: 'Rebounding Margin',
+              value: '+6',
+              impactScore: 28.0,
+              courtMeaning: [
+                '37 total rebounds vs 31 for Medford',
+                '14 offensive boards created second-chance points',
+                'Controlled the glass despite poor shooting'
+              ],
+              coachingTakeaway: [
+                'Offensive rebounding saved this game',
+                'Murrell (18 rebounds) was the difference maker',
+                'Keep crashing—it covers shooting slumps'
+              ]
+            },
+            {
+              factor: 'Turnovers Forced',
+              value: '+4',
+              impactScore: 22.0,
+              courtMeaning: [
+                'Medford committed 19 turnovers vs Winslow 15',
+                'Pressure defense disrupted Medford rhythm',
+                'DeGrais (5 steals) led the disruption'
+              ],
+              coachingTakeaway: [
+                'Defensive pressure creates comeback opportunities',
+                'Active hands and ball pressure work',
+                'Still need to reduce own turnovers (15 is high)'
+              ]
+            }
+          ]}
+          keyPlayers={[
+            {
+              name: 'Murrell',
+              rank: 1,
+              points: 4,
+              rebounds: 18,
+              assists: 0,
+              steals: 0,
+              blocks: 2,
+              turnovers: 4,
+              impactScore: 23.6,
+              strengths: [
+                'ELITE rebounding (18 boards!)',
+                'Dominated the glass on both ends',
+                '2 blocks on defensive end'
+              ],
+              coachingFocus: [
+                'Keep being the anchor on the boards',
+                'Look for putbacks on offensive rebounds',
+                'This effort sets the tone for the team'
+              ]
+            },
+            {
+              name: 'DeGrais',
+              rank: 2,
+              points: 8,
+              rebounds: 3,
+              assists: 2,
+              steals: 5,
+              blocks: 0,
+              turnovers: 2,
+              impactScore: 21.6,
+              strengths: [
+                'Defensive playmaker (5 steals!)',
+                'Created turnovers and disrupted passing lanes',
+                'Efficient with only 2 turnovers'
+              ],
+              coachingFocus: [
+                'Keep the defensive pressure up',
+                'Look to push pace after steals',
+                'Model for teammates on ball pressure'
+              ]
+            },
+            {
+              name: 'Ward Jr',
+              rank: 3,
+              points: 16,
+              rebounds: 2,
+              assists: 2,
+              steals: 1,
+              blocks: 1,
+              turnovers: 3,
+              impactScore: 20.9,
+              strengths: [
+                'Leading scorer with 16 points',
+                'Stepped up when team needed buckets',
+                'All-around game with blocks and steals'
+              ],
+              coachingFocus: [
+                'Continue being the go-to scorer',
+                'Look for Murrell on offensive boards',
+                'Reduce turnovers in crunch time'
+              ]
+            }
+          ]}
+          momentum={{
+            quarter: 4,
+            teamScore: 15,
+            opponentScore: 6,
+            description: 'After trailing most of the game following a 2-12 first quarter, Winslow finally took control in the 4th. The defense clamped down, holding Medford to just 6 points while the offense found its rhythm. Ward Jr and Thorton combined for key buckets, and Murrell cleaned up on the boards. This was a complete team effort to close out a must-win quarter.'
+          }}
+          opponentBreakdown={{
+            fgPercentage: 35.5,
+            turnovers: 19,
+            fouls: 17,
+            keyIssues: [
+              '19 turnovers killed offensive possessions',
+              'Only 6 points in 4th quarter collapse',
+              '17 fouls put Winslow in bonus'
+            ],
+            correctableIssues: [
+              'Ball security and passing decisions',
+              'Foul discipline in late-game situations',
+              'Closing intensity and execution'
+            ],
+            deeperProblems: [
+              'Struggled to score against Winslow defense late',
+              'Rebounding disadvantage limited second chances',
+              'No answer for Winslow 4th quarter run'
+            ]
+          }}
+          actionItems={{
+            winner: [
+              'Start faster—can\'t rely on comebacks every game',
+              'Improve 3PT shooting (21.7% won\'t cut it)',
+              'Improve FT shooting (44.4% leaves points)',
+              'Maintain rebounding intensity—it saved this game'
+            ],
+            loser: [
+              'Protect the ball—19 turnovers is too many',
+              'Finish games—6 points in Q4 is unacceptable',
+              'Better foul discipline late in games',
+              'Develop plan for opponents\' dominant rebounders'
+            ]
+          }}
+          bottomLine="This was a character win for Winslow. Down 10 after the first quarter with shots not falling, they relied on what they could control: effort, rebounding, and defense. Murrell's 18 rebounds and DeGrais' 5 steals kept them in it, and Ward Jr's 16 points sealed it. The 4th quarter 15-6 run shows this team can close. But the poor shooting (21.7% from three, 44.4% from the line) and slow start are concerns. This team wins ugly—now they need to learn to win clean."
+        />
+      )}
     </div>
   );
 }
