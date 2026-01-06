@@ -231,7 +231,7 @@ function isClipEligible(statType: string, modifier: string | null): boolean {
 function getClipTimingWindow(statType: string, modifier: string | null): { before: number; after: number } {
   // Assists need to capture the pass AND the made shot
   if (statType === 'assist') {
-    return { before: 2, after: 4 };
+    return { before: 2, after: 5 };
   }
   
   // Rebounds need to capture the missed shot attempt
@@ -250,12 +250,12 @@ function getClipTimingWindow(statType: string, modifier: string | null): { befor
     return { before: 2, after: 3 };
   }
   
-  // Made shots - need to see setup/pass before + extra 1.5s after for celebration/reaction
+  // Made shots - need to see setup/pass before + extra time after for celebration/reaction
   if (statType === 'field_goal' && modifier === 'made') {
-    return { before: 3, after: 3.5 };
+    return { before: 3, after: 4.5 };
   }
   if (statType === 'three_pointer' && modifier === 'made') {
-    return { before: 3, after: 3.5 };
+    return { before: 3, after: 4.5 };
   }
   
   // Free throws - less context needed
