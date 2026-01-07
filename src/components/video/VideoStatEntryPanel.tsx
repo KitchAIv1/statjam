@@ -9,14 +9,15 @@
  * @module VideoStatEntryPanel
  */
 
-import React, { useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Loader2, Zap, Hand } from 'lucide-react';
 import { VideoPlayerRoster } from '@/components/video/VideoPlayerRoster';
 import { VideoStatButtons } from '@/components/video/VideoStatButtons';
 import { VideoStatPromptRenderer } from '@/components/video/VideoStatPromptRenderer';
 import { SubstitutionModalV4 } from '@/components/tracker-v3/SubstitutionModalV4';
-import { useVideoStatEntry, type VideoStatHandlers, type Player } from '@/hooks/useVideoStatEntry';
+import { useVideoStatEntry, type VideoStatHandlers, type Player, DEFAULT_SEQUENCE_FLAGS, MANUAL_MODE_FLAGS } from '@/hooks/useVideoStatEntry';
 import type { GameClock } from '@/lib/types/video';
+import type { SequenceAutomationFlags } from '@/lib/types/automation';
 
 // Re-export types for consumers
 export type { VideoStatHandlers, Player };
@@ -35,6 +36,14 @@ interface VideoStatEntryPanelProps {
   preloadedTeamAPlayers?: Player[];
   preloadedTeamBPlayers?: Player[];
   preloadedGameData?: any;
+  /**
+   * ✅ NEW: Initial manual mode setting (defaults to false = auto-prompts enabled)
+   */
+  initialManualMode?: boolean;
+  /**
+   * ✅ NEW: Callback when manual mode changes
+   */
+  onManualModeChange?: (isManual: boolean) => void;
 }
 
 export function VideoStatEntryPanel({
@@ -42,13 +51,31 @@ export function VideoStatEntryPanel({
   onStatRecorded, onBeforeRecord, onRegisterHandlers,
   isCoachMode = false, userId, opponentName,
   preloadedTeamAPlayers, preloadedTeamBPlayers, preloadedGameData,
+  initialManualMode = false,
+  onManualModeChange,
 }: VideoStatEntryPanelProps) {
+  
+  // ✅ Manual mode state - controls whether auto-prompts are shown
+  const [isManualMode, setIsManualMode] = useState(initialManualMode);
+  
+  // Derive sequence flags from manual mode state
+  const sequenceFlags: SequenceAutomationFlags = isManualMode 
+    ? MANUAL_MODE_FLAGS 
+    : DEFAULT_SEQUENCE_FLAGS;
+  
+  // Toggle handler with callback
+  const handleToggleManualMode = useCallback(() => {
+    const newValue = !isManualMode;
+    setIsManualMode(newValue);
+    onManualModeChange?.(newValue);
+  }, [isManualMode, onManualModeChange]);
   
   const entry = useVideoStatEntry({
     gameId, videoId, currentVideoTimeMs, gameClock,
     onStatRecorded, onBeforeRecord,
     isCoachMode, userId, opponentName,
     preloadedTeamAPlayers, preloadedTeamBPlayers, preloadedGameData,
+    sequenceFlags, // ✅ Pass derived sequence flags
   });
 
   // Register handlers for keyboard shortcuts
@@ -145,16 +172,49 @@ export function VideoStatEntryPanel({
         {/* Normal stat entry UI (when no prompt active) */}
         {!entry.promptType && (
           <>
-            <div className="text-sm font-medium text-gray-700 mb-3">
-              {entry.selectedPlayer ? (
-                <>
-                  Recording for: <span className="text-orange-600">{selectedPlayerData?.name}</span>
-                  {entry.isRecording && <span className="text-gray-400 ml-2">(saving...)</span>}
-                </>
-              ) : (
-                <span className="text-gray-400">Select a player first (1-0)</span>
-              )}
+            {/* ✅ Manual Mode Toggle */}
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
+              <div className="text-sm font-medium text-gray-700">
+                {entry.selectedPlayer ? (
+                  <>
+                    Recording for: <span className="text-orange-600">{selectedPlayerData?.name}</span>
+                    {entry.isRecording && <span className="text-gray-400 ml-2">(saving...)</span>}
+                  </>
+                ) : (
+                  <span className="text-gray-400">Select a player first (1-0)</span>
+                )}
+              </div>
+              
+              {/* Manual Mode Toggle Button */}
+              <button
+                type="button"
+                onClick={handleToggleManualMode}
+                className={`
+                  flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all
+                  ${isManualMode 
+                    ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' 
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }
+                `}
+                title={isManualMode 
+                  ? 'Manual Mode: No auto-prompts after stats' 
+                  : 'Auto Mode: Prompts for assists, rebounds, etc.'
+                }
+              >
+                {isManualMode ? (
+                  <>
+                    <Hand className="w-3.5 h-3.5" />
+                    Manual
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-3.5 h-3.5" />
+                    Auto
+                  </>
+                )}
+              </button>
             </div>
+            
             <VideoStatButtons 
               onStatRecord={(statType, modifier) => {
                 if (statType === 'turnover') {

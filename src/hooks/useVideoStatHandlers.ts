@@ -14,6 +14,7 @@ import { VideoStatService } from '@/lib/services/videoStatService';
 import { GameService } from '@/lib/services/gameService';
 import { getShotValue } from '@/hooks/useVideoStatPrompts';
 import type { GameClock } from '@/lib/types/video';
+import type { SequenceAutomationFlags } from '@/lib/types/automation';
 
 export interface Player {
   id: string;
@@ -41,6 +42,32 @@ interface LastEventInfo {
   victimPlayerName?: string;  // For shooting foul: victim's name
 }
 
+/**
+ * Default sequence flags - ALL auto-prompts ENABLED (for backward compatibility)
+ * Manual mode = all flags FALSE
+ */
+export const DEFAULT_SEQUENCE_FLAGS: SequenceAutomationFlags = {
+  enabled: true,
+  promptAssists: true,
+  promptRebounds: true,
+  promptBlocks: true,
+  linkEvents: false, // Not used in video tracker
+  freeThrowSequence: true,
+};
+
+/**
+ * Manual mode flags - ALL auto-prompts DISABLED
+ * User must manually record each stat type
+ */
+export const MANUAL_MODE_FLAGS: SequenceAutomationFlags = {
+  enabled: false,
+  promptAssists: false,
+  promptRebounds: false,
+  promptBlocks: false,
+  linkEvents: false,
+  freeThrowSequence: false,
+};
+
 interface UseVideoStatHandlersProps {
   gameId: string;
   videoId: string;
@@ -60,6 +87,12 @@ interface UseVideoStatHandlersProps {
   benchA: Player[];
   onCourtB: Player[];
   benchB: Player[];
+  /**
+   * ✅ NEW: Sequence automation flags for manual mode control
+   * Controls which auto-prompts are shown after stat recording
+   * When undefined, defaults to all prompts enabled (backward compatible)
+   */
+  sequenceFlags?: SequenceAutomationFlags;
   // Callbacks
   setIsRecording: (v: boolean) => void;
   setSelectedPlayer: (v: string | null) => void;
@@ -91,6 +124,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     selectedPlayer, selectedTeam, teamAPlayers, teamBPlayers,
     isCoachMode, userId, opponentName, lastEvent, promptType,
     onCourtA, benchA, onCourtB, benchB,
+    sequenceFlags = DEFAULT_SEQUENCE_FLAGS, // ✅ Default: all auto-prompts enabled
     setIsRecording, setSelectedPlayer, setShowSubModal,
     setOnCourtA, setBenchA, setOnCourtB, setBenchB,
     onStatRecorded, onBeforeRecord,
@@ -99,6 +133,12 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     showBlockedShooterPrompt, showFreeThrowPrompt, showFouledPlayerPrompt,
     showShotMadeMissedPrompt, closePrompt,
   } = props;
+
+  // ✅ Derived flags for easy access in callbacks
+  const autoPromptAssists = sequenceFlags.enabled && sequenceFlags.promptAssists;
+  const autoPromptRebounds = sequenceFlags.enabled && sequenceFlags.promptRebounds;
+  const autoPromptBlocks = sequenceFlags.enabled && sequenceFlags.promptBlocks;
+  const autoFreeThrowSequence = sequenceFlags.enabled && sequenceFlags.freeThrowSequence;
 
   // Core stat recording - ✅ OPTIMIZED: Fire-and-forget pattern for instant UI response
   const handleStatRecord = useCallback((statType: string, modifier?: string) => {
@@ -140,42 +180,51 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       });
     
     // ✅ UI updates happen IMMEDIATELY (no await)
-      // Auto-sequence prompts
-      if (isOpponentStat) {
-        if (modifier === 'missed') {
-          showReboundPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
-        } else if (statType === 'steal') {
-          showTurnoverPrompt({ playerId: selectedPlayer, playerName: opponentName || 'Opponent', teamId, statType: 'steal', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
-        } else if (statType === 'block') {
-          showBlockedShotPrompt({ playerId: selectedPlayer, playerName: opponentName || 'Opponent', teamId, statType: 'block', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
-        }
-      } else {
-        if (modifier === 'made' && (statType === 'field_goal' || statType === 'three_pointer')) {
-          showAssistPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: getShotValue(statType), videoTimestampMs: currentVideoTimeMs });
-        } else if (modifier === 'missed') {
-          showReboundPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: false });
-        } else if (statType === 'steal') {
-          if (isCoachMode) {
-          // ✅ OPTIMIZED: Trigger timeline refresh immediately
+    // ✅ AUTO-SEQUENCE PROMPTS - Controlled by sequenceFlags for manual mode support
+    if (isOpponentStat) {
+      // OPPONENT STATS: Opponent missed shot → rebound prompt, opponent steal → turnover prompt, etc.
+      if (modifier === 'missed' && autoPromptRebounds) {
+        // Sequence #12: Opponent missed shot → Rebound Prompt
+        showReboundPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
+      } else if (statType === 'steal' && autoPromptRebounds) {
+        // Sequence #13: Opponent steal → Turnover Prompt (linked to rebound flag for simplicity)
+        showTurnoverPrompt({ playerId: selectedPlayer, playerName: opponentName || 'Opponent', teamId, statType: 'steal', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
+      } else if (statType === 'block' && autoPromptBlocks) {
+        // Sequence #14: Opponent block → Blocked Shot Prompt
+        showBlockedShotPrompt({ playerId: selectedPlayer, playerName: opponentName || 'Opponent', teamId, statType: 'block', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: true });
+      }
+    } else {
+      // COACH'S TEAM STATS: Made shot → assist prompt, missed shot → rebound prompt, etc.
+      if (modifier === 'made' && (statType === 'field_goal' || statType === 'three_pointer') && autoPromptAssists) {
+        // Sequence #1-2: Made shot (2PT/3PT) → Assist Prompt
+        showAssistPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: getShotValue(statType), videoTimestampMs: currentVideoTimeMs });
+      } else if (modifier === 'missed' && autoPromptRebounds) {
+        // Sequence #3-4: Missed shot (2PT/3PT) → Rebound Prompt
+        showReboundPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: false });
+      } else if (statType === 'steal') {
+        // Sequence #6: Steal → Turnover Prompt (or auto-record in coach mode)
+        if (isCoachMode) {
+          // ✅ Coach mode: Auto-record opponent turnover (not affected by manual mode - it's a linked stat)
           onStatRecorded?.('turnover');
-          // Fire-and-forget for auto turnover
           VideoStatService.recordVideoStat({
-              gameId, videoId, playerId: userId, isOpponentStat: true, teamId: gameData.team_a_id,
-              statType: 'turnover', modifier: 'steal', videoTimestampMs: currentVideoTimeMs,
-              quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+            gameId, videoId, playerId: userId, isOpponentStat: true, teamId: gameData.team_a_id,
+            statType: 'turnover', modifier: 'steal', videoTimestampMs: currentVideoTimeMs,
+            quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
             skipPostUpdates: true,
           })
             .catch((error) => console.error('Error recording auto turnover:', error));
-          } else {
-            showTurnoverPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs });
-          }
-        } else if (statType === 'block') {
-          showBlockedShotPrompt({ playerId: selectedPlayer, playerName, teamId, statType: 'block', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: false });
+        } else if (autoPromptRebounds) {
+          // Non-coach mode: Prompt for who turned it over (linked to rebound flag for simplicity)
+          showTurnoverPrompt({ playerId: selectedPlayer, playerName, teamId, statType, shotValue: 0, videoTimestampMs: currentVideoTimeMs });
         }
+      } else if (statType === 'block' && autoPromptBlocks) {
+        // Sequence #7: Block → Blocked Shot Type Prompt
+        showBlockedShotPrompt({ playerId: selectedPlayer, playerName, teamId, statType: 'block', shotValue: 0, videoTimestampMs: currentVideoTimeMs, isOpponentStat: false });
       }
-      
-      setSelectedPlayer(null);
-  }, [selectedPlayer, gameData, gameClock, selectedTeam, gameId, videoId, currentVideoTimeMs, onStatRecorded, onBeforeRecord, teamAPlayers, teamBPlayers, showAssistPrompt, showReboundPrompt, showTurnoverPrompt, showBlockedShotPrompt, isCoachMode, userId, opponentName, setSelectedPlayer]);
+    }
+
+    setSelectedPlayer(null);
+  }, [selectedPlayer, gameData, gameClock, selectedTeam, gameId, videoId, currentVideoTimeMs, onStatRecorded, onBeforeRecord, teamAPlayers, teamBPlayers, showAssistPrompt, showReboundPrompt, showTurnoverPrompt, showBlockedShotPrompt, isCoachMode, userId, opponentName, setSelectedPlayer, autoPromptAssists, autoPromptRebounds, autoPromptBlocks]);
 
   // Turnover handlers
   const handleInitiateTurnover = useCallback(() => {
@@ -341,39 +390,41 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     })
       .catch((error) => console.error('Error recording foul:', error));
       
-    // UI updates immediately - For shooting fouls, trigger FT sequence
-      if (ftCount > 0) {
-        if (isOpponentStat) {
-          showFouledPlayerPrompt({ 
-            playerId: lastEvent.playerId, 
-            playerName: opponentName || 'Opponent', 
-            teamId: gameData.team_a_id, 
-            statType: 'foul', 
-            shotValue: 0, 
-            videoTimestampMs: lastEvent.videoTimestampMs, 
-            ftCount, 
-            foulType,
-            isOpponentStat: true,
-          });
-        } else {
-          showFreeThrowPrompt({ 
-            playerId: lastEvent.playerId, 
-            playerName: lastEvent.playerName, 
-            teamId: lastEvent.teamId, 
-            statType: 'free_throw', 
-            shotValue: 1, 
-            videoTimestampMs: lastEvent.videoTimestampMs, 
-            ftCount, 
-            foulType 
-          });
-        }
-        return;
+    // ✅ SEQUENCE #10-11: Shooting fouls → FT sequence (controlled by autoFreeThrowSequence)
+    if (ftCount > 0 && autoFreeThrowSequence) {
+      if (isOpponentStat) {
+        // Sequence #10: Opponent shooting foul → Fouled Player Prompt
+        showFouledPlayerPrompt({ 
+          playerId: lastEvent.playerId, 
+          playerName: opponentName || 'Opponent', 
+          teamId: gameData.team_a_id, 
+          statType: 'foul', 
+          shotValue: 0, 
+          videoTimestampMs: lastEvent.videoTimestampMs, 
+          ftCount, 
+          foulType,
+          isOpponentStat: true,
+        });
+      } else {
+        // Coach's player committed shooting foul → FT sequence for other team (not typical in coach mode)
+        showFreeThrowPrompt({ 
+          playerId: lastEvent.playerId, 
+          playerName: lastEvent.playerName, 
+          teamId: lastEvent.teamId, 
+          statType: 'free_throw', 
+          shotValue: 1, 
+          videoTimestampMs: lastEvent.videoTimestampMs, 
+          ftCount, 
+          foulType 
+        });
       }
-      
-      // No follow-up prompt needed
-      setSelectedPlayer(null);
-      closePrompt();
-  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, showFreeThrowPrompt, showFouledPlayerPrompt, isCoachMode, userId, opponentName, teamAPlayers, setSelectedPlayer]);
+      return;
+    }
+
+    // No follow-up prompt needed (either ftCount=0 or manual mode)
+    setSelectedPlayer(null);
+    closePrompt();
+  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, showFreeThrowPrompt, showFouledPlayerPrompt, isCoachMode, userId, opponentName, teamAPlayers, setSelectedPlayer, autoFreeThrowSequence]);
 
   // Free throw handler - ✅ OPTIMIZED: Batch inserts with Promise.all
   const handleFreeThrowComplete = useCallback(async (results: { made: boolean }[]) => {
@@ -413,7 +464,8 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       results.forEach(() => onStatRecorded?.('free_throw'));
       
       const lastResult = results[results.length - 1];
-      if (!lastResult.made) {
+      // ✅ SEQUENCE #5: Missed last FT → Rebound Prompt (controlled by autoPromptRebounds)
+      if (!lastResult.made && autoPromptRebounds) {
         closePrompt();
         showReboundPrompt({ playerId: lastEvent.playerId, playerName: lastEvent.playerName, teamId: lastEvent.teamId, statType: 'free_throw', shotValue: 1, videoTimestampMs: lastEvent.videoTimestampMs, isOpponentStat: false });
         setIsRecording(false);
@@ -426,7 +478,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       setIsRecording(false);
       closePrompt();
     }
-  }, [lastEvent, gameClock, gameId, videoId, onStatRecorded, closePrompt, showReboundPrompt, isCoachMode, teamAPlayers, setIsRecording, setSelectedPlayer]);
+  }, [lastEvent, gameClock, gameId, videoId, onStatRecorded, closePrompt, showReboundPrompt, isCoachMode, teamAPlayers, setIsRecording, setSelectedPlayer, autoPromptRebounds]);
 
   // Shot made/missed handler (for shooting fouls - and-1 logic) - ✅ OPTIMIZED: Fire-and-forget
   const handleShotMadeMissed = useCallback((made: boolean) => {
@@ -495,7 +547,8 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     if (!lastEvent || !gameClock || !gameData) return;
     const wasOpponentBlock = lastEvent.isOpponentStat === true;
     
-    if (wasOpponentBlock && isCoachMode) {
+    // ✅ SEQUENCE #8: Opponent block → Blocked Shooter Prompt (controlled by autoPromptBlocks)
+    if (wasOpponentBlock && isCoachMode && autoPromptBlocks) {
       closePrompt();
       showBlockedShooterPrompt({ playerId: lastEvent.playerId, playerName: lastEvent.playerName, teamId: lastEvent.teamId, statType: 'block', shotValue: 0, videoTimestampMs: lastEvent.videoTimestampMs, isOpponentStat: true, blockedShotType: shotType });
       return;
@@ -506,18 +559,21 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     
     // Fire-and-forget: Coach's player blocked opponent's shot: record opponent's missed shot
     VideoStatService.recordVideoStat({
-        gameId, videoId, playerId: isCoachMode ? userId : undefined, isOpponentStat: true,
-        teamId: gameData.team_a_id, statType: shotType, modifier: 'missed',
-        videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
-        gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-        skipPostUpdates: true,
+      gameId, videoId, playerId: isCoachMode ? userId : undefined, isOpponentStat: true,
+      teamId: gameData.team_a_id, statType: shotType, modifier: 'missed',
+      videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
+      gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+      skipPostUpdates: true,
     })
       .catch((error) => console.error('Error recording blocked shot:', error));
     
-    // UI updates immediately
-      closePrompt();
+    closePrompt();
+    
+    // ✅ SEQUENCE #9: Blocked shot → Rebound Prompt (controlled by autoPromptRebounds)
+    if (autoPromptRebounds) {
       showReboundPrompt({ playerId: lastEvent.playerId, playerName: lastEvent.playerName, teamId: lastEvent.teamId, statType: 'block', shotValue: 0, videoTimestampMs: lastEvent.videoTimestampMs, isOpponentStat: true });
-  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, showReboundPrompt, showBlockedShooterPrompt, isCoachMode, userId]);
+    }
+  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, showReboundPrompt, showBlockedShooterPrompt, isCoachMode, userId, autoPromptBlocks, autoPromptRebounds]);
 
   // Prompt player selection handler - ✅ OPTIMIZED: Fire-and-forget pattern
   const handlePromptPlayerSelect = useCallback((playerId: string) => {
@@ -571,7 +627,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       return;
     }
     
-    // Handle blocked_shooter case - fire-and-forget then show rebound prompt
+    // Handle blocked_shooter case - fire-and-forget then optionally show rebound prompt
     if (promptType === 'blocked_shooter') {
       const shotType = lastEvent.blockedShotType || 'field_goal';
       
@@ -588,7 +644,11 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
         .catch((error) => console.error('Error recording blocked shooter:', error));
       
       closePrompt();
-      showReboundPrompt({ playerId, playerName: player?.name || 'Player', teamId: gameData.team_a_id, statType: 'block', shotValue: 0, videoTimestampMs: lastEvent.videoTimestampMs, isOpponentStat: false });
+      
+      // ✅ SEQUENCE #9 (variant): Blocked shooter recorded → Rebound Prompt (controlled by autoPromptRebounds)
+      if (autoPromptRebounds) {
+        showReboundPrompt({ playerId, playerName: player?.name || 'Player', teamId: gameData.team_a_id, statType: 'block', shotValue: 0, videoTimestampMs: lastEvent.videoTimestampMs, isOpponentStat: false });
+      }
       return;
     }
     
@@ -654,7 +714,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     
     // UI updates immediately
     closePrompt();
-  }, [gameData, gameClock, lastEvent, promptType, gameId, videoId, teamAPlayers, teamBPlayers, onStatRecorded, closePrompt, showReboundPrompt, showFreeThrowPrompt, showShotMadeMissedPrompt, isCoachMode, userId]);
+  }, [gameData, gameClock, lastEvent, promptType, gameId, videoId, teamAPlayers, teamBPlayers, onStatRecorded, closePrompt, showReboundPrompt, showFreeThrowPrompt, showShotMadeMissedPrompt, isCoachMode, userId, autoPromptRebounds]);
 
   // Substitution handlers
   const handleOpenSubModal = useCallback(() => {

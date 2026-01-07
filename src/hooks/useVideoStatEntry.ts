@@ -13,8 +13,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { GameService } from '@/lib/services/gameService';
 import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { useVideoStatPrompts } from '@/hooks/useVideoStatPrompts';
-import { useVideoStatHandlers, OPPONENT_TEAM_ID, type Player } from '@/hooks/useVideoStatHandlers';
+import { useVideoStatHandlers, OPPONENT_TEAM_ID, type Player, DEFAULT_SEQUENCE_FLAGS, MANUAL_MODE_FLAGS } from '@/hooks/useVideoStatHandlers';
 import type { GameClock } from '@/lib/types/video';
+import type { SequenceAutomationFlags } from '@/lib/types/automation';
+
+// Re-export sequence flags for consumers
+export { DEFAULT_SEQUENCE_FLAGS, MANUAL_MODE_FLAGS };
 
 // Re-export types
 export { OPPONENT_TEAM_ID, type Player };
@@ -49,6 +53,11 @@ interface UseVideoStatEntryProps {
   preloadedTeamAPlayers?: Player[];
   preloadedTeamBPlayers?: Player[];
   preloadedGameData?: any;
+  /**
+   * ✅ NEW: Sequence automation flags for manual mode
+   * When undefined, defaults to all auto-prompts enabled
+   */
+  sequenceFlags?: SequenceAutomationFlags;
 }
 
 export function useVideoStatEntry(props: UseVideoStatEntryProps) {
@@ -57,6 +66,7 @@ export function useVideoStatEntry(props: UseVideoStatEntryProps) {
     onStatRecorded, onBeforeRecord,
     isCoachMode = false, userId, opponentName,
     preloadedTeamAPlayers, preloadedTeamBPlayers, preloadedGameData,
+    sequenceFlags = DEFAULT_SEQUENCE_FLAGS, // ✅ Default: all auto-prompts enabled
   } = props;
 
   // Core state
@@ -82,12 +92,13 @@ export function useVideoStatEntry(props: UseVideoStatEntryProps) {
           showBlockedShotPrompt, showBlockedShooterPrompt, showFreeThrowPrompt,
           showFouledPlayerPrompt, showShotMadeMissedPrompt } = prompts;
 
-  // Handlers
+  // Handlers - ✅ Pass sequenceFlags for manual mode control
   const handlers = useVideoStatHandlers({
     gameId, videoId, currentVideoTimeMs, gameClock, gameData,
     selectedPlayer, selectedTeam, teamAPlayers, teamBPlayers,
     isCoachMode, userId, opponentName, lastEvent, promptType,
     onCourtA, benchA, onCourtB, benchB,
+    sequenceFlags, // ✅ NEW: Controls auto-prompts
     setIsRecording, setSelectedPlayer, setShowSubModal,
     setOnCourtA, setBenchA, setOnCourtB, setBenchB,
     onStatRecorded, onBeforeRecord,
