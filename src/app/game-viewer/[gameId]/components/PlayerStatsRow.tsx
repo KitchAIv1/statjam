@@ -5,7 +5,7 @@
  * for both on-court and bench players in the Team Stats Tab.
  * 
  * LAYOUT: Photo + name on left, stats grid on right
- * STATS: MIN, FG, 3P, FT, PTS, REB, AST, STL, BLK, PF, +/-
+ * STATS: MIN, FG, 3P, FT, PTS, REB, AST, STL, BLK, TO, PF, +/-
  * 
  * Follows .cursorrules: <200 lines, single responsibility, Tailwind styling
  */
@@ -29,6 +29,7 @@ export interface PlayerStatsRowProps {
     assists: number;
     steals: number;
     blocks: number;
+    turnovers: number;
     fouls: number;
     plusMinus: number;
     fieldGoalsMade?: number;
@@ -68,7 +69,7 @@ export function PlayerStatsRow({
 
   const { id, name, isCustomPlayer = false, profilePhotoUrl } = player;
   const { 
-    minutes, points, rebounds, assists, steals, blocks, fouls, plusMinus,
+    minutes, points, rebounds, assists, steals, blocks, turnovers, fouls, plusMinus,
     fieldGoalsMade = 0, fieldGoalsAttempted = 0,
     threePointersMade = 0, threePointersAttempted = 0,
     freeThrowsMade = 0, freeThrowsAttempted = 0
@@ -155,7 +156,7 @@ export function PlayerStatsRow({
 
       {/* Stats Grid */}
       <div className={`flex items-center ${isMobile ? 'flex-1 overflow-x-auto scrollbar-hide' : 'flex-1'}`}>
-        <div className={`grid grid-cols-11 items-center ${isMobile ? 'gap-0.5 min-w-[280px]' : 'gap-1.5 min-w-[440px]'}`}>
+        <div className={`grid grid-cols-12 items-center ${isMobile ? 'gap-0.5 min-w-[300px]' : 'gap-1.5 min-w-[470px]'}`}>
           <StatCell label="MIN" value={minutes} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
           <StatCell label="FG" value={fgDisplay} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} wide />
           <StatCell label="3P" value={threePtDisplay} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} wide />
@@ -165,6 +166,7 @@ export function PlayerStatsRow({
           <StatCell label="AST" value={assists} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
           <StatCell label="STL" value={steals} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
           <StatCell label="BLK" value={blocks} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
+          <StatCell label="TO" value={turnovers} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
           <StatCell label="PF" value={fouls} isMobile={isMobile} textPrimary={textPrimary} textSecondary={textSecondary} />
           <StatCell label="+/-" value={pmText} isMobile={isMobile} textPrimary={pmColor} textSecondary={textSecondary} />
         </div>

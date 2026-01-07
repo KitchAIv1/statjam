@@ -1028,6 +1028,174 @@ export function CoachGameAnalyticsTab({
           bottomLine="This was Winslow at their best—suffocating defense, dominant rebounding, and balanced scoring. The 28 forced turnovers and +9 rebounding margin were the story of the game. DeGrais led with 18 points and 7 steals, while Murrell and Haines combined for 24 rebounds. The only concern was the third-quarter lapse where they were outscored 19-13, but the 19-7 fourth quarter response shows this team knows how to finish. When the defense plays like this, Winslow is a tough out for anyone."
         />
       )}
+
+      {/* AI Game Analysis Report - Winslow vs Shawnee Medford (31-47) LOSS - Learning Game */}
+      {gameId === '70d61fd3-2f21-4b8d-8754-01ce5838094f' && (
+        <AIGameAnalysisReport
+          gameId={gameId}
+          winningTeam="Shawnee Medford"
+          losingTeam="Winslow Township 7th Grade"
+          finalScore={{ home: 31, away: 47 }}
+          margin={16}
+          gameType="Learning Opportunity"
+          overview="This was a tough night for Winslow. The game slipped away in the 3rd quarter when Shawnee Medford outscored Winslow 14-5, turning a close game into a 16-point deficit. Winslow struggled with shot selection (33% FG, 21% from three), committed 19 turnovers, and was dominated on the boards (22-36). However, every loss is a learning opportunity—and this game reveals clear areas for improvement heading into the next matchup."
+          winningFactors={[
+            {
+              factor: 'Rebounding Gap',
+              value: '-14',
+              impactScore: 0,
+              courtMeaning: [
+                'Shawnee grabbed 36 rebounds vs Winslow\'s 22',
+                '11 offensive rebounds for Shawnee created second-chance points',
+                'Winslow only had 4 offensive boards—limited extra possessions'
+              ],
+              coachingTakeaway: [
+                '🎯 Box out every shot—it\'s effort, not size',
+                '🎯 Crash the offensive glass—second chances keep you in games',
+                '🎯 Focus on positioning before the shot goes up'
+              ]
+            },
+            {
+              factor: '3rd Quarter Collapse',
+              value: '5-14',
+              impactScore: 0,
+              courtMeaning: [
+                'Winslow scored only 5 points in Q3 while allowing 14',
+                'Went from down 3 to down 12 in one quarter',
+                'Momentum completely shifted to Shawnee'
+              ],
+              coachingTakeaway: [
+                '🎯 Halftime adjustments need work—come out stronger',
+                '🎯 Call timeout earlier when momentum shifts',
+                '🎯 Stay mentally tough when shots aren\'t falling'
+              ]
+            },
+            {
+              factor: 'Turnover Trouble',
+              value: '19 TO',
+              impactScore: 0,
+              courtMeaning: [
+                '19 turnovers gave away nearly 20 possessions',
+                'Lost ball (7) and bad passes (3) were main issues',
+                'Travel calls (3) show rushed decisions'
+              ],
+              coachingTakeaway: [
+                '🎯 Value each possession—slow down when needed',
+                '🎯 Make the simple pass, not the highlight pass',
+                '🎯 Use fundamentals under pressure'
+              ]
+            }
+          ]}
+          keyPlayers={[
+            {
+              name: 'Thorton',
+              rank: 1,
+              points: 10,
+              rebounds: 2,
+              assists: 1,
+              steals: 0,
+              blocks: 0,
+              turnovers: 0,
+              impactScore: 0,
+              strengths: [
+                '⭐ Team\'s most efficient scorer (4/8 FG = 50%)',
+                'Zero turnovers—protected the ball well',
+                'Aggressive attacking the basket'
+              ],
+              coachingFocus: [
+                'Look to get more shots—you\'re earning them',
+                'Be more vocal as a leader on tough nights',
+                'Help teammates find their rhythm'
+              ]
+            },
+            {
+              name: 'Ward Jr',
+              rank: 2,
+              points: 10,
+              rebounds: 2,
+              assists: 3,
+              steals: 2,
+              blocks: 0,
+              turnovers: 5,
+              impactScore: 0,
+              strengths: [
+                '💪 Tied for team-high 10 points',
+                'Created for others with 3 assists',
+                'Active hands with 2 steals'
+              ],
+              riskToManage: '5 turnovers offset scoring—decision-making needs work',
+              coachingFocus: [
+                'Great scoring, but 5 turnovers hurt the team',
+                'Pick your spots—not every shot needs to be a three',
+                'Trust your teammates when doubled'
+              ]
+            },
+            {
+              name: 'Haines',
+              rank: 3,
+              points: 4,
+              rebounds: 7,
+              assists: 1,
+              steals: 1,
+              blocks: 1,
+              turnovers: 5,
+              impactScore: 0,
+              strengths: [
+                '💪 Team-high 7 rebounds in a tough rebounding game',
+                'Only block of the game',
+                'Physical presence inside'
+              ],
+              riskToManage: '5 turnovers need to be cleaned up',
+              coachingFocus: [
+                'Great rebounding—we need more of this from everyone',
+                'Protect the ball better in traffic',
+                'Keep battling on the glass'
+              ]
+            }
+          ]}
+          momentum={{
+            quarter: 3,
+            teamScore: 5,
+            opponentScore: 14,
+            description: 'The third quarter was the turning point. Winslow came out of halftime flat, scoring only 5 points while Shawnee Medford erupted for 14. What was a 3-point deficit became a 12-point hole. Shot selection became desperate, turnovers mounted, and the defense couldn\'t get stops. This quarter cost Winslow the game and is the primary focus for improvement.'
+          }}
+          opponentBreakdown={{
+            fgPercentage: 43,
+            turnovers: 19,
+            fouls: 12,
+            keyIssues: [
+              'Winslow shot poorly: 33% FG, 21% from three',
+              'Outrebounded by 14 (22 vs 36)',
+              '19 turnovers gave away too many possessions'
+            ],
+            correctableIssues: [
+              'Shot selection—stop settling for contested threes',
+              'Ball security—19 turnovers is fixable with focus',
+              'Boxing out—effort and technique, not size'
+            ],
+            deeperProblems: [
+              '3rd quarter mental toughness—came out flat',
+              'Need secondary scoring options when shots aren\'t falling',
+              'Offensive rebounding effort was lacking (only 4)'
+            ]
+          }}
+          actionItems={{
+            winner: [
+              'Review what Shawnee did well—learn from their execution',
+              'Study their rebounding technique and positioning',
+              'Prepare for their pressure defense next time'
+            ],
+            loser: [
+              '✅ DRILL: Ball handling under pressure—reduce turnovers',
+              '✅ DRILL: Boxing out and rebounding positioning',
+              '✅ FOCUS: Come out of halftime with more energy',
+              '✅ MINDSET: Shots will fall if you take good ones',
+              '✅ FILM: Watch Q3 together—identify the breakdown'
+            ]
+          }}
+          bottomLine="Tough loss, but there's a clear path forward. This game was lost on the glass (-14 rebounds) and through turnovers (19). The 3rd quarter collapse (5-14) was the dagger. But here's the silver lining: Thorton showed he can be efficient (50% FG, 0 TO), Ward Jr can score, and Haines competed on the boards. Fix the turnovers, crash the glass harder, and come out of halftime ready to compete—this team has the talent to beat Shawnee Medford next time. Losses teach more than wins. Use this one."
+        />
+      )}
     </div>
   );
 }
