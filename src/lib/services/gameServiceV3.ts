@@ -504,6 +504,9 @@ export class GameServiceV3 {
 
       const url = `${this.SUPABASE_URL}/rest/v1/game_stats`;
       
+      // ✅ LATENCY TEST: Measure actual INSERT time
+      const startTime = performance.now();
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -536,6 +539,18 @@ export class GameServiceV3 {
           shot_zone: statData.shotZone || null
         })
       });
+      
+      const endTime = performance.now();
+      const latencyMs = Math.round(endTime - startTime);
+      
+      // ✅ LATENCY LOG: Color-coded based on performance
+      if (latencyMs > 500) {
+        console.error(`🔴 MANUAL STAT INSERT LATENCY: ${latencyMs}ms (SLOW!) - ${statData.statType}`);
+      } else if (latencyMs > 200) {
+        console.warn(`🟡 MANUAL STAT INSERT LATENCY: ${latencyMs}ms (moderate) - ${statData.statType}`);
+      } else {
+        console.log(`🟢 MANUAL STAT INSERT LATENCY: ${latencyMs}ms (good) - ${statData.statType}`);
+      }
 
       if (!response.ok) {
         const errorText = await response.text();

@@ -303,6 +303,9 @@ export async function recordVideoStat(params: RecordVideoStatParams): Promise<st
   
   console.log(`💾 recordVideoStat payload: quarter=${quarter}, gameTimeMin=${gameTimeMinutes}, gameTimeSec=${gameTimeSeconds}, videoMs=${videoTimestampMsInt}, statType=${statType}, isOpponentStat=${isOpponentStat}, customPlayerId=${customPlayerId || 'none'}`);
   
+  // ✅ LATENCY TEST: Measure actual INSERT time
+  const startTime = performance.now();
+  
   // Use raw HTTP request with proper auth (bypasses broken Supabase client)
   const response = await fetch(`${supabaseUrl}/rest/v1/game_stats`, {
     method: 'POST',
@@ -314,6 +317,18 @@ export async function recordVideoStat(params: RecordVideoStatParams): Promise<st
     },
     body: JSON.stringify(payload)
   });
+  
+  const endTime = performance.now();
+  const latencyMs = Math.round(endTime - startTime);
+  
+  // ✅ LATENCY LOG: Color-coded based on performance
+  if (latencyMs > 500) {
+    console.error(`🔴 VIDEO STAT INSERT LATENCY: ${latencyMs}ms (SLOW!) - ${statType}`);
+  } else if (latencyMs > 200) {
+    console.warn(`🟡 VIDEO STAT INSERT LATENCY: ${latencyMs}ms (moderate) - ${statType}`);
+  } else {
+    console.log(`🟢 VIDEO STAT INSERT LATENCY: ${latencyMs}ms (good) - ${statType}`);
+  }
   
   if (!response.ok) {
     const errorText = await response.text();
