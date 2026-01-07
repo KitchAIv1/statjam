@@ -230,13 +230,14 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
       setFrozenClockValue(gameClock);
     }
     
-    // ✅ DEBOUNCED: Refresh scores with 500ms debounce to prevent rapid query timeouts
+    // ✅ DEBOUNCED: Refresh scores with 2s debounce to prevent rapid query timeouts
+    // Increased from 500ms to 2000ms to reduce HTTP call frequency during rapid stat entry
     if (scoreRefreshTimeoutRef.current) {
       clearTimeout(scoreRefreshTimeoutRef.current);
     }
     scoreRefreshTimeoutRef.current = setTimeout(() => {
       loadScores();
-    }, 500);
+    }, 2000);
   }, [loadScores, gameClock, clockFrozen]);
   
   // Resume (unfreeze) game clock and recalibrate to current video position
@@ -694,11 +695,13 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
   }, [gameId]);
   
   // Load scores when gameData is available (source of truth: TeamStatsService)
+  // ✅ FIX: Remove loadScores from deps - only load on initial gameData, not on every render
   useEffect(() => {
     if (gameData?.team_a_id) {
       loadScores();
     }
-  }, [gameData?.team_a_id, gameData?.team_b_id, loadScores]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameData?.team_a_id, gameData?.team_b_id]);
   
   // Handle video upload complete
   const handleUploadComplete = async (bunnyVideoId: string) => {
