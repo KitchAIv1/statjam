@@ -640,10 +640,10 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
         if (!game) return;
         setGameData(game);
         
-        // Check if this is a coach game (has is_coach_game flag or opponent_name)
-        // Cast to any to access potential coach game properties
+        // Check if this is a coach game (ONLY use is_coach_game flag)
+        // Note: opponent_name can exist on organizer games too, so don't use it for detection
         const gameAny = game as any;
-        const isCoach = gameAny.is_coach_game === true || !!gameAny.opponent_name;
+        const isCoach = gameAny.is_coach_game === true;
         console.log('🎮 Game type detection:', { isCoach, opponent: gameAny.opponent_name, teamAId: game.team_a_id });
         
         if (isCoach) {
@@ -1145,6 +1145,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                       userId={user?.id}
                       opponentName={opponentName}
                       preloadedTeamAPlayers={teamAPlayers}
+                      preloadedTeamBPlayers={teamBPlayers}
                       preloadedGameData={gameData}
                     />
                   </div>

@@ -33,6 +33,7 @@ interface VideoStatEntryPanelProps {
   userId?: string;
   opponentName?: string;
   preloadedTeamAPlayers?: Player[];
+  preloadedTeamBPlayers?: Player[];
   preloadedGameData?: any;
 }
 
@@ -40,14 +41,14 @@ export function VideoStatEntryPanel({
   gameId, videoId, currentVideoTimeMs, gameClock,
   onStatRecorded, onBeforeRecord, onRegisterHandlers,
   isCoachMode = false, userId, opponentName,
-  preloadedTeamAPlayers, preloadedGameData,
+  preloadedTeamAPlayers, preloadedTeamBPlayers, preloadedGameData,
 }: VideoStatEntryPanelProps) {
   
   const entry = useVideoStatEntry({
     gameId, videoId, currentVideoTimeMs, gameClock,
     onStatRecorded, onBeforeRecord,
     isCoachMode, userId, opponentName,
-    preloadedTeamAPlayers, preloadedGameData,
+    preloadedTeamAPlayers, preloadedTeamBPlayers, preloadedGameData,
   });
 
   // Register handlers for keyboard shortcuts

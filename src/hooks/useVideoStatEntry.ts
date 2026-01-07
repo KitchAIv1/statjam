@@ -47,6 +47,7 @@ interface UseVideoStatEntryProps {
   userId?: string;
   opponentName?: string;
   preloadedTeamAPlayers?: Player[];
+  preloadedTeamBPlayers?: Player[];
   preloadedGameData?: any;
 }
 
@@ -55,7 +56,7 @@ export function useVideoStatEntry(props: UseVideoStatEntryProps) {
     gameId, videoId, currentVideoTimeMs, gameClock,
     onStatRecorded, onBeforeRecord,
     isCoachMode = false, userId, opponentName,
-    preloadedTeamAPlayers, preloadedGameData,
+    preloadedTeamAPlayers, preloadedTeamBPlayers, preloadedGameData,
   } = props;
 
   // Core state
@@ -105,6 +106,12 @@ export function useVideoStatEntry(props: UseVideoStatEntryProps) {
         setOnCourtA(preloadedTeamAPlayers.slice(0, 5));
         setBenchA(preloadedTeamAPlayers.slice(5));
       }
+      // ✅ FIX: Also set team B players when preloaded (for organizer games)
+      if (preloadedTeamBPlayers) {
+        setTeamBPlayers(preloadedTeamBPlayers);
+        setOnCourtB(preloadedTeamBPlayers.slice(0, 5));
+        setBenchB(preloadedTeamBPlayers.slice(5));
+      }
       setLoading(false);
       return;
     }
@@ -151,7 +158,7 @@ export function useVideoStatEntry(props: UseVideoStatEntryProps) {
       }
     };
     loadData();
-  }, [gameId, preloadedGameData, preloadedTeamAPlayers]);
+  }, [gameId, preloadedGameData, preloadedTeamAPlayers, preloadedTeamBPlayers]);
 
   // Player selection
   const handlePlayerSelect = useCallback((playerId: string) => {
