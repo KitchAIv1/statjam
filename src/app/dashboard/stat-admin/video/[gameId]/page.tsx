@@ -657,7 +657,9 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
               id: p.id,
               name: p.name || 'Unknown',
               jerseyNumber: p.jersey_number || p.jerseyNumber,
-              is_custom_player: p.is_custom_player || true,
+              // ✅ FIX: Respect is_custom_player flag from service (was incorrectly always true)
+              // Claimed players have is_custom_player: false and should use player_id, not custom_player_id
+              is_custom_player: p.is_custom_player === true,
             })));
             setTeamBPlayers([]); // No Team B players in coach mode
             console.log('👥 Loaded coach team players with substitutions:', playersWithSubs.length);
@@ -668,7 +670,8 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
             setTeamAPlayers(basePlayers.map((p: any) => ({
               id: p.id, name: p.name || 'Unknown',
               jerseyNumber: p.jersey_number || p.jerseyNumber,
-              is_custom_player: true,
+              // ✅ FIX: Respect is_custom_player flag (was hardcoded to true)
+              is_custom_player: p.is_custom_player === true,
             })));
           }
         } else {
