@@ -810,6 +810,224 @@ export function CoachGameAnalyticsTab({
           bottomLine="This was a character win for Winslow. Down 10 after the first quarter with shots not falling, they relied on what they could control: effort, rebounding, and defense. Murrell's 18 rebounds and DeGrais' 5 steals kept them in it, and Ward Jr's 16 points sealed it. The 4th quarter 15-6 run shows this team can close. But the poor shooting (21.7% from three, 44.4% from the line) and slow start are concerns. This team wins ugly—now they need to learn to win clean."
         />
       )}
+
+      {/* AI Game Analysis Report - Winslow vs Pemberton Home (64-42) DOMINANT */}
+      {gameId === '46f5866b-426f-4a3f-a37d-ce41d5a2631d' && (
+        <AIGameAnalysisReport
+          gameId={gameId}
+          winningTeam="Winslow Township 7th Grade"
+          losingTeam="Pemberton"
+          finalScore={{ home: 64, away: 42 }}
+          margin={22}
+          gameType="Dominant"
+          overview="Winslow Township delivered a complete performance against Pemberton, winning by 22 points in a game that showcased their defensive prowess and balanced scoring. The team forced an incredible 28 turnovers while committing only 14, creating a +14 turnover margin that defined the game. After a slight third-quarter lapse where they were outscored 19-13, Winslow responded with a dominant 19-7 fourth quarter to put the game away."
+          winningFactors={[
+            {
+              factor: 'Turnover Margin',
+              value: '+14',
+              impactScore: 38.0,
+              courtMeaning: [
+                'Forced 28 turnovers from Pemberton',
+                '18 steals created easy transition opportunities',
+                'Suffocating defensive pressure all game'
+              ],
+              coachingTakeaway: [
+                'Defensive intensity is a team identity',
+                'Continue emphasizing active hands and ball pressure',
+                'Convert turnovers to points more consistently'
+              ]
+            },
+            {
+              factor: 'Rebounding Margin',
+              value: '+9',
+              impactScore: 28.0,
+              courtMeaning: [
+                '41 total rebounds vs 32 for Pemberton',
+                'Dominated the glass on both ends',
+                'Multiple players with double-digit boards'
+              ],
+              coachingTakeaway: [
+                'Rebounding is a consistent strength',
+                'Haines and Murrell anchor the interior',
+                'Second-chance points are a key advantage'
+              ]
+            },
+            {
+              factor: '4th Quarter Dominance',
+              value: '+12',
+              impactScore: 25.0,
+              courtMeaning: [
+                'Outscored Pemberton 19-7 in final quarter',
+                'Responded to Q3 adversity with intensity',
+                'Closed the game with authority'
+              ],
+              coachingTakeaway: [
+                'Team shows ability to finish strong',
+                'Mental toughness after Q3 lapse is encouraging',
+                'Build on closing mentality'
+              ]
+            }
+          ]}
+          keyPlayers={[
+            {
+              name: 'DeGrais',
+              rank: 1,
+              points: 18,
+              rebounds: 8,
+              assists: 2,
+              steals: 7,
+              blocks: 1,
+              turnovers: 4,
+              fouls: 2,
+              impactScore: 32.5,
+              strengths: [
+                'Team-high 18 points with efficiency',
+                'Defensive menace with 7 steals',
+                'Contributed 8 rebounds for versatility'
+              ],
+              riskToManage: '4 turnovers need attention',
+              coachingFocus: [
+                'Continue aggressive defensive play',
+                'Reduce turnovers with better decisions',
+                'All-around threat when engaged'
+              ]
+            },
+            {
+              name: 'Ward Jr',
+              rank: 2,
+              points: 16,
+              rebounds: 0,
+              assists: 6,
+              steals: 3,
+              blocks: 0,
+              turnovers: 3,
+              fouls: 1,
+              impactScore: 28.0,
+              strengths: [
+                'Efficient 16 points as secondary scorer',
+                'Team-high 6 assists running offense',
+                '3 steals contributing to defensive effort'
+              ],
+              riskToManage: 'Need to crash boards more',
+              coachingFocus: [
+                'Continue playmaking excellence',
+                'Add rebounding to complete game',
+                'Floor general role suits him well'
+              ]
+            },
+            {
+              name: 'Murrell',
+              rank: 3,
+              points: 10,
+              rebounds: 14,
+              assists: 1,
+              steals: 1,
+              blocks: 1,
+              turnovers: 2,
+              fouls: 4,
+              impactScore: 26.0,
+              strengths: [
+                'Dominant 14 rebounds (double-double!)',
+                'Anchored the paint defensively',
+                'Consistent force on the glass'
+              ],
+              riskToManage: 'Foul trouble (4 fouls)',
+              coachingFocus: [
+                'Continue being the rebounding anchor',
+                'Stay out of foul trouble',
+                'Expand offensive game around the basket'
+              ]
+            },
+            {
+              name: 'Haines',
+              rank: 4,
+              points: 9,
+              rebounds: 10,
+              assists: 1,
+              steals: 3,
+              blocks: 1,
+              turnovers: 0,
+              fouls: 3,
+              impactScore: 24.5,
+              strengths: [
+                'Double-double with 9 pts, 10 reb!',
+                'Zero turnovers—exceptional ball security',
+                'Contributed 3 steals and a block'
+              ],
+              riskToManage: 'Continue developing offensive game',
+              coachingFocus: [
+                'Reliable presence in the paint',
+                'Model for turnover-free play',
+                'Build on scoring confidence'
+              ]
+            },
+            {
+              name: 'Scott',
+              rank: 5,
+              points: 4,
+              rebounds: 3,
+              assists: 1,
+              steals: 3,
+              blocks: 2,
+              turnovers: 2,
+              fouls: 0,
+              impactScore: 18.0,
+              strengths: [
+                'Team-high 2 blocks protecting the rim',
+                '3 steals showing quick hands',
+                'No fouls—disciplined defender'
+              ],
+              riskToManage: 'Need more offensive involvement',
+              coachingFocus: [
+                'Defensive specialist role is valuable',
+                'Look for more scoring opportunities',
+                'Continue shot-blocking presence'
+              ]
+            }
+          ]}
+          momentum={{
+            quarter: 4,
+            teamScore: 19,
+            opponentScore: 7,
+            description: 'After being outscored 19-13 in the third quarter, Winslow responded emphatically in the fourth. The defense locked down completely, holding Pemberton to just 7 points while the offense found its rhythm. This closing run demonstrated the team\'s ability to respond to adversity and finish games strong. The balanced attack and suffocating defense put the game out of reach.'
+          }}
+          opponentBreakdown={{
+            fgPercentage: 32.0,
+            turnovers: 28,
+            fouls: 15,
+            keyIssues: [
+              '28 turnovers led to easy Winslow points',
+              'Only 5 assists shows lack of ball movement',
+              'Outrebounded 41-32 limited second chances'
+            ],
+            correctableIssues: [
+              'Ball security and passing decisions',
+              'Offensive execution and patience',
+              'Transition defense after turnovers'
+            ],
+            deeperProblems: [
+              'Could not handle Winslow defensive pressure',
+              'Lack of playmaking and shot creation',
+              'Overwhelmed on the boards'
+            ]
+          }}
+          actionItems={{
+            winner: [
+              'Maintain defensive intensity—28 forced turnovers is elite',
+              'Address Q3 lapse—can\'t allow 19-point quarters',
+              'Continue developing balanced scoring attack',
+              'Keep crashing the boards—rebounding wins games'
+            ],
+            loser: [
+              'Improve ball security—28 turnovers is unacceptable',
+              'Develop better offensive structure and spacing',
+              'Work on handling defensive pressure',
+              'Need more rebounding effort and positioning'
+            ]
+          }}
+          bottomLine="This was Winslow at their best—suffocating defense, dominant rebounding, and balanced scoring. The 28 forced turnovers and +9 rebounding margin were the story of the game. DeGrais led with 18 points and 7 steals, while Murrell and Haines combined for 24 rebounds. The only concern was the third-quarter lapse where they were outscored 19-13, but the 19-7 fourth quarter response shows this team knows how to finish. When the defense plays like this, Winslow is a tough out for anyone."
+        />
+      )}
     </div>
   );
 }
