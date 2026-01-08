@@ -13,6 +13,7 @@ import {
   updateClipStatus,
   incrementJobProgress,
   updateVideoAssignmentStatus,
+  getActualClipCounts,
   GeneratedClip,
 } from '../services/supabaseClient';
 import {
@@ -131,24 +132,34 @@ export async function processClipJob(jobId: string): Promise<void> {
       );
     }
 
-    // 8. Check final status
+    // 8. Check final status - use actual clip counts from generated_clips table
+    // This is more reliable than the counter which can have race conditions
+    const actualCounts = await getActualClipCounts(jobId);
     const updatedJob = await getJob(jobId);
-    if (updatedJob) {
-      const processedCount = updatedJob.completed_clips + updatedJob.failed_clips + (updatedJob.skipped_clips || 0);
+    
+    if (updatedJob && actualCounts) {
+      const processedCount = actualCounts.ready + actualCounts.failed + actualCounts.skipped;
       const allComplete = processedCount >= updatedJob.total_clips;
       
+      logger.info(`📊 Final check: ${processedCount}/${updatedJob.total_clips} processed (${actualCounts.ready} ready, ${actualCounts.failed} failed, ${actualCounts.skipped} skipped)`);
+      
       if (allComplete) {
-        const finalStatus = updatedJob.failed_clips === 0 ? 'completed' : 'completed';
+        // ✅ FIX: Update job with actual counts from generated_clips table
         await updateJobStatus(jobId, {
-          status: finalStatus,
+          status: 'completed',
           completed_at: new Date().toISOString(),
+          completed_clips: actualCounts.ready,
+          failed_clips: actualCounts.failed,
+          skipped_clips: actualCounts.skipped,
         });
         
         // 9. Update video assignment status to completed (connects to admin pipeline)
         await updateVideoAssignmentStatus(job.video_id, 'completed');
         
-        const skippedCount = updatedJob.skipped_clips || 0;
-        logger.info(`✅ Job ${jobId} finished: ${updatedJob.completed_clips} success, ${updatedJob.failed_clips} failed, ${skippedCount} skipped`);
+        logger.info(`✅ Job ${jobId} COMPLETED: ${actualCounts.ready} success, ${actualCounts.failed} failed, ${actualCounts.skipped} skipped`);
+      } else {
+        // Something is wrong - log for debugging
+        logger.warn(`⚠️ Job ${jobId} incomplete: ${processedCount}/${updatedJob.total_clips} - may have pending clips`);
       }
     }
 

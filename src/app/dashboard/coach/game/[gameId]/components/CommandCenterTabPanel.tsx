@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamStatsTab } from '@/app/game-viewer/[gameId]/components/TeamStatsTab';
 import { CoachGameAnalyticsTab } from '@/app/game-viewer/[gameId]/components/CoachGameAnalyticsTab';
 import { GameAwardsSection } from '@/app/game-viewer/[gameId]/components/GameAwardsSection';
+import { TournamentGameArticle } from '@/app/game-viewer/[gameId]/components/TournamentGameArticle';
 import { UpgradeModal } from '@/components/subscription';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -201,6 +202,11 @@ export function CommandCenterTabPanel({
                   hustlePlayer: gameAwardsPrefetch.hustlePlayer
                 } : undefined}
               />
+            )}
+
+            {/* Tournament Game Article - Below Awards */}
+            {isCompleted && (
+              <TournamentGameArticle gameId={gameId} isDark={false} />
             )}
           </div>
         </TabsContent>

@@ -372,6 +372,9 @@ export async function incrementJobProgress(
   jobId: string,
   field: 'completed_clips' | 'failed_clips' | 'skipped_clips'
 ): Promise<void> {
+  // Note: This has a race condition with parallel clips, but it doesn't affect
+  // actual clip generation. The final completion check uses getActualClipCounts()
+  // which queries the generated_clips table directly for accurate counts.
   const { data: job } = await supabase
     .from('clip_generation_jobs')
     .select('completed_clips, failed_clips, skipped_clips')
@@ -385,6 +388,45 @@ export async function incrementJobProgress(
       .update({ [field]: currentValue + 1 })
       .eq('id', jobId);
   }
+}
+
+/**
+ * Get actual clip counts from generated_clips table
+ * More reliable than the job counters which can have race conditions
+ */
+export async function getActualClipCounts(jobId: string): Promise<{
+  ready: number;
+  failed: number;
+  skipped: number;
+  pending: number;
+  processing: number;
+} | null> {
+  const { data, error } = await supabase
+    .from('generated_clips')
+    .select('status')
+    .eq('job_id', jobId);
+
+  if (error) {
+    logger.error(`Error fetching clip counts for job ${jobId}:`, error);
+    return null;
+  }
+
+  const counts = {
+    ready: 0,
+    failed: 0,
+    skipped: 0,
+    pending: 0,
+    processing: 0,
+  };
+
+  for (const clip of data || []) {
+    const status = clip.status as keyof typeof counts;
+    if (status in counts) {
+      counts[status]++;
+    }
+  }
+
+  return counts;
 }
 
 /**

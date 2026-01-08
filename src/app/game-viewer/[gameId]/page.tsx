@@ -340,6 +340,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
           )}
         </Tabs>
 
+
         {/* Live Indicator */}
         <LiveIndicator show={isLive} position="bottom-right" size="md" />
       </div>
