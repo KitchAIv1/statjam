@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { Users, PlayCircle, Video, MoreHorizontal, Trophy, Calendar } from 'lucide-react';
+import { Users, PlayCircle, Video, MoreHorizontal, Trophy, Calendar, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -29,6 +29,7 @@ interface CompactTeamCardProps {
   onAnalytics: (team: CoachTeam) => void;
   onJoinTournament: (team: CoachTeam) => void;
   onViewGames: (team: CoachTeam) => void;
+  onSeasons: (team: CoachTeam) => void;
   hasVideoAccess: boolean;
 }
 
@@ -40,6 +41,7 @@ export function CompactTeamCard({
   onAnalytics,
   onJoinTournament,
   onViewGames,
+  onSeasons,
   hasVideoAccess,
 }: CompactTeamCardProps) {
   const canTrack = (team.player_count || 0) >= 5;
@@ -114,6 +116,10 @@ export function CompactTeamCard({
             <DropdownMenuItem onClick={() => onJoinTournament(team)}>
               <Trophy className="w-4 h-4 mr-2" />
               {team.tournament_id ? 'Add to Tournament' : 'Join Tournament'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onSeasons(team)}>
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Seasons
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -30,6 +30,7 @@ import { CoachPlayerManagementService } from '@/lib/services/coachPlayerManageme
 import { CoachTeamAnalyticsTab } from './CoachTeamAnalyticsTab';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UpgradeModal, VideoCreditsModal } from '@/components/subscription';
+import { SeasonCreateModal } from '@/components/season';
 
 interface CoachMissionControlProps {
   user: any;
@@ -88,6 +89,7 @@ export function CoachMissionControl({
   const [showTournamentSearch, setShowTournamentSearch] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showVideoCreditsModal, setShowVideoCreditsModal] = useState(false);
+  const [showSeasons, setShowSeasons] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<CoachTeam | null>(null);
   
   // Daily upload limit
@@ -148,6 +150,11 @@ export function CoachMissionControl({
 
   const handleViewGames = (team: CoachTeam) => {
     router.push(`/dashboard/coach/games?teamId=${team.id}`);
+  };
+
+  const handleSeasons = (team: CoachTeam) => {
+    setSelectedTeam(team);
+    setShowSeasons(true);
   };
 
   const handleStartGame = () => {
@@ -234,6 +241,7 @@ export function CoachMissionControl({
         onAnalytics={handleAnalytics}
         onJoinTournament={handleJoinTournament}
         onViewGames={handleViewGames}
+        onSeasons={handleSeasons}
         onCreateTeam={() => setShowCreateTeam(true)}
       />
 
@@ -324,6 +332,19 @@ export function CoachMissionControl({
           setShowVideoCreditsModal(false);
         }}
       />
+
+      {showSeasons && selectedTeam && (
+        <SeasonCreateModal
+          team={selectedTeam}
+          isOpen={showSeasons}
+          onClose={() => { setShowSeasons(false); setSelectedTeam(null); }}
+          onCreated={() => {
+            setShowSeasons(false);
+            setSelectedTeam(null);
+            onTeamUpdate();
+          }}
+        />
+      )}
     </div>
   );
 }

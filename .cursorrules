@@ -252,6 +252,65 @@ Code is acceptable when:
 
 ---
 
+## LEGACY FILE HANDLING (CRITICAL - PAYING CUSTOMERS)
+
+### Rule: NO ADDITIONS TO GIANT FILES
+
+**If a file exceeds 500 lines, you MUST NOT add new code directly to it.**
+
+Instead:
+1. **Extract** the new functionality into a separate, clean file
+2. **Import** it back into the legacy file if needed
+3. **Never** increase the line count of an already-oversized file
+
+### Known Legacy Files (DO NOT EXPAND):
+These files are over 500 lines. Any new feature touching them MUST be extracted:
+
+```
+- useTracker.ts (2,360 lines) → Extract to useTracker*.ts hooks
+- stat-tracker-v3/page.tsx (2,371 lines) → Extract to components/hooks
+- schedule/page.tsx (2,458 lines) → Extract to components/hooks
+- OrganizerTournamentManager.tsx (1,909 lines) → Extract to components
+- tournamentService.ts (1,653 lines) → Split by domain operation
+- PlayerDashboard.tsx (1,102 lines) → Extract to sub-components
+- teamStatsService.ts (1,273 lines) → Split by function type
+```
+
+### Strategy: Gradual Strangling
+
+When you MUST touch a legacy file:
+1. **Fix bugs** with minimal changes (don't expand)
+2. **New features** → Create new file, import into legacy
+3. **Refactoring** → Extract ONE piece per session to a clean file
+
+### Output Format When Legacy File Is Involved:
+
+```
+■ LEGACY FILE DETECTED: <filename> (<line count> lines)
+■ REQUESTED CHANGE: <what user wants>
+
+■ STRATEGY (No Direct Addition):
+- [ ] Create: src/<path>/<NewFile>.ts (~X lines)
+- [ ] Move/Add: <specific logic being extracted>
+- [ ] Import into legacy file (net change: +1 import, -0 to -X lines)
+
+■ RESULT:
+- Legacy file: No size increase (or slight decrease)
+- New file: Clean, <100 lines, testable
+
+Proceed with extraction?
+```
+
+### The Golden Rule
+
+> **"Leave it better than you found it, but NEVER make it worse."**
+
+- ✅ Fix a bug in a 2,000-line file → OK (minimal change)
+- ✅ Extract 50 lines to a new file → GREAT
+- ❌ Add 50 new lines to a 2,000-line file → BLOCKED
+
+---
+
 ## REMEMBER
 
 **The goal is maintainable, scalable, testable code.**
@@ -265,3 +324,5 @@ Small, focused files are:
 - Harder to break
 
 **ALWAYS propose splits over monoliths.**
+
+**NEVER expand legacy files. Extract instead.**
