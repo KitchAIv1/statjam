@@ -1,6 +1,6 @@
 // ============================================================================
-// SEASON CREATE MODAL - Modal shell (<200 lines)
-// Purpose: Multi-step modal for creating a new season
+// SEASON CREATE/EDIT MODAL - Modal shell (<200 lines)
+// Purpose: Multi-step modal for creating OR editing a season
 // Follows .cursorrules: UI component, <200 lines, orchestration only
 // ============================================================================
 
@@ -9,8 +9,9 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/Button';
-import { ArrowLeft, ArrowRight, Calendar, Palette, List, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar, Palette, List, Check, Loader2, Pencil } from 'lucide-react';
 import { CoachTeam } from '@/lib/types/coach';
+import { Season } from '@/lib/types/season';
 import { useSeasonForm } from '@/hooks/useSeasonForm';
 import { useSeasonGames } from '@/hooks/useSeasonGames';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
@@ -26,6 +27,7 @@ interface SeasonCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;
+  existingSeason?: Season; // For edit mode
 }
 
 const STEPS = [
@@ -35,10 +37,21 @@ const STEPS = [
   { id: 4, label: 'Games', icon: List },
 ];
 
-export function SeasonCreateModal({ team, isOpen, onClose, onCreated }: SeasonCreateModalProps) {
+export function SeasonCreateModal({ team, isOpen, onClose, onCreated, existingSeason }: SeasonCreateModalProps) {
   const { user } = useAuthV2();
-  const form = useSeasonForm(team.id);
+  const isEditMode = !!existingSeason;
+  const form = useSeasonForm(team.id, existingSeason);
   const gamesPicker = useSeasonGames({ teamId: team.id });
+
+  // Pre-select games when editing (fetch existing game IDs)
+  React.useEffect(() => {
+    if (isEditMode && existingSeason?.id && isOpen) {
+      SeasonService.getSeasonGames(existingSeason.id).then(games => {
+        const gameIds = games.map(g => g.game_id);
+        gamesPicker.setSelectedIds(gameIds);
+      });
+    }
+  }, [isEditMode, existingSeason?.id, isOpen]);
 
   // Logo upload
   const logoUpload = usePhotoUpload({
@@ -60,13 +73,19 @@ export function SeasonCreateModal({ team, isOpen, onClose, onCreated }: SeasonCr
 
     form.setLoading(true);
     try {
-      await SeasonService.createSeason(form.data as any, user.id);
+      if (isEditMode && existingSeason) {
+        await SeasonService.updateSeason(existingSeason.id, form.data as any);
+        // Update game links (remove old, add new)
+        await SeasonService.syncSeasonGames(existingSeason.id, gamesPicker.selectedIds);
+      } else {
+        await SeasonService.createSeason(form.data as any, user.id);
+      }
       onCreated();
       onClose();
       form.reset();
       gamesPicker.deselectAll();
     } catch (err) {
-      form.setError('submit', err instanceof Error ? err.message : 'Failed to create season');
+      form.setError('submit', err instanceof Error ? err.message : `Failed to ${isEditMode ? 'update' : 'create'} season`);
     } finally {
       form.setLoading(false);
     }
@@ -110,7 +129,10 @@ export function SeasonCreateModal({ team, isOpen, onClose, onCreated }: SeasonCr
             logoError={logoUpload.error}
             onChange={(field, value) => form.updateField(field as any, value)}
             onLogoSelect={logoUpload.handleFileSelect}
-            onLogoRemove={logoUpload.clearPreview}
+            onLogoRemove={() => {
+              logoUpload.clearPreview();
+              form.updateField('logo', '');
+            }}
             onLogoClearError={logoUpload.clearError}
           />
         );
@@ -137,8 +159,8 @@ export function SeasonCreateModal({ team, isOpen, onClose, onCreated }: SeasonCr
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-orange-500" />
-            Create Season
+            {isEditMode ? <Pencil className="w-5 h-5 text-orange-500" /> : <Calendar className="w-5 h-5 text-orange-500" />}
+            {isEditMode ? 'Edit Season' : 'Create Season'}
           </DialogTitle>
         </DialogHeader>
 
@@ -209,9 +231,9 @@ export function SeasonCreateModal({ team, isOpen, onClose, onCreated }: SeasonCr
               className="flex-1 gap-1"
             >
               {form.loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> {isEditMode ? 'Saving...' : 'Creating...'}</>
               ) : (
-                <><Check className="w-4 h-4" /> Create Season</>
+                <><Check className="w-4 h-4" /> {isEditMode ? 'Save Changes' : 'Create Season'}</>
               )}
             </Button>
           )}

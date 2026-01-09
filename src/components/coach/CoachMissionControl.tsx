@@ -30,7 +30,8 @@ import { CoachPlayerManagementService } from '@/lib/services/coachPlayerManageme
 import { CoachTeamAnalyticsTab } from './CoachTeamAnalyticsTab';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UpgradeModal, VideoCreditsModal } from '@/components/subscription';
-import { SeasonCreateModal } from '@/components/season';
+import { SeasonCreateModal, SeasonListModal } from '@/components/season';
+import { Season } from '@/lib/types/season';
 
 interface CoachMissionControlProps {
   user: any;
@@ -89,8 +90,10 @@ export function CoachMissionControl({
   const [showTournamentSearch, setShowTournamentSearch] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showVideoCreditsModal, setShowVideoCreditsModal] = useState(false);
-  const [showSeasons, setShowSeasons] = useState(false);
+  const [showSeasonList, setShowSeasonList] = useState(false);
+  const [showSeasonCreate, setShowSeasonCreate] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<CoachTeam | null>(null);
+  const [selectedSeasonForEdit, setSelectedSeasonForEdit] = useState<Season | null>(null);
   
   // Daily upload limit
   const [dailyUploads, setDailyUploads] = useState<DailyUploadStatus>({ 
@@ -154,7 +157,19 @@ export function CoachMissionControl({
 
   const handleSeasons = (team: CoachTeam) => {
     setSelectedTeam(team);
-    setShowSeasons(true);
+    setShowSeasonList(true);
+  };
+
+  const handleCreateSeason = () => {
+    setSelectedSeasonForEdit(null); // Clear any edit state
+    setShowSeasonList(false);
+    setShowSeasonCreate(true);
+  };
+
+  const handleEditSeason = (season: Season) => {
+    setSelectedSeasonForEdit(season);
+    setShowSeasonList(false);
+    setShowSeasonCreate(true);
   };
 
   const handleStartGame = () => {
@@ -333,16 +348,28 @@ export function CoachMissionControl({
         }}
       />
 
-      {showSeasons && selectedTeam && (
+      {showSeasonList && selectedTeam && (
+        <SeasonListModal
+          team={selectedTeam}
+          isOpen={showSeasonList}
+          onClose={() => { setShowSeasonList(false); setSelectedTeam(null); }}
+          onCreateNew={handleCreateSeason}
+          onEdit={handleEditSeason}
+        />
+      )}
+
+      {showSeasonCreate && selectedTeam && (
         <SeasonCreateModal
           team={selectedTeam}
-          isOpen={showSeasons}
-          onClose={() => { setShowSeasons(false); setSelectedTeam(null); }}
+          isOpen={showSeasonCreate}
+          onClose={() => { setShowSeasonCreate(false); setSelectedTeam(null); setSelectedSeasonForEdit(null); }}
           onCreated={() => {
-            setShowSeasons(false);
-            setSelectedTeam(null);
+            setShowSeasonCreate(false);
+            setShowSeasonList(true); // Go back to list to see updated season
+            setSelectedSeasonForEdit(null);
             onTeamUpdate();
           }}
+          existingSeason={selectedSeasonForEdit || undefined}
         />
       )}
     </div>

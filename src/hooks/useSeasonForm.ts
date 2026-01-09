@@ -5,32 +5,37 @@
 // ============================================================================
 
 import { useState, useCallback } from 'react';
-import { SeasonFormState, SeasonCreateRequest, SeasonType } from '@/lib/types/season';
+import { SeasonFormState, SeasonCreateRequest, Season } from '@/lib/types/season';
 
-const initialState: SeasonFormState = {
-  data: {
-    name: '',
-    description: '',
-    season_type: 'regular',
-    season_year: '',
-    league_name: '',
-    conference: '',
-    home_venue: '',
-    primary_color: '#FF6B00',
-    secondary_color: '#1A1A1A',
-    is_public: false,
-    game_ids: [],
+const getInitialState = (teamId: string, existingSeason?: Season): SeasonFormState => ({
+  data: existingSeason ? {
+    name: existingSeason.name,
+    team_id: teamId,
+    description: existingSeason.description || '',
+    logo: existingSeason.logo || '',
+    league_name: existingSeason.league_name || '',
+    season_type: existingSeason.season_type,
+    season_year: existingSeason.season_year || '',
+    conference: existingSeason.conference || '',
+    home_venue: existingSeason.home_venue || '',
+    primary_color: existingSeason.primary_color || '#FF6B00',
+    secondary_color: existingSeason.secondary_color || '#1A1A1A',
+    start_date: existingSeason.start_date || '',
+    end_date: existingSeason.end_date || '',
+    is_public: existingSeason.is_public,
+    game_ids: [], // Will be populated separately
+  } : {
+    name: '', team_id: teamId, description: '', season_type: 'regular',
+    season_year: '', league_name: '', conference: '', home_venue: '',
+    primary_color: '#FF6B00', secondary_color: '#1A1A1A', is_public: false, game_ids: [],
   },
   errors: {},
   loading: false,
   currentStep: 1,
-};
+});
 
-export function useSeasonForm(teamId: string) {
-  const [state, setState] = useState<SeasonFormState>({
-    ...initialState,
-    data: { ...initialState.data, team_id: teamId },
-  });
+export function useSeasonForm(teamId: string, existingSeason?: Season) {
+  const [state, setState] = useState<SeasonFormState>(getInitialState(teamId, existingSeason));
 
   const updateField = useCallback(<K extends keyof SeasonCreateRequest>(
     field: K,
@@ -87,8 +92,8 @@ export function useSeasonForm(teamId: string) {
   }, []);
 
   const reset = useCallback(() => {
-    setState({ ...initialState, data: { ...initialState.data, team_id: teamId } });
-  }, [teamId]);
+    setState(getInitialState(teamId, existingSeason));
+  }, [teamId, existingSeason]);
 
   return {
     data: state.data,

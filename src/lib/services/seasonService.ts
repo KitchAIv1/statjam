@@ -105,11 +105,13 @@ export const SeasonService = {
   // ========================================
   
   async updateSeason(seasonId: string, data: Partial<SeasonUpdateRequest>): Promise<Season> {
+    // Exclude game_ids - handled separately by syncSeasonGames
+    const { game_ids, ...seasonData } = data as any;
     
     const { data: season, error } = await supabase
       .from('seasons')
       .update({
-        ...data,
+        ...seasonData,
         updated_at: new Date().toISOString(),
       })
       .eq('id', seasonId)
@@ -136,14 +138,31 @@ export const SeasonService = {
   },
 
   async unlinkGameFromSeason(seasonId: string, gameId: string): Promise<void> {
-    
     const { error } = await supabase
-      .from('season_games')
-      .delete()
-      .eq('season_id', seasonId)
-      .eq('game_id', gameId);
-    
+      .from('season_games').delete().eq('season_id', seasonId).eq('game_id', gameId);
     if (error) throw new Error(`Failed to unlink game: ${error.message}`);
+  },
+
+  async syncSeasonGames(seasonId: string, newGameIds: string[]): Promise<void> {
+    // Get current games
+    const current = await this.getSeasonGames(seasonId);
+    const currentIds = new Set(current.map(g => g.game_id));
+    const newIds = new Set(newGameIds);
+    
+    // Remove games no longer in selection
+    const toRemove = current.filter(g => !newIds.has(g.game_id));
+    for (const g of toRemove) {
+      await this.unlinkGameFromSeason(seasonId, g.game_id);
+    }
+    
+    // Add new games
+    const toAdd = newGameIds.filter(id => !currentIds.has(id));
+    if (toAdd.length > 0) {
+      await this.linkGamesToSeason(seasonId, toAdd);
+    }
+    
+    // Recalculate stats
+    await this.recalculateSeasonStats(seasonId);
   },
 
   // ========================================
