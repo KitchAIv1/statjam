@@ -11,7 +11,7 @@ import type { HelpFAQ } from "@/components/support/HelpPanel";
 export const coachChecklistSteps: ChecklistStep[] = [
   {
     title: "Create your team",
-    description: "From your dashboard, click Create Team to set up your roster.",
+    description: "Click Create Team to set up your roster. Free accounts: 1 team, Premium: unlimited.",
     action: { label: "Create Team", href: "/dashboard/coach" }
   },
   {
@@ -21,12 +21,12 @@ export const coachChecklistSteps: ChecklistStep[] = [
   },
   {
     title: "Start a game",
-    description: "Use 'Start New Game' for manual tracking, or 'Upload Video' for AI-assisted tracking with clips.",
+    description: "Click 'Start New Game' for manual tracking. Free: 6 games max. Premium: unlimited + video tracking.",
     action: { label: "Quick Actions", href: "/dashboard/coach" }
   },
   {
     title: "Track stats",
-    description: "Manual: Use stat buttons live. Video: Wait for processing to complete.",
+    description: "Use stat buttons to record plays live. Tap players, then tap stat buttons.",
   },
   {
     title: "Review in Game Viewer",
@@ -42,20 +42,20 @@ export const coachChecklistSteps: ChecklistStep[] = [
 
 export const coachFAQs: HelpFAQ[] = [
   {
+    question: "What can I do with a Free account?",
+    answer: "Free accounts get 1 team with up to 6 manually tracked games. Perfect for getting started with basic stat tracking and analytics."
+  },
+  {
     question: "How do I start tracking a game?",
     answer: "Click 'Start New Game' in Quick Actions, select a team, enter opponent details, and use the stat tracker."
   },
   {
     question: "What's Manual vs Video tracking?",
-    answer: "Manual: Track stats live during the game. Video: Upload recorded footage for AI-assisted stat tracking plus auto-generated highlight clips."
+    answer: "Manual: Track stats live during the game (free). Video: Upload recorded footage for AI tracking + auto-generated highlight clips (premium only)."
   },
   {
-    question: "How do video credits work?",
-    answer: "Each video upload uses 1 credit. You get AI-tracked stats plus highlight clips. Buy more credits from Quick Actions when needed."
-  },
-  {
-    question: "What's the daily upload limit?",
-    answer: "Free accounts: 2 uploads per day (resets every 24 hours). Premium subscribers have unlimited uploads."
+    question: "Can free accounts upload videos?",
+    answer: "No. Video tracking is exclusive to premium subscribers. Free accounts can manually track up to 6 games with 1 team."
   },
   {
     question: "How do I add players to my team?",
@@ -63,7 +63,7 @@ export const coachFAQs: HelpFAQ[] = [
   },
   {
     question: "Official vs Practice teams?",
-    answer: "Official: Stats count toward player profiles and season totals. Practice: For scrimmages/training, stats stay private."
+    answer: "Official: Stats count toward player profiles. Practice: For scrimmages/training, stats stay private."
   },
   {
     question: "What are Seasons?",
@@ -76,8 +76,8 @@ export const coachFAQs: HelpFAQ[] = [
     answer: "Click any game from Recent Games or your team card to open the Game Viewer with box scores, play-by-play, and clips."
   },
   {
-    question: "How do I get Verified status?",
-    answer: "Subscribe to a premium plan to display the verified badge on your profile and unlock unlimited uploads."
+    question: "What do Premium plans include?",
+    answer: "Unlimited teams, unlimited games, video tracking with AI highlights, advanced analytics, and the Verified badge on your profile."
   }
 ];
 
@@ -85,7 +85,7 @@ export const coachFeatureTourSteps: FeatureTourStep[] = [
   {
     target: "[data-coach-tour=quick-actions]",
     title: "Quick Actions",
-    description: "Start a new game for manual tracking, or upload video for AI-assisted tracking with highlights."
+    description: "Start a game for manual tracking. Premium subscribers can also upload video for AI-assisted tracking."
   },
   {
     target: "[data-coach-tour=teams-strip]",
