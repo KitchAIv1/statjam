@@ -1,12 +1,13 @@
 // ============================================================================
 // PLAYER STATS TABLE - Reusable (<200 lines)
 // Purpose: Display aggregated player stats with filters - Seasons AND Tournaments
-// Follows .cursorrules: Single responsibility, reusable, <200 lines
+// Follows .cursorrules: Single responsibility, reusable, <200 lines, optimized
 // ============================================================================
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ChevronUp, ChevronDown, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -41,7 +42,7 @@ interface PlayerStatsTableProps {
 type SortKey = keyof PlayerSeasonStats;
 type SortDir = 'asc' | 'desc';
 
-export function PlayerStatsTable({
+export const PlayerStatsTable = memo(function PlayerStatsTable({
   players,
   variant = 'full',
   showAverages = true,
@@ -51,18 +52,25 @@ export function PlayerStatsTable({
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [search, setSearch] = useState('');
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
+  const handleSort = useCallback((key: SortKey) => {
+    setSortKey(prev => {
+      if (prev === key) {
+        setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        return prev;
+      }
       setSortDir('desc');
-    }
-  };
+      return key;
+    });
+  }, []);
+
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+  }, []);
 
   const sortedPlayers = useMemo(() => {
-    let filtered = players.filter(p =>
-      p.playerName.toLowerCase().includes(search.toLowerCase())
+    const searchLower = search.toLowerCase();
+    const filtered = players.filter(p =>
+      p.playerName.toLowerCase().includes(searchLower)
     );
 
     return filtered.sort((a, b) => {
@@ -75,8 +83,10 @@ export function PlayerStatsTable({
     });
   }, [players, sortKey, sortDir, search]);
 
-  const avg = (val: number, games: number) => games > 0 ? (val / games).toFixed(1) : '0.0';
-  const pct = (made: number, att: number) => att > 0 ? `${Math.round((made / att) * 100)}%` : '-';
+  const avg = useCallback((val: number, games: number) => 
+    games > 0 ? (val / games).toFixed(1) : '0.0', []);
+  const pct = useCallback((made: number, att: number) => 
+    att > 0 ? `${Math.round((made / att) * 100)}%` : '-', []);
 
   const columns = variant === 'compact'
     ? ['Player', 'GP', 'PTS', 'REB', 'AST', 'STL']
@@ -125,36 +135,46 @@ export function PlayerStatsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {sortedPlayers.map((p, idx) => (
-              <tr key={p.playerId} className={cn(idx % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-orange-50/50')}>
-                <td className="px-2 py-2">
-                  <div className="flex items-center gap-2">
-                    {p.profilePhotoUrl ? (
-                      <img src={p.profilePhotoUrl} className="w-6 h-6 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-500">
-                        {p.jerseyNumber || p.playerName[0]}
-                      </div>
-                    )}
-                    <span className="font-medium truncate max-w-[120px]">{p.playerName}</span>
-                  </div>
-                </td>
-                <td className="text-center text-gray-600">{p.gamesPlayed}</td>
-                <td className="text-center font-semibold">{showAverages ? avg(p.points, p.gamesPlayed) : p.points}</td>
-                <td className="text-center">{showAverages ? avg(p.rebounds, p.gamesPlayed) : p.rebounds}</td>
-                <td className="text-center">{showAverages ? avg(p.assists, p.gamesPlayed) : p.assists}</td>
-                <td className="text-center">{showAverages ? avg(p.steals, p.gamesPlayed) : p.steals}</td>
-                {variant === 'full' && (
-                  <>
-                    <td className="text-center">{showAverages ? avg(p.blocks, p.gamesPlayed) : p.blocks}</td>
-                    <td className="text-center text-gray-500">{showAverages ? avg(p.turnovers, p.gamesPlayed) : p.turnovers}</td>
-                    <td className="text-center">{pct(p.fgMade, p.fgAttempts)}</td>
-                    <td className="text-center">{pct(p.threePtMade, p.threePtAttempts)}</td>
-                    <td className="text-center">{pct(p.ftMade, p.ftAttempts)}</td>
-                  </>
-                )}
-              </tr>
-            ))}
+            <AnimatePresence mode="popLayout">
+              {sortedPlayers.map((p, idx) => (
+                <motion.tr
+                  key={p.playerId}
+                  layout
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={cn(idx % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-orange-50/50 transition-colors')}
+                >
+                  <td className="px-2 py-2">
+                    <div className="flex items-center gap-2">
+                      {p.profilePhotoUrl ? (
+                        <img src={p.profilePhotoUrl} className="w-6 h-6 rounded-full object-cover" alt="" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-500">
+                          {p.jerseyNumber || p.playerName[0]}
+                        </div>
+                      )}
+                      <span className="font-medium truncate max-w-[120px]">{p.playerName}</span>
+                    </div>
+                  </td>
+                  <td className="text-center text-gray-600 tabular-nums">{p.gamesPlayed}</td>
+                  <td className="text-center font-semibold tabular-nums">{showAverages ? avg(p.points, p.gamesPlayed) : p.points}</td>
+                  <td className="text-center tabular-nums">{showAverages ? avg(p.rebounds, p.gamesPlayed) : p.rebounds}</td>
+                  <td className="text-center tabular-nums">{showAverages ? avg(p.assists, p.gamesPlayed) : p.assists}</td>
+                  <td className="text-center tabular-nums">{showAverages ? avg(p.steals, p.gamesPlayed) : p.steals}</td>
+                  {variant === 'full' && (
+                    <>
+                      <td className="text-center tabular-nums">{showAverages ? avg(p.blocks, p.gamesPlayed) : p.blocks}</td>
+                      <td className="text-center text-gray-500 tabular-nums">{showAverages ? avg(p.turnovers, p.gamesPlayed) : p.turnovers}</td>
+                      <td className="text-center tabular-nums">{pct(p.fgMade, p.fgAttempts)}</td>
+                      <td className="text-center tabular-nums">{pct(p.threePtMade, p.threePtAttempts)}</td>
+                      <td className="text-center tabular-nums">{pct(p.ftMade, p.ftAttempts)}</td>
+                    </>
+                  )}
+                </motion.tr>
+              ))}
+            </AnimatePresence>
             {sortedPlayers.length === 0 && (
               <tr>
                 <td colSpan={columns.length} className="text-center py-8 text-gray-400">
@@ -167,7 +187,7 @@ export function PlayerStatsTable({
       </div>
     </div>
   );
-}
+});
 
 function colToKey(col: string): SortKey {
   const map: Record<string, SortKey> = {
