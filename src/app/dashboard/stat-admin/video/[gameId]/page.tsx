@@ -513,32 +513,49 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     const newQuarterStartMs = Math.max(0, currentTimeMs - elapsedInQuarterMs);
     
     // Create updated config - update the CORRECT quarter marker
+    // ✅ CRITICAL: Clear ALL markers AFTER the target quarter (allows going back to earlier quarters)
     const updatedConfig: ClockSyncConfig = { ...clockSyncConfig };
+    
+    // Helper to clear markers for quarters > targetQuarter
+    const clearFutureMarkers = (targetQ: number) => {
+      if (targetQ < 2) updatedConfig.q2StartTimestampMs = undefined;
+      if (targetQ < 3) updatedConfig.q3StartTimestampMs = undefined;
+      if (targetQ < 4) updatedConfig.q4StartTimestampMs = undefined;
+      if (targetQ < 5) updatedConfig.ot1StartTimestampMs = undefined;
+      if (targetQ < 6) updatedConfig.ot2StartTimestampMs = undefined;
+      if (targetQ < 7) updatedConfig.ot3StartTimestampMs = undefined;
+    };
     
     switch (effectiveQuarter) {
       case 1:
         updatedConfig.jumpballTimestampMs = newQuarterStartMs;
-        console.log(`✅ Clock adjusted: Q1 start (jumpball) at ${newQuarterStartMs}ms`);
+        clearFutureMarkers(1);
+        console.log(`✅ Clock adjusted: Q1 start (jumpball) at ${newQuarterStartMs}ms, cleared Q2-OT3 markers`);
         break;
       case 2:
         updatedConfig.q2StartTimestampMs = newQuarterStartMs;
-        console.log(`✅ Clock adjusted: Q2 start at ${newQuarterStartMs}ms`);
+        clearFutureMarkers(2);
+        console.log(`✅ Clock adjusted: Q2 start at ${newQuarterStartMs}ms, cleared Q3-OT3 markers`);
         break;
       case 3:
         updatedConfig.q3StartTimestampMs = newQuarterStartMs;
-        console.log(`✅ Clock adjusted: Q3 start at ${newQuarterStartMs}ms`);
+        clearFutureMarkers(3);
+        console.log(`✅ Clock adjusted: Q3 start at ${newQuarterStartMs}ms, cleared Q4-OT3 markers`);
         break;
       case 4:
         updatedConfig.q4StartTimestampMs = newQuarterStartMs;
-        console.log(`✅ Clock adjusted: Q4 start at ${newQuarterStartMs}ms`);
+        clearFutureMarkers(4);
+        console.log(`✅ Clock adjusted: Q4 start at ${newQuarterStartMs}ms, cleared OT markers`);
         break;
       case 5:
         updatedConfig.ot1StartTimestampMs = newQuarterStartMs;
-        console.log(`✅ Clock adjusted: OT1 start at ${newQuarterStartMs}ms`);
+        clearFutureMarkers(5);
+        console.log(`✅ Clock adjusted: OT1 start at ${newQuarterStartMs}ms, cleared OT2-OT3 markers`);
         break;
       case 6:
         updatedConfig.ot2StartTimestampMs = newQuarterStartMs;
-        console.log(`✅ Clock adjusted: OT2 start at ${newQuarterStartMs}ms`);
+        clearFutureMarkers(6);
+        console.log(`✅ Clock adjusted: OT2 start at ${newQuarterStartMs}ms, cleared OT3 marker`);
         break;
       case 7:
         updatedConfig.ot3StartTimestampMs = newQuarterStartMs;

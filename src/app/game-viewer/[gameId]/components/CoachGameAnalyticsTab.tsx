@@ -18,6 +18,7 @@ import { CoachAnalyticsService } from '@/lib/services/coachAnalyticsService';
 import { GameBreakdown } from '@/lib/types/coachAnalytics';
 import { Target, TrendingUp, Award, BarChart3, Lightbulb, CheckCircle, AlertTriangle, Crosshair } from 'lucide-react';
 import { AIGameAnalysisReport } from '@/components/analytics/AIGameAnalysisReport';
+import { ImpactFormulaExplainer } from '@/components/analytics/ImpactFormulaExplainer';
 
 interface CoachGameAnalyticsTabProps {
   gameId: string;
@@ -1195,6 +1196,202 @@ export function CoachGameAnalyticsTab({
           }}
           bottomLine="Tough loss, but there's a clear path forward. This game was lost on the glass (-14 rebounds) and through turnovers (19). The 3rd quarter collapse (5-14) was the dagger. But here's the silver lining: Thorton showed he can be efficient (50% FG, 0 TO), Ward Jr can score, and Haines competed on the boards. Fix the turnovers, crash the glass harder, and come out of halftime ready to compete—this team has the talent to beat Shawnee Medford next time. Losses teach more than wins. Use this one."
         />
+      )}
+
+      {/* AI Game Analysis Report - Winslow vs Mt Laurel (38-28) CONTROLLED */}
+      {gameId === '0b38e518-974e-4fdb-9bca-153d5b3cc788' && (
+        <>
+          {/* IMPACT Formula Explanation */}
+          <ImpactFormulaExplainer className="mb-6" />
+          
+          <AIGameAnalysisReport
+            gameId={gameId}
+            winningTeam="Winslow Township 7th Grade"
+            losingTeam="Mt Laurel"
+            finalScore={{ home: 38, away: 28 }}
+            margin={10}
+            gameType="Controlled"
+            overview="Winslow Township secured a controlled 10-point victory over Mt Laurel, led by Ward Jr's team-high 19 points. Despite a slow start in Q1 (8 points), the team exploded for 24 in the second quarter and never looked back. The glass was dominated with 31 total rebounds, and a perfect 7-for-7 free throw performance in the 4th quarter sealed the win. Turnovers (14 total) remain an area to address."
+            winningFactors={[
+              {
+                factor: '2nd Quarter Explosion',
+                value: '+24',
+                impactScore: 28.0,
+                courtMeaning: [
+                  '24 points in Q2—highest scoring quarter',
+                  '5 field goals and 4 three-pointers converted',
+                  'Built momentum that carried through the game'
+                ],
+                coachingTakeaway: [
+                  'Team can score in bunches when engaged',
+                  'Continue aggressive play after slow starts',
+                  'Q2 intensity should be the standard'
+                ]
+              },
+              {
+                factor: 'Rebounding Dominance',
+                value: '31 REB',
+                impactScore: 25.0,
+                courtMeaning: [
+                  'Murrell (13) and Haines (10) combined for 23 boards',
+                  'Second-chance opportunities kept possessions alive',
+                  'Controlled the paint on both ends'
+                ],
+                coachingTakeaway: [
+                  'Rebounding is a core team strength',
+                  'Continue feeding Murrell and Haines inside',
+                  'Box out fundamentals are paying off'
+                ]
+              },
+              {
+                factor: 'Free Throw Clutch',
+                value: '9-10 (90%)',
+                impactScore: 18.0,
+                courtMeaning: [
+                  '7-for-7 in the 4th quarter to seal the game',
+                  '90% FT shooting shows composure under pressure',
+                  'Converted when it mattered most'
+                ],
+                coachingTakeaway: [
+                  'Team shows mental toughness at the line',
+                  'Continue late-game free throw drills',
+                  'Trust players to close games from the stripe'
+                ]
+              }
+            ]}
+            keyPlayers={[
+              {
+                name: 'Ward Jr',
+                rank: 1,
+                points: 19,
+                rebounds: 1,
+                assists: 2,
+                steals: 2,
+                blocks: 0,
+                turnovers: 3,
+                fouls: 0,
+                impactScore: 24.2,
+                strengths: [
+                  'Team-high 19 points as the go-to scorer',
+                  'Efficient 4-4 from the free throw line',
+                  '3-for-10 from three—volume shooter'
+                ],
+                riskToManage: '3 turnovers need to improve',
+                coachingFocus: [
+                  'Primary scoring option in crunch time',
+                  'Improve three-point shot selection',
+                  'Reduce turnovers with better decision-making'
+                ]
+              },
+              {
+                name: 'Murrell',
+                rank: 2,
+                points: 2,
+                rebounds: 13,
+                assists: 0,
+                steals: 2,
+                blocks: 0,
+                turnovers: 1,
+                fouls: 0,
+                impactScore: 20.6,
+                strengths: [
+                  'Team-high 13 rebounds—glass cleaner',
+                  'Only 1 turnover in heavy usage',
+                  '2 steals contributing to defense'
+                ],
+                riskToManage: 'Needs to develop scoring around the rim',
+                coachingFocus: [
+                  'Anchor on the boards every game',
+                  'Expand offensive game inside',
+                  'Continue disciplined defense'
+                ]
+              },
+              {
+                name: 'DeGrais',
+                rank: 3,
+                points: 8,
+                rebounds: 3,
+                assists: 1,
+                steals: 2,
+                blocks: 0,
+                turnovers: 1,
+                fouls: 1,
+                impactScore: 15.6,
+                strengths: [
+                  '8 points including 2-for-3 from three',
+                  '2 steals creating defensive pressure',
+                  'Efficient with only 1 turnover'
+                ],
+                riskToManage: '0-8 from two-point range',
+                coachingFocus: [
+                  'Attack the rim more confidently',
+                  'Continue perimeter shooting',
+                  'Solid two-way contributor'
+                ]
+              },
+              {
+                name: 'Haines',
+                rank: 4,
+                points: 4,
+                rebounds: 10,
+                assists: 0,
+                steals: 0,
+                blocks: 0,
+                turnovers: 3,
+                fouls: 0,
+                impactScore: 13.0,
+                strengths: [
+                  'Double-digit rebounds (10)—interior presence',
+                  'Reliable 2-for-7 inside scoring',
+                  'Pairs well with Murrell on the glass'
+                ],
+                riskToManage: '3 turnovers from a big is concerning',
+                coachingFocus: [
+                  'Continue crashing boards',
+                  'Improve ball security in the post',
+                  'Develop finishing around the basket'
+                ]
+              }
+            ]}
+            momentum={{
+              quarter: 2,
+              teamScore: 24,
+              opponentScore: 0,
+              description: "The second quarter was the turning point—Winslow exploded for 24 points while Mt Laurel struggled to find rhythm. This 16-point swing built the cushion that would carry the team through the second half. When this team gets going offensively, they're difficult to stop."
+            }}
+            opponentBreakdown={{
+              fgPercentage: 36,
+              turnovers: 28,
+              fouls: 13,
+              keyIssues: [
+                'Struggled against Winslow rebounding',
+                'Could not match second quarter intensity'
+              ],
+              correctableIssues: [
+                'Shot selection under pressure',
+                'Ball movement against zone defense'
+              ],
+              deeperProblems: [
+                'Size disadvantage on the glass',
+                'Lack of perimeter shooting'
+              ]
+            }}
+            actionItems={{
+              winner: [
+                'Continue emphasizing rebounding as team identity',
+                'Address 14 team turnovers with ball-handling drills',
+                'Build on 90% free throw performance',
+                'Ward Jr is the closer—get him the ball late'
+              ],
+              loser: [
+                'Improve transition defense after misses',
+                'Find secondary scoring options',
+                'Work on contesting rebounds'
+              ]
+            }}
+            bottomLine="This was a workmanlike victory for Winslow. They won with defense, rebounding, and free throws—not pretty scoring. Ward Jr's 19 points led the way, but Murrell (13 reb) and Haines (10 reb) controlled the glass. The 14 turnovers are a concern, but the 90% free throw shooting and dominant Q2 explosion show this team can win different ways. Against better competition, they'll need to clean up the ball-handling—but today, effort and execution were enough."
+          />
+        </>
       )}
     </div>
   );

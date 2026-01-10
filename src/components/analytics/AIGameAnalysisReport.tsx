@@ -231,6 +231,27 @@ export function AIGameAnalysisReport({
       <SectionHeader id="players" icon={Users} title="Key Player Impact" />
       {expandedSections.has('players') && (
         <div className="space-y-3 mb-4">
+          {/* IMPACT Formula Explanation */}
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-lg border border-purple-200 mb-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Zap className="w-4 h-4 text-purple-600" />
+              </div>
+              <div>
+                <h4 className="font-bold text-purple-800 text-sm mb-1">How IMPACT Score is Calculated</h4>
+                <p className="text-xs text-purple-700 font-mono bg-white/50 px-2 py-1 rounded mb-2">
+                  IMPACT = PTS + (1.2 × REB) + (1.5 × AST) + (2 × STL) + (2 × BLK) - TO - (0.5 × FOULS)
+                </p>
+                <ul className="text-xs text-purple-600 space-y-0.5">
+                  <li>• <strong>Rebounds (1.2×)</strong> — Possessions matter, boards create opportunities</li>
+                  <li>• <strong>Assists (1.5×)</strong> — Playmaking generates efficient offense</li>
+                  <li>• <strong>Steals & Blocks (2×)</strong> — High-value defensive plays that change games</li>
+                  <li>• <strong>Turnovers & Fouls</strong> — Penalties for giving up possessions</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
           {keyPlayers.map((player, idx) => (
             <div key={idx} className="bg-white p-4 rounded-lg border border-slate-200">
               <div className="flex items-center justify-between mb-3">

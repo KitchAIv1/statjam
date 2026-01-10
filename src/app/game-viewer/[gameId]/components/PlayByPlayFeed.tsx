@@ -169,6 +169,7 @@ export default memo(PlayByPlayFeed, (prevProps, nextProps) => {
     prevProps.game.homeScore === nextProps.game.homeScore &&
     prevProps.game.awayScore === nextProps.game.awayScore &&
     prevProps.isLive === nextProps.isLive &&
-    prevProps.theme === nextProps.theme // ✅ FIX: Check theme changes
+    prevProps.theme === nextProps.theme &&
+    prevProps.clipMap?.size === nextProps.clipMap?.size // ✅ FIX: Check clipMap changes
   );
 });
