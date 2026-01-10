@@ -2264,6 +2264,8 @@ function StatTrackerV3Content() {
                 currentMinutes={Math.floor(tracker.clock.secondsRemaining / 60)}
                 currentSeconds={tracker.clock.secondsRemaining % 60}
                 currentUserId={user?.id}
+                automationFlags={tracker.automationFlags}
+                onAutomationFlagsChange={tracker.setAutomationFlags}
               />
             </div>
           </div>

@@ -129,6 +129,9 @@ interface UseTrackerReturn {
     primaryEventId: string | null;
     metadata: Record<string, any> | null;
   }) => void;
+  
+  // ✅ Runtime automation mode toggle
+  setAutomationFlags: React.Dispatch<React.SetStateAction<AutomationFlags>>;
 }
 
 export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = false, initialGameData }: UseTrackerProps): UseTrackerReturn => {
@@ -2356,6 +2359,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     manualSetPossession, // ✅ PHASE 6: Manual possession control
     playPrompt, // ✅ PHASE 4: Play sequence prompts
     clearPlayPrompt, // ✅ PHASE 4: Clear play prompt
-    setPlayPrompt // ✅ PHASE 5: Manually set play prompt (for foul flow)
+    setPlayPrompt, // ✅ PHASE 5: Manually set play prompt (for foul flow)
+    setAutomationFlags // ✅ Runtime automation mode toggle
   };
 };

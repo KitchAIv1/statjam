@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Hand, Zap } from 'lucide-react';
 import { CompactScoreboardV3 } from './CompactScoreboardV3';
 import { DualTeamHorizontalRosterV3 } from './DualTeamHorizontalRosterV3';
 import { MobileStatGridV3 } from './MobileStatGridV3';
@@ -61,6 +62,7 @@ interface TrackerData {
   };
   ruleset?: any;
   automationFlags?: any;
+  setAutomationFlags?: React.Dispatch<React.SetStateAction<any>>; // ✅ Runtime mode toggle
 }
 
 interface MobileLayoutV3Props {
@@ -255,7 +257,45 @@ export function MobileLayoutV3({
           onPossessionChange={onPossessionChange}
         />
 
-        {/* ✅ REFINEMENT 4: Possession Indicator moved to CompactScoreboardV3 center column */}
+        {/* ✅ Runtime Automation Mode Toggle */}
+        {tracker.setAutomationFlags && (
+          <div className="flex items-center justify-center gap-2 py-1">
+            <button
+              type="button"
+              onClick={() => {
+                tracker.setAutomationFlags?.((prev: any) => ({
+                  ...prev,
+                  sequences: {
+                    ...prev.sequences,
+                    enabled: !prev.sequences.enabled
+                  }
+                }));
+              }}
+              className={`
+                flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all
+                ${tracker.automationFlags?.sequences?.enabled 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-amber-600 text-white'
+                }
+              `}
+            >
+              {tracker.automationFlags?.sequences?.enabled ? (
+                <>
+                  <Zap className="w-3 h-3" />
+                  Auto
+                </>
+              ) : (
+                <>
+                  <Hand className="w-3 h-3" />
+                  Manual
+                </>
+              )}
+            </button>
+            <span className="text-[10px] text-gray-400">
+              {tracker.automationFlags?.sequences?.enabled ? 'Prompts on' : 'No prompts'}
+            </span>
+          </div>
+        )}
 
         {/* Dual Team Horizontal Roster */}
         <DualTeamHorizontalRosterV3

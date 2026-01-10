@@ -10,10 +10,12 @@
  */
 
 import React, { useState } from 'react';
+import { Hand, Zap } from 'lucide-react';
 import { DesktopStatGridV3 } from './DesktopStatGridV3';
 import { ShotTrackerPanel } from './shot-tracker/ShotTrackerPanel';
 import { TrackerModeToggle } from './shot-tracker/TrackerModeToggle';
 import { TrackerInputMode, ShotLocationData } from '@/lib/types/shotTracker';
+import { AutomationFlags } from '@/lib/types/automation';
 
 interface Player {
   id: string;
@@ -82,6 +84,10 @@ interface StatInputWrapperProps {
   
   // User ID for opponent stats in coach mode
   currentUserId?: string;
+  
+  // ✅ Runtime automation mode toggle
+  automationFlags?: AutomationFlags;
+  onAutomationFlagsChange?: React.Dispatch<React.SetStateAction<AutomationFlags>>;
 }
 
 export function StatInputWrapper({
@@ -114,7 +120,9 @@ export function StatInputWrapper({
   currentQuarter = 1,
   currentMinutes = 10,
   currentSeconds = 0,
-  currentUserId
+  currentUserId,
+  automationFlags,
+  onAutomationFlagsChange
 }: StatInputWrapperProps) {
   const [inputMode, setInputMode] = useState<TrackerInputMode>('classic');
 
@@ -146,7 +154,29 @@ export function StatInputWrapper({
         }}
       >
         {/* Mode Toggle Header - Available for all tracking modes */}
-        <div className="flex items-center justify-end p-2 flex-shrink-0">
+        <div className="flex items-center justify-between p-2 flex-shrink-0">
+          {/* Left: Manual/Auto Toggle */}
+          {onAutomationFlagsChange ? (
+            <button
+              type="button"
+              onClick={() => {
+                onAutomationFlagsChange(prev => ({
+                  ...prev,
+                  sequences: { ...prev.sequences, enabled: !prev.sequences.enabled }
+                }));
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                automationFlags?.sequences?.enabled 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-amber-600 text-white hover:bg-amber-700'
+              }`}
+              title={automationFlags?.sequences?.enabled ? 'Auto: Prompts for assists, rebounds' : 'Manual: No auto-prompts'}
+            >
+              {automationFlags?.sequences?.enabled ? <><Zap className="w-3.5 h-3.5" />Auto</> : <><Hand className="w-3.5 h-3.5" />Manual</>}
+            </button>
+          ) : <div />}
+          
+          {/* Right: Court/Classic Toggle */}
           <TrackerModeToggle
             mode={inputMode}
             onModeChange={setInputMode}
@@ -203,7 +233,29 @@ export function StatInputWrapper({
       }}
     >
       {/* Mode Toggle Header - Available for all tracking modes */}
-      <div className="flex items-center justify-end p-2 flex-shrink-0">
+      <div className="flex items-center justify-between p-2 flex-shrink-0">
+        {/* Left: Manual/Auto Toggle */}
+        {onAutomationFlagsChange ? (
+          <button
+            type="button"
+            onClick={() => {
+              onAutomationFlagsChange(prev => ({
+                ...prev,
+                sequences: { ...prev.sequences, enabled: !prev.sequences.enabled }
+              }));
+            }}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+              automationFlags?.sequences?.enabled 
+                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                : 'bg-amber-600 text-white hover:bg-amber-700'
+            }`}
+            title={automationFlags?.sequences?.enabled ? 'Auto: Prompts for assists, rebounds' : 'Manual: No auto-prompts'}
+          >
+            {automationFlags?.sequences?.enabled ? <><Zap className="w-3.5 h-3.5" />Auto</> : <><Hand className="w-3.5 h-3.5" />Manual</>}
+          </button>
+        ) : <div />}
+        
+        {/* Right: Court/Classic Toggle */}
         <TrackerModeToggle
           mode={inputMode}
           onModeChange={setInputMode}
