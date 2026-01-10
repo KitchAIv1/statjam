@@ -139,7 +139,7 @@ export function AIGameAnalysisReport({
     <div className="space-y-4 mt-6">
       {/* AI Analysis Header */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+        <div className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg">
           <Zap className="w-5 h-5 text-white" />
         </div>
         <div>
@@ -164,9 +164,9 @@ export function AIGameAnalysisReport({
             </div>
             <div className="ml-auto">
               <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                gameType === 'Dominant' ? 'bg-emerald-100 text-emerald-700' :
-                gameType === 'Controlled' ? 'bg-blue-100 text-blue-700' :
-                'bg-amber-100 text-amber-700'
+                gameType === 'Dominant' ? 'bg-orange-100 text-orange-700' :
+                gameType === 'Controlled' ? 'bg-orange-50 text-orange-600' :
+                'bg-gray-100 text-gray-700'
               }`}>
                 {gameType} (+{margin})
               </span>
@@ -186,15 +186,15 @@ export function AIGameAnalysisReport({
       {expandedSections.has('factors') && (
         <div className="space-y-3 mb-4">
           {winningFactors.map((factor, idx) => (
-            <div key={idx} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-emerald-300 transition-colors">
+            <div key={idx} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-orange-300 transition-colors">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
+                  <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-xs font-bold">
                     {idx + 1}
                   </span>
                   <h4 className="font-bold text-slate-800">{factor.factor}</h4>
                 </div>
-                <span className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs font-bold">
+                <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-bold">
                   {typeof factor.value === 'number' && factor.value > 0 ? '+' : ''}{factor.value}
                 </span>
               </div>
@@ -204,7 +204,7 @@ export function AIGameAnalysisReport({
                   <ul className="text-slate-600 space-y-1">
                     {factor.courtMeaning.map((item, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <span className="text-emerald-500 mt-1">•</span>
+                        <span className="text-orange-500 mt-1">•</span>
                         <span>{item}</span>
                       </li>
                     ))}
@@ -231,27 +231,6 @@ export function AIGameAnalysisReport({
       <SectionHeader id="players" icon={Users} title="Key Player Impact" />
       {expandedSections.has('players') && (
         <div className="space-y-3 mb-4">
-          {/* IMPACT Formula Explanation */}
-          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-lg border border-purple-200 mb-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Zap className="w-4 h-4 text-purple-600" />
-              </div>
-              <div>
-                <h4 className="font-bold text-purple-800 text-sm mb-1">How IMPACT Score is Calculated</h4>
-                <p className="text-xs text-purple-700 font-mono bg-white/50 px-2 py-1 rounded mb-2">
-                  IMPACT = PTS + (1.2 × REB) + (1.5 × AST) + (2 × STL) + (2 × BLK) - TO - (0.5 × FOULS)
-                </p>
-                <ul className="text-xs text-purple-600 space-y-0.5">
-                  <li>• <strong>Rebounds (1.2×)</strong> — Possessions matter, boards create opportunities</li>
-                  <li>• <strong>Assists (1.5×)</strong> — Playmaking generates efficient offense</li>
-                  <li>• <strong>Steals & Blocks (2×)</strong> — High-value defensive plays that change games</li>
-                  <li>• <strong>Turnovers & Fouls</strong> — Penalties for giving up possessions</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          
           {keyPlayers.map((player, idx) => (
             <div key={idx} className="bg-white p-4 rounded-lg border border-slate-200">
               <div className="flex items-center justify-between mb-3">
@@ -270,15 +249,15 @@ export function AIGameAnalysisReport({
                     </p>
                   </div>
                 </div>
-                <span className="text-sm font-bold text-purple-600">
+                <span className="text-sm font-bold text-orange-600">
                   Impact: {player.impactScore}
                 </span>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="bg-emerald-50 p-3 rounded-lg">
-                  <p className="text-emerald-700 font-medium text-xs uppercase mb-1">Strengths</p>
-                  <ul className="text-emerald-800 space-y-1">
+                <div className="bg-orange-50 p-3 rounded-lg">
+                  <p className="text-orange-700 font-medium text-xs uppercase mb-1">Strengths</p>
+                  <ul className="text-orange-800 space-y-1">
                     {player.strengths.map((s, i) => (
                       <li key={i}>• {s}</li>
                     ))}
@@ -312,18 +291,18 @@ export function AIGameAnalysisReport({
       {/* Momentum & Turning Point */}
       <SectionHeader id="momentum" icon={Activity} title="Momentum & Turning Point" />
       {expandedSections.has('momentum') && (
-        <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-5 rounded-lg border border-purple-200 mb-4">
+        <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-5 rounded-lg border border-orange-200 mb-4">
           <div className="flex items-center gap-3 mb-3">
-            <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-sm font-bold">
+            <span className="px-3 py-1 bg-orange-600 text-white rounded-full text-sm font-bold">
               Q{momentum.quarter}
             </span>
-            <span className="text-2xl font-black text-purple-700">
+            <span className="text-2xl font-black text-orange-700">
               {momentum.teamScore} - {momentum.opponentScore}
             </span>
           </div>
-          <p className="text-purple-800">{momentum.description}</p>
+          <p className="text-orange-800">{momentum.description}</p>
           <div className="mt-3 p-3 bg-white/70 rounded-lg">
-            <p className="text-sm text-purple-700">
+            <p className="text-sm text-orange-700">
               <strong>Coaching Takeaway:</strong> Conditioning and mental toughness matter late. 
               Execution under pressure separates good teams from great ones.
             </p>
@@ -375,15 +354,15 @@ export function AIGameAnalysisReport({
       <SectionHeader id="actions" icon={Crosshair} title="Coach Action Items" />
       {expandedSections.has('actions') && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
-            <h4 className="font-bold text-emerald-800 mb-3 flex items-center gap-2">
+          <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <h4 className="font-bold text-orange-800 mb-3 flex items-center gap-2">
               <Trophy className="w-4 h-4" />
               For {winningTeam} Coaches
             </h4>
-            <ul className="space-y-2 text-sm text-emerald-700">
+            <ul className="space-y-2 text-sm text-orange-700">
               {actionItems.winner.map((item, i) => (
                 <li key={i} className="flex items-start gap-2">
-                  <span className="text-emerald-500 mt-0.5">✓</span>
+                  <span className="text-orange-500 mt-0.5">✓</span>
                   <span>{item}</span>
                 </li>
               ))}
