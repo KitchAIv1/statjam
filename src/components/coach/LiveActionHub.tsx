@@ -64,7 +64,7 @@ export function LiveActionHub({
     <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full flex flex-col relative">
       {/* Leaderboard-style Background */}
       <div 
-        className="absolute inset-0 bg-cover bg-center opacity-[0.25] pointer-events-none"
+        className="absolute inset-0 bg-cover bg-center opacity-[0.12] pointer-events-none"
         style={{ backgroundImage: 'url(/images/leadersection.webp)' }}
       />
       
@@ -104,7 +104,7 @@ export function LiveActionHub({
               className={`w-full text-left p-3 rounded-xl border-2 transition-all group/upload backdrop-blur-sm
                 ${dailyLimitReached 
                   ? 'border-gray-200 bg-gray-100/90 cursor-not-allowed opacity-60' 
-                  : 'border-orange-200 bg-white/80 hover:border-orange-300 hover:bg-white/90'
+                  : 'border-orange-200 bg-white/70 hover:border-orange-300 hover:bg-white/80'
                 }`}
             >
               <div className="flex items-center gap-3">
@@ -134,7 +134,7 @@ export function LiveActionHub({
             <button
               onClick={onBuyCredits}
               className="w-full text-left p-3 rounded-xl border-2 border-dashed border-primary/30 
-                         bg-white/70 hover:bg-white/90 hover:border-primary/50 transition-all group/buy backdrop-blur-sm"
+                         bg-white/70 hover:bg-white/80 hover:border-primary/50 transition-all group/buy backdrop-blur-sm"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
@@ -152,7 +152,7 @@ export function LiveActionHub({
 
         {/* Live Game Alert - Only shown when there's a live game */}
         {hasLiveGame && liveGame && (
-          <div className="mt-4 p-3 bg-white/90 border border-orange-200 rounded-xl backdrop-blur-sm">
+          <div className="mt-4 p-3 bg-white/70 border border-orange-200 rounded-xl backdrop-blur-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
