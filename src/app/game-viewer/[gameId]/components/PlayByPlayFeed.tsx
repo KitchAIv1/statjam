@@ -16,6 +16,7 @@ import { PlayByPlayEntry } from '@/lib/types/playByPlay';
 import { GameViewerTheme } from '../hooks/useGameViewerTheme';
 import PlayEntry from './PlayEntry';
 import { ListVideo, Radio } from 'lucide-react';
+import { GeneratedClip } from '@/lib/services/clipService';
 
 interface PlayerStats {
   fieldGoalMade: number;
@@ -46,6 +47,8 @@ interface PlayByPlayFeedProps {
   isMobile?: boolean;
   calculatePlayerStats?: (currentPlayIndex: number, playerId?: string) => PlayerStats | undefined;
   calculatePlayerPoints?: (currentPlayIndex: number, playerId?: string) => number | undefined;
+  /** Map of stat_event_id to clip for quick lookup */
+  clipMap?: Map<string, GeneratedClip>;
 }
 
 /**
@@ -66,7 +69,8 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
   theme,
   isMobile = false,
   calculatePlayerStats,
-  calculatePlayerPoints
+  calculatePlayerPoints,
+  clipMap
 }) => {
 
   const isDark = theme === 'dark';
@@ -134,6 +138,7 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
           const isLatest = index === 0;
           const playerStats = calculatePlayerStats?.(index, play.playerId);
           const playerPoints = calculatePlayerPoints?.(index, play.playerId);
+          const clip = clipMap?.get(play.id);
           
           return (
             <div key={play.id || `play-${index}`}>
@@ -145,6 +150,7 @@ const PlayByPlayFeed: React.FC<PlayByPlayFeedProps> = ({
                 theme={theme}
                 playerStats={playerStats}
                 playerPoints={playerPoints}
+                clip={clip}
               />
             </div>
           );

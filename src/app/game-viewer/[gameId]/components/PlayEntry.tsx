@@ -22,6 +22,8 @@ import { PlayScoreCard } from './PlayScoreCard';
 import { Heart, MessageCircle, Share2 } from 'lucide-react';
 import { MilestoneBadge } from './MilestoneBadge';
 import { detectNewMilestones, PlayerStatsForMilestone } from '@/lib/engines/milestoneEngine';
+import { PlayClipButton } from './PlayClipButton';
+import { GeneratedClip } from '@/lib/services/clipService';
 
 interface PlayerStats {
   fieldGoalMade: number;
@@ -47,6 +49,8 @@ interface PlayEntryProps {
   theme: GameViewerTheme;
   playerStats?: PlayerStats;
   playerPoints?: number;
+  /** Optional clip associated with this play (matched via stat_event_id) */
+  clip?: GeneratedClip;
 }
 
 /**
@@ -65,7 +69,8 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
   teamBName,
   theme,
   playerStats,
-  playerPoints
+  playerPoints,
+  clip
 }) => {
 
   const isDark = theme === 'dark';
@@ -348,6 +353,12 @@ const PlayEntry: React.FC<PlayEntryProps> = ({
           {milestones.length > 0 && (
             <div className="mt-1">
               <MilestoneBadge milestones={milestones} isDark={isDark} />
+            </div>
+          )}
+          {/* Clip Button - Below stat/milestone, aligned right */}
+          {clip && (
+            <div className="mt-1">
+              <PlayClipButton clip={clip} playerName={play.playerName} isDark={isDark} />
             </div>
           )}
         </div>

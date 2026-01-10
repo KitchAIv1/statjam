@@ -15,13 +15,17 @@ import { PlayByPlayEntry } from '@/lib/types/playByPlay';
 import { ListVideo, Clock } from 'lucide-react';
 import { PlayerAvatarCard } from '@/app/game-viewer/[gameId]/components/PlayerAvatarCard';
 import { ActionIcon } from '@/app/game-viewer/[gameId]/components/ActionIcon';
+import { PlayClipButton } from '@/app/game-viewer/[gameId]/components/PlayClipButton';
 import { formatGameTime, getScoringInfo, getEnhancedPlayDescription } from '@/lib/utils/gameViewerUtils';
+import { GeneratedClip } from '@/lib/services/clipService';
 
 interface CompactPlayByPlayFeedProps {
   plays: PlayByPlayEntry[];
   teamAName: string;
   teamBName: string;
   isLive: boolean;
+  /** Map of stat_event_id to clip for quick lookup */
+  clipMap?: Map<string, GeneratedClip>;
 }
 
 // Get background color for stat type (light theme, compact badges)
@@ -43,7 +47,7 @@ const getStatBadgeStyles = (statType: string, modifier?: string): string => {
   return styles[statType] || 'bg-gray-100 text-gray-600 border-gray-200';
 };
 
-export function CompactPlayByPlayFeed({ plays, teamAName, teamBName, isLive }: CompactPlayByPlayFeedProps) {
+export function CompactPlayByPlayFeed({ plays, teamAName, teamBName, isLive, clipMap }: CompactPlayByPlayFeedProps) {
   if (plays.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center bg-orange-50/30">
@@ -97,6 +101,7 @@ export function CompactPlayByPlayFeed({ plays, teamAName, teamBName, isLive }: C
           {plays.map((play, index) => {
             const isLatest = index === 0;
             const scoringInfo = getScoringInfo(play.statType || '', play.modifier);
+            const clip = clipMap?.get(play.id);
             
             return (
               <motion.div
@@ -165,26 +170,34 @@ export function CompactPlayByPlayFeed({ plays, teamAName, teamBName, isLive }: C
                   </div>
 
                   {/* Points Indicator (Right) */}
-                  {scoringInfo && (
-                    <div className="flex-shrink-0 flex flex-col items-end">
-                      <span className={`text-lg font-extrabold leading-none ${
-                        play.statType === 'three_pointer' ? 'text-orange-600' :
-                        play.statType === 'field_goal' ? 'text-green-600' : 'text-blue-600'
-                      }`}>
-                        +{scoringInfo.points}
-                      </span>
-                      <span className={`text-[8px] font-bold uppercase ${
-                        play.statType === 'three_pointer' ? 'text-orange-500' :
-                        play.statType === 'field_goal' ? 'text-green-500' : 'text-blue-500'
-                      }`}>
-                        {scoringInfo.points === 1 ? 'PT' : 'PTS'}
-                      </span>
-                    </div>
-                  )}
-                  {/* Miss Indicator */}
-                  {!scoringInfo && ['field_goal', 'three_pointer', 'free_throw'].includes(play.statType || '') && (
-                    <span className="text-xs font-bold text-gray-400 uppercase">MISS</span>
-                  )}
+                  <div className="flex-shrink-0 flex flex-col items-end">
+                    {scoringInfo && (
+                      <>
+                        <span className={`text-lg font-extrabold leading-none ${
+                          play.statType === 'three_pointer' ? 'text-orange-600' :
+                          play.statType === 'field_goal' ? 'text-green-600' : 'text-blue-600'
+                        }`}>
+                          +{scoringInfo.points}
+                        </span>
+                        <span className={`text-[8px] font-bold uppercase ${
+                          play.statType === 'three_pointer' ? 'text-orange-500' :
+                          play.statType === 'field_goal' ? 'text-green-500' : 'text-blue-500'
+                        }`}>
+                          {scoringInfo.points === 1 ? 'PT' : 'PTS'}
+                        </span>
+                      </>
+                    )}
+                    {/* Miss Indicator */}
+                    {!scoringInfo && ['field_goal', 'three_pointer', 'free_throw'].includes(play.statType || '') && (
+                      <span className="text-xs font-bold text-gray-400 uppercase">MISS</span>
+                    )}
+                    {/* Clip Button - Below score/miss */}
+                    {clip && (
+                      <div className="mt-1">
+                        <PlayClipButton clip={clip} playerName={play.playerName} isDark={false} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             );

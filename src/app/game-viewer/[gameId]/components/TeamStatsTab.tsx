@@ -17,6 +17,7 @@ import { useTeamStats } from '@/hooks/useTeamStats';
 import { PlayerStatsRow } from './PlayerStatsRow';
 import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
+import { StatsGuide } from '@/components/shared/StatsGuide';
 
 export interface TeamStatsTabProps {
   gameId: string;
@@ -117,7 +118,7 @@ export function TeamStatsTab({
       <div className={`p-3 md:p-4 border-b ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-orange-200'}`}>
         <div className="flex items-center justify-between mb-4">
           <div className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{teamName}</div>
-          <div className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>▼ 2.5</div>
+          <StatsGuide isDark={isDark} />
         </div>
         
         <div className={`grid gap-3 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-7'}`}>

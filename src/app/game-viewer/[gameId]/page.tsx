@@ -26,7 +26,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle, Film } from 'lucide-react';
 import { TeamService } from '@/lib/services/tournamentService';
 import { PublicClipsTab } from './components/PublicClipsTab';
-import { getGameClips } from '@/lib/services/clipService';
+import { getGameClips, GeneratedClip } from '@/lib/services/clipService';
+import { usePlayClips } from './hooks/usePlayClips';
 
 interface GameViewerPageProps {
   params: Promise<{ gameId: string }>;
@@ -39,8 +40,9 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   const [teamALogo, setTeamALogo] = useState<string | null>(null);
   const [teamBLogo, setTeamBLogo] = useState<string | null>(null);
   
-  // Clips count for tab badge
-  const [clipsCount, setClipsCount] = useState(0);
+  // Clips for tab badge and play-by-play icons
+  const [clips, setClips] = useState<GeneratedClip[]>([]);
+  const clipsCount = clips.length;
 
   useEffect(() => {
     let isMounted = true;
@@ -80,29 +82,41 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
     };
   }, [game?.team_a_id, game?.team_b_id]);
 
-  // Load clips count for tab badge (completed games only)
+  // Load clips for tab badge and play-by-play icons (completed games only)
   useEffect(() => {
     let isMounted = true;
 
-    async function loadClipsCount() {
+    async function loadClips() {
       if (!gameId || game?.status?.toLowerCase() !== 'completed') return;
       
       try {
         const gameClips = await getGameClips(gameId);
         if (isMounted) {
-          setClipsCount(gameClips.length);
+          setClips(gameClips);
         }
       } catch (err) {
-        console.error('❌ Failed to load clips count:', err);
+        console.error('❌ Failed to load clips:', err);
       }
     }
 
-    void loadClipsCount();
+    void loadClips();
 
     return () => {
       isMounted = false;
     };
   }, [gameId, game?.status]);
+
+  // Create clip lookup map for play-by-play
+  const { hasClip, getClip } = usePlayClips(clips);
+  const clipMap = useMemo(() => {
+    const map = new Map<string, GeneratedClip>();
+    clips.forEach(clip => {
+      if (clip.stat_event_id && clip.bunny_clip_url) {
+        map.set(clip.stat_event_id, clip);
+      }
+    });
+    return map;
+  }, [clips]);
 
   // Prefetch team data for instant tab switching
   const teamAPrefetch = useTeamStats(gameId, game?.team_a_id || '', { 
@@ -290,6 +304,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               theme={theme}
               calculatePlayerStats={calculatePlayerStats}
               calculatePlayerPoints={calculatePlayerPoints}
+              clipMap={clipMap}
             />
           </TabsContent>
 

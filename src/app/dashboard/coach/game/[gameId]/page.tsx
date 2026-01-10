@@ -25,6 +25,7 @@ import { CompactPlayByPlayFeed } from './components/CompactPlayByPlayFeed';
 import { CommandCenterTabPanel } from './components/CommandCenterTabPanel';
 import { GameViewerSkeleton } from './components/GameViewerSkeleton';
 import { Loader2, AlertCircle, ShieldAlert } from 'lucide-react';
+import { getGameClips, GeneratedClip } from '@/lib/services/clipService';
 
 interface CoachCommandCenterProps {
   params: Promise<{ gameId: string }>;
@@ -41,6 +42,9 @@ export default function CoachCommandCenter({ params }: CoachCommandCenterProps) 
   // Team logos
   const [teamALogo, setTeamALogo] = useState<string | null>(null);
   const [teamBLogo, setTeamBLogo] = useState<string | null>(null);
+  
+  // Clips for play-by-play icons
+  const [clipMap, setClipMap] = useState<Map<string, GeneratedClip>>(new Map());
 
   // Load team logos
   useEffect(() => {
@@ -62,6 +66,29 @@ export default function CoachCommandCenter({ params }: CoachCommandCenterProps) 
     void loadTeamLogos();
     return () => { isMounted = false; };
   }, [game?.team_a_id, game?.team_b_id]);
+
+  // Load clips for play-by-play icons (completed games only)
+  useEffect(() => {
+    let isMounted = true;
+    async function loadClips() {
+      if (!gameId || game?.status?.toLowerCase() !== 'completed') return;
+      try {
+        const clips = await getGameClips(gameId);
+        if (!isMounted) return;
+        const map = new Map<string, GeneratedClip>();
+        clips.forEach(clip => {
+          if (clip.stat_event_id && clip.bunny_clip_url) {
+            map.set(clip.stat_event_id, clip);
+          }
+        });
+        setClipMap(map);
+      } catch (err) {
+        console.error('Failed to load clips:', err);
+      }
+    }
+    void loadClips();
+    return () => { isMounted = false; };
+  }, [gameId, game?.status]);
 
   // Prefetch team stats for instant tab switching
   const teamAPrefetch = useTeamStats(gameId, game?.team_a_id || '', {
@@ -180,6 +207,7 @@ export default function CoachCommandCenter({ params }: CoachCommandCenterProps) 
             teamAName={game.team_a_name || 'Team'}
             teamBName={teamBName}
             isLive={isLive}
+            clipMap={clipMap}
           />
         </aside>
 
@@ -219,6 +247,7 @@ export default function CoachCommandCenter({ params }: CoachCommandCenterProps) 
         teamAName={game.team_a_name || 'Team'}
         teamBName={teamBName}
         isLive={isLive}
+        clipMap={clipMap}
       />
     </div>
   );
@@ -230,11 +259,13 @@ function MobilePlayByPlaySheet({
   teamAName,
   teamBName,
   isLive,
+  clipMap,
 }: {
   plays: any[];
   teamAName: string;
   teamBName: string;
   isLive: boolean;
+  clipMap?: Map<string, GeneratedClip>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -266,6 +297,7 @@ function MobilePlayByPlaySheet({
               teamAName={teamAName}
               teamBName={teamBName}
               isLive={isLive}
+              clipMap={clipMap}
             />
           </div>
         </div>
