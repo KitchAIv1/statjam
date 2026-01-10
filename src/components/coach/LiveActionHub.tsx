@@ -106,7 +106,7 @@ export function LiveActionHub({
                         : `✓ ${videoCredits} credit${videoCredits === 1 ? '' : 's'}`}
                     </span>
                     {showDailyLimit && (
-                      <span className={`text-xs flex items-center gap-0.5 ${dailyLimitReached ? 'text-red-500' : 'text-blue-600'}`}>
+                      <span className={`text-xs flex items-center gap-0.5 ${dailyLimitReached ? 'text-red-500' : 'text-gray-500'}`}>
                         <Calendar className="w-3 h-3" />
                         {dailyLimitReached ? 'Limit reached' : `${dailyUploads!.remaining}/${dailyUploads!.limit} today`}
                       </span>
@@ -138,14 +138,14 @@ export function LiveActionHub({
 
         {/* Live Game Alert - Only shown when there's a live game */}
         {hasLiveGame && liveGame && (
-          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">
+          <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-xl">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
                 </span>
-                <span className="text-[10px] font-bold text-green-700 uppercase tracking-wide">Live Game</span>
+                <span className="text-[10px] font-bold text-orange-700 uppercase tracking-wide">Live Game</span>
               </div>
               <span className="text-[10px] font-medium text-gray-500">Q{liveGame.quarter || 1}</span>
             </div>
@@ -157,7 +157,7 @@ export function LiveActionHub({
               <Button
                 size="sm"
                 onClick={() => handleResume(liveGame)}
-                className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 gap-1"
+                className="h-8 px-3 text-xs bg-orange-600 hover:bg-orange-700 gap-1"
               >
                 Resume <ArrowRight className="w-3 h-3" />
               </Button>

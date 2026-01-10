@@ -36,7 +36,7 @@ export function RecentGamesWidget({ games, onViewAll }: RecentGamesWidgetProps) 
     <Card className="p-4 bg-white border-gray-200">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-blue-600" />
+          <Calendar className="w-4 h-4 text-orange-500" />
           Recent Games
         </h3>
         {onViewAll && (
@@ -61,7 +61,7 @@ export function RecentGamesWidget({ games, onViewAll }: RecentGamesWidgetProps) 
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${isWin ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${isWin ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
                       {isWin ? 'W' : 'L'}
                     </span>
                     <span className="text-sm font-medium text-gray-900 truncate">

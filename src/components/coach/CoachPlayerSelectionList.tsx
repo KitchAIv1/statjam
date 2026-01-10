@@ -252,7 +252,7 @@ export function CoachPlayerSelectionList({
                   </AvatarFallback>
                 </Avatar>
                 {player.is_on_team && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
                     <Check className="w-3 h-3 text-white" />
                   </div>
                 )}
@@ -263,7 +263,7 @@ export function CoachPlayerSelectionList({
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="font-medium text-sm truncate">{player.name}</h4>
                   {player.premium_status && (
-                    <Crown className="w-4 h-4 text-yellow-500" />
+                    <Crown className="w-4 h-4 text-orange-500" />
                   )}
                 </div>
                 

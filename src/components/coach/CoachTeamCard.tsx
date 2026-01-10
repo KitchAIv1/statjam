@@ -348,7 +348,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
   const getGameStatusBadge = (status: string) => {
     switch (status) {
       case 'in_progress':
-        return <Badge className="bg-green-500 text-white gap-1"><Clock className="w-3 h-3" /> Live</Badge>;
+        return <Badge className="bg-orange-500 text-white gap-1"><Clock className="w-3 h-3" /> Live</Badge>;
       case 'completed':
         return <Badge variant="secondary" className="gap-1"><CheckCircle className="w-3 h-3" /> Completed</Badge>;
       case 'scheduled':
@@ -414,7 +414,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                   
                   {/* Team Type Badge */}
                   {team.is_official_team ? (
-                    <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 gap-1 shrink-0">
+                    <Badge variant="default" className="bg-orange-600 hover:bg-orange-700 gap-1 shrink-0">
                       <Trophy className="w-3 h-3" />
                       <span className="hidden sm:inline">Official</span>
                     </Badge>
@@ -515,7 +515,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 variant="outline"
                 className={`gap-1.5 w-full text-xs sm:text-sm px-2 sm:px-3 ${
                   hasVideoAccess 
-                    ? '!border-purple-300 text-purple-600 hover:text-purple-700 hover:bg-purple-50 hover:!border-purple-400' 
+                    ? '!border-orange-300 text-orange-600 hover:text-orange-700 hover:bg-orange-50 hover:!border-orange-400' 
                     : '!border-gray-300'
                 }`}
                 aria-label={playerCount < 5 ? "Add at least 5 players first" : "Track game using video"}
@@ -590,14 +590,14 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
           {!team.tournament_id ? (
             // No tournament attached - Show CTA
             <div className="pt-4">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
                 <div className="flex flex-col gap-3">
                   {/* Icon + Text Content */}
                   <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <Trophy className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                    <Trophy className="w-5 h-5 text-orange-600 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-blue-900 font-semibold text-base">Ready to compete?</h3>
-                      <p className="text-blue-700 text-sm leading-relaxed mt-0.5">
+                      <h3 className="text-orange-900 font-semibold text-base">Ready to compete?</h3>
+                      <p className="text-orange-700 text-sm leading-relaxed mt-0.5">
                         Join a tournament to track official games and compete with other teams.
                       </p>
                     </div>
@@ -607,7 +607,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                   <Button
                     onClick={() => setShowTournamentSearch(true)}
                     size="sm"
-                    className="gap-2 bg-blue-600 hover:bg-blue-700 w-full"
+                    className="gap-2 bg-orange-600 hover:bg-orange-700 w-full"
                   >
                     <Trophy className="w-4 h-4" />
                     Browse Tournaments
@@ -658,7 +658,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 {gamesExpanded && (
                   <>
                     {inProgressGames.length > 0 && (
-                      <Badge className="bg-green-500 text-white text-xs">{inProgressGames.length} Live</Badge>
+                      <Badge className="bg-orange-500 text-white text-xs">{inProgressGames.length} Live</Badge>
                     )}
                     {completedGames.length > 0 && (
                       <Badge variant="secondary" className="text-xs">{completedGames.length} Completed</Badge>
@@ -683,7 +683,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                     {inProgressGames.map((game) => (
                       <div
                         key={game.id}
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-lg"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -878,7 +878,7 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                       Team Type
                     </Label>
                     {editFormData.is_official_team ? (
-                      <Trophy className="w-4 h-4 text-blue-600" />
+                      <Trophy className="w-4 h-4 text-orange-600" />
                     ) : (
                       <Dumbbell className="w-4 h-4 text-amber-600" />
                     )}
@@ -894,11 +894,11 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                 
                 <div className="text-sm">
                   {editFormData.is_official_team ? (
-                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                      <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
+                    <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                      <Info className="w-4 h-4 mt-0.5 shrink-0 text-orange-600" />
                       <div>
-                        <p className="font-medium text-blue-900 mb-1">Official Team</p>
-                        <p className="text-blue-700">
+                        <p className="font-medium text-orange-900 mb-1">Official Team</p>
+                        <p className="text-orange-700">
                           Games will count toward your players' statistics and appear on their StatJam profiles.
                         </p>
                       </div>

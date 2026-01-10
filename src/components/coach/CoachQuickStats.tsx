@@ -38,7 +38,7 @@ export function CoachQuickStats({ teams, loading }: CoachQuickStatsProps) {
       value: totalGames.toString(),
       description: totalGames > 0 ? "Tracked this season" : "No games yet",
       icon: PlayCircle,
-      bgGradient: "bg-green-600"
+      bgGradient: "bg-orange-500"
     },
     {
       title: "Public",
@@ -52,7 +52,7 @@ export function CoachQuickStats({ teams, loading }: CoachQuickStatsProps) {
       value: avgGamesPerTeam.toString(),
       description: "Games per team",
       icon: TrendingUp,
-      bgGradient: "bg-purple-600"
+      bgGradient: "bg-orange-600"
     }
   ];
 

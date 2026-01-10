@@ -226,11 +226,11 @@ export function CoachTeamAnalyticsTab({ teamId, teamName }: CoachTeamAnalyticsTa
               <p className="text-sm text-gray-600 mt-1">3PT Attempt Rate</p>
             </div>
             <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-blue-500">{analytics.freeThrowRate}%</p>
+              <p className="text-2xl font-bold text-orange-500">{analytics.freeThrowRate}%</p>
               <p className="text-sm text-gray-600 mt-1">FT Rate</p>
             </div>
             <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-purple-500">{analytics.assistPercentage}%</p>
+              <p className="text-2xl font-bold text-orange-600">{analytics.assistPercentage}%</p>
               <p className="text-sm text-gray-600 mt-1">Assist %</p>
             </div>
           </div>

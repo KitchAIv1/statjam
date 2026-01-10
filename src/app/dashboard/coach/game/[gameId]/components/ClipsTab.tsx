@@ -76,8 +76,8 @@ export function ClipsTab({ gameId, teamId }: ClipsTabProps) {
   if (clips.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center">
-        <div className="w-20 h-20 mb-6 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center shadow-lg">
-          <Film className="w-10 h-10 text-purple-500" />
+        <div className="w-20 h-20 mb-6 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center shadow-lg">
+          <Film className="w-10 h-10 text-orange-500" />
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">
           Game Highlights Coming Soon
@@ -86,7 +86,7 @@ export function ClipsTab({ gameId, teamId }: ClipsTabProps) {
           Video clips are generated automatically after video tracking is complete. 
           Each play becomes a shareable highlight!
         </p>
-        <div className="flex items-center gap-2 text-sm text-purple-600 bg-purple-50 px-4 py-2 rounded-full">
+        <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 px-4 py-2 rounded-full">
           <Sparkles className="w-4 h-4" />
           <span>AI-powered clip generation</span>
         </div>

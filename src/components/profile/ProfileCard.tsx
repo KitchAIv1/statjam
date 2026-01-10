@@ -54,15 +54,15 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
       .slice(0, 2);
   };
 
-  // Get role-specific badge color
+  // Get role-specific badge color - StatJam unified orange theme
   const getRoleBadgeClass = (role: string) => {
     switch (role) {
       case 'organizer':
-        return 'bg-blue-600 hover:bg-blue-700';
+        return 'bg-orange-600 hover:bg-orange-700';
       case 'coach':
         return 'bg-orange-600 hover:bg-orange-700';
       case 'stat_admin':
-        return 'bg-purple-600 hover:bg-purple-700';
+        return 'bg-orange-500 hover:bg-orange-600';
       default:
         return 'bg-gray-600 hover:bg-gray-700';
     }
@@ -98,11 +98,21 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
   const statsDisplay = getStatsDisplay();
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full">
-      {/* Gradient Top Bar */}
-      <div className="h-2 bg-gradient-to-r from-primary via-accent to-orange-500"></div>
+    <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full relative">
+      {/* Basketball Splash Background */}
+      <div 
+        className="absolute inset-0 bg-no-repeat opacity-[0.08] pointer-events-none"
+        style={{ 
+          backgroundImage: 'url(/images/basketball-splash.webp)',
+          backgroundPosition: 'right center',
+          backgroundSize: 'auto 120%'
+        }}
+      />
       
-      <CardContent className="p-6">
+      {/* Gradient Top Bar */}
+      <div className="h-2 bg-gradient-to-r from-primary via-accent to-orange-500 relative z-10"></div>
+      
+      <CardContent className="p-6 relative z-10">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           {/* Profile Photo */}
           <div className="relative flex-shrink-0">
@@ -211,7 +221,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
                       : `https://facebook.com/${profileData.socialLinks.facebook}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center text-white transition-colors"
+                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200"
                   >
                     <Facebook className="w-4 h-4" />
                   </a>
@@ -221,7 +231,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
                     href={`https://twitter.com/${profileData.socialLinks.twitter}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center text-white transition-colors"
+                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200"
                   >
                     <Twitter className="w-4 h-4" />
                   </a>
@@ -231,7 +241,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
                     href={`https://instagram.com/${profileData.socialLinks.instagram}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 flex items-center justify-center text-white transition-colors"
+                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200"
                   >
                     <Instagram className="w-4 h-4" />
                   </a>
@@ -241,7 +251,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
                     href={profileData.socialLinks.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-gray-500 hover:bg-gray-600 flex items-center justify-center text-white transition-colors"
+                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200"
                   >
                     <Globe className="w-4 h-4" />
                   </a>

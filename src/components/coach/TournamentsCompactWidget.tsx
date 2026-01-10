@@ -86,7 +86,7 @@ export function TournamentsCompactWidget({ userId }: TournamentsCompactWidgetPro
     <Card className="p-4 bg-white border-gray-200">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-yellow-600" />
+          <Trophy className="w-4 h-4 text-orange-500" />
           Tournaments
         </h3>
         <Button 
@@ -128,7 +128,7 @@ export function TournamentsCompactWidget({ userId }: TournamentsCompactWidgetPro
                   </span>
                 </div>
               </div>
-              <Badge variant="outline" className="text-green-600 border-green-300 text-[10px]">
+              <Badge variant="outline" className="text-orange-600 border-orange-300 text-[10px]">
                 Active
               </Badge>
             </div>

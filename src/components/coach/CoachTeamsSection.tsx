@@ -113,11 +113,11 @@ export function CoachTeamsSection({ teams, loading, error, userId, onTeamUpdate 
       <div className="space-y-6 mt-6">
         {/* Checkout Success Banner */}
         {checkoutSuccess && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-            <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+          <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+            <CheckCircle className="w-6 h-6 text-orange-600 flex-shrink-0" />
             <div>
-              <p className="font-semibold text-green-800">Payment Successful!</p>
-              <p className="text-sm text-green-700">Your subscription is now active. Enjoy unlimited access!</p>
+              <p className="font-semibold text-orange-800">Payment Successful!</p>
+              <p className="text-sm text-orange-700">Your subscription is now active. Enjoy unlimited access!</p>
             </div>
           </div>
         )}

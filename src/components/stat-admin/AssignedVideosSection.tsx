@@ -25,7 +25,9 @@ import {
   MapPin,
   Calendar,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Link2,
+  Check
 } from 'lucide-react';
 
 interface AssignedVideosSectionProps {
@@ -40,6 +42,18 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyLink = async (gameId: string) => {
+    const url = `${window.location.origin}/game-viewer/${gameId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(gameId);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
 
   const loadVideos = useCallback(async () => {
     if (!userId) return;
@@ -102,7 +116,7 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
     }
     
     return (
-      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
         <Clock className="w-3 h-3" />
         {hours.toFixed(1)}h left
       </span>
@@ -112,7 +126,7 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
   const getStatusBadge = (status: string) => {
     if (status === 'completed') {
       return (
-        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-600 text-white shadow-sm flex items-center gap-1">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-600 text-white shadow-sm flex items-center gap-1">
           <CheckCircle className="w-3 h-3" />
           Completed
         </span>
@@ -120,13 +134,13 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
     }
     if (status === 'in_progress') {
       return (
-        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-600 text-white shadow-sm">
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-500 text-white shadow-sm">
           In Progress
         </span>
       );
     }
     return (
-      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white shadow-sm">
+      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-600 text-white shadow-sm">
         Assigned
       </span>
     );
@@ -137,7 +151,7 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
       <Card className="animate-pulse">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Video className="w-5 h-5 text-purple-500" />
+            <Video className="w-5 h-5 text-orange-500" />
             <div className="h-6 bg-gray-200 rounded w-48" />
           </div>
         </CardHeader>
@@ -246,31 +260,54 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
                   </div>
                 </div>
                 
-                <button
-                  onClick={() => handleStartTracking(item)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex-shrink-0 ${
-                    item.video.assignmentStatus === 'completed'
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
-                      : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
-                  }`}
-                >
-                  {item.video.assignmentStatus === 'completed' ? (
-                    <>
-                      <CheckCircle className="w-4 h-4" />
-                      View Stats
-                    </>
-                  ) : item.video.assignmentStatus === 'in_progress' ? (
-                    <>
-                      <Play className="w-4 h-4" />
-                      Continue
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4" />
-                      Start Tracking
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Copy Link Button */}
+                  <button
+                    onClick={() => handleCopyLink(item.video.gameId)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium transition-all 
+                               bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200"
+                    title="Copy shareable link"
+                  >
+                    {copiedId === item.video.gameId ? (
+                      <>
+                        <Check className="w-4 h-4 text-orange-600" />
+                        <span className="text-xs text-orange-600">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="w-4 h-4" />
+                        <span className="text-xs hidden sm:inline">Share</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Main Action Button */}
+                  <button
+                    onClick={() => handleStartTracking(item)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg ${
+                      item.video.assignmentStatus === 'completed'
+                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                        : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                    }`}
+                  >
+                    {item.video.assignmentStatus === 'completed' ? (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        View Stats
+                      </>
+                    ) : item.video.assignmentStatus === 'in_progress' ? (
+                      <>
+                        <Play className="w-4 h-4" />
+                        Continue
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" />
+                        Start Tracking
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           ))}

@@ -37,25 +37,22 @@ export function VideoTrackingWidget({
       label: 'Queue', 
       count: videoQueue.pending, 
       icon: Clock, 
-      color: 'amber',
-      bgColor: 'bg-amber-50',
-      textColor: 'text-amber-600',
-      borderColor: 'border-amber-200'
+      bgColor: 'bg-gray-50',
+      textColor: 'text-gray-600',
+      borderColor: 'border-gray-200'
     },
     { 
       label: 'Assigned', 
       count: videoQueue.assigned, 
       icon: UserCheck, 
-      color: 'blue',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-600',
-      borderColor: 'border-blue-200'
+      bgColor: 'bg-gray-50',
+      textColor: 'text-gray-600',
+      borderColor: 'border-gray-200'
     },
     { 
       label: 'Tracking', 
       count: videoQueue.inProgress, 
       icon: Loader2, 
-      color: 'orange',
       bgColor: 'bg-orange-50',
       textColor: 'text-orange-600',
       borderColor: 'border-orange-200'
@@ -64,10 +61,9 @@ export function VideoTrackingWidget({
       label: 'Complete', 
       count: videoQueue.completed, 
       icon: CheckCircle, 
-      color: 'green',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-600',
-      borderColor: 'border-green-200'
+      bgColor: 'bg-orange-50/50',
+      textColor: 'text-orange-500',
+      borderColor: 'border-orange-100'
     },
   ];
 
@@ -76,7 +72,7 @@ export function VideoTrackingWidget({
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-            <Video className="w-4 h-4 text-purple-600" />
+            <Video className="w-4 h-4 text-orange-500" />
             Video Tracking
           </h3>
           {/* Video Credits - inline under header */}

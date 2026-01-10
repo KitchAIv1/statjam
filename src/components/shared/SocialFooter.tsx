@@ -39,7 +39,7 @@ export function SocialFooter({ variant = 'default' }: SocialFooterProps) {
               href="https://www.facebook.com/people/Statjam/61583861420167/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-600 hover:bg-gray-700 text-white transition-colors"
             >
               <Facebook className="w-3 h-3" />
               <span className="hidden sm:inline">Facebook</span>
@@ -48,7 +48,7 @@ export function SocialFooter({ variant = 'default' }: SocialFooterProps) {
               href="https://instagram.com/stat.jam"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-600 hover:bg-gray-700 text-white transition-colors"
             >
               <Instagram className="w-3 h-3" />
               <span className="hidden sm:inline">Instagram</span>
@@ -74,7 +74,7 @@ export function SocialFooter({ variant = 'default' }: SocialFooterProps) {
               href="https://www.facebook.com/people/Statjam/61583861420167/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-600 hover:bg-gray-700 text-white text-sm transition-colors"
             >
               <Facebook className="w-3.5 h-3.5" />
               <span className="font-medium hidden sm:inline">Facebook</span>
@@ -83,7 +83,7 @@ export function SocialFooter({ variant = 'default' }: SocialFooterProps) {
               href="https://instagram.com/stat.jam"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-sm transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-600 hover:bg-gray-700 text-white text-sm transition-colors"
             >
               <Instagram className="w-3.5 h-3.5" />
               <span className="font-medium hidden sm:inline">Instagram</span>

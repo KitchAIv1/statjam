@@ -160,16 +160,16 @@ export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateC
 
         {/* Progress Indicator */}
         <div className="flex items-center gap-2 mb-4">
-          <div className={`flex items-center gap-2 ${currentStep === 'details' ? 'text-primary' : 'text-green-600'}`}>
+          <div className={`flex items-center gap-2 ${currentStep === 'details' ? 'text-primary' : 'text-orange-600'}`}>
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-              currentStep === 'details' ? 'bg-primary text-white' : 'bg-green-600 text-white'
+              currentStep === 'details' ? 'bg-primary text-white' : 'bg-orange-600 text-white'
             }`}>
               {currentStep === 'players' ? <Check className="w-4 h-4" /> : '1'}
             </div>
             <span className="text-sm font-medium">Team Details</span>
           </div>
           
-          <div className={`flex-1 h-0.5 ${currentStep === 'players' ? 'bg-green-600' : 'bg-muted'}`} />
+          <div className={`flex-1 h-0.5 ${currentStep === 'players' ? 'bg-orange-600' : 'bg-muted'}`} />
           
           <div className={`flex items-center gap-2 ${currentStep === 'players' ? 'text-primary' : 'text-muted-foreground'}`}>
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
@@ -275,7 +275,7 @@ export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateC
                       Team Type
                     </Label>
                     {formData.is_official_team ? (
-                      <Trophy className="w-4 h-4 text-blue-600" />
+                      <Trophy className="w-4 h-4 text-orange-600" />
                     ) : (
                       <Dumbbell className="w-4 h-4 text-amber-600" />
                     )}
@@ -291,11 +291,11 @@ export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateC
                 
                 <div className="text-sm">
                   {formData.is_official_team ? (
-                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                      <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
+                    <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                      <Info className="w-4 h-4 mt-0.5 shrink-0 text-orange-600" />
                       <div>
-                        <p className="font-medium text-blue-900 mb-1">Official Team</p>
-                        <p className="text-blue-700">
+                        <p className="font-medium text-orange-900 mb-1">Official Team</p>
+                        <p className="text-orange-700">
                           Games will count toward your players' statistics and appear on their StatJam profiles.
                         </p>
                       </div>
@@ -319,14 +319,14 @@ export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateC
             <div className="space-y-4 pb-4">
               {/* Added Players Summary */}
               {addedPlayers.length > 0 && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Check className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-800">
+                    <Check className="w-4 h-4 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-800">
                       {addedPlayers.length} player{addedPlayers.length !== 1 ? 's' : ''} added
                     </span>
                     {addedPlayers.length >= 5 && (
-                      <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      <Badge variant="secondary" className="bg-orange-100 text-orange-800">
                         Ready to track!
                       </Badge>
                     )}

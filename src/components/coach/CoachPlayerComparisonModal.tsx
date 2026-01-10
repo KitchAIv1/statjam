@@ -164,7 +164,7 @@ export function CoachPlayerComparisonModal({
                 <h4 className="font-semibold text-gray-900 mb-2">{player1.playerName} - Strengths</h4>
                 <div className="flex flex-wrap gap-2">
                   {player1.strengths.map((strength, i) => (
-                    <span key={i} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+                    <span key={i} className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded">
                       {strength}
                     </span>
                   ))}
@@ -189,7 +189,7 @@ export function CoachPlayerComparisonModal({
                 <h4 className="font-semibold text-gray-900 mb-2">{player2.playerName} - Strengths</h4>
                 <div className="flex flex-wrap gap-2">
                   {player2.strengths.map((strength, i) => (
-                    <span key={i} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+                    <span key={i} className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded">
                       {strength}
                     </span>
                   ))}
@@ -216,7 +216,7 @@ export function CoachPlayerComparisonModal({
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">Recent Trend</p>
                 <div className="flex items-center justify-center gap-2">
-                  {player1.trend === 'improving' && <TrendingUp className="w-5 h-5 text-green-500" />}
+                  {player1.trend === 'improving' && <TrendingUp className="w-5 h-5 text-orange-500" />}
                   {player1.trend === 'declining' && <TrendingDown className="w-5 h-5 text-red-500" />}
                   {player1.trend === 'stable' && <Minus className="w-5 h-5 text-gray-500" />}
                   <span className="font-semibold capitalize">{player1.trend}</span>
@@ -225,7 +225,7 @@ export function CoachPlayerComparisonModal({
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">Recent Trend</p>
                 <div className="flex items-center justify-center gap-2">
-                  {player2.trend === 'improving' && <TrendingUp className="w-5 h-5 text-green-500" />}
+                  {player2.trend === 'improving' && <TrendingUp className="w-5 h-5 text-orange-500" />}
                   {player2.trend === 'declining' && <TrendingDown className="w-5 h-5 text-red-500" />}
                   {player2.trend === 'stable' && <Minus className="w-5 h-5 text-gray-500" />}
                   <span className="font-semibold capitalize">{player2.trend}</span>

@@ -23,8 +23,10 @@ import { LiveIndicator } from './components/LiveIndicator';
 import { GameAwardsSection } from './components/GameAwardsSection';
 import { CoachGameAnalyticsTab } from './components/CoachGameAnalyticsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Film } from 'lucide-react';
 import { TeamService } from '@/lib/services/tournamentService';
+import { PublicClipsTab } from './components/PublicClipsTab';
+import { getGameClips } from '@/lib/services/clipService';
 
 interface GameViewerPageProps {
   params: Promise<{ gameId: string }>;
@@ -36,6 +38,9 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   const { theme, isDark, toggleTheme } = useGameViewerTheme();
   const [teamALogo, setTeamALogo] = useState<string | null>(null);
   const [teamBLogo, setTeamBLogo] = useState<string | null>(null);
+  
+  // Clips count for tab badge
+  const [clipsCount, setClipsCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -74,6 +79,30 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
       isMounted = false;
     };
   }, [game?.team_a_id, game?.team_b_id]);
+
+  // Load clips count for tab badge (completed games only)
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadClipsCount() {
+      if (!gameId || game?.status?.toLowerCase() !== 'completed') return;
+      
+      try {
+        const gameClips = await getGameClips(gameId);
+        if (isMounted) {
+          setClipsCount(gameClips.length);
+        }
+      } catch (err) {
+        console.error('❌ Failed to load clips count:', err);
+      }
+    }
+
+    void loadClipsCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [gameId, game?.status]);
 
   // Prefetch team data for instant tab switching
   const teamAPrefetch = useTeamStats(gameId, game?.team_a_id || '', { 
@@ -238,6 +267,18 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
                 Analytics
               </TabsTrigger>
             )}
+            {/* ✅ Clips Tab - Only for completed games */}
+            {isCompleted && (
+              <TabsTrigger value="clips" className={`flex-1 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none py-3 ${isDark ? 'data-[state=active]:bg-slate-700/50 text-muted-foreground data-[state=active]:text-orange-400' : 'data-[state=active]:bg-orange-50 text-gray-600 data-[state=active]:text-orange-600'}`}>
+                <span className="flex items-center gap-1.5">
+                  <Film className="w-4 h-4" />
+                  Clips
+                  {clipsCount > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-orange-500 text-white rounded-full">{clipsCount}</span>
+                  )}
+                </span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Feed Tab */}
@@ -335,6 +376,17 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
                 teamId={game.team_a_id}
                 teamName={game.team_a_name || 'Team'}
                 isDark={isDark}
+              />
+            </TabsContent>
+          )}
+
+          {/* ✅ Clips Tab - Video highlights */}
+          {isCompleted && (
+            <TabsContent value="clips" className={`mt-0 ${isDark ? 'bg-slate-900' : 'bg-gradient-to-br from-orange-50/30 to-background'}`}>
+              <PublicClipsTab 
+                gameId={gameId} 
+                teamId={game.team_a_id} 
+                isDark={isDark} 
               />
             </TabsContent>
           )}

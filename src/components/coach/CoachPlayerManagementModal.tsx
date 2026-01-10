@@ -196,7 +196,7 @@ export function CoachPlayerManagementModal({
                       <div 
                         key={player.id}
                         onClick={() => openModal(player.id, { isCustomPlayer: player.is_custom_player || false })}
-                        className="flex items-center gap-3 p-3 border rounded-lg bg-green-50 border-green-200 cursor-pointer hover:bg-green-100 transition-colors relative"
+                        className="flex items-center gap-3 p-3 border rounded-lg bg-orange-50 border-orange-200 cursor-pointer hover:bg-orange-100 transition-colors relative"
                       >
                         <Avatar className="w-10 h-10 border-2 border-green-200 flex-shrink-0">
                           {(player.profile_photo_url || player.photo_url) && (
@@ -206,7 +206,7 @@ export function CoachPlayerManagementModal({
                               className="object-cover" 
                             />
                           )}
-                          <AvatarFallback className="bg-green-100 text-green-600">
+                          <AvatarFallback className="bg-orange-100 text-orange-600">
                             <Users className="w-4 h-4" />
                           </AvatarFallback>
                         </Avatar>
