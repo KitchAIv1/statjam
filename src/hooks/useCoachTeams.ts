@@ -24,52 +24,35 @@ export function useCoachTeams(user: { id: string; role: string } | null) {
 
   const refetch = useCallback(async (skipCache: boolean = false) => {
     if (!user?.id || user.role !== 'coach') {
-      console.log('🔍 useCoachTeams: No coach user, skipping fetch');
       setState(prev => ({ ...prev, loading: false }));
       return;
     }
 
-    // ⚡ Check cache first (unless skipCache is true)
-    if (!skipCache) {
-      const cacheKey = CacheKeys.coachTeams(user.id);
-      const cachedTeams = cache.get<CoachTeam[]>(cacheKey);
-      
-      if (cachedTeams) {
-        console.log('⚡ useCoachTeams: Using cached teams data');
-        setState({
-          teams: cachedTeams,
-          loading: false,
-          error: null
-        });
-        return;
-      }
+    const cacheKey = CacheKeys.coachTeams(user.id);
+    const cachedTeams = cache.get<CoachTeam[]>(cacheKey);
+
+    // ⚡ Return cached data immediately (unless skipCache)
+    if (!skipCache && cachedTeams) {
+      setState({ teams: cachedTeams, loading: false, error: null });
+      return;
     }
 
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    // ⚡ KEY: Only show loading if NO cached data exists (prevents flash on return)
+    if (!cachedTeams) {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+    }
     
     try {
-      console.log('🔍 useCoachTeams: Fetching fresh teams data...');
       const coachTeams = await CoachTeamService.getCoachTeams(user.id);
-      
-      // ⚡ Store in cache
-      const cacheKey = CacheKeys.coachTeams(user.id);
       cache.set(cacheKey, coachTeams, CacheTTL.coachTeams);
-      console.log('⚡ useCoachTeams: Teams cached for', CacheTTL.coachTeams, 'minutes');
-      
-      setState({
-        teams: coachTeams,
-        loading: false,
-        error: null
-      });
-      
-      console.log('✅ useCoachTeams: Teams fetched successfully:', coachTeams.length, 'teams');
+      setState({ teams: coachTeams, loading: false, error: null });
     } catch (error) {
-      console.error('❌ useCoachTeams: Error fetching teams:', error);
-      setState({
-        teams: [],
+      // ⚡ KEY: Keep showing cached data on error (graceful degradation)
+      setState(prev => ({
+        teams: cachedTeams || prev.teams,
         loading: false,
         error: error instanceof Error ? error.message : 'Failed to load teams'
-      });
+      }));
     }
   }, [user?.id, user?.role]);
 

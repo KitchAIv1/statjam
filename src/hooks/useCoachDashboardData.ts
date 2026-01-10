@@ -80,19 +80,20 @@ export function useCoachDashboardData(userId: string | undefined): CoachDashboar
     if (!userId) return;
     
     const cacheKey = CacheKeys.coachDashboard(userId);
+    const cached = cache.get<CachedDashboardData>(cacheKey);
     
-    // ⚡ Check cache first (unless skipCache is true)
-    if (!skipCache) {
-      const cached = cache.get<CachedDashboardData>(cacheKey);
-      if (cached) {
-        setState(prev => ({ ...prev, ...cached, loading: false, error: null }));
-        return;
-      }
+    // ⚡ Return cached data immediately (unless skipCache)
+    if (!skipCache && cached) {
+      setState(prev => ({ ...prev, ...cached, loading: false, error: null }));
+      return;
+    }
+
+    // ⚡ KEY: Only show loading if NO cached data exists (prevents flash on return)
+    if (!cached) {
+      setState(prev => ({ ...prev, loading: true, error: null }));
     }
     
     try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-
       // Parallel fetch all dashboard data
       const [videosRes, gamesRes, clipsRes] = await Promise.all([
         supabase.from('game_videos').select('id, assignment_status').eq('uploaded_by', userId),
@@ -145,9 +146,9 @@ export function useCoachDashboardData(userId: string | undefined): CoachDashboar
       setState({ videoQueue, liveGames, recentGames, clips, loading: false, error: null });
 
     } catch (err) {
-      console.error('❌ useCoachDashboardData error:', err);
+      // ⚡ KEY: Keep showing cached data on error (graceful degradation)
       setState(prev => ({
-        ...prev,
+        ...(cached || prev),
         loading: false,
         error: err instanceof Error ? err.message : 'Failed to load dashboard data'
       }));
