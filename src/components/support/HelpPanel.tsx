@@ -25,10 +25,10 @@ interface HelpPanelProps {
 }
 
 const roleAccentClasses: Record<UserRole, string> = {
-  coach: "bg-blue-600 hover:bg-blue-500",
+  coach: "bg-orange-600 hover:bg-orange-500",
   organizer: "bg-orange-600 hover:bg-orange-500",
-  stat_admin: "bg-purple-600 hover:bg-purple-500",
-  player: "bg-emerald-600 hover:bg-emerald-500"
+  stat_admin: "bg-orange-500 hover:bg-orange-400",
+  player: "bg-orange-600 hover:bg-orange-500"
 };
 
 const panelTitles: Record<UserRole, string> = {
@@ -68,7 +68,7 @@ export function HelpPanel({
       <SheetContent side="right" className="w-full max-w-md">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 text-2xl font-bold">
-            <MessageCircle className="h-5 w-5 text-blue-500" />
+            <MessageCircle className="h-5 w-5 text-orange-500" />
             {panelTitle}
           </SheetTitle>
           <SheetDescription>
@@ -78,13 +78,13 @@ export function HelpPanel({
 
         <div className="flex h-full flex-col gap-6 overflow-y-auto pb-10 pr-2">
           {(checklistLink || onChecklistOpen) && (
-            <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
+            <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-700">
               <p className="font-semibold">Need a refresher?</p>
               <p className="mt-1">Open the quick-start checklist any time to review the essentials.</p>
               {onChecklistOpen ? (
                 <button
                   type="button"
-                  className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:underline"
+                  className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-orange-600 hover:underline"
                   onClick={() => {
                     onChecklistOpen();
                     setOpen(false);
@@ -96,7 +96,7 @@ export function HelpPanel({
               ) : (
                 <Link
                   href={checklistLink ?? "#"}
-                  className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:underline"
+                  className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-orange-600 hover:underline"
                   onClick={() => setOpen(false)}
                 >
                   View Checklist
@@ -118,7 +118,7 @@ export function HelpPanel({
                   {faq.href && (
                     <Link
                       href={faq.href}
-                      className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:underline"
+                      className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-orange-600 hover:underline"
                       onClick={() => setOpen(false)}
                     >
                       {faq.hrefLabel ?? "Learn more"}

@@ -1,3 +1,9 @@
+// ============================================================================
+// COACH ONBOARDING CONFIG (<120 lines)
+// Purpose: Checklist steps, FAQs, and feature tour for coach dashboard
+// Follows .cursorrules: Single responsibility, <150 lines
+// ============================================================================
+
 import type { ChecklistStep } from "@/components/onboarding/WelcomeChecklist";
 import type { FeatureTourStep } from "@/components/onboarding/FeatureTour";
 import type { HelpFAQ } from "@/components/support/HelpPanel";
@@ -5,83 +11,91 @@ import type { HelpFAQ } from "@/components/support/HelpPanel";
 export const coachChecklistSteps: ChecklistStep[] = [
   {
     title: "Create your team",
-    description: "Head to My Teams, tap Create Team, and save your roster shell.",
-    action: { label: "Go to My Teams", href: "/dashboard/coach?section=teams" }
-  },
-  {
-    title: "Choose team type: Official or Practice",
-    description:
-      "Official teams count toward players’ profile stats. Practice teams do not. Set this on the Team Type toggle when creating or editing a team.",
-    action: { label: "Edit Team Type", href: "/dashboard/coach?section=teams" }
+    description: "From your dashboard, click Create Team to set up your roster.",
+    action: { label: "Create Team", href: "/dashboard/coach" }
   },
   {
     title: "Add your players",
-    description: "Use Manage → Add Player to search existing profiles or add custom entries.",
-    action: { label: "Manage Players", href: "/dashboard/coach?section=teams" }
+    description: "Open team card → Manage Players → Add from existing profiles or create custom players.",
+    action: { label: "Manage Players", href: "/dashboard/coach" }
   },
   {
-    title: "Set up a game",
-    description: "From your team card choose Quick Track or New Game and enter opponent details.",
-    action: { label: "Start Quick Track", href: "/dashboard/coach?section=quick-track" }
+    title: "Start a game",
+    description: "Use 'Start New Game' for manual tracking, or 'Upload Video' for AI-assisted tracking with clips.",
+    action: { label: "Quick Actions", href: "/dashboard/coach" }
   },
   {
-    title: "Run the stat tracker",
-    description: "Select a player, tap the stat buttons, and manage the clock and substitutions live.",
-    action: { label: "Launch Tracker", href: "/dashboard/coach?section=quick-track" }
+    title: "Track stats",
+    description: "Manual: Use stat buttons live. Video: Wait for processing to complete.",
   },
   {
-    title: "Complete the game",
-    description: "When the final buzzer hits, press End Game to lock scores and close the session."
+    title: "Review in Game Viewer",
+    description: "Open completed games to see box scores, play-by-play, and highlight clips.",
+    action: { label: "Recent Games", href: "/dashboard/coach" }
   },
   {
-    title: "Review analytics",
-    description: "Back on the dashboard, open the finished game to view box score and trend insights.",
-    action: { label: "View Analytics", href: "/dashboard/coach?section=overview" }
+    title: "Create a Season (optional)",
+    description: "Organize games into seasons for ESPN-like standings and player stats.",
+    action: { label: "Team → Seasons", href: "/dashboard/coach" }
   }
 ];
 
 export const coachFAQs: HelpFAQ[] = [
   {
-    question: "How do I add or edit players?",
-    answer: "Open your team card, select Manage, and add players from existing profiles or create custom ones."
+    question: "How do I start tracking a game?",
+    answer: "Click 'Start New Game' in Quick Actions, select a team, enter opponent details, and use the stat tracker."
   },
   {
-    question: "Official vs Practice — what’s the difference?",
-    answer:
-      "Official teams’ games are included in players’ profile dashboards and season totals. Practice teams are excluded from player profiles and are best for scrimmages or training. This setting is controlled by the Team Type toggle on the team card (Create/Edit Team)."
+    question: "What's Manual vs Video tracking?",
+    answer: "Manual: Track stats live during the game. Video: Upload recorded footage for AI-assisted stat tracking plus auto-generated highlight clips."
   },
   {
-    question: "Can I change a team from Practice to Official later?",
-    answer:
-      "Yes. Open the team card → Edit → switch Team Type. If you change Official → Practice, those games will stop appearing in players’ dashboards. If you change Practice → Official, future games under that team will count toward player stats.",
-    href: "/dashboard/coach?section=teams",
-    hrefLabel: "Open My Teams"
+    question: "How do video credits work?",
+    answer: "Each video upload uses 1 credit. You get AI-tracked stats plus highlight clips. Buy more credits from Quick Actions when needed."
   },
   {
-    question: "Do customized players affect player profiles?",
-    answer:
-      "No. Customized players are for coach-side tracking only and are not included in player profile dashboards. The Official/Practice flag applies to teams with linked player profiles."
+    question: "What's the daily upload limit?",
+    answer: "Free accounts: 2 uploads per day (resets every 24 hours). Premium subscribers have unlimited uploads."
   },
   {
-    question: "What if my opponent changes?",
-    answer: "Edit the game details from the dashboard before you start tracking, or update the opponent name in the tracker header."
+    question: "How do I add players to my team?",
+    answer: "Open your team card → Manage Players → Add from existing profiles or create custom players."
   },
   {
-    question: "When do analytics populate?",
-    answer: "Once you tap End Game in the tracker, the system locks stats and generates analytics automatically."
+    question: "Official vs Practice teams?",
+    answer: "Official: Stats count toward player profiles and season totals. Practice: For scrimmages/training, stats stay private."
+  },
+  {
+    question: "What are Seasons?",
+    answer: "Organize games into seasons for ESPN-like standings and player stats. Access via team card → Seasons.",
+    href: "/dashboard/coach",
+    hrefLabel: "Open Dashboard"
+  },
+  {
+    question: "Where do I view completed games?",
+    answer: "Click any game from Recent Games or your team card to open the Game Viewer with box scores, play-by-play, and clips."
+  },
+  {
+    question: "How do I get Verified status?",
+    answer: "Subscribe to a premium plan to display the verified badge on your profile and unlock unlimited uploads."
   }
 ];
 
 export const coachFeatureTourSteps: FeatureTourStep[] = [
   {
-    target: "[data-coach-tour=back-button]",
-    title: "Return to dashboard",
-    description: "Use this shortcut to jump back to your coach dashboard without ending the game."
+    target: "[data-coach-tour=quick-actions]",
+    title: "Quick Actions",
+    description: "Start a new game for manual tracking, or upload video for AI-assisted tracking with highlights."
+  },
+  {
+    target: "[data-coach-tour=teams-strip]",
+    title: "Your Teams",
+    description: "Manage your teams, players, seasons, and access game tracking from here."
   },
   {
     target: "[data-coach-tour=scoreboard]",
     title: "Control the clock",
-    description: "Start, stop, or reset the game and shot clocks. Update the quarter and possession here."
+    description: "Start, stop, or reset the game and shot clocks. Update the quarter and possession."
   },
   {
     target: "[data-coach-tour=player-selector]",
@@ -96,7 +110,7 @@ export const coachFeatureTourSteps: FeatureTourStep[] = [
   {
     target: "[data-coach-tour=action-bar]",
     title: "Finish the game",
-    description: "When the game ends, tap End Game here to lock stats and unlock analytics."
+    description: "When the game ends, tap End Game to lock stats and view analytics in the Game Viewer."
   }
 ];
 
