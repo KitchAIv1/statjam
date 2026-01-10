@@ -20,7 +20,26 @@ function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentPro
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user, loading, signOut } = useAuthContext(); // ✅ NO API CALL - Uses context
-  const { isVerified } = useSubscription();
+  const { isVerified, loading: subLoading } = useSubscription();
+  
+  // ⚡ Persist verified status to prevent flash on navigation
+  const [cachedVerified, setCachedVerified] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('statjam_verified') === 'true';
+    }
+    return false;
+  });
+  
+  // Update localStorage when verified status changes
+  useEffect(() => {
+    if (!subLoading && typeof window !== 'undefined') {
+      localStorage.setItem('statjam_verified', String(isVerified));
+      setCachedVerified(isVerified);
+    }
+  }, [isVerified, subLoading]);
+  
+  // Use cached value during loading to prevent flash
+  const showVerified = subLoading ? cachedVerified : isVerified;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   
@@ -105,11 +124,9 @@ function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentPro
             <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent whitespace-nowrap">
               StatJam
             </h1>
-            {/* Reserve space for badge to prevent layout shift */}
-            {isAuthenticated && (
-              <div className="w-[70px] h-[20px] flex items-center">
-                {isVerified && <VerifiedBadge variant="pill" />}
-              </div>
+            {/* Show verified badge - uses cached value during loading */}
+            {isAuthenticated && showVerified && (
+              <VerifiedBadge variant="pill" />
             )}
           </div>
 
