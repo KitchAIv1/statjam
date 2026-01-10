@@ -162,7 +162,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare, isVerifie
           <div className="flex-1 text-center sm:text-left">
             {/* Name & Role */}
             <div className="mb-3">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2 justify-center sm:justify-start">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2 justify-center sm:justify-start">
                 {profileData.name}
                 {isVerified && <VerifiedBadge size="md" />}
               </h2>
