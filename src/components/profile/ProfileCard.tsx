@@ -277,7 +277,8 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare, isVerifie
                 onClick={onShare}
                 variant="outline"
                 size="sm"
-                className="gap-2"
+                className="gap-2 opacity-50 cursor-not-allowed"
+                disabled
               >
                 <Share2 className="w-4 h-4" />
                 Share
