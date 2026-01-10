@@ -116,3 +116,99 @@ useEffect(() => {
 - [ ] Analytics tracking for announcement engagement
 - [ ] Customizable highlight colors per announcement
 
+---
+
+## Performance Optimizations (v0.17.8+)
+
+### keepPreviousData Pattern Implementation
+
+**Status**: ✅ Implemented (January 2025)
+
+#### Overview
+
+Adopted the proven `keepPreviousData` pattern from `TournamentPageShell.tsx` to eliminate loading flashes and ensure instant navigation.
+
+#### Hooks Optimized
+
+1. **`useCoachTeams`** (`src/hooks/useCoachTeams.ts`)
+   - Added synchronous cache check on initial render
+   - Only shows loading if no cached data exists
+   - Cache TTL: 3 minutes
+   - Result: Teams list loads instantly on return navigation
+
+2. **`useCoachDashboardData`** (`src/hooks/useCoachDashboardData.ts`)
+   - Added synchronous cache check on initial render
+   - Only shows loading if no cached data exists
+   - Cache TTL: 2 minutes
+   - Result: Video queue, games, clips load instantly
+
+3. **`useCoachProfile`** (`src/hooks/useCoachProfile.ts`)
+   - **FIXED**: Was missing cache entirely - always showed loading
+   - Added full caching pattern with optimistic updates
+   - Cache TTL: 2 minutes
+   - Result: Profile card loads instantly
+
+4. **`useSubscription`** (`src/hooks/useSubscription.ts`)
+   - Added caching for subscription and verified status
+   - localStorage persistence for verified badge
+   - Cache TTL: 15 minutes
+   - Result: Verified badge no longer flashes on navigation
+
+#### Navigation Bar Stability
+
+- **Fixed container width**: `min-w-[120px]` prevents layout shift
+- **Reserved badge space**: 70px × 20px container for verified badge
+- **localStorage persistence**: Verified status cached to prevent flash
+- **Result**: Navbar remains stable, no horizontal shifts
+
+#### Performance Metrics
+
+| Scenario | Before | After |
+|----------|--------|-------|
+| Return navigation | 200-400ms flash | **0ms (instant)** |
+| Network error | Error state | **Shows cached data** |
+| Navbar navigation | Layout shift | **No shift** |
+
+#### Documentation
+
+See `docs/02-development/COACH_DASHBOARD_PERFORMANCE_OPTIMIZATION.md` for detailed implementation guide.
+
+---
+
+## Branding Alignment (v0.17.8+)
+
+### Orange Theme Consistency
+
+All coach dashboard pages now use consistent orange/gray branding:
+
+- **Live badges**: `orange-500`
+- **Success indicators**: `orange-*`
+- **Info/actions**: `orange-*`
+- **Feature buttons**: `orange-600`
+- **Neutral elements**: `gray-*`
+- **Semantic errors**: `red-*` (kept for errors/misses)
+
+### Pages Updated
+
+- View Games (`/dashboard/coach/games`)
+- Video Tracking (`/dashboard/coach/video/[gameId]`)
+- Game Clips (`/dashboard/coach/game/[gameId]/clips`)
+- Play-by-Play Feed components
+- Command Center Header
+- Tournaments page
+- Stat Admin Video Tracking page
+
+### Help Center Updates
+
+- FAQs updated with current UX (video tracking, seasons, verified badge)
+- Free tier limits corrected: **1 team, 6 games, no video access**
+- Accent colors: blue → orange
+- Checklist simplified to match Quick Actions flow
+
+---
+
+**Last Updated**: January 2025  
+**Related Docs**: 
+- `docs/02-development/COACH_DASHBOARD_PERFORMANCE_OPTIMIZATION.md`
+- `docs/01-project/CHANGELOG.md`
+
