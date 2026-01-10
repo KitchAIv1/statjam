@@ -292,7 +292,7 @@ export function MobileLayoutV3({
               )}
             </button>
             <span className="text-[10px] text-gray-400">
-              {tracker.automationFlags?.sequences?.enabled ? 'Prompts on' : 'No prompts'}
+              {tracker.automationFlags?.sequences?.enabled ? 'Prompts for assists & rebounds' : 'Full control, no prompts'}
             </span>
           </div>
         )}

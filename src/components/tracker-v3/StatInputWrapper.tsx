@@ -155,25 +155,30 @@ export function StatInputWrapper({
       >
         {/* Mode Toggle Header - Available for all tracking modes */}
         <div className="flex items-center justify-between p-2 flex-shrink-0">
-          {/* Left: Manual/Auto Toggle */}
+          {/* Left: Manual/Auto Toggle with description */}
           {onAutomationFlagsChange ? (
-            <button
-              type="button"
-              onClick={() => {
-                onAutomationFlagsChange(prev => ({
-                  ...prev,
-                  sequences: { ...prev.sequences, enabled: !prev.sequences.enabled }
-                }));
-              }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                automationFlags?.sequences?.enabled 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                  : 'bg-amber-600 text-white hover:bg-amber-700'
-              }`}
-              title={automationFlags?.sequences?.enabled ? 'Auto: Prompts for assists, rebounds' : 'Manual: No auto-prompts'}
-            >
-              {automationFlags?.sequences?.enabled ? <><Zap className="w-3.5 h-3.5" />Auto</> : <><Hand className="w-3.5 h-3.5" />Manual</>}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onAutomationFlagsChange(prev => ({
+                    ...prev,
+                    sequences: { ...prev.sequences, enabled: !prev.sequences.enabled }
+                  }));
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                  automationFlags?.sequences?.enabled 
+                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                    : 'bg-amber-600 text-white hover:bg-amber-700'
+                }`}
+                title={automationFlags?.sequences?.enabled ? 'Auto: Prompts for assists, rebounds' : 'Manual: No auto-prompts'}
+              >
+                {automationFlags?.sequences?.enabled ? <><Zap className="w-3.5 h-3.5" />Auto</> : <><Hand className="w-3.5 h-3.5" />Manual</>}
+              </button>
+              <span className="text-[10px] text-gray-400 hidden sm:inline">
+                {automationFlags?.sequences?.enabled ? 'Prompts for assists & rebounds' : 'Full control, no prompts'}
+              </span>
+            </div>
           ) : <div />}
           
           {/* Right: Court/Classic Toggle */}
@@ -234,25 +239,30 @@ export function StatInputWrapper({
     >
       {/* Mode Toggle Header - Available for all tracking modes */}
       <div className="flex items-center justify-between p-2 flex-shrink-0">
-        {/* Left: Manual/Auto Toggle */}
+        {/* Left: Manual/Auto Toggle with description */}
         {onAutomationFlagsChange ? (
-          <button
-            type="button"
-            onClick={() => {
-              onAutomationFlagsChange(prev => ({
-                ...prev,
-                sequences: { ...prev.sequences, enabled: !prev.sequences.enabled }
-              }));
-            }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-              automationFlags?.sequences?.enabled 
-                ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                : 'bg-amber-600 text-white hover:bg-amber-700'
-            }`}
-            title={automationFlags?.sequences?.enabled ? 'Auto: Prompts for assists, rebounds' : 'Manual: No auto-prompts'}
-          >
-            {automationFlags?.sequences?.enabled ? <><Zap className="w-3.5 h-3.5" />Auto</> : <><Hand className="w-3.5 h-3.5" />Manual</>}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onAutomationFlagsChange(prev => ({
+                  ...prev,
+                  sequences: { ...prev.sequences, enabled: !prev.sequences.enabled }
+                }));
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                automationFlags?.sequences?.enabled 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-amber-600 text-white hover:bg-amber-700'
+              }`}
+              title={automationFlags?.sequences?.enabled ? 'Auto: Prompts for assists, rebounds' : 'Manual: No auto-prompts'}
+            >
+              {automationFlags?.sequences?.enabled ? <><Zap className="w-3.5 h-3.5" />Auto</> : <><Hand className="w-3.5 h-3.5" />Manual</>}
+            </button>
+            <span className="text-[10px] text-gray-400 hidden sm:inline">
+              {automationFlags?.sequences?.enabled ? 'Prompts for assists & rebounds' : 'Full control, no prompts'}
+            </span>
+          </div>
         ) : <div />}
         
         {/* Right: Court/Classic Toggle */}
