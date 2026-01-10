@@ -97,16 +97,19 @@ function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentPro
     <header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo + Verified Badge */}
+          {/* Logo + Verified Badge - Fixed layout to prevent shift */}
           <div 
             onClick={handleHome}
             className="cursor-pointer flex items-center gap-2"
           >
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent whitespace-nowrap">
               StatJam
             </h1>
-            {isAuthenticated && isVerified && (
-              <VerifiedBadge variant="pill" />
+            {/* Reserve space for badge to prevent layout shift */}
+            {isAuthenticated && (
+              <div className="w-[70px] h-[20px] flex items-center">
+                {isVerified && <VerifiedBadge variant="pill" />}
+              </div>
             )}
           </div>
 
@@ -139,11 +142,14 @@ function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentPro
             </nav>
           )}
 
-          {/* Right Side Actions */}
-          <div className="flex items-center space-x-4">
-            {!hasHydrated || loading ? (
-              // Loading state
-              <div className="w-8 h-8 animate-pulse bg-gray-700 rounded-full" />
+          {/* Right Side Actions - Fixed width container to prevent layout shift */}
+          <div className="flex items-center space-x-4 min-w-[120px] justify-end">
+            {!hasHydrated ? (
+              // SSR placeholder - matches user menu size
+              <div className="w-8 h-8 rounded-full bg-gray-700/50" />
+            ) : loading ? (
+              // Loading state - same size as user menu to prevent shift
+              <div className="w-8 h-8 rounded-full bg-gray-700/50 animate-pulse" />
             ) : isAuthenticated ? (
               // Authenticated user menu
               <>
