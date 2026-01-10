@@ -35,10 +35,32 @@ export function useSeasonPlayerStats(seasonId: string | null) {
           .in('game_id', gameIds);
         if (statsErr) throw statsErr;
 
-        // Get player names
-        const playerIds = [...new Set(stats?.map(s => s.player_id || s.custom_player_id).filter(Boolean))];
-        const { data: customPlayers } = await supabase
-          .from('custom_players').select('id, name, jersey_number, profile_photo_url').in('id', playerIds);
+        // ✅ FIX: Separate player_id (users) from custom_player_id (custom_players)
+        const regularPlayerIds = [...new Set(stats?.filter(s => s.player_id).map(s => s.player_id))];
+        const customPlayerIds = [...new Set(stats?.filter(s => s.custom_player_id).map(s => s.custom_player_id))];
+
+        // ✅ Query BOTH tables in parallel (matches useGameViewerV2 pattern)
+        const [usersResult, customPlayersResult] = await Promise.all([
+          regularPlayerIds.length > 0
+            ? supabase.from('users').select('id, name, profile_photo_url').in('id', regularPlayerIds)
+            : Promise.resolve({ data: [] }),
+          customPlayerIds.length > 0
+            ? supabase.from('custom_players').select('id, name, jersey_number, profile_photo_url').in('id', customPlayerIds)
+            : Promise.resolve({ data: [] }),
+        ]);
+
+        // ✅ Merge into single lookup map
+        const playersLookup = new Map<string, { name: string; jerseyNumber?: number; photoUrl?: string }>();
+        
+        // Add regular users (claimed players)
+        (usersResult.data || []).forEach((u: any) => {
+          playersLookup.set(u.id, { name: u.name || 'Unknown', photoUrl: u.profile_photo_url });
+        });
+        
+        // Add custom players
+        (customPlayersResult.data || []).forEach((cp: any) => {
+          playersLookup.set(cp.id, { name: cp.name || 'Unknown', jerseyNumber: cp.jersey_number, photoUrl: cp.profile_photo_url });
+        });
 
         // Aggregate by player (matches Game Viewer stat type mapping)
         const playerMap = new Map<string, PlayerSeasonStats>();
@@ -52,12 +74,12 @@ export function useSeasonPlayerStats(seasonId: string | null) {
           if (!gamesByPlayer.has(pid)) gamesByPlayer.set(pid, new Set());
           gamesByPlayer.get(pid)!.add(stat.game_id);
 
-          // Initialize player if new
+          // Initialize player if new (✅ uses merged lookup for both users & custom_players)
           if (!playerMap.has(pid)) {
-            const cp = customPlayers?.find(p => p.id === pid);
+            const player = playersLookup.get(pid);
             playerMap.set(pid, {
-              playerId: pid, playerName: cp?.name || 'Unknown',
-              jerseyNumber: cp?.jersey_number, profilePhotoUrl: cp?.profile_photo_url,
+              playerId: pid, playerName: player?.name || 'Unknown',
+              jerseyNumber: player?.jerseyNumber, profilePhotoUrl: player?.photoUrl,
               gamesPlayed: 0, points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, turnovers: 0,
               fgMade: 0, fgAttempts: 0, threePtMade: 0, threePtAttempts: 0, ftMade: 0, ftAttempts: 0,
             });
