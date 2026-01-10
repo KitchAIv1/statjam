@@ -80,33 +80,41 @@ export function LiveActionHub({
         {/* Actions */}
         <div className="space-y-3 flex-1">
           {/* Hero CTA: Start New Game */}
-          <Button
+          <button
             onClick={onStartGame}
-            className="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 transition-all gap-2"
+            className="w-full text-left p-3 rounded-xl border-2 border-orange-400 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 transition-all group/start"
           >
-            <PlayCircle className="w-5 h-5" />
-            <span className="font-semibold">Start New Game</span>
-          </Button>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-white/20 group-hover/start:bg-white/30 transition-colors">
+                <PlayCircle className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-white">Start New Game</div>
+                <div className="text-xs text-white/80">Manual stat tracking</div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-white/70 group-hover/start:text-white transition-colors flex-shrink-0" />
+            </div>
+          </button>
 
           {/* Upload Video - State-aware integrated button */}
           {hasCredits ? (
             <button
               onClick={dailyLimitReached ? undefined : onUploadVideo}
               disabled={dailyLimitReached}
-              className={`w-full text-left p-3 rounded-xl border transition-all group/upload
+              className={`w-full text-left p-3 rounded-xl border-2 transition-all group/upload
                 ${dailyLimitReached 
-                  ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60' 
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-60' 
+                  : 'border-orange-200 bg-orange-50/50 hover:border-orange-300 hover:bg-orange-50'
                 }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg transition-colors ${dailyLimitReached ? 'bg-gray-100' : 'bg-gray-100 group-hover/upload:bg-gray-200'}`}>
-                  <Upload className="w-5 h-5 text-gray-600" />
+                <div className={`p-2 rounded-lg transition-colors ${dailyLimitReached ? 'bg-gray-200' : 'bg-orange-100 group-hover/upload:bg-orange-200'}`}>
+                  <Upload className={`w-5 h-5 ${dailyLimitReached ? 'text-gray-500' : 'text-orange-600'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-gray-900">Upload Video</div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-xs ${isLowCredits ? 'text-amber-600' : 'text-orange-600'}`}>
+                    <span className={`text-xs font-medium ${isLowCredits ? 'text-amber-600' : 'text-orange-600'}`}>
                       {isLowCredits 
                         ? `⚠ ${videoCredits} credit${videoCredits === 1 ? '' : 's'} left`
                         : `✓ ${videoCredits} credit${videoCredits === 1 ? '' : 's'}`}
@@ -119,7 +127,7 @@ export function LiveActionHub({
                     )}
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-gray-400 group-hover/upload:text-gray-600 transition-colors flex-shrink-0" />
+                <ArrowRight className={`w-4 h-4 transition-colors flex-shrink-0 ${dailyLimitReached ? 'text-gray-400' : 'text-orange-400 group-hover/upload:text-orange-600'}`} />
               </div>
             </button>
           ) : (
