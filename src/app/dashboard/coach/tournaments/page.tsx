@@ -236,7 +236,7 @@ function CoachTournamentsContent() {
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium">{team.name}</span>
                                 {team.is_primary && (
-                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-[10px]">
                                     Primary
                                   </Badge>
                                 )}
@@ -253,7 +253,7 @@ function CoachTournamentsContent() {
                                   </Badge>
                                 )}
                                 {(!team.approval_status || team.approval_status === 'approved') && (
-                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-200">
                                     Approved
                                   </Badge>
                                 )}

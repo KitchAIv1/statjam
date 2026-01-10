@@ -32,12 +32,12 @@ interface CompactPlayByPlayFeedProps {
 const getStatBadgeStyles = (statType: string, modifier?: string): string => {
   if (statType === 'field_goal' || statType === 'three_pointer' || statType === 'free_throw') {
     return modifier === 'made' 
-      ? 'bg-green-100 text-green-700 border-green-200' 
+      ? 'bg-orange-100 text-orange-700 border-orange-200' 
       : 'bg-red-50 text-red-600 border-red-200';
   }
   const styles: Record<string, string> = {
-    rebound: 'bg-blue-100 text-blue-700 border-blue-200',
-    assist: 'bg-purple-100 text-purple-700 border-purple-200',
+    rebound: 'bg-gray-100 text-gray-700 border-gray-200',
+    assist: 'bg-orange-50 text-orange-700 border-orange-200',
     steal: 'bg-teal-100 text-teal-700 border-teal-200',
     block: 'bg-red-100 text-red-700 border-red-200',
     turnover: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -175,13 +175,13 @@ export function CompactPlayByPlayFeed({ plays, teamAName, teamBName, isLive, cli
                       <>
                         <span className={`text-lg font-extrabold leading-none ${
                           play.statType === 'three_pointer' ? 'text-orange-600' :
-                          play.statType === 'field_goal' ? 'text-green-600' : 'text-blue-600'
+                          play.statType === 'field_goal' ? 'text-orange-600' : 'text-gray-700'
                         }`}>
                           +{scoringInfo.points}
                         </span>
                         <span className={`text-[8px] font-bold uppercase ${
                           play.statType === 'three_pointer' ? 'text-orange-500' :
-                          play.statType === 'field_goal' ? 'text-green-500' : 'text-blue-500'
+                          play.statType === 'field_goal' ? 'text-orange-500' : 'text-gray-500'
                         }`}>
                           {scoringInfo.points === 1 ? 'PT' : 'PTS'}
                         </span>

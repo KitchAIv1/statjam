@@ -90,7 +90,7 @@ function CoachGamesContent() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'in_progress':
-        return <Badge className="bg-green-500 text-white text-xs">Live</Badge>;
+        return <Badge className="bg-orange-500 text-white text-xs">Live</Badge>;
       case 'completed':
         return <Badge variant="secondary" className="text-xs">Completed</Badge>;
       default:
@@ -163,7 +163,7 @@ function CoachGamesContent() {
             <div className="flex gap-4 text-sm text-gray-500 mt-2">
               <span>{total} total games</span>
               {inProgressGames.length > 0 && (
-                <span className="text-green-600">{inProgressGames.length} live</span>
+                <span className="text-orange-600">{inProgressGames.length} live</span>
               )}
               <span>{completedGames.length} completed</span>
             </div>
@@ -194,7 +194,7 @@ function CoachGamesContent() {
                 {inProgressGames.map((game) => (
                   <div
                     key={game.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-green-50 border border-green-200 rounded-lg"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-orange-50 border border-orange-200 rounded-lg"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">

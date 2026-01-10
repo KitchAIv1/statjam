@@ -161,9 +161,9 @@ export default function CoachClipsPage({ params }: CoachClipsPageProps) {
           </div>
 
           {/* Clip Count Badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full">
-            <Film className="w-4 h-4 text-green-600" />
-            <span className="text-sm font-medium text-green-700">{clips.length} clips</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 rounded-full">
+            <Film className="w-4 h-4 text-orange-600" />
+            <span className="text-sm font-medium text-orange-700">{clips.length} clips</span>
           </div>
         </div>
       </header>

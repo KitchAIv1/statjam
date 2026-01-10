@@ -126,9 +126,9 @@ export function CommandCenterHeader({ game, isLive }: CommandCenterHeaderProps) 
           )}
           <span className={`text-xs font-bold uppercase tracking-wide px-2 py-1 rounded ${
             isCompleted 
-              ? 'bg-green-100 text-green-700 border border-green-200' 
+              ? 'bg-gray-100 text-gray-700 border border-gray-200' 
               : isLive 
-                ? 'bg-red-100 text-red-600 border border-red-200' 
+                ? 'bg-orange-100 text-orange-600 border border-orange-200' 
                 : 'bg-orange-100 text-orange-600 border border-orange-200'
           }`}>
             {getStatusLabel()}

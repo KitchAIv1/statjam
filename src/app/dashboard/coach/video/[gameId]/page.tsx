@@ -296,17 +296,17 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
                   {!limitLoading && !dailyUploads.isExempt && (
                     <div className={`mb-4 p-3 rounded-lg flex items-center justify-between
                       ${dailyUploads.remaining > 0 
-                        ? 'bg-blue-50 border border-blue-200' 
+                        ? 'bg-orange-50 border border-orange-200' 
                         : 'bg-red-50 border border-red-200'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <Calendar className={`w-4 h-4 ${dailyUploads.remaining > 0 ? 'text-blue-600' : 'text-red-600'}`} />
-                        <span className={`text-sm font-medium ${dailyUploads.remaining > 0 ? 'text-blue-800' : 'text-red-700'}`}>
+                        <Calendar className={`w-4 h-4 ${dailyUploads.remaining > 0 ? 'text-orange-600' : 'text-red-600'}`} />
+                        <span className={`text-sm font-medium ${dailyUploads.remaining > 0 ? 'text-orange-700' : 'text-red-700'}`}>
                           Daily Limit: {dailyUploads.uploadsToday}/{dailyUploads.limit} today
                         </span>
                       </div>
-                      <span className={`text-xs ${dailyUploads.remaining > 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                      <span className={`text-xs ${dailyUploads.remaining > 0 ? 'text-orange-600' : 'text-red-600'}`}>
                         {dailyUploads.remaining > 0 
                           ? `${dailyUploads.remaining} remaining` 
                           : 'Resets at midnight EST'

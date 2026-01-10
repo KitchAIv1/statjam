@@ -865,7 +865,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                   variant="default"
                   size="sm"
                   onClick={() => setShowAwardsModal(true)}
-                  className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                  className="gap-2 bg-orange-600 hover:bg-orange-700 text-white"
                 >
                   <Trophy className="w-4 h-4" />
                   {gameData.status === 'completed' ? 'Edit Awards' : 'Complete Game'}
@@ -967,7 +967,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
               {isPolling && processingStatus && (
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
                     Checking status...
                   </div>
                   {processingStatus.encodeProgress > 0 && (
@@ -1053,7 +1053,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                         variant="default"
                         size="sm"
                         onClick={handleClockResume}
-                        className="gap-2 bg-blue-600 hover:bg-blue-700 text-white animate-pulse"
+                        className="gap-2 bg-orange-600 hover:bg-orange-700 text-white animate-pulse"
                       >
                         <Play className="w-4 h-4" />
                         Resume Clock
@@ -1072,7 +1072,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                             setFrozenClockValue(gameClock);
                           }
                         }}
-                        className="gap-2 text-blue-600 border-blue-300 hover:bg-blue-50"
+                        className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
                       >
                         <Pause className="w-4 h-4" />
                         Pause Clock
@@ -1096,12 +1096,12 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                 
                 {/* Frozen Clock Banner */}
                 {clockFrozen && frozenClockValue && (
-                  <div className="mt-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-                    <span className="text-blue-700 font-medium text-sm">
+                  <div className="mt-2 px-4 py-2 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-3">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse" />
+                    <span className="text-orange-700 font-medium text-sm">
                       ❄️ Game clock frozen at Q{frozenClockValue.quarter > 4 ? `OT${frozenClockValue.quarter - 4}` : frozenClockValue.quarter} {frozenClockValue.minutesRemaining}:{frozenClockValue.secondsRemaining.toString().padStart(2, '0')} (foul committed)
                     </span>
-                    <span className="text-blue-500 text-xs">Click Resume when play resumes</span>
+                    <span className="text-orange-500 text-xs">Click Resume when play resumes</span>
                   </div>
                 )}
                 
