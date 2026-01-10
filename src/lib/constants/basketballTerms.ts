@@ -38,3 +38,31 @@ export const ADVANCED_STATS: StatTerm[] = [
   },
 ];
 
+// ============================================================================
+// TEAM SEASON STATS - Terminology for aggregate team statistics
+// ============================================================================
+
+export const TEAM_SHOOTING_STATS: StatTerm[] = [
+  { abbr: 'FG%', full: 'Field Goal Percentage', description: 'Percentage of all 2PT and 3PT shots made' },
+  { abbr: '3P%', full: 'Three-Point Percentage', description: 'Percentage of shots from beyond the arc made' },
+  { abbr: 'FT%', full: 'Free Throw Percentage', description: 'Percentage of foul shots made' },
+];
+
+export const TEAM_PER_GAME_STATS: StatTerm[] = [
+  { abbr: 'PPG', full: 'Points Per Game', description: 'Average points scored per game' },
+  { abbr: 'RPG', full: 'Rebounds Per Game', description: 'Average total rebounds per game' },
+  { abbr: 'APG', full: 'Assists Per Game', description: 'Average assists per game' },
+  { abbr: 'SPG', full: 'Steals Per Game', description: 'Average steals per game' },
+  { abbr: 'BPG', full: 'Blocks Per Game', description: 'Average blocks per game' },
+  { abbr: 'TOPG', full: 'Turnovers Per Game', description: 'Average turnovers per game (lower is better)' },
+];
+
+export const TEAM_TOTAL_STATS: StatTerm[] = [
+  { abbr: 'PTS', full: 'Total Points', description: 'Total points scored across all games' },
+  { abbr: 'REB', full: 'Total Rebounds', description: 'Total rebounds across all games' },
+  { abbr: 'AST', full: 'Total Assists', description: 'Total assists across all games' },
+  { abbr: 'STL', full: 'Total Steals', description: 'Total steals across all games' },
+  { abbr: 'BLK', full: 'Total Blocks', description: 'Total blocks across all games' },
+  { abbr: 'TO', full: 'Total Turnovers', description: 'Total turnovers across all games (lower is better)' },
+];
+

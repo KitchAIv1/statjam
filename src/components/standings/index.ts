@@ -9,4 +9,5 @@ export * from './SeasonHeader';
 export * from './GameResultsList';
 export * from './SeasonSkeleton';
 export * from './AnimatedList';
+export * from './TeamSeasonStats';
 

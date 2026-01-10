@@ -15,7 +15,7 @@ import { useSeasonPlayerStats } from '@/hooks/useSeasonPlayerStats';
 import { useStandings } from '@/hooks/useStandings';
 import { 
   SeasonHeader, TeamStandingsTable, PlayerStatsTable, 
-  GameResultsList, SeasonSkeleton, PageTransition 
+  GameResultsList, SeasonSkeleton, PageTransition, TeamSeasonStats 
 } from '@/components/standings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/Button';
@@ -160,7 +160,7 @@ export default function SeasonDetailPage({ params }: SeasonDetailPageProps) {
               </TabsTrigger>
               <TabsTrigger value="stats" className="gap-2 transition-all">
                 <BarChart3 className="w-4 h-4" />
-                Analytics
+                Team Stats
               </TabsTrigger>
             </TabsList>
 
@@ -191,12 +191,8 @@ export default function SeasonDetailPage({ params }: SeasonDetailPageProps) {
             </TabsContent>
 
             <TabsContent value="stats" className="mt-4 focus:outline-none">
-              <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-                <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">Advanced analytics coming soon</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Track trends, compare performance, and get AI insights
-                </p>
+              <div className="rounded-xl border border-gray-200 bg-white p-5">
+                <TeamSeasonStats players={players} gamesPlayed={games.length} />
               </div>
             </TabsContent>
           </Tabs>
