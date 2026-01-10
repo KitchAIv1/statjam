@@ -103,7 +103,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare, isVerifie
     <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full relative">
       {/* Basketball Splash Background */}
       <div 
-        className="absolute inset-0 bg-no-repeat opacity-[0.08] pointer-events-none"
+        className="absolute inset-0 bg-no-repeat opacity-[0.20] pointer-events-none"
         style={{ 
           backgroundImage: 'url(/images/basketball-splash.webp)',
           backgroundPosition: 'right center',
@@ -192,7 +192,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare, isVerifie
               {statsDisplay.map((stat, index) => (
                 <div 
                   key={index}
-                  className="bg-primary/10 dark:bg-primary/20 rounded-lg p-3 text-center hover:bg-primary/15 dark:hover:bg-primary/25 transition-colors border border-primary/20"
+                  className="bg-white/70 dark:bg-gray-800/70 rounded-lg p-3 text-center hover:bg-white/80 dark:hover:bg-gray-800/80 transition-colors border border-primary/20 backdrop-blur-sm"
                 >
                   <div className="flex items-center justify-center mb-1">
                     <stat.icon className="w-4 h-4 text-primary" />
@@ -224,7 +224,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare, isVerifie
                       : `https://facebook.com/${profileData.socialLinks.facebook}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200"
+                    className="w-8 h-8 rounded-full bg-white/70 hover:bg-white/90 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200 backdrop-blur-sm"
                   >
                     <Facebook className="w-4 h-4" />
                   </a>
@@ -234,7 +234,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare, isVerifie
                     href={`https://twitter.com/${profileData.socialLinks.twitter}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200"
+                    className="w-8 h-8 rounded-full bg-white/70 hover:bg-white/90 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200 backdrop-blur-sm"
                   >
                     <Twitter className="w-4 h-4" />
                   </a>
@@ -244,7 +244,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare, isVerifie
                     href={`https://instagram.com/${profileData.socialLinks.instagram}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200"
+                    className="w-8 h-8 rounded-full bg-white/70 hover:bg-white/90 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200 backdrop-blur-sm"
                   >
                     <Instagram className="w-4 h-4" />
                   </a>
@@ -254,7 +254,7 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare, isVerifie
                     href={profileData.socialLinks.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200"
+                    className="w-8 h-8 rounded-full bg-white/70 hover:bg-white/90 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors border border-gray-200 backdrop-blur-sm"
                   >
                     <Globe className="w-4 h-4" />
                   </a>
