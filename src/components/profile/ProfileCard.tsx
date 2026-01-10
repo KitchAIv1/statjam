@@ -19,12 +19,14 @@ import {
 import { OrganizerProfile, CoachProfile, StatAdminProfile, ProfileShareData } from '@/lib/types/profile';
 import { getCountryName } from '@/data/countries';
 import { SocialFooter } from '@/components/shared/SocialFooter';
+import { VerifiedBadge } from '@/components/shared/VerifiedBadge';
 
 interface ProfileCardProps {
   profileData: OrganizerProfile | CoachProfile | StatAdminProfile;
   shareData: ProfileShareData;
   onEdit: () => void;
   onShare: () => void;
+  isVerified?: boolean;
 }
 
 /**
@@ -40,7 +42,7 @@ interface ProfileCardProps {
  * 
  * Follows .cursorrules: <200 lines, UI only
  */
-export function ProfileCard({ profileData, shareData, onEdit, onShare }: ProfileCardProps) {
+export function ProfileCard({ profileData, shareData, onEdit, onShare, isVerified }: ProfileCardProps) {
   // Track avatar image loading state
   const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
 
@@ -160,8 +162,9 @@ export function ProfileCard({ profileData, shareData, onEdit, onShare }: Profile
           <div className="flex-1 text-center sm:text-left">
             {/* Name & Role */}
             <div className="mb-3">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2 justify-center sm:justify-start">
                 {profileData.name}
+                {isVerified && <VerifiedBadge size="md" />}
               </h2>
               <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                 <Badge className={`${getRoleBadgeClass(profileData.role)} text-white gap-1`}>

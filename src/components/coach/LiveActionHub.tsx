@@ -61,11 +61,17 @@ export function LiveActionHub({
   const showDailyLimit = dailyUploads && !dailyUploads.isExempt;
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full flex flex-col">
-      {/* Gradient Top Bar */}
-      <div className="h-2 bg-gradient-to-r from-primary via-accent to-orange-500 flex-shrink-0"></div>
+    <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full flex flex-col relative">
+      {/* Leaderboard-style Background */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center opacity-[0.12] pointer-events-none"
+        style={{ backgroundImage: 'url(/images/leadersection.webp)' }}
+      />
       
-      <CardContent className="p-4 pt-3 flex flex-col flex-1">
+      {/* Gradient Top Bar */}
+      <div className="h-2 bg-gradient-to-r from-primary via-accent to-orange-500 flex-shrink-0 relative z-10"></div>
+      
+      <CardContent className="p-4 pt-3 flex flex-col flex-1 relative z-10">
         {/* Header */}
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
           Quick Actions

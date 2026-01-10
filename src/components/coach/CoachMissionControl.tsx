@@ -54,7 +54,7 @@ export function CoachMissionControl({
 }: CoachMissionControlProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { limits, tier, videoCredits, refetch: refetchSubscription } = useSubscription('coach');
+  const { limits, tier, videoCredits, isVerified, refetch: refetchSubscription } = useSubscription('coach');
   
   // Dashboard data hook
   const dashboardData = useCoachDashboardData(user?.id);
@@ -228,6 +228,7 @@ export function CoachMissionControl({
               shareData={ProfileService.generateShareData(profileData)}
               onEdit={onEditProfile}
               onShare={handleShare}
+              isVerified={isVerified}
             />
           ) : null}
         </div>

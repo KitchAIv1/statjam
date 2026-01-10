@@ -9,6 +9,7 @@ import { OrganizerVideoTracking } from "./OrganizerVideoTracking";
 import { ProfileCard, ProfileCardSkeleton } from "./profile/ProfileCard";
 import { ProfileEditModal } from "./profile/ProfileEditModal";
 import { useOrganizerProfile } from "@/hooks/useOrganizerProfile";
+import { useSubscription } from "@/hooks/useSubscription";
 import { ProfileService } from "@/lib/services/profileService";
 
 type ActiveSection = 'overview' | 'tournaments' | 'teams' | 'games' | 'video-tracking' | 'live-stream';
@@ -26,6 +27,7 @@ export function OrganizerDashboard({ user }: OrganizerDashboardProps) {
   
   // Fetch organizer profile data
   const { profileData, loading: profileLoading, updateProfile } = useOrganizerProfile(user?.id || '');
+  const { isVerified } = useSubscription('organizer');
 
   // Handle profile share
   const handleShare = async () => {
@@ -98,6 +100,7 @@ export function OrganizerDashboard({ user }: OrganizerDashboardProps) {
               shareData={ProfileService.generateShareData(profileData)}
               onEdit={() => setShowEditModal(true)}
               onShare={handleShare}
+              isVerified={isVerified}
             />
           )}
           

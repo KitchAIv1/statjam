@@ -8,6 +8,8 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { getNavigationForRole } from "@/lib/navigation-config";
 import { Menu, X } from "lucide-react";
 import { OrganizerGuideButton } from "@/components/guide";
+import { useSubscription } from "@/hooks/useSubscription";
+import { VerifiedBadge } from "@/components/shared/VerifiedBadge";
 
 interface NavigationHeaderContentProps {
   minimal?: boolean;
@@ -18,6 +20,7 @@ function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentPro
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user, loading, signOut } = useAuthContext(); // ✅ NO API CALL - Uses context
+  const { isVerified } = useSubscription();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   
@@ -94,14 +97,17 @@ function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentPro
     <header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Logo + Verified Badge */}
           <div 
             onClick={handleHome}
-            className="cursor-pointer"
+            className="cursor-pointer flex items-center gap-2"
           >
             <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
               StatJam
             </h1>
+            {isAuthenticated && isVerified && (
+              <VerifiedBadge variant="pill" />
+            )}
           </div>
 
           {/* Desktop Navigation - Hidden in minimal mode */}
