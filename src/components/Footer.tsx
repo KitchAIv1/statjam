@@ -2,8 +2,6 @@
 
 import { Separator } from "@/components/ui/separator";
 import { Facebook, Instagram, Twitter } from "lucide-react";
-import { useState } from "react";
-import { FeedbackModal } from "./feedback/FeedbackModal";
 
 // TikTok icon as a custom SVG since it's not in lucide-react
 function TikTokIcon({ className }: { className?: string }) {
@@ -20,8 +18,6 @@ function TikTokIcon({ className }: { className?: string }) {
 }
 
 export function Footer() {
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-
   return (
     <footer className="bg-gray-900 text-white py-16">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -46,16 +42,8 @@ export function Footer() {
               <span className="block text-gray-500 text-sm">
                 support@statjam.net
               </span>
-              <button
-                onClick={() => setIsFeedbackOpen(true)}
-                className="block text-gray-300 hover:text-white transition-colors text-left"
-              >
-                Give Feedback
-              </button>
             </div>
           </div>
-
-          <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
 
           {/* Column 2 - For Organizers */}
           <div>

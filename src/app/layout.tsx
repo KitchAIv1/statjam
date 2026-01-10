@@ -4,7 +4,6 @@ import './globals.css'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { Toaster } from 'sonner'
-import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 
 // Initialize Sentry for client-side
 if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SENTRY_DSN) {
@@ -116,7 +115,6 @@ export default function RootLayout({
             closeButton
             duration={4000}
           />
-          <FeedbackButton />
         </AuthProvider>
       </body>
     </html>
