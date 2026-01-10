@@ -2,12 +2,17 @@
 // USE COACH PROFILE HOOK
 // ============================================================================
 // Purpose: Custom hook for coach profile data and actions
+// ⚡ Optimized with keepPreviousData pattern - no loading flash on return
 // Follows .cursorrules: <100 lines, single responsibility
 // ============================================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CoachProfile, ProfileUpdateRequest } from '@/lib/types/profile';
 import { ProfileService } from '@/lib/services/profileService';
+import { cache, CacheTTL } from '@/lib/utils/cache';
+
+// Cache key for coach profile
+const getProfileCacheKey = (userId: string) => `coach_profile:${userId}`;
 
 interface UseCoachProfileReturn {
   profileData: CoachProfile | null;
@@ -18,67 +23,92 @@ interface UseCoachProfileReturn {
 }
 
 export function useCoachProfile(userId: string): UseCoachProfileReturn {
-  const [profileData, setProfileData] = useState<CoachProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ⚡ Check cache SYNCHRONOUSLY on initial render - prevents spinner flash
+  const [profileData, setProfileData] = useState<CoachProfile | null>(() => {
+    if (userId) {
+      return cache.get<CoachProfile>(getProfileCacheKey(userId));
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(() => {
+    // Only show loading if no cached data
+    return userId ? !cache.get(getProfileCacheKey(userId)) : true;
+  });
   const [error, setError] = useState<string | null>(null);
 
   // Fetch profile data
-  const fetchProfile = async () => {
-    try {
+  const fetchProfile = useCallback(async (skipCache = false) => {
+    if (!userId) return;
+    
+    const cacheKey = getProfileCacheKey(userId);
+    const cached = cache.get<CoachProfile>(cacheKey);
+    
+    // ⚡ Return cached data immediately (unless skipCache)
+    if (!skipCache && cached) {
+      setProfileData(cached);
+      setLoading(false);
+      return;
+    }
+
+    // ⚡ Only show loading if NO cached data exists
+    if (!cached) {
       setLoading(true);
-      setError(null);
-      
+    }
+    setError(null);
+    
+    try {
       const fetchedProfile = await ProfileService.getCoachProfile(userId);
       
       if (fetchedProfile) {
+        cache.set(cacheKey, fetchedProfile, CacheTTL.coachDashboard);
         setProfileData(fetchedProfile);
       } else {
         setError('Failed to load profile');
       }
     } catch (err) {
-      console.error('❌ Error fetching coach profile:', err);
-      setError('Failed to load profile');
+      // ⚡ Keep showing cached data on error
+      if (!cached) {
+        setError('Failed to load profile');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   // Update profile with optimistic updates
   const updateProfile = async (updates: ProfileUpdateRequest): Promise<boolean> => {
     try {
-      // ⚡ OPTIMIZATION: Update local state immediately (optimistic update)
+      // ⚡ Optimistic update - update cache and state immediately
+      const cacheKey = getProfileCacheKey(userId);
       if (profileData) {
-        setProfileData({
+        const updatedProfile = {
           ...profileData,
           name: updates.name,
           bio: updates.bio,
           location: updates.location,
           socialLinks: updates.socialLinks,
           profilePhotoUrl: updates.profilePhotoUrl
-          // Note: Stats remain unchanged - no need to re-fetch
-        });
+        };
+        setProfileData(updatedProfile);
+        cache.set(cacheKey, updatedProfile, CacheTTL.coachDashboard);
       }
 
-      // Save to database in background
       const success = await ProfileService.updateProfile(userId, updates);
       
       if (!success) {
-        // Rollback on failure - re-fetch to get correct data
-        await fetchProfile();
+        await fetchProfile(true); // Skip cache on rollback
       }
       
       return success;
     } catch (err) {
-      console.error('❌ Error updating profile:', err);
-      // Rollback on error
-      await fetchProfile();
+      await fetchProfile(true); // Skip cache on rollback
       return false;
     }
   };
 
-  // Refresh profile data
+  // Refresh profile data (force skip cache)
   const refreshProfile = async () => {
-    await fetchProfile();
+    await fetchProfile(true);
   };
 
   // Initial fetch
@@ -86,14 +116,8 @@ export function useCoachProfile(userId: string): UseCoachProfileReturn {
     if (userId) {
       fetchProfile();
     }
-  }, [userId]);
+  }, [userId, fetchProfile]);
 
-  return {
-    profileData,
-    loading,
-    error,
-    updateProfile,
-    refreshProfile
-  };
+  return { profileData, loading, error, updateProfile, refreshProfile };
 }
 
