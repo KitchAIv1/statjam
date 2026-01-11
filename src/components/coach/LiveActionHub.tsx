@@ -72,10 +72,23 @@ export function LiveActionHub({
       <div className="h-2 bg-gradient-to-r from-primary via-accent to-orange-500 flex-shrink-0 relative z-10"></div>
       
       <CardContent className="p-4 pt-3 flex flex-col flex-1 relative z-10">
-        {/* Header */}
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          Quick Actions
-        </h3>
+        {/* Header with Video Credits Badge */}
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Quick Actions
+          </h3>
+          {/* ✅ Visible Video Credits Badge */}
+          <button
+            onClick={onBuyCredits}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all
+              ${hasCredits 
+                ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' 
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-dashed border-gray-300'}`}
+          >
+            <Video className="w-3.5 h-3.5" />
+            <span>{videoCredits ?? 0} credits</span>
+          </button>
+        </div>
 
         {/* Actions */}
         <div className="space-y-3 flex-1">

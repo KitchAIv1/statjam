@@ -241,7 +241,14 @@ export function CoachMissionControl({
             dailyUploads={dailyUploads}
             onStartGame={handleStartGame}
             onUploadVideo={handleUploadVideo}
-            onBuyCredits={() => setShowVideoCreditsModal(true)}
+            onBuyCredits={() => {
+              // ✅ GATEKEEPING: If not subscribed, show upgrade modal first
+              if (!limits.hasVideoAccess && videoCredits === 0) {
+                setShowUpgradeModal(true);
+              } else {
+                setShowVideoCreditsModal(true);
+              }
+            }}
           />
         </div>
       </div>
