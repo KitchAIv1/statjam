@@ -18,7 +18,8 @@ import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 import { GameServiceV3 } from '@/lib/services/gameServiceV3';
 
 // ✅ OPTIMIZATION: Debounce delay to prevent query cascade on rapid stat recording
-const REALTIME_DEBOUNCE_MS = 500;
+// Increased from 500ms to 2000ms to allow batch completion before refetch
+const REALTIME_DEBOUNCE_MS = 2000;
 
 interface OpponentPlayerStats {
   playerId: string;

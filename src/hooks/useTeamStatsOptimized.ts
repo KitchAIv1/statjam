@@ -16,6 +16,9 @@ import { TeamStatsService, TeamStats, PlayerStats } from '@/lib/services/teamSta
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 
+// ✅ OPTIMIZATION: Debounce delay to prevent query cascade on rapid stat recording
+const REALTIME_DEBOUNCE_MS = 2000;
+
 export interface TeamStatsOptimizedData {
   teamStats: TeamStats | null;
   onCourtPlayers: PlayerStats[];
@@ -35,6 +38,9 @@ export function useTeamStatsOptimized(gameId: string, teamId: string) {
 
   // ✅ FIX: Use ref to store latest loadTeamStats function to avoid stale closures in subscription callback
   const loadTeamStatsRef = useRef<((skipCache?: boolean, isRealTimeUpdate?: boolean) => Promise<void>) | null>(null);
+  
+  // ✅ OPTIMIZATION: Debounce timer ref to batch rapid updates
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadTeamStats = useCallback(async (skipCache: boolean = false, isRealTimeUpdate: boolean = false) => {
     if (!gameId || !teamId) {
@@ -126,6 +132,7 @@ export function useTeamStatsOptimized(gameId: string, teamId: string) {
    * ✅ REAL-TIME SUBSCRIPTION: Set up WebSocket subscriptions for live updates
    * Similar to useTeamStats but maintains cache-first loading for initial load
    * ✅ FIX: Use ref to access latest loadTeamStats to avoid stale closures
+   * ✅ OPTIMIZATION: Debounced to prevent query cascade on rapid stat recording
    */
   useEffect(() => {
     if (!gameId || !teamId) return;
@@ -133,21 +140,33 @@ export function useTeamStatsOptimized(gameId: string, teamId: string) {
     // ✅ FIX: Ensure ref is initialized before setting up subscription
     loadTeamStatsRef.current = loadTeamStats;
     
-    // Use the existing hybrid subscription system
-    // ✅ SIMPLIFIED APPROACH: Match play-by-play feed (which works correctly)
-    // Refresh immediately for ANY relevant update - let database queries handle correct state
-    const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
-      // Refresh for ANY relevant update (games, game_stats, game_substitutions)
-      // This matches the working play-by-play feed approach - simple and reliable
-      if (table === 'games' || table === 'game_stats' || table === 'game_substitutions') {
-        // ✅ FIX: Use ref to access latest loadTeamStats function (avoids stale closure)
+    // ✅ OPTIMIZATION: Debounced fetch to batch rapid updates
+    const debouncedFetch = () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
         if (loadTeamStatsRef.current) {
           void loadTeamStatsRef.current(true, true); // skipCache=true, isRealTimeUpdate=true
         }
+      }, REALTIME_DEBOUNCE_MS);
+    };
+    
+    // Use the existing hybrid subscription system
+    const unsubscribe = gameSubscriptionManager.subscribe(gameId, (table: string, payload: any) => {
+      // Refresh for ANY relevant update (games, game_stats, game_substitutions)
+      if (table === 'games' || table === 'game_stats' || table === 'game_substitutions') {
+        debouncedFetch(); // ✅ OPTIMIZATION: Debounced instead of immediate
       }
     });
 
-    return unsubscribe;
+    // Cleanup debounce timer on unmount
+    return () => {
+      unsubscribe();
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, [gameId, teamId, loadTeamStats]); // ✅ Keep loadTeamStats in deps to re-init ref when it changes
 
   return {

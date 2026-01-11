@@ -18,7 +18,8 @@ import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { TeamStatsService, TeamStats, PlayerStats } from '@/lib/services/teamStatsService';
 
 // ✅ OPTIMIZATION: Debounce delay to prevent query cascade on rapid stat recording
-const REALTIME_DEBOUNCE_MS = 500;
+// Increased from 500ms to 2000ms to allow batch completion before refetch
+const REALTIME_DEBOUNCE_MS = 2000;
 
 export interface TeamStatsData {
   teamStats: TeamStats | null;
