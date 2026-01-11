@@ -173,6 +173,7 @@ export class CoachGameService {
 
   /**
    * Get coach games
+   * ✅ FIXED: Calculates scores from game_stats (source of truth) instead of stale DB values
    */
   static async getCoachGames(coachId: string): Promise<CoachGame[]> {
     try {
@@ -184,27 +185,63 @@ export class CoachGameService {
         .order('start_time', { ascending: false });
 
       if (error) throw error;
+      if (!data || data.length === 0) return [];
 
-      return (data || []).map(game => ({
-        id: game.id,
-        coach_id: coachId,
-        coach_team_id: game.team_a_id,
-        opponent_name: game.opponent_name,
-        opponent_tournament_name: game.meta_json?.opponent_tournament_name,
-        is_coach_game: true,
-        status: game.status,
-        start_time: game.start_time,
-        end_time: game.end_time,
-        quarter: game.quarter,
-        game_clock_minutes: game.game_clock_minutes,
-        game_clock_seconds: game.game_clock_seconds,
-        is_clock_running: game.is_clock_running,
-        home_score: game.home_score,
-        away_score: game.away_score,
-        meta_json: game.meta_json,
-        created_at: game.created_at,
-        updated_at: game.updated_at
-      }));
+      // ✅ BATCH fetch game_stats for ALL games (avoids N+1 queries)
+      const gameIds = data.map(g => g.id);
+      const { data: allStats } = await supabase
+        .from('game_stats')
+        .select('game_id, team_id, stat_type, modifier, is_opponent_stat')
+        .in('game_id', gameIds)
+        .eq('modifier', 'made');
+
+      // ✅ Pre-calculate scores from game_stats
+      const scoresByGameId = new Map<string, { home: number; away: number }>();
+      for (const game of data) {
+        const gameStats = (allStats || []).filter(s => s.game_id === game.id);
+        let home = 0, away = 0;
+        
+        for (const stat of gameStats) {
+          let points = 0;
+          if (stat.stat_type === 'field_goal' || stat.stat_type === 'two_pointer') points = 2;
+          else if (stat.stat_type === 'three_pointer' || stat.stat_type === '3_pointer') points = 3;
+          else if (stat.stat_type === 'free_throw') points = 1;
+          else continue;
+
+          if (stat.is_opponent_stat) {
+            away += points;
+          } else if (stat.team_id === game.team_a_id) {
+            home += points;
+          } else {
+            away += points;
+          }
+        }
+        scoresByGameId.set(game.id, { home, away });
+      }
+
+      return data.map(game => {
+        const scores = scoresByGameId.get(game.id) || { home: 0, away: 0 };
+        return {
+          id: game.id,
+          coach_id: coachId,
+          coach_team_id: game.team_a_id,
+          opponent_name: game.opponent_name,
+          opponent_tournament_name: game.meta_json?.opponent_tournament_name,
+          is_coach_game: true,
+          status: game.status,
+          start_time: game.start_time,
+          end_time: game.end_time,
+          quarter: game.quarter,
+          game_clock_minutes: game.game_clock_minutes,
+          game_clock_seconds: game.game_clock_seconds,
+          is_clock_running: game.is_clock_running,
+          home_score: scores.home,
+          away_score: scores.away,
+          meta_json: game.meta_json,
+          created_at: game.created_at,
+          updated_at: game.updated_at
+        };
+      });
     } catch (error) {
       console.error('❌ Error fetching coach games:', error);
       throw error;
@@ -214,6 +251,7 @@ export class CoachGameService {
   /**
    * Get games for a specific team with pagination support
    * Uses team_a_id to identify coach team games (coach team is always team_a)
+   * ✅ FIXED: Calculates scores from game_stats (source of truth) instead of stale DB values
    */
   static async getTeamGames(
     teamId: string, 
@@ -240,27 +278,67 @@ export class CoachGameService {
         .range(offset, offset + limit - 1);
 
       if (error) throw error;
+      if (!data || data.length === 0) {
+        return { games: [], hasMore: false, total: count || 0 };
+      }
 
-      const games = (data || []).map(game => ({
-        id: game.id,
-        coach_id: game.stat_admin_id,
-        coach_team_id: game.team_a_id,
-        opponent_name: game.opponent_name || 'Unknown Opponent',
-        opponent_tournament_name: game.meta_json?.opponent_tournament_name,
-        is_coach_game: true,
-        status: game.status,
-        start_time: game.start_time,
-        end_time: game.end_time,
-        quarter: game.quarter,
-        game_clock_minutes: game.game_clock_minutes,
-        game_clock_seconds: game.game_clock_seconds,
-        is_clock_running: game.is_clock_running,
-        home_score: game.home_score,
-        away_score: game.away_score,
-        meta_json: game.meta_json,
-        created_at: game.created_at,
-        updated_at: game.updated_at
-      }));
+      // ✅ BATCH fetch game_stats for ALL games (avoids N+1 queries)
+      const gameIds = data.map(g => g.id);
+      const { data: allStats } = await supabase
+        .from('game_stats')
+        .select('game_id, team_id, stat_type, modifier, is_opponent_stat')
+        .in('game_id', gameIds)
+        .eq('modifier', 'made'); // Only need made shots for scoring
+
+      // ✅ Pre-calculate scores from game_stats (source of truth)
+      const scoresByGameId = new Map<string, { home: number; away: number }>();
+      for (const game of data) {
+        const gameStats = (allStats || []).filter(s => s.game_id === game.id);
+        let home = 0, away = 0;
+        
+        for (const stat of gameStats) {
+          // Calculate points: field_goal=2, three_pointer=3, free_throw=1
+          let points = 0;
+          if (stat.stat_type === 'field_goal' || stat.stat_type === 'two_pointer') points = 2;
+          else if (stat.stat_type === 'three_pointer' || stat.stat_type === '3_pointer') points = 3;
+          else if (stat.stat_type === 'free_throw') points = 1;
+          else continue;
+
+          // Handle is_opponent_stat for coach mode
+          if (stat.is_opponent_stat) {
+            away += points;
+          } else if (stat.team_id === game.team_a_id) {
+            home += points;
+          } else {
+            away += points;
+          }
+        }
+        scoresByGameId.set(game.id, { home, away });
+      }
+
+      const games = data.map(game => {
+        const calculatedScores = scoresByGameId.get(game.id) || { home: 0, away: 0 };
+        return {
+          id: game.id,
+          coach_id: game.stat_admin_id,
+          coach_team_id: game.team_a_id,
+          opponent_name: game.opponent_name || 'Unknown Opponent',
+          opponent_tournament_name: game.meta_json?.opponent_tournament_name,
+          is_coach_game: true,
+          status: game.status,
+          start_time: game.start_time,
+          end_time: game.end_time,
+          quarter: game.quarter,
+          game_clock_minutes: game.game_clock_minutes,
+          game_clock_seconds: game.game_clock_seconds,
+          is_clock_running: game.is_clock_running,
+          home_score: calculatedScores.home, // ✅ Use calculated score
+          away_score: calculatedScores.away, // ✅ Use calculated score
+          meta_json: game.meta_json,
+          created_at: game.created_at,
+          updated_at: game.updated_at
+        };
+      });
 
       return {
         games,
