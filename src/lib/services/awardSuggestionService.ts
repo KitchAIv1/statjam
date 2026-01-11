@@ -4,6 +4,7 @@
  * PURPOSE: Calculate and suggest Player of the Game and Hustle Player
  * based on game statistics
  * 
+ * ✅ OPTIMIZED: Supports both async (fetches data) and sync (pre-fetched data) modes
  * Follows .cursorrules: <200 lines service
  */
 
@@ -183,6 +184,51 @@ export class AwardSuggestionService {
     ]);
 
     return { playerOfTheGame, hustlePlayer };
+  }
+
+  /**
+   * ✅ OPTIMIZED: Suggest both awards using PRE-FETCHED player stats
+   * Eliminates duplicate API calls when caller already has the data
+   */
+  static suggestBothAwardsFromStats(
+    playerStats: PlayerStats[]
+  ): {
+    playerOfTheGame: AwardSuggestion | null;
+    hustlePlayer: AwardSuggestion | null;
+  } {
+    if (playerStats.length === 0) {
+      return { playerOfTheGame: null, hustlePlayer: null };
+    }
+
+    // Calculate Player of the Game (impact score)
+    const pogSuggestions = playerStats.map(player => ({
+      playerId: player.playerId,
+      playerName: player.playerName,
+      score: (player.points * 2) + player.rebounds + player.assists +
+             (player.steals * 1.5) + (player.blocks * 1.5) - (player.turnovers * 0.5),
+      reasoning: this.generatePlayerOfGameReasoning(player),
+      stats: {
+        points: player.points, rebounds: player.rebounds, assists: player.assists,
+        steals: player.steals, blocks: player.blocks, turnovers: player.turnovers
+      }
+    })).sort((a, b) => b.score - a.score);
+
+    // Calculate Hustle Player (hustle score)
+    const hustleSuggestions = playerStats.map(player => ({
+      playerId: player.playerId,
+      playerName: player.playerName,
+      score: player.rebounds + (player.steals * 2) + (player.blocks * 2),
+      reasoning: this.generateHustlePlayerReasoning(player),
+      stats: {
+        points: player.points, rebounds: player.rebounds, assists: player.assists,
+        steals: player.steals, blocks: player.blocks, turnovers: player.turnovers
+      }
+    })).sort((a, b) => b.score - a.score);
+
+    return {
+      playerOfTheGame: pogSuggestions[0] || null,
+      hustlePlayer: hustleSuggestions[0] || null
+    };
   }
 }
 

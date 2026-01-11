@@ -80,6 +80,9 @@ export function GameCompletionModal({
   const winningTeamId = isCoachGame ? teamAId : (teamAScore > teamBScore ? teamAId : teamBId);
   const winningTeamName = isCoachGame ? teamAName : (teamAScore > teamBScore ? teamAName : teamBName);
 
+  // ✅ OPTIMIZED: Store prefetched data for TeamStatsTab
+  const [prefetchedTeamStats, setPrefetchedTeamStats] = useState<any>(null);
+
   // Load winning team players and auto-suggest on open
   useEffect(() => {
     if (!isOpen) {
@@ -90,6 +93,7 @@ export function GameCompletionModal({
       setSuggestedHustlePlayer(null);
       setWinningTeamPlayers([]);
       setRosterWithCustomInfo(new Map());
+      setPrefetchedTeamStats(null);
       setFinalOpponentScore(teamBScore); // Reset to current opponent score
       setShowSuccess(false); // Reset success state
       return;
@@ -98,10 +102,14 @@ export function GameCompletionModal({
     const loadData = async () => {
       setLoading(true);
       try {
-        // Fetch winning team roster and stats
+        // ✅ OPTIMIZED: Fetch roster + team stats + player stats in PARALLEL
         const teamRoster = await TeamServiceV3.getTeamPlayersWithSubstitutions(winningTeamId, gameId);
         const playerIds = teamRoster.map(p => p.id);
-        const playerStats = await TeamStatsService.aggregatePlayerStats(gameId, winningTeamId, playerIds);
+        
+        const [teamStats, playerStats] = await Promise.all([
+          TeamStatsService.aggregateTeamStats(gameId, winningTeamId),
+          TeamStatsService.aggregatePlayerStats(gameId, winningTeamId, playerIds)
+        ]);
         
         // ✅ Build map of player ID → is_custom_player
         const customInfoMap = new Map<string, boolean>();
@@ -109,12 +117,18 @@ export function GameCompletionModal({
           customInfoMap.set(player.id, player.is_custom_player === true);
         });
         setRosterWithCustomInfo(customInfoMap);
-        
         setWinningTeamPlayers(playerStats);
 
-        // Auto-suggest awards
+        // ✅ OPTIMIZED: Store prefetched data for TeamStatsTab (no duplicate queries!)
+        setPrefetchedTeamStats({
+          teamStats,
+          onCourtPlayers: playerStats.slice(0, 5),
+          benchPlayers: playerStats.slice(5)
+        });
+
+        // ✅ OPTIMIZED: Use SYNC method with pre-fetched stats (no additional API calls!)
         setSuggesting(true);
-        const suggestions = await AwardSuggestionService.suggestBothAwards(gameId, winningTeamId);
+        const suggestions = AwardSuggestionService.suggestBothAwardsFromStats(playerStats);
         
         if (suggestions.playerOfTheGame) {
           setSuggestedPlayerOfGame(suggestions.playerOfTheGame.playerId);
@@ -134,7 +148,7 @@ export function GameCompletionModal({
     };
 
     loadData();
-  }, [isOpen, gameId, winningTeamId]);
+  }, [isOpen, gameId, winningTeamId, teamBScore]);
 
   const handleComplete = async () => {
     if (!selectedPlayerOfGame || !selectedHustlePlayer) {
@@ -269,7 +283,7 @@ export function GameCompletionModal({
                 />
               )}
 
-              {/* Winning Team Stats */}
+              {/* Winning Team Stats - ✅ OPTIMIZED: Uses prefetched data */}
               <div className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="bg-purple-50 px-4 py-2 border-b border-gray-200">
                   <h3 className="font-semibold text-gray-900">{winningTeamName} Statistics</h3>
@@ -279,6 +293,7 @@ export function GameCompletionModal({
                     gameId={gameId}
                     teamId={winningTeamId}
                     teamName={winningTeamName}
+                    prefetchedData={prefetchedTeamStats}
                   />
                 </div>
               </div>
