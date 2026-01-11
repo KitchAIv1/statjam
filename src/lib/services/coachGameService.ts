@@ -128,6 +128,7 @@ export class CoachGameService {
           start_time: new Date().toISOString(),
           quarter: 1,
           quarter_length_minutes: request.game_settings?.quarter_length_minutes || 8,
+          periods_per_game: request.game_settings?.periods_per_game || 4, // ✅ NEW: Dynamic periods (4 for quarters, 2 for halves)
           game_clock_minutes: request.game_settings?.quarter_length_minutes || 8,
           game_clock_seconds: 0,
           is_clock_running: false,

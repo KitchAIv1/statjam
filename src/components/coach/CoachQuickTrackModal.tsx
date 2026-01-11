@@ -12,14 +12,8 @@ import { AutomationFlags, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation'
 import { GameServiceV3 } from '@/lib/services/gameServiceV3';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
-
-// Quarter length options (same as stat admin pre-flight)
-const QUARTER_LENGTH_OPTIONS = [
-  { value: 8, label: '8 min', description: 'Youth/Rec' },
-  { value: 10, label: '10 min', description: 'FIBA Standard' },
-  { value: 12, label: '12 min', description: 'NBA Standard' },
-  { value: 6, label: '6 min', description: 'Short Game' },
-] as const;
+import { GameFormatId } from '@/lib/types/gameFormat';
+import { GAME_FORMATS, PERIOD_LENGTH_OPTIONS, getDefaultPeriodLength } from '@/lib/config/gameFormatConfig';
 
 interface CoachQuickTrackModalProps {
   team: CoachTeam;
@@ -49,6 +43,9 @@ export function CoachQuickTrackModal({ team, userId, onClose, onGameCreated }: C
   // ✅ NEW: Automation settings state
   const [automationSettings, setAutomationSettings] = useState<AutomationFlags>(COACH_AUTOMATION_FLAGS);
   const [selectedPreset, setSelectedPreset] = useState<'minimal' | 'balanced' | 'full'>('full');
+  
+  // ✅ Game Format state (quarters vs halves)
+  const [gameFormat, setGameFormat] = useState<GameFormatId>('quarters');
   
   // Player validation state
   const [playerValidation, setPlayerValidation] = useState<{
@@ -87,6 +84,7 @@ export function CoachQuickTrackModal({ team, userId, onClose, onGameCreated }: C
     opponent_tournament_name: '',
     game_settings: {
       quarter_length_minutes: 8, // Default to Youth/Rec for coach mode
+      periods_per_game: 4, // ✅ NEW: Default to 4 quarters
       shot_clock_seconds: 24,
       venue: '',
       notes: ''
@@ -318,10 +316,48 @@ export function CoachQuickTrackModal({ team, userId, onClose, onGameCreated }: C
       case 'settings':
         return (
           <div>
+            {/* ✅ NEW: Game Format Selector */}
             <div style={styles.formGroup}>
-              <Label style={styles.label}>Quarter Length</Label>
+              <Label style={styles.label}>Game Format</Label>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                {Object.values(GAME_FORMATS).map((format) => (
+                  <button
+                    key={format.id}
+                    type="button"
+                    onClick={() => {
+                      setGameFormat(format.id);
+                      updateFormData({ 
+                        game_settings: { 
+                          periods_per_game: format.periodsPerGame,
+                          quarter_length_minutes: getDefaultPeriodLength(format.id)
+                        } 
+                      });
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      border: `2px solid ${gameFormat === format.id ? '#f97316' : 'rgba(255, 255, 255, 0.2)'}`,
+                      backgroundColor: gameFormat === format.id ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <div style={{ fontWeight: '600', fontSize: '0.875rem' }}>{format.label}</div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.7, marginTop: '2px' }}>
+                      {format.periodsPerGame}x {format.periodLabel}s
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div style={styles.formGroup}>
+              <Label style={styles.label}>{gameFormat === 'halves' ? 'Half' : 'Quarter'} Length</Label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                {QUARTER_LENGTH_OPTIONS.map((option) => (
+                {PERIOD_LENGTH_OPTIONS.map((option) => (
                   <button
                     key={option.value}
                     type="button"

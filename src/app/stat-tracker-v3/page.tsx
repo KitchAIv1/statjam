@@ -2160,6 +2160,7 @@ function StatTrackerV3Content() {
           onSetCustomTime={tracker.setCustomTime} // NEW: Manual clock editing
           onSetQuarter={tracker.setQuarter} // ✅ NEW: Manual quarter editing
           maxClockMinutes={tracker.originalQuarterLength} // ✅ Max for clock edit
+          periodsPerGame={tracker.periodsPerGame} // ✅ NEW: Dynamic periods (4 for quarters, 2 for halves)
           // NBA Standard: Team fouls and timeouts (placeholder values for now)
           teamAFouls={tracker.teamFouls[gameData.team_a_id] || 0}
           teamBFouls={tracker.teamFouls[gameData.team_b_id] || 0}

@@ -177,6 +177,7 @@ export interface QuickTrackGameRequest {
   opponent_tournament_name?: string;
   game_settings?: {
     quarter_length_minutes?: number;
+    periods_per_game?: number; // ✅ NEW: 4 for quarters, 2 for halves
     shot_clock_seconds?: number;
     venue?: string;
     notes?: string;

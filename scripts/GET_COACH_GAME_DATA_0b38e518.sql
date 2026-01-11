@@ -1,4 +1,17 @@
--- ===========================================
+-- =======================================-- 5. Stat breakdown by quarter (for detailed analysis)
+SELECT 
+  quarter,
+  COUNT(CASE WHEN stat_type = 'field_goal' AND modifier = 'made' THEN 1 END) as fg_made,
+  COUNT(CASE WHEN stat_type = 'three_pointer' AND modifier = 'made' THEN 1 END) as three_made,
+  COUNT(CASE WHEN stat_type = 'free_throw' AND modifier = 'made' THEN 1 END) as ft_made,
+  COUNT(CASE WHEN stat_type = 'rebound' THEN 1 END) as rebounds,
+  COUNT(CASE WHEN stat_type = 'assist' THEN 1 END) as assists,
+  COUNT(CASE WHEN stat_type = 'steal' THEN 1 END) as steals,
+  COUNT(CASE WHEN stat_type = 'turnover' THEN 1 END) as turnovers
+FROM game_stats
+WHERE game_id = '0b38e518-974e-4fdb-9bca-153d5b3cc788'
+GROUP BY quarter
+ORDER BY quarter;====
 -- Get COACH Game Data for AI Analysis: 0b38e518-974e-4fdb-9bca-153d5b3cc788
 -- Coach games track MY TEAM stats only - opponent score is entered manually
 -- ===========================================
@@ -79,18 +92,5 @@ WHERE game_id = '0b38e518-974e-4fdb-9bca-153d5b3cc788'
 GROUP BY quarter
 ORDER BY quarter;
 
--- 5. Stat breakdown by quarter (for detailed analysis)
-SELECT 
-  quarter,
-  COUNT(CASE WHEN stat_type = 'field_goal' AND modifier = 'made' THEN 1 END) as fg_made,
-  COUNT(CASE WHEN stat_type = 'three_pointer' AND modifier = 'made' THEN 1 END) as three_made,
-  COUNT(CASE WHEN stat_type = 'free_throw' AND modifier = 'made' THEN 1 END) as ft_made,
-  COUNT(CASE WHEN stat_type = 'rebound' THEN 1 END) as rebounds,
-  COUNT(CASE WHEN stat_type = 'assist' THEN 1 END) as assists,
-  COUNT(CASE WHEN stat_type = 'steal' THEN 1 END) as steals,
-  COUNT(CASE WHEN stat_type = 'turnover' THEN 1 END) as turnovers
-FROM game_stats
-WHERE game_id = '0b38e518-974e-4fdb-9bca-153d5b3cc788'
-GROUP BY quarter
-ORDER BY quarter;
+
 

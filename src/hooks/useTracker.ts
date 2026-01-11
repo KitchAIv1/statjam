@@ -6,6 +6,7 @@ import { RulesetService } from '@/lib/config/rulesetService';
 import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 import { validateQuarter } from '@/lib/validation/statValidation';
 import { cache } from '@/lib/utils/cache';
+import { getPeriodLabel, isOvertimePeriod } from '@/lib/utils/periodUtils';
 
 interface UseTrackerProps {
   initialGameId: string;
@@ -46,6 +47,7 @@ interface UseTrackerReturn {
   resetClock: (forQuarter?: number) => void;
   setCustomTime: (minutes: number, seconds: number) => Promise<void>; // NEW: Manual clock editing
   originalQuarterLength: number; // ✅ For clock edit UI max validation
+  periodsPerGame: number; // ✅ NEW: Dynamic periods (4 for quarters, 2 for halves)
   tick: (seconds: number) => void;
   // NEW: Shot Clock Actions
   startShotClock: () => void;
@@ -170,6 +172,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   
   // ✅ Original quarter length (loaded from localStorage immediately, updated when game data loads)
   const [originalQuarterLength, setOriginalQuarterLength] = useState(getInitialQuarterLength);
+  
+  // ✅ NEW: Periods per game (4 for quarters, 2 for halves) - loaded from game data
+  const [periodsPerGame, setPeriodsPerGame] = useState(4);
   
   // ✅ CRITICAL: Ref to store current clock state for exit handlers (prevents stale closure)
   const clockRef = useRef(clock);
@@ -346,7 +351,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   // ✅ PHASE 4 & 5: Play Sequence Prompts
   const [playPrompt, setPlayPrompt] = useState<{
     isOpen: boolean;
-    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | null;
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | 'missed_shot_type' | null;
     sequenceId: string | null;
     primaryEventId: string | null;
     metadata: Record<string, any> | null;
@@ -361,7 +366,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   // ✅ SEQUENTIAL PROMPTS: Queue for multiple prompts (Rebound, Free Throws, etc.)
   // Note: Blocks removed from auto-sequence but can still be recorded manually
   const [promptQueue, setPromptQueue] = useState<Array<{
-    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw';
+    type: 'assist' | 'rebound' | 'block' | 'turnover' | 'free_throw' | 'missed_shot_type';
     sequenceId: string;
     metadata: Record<string, any>;
   }>>([]);
@@ -519,6 +524,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             
             // ✅ Mark game data as loaded - prevents saving hardcoded 12 min during mount
             gameDataLoadedRef.current = true;
+            
+            // ✅ NEW: Load periods per game from game data (default 4 for quarters)
+            const periods = game.periods_per_game || 4;
+            setPeriodsPerGame(periods);
+            console.log(`✅ Periods per game: ${periods} (${periods === 2 ? 'halves' : 'quarters'})`);
           }
           
           // Load team fouls and timeouts from game data
@@ -814,21 +824,21 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     const targetQuarter = forQuarter || quarter;
     
     // Determine clock duration based on quarter
-    // Regular quarters (1-4): Use original quarter length from pre-flight
-    // Overtime periods (5+): 5 minutes
-    const isOvertimePeriod = targetQuarter >= 5;
-    const clockMinutes = isOvertimePeriod ? 5 : originalQuarterLength;
+    // Regular periods: Use original quarter/half length from pre-flight
+    // Overtime periods: 5 minutes
+    const isOT = isOvertimePeriod(targetQuarter, periodsPerGame);
+    const clockMinutes = isOT ? 5 : originalQuarterLength;
     const newSeconds = clockMinutes * 60;
     
-    console.log(`🕐 Resetting clock for quarter ${targetQuarter}: ${clockMinutes} minutes (${newSeconds} seconds)`);
+    console.log(`🕐 Resetting clock for ${getPeriodLabel(targetQuarter, periodsPerGame)}: ${clockMinutes} minutes (${newSeconds} seconds)`);
     
     setClock({ isRunning: false, secondsRemaining: newSeconds });
     
-    if (isOvertimePeriod) {
-      const otPeriod = targetQuarter - 4;
+    if (isOT) {
+      const otPeriod = targetQuarter - periodsPerGame;
       setLastAction(`OT${otPeriod} clock reset (5 minutes)`);
     } else {
-      setLastAction(`Q${targetQuarter} clock reset (${clockMinutes} minutes)`);
+      setLastAction(`${getPeriodLabel(targetQuarter, periodsPerGame)} clock reset (${clockMinutes} minutes)`);
     }
     
     // ✅ FIX #3: Sync clock state to database with correct minutes (not always 12)
@@ -1006,15 +1016,15 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     }
     
     // ✅ FIX #2: Calculate new clock time BEFORE resetting (prevents race condition)
-    // ✅ FIX: Use originalQuarterLength instead of hardcoded 12 (prevents DB corruption)
-    const isOvertime = newQuarter >= 5;
+    // ✅ DYNAMIC PERIODS: Use periodsPerGame for overtime detection
+    const isOvertime = newQuarter > periodsPerGame;
     const newClockMinutes = isOvertime ? 5 : originalQuarterLength;
     const newClockSeconds = 0;
     
     // ✅ Update quarter state
     setQuarterState(newQuarter);
     
-    // ✅ Reset clock for the new quarter (handles Q1-4 = 12 min, OT = 5 min)
+    // ✅ Reset clock for the new quarter (handles regular periods + OT = 5 min)
     resetClock(newQuarter);
     
     // ✅ FIX: Reset team fouls on quarter change (NBA rule: fouls reset each quarter)
@@ -1022,10 +1032,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       [teamAId]: 0,
       [teamBId]: 0
     });
-    console.log('🏀 Team fouls reset for new quarter');
+    console.log('🏀 Team fouls reset for new period');
     
-    // ✅ Update last action message
-    const quarterDisplay = newQuarter <= 4 ? `Q${newQuarter}` : `OT${newQuarter - 4}`;
+    // ✅ DYNAMIC PERIODS: Use getPeriodLabel for display
+    const quarterDisplay = getPeriodLabel(newQuarter, periodsPerGame);
     setLastAction(`Changed to ${quarterDisplay}`);
     
     // ✅ FIX #2: Sync quarter change to database with calculated clock time (not stale state)
@@ -1048,7 +1058,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       const { notify } = await import('@/lib/services/notificationService');
       notify.error('Sync Failed', 'Failed to sync quarter change to database');
     }
-  }, [gameId, resetClock, teamAId, teamBId, originalQuarterLength]);
+  }, [gameId, resetClock, teamAId, teamBId, originalQuarterLength, periodsPerGame]);
 
   const advanceIfNeeded = useCallback(() => {
     // ✅ FIX #5: Guard against multiple calls - only advance if clock reaches 0
@@ -1059,13 +1069,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         setClock(prev => ({ ...prev, isRunning: false }));
       }
       
-      if (quarter < 4) {
-        // Regular quarters 1-4
+      // ✅ DYNAMIC PERIODS: Use periodsPerGame instead of hardcoded 4
+      if (quarter < periodsPerGame) {
+        // Regular periods (Q1-Q4 for quarters, H1-H2 for halves)
         const nextQuarter = quarter + 1;
         // ✅ FIX #1: setQuarter already calls resetClock internally - remove duplicate call
         setQuarter(nextQuarter);
-      } else if (quarter === 4) {
-        // End of 4th quarter - check if game should go to overtime
+      } else if (quarter === periodsPerGame) {
+        // End of regulation - check if game should go to overtime
         // ✅ FIX: Use isCoachMode flag instead of comparing team IDs
         const teamAScore = scores[teamAId] || 0;
         const teamBScore = isCoachMode 
@@ -1076,7 +1087,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           // Tied game - go to overtime
           console.log(`🏀 End of regulation - TIED GAME (${teamAScore}-${teamBScore}) - advancing to overtime`);
           // ✅ FIX #1: setQuarter already calls resetClock internally - remove duplicate call
-          setQuarter(5); // Overtime starts at quarter 5
+          setQuarter(periodsPerGame + 1); // Overtime starts after regulation
         } else {
           // Game has a winner - show game over modal
           const winner = teamAScore > teamBScore ? 'Team A' : 'Team B';
@@ -1085,7 +1096,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           setShowGameOverModal(true); // ✅ Trigger game over modal
         }
       } else {
-        // Already in overtime (quarter >= 5) - check for tie again
+        // Already in overtime (quarter > periodsPerGame) - check for tie again
         // ✅ FIX: Use isCoachMode flag instead of comparing team IDs
         const teamAScore = scores[teamAId] || 0;
         const teamBScore = isCoachMode 
@@ -1094,7 +1105,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         
         if (teamAScore === teamBScore) {
           // Still tied - continue to next OT period
-          const currentOT = quarter - 4;
+          const currentOT = quarter - periodsPerGame;
           const nextOT = currentOT + 1;
           const nextQuarter = quarter + 1;
           console.log(`🏀 End of OT${currentOT} - STILL TIED (${teamAScore}-${teamBScore}) - advancing to OT${nextOT}`);
@@ -1103,14 +1114,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         } else {
           // Overtime has a winner - show game over modal
           const winner = teamAScore > teamBScore ? 'Team A' : 'Team B';
-          const currentOT = quarter - 4;
+          const currentOT = quarter - periodsPerGame;
           console.log(`🏀 End of OT${currentOT} - GAME OVER! Winner: ${winner} (${teamAScore}-${teamBScore})`);
           setLastAction(`Game Over in OT${currentOT}! ${winner} wins ${teamAScore}-${teamBScore}`);
           setShowGameOverModal(true); // ✅ Trigger game over modal
         }
       }
     }
-  }, [clock.secondsRemaining, clock.isRunning, quarter, setQuarter, scores, teamAId, teamBId]);
+  }, [clock.secondsRemaining, clock.isRunning, quarter, setQuarter, scores, teamAId, teamBId, periodsPerGame]);
 
   // Timeout Countdown Effect
   useEffect(() => {
@@ -2317,6 +2328,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     resetClock,
     setCustomTime, // NEW: Manual clock editing
     originalQuarterLength, // ✅ For clock edit UI max validation
+    periodsPerGame, // ✅ NEW: Dynamic periods (4 for quarters, 2 for halves)
     tick,
     // NEW: Shot Clock Actions
     startShotClock,

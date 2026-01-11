@@ -63,6 +63,11 @@ interface TrackerData {
   ruleset?: any;
   automationFlags?: any;
   setAutomationFlags?: React.Dispatch<React.SetStateAction<any>>; // ✅ Runtime mode toggle
+  periodsPerGame?: number; // ✅ NEW: Dynamic periods (4 for quarters, 2 for halves)
+  setQuarter?: (quarter: number) => void; // Manual quarter setting
+  originalQuarterLength?: number; // For clock edit max
+  toggleShotClockVisibility?: () => void; // Toggle shot clock
+  cancelGame?: () => void; // Cancel game
 }
 
 interface MobileLayoutV3Props {
@@ -242,6 +247,7 @@ export function MobileLayoutV3({
           onSetCustomTime={tracker.setCustomTime} // NEW: Manual clock editing
           onSetQuarter={tracker.setQuarter} // ✅ NEW: Manual quarter editing
           maxClockMinutes={tracker.originalQuarterLength} // ✅ Max for clock edit
+          periodsPerGame={tracker.periodsPerGame ?? 4} // ✅ NEW: Dynamic periods (4 for quarters, 2 for halves)
           shotClockSeconds={tracker.shotClock.secondsRemaining ?? 24}
           shotClockIsRunning={tracker.shotClock.isRunning ?? false}
           shotClockIsVisible={tracker.shotClock.isVisible ?? true}
@@ -359,7 +365,7 @@ export function MobileLayoutV3({
                 className="flex-1 text-sm font-bold py-4 rounded-xl border-2 border-orange-400 bg-orange-500 hover:bg-orange-600 text-white transition-all duration-200 hover:shadow-lg active:scale-95"
                 onClick={() => {
                   if (confirm('Are you sure you want to cancel this game? This action cannot be undone.')) {
-                    tracker.cancelGame();
+                    tracker.cancelGame?.();
                   }
                 }}
               >

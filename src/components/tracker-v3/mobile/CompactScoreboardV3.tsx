@@ -5,6 +5,7 @@ import { ChevronRight, ChevronLeft, Play, Pause, RotateCcw, Eye, EyeOff, Check, 
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { PossessionIndicator } from '../PossessionIndicator';
+import { getPeriodLabel } from '@/lib/utils/periodUtils';
 
 interface CompactScoreboardV3Props {
   gameId?: string;
@@ -30,6 +31,7 @@ interface CompactScoreboardV3Props {
   onSetCustomTime?: (minutes: number, seconds: number) => void; // NEW: Manual time setting
   onSetQuarter?: (quarter: number) => void; // ✅ NEW: Manual quarter setting
   maxClockMinutes?: number; // ✅ Max minutes for clock edit (from quarter length)
+  periodsPerGame?: number; // ✅ NEW: Dynamic periods (4 for quarters, 2 for halves)
   // Shot Clock Props
   shotClockSeconds?: number;
   shotClockIsRunning?: boolean;
@@ -72,6 +74,7 @@ export function CompactScoreboardV3({
   onSetCustomTime,
   onSetQuarter,
   maxClockMinutes = 12,
+  periodsPerGame = 4,
   shotClockSeconds = 24,
   shotClockIsRunning = false,
   shotClockIsVisible = true,
@@ -165,10 +168,8 @@ export function CompactScoreboardV3({
     setIsClockEditMode(false);
   };
 
-  const getQuarterDisplay = (q: number) => {
-    if (q <= 4) return `Q${q}`;
-    return `OT${q - 4}`;
-  };
+  // ✅ DYNAMIC PERIODS: Use periodsPerGame for correct period labels (Q/H/OT)
+  const getQuarterDisplay = (q: number) => getPeriodLabel(q, periodsPerGame);
 
   return (
     <div 
@@ -207,14 +208,15 @@ export function CompactScoreboardV3({
                   onChange={(e) => setEditQuarter(parseInt(e.target.value))}
                   className="text-orange-500 border-orange-500 bg-orange-500/10 px-2 py-1 text-xs font-bold rounded border focus:outline-none focus:ring-1 focus:ring-orange-500"
                 >
-                  <option value="1">Q1</option>
-                  <option value="2">Q2</option>
-                  <option value="3">Q3</option>
-                  <option value="4">Q4</option>
-                  <option value="5">OT1</option>
-                  <option value="6">OT2</option>
-                  <option value="7">OT3</option>
-                  <option value="8">OT4</option>
+                  {/* Dynamic periods based on game format */}
+                  {Array.from({ length: periodsPerGame }, (_, i) => i + 1).map((p) => (
+                    <option key={p} value={p}>{getPeriodLabel(p, periodsPerGame)}</option>
+                  ))}
+                  {/* Overtime options */}
+                  <option value={periodsPerGame + 1}>OT1</option>
+                  <option value={periodsPerGame + 2}>OT2</option>
+                  <option value={periodsPerGame + 3}>OT3</option>
+                  <option value={periodsPerGame + 4}>OT4</option>
                 </select>
                 <div className="flex gap-1">
                   <Button
