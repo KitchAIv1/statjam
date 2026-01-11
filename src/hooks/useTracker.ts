@@ -156,7 +156,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         const stored = localStorage.getItem(`quarterLength_${initialGameId}`);
         if (stored) {
           const parsed = parseInt(stored, 10);
-          if ([5, 6, 8, 10, 12].includes(parsed)) {
+          if ([5, 6, 8, 10, 12, 18, 20].includes(parsed)) {
             // ✅ Lock immediately when valid value is found from localStorage
             quarterLengthLockedRef.current = true;
             console.log(`🔒 Quarter length locked from localStorage: ${parsed} min`);
