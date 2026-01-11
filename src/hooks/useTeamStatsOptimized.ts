@@ -17,7 +17,7 @@ import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 
 // ✅ OPTIMIZATION: Debounce delay to prevent query cascade on rapid stat recording
-const REALTIME_DEBOUNCE_MS = 2000;
+const REALTIME_DEBOUNCE_MS = 5000;
 
 export interface TeamStatsOptimizedData {
   teamStats: TeamStats | null;
