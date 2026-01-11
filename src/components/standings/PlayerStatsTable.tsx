@@ -37,6 +37,7 @@ interface PlayerStatsTableProps {
   variant?: 'full' | 'compact';
   showAverages?: boolean;
   className?: string;
+  totalGames?: number; // ✅ Actual season game count for Total row
 }
 
 type SortKey = keyof PlayerSeasonStats;
@@ -47,6 +48,7 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
   variant = 'full',
   showAverages = true,
   className,
+  totalGames,
 }: PlayerStatsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('points');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -82,6 +84,28 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
       return sortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
     });
   }, [players, sortKey, sortDir, search]);
+
+  // ✅ Calculate team totals
+  const totals = useMemo(() => {
+    return players.reduce((acc, p) => ({
+      gamesPlayed: acc.gamesPlayed + p.gamesPlayed,
+      points: acc.points + p.points,
+      rebounds: acc.rebounds + p.rebounds,
+      assists: acc.assists + p.assists,
+      steals: acc.steals + p.steals,
+      blocks: acc.blocks + p.blocks,
+      turnovers: acc.turnovers + p.turnovers,
+      fgMade: acc.fgMade + p.fgMade,
+      fgAttempts: acc.fgAttempts + p.fgAttempts,
+      threePtMade: acc.threePtMade + p.threePtMade,
+      threePtAttempts: acc.threePtAttempts + p.threePtAttempts,
+      ftMade: acc.ftMade + p.ftMade,
+      ftAttempts: acc.ftAttempts + p.ftAttempts,
+    }), {
+      gamesPlayed: 0, points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0,
+      turnovers: 0, fgMade: 0, fgAttempts: 0, threePtMade: 0, threePtAttempts: 0, ftMade: 0, ftAttempts: 0
+    });
+  }, [players]);
 
   const avg = useCallback((val: number, games: number) => 
     games > 0 ? (val / games).toFixed(1) : '0.0', []);
@@ -175,6 +199,26 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
                 </motion.tr>
               ))}
             </AnimatePresence>
+            {/* ✅ Total Row */}
+            {sortedPlayers.length > 0 && (
+              <tr className="bg-gray-100 font-semibold border-t-2 border-gray-300">
+                <td className="px-2 py-2 text-gray-700">Total</td>
+                <td className="text-center text-gray-600 tabular-nums">{totalGames ?? '-'}</td>
+                <td className="text-center tabular-nums">{totals.points}</td>
+                <td className="text-center tabular-nums">{totals.rebounds}</td>
+                <td className="text-center tabular-nums">{totals.assists}</td>
+                <td className="text-center tabular-nums">{totals.steals}</td>
+                {variant === 'full' && (
+                  <>
+                    <td className="text-center tabular-nums">{totals.blocks}</td>
+                    <td className="text-center text-gray-500 tabular-nums">{totals.turnovers}</td>
+                    <td className="text-center tabular-nums">{pct(totals.fgMade, totals.fgAttempts)}</td>
+                    <td className="text-center tabular-nums">{pct(totals.threePtMade, totals.threePtAttempts)}</td>
+                    <td className="text-center tabular-nums">{pct(totals.ftMade, totals.ftAttempts)}</td>
+                  </>
+                )}
+              </tr>
+            )}
             {sortedPlayers.length === 0 && (
               <tr>
                 <td colSpan={columns.length} className="text-center py-8 text-gray-400">

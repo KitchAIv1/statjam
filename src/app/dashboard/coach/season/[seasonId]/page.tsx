@@ -181,7 +181,7 @@ export default function SeasonDetailPage({ params }: SeasonDetailPageProps) {
                   </div>
                 </div>
               ) : players.length > 0 ? (
-                <PlayerStatsTable players={players} />
+                <PlayerStatsTable players={players} totalGames={games.length} />
               ) : (
                 <div className="py-8 text-center text-gray-500 rounded-xl border border-gray-200 bg-white">
                   <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
