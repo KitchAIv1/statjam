@@ -64,7 +64,7 @@ export function LiveActionHub({
     <Card className="group hover:shadow-xl transition-all duration-300 border-2 border-border/50 hover:border-primary/30 overflow-hidden h-full flex flex-col relative">
       {/* Leaderboard-style Background */}
       <div 
-        className="absolute inset-0 bg-cover bg-center opacity-[0.20] pointer-events-none"
+        className="absolute inset-0 bg-cover bg-center opacity-[0.28] pointer-events-none"
         style={{ backgroundImage: 'url(/images/leadersection.webp)' }}
       />
       
