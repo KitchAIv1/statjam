@@ -510,7 +510,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               // If localStorage didn't have a value but clock is valid, save it
               if (typeof window !== 'undefined') {
                 const stored = localStorage.getItem(storageKey);
-                if (!stored && [5, 6, 8, 10, 12].includes(clockMinutes)) {
+                if (!stored && [5, 6, 8, 10, 12, 18, 20].includes(clockMinutes)) {
                   quarterLen = clockMinutes;
                   localStorage.setItem(storageKey, String(quarterLen));
                 }
