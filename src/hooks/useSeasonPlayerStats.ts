@@ -29,10 +29,12 @@ export function useSeasonPlayerStats(seasonId: string | null) {
         const gameIds = seasonGames.map(sg => sg.game_id);
 
         // Fetch stats with modifier (matches Game Viewer query)
+        // ✅ FIX: Filter out opponent stats - they should NOT appear in player leaderboard
         const { data: stats, error: statsErr } = await supabase
           .from('game_stats')
           .select('player_id, custom_player_id, stat_type, modifier, game_id')
-          .in('game_id', gameIds);
+          .in('game_id', gameIds)
+          .eq('is_opponent_stat', false);
         if (statsErr) throw statsErr;
 
         // ✅ FIX: Separate player_id (users) from custom_player_id (custom_players)
