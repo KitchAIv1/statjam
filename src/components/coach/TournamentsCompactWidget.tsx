@@ -83,7 +83,7 @@ export function TournamentsCompactWidget({ userId }: TournamentsCompactWidgetPro
   };
 
   return (
-    <Card className="p-4 bg-white border-gray-200">
+    <Card className="p-4 bg-white border-gray-200 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
           <Trophy className="w-4 h-4 text-orange-500" />

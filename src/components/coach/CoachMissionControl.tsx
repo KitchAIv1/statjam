@@ -22,6 +22,7 @@ import { TeamsStrip } from './TeamsStrip';
 import { VideoTrackingWidget } from './VideoTrackingWidget';
 import { RecentGamesWidget } from './RecentGamesWidget';
 import { TournamentsCompactWidget } from './TournamentsCompactWidget';
+import { SeasonsCompactWidget } from './SeasonsCompactWidget';
 import { CoachQuickTrackModal } from './CoachQuickTrackModal';
 import { CreateCoachTeamModal } from './CreateCoachTeamModal';
 import { CoachTournamentSearchModal } from './CoachTournamentSearchModal';
@@ -276,7 +277,15 @@ export function CoachMissionControl({
           onBuyCredits={() => setShowVideoCreditsModal(true)}
         />
         <RecentGamesWidget games={dashboardData.recentGames} />
-        <TournamentsCompactWidget userId={user?.id || ''} />
+        {/* Seasons + Tournaments stacked - equal height distribution */}
+        <div className="flex flex-col gap-3 h-full">
+          <div className="flex-1 min-h-0">
+            <SeasonsCompactWidget userId={user?.id || ''} />
+          </div>
+          <div className="flex-1 min-h-0">
+            <TournamentsCompactWidget userId={user?.id || ''} />
+          </div>
+        </div>
       </div>
 
       {/* Modals */}
