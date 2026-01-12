@@ -115,20 +115,57 @@ export function useCoachDashboardData(userId: string | undefined): CoachDashboar
         total: videos.length,
       };
 
-      // Process games
-      const games = (gamesRes.data || []).map(g => ({
-        id: g.id,
-        opponent_name: g.opponent_name || 'Unknown',
-        status: g.status,
-        quarter: g.quarter,
-        game_clock_minutes: g.game_clock_minutes,
-        game_clock_seconds: g.game_clock_seconds,
-        home_score: g.home_score,
-        away_score: g.away_score,
-        start_time: g.start_time,
-        end_time: g.end_time,
-        coach_team_id: g.team_a_id,
-      } as CoachGame));
+      // ✅ FIX: Calculate scores from game_stats (source of truth)
+      const gameIds = (gamesRes.data || []).map(g => g.id);
+      const { data: allStats } = gameIds.length > 0 
+        ? await supabase
+            .from('game_stats')
+            .select('game_id, team_id, stat_type, modifier, is_opponent_stat')
+            .in('game_id', gameIds)
+            .eq('modifier', 'made')
+        : { data: [] };
+
+      // Pre-calculate scores from game_stats
+      const scoresByGameId = new Map<string, { home: number; away: number }>();
+      for (const g of gamesRes.data || []) {
+        const gameStats = (allStats || []).filter(s => s.game_id === g.id);
+        let home = 0, away = 0;
+        
+        for (const stat of gameStats) {
+          let points = 0;
+          if (stat.stat_type === 'field_goal' || stat.stat_type === 'two_pointer') points = 2;
+          else if (stat.stat_type === 'three_pointer' || stat.stat_type === '3_pointer') points = 3;
+          else if (stat.stat_type === 'free_throw') points = 1;
+          else continue;
+
+          if (stat.is_opponent_stat) {
+            away += points;
+          } else if (stat.team_id === g.team_a_id) {
+            home += points;
+          } else {
+            away += points;
+          }
+        }
+        scoresByGameId.set(g.id, { home, away });
+      }
+
+      // Process games with calculated scores
+      const games = (gamesRes.data || []).map(g => {
+        const calculated = scoresByGameId.get(g.id) || { home: g.home_score || 0, away: g.away_score || 0 };
+        return {
+          id: g.id,
+          opponent_name: g.opponent_name || 'Unknown',
+          status: g.status,
+          quarter: g.quarter,
+          game_clock_minutes: g.game_clock_minutes,
+          game_clock_seconds: g.game_clock_seconds,
+          home_score: calculated.home, // ✅ Use calculated score
+          away_score: calculated.away, // ✅ Use calculated score
+          start_time: g.start_time,
+          end_time: g.end_time,
+          coach_team_id: g.team_a_id,
+        } as CoachGame;
+      });
 
       const liveGames = games.filter(g => g.status === 'in_progress');
       const recentGames = games.filter(g => g.status === 'completed').slice(0, 4);

@@ -30,7 +30,7 @@ export function SeasonListModal({ team, isOpen, onClose, onCreateNew, onEdit }: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch seasons for team
+  // Fetch seasons for team (with fresh stats recalculation)
   useEffect(() => {
     const fetchSeasons = async () => {
       if (!isOpen || !team.id) return;
@@ -39,8 +39,16 @@ export function SeasonListModal({ team, isOpen, onClose, onCreateNew, onEdit }: 
       setError(null);
       
       try {
+        // First fetch seasons
         const data = await SeasonService.getSeasonsByTeam(team.id);
-        setSeasons(data);
+        
+        // Recalculate stats for each season to ensure accuracy
+        // (handles cases where games were deleted/modified externally)
+        await Promise.all(data.map(s => SeasonService.recalculateSeasonStats(s.id)));
+        
+        // Re-fetch with updated stats
+        const freshData = await SeasonService.getSeasonsByTeam(team.id);
+        setSeasons(freshData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load seasons');
       } finally {
