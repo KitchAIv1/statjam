@@ -63,6 +63,7 @@ interface GameContext {
   isCoachGame: boolean;
   quarterLengthMinutes: number;
   quarterLengthSeconds: number;
+  periodsPerGame: number;  // ✅ FIX: For completed games full duration calculation
   currentGameState: {
     quarter: number;
     clockMinutes: number;
@@ -199,9 +200,9 @@ export class TeamStatsService {
     
     // ✅ PARALLEL FETCH: Get all shared data in one round-trip
     const [gameData, substitutions, scoringStats, allTeamStats] = await Promise.all([
-      // Game data with all needed fields
+      // Game data with all needed fields (including periods_per_game for completed games)
       this.makeAuthenticatedRequest<any>('games', {
-        'select': 'id,is_coach_game,quarter_length_minutes,quarter,game_clock_minutes,game_clock_seconds,status,team_a_id,team_b_id,tournament_id,tournaments(ruleset,ruleset_config)',
+        'select': 'id,is_coach_game,quarter_length_minutes,quarter,game_clock_minutes,game_clock_seconds,status,team_a_id,team_b_id,tournament_id,periods_per_game,tournaments(ruleset,ruleset_config)',
         'id': `eq.${gameId}`
       }),
       // All substitutions for this team
@@ -253,12 +254,15 @@ export class TeamStatsService {
       quarterLengthMinutes = 20;
     }
 
+    const periodsPerGame = game.periods_per_game || 4;  // Default 4 quarters
+    
     const context: GameContext = {
       gameId,
       teamId,
       isCoachGame,
       quarterLengthMinutes,
       quarterLengthSeconds: quarterLengthMinutes * 60,
+      periodsPerGame,  // ✅ FIX: For completed games full duration calculation
       currentGameState: {
         quarter: game.quarter || 1,
         clockMinutes: game.game_clock_minutes ?? quarterLengthMinutes,
@@ -788,13 +792,23 @@ export class TeamStatsService {
       console.log(`📊 Plus/Minus: Using ${quarterLengthMinutes}-min quarters ${context ? '(from context)' : '(fetched)'}`);
 
       // ✅ OPTIMIZATION: Use context game state if provided
+      // ✅ FIX: For completed games, use full game duration (clock data may be stale)
       let currentGameTimeSeconds = Infinity;
       if (context) {
-        const { quarter, clockMinutes, clockSeconds } = context.currentGameState;
-        currentGameTimeSeconds = this.convertGameTimeToSecondsWithLength(
-          quarter, clockMinutes, clockSeconds, quarterLengthSeconds
-        );
-        console.log(`📊 Plus/Minus: Current game time = ${currentGameTimeSeconds}s (from context)`);
+        const { quarter, clockMinutes, clockSeconds, status } = context.currentGameState;
+        
+        if (status === 'completed') {
+          // Completed games: use full game duration regardless of clock values
+          // Clock data may be stale (e.g., showing Q1 6:47 for a finished game)
+          currentGameTimeSeconds = context.periodsPerGame * quarterLengthSeconds;
+          console.log(`📊 Plus/Minus: Current game time = ${currentGameTimeSeconds}s (COMPLETED - full ${context.periodsPerGame} periods × ${quarterLengthMinutes}min)`);
+        } else {
+          // Live/in-progress games: calculate from current clock
+          currentGameTimeSeconds = this.convertGameTimeToSecondsWithLength(
+            quarter, clockMinutes, clockSeconds, quarterLengthSeconds
+          );
+          console.log(`📊 Plus/Minus: Current game time = ${currentGameTimeSeconds}s (from context)`);
+        }
       } else {
         try {
           const gameState = await this.makeAuthenticatedRequest<any>('games', {
