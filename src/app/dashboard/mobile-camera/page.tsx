@@ -148,15 +148,48 @@ export default function MobileCameraPage() {
       try {
         console.log('📹 Requesting camera access...');
         
+        // First, try to enumerate devices to find rear camera explicitly
+        let rearCameraId: string | null = null;
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = devices.filter(device => device.kind === 'videoinput');
+          
+          // Find rear camera by label (iOS Safari uses "Back" or "Back Camera")
+          // Also check for devices with facingMode constraints
+          const rearCamera = videoDevices.find(device => {
+            const label = device.label.toLowerCase();
+            return label.includes('back') || label.includes('rear') || label.includes('environment');
+          });
+          
+          if (rearCamera) {
+            rearCameraId = rearCamera.deviceId;
+            console.log('✅ Found rear camera:', rearCamera.label);
+          } else if (videoDevices.length > 1) {
+            // If multiple cameras, prefer the last one (usually rear on iOS)
+            rearCameraId = videoDevices[videoDevices.length - 1].deviceId;
+            console.log('✅ Using last camera device (likely rear):', videoDevices[videoDevices.length - 1].label);
+          }
+        } catch (enumError) {
+          console.warn('⚠️ Could not enumerate devices, falling back to facingMode:', enumError);
+        }
+        
         // Request rear camera with high quality
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment', // Use rear camera
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
+        const constraints: MediaStreamConstraints = {
+          video: rearCameraId
+            ? {
+                deviceId: { exact: rearCameraId }, // Explicit device selection
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              }
+            : {
+                facingMode: 'environment', // Fallback to facingMode
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              },
           audio: false, // No audio for MVP
-        });
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
         console.log('✅ Camera access granted');
         setLocalStream(stream);
