@@ -220,7 +220,8 @@ export class TeamStatsService {
         'order': 'quarter.asc,game_time_minutes.desc,game_time_seconds.desc'
       }),
       // ✅ OPTIMIZATION: Lightweight query for DNP detection (just player IDs)
-      this.makeRequest<any>('game_stats', {
+      // ✅ FIX: Use authenticated request for coach games (RLS requires auth)
+      this.makeAuthenticatedRequest<any>('game_stats', {
         'select': 'player_id,custom_player_id',
         'game_id': `eq.${gameId}`,
         'team_id': `eq.${teamId}`
@@ -894,15 +895,16 @@ export class TeamStatsService {
         }
       });
 
-      // Players with NO subs who scored = starters who played full game
-      // Players with NO subs and NO scoring = DNP (Did Not Play)
+      // Players with NO subs who have ANY stat = starters who played full game
+      // Players with NO subs and NO stats = DNP (Did Not Play)
+      // ✅ FIX: Use playersWithAnyStats (not just scoring) - same as minutes calculation
       playerIds.forEach(playerId => {
         if (!playerFirstAction.has(playerId)) {
-          const playerScored = allScoringStats.some(
-            (stat: any) => stat.player_id === playerId || stat.custom_player_id === playerId
-          );
-          if (playerScored) {
-            starterIds.add(playerId); // Scored but no subs = played full game as starter
+          // Check if player has ANY stat (rebounds, assists, etc.) not just scoring
+          const playerPlayed = context?.playersWithAnyStats?.has(playerId) || 
+            allScoringStats.some((stat: any) => stat.player_id === playerId || stat.custom_player_id === playerId);
+          if (playerPlayed) {
+            starterIds.add(playerId); // Has stats but no subs = played full game as starter
           }
           // Else: DNP - don't add to starters
         }
