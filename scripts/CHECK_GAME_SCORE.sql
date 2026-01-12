@@ -44,3 +44,4 @@ WHERE gs.game_id = 'ff743a36-8814-4932-b116-4ce22ab3afb9'
 GROUP BY gs.team_id, t.name
 ORDER BY total_points DESC;
 
+
