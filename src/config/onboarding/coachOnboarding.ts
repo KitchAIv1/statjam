@@ -21,7 +21,7 @@ export const coachChecklistSteps: ChecklistStep[] = [
   },
   {
     title: "Start a game",
-    description: "Click 'Start New Game' for manual tracking. Free: 6 games max. Premium: unlimited + video tracking.",
+    description: "Click 'Start New Game' for manual tracking. Free: 10 games max. Premium: unlimited + video tracking.",
     action: { label: "Quick Actions", href: "/dashboard/coach" }
   },
   {
@@ -43,7 +43,7 @@ export const coachChecklistSteps: ChecklistStep[] = [
 export const coachFAQs: HelpFAQ[] = [
   {
     question: "What can I do with a Free account?",
-    answer: "Free accounts get 1 team with up to 6 manually tracked games. Perfect for getting started with basic stat tracking and analytics."
+    answer: "Free accounts get 1 team with up to 10 manually tracked games. Perfect for getting started with basic stat tracking and analytics."
   },
   {
     question: "How do I start tracking a game?",
@@ -55,7 +55,7 @@ export const coachFAQs: HelpFAQ[] = [
   },
   {
     question: "Can free accounts upload videos?",
-    answer: "No. Video tracking is exclusive to premium subscribers. Free accounts can manually track up to 6 games with 1 team."
+    answer: "No. Video tracking is exclusive to premium subscribers. Free accounts can manually track up to 10 games with 1 team."
   },
   {
     question: "How do I add players to my team?",

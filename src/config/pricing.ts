@@ -51,7 +51,7 @@ const PRO_ORGANIZER_LIMITS: TierLimits = {
 const FREE_COACH_LIMITS: TierLimits = {
   seasons: 1,
   teams: 1,
-  games: 6,
+  games: 10,
   hasAnalytics: true,
   hasAdvancedAnalytics: false,
   hasStatAdminAccess: true,
@@ -177,7 +177,7 @@ export const COACH_TIERS: PricingTier[] = [
     limits: FREE_COACH_LIMITS,
     features: [
       '1 team',
-      'Up to 6 tracked games',
+      'Up to 10 tracked games',
       'Manual tracking',
       'Basic analytics',
       'STATADMIN access',
