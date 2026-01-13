@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { compressTeamLogo, compressTournamentLogo } from '@/lib/utils/imageCompression';
 
 // ============================================================================
 // TYPES
@@ -547,17 +548,22 @@ export async function deletePlayerPhoto(publicUrl: string): Promise<void> {
 /**
  * Upload tournament logo
  */
+/**
+ * ✅ Compresses to ~200KB max for fast loading
+ */
 export async function uploadTournamentLogo(
   file: File,
   tournamentId: string,
   organizerId: string
 ): Promise<ImageUploadResult> {
-  return uploadImage(file, organizerId, {
+  // Compress before upload for faster loading
+  const compressedFile = await compressTournamentLogo(file);
+  
+  return uploadImage(compressedFile, organizerId, {
     bucket: 'tournament-logos',
     folder: 'logos',
     maxSizeMB: 5,
     generateUniqueName: true,
-    filePrefix: `tournament-${tournamentId}`
   });
 }
 
@@ -573,18 +579,21 @@ export async function deleteTournamentLogo(publicUrl: string): Promise<void> {
 
 /**
  * Upload team logo
+ * ✅ Compresses to ~200KB max for fast loading
  */
 export async function uploadTeamLogo(
   file: File,
   teamId: string,
   userId: string // coach_id or organizer_id
 ): Promise<ImageUploadResult> {
-  return uploadImage(file, userId, {
+  // Compress before upload for faster loading
+  const compressedFile = await compressTeamLogo(file);
+  
+  return uploadImage(compressedFile, userId, {
     bucket: 'team-logos',
     folder: 'logos',
     maxSizeMB: 5,
     generateUniqueName: true,
-    filePrefix: `team-${teamId}`
   });
 }
 
