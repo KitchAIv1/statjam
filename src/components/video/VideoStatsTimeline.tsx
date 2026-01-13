@@ -434,6 +434,10 @@ export function VideoStatsTimeline({
       created_at: stat.createdAt || new Date().toISOString(),
       is_opponent_stat: stat.isOpponentStat || false,
       player_name: stat.playerName,
+      // ✅ Shot location fields for edit form
+      shot_location_x: stat.shotLocationX ?? null,
+      shot_location_y: stat.shotLocationY ?? null,
+      shot_zone: stat.shotZone ?? null,
     };
     setEditingStat(gameStatRecord);
   }, [gameId]);
