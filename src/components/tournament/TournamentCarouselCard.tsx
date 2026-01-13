@@ -61,6 +61,8 @@ export function TournamentCarouselCard({
                   src={tournament.logo}
                   alt={tournament.name}
                   className="w-full h-full object-contain p-3"
+                  loading="eager"
+                  fetchPriority="high"
                 />
               </div>
             ) : (
@@ -156,6 +158,8 @@ export function TournamentCarouselCard({
                       src={logoUrl}
                       alt={`Team ${idx + 1}`}
                       className="w-full h-full object-cover"
+                      loading="eager"
+                      fetchPriority="high"
                     />
                   </div>
                 ))}
@@ -171,6 +175,8 @@ export function TournamentCarouselCard({
                       src={logoUrl}
                       alt={`Team ${idx + 4}`}
                       className="w-full h-full object-cover"
+                      loading="eager"
+                      fetchPriority="high"
                     />
                   </div>
                 ))}

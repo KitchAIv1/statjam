@@ -69,7 +69,7 @@ export function GameCard({
     if (logoUrl) {
       return (
         <div className={`rounded-full border border-white/15 bg-white/5 flex items-center justify-center ${align === 'left' ? 'mr-2' : 'ml-2'}`} style={{ width: size, height: size }}>
-          <img src={logoUrl} alt={`${name} logo`} className="w-[70%] h-[70%] object-contain" />
+          <img src={logoUrl} alt={`${name} logo`} className="w-[70%] h-[70%] object-contain" loading="eager" fetchPriority="high" />
         </div>
       );
     }
