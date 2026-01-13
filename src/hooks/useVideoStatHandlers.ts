@@ -141,7 +141,12 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
   const autoFreeThrowSequence = sequenceFlags.enabled && sequenceFlags.freeThrowSequence;
 
   // Core stat recording - ✅ OPTIMIZED: Fire-and-forget pattern for instant UI response
-  const handleStatRecord = useCallback((statType: string, modifier?: string) => {
+  // ✅ SHOT TRACKER: Now accepts optional location data for court-based shot tracking
+  const handleStatRecord = useCallback((
+    statType: string, 
+    modifier?: string,
+    locationData?: { shotLocationX?: number; shotLocationY?: number; shotZone?: string }
+  ) => {
     if (!selectedPlayer || !gameData || !gameClock) return;
     onBeforeRecord?.();
 
@@ -170,6 +175,9 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
         gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId, statType, modifier,
         videoTimestampMs: currentVideoTimeMs, quarter: gameClock.quarter,
         gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+        shotLocationX: locationData?.shotLocationX,
+        shotLocationY: locationData?.shotLocationY,
+        shotZone: locationData?.shotZone,
       skipPostUpdates: true,
     })
       .then((statId) => {

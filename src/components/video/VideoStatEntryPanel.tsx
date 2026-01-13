@@ -10,14 +10,16 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Loader2, Zap, Hand } from 'lucide-react';
+import { Loader2, Zap, Hand, Grid3X3, Target } from 'lucide-react';
 import { VideoPlayerRoster } from '@/components/video/VideoPlayerRoster';
 import { VideoStatButtons } from '@/components/video/VideoStatButtons';
 import { VideoStatPromptRenderer } from '@/components/video/VideoStatPromptRenderer';
 import { SubstitutionModalV4 } from '@/components/tracker-v3/SubstitutionModalV4';
+import { ShotTrackerContainer } from '@/components/tracker-v3/shot-tracker/ShotTrackerContainer';
 import { useVideoStatEntry, type VideoStatHandlers, type Player, DEFAULT_SEQUENCE_FLAGS, MANUAL_MODE_FLAGS } from '@/hooks/useVideoStatEntry';
 import type { GameClock } from '@/lib/types/video';
 import type { SequenceAutomationFlags } from '@/lib/types/automation';
+import type { ShotLocationData } from '@/lib/types/shotTracker';
 
 // Re-export types for consumers
 export type { VideoStatHandlers, Player };
@@ -58,6 +60,9 @@ export function VideoStatEntryPanel({
   // ✅ Manual mode state - controls whether auto-prompts are shown
   const [isManualMode, setIsManualMode] = useState(initialManualMode);
   
+  // ✅ SHOT TRACKER: Input mode toggle (classic buttons vs court diagram)
+  const [inputMode, setInputMode] = useState<'classic' | 'shot_tracker'>('classic');
+  
   // Derive sequence flags from manual mode state
   const sequenceFlags: SequenceAutomationFlags = isManualMode 
     ? MANUAL_MODE_FLAGS 
@@ -69,6 +74,15 @@ export function VideoStatEntryPanel({
     setIsManualMode(newValue);
     onManualModeChange?.(newValue);
   }, [isManualMode, onManualModeChange]);
+  
+  // ✅ SHOT TRACKER: Async wrapper for shot tracker (expects Promise return)
+  const handleStatRecordWithLocation = useCallback(async (
+    statType: string,
+    modifier: string,
+    locationData?: ShotLocationData
+  ): Promise<void> => {
+    entry.handleStatRecord(statType, modifier, locationData);
+  }, [entry]);
   
   const entry = useVideoStatEntry({
     gameId, videoId, currentVideoTimeMs, gameClock,
@@ -172,7 +186,7 @@ export function VideoStatEntryPanel({
         {/* Normal stat entry UI (when no prompt active) */}
         {!entry.promptType && (
           <>
-            {/* ✅ Manual Mode Toggle */}
+            {/* ✅ Mode Toggles: Manual/Auto + Buttons/Court */}
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
               <div className="text-sm font-medium text-gray-700">
                 {entry.selectedPlayer ? (
@@ -185,50 +199,98 @@ export function VideoStatEntryPanel({
                 )}
               </div>
               
-              {/* Manual Mode Toggle Button */}
-              <button
-                type="button"
-                onClick={handleToggleManualMode}
-                className={`
-                  flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all
-                  ${isManualMode 
-                    ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' 
-                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+              <div className="flex items-center gap-2">
+                {/* ✅ SHOT TRACKER: Input Mode Toggle */}
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('classic')}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                      inputMode === 'classic'
+                        ? 'bg-white text-gray-800 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Classic button mode"
+                  >
+                    <Grid3X3 className="w-3 h-3" />
+                    <span className="hidden sm:inline">Buttons</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('shot_tracker')}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                      inputMode === 'shot_tracker'
+                        ? 'bg-white text-orange-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Court shot tracker mode"
+                  >
+                    <Target className="w-3 h-3" />
+                    <span className="hidden sm:inline">Court</span>
+                  </button>
+                </div>
+                
+                {/* Manual Mode Toggle Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleManualMode}
+                  className={`
+                    flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all
+                    ${isManualMode 
+                      ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' 
+                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }
+                  `}
+                  title={isManualMode 
+                    ? 'Manual Mode: No auto-prompts after stats' 
+                    : 'Auto Mode: Prompts for assists, rebounds, etc.'
                   }
-                `}
-                title={isManualMode 
-                  ? 'Manual Mode: No auto-prompts after stats' 
-                  : 'Auto Mode: Prompts for assists, rebounds, etc.'
-                }
-              >
-                {isManualMode ? (
-                  <>
-                    <Hand className="w-3.5 h-3.5" />
-                    Manual
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-3.5 h-3.5" />
-                    Auto
-                  </>
-                )}
-              </button>
+                >
+                  {isManualMode ? (
+                    <>
+                      <Hand className="w-3.5 h-3.5" />
+                      Manual
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-3.5 h-3.5" />
+                      Auto
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
             
-            <VideoStatButtons 
-              onStatRecord={(statType, modifier) => {
-                if (statType === 'turnover') {
-                  entry.handleInitiateTurnover();
-                } else if (statType === 'foul') {
-                  entry.handleInitiateFoul();
-                } else if (statType === 'rebound') {
-                  entry.handleInitiateRebound();
-                } else {
-                  entry.handleStatRecord(statType, modifier);
-                }
-              }} 
-              disabled={!entry.selectedPlayer || entry.isRecording} 
-            />
+            {/* ✅ SHOT TRACKER: Conditional rendering based on input mode */}
+            {inputMode === 'shot_tracker' ? (
+              <div className="h-64 mb-3">
+                <ShotTrackerContainer
+                  selectedPlayerId={entry.selectedPlayer}
+                  selectedCustomPlayerId={entry.selectedPlayer?.startsWith('custom-') ? entry.selectedPlayer : null}
+                  selectedTeamId={entry.selectedTeam === 'A' ? entry.gameData.team_a_id : entry.gameData.team_b_id}
+                  teamAId={entry.gameData.team_a_id}
+                  playerName={selectedPlayerData?.name || 'Unknown'}
+                  jerseyNumber={selectedPlayerData?.jerseyNumber}
+                  onRecordStat={handleStatRecordWithLocation}
+                  hasPlayerSelected={!!entry.selectedPlayer}
+                />
+              </div>
+            ) : (
+              <VideoStatButtons 
+                onStatRecord={(statType, modifier) => {
+                  if (statType === 'turnover') {
+                    entry.handleInitiateTurnover();
+                  } else if (statType === 'foul') {
+                    entry.handleInitiateFoul();
+                  } else if (statType === 'rebound') {
+                    entry.handleInitiateRebound();
+                  } else {
+                    entry.handleStatRecord(statType, modifier);
+                  }
+                }} 
+                disabled={!entry.selectedPlayer || entry.isRecording} 
+              />
+            )}
           </>
         )}
       </div>
