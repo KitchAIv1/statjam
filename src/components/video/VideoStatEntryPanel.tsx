@@ -75,6 +75,14 @@ export function VideoStatEntryPanel({
     onManualModeChange?.(newValue);
   }, [isManualMode, onManualModeChange]);
   
+  const entry = useVideoStatEntry({
+    gameId, videoId, currentVideoTimeMs, gameClock,
+    onStatRecorded, onBeforeRecord,
+    isCoachMode, userId, opponentName,
+    preloadedTeamAPlayers, preloadedTeamBPlayers, preloadedGameData,
+    sequenceFlags, // ✅ Pass derived sequence flags
+  });
+
   // ✅ SHOT TRACKER: Async wrapper for shot tracker (expects Promise return)
   const handleStatRecordWithLocation = useCallback(async (
     statType: string,
@@ -83,14 +91,6 @@ export function VideoStatEntryPanel({
   ): Promise<void> => {
     entry.handleStatRecord(statType, modifier, locationData);
   }, [entry]);
-  
-  const entry = useVideoStatEntry({
-    gameId, videoId, currentVideoTimeMs, gameClock,
-    onStatRecorded, onBeforeRecord,
-    isCoachMode, userId, opponentName,
-    preloadedTeamAPlayers, preloadedTeamBPlayers, preloadedGameData,
-    sequenceFlags, // ✅ Pass derived sequence flags
-  });
 
   // Register handlers for keyboard shortcuts
   useEffect(() => {
