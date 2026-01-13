@@ -76,12 +76,56 @@ interface PlayByPlayEntry {
   };
 }
 
+// ✅ Public viewer team stats (computed without complex +/- calculation)
+interface PublicTeamStats {
+  teamStats: {
+    fieldGoalsMade: number;
+    fieldGoalsAttempted: number;
+    threePointersMade: number;
+    threePointersAttempted: number;
+    freeThrowsMade: number;
+    freeThrowsAttempted: number;
+    turnovers: number;
+    rebounds: number;
+    assists: number;
+    teamFouls: number;
+    fieldGoalPercentage: number;
+    threePointPercentage: number;
+    freeThrowPercentage: number;
+  };
+  players: {
+    playerId: string;
+    playerName: string;
+    isCustomPlayer: boolean;
+    profilePhotoUrl?: string;
+    minutes: number; // 0 for public (no complex calculation)
+    points: number;
+    rebounds: number;
+    assists: number;
+    steals: number;
+    blocks: number;
+    turnovers: number;
+    fouls: number;
+    plusMinus: number; // 0 for public (no complex calculation)
+    fieldGoalsMade: number;
+    fieldGoalsAttempted: number;
+    threePointersMade: number;
+    threePointersAttempted: number;
+    freeThrowsMade: number;
+    freeThrowsAttempted: number;
+  }[];
+}
+
 interface GameViewerData {
   game: GameData | null;
   stats: GameStats[];
   plays: PlayByPlayEntry[];
   loading: boolean;
   error: string | null;
+  // ✅ Public viewer pre-computed stats (for unauthenticated users)
+  publicTeamAStats: PublicTeamStats | null;
+  publicTeamBStats: PublicTeamStats | null;
+  isPublicViewer: boolean;
 }
 
 /**
@@ -95,7 +139,8 @@ function transformStatsToPlays(
   teamAName: string,
   teamBName: string,
   substitutions: any[] = [],
-  timeouts: any[] = []
+  timeouts: any[] = [],
+  playersMap: Map<string, { name: string; photoUrl: string | null }> = new Map()
 ): PlayByPlayEntry[] {
   // ✅ STEP 1: Sort all raw data chronologically by GAME TIME (oldest first) BEFORE score calculation
   // ✅ FIX: Use game time (quarter, minutes, seconds) instead of created_at for accurate chronological order
@@ -172,7 +217,19 @@ function transformStatsToPlays(
       teamName = 'Unknown Team';
     }
     
-    const playerName = stat.player_name || `Player ${stat.player_id?.substring(0, 8) || 'Unknown'}`;
+    // ✅ FIX: Use playersMap directly for player name lookup (same as Team Tabs)
+    const statWithCustomId = stat as any;
+    const playerId = stat.player_id || statWithCustomId.custom_player_id;
+    const playerInfo = playersMap.get(playerId);
+    
+    // 🔍 DEBUG: First stat only
+    if (sortedStats.indexOf(stat) === 0) {
+      console.log('🔍 TRANSFORM DEBUG:', 
+        `mapSize=${playersMap.size}, playerId=${playerId?.substring(0,8)}, found=${!!playerInfo}, name=${playerInfo?.name || 'NOT FOUND'}`
+      );
+    }
+    
+    const playerName = playerInfo?.name || stat.player_name || `Player ${playerId?.substring(0, 8) || 'Unknown'}`;
     
     let description = '';
     let points = 0;
@@ -294,8 +351,16 @@ function transformStatsToPlays(
                      sub.team_id === teamBId ? teamBName : 
                      'Unknown Team';
     
-    const description = `SUB: ${sub.player_in_name} in for ${sub.player_out_name}`;
+    // ✅ FIX: Use playersMap directly for substitution player names (same as Team Tabs)
     const subWithCustom = sub as any;
+    const playerInId = sub.player_in_id || subWithCustom.custom_player_in_id;
+    const playerOutId = sub.player_out_id || subWithCustom.custom_player_out_id;
+    const playerInInfo = playersMap.get(playerInId);
+    const playerOutInfo = playersMap.get(playerOutId);
+    const playerInName = playerInInfo?.name || sub.player_in_name || `Player ${playerInId?.substring(0, 8) || 'Unknown'}`;
+    const playerOutName = playerOutInfo?.name || sub.player_out_name || `Player ${playerOutId?.substring(0, 8) || 'Unknown'}`;
+    
+    const description = `SUB: ${playerInName} in for ${playerOutName}`;
     
     return {
       id: sub.id,
@@ -305,9 +370,9 @@ function transformStatsToPlays(
       gameTimeSeconds: sub.game_time_seconds || 0,
       description,
       statType: 'substitution',
-      playerId: sub.player_in_id || subWithCustom.custom_player_in_id || '', // ✅ FIX: Handle custom players
-      playerName: sub.player_in_name,
-      playerPhotoUrl: subWithCustom.player_in_photo_url || null, // ✅ FIX: Include player photo for avatar display
+      playerId: playerInId || '',
+      playerName: playerInName,
+      playerPhotoUrl: playerInInfo?.photoUrl || subWithCustom.player_in_photo_url || null,
       teamId: sub.team_id || '',
       teamName,
       modifier: null,
@@ -373,6 +438,11 @@ export function useGameViewerV2(gameId: string): GameViewerData {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // ✅ COACH GAME FIX: Pre-computed stats for public viewers (bypass RLS)
+  const [publicTeamAStats, setPublicTeamAStats] = useState<PublicTeamStats | null>(null);
+  const [publicTeamBStats, setPublicTeamBStats] = useState<PublicTeamStats | null>(null);
+  const [isPublicViewer, setIsPublicViewer] = useState(false);
   
   // Store players map for photo updates
   const playersMapRef = useRef<Map<string, { name: string; photoUrl: string | null }>>(new Map());
@@ -482,6 +552,14 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         // Tournament name (API doesn't return this, but it's not critical for coach games)
         tournamentName = 'Coach Game';
         
+        // ✅ COACH GAME FIX: Extract pre-computed stats for public viewers
+        // Only for coach games - organizer games use existing RLS flow
+        if (gameInfo.is_coach_game && apiDataFromFallback.computedTeamAStats) {
+          setPublicTeamAStats(apiDataFromFallback.computedTeamAStats);
+          setPublicTeamBStats(apiDataFromFallback.computedTeamBStats || null);
+          setIsPublicViewer(true);
+        }
+        
       } else {
         // ✅ NORMAL PATH: Direct Supabase calls (RLS allowed)
         const teamIds = [gameInfo.team_a_id, gameInfo.team_b_id].filter(Boolean);
@@ -574,6 +652,13 @@ export function useGameViewerV2(gameId: string): GameViewerData {
             });
           });
         }
+        
+        // 🔍 DEBUG: Log playersMap contents for public viewer
+        const sampleEntries = Array.from(playersMap.entries()).slice(0, 3);
+        console.log('🗺️ PUBLIC PATH - playersMap populated:', 
+          `size=${playersMap.size}, users=${apiDataFromFallback.users?.length || 0}, custom=${apiDataFromFallback.customPlayers?.length || 0}`,
+          'sampleKeys:', sampleEntries.map(([k, v]) => `${k.substring(0,8)}=${v.name}`).join(', ')
+        );
       } else {
         // ✅ NORMAL PATH: Direct Supabase calls for players (RLS allowed)
         const statsPlayerIds = [...new Set(gameStats.map(s => s.player_id).filter(Boolean))];
@@ -731,6 +816,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
       };
 
       // 9. Transform stats, substitutions, AND timeouts into play-by-play entries
+      // ✅ FIX: Pass playersMap for direct player name lookup (fixes public viewer)
       const playByPlayEntries = transformStatsToPlays(
         gameStats,
         gameInfo.team_a_id,
@@ -738,7 +824,8 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         teamAName,
         teamBName,
         gameSubstitutions,
-        gameTimeouts
+        gameTimeouts,
+        playersMap
       );
 
       // ✅ ANTI-FLICKER: Only update if data actually changed
@@ -1006,6 +1093,10 @@ export function useGameViewerV2(gameId: string): GameViewerData {
     stats,
     plays,
     loading,
-    error
+    error,
+    // ✅ COACH GAME FIX: Pre-computed stats for public viewers
+    publicTeamAStats,
+    publicTeamBStats,
+    isPublicViewer
   };
 }

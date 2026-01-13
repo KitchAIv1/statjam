@@ -149,7 +149,7 @@ export class TournamentLeadersService {
       logger.debug('⚡ TournamentLeadersService: Fetched', rows.length, 'rows for phase:', gamePhase);
 
       // Map database rows to PlayerLeader interface
-      return processedRows
+      return rows
         .filter(row => row.games_played >= minGames)
         .map((row, index) => {
           const gp = row.games_played || 1;

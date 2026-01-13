@@ -7,10 +7,13 @@
  * - Organizer games: Public (shareable link for spectators)
  * - Security: UUID-based (unguessable game IDs)
  * - Data: READ-ONLY spectator data (scores, stats, player names)
+ * 
+ * @module GameViewerAPI
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { computeTeamStats, computeOpponentStats } from '@/lib/services/publicGameStatsService';
 
 // Lazy initialization to avoid build-time errors
 function getSupabaseAdmin() {
@@ -28,15 +31,13 @@ export async function GET(
     const supabaseAdmin = getSupabaseAdmin();
     const { gameId } = await params;
     
-    // ✅ ALL GAMES ARE PUBLIC - No auth required for spectator view
-    // Fetch full game data with service role (bypasses RLS)
+    // Fetch game data (bypasses RLS)
     const { data: game, error: gameError } = await supabaseAdmin
       .from('games')
       .select('*')
       .eq('id', gameId)
       .single();
     
-    // Log access for debugging
     console.log(`📺 Game viewer API: Public access - ${gameId.substring(0, 8)}`);
 
     if (gameError || !game) {
@@ -50,20 +51,13 @@ export async function GET(
       .select('id, name, logo_url')
       .in('id', teamIds);
 
-    // Fetch team players for both teams
+    // Fetch team players
     const { data: teamPlayers } = await supabaseAdmin
       .from('team_players')
-      .select(`
-        id,
-        team_id,
-        player_id,
-        custom_player_id,
-        jersey_number,
-        position
-      `)
+      .select('id, team_id, player_id, custom_player_id, jersey_number, position')
       .in('team_id', teamIds);
 
-    // Get player IDs from team_players (will combine with stats later)
+    // Get player IDs from team_players
     const teamPlayerIds = teamPlayers?.filter(tp => tp.player_id).map(tp => tp.player_id) || [];
     const teamCustomPlayerIds = teamPlayers?.filter(tp => tp.custom_player_id).map(tp => tp.custom_player_id) || [];
 
@@ -85,23 +79,56 @@ export async function GET(
       .select('*')
       .eq('game_id', gameId);
 
-    // ✅ FIX: Also get player IDs from stats (in case some players are not in team_players)
+    // Collect ALL player IDs from stats AND substitutions
     const statsPlayerIds = stats?.filter(s => s.player_id).map(s => s.player_id) || [];
     const statsCustomPlayerIds = stats?.filter(s => s.custom_player_id).map(s => s.custom_player_id) || [];
+    const subPlayerInIds = substitutions?.filter(s => s.player_in_id).map(s => s.player_in_id) || [];
+    const subPlayerOutIds = substitutions?.filter(s => s.player_out_id).map(s => s.player_out_id) || [];
+    const subCustomPlayerInIds = substitutions?.filter(s => s.custom_player_in_id).map(s => s.custom_player_in_id) || [];
+    const subCustomPlayerOutIds = substitutions?.filter(s => s.custom_player_out_id).map(s => s.custom_player_out_id) || [];
     
-    // Combine all player IDs (team_players + stats)
-    const allPlayerIds = [...new Set([...teamPlayerIds, ...statsPlayerIds])];
-    const allCustomPlayerIds = [...new Set([...teamCustomPlayerIds, ...statsCustomPlayerIds])];
+    // Combine all player IDs
+    const allPlayerIds = [...new Set([...teamPlayerIds, ...statsPlayerIds, ...subPlayerInIds, ...subPlayerOutIds])];
+    const allCustomPlayerIds = [...new Set([...teamCustomPlayerIds, ...statsCustomPlayerIds, ...subCustomPlayerInIds, ...subCustomPlayerOutIds])];
 
-    // Fetch ALL users (from team_players + stats)
+    // Fetch users for player_id values
     const { data: allUsers } = allPlayerIds.length > 0 
       ? await supabaseAdmin.from('users').select('id, name, email, avatar_url, profile_photo_url').in('id', allPlayerIds)
       : { data: [] };
+    
+    // Find player_ids NOT found in users (might be custom players)
+    const foundUserIds = new Set((allUsers || []).map(u => u.id));
+    const missingPlayerIds = allPlayerIds.filter(id => !foundUserIds.has(id));
+    const allPossibleCustomPlayerIds = [...new Set([...allCustomPlayerIds, ...missingPlayerIds])];
 
-    // Fetch ALL custom players (from team_players + stats)
-    const { data: allCustomPlayers } = allCustomPlayerIds.length > 0
-      ? await supabaseAdmin.from('custom_players').select('id, name, photo_url, profile_photo_url, jersey_number').in('id', allCustomPlayerIds)
-      : { data: [] };
+    // Fetch custom players
+    let allCustomPlayers: any[] = [];
+    if (allPossibleCustomPlayerIds.length > 0) {
+      const { data, error } = await supabaseAdmin
+        .from('custom_players')
+        .select('id, name, profile_photo_url, jersey_number')
+        .in('id', allPossibleCustomPlayerIds);
+      
+      if (error) {
+        console.error('❌ Game viewer API: custom_players query error:', error);
+      } else {
+        allCustomPlayers = data || [];
+      }
+    }
+
+    // Compute team stats for coach games (public viewers)
+    let computedTeamAStats = null;
+    let computedTeamBStats = null;
+    
+    if (game.is_coach_game && stats && stats.length > 0) {
+      const usersMap = new Map((allUsers || []).map(u => [u.id, u]));
+      const customPlayersMap = new Map((allCustomPlayers || []).map(cp => [cp.id, cp]));
+      
+      computedTeamAStats = computeTeamStats(stats, game.team_a_id, true, usersMap, customPlayersMap);
+      computedTeamBStats = computeOpponentStats(stats);
+      
+      console.log(`📺 Game viewer API: Computed coach stats - ${computedTeamAStats.players.length} players`);
+    }
 
     return NextResponse.json({
       game,
@@ -111,7 +138,9 @@ export async function GET(
       customPlayers: allCustomPlayers || [],
       stats: stats || [],
       substitutions: substitutions || [],
-      timeouts: timeouts || []
+      timeouts: timeouts || [],
+      computedTeamAStats,
+      computedTeamBStats
     });
 
   } catch (error: any) {
@@ -119,4 +148,3 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

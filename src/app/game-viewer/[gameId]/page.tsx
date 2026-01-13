@@ -35,7 +35,8 @@ interface GameViewerPageProps {
 
 const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   const { gameId } = use(params);
-  const { game, stats, plays, loading, error } = useGameViewerV2(gameId);
+  // ✅ COACH GAME FIX: Get pre-computed stats for public viewers
+  const { game, stats, plays, loading, error, publicTeamAStats, publicTeamBStats, isPublicViewer } = useGameViewerV2(gameId);
   const { theme, isDark, toggleTheme } = useGameViewerTheme();
   const [teamALogo, setTeamALogo] = useState<string | null>(null);
   const [teamBLogo, setTeamBLogo] = useState<string | null>(null);
@@ -119,14 +120,17 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
   }, [clips]);
 
   // Prefetch team data for instant tab switching
+  // ✅ FIX: Skip prefetch for public coach game viewers (RLS blocks, use API data instead)
+  const skipPrefetch = game?.is_coach_game && isPublicViewer;
+  
   const teamAPrefetch = useTeamStats(gameId, game?.team_a_id || '', { 
     prefetch: true, 
-    enabled: !!game?.team_a_id 
+    enabled: !!game?.team_a_id && !skipPrefetch
   });
   
   const teamBPrefetch = useTeamStats(gameId, game?.team_b_id || '', { 
     prefetch: true, 
-    enabled: !!game?.team_b_id 
+    enabled: !!game?.team_b_id && !skipPrefetch
   });
 
   // ✅ Game completion state (needed for prefetch conditions)
@@ -275,8 +279,8 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
             <TabsTrigger value="teamB" className={`flex-1 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none py-3 ${isDark ? 'data-[state=active]:bg-slate-700/50 text-muted-foreground data-[state=active]:text-orange-400' : 'data-[state=active]:bg-orange-50 text-gray-600 data-[state=active]:text-orange-600'}`}>
               {game.is_coach_game ? (game.opponent_name || 'Opponent') : (game.team_b_name || 'Team B')}
             </TabsTrigger>
-            {/* ✅ Coach Analytics Tab - Only for coach games */}
-            {game.is_coach_game && isCompleted && (
+            {/* ✅ Coach Analytics Tab - Only for coach games (hidden for public viewers) */}
+            {game.is_coach_game && isCompleted && !isPublicViewer && (
               <TabsTrigger value="analytics" className={`flex-1 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none py-3 ${isDark ? 'data-[state=active]:bg-slate-700/50 text-muted-foreground data-[state=active]:text-orange-400' : 'data-[state=active]:bg-orange-50 text-gray-600 data-[state=active]:text-orange-600'}`}>
                 Analytics
               </TabsTrigger>
@@ -359,11 +363,23 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               teamId={game.team_a_id} 
               teamName={game.team_a_name || 'Team A'}
               isDark={isDark}
-              prefetchedData={!teamAPrefetch.loading && !teamAPrefetch.error ? {
-                teamStats: teamAPrefetch.teamStats,
-                onCourtPlayers: teamAPrefetch.onCourtPlayers,
-                benchPlayers: teamAPrefetch.benchPlayers
-              } : undefined}
+              prefetchedData={
+                // ✅ COACH GAME FIX: Use pre-computed stats for public coach game viewers
+                // Priority: 1) Public coach game stats (API), 2) Prefetch hook data
+                (game.is_coach_game && isPublicViewer && publicTeamAStats) 
+                  ? {
+                      teamStats: publicTeamAStats.teamStats,
+                      onCourtPlayers: publicTeamAStats.players.slice(0, 5),
+                      benchPlayers: publicTeamAStats.players.slice(5)
+                    }
+                  : (!teamAPrefetch.loading && !teamAPrefetch.error) 
+                    ? {
+                        teamStats: teamAPrefetch.teamStats,
+                        onCourtPlayers: teamAPrefetch.onCourtPlayers,
+                        benchPlayers: teamAPrefetch.benchPlayers
+                      } 
+                    : undefined
+              }
             />
           </TabsContent>
 
@@ -375,16 +391,29 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
               teamName={game.is_coach_game ? (game.opponent_name || 'Opponent') : (game.team_b_name || 'Team B')}
               isDark={isDark}
               teamStatsOnly={game.is_coach_game || false}
-              prefetchedData={!teamBPrefetch.loading && !teamBPrefetch.error ? {
-                teamStats: teamBPrefetch.teamStats,
-                onCourtPlayers: teamBPrefetch.onCourtPlayers,
-                benchPlayers: teamBPrefetch.benchPlayers
-              } : undefined}
+              prefetchedData={
+                // ✅ COACH GAME FIX: Use pre-computed stats for public coach game viewers
+                // For coach games, Team B is opponent - only team stats, no players
+                (game.is_coach_game && isPublicViewer && publicTeamBStats)
+                  ? {
+                      teamStats: publicTeamBStats.teamStats,
+                      onCourtPlayers: [], // No individual players for opponent in coach mode
+                      benchPlayers: []
+                    }
+                  : (!teamBPrefetch.loading && !teamBPrefetch.error)
+                    ? {
+                        teamStats: teamBPrefetch.teamStats,
+                        onCourtPlayers: teamBPrefetch.onCourtPlayers,
+                        benchPlayers: teamBPrefetch.benchPlayers
+                      }
+                    : undefined
+              }
             />
           </TabsContent>
 
           {/* ✅ Coach Analytics Tab - Game breakdown for coach games */}
-          {game.is_coach_game && isCompleted && (
+          {/* Hidden for public viewers - requires authenticated access for complex calculations */}
+          {game.is_coach_game && isCompleted && !isPublicViewer && (
             <TabsContent value="analytics" className="mt-0">
               <CoachGameAnalyticsTab
                 gameId={gameId}

@@ -403,6 +403,11 @@ export class AuthServiceV2 {
       return { data: profile, error: null };
 
     } catch (error: any) {
+      // ✅ FIX: Don't log AbortError - this is expected during navigation/unmount
+      if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+        logger.debug('🔄 AuthServiceV2: Profile fetch aborted (navigation/unmount)');
+        return { data: null, error };
+      }
       logger.error('❌ AuthServiceV2: Get profile error:', error.message);
       return { data: null, error };
     }
