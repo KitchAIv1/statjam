@@ -396,55 +396,55 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         throw new Error('Missing Supabase configuration');
       }
 
-      // ✅ FIX: Try to get user auth token for coach games (fallback to anon for public games)
+      // ✅ FIX: Check for user auth token - determines which path to use
       let authToken = supabaseKey; // Default to anon key
+      let hasUserAuth = false;
       if (typeof window !== 'undefined') {
         const userToken = localStorage.getItem('sb-access-token');
         if (userToken) {
-          authToken = userToken; // Use authenticated token if available
+          authToken = userToken;
+          hasUserAuth = true;
         }
       }
 
       const headers = {
         'apikey': supabaseKey,
-        'Authorization': `Bearer ${authToken}`, // ✅ Use user token if available
+        'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json'
       };
 
-      // ⚡ PHASE 1: Fetch game data (needed for IDs)
-      // Try direct fetch first, fallback to API route if RLS blocks (for admin viewing coach games)
+      // ⚡ PHASE 1: Fetch game data
+      // ✅ FIX: For unauthenticated users, skip direct REST (RLS blocks stats) → use API route
       let gameInfo: any = null;
-      
-      const gameResponse = await fetch(
-        `${supabaseUrl}/rest/v1/games?select=*&id=eq.${gameId}`,
-        { headers }
-      );
-
-      if (gameResponse.ok) {
-        const gameData = await gameResponse.json();
-        if (gameData && gameData.length > 0) {
-          gameInfo = gameData[0];
-        }
-      }
-
-      // Fallback to API route if direct fetch returns empty (RLS blocking)
-      // ✅ FIX: Store ALL API data when using fallback (stats, teams, players, subs)
       let apiDataFromFallback: any = null;
       
-      if (!gameInfo) {
-        console.log('🔄 useGameViewerV2: Direct fetch blocked by RLS, trying API fallback...');
-        const apiFallbackResponse = await fetch(`/api/game-viewer/${gameId}`, {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
+      if (hasUserAuth) {
+        // Authenticated user: Try direct REST first (faster)
+        const gameResponse = await fetch(
+          `${supabaseUrl}/rest/v1/games?select=*&id=eq.${gameId}`,
+          { headers }
+        );
+
+        if (gameResponse.ok) {
+          const gameData = await gameResponse.json();
+          if (gameData && gameData.length > 0) {
+            gameInfo = gameData[0];
           }
+        }
+      }
+      
+      // Use API route for: unauthenticated users OR if direct fetch failed
+      if (!gameInfo) {
+        console.log(`🔄 useGameViewerV2: Using API fallback (${hasUserAuth ? 'RLS blocked' : 'public viewer'})`);
+        const apiFallbackResponse = await fetch(`/api/game-viewer/${gameId}`, {
+          headers: { 'Content-Type': 'application/json' }
         });
         
         if (apiFallbackResponse.ok) {
           apiDataFromFallback = await apiFallbackResponse.json();
           gameInfo = apiDataFromFallback.game;
           if (apiDataFromFallback.game) {
-            console.log('✅ useGameViewerV2: Successfully fetched via API fallback (using full API data)');
+            console.log('✅ useGameViewerV2: Successfully fetched via API fallback');
           }
         }
       }
