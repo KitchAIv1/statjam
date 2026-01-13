@@ -7,6 +7,7 @@
 
 import { hybridSupabaseService } from './hybridSupabaseService';
 import { getCountry } from '@/data/countries';
+import { getTeamLogoCdn } from '@/lib/utils/cdnUrl';
 
 /**
  * 🕐 STALENESS THRESHOLD: Games are considered stale if not updated in 6 hours
@@ -229,8 +230,12 @@ async function fetchTeamLogosForTournaments(tournamentIds: string[]): Promise<Ma
       if (!logosMap.has(team.tournament_id)) {
         logosMap.set(team.tournament_id, []);
       }
-      logosMap.get(team.tournament_id)!.push(team.logo_url);
-      counts.set(team.tournament_id, count + 1);
+      // ✅ CDN for faster logo loading
+      const cdnUrl = getTeamLogoCdn(team.logo_url);
+      if (cdnUrl) {
+        logosMap.get(team.tournament_id)!.push(cdnUrl);
+        counts.set(team.tournament_id, count + 1);
+      }
     }
 
     return logosMap;

@@ -24,6 +24,7 @@ import {
 } from '../types/coach';
 import { CoachPlayerService } from './coachPlayerService';
 import { invalidateCoachTeams } from '../utils/cache';
+import { getTeamLogoCdn } from '../utils/cdnUrl';
 
 export class CoachTeamService {
   /**
@@ -71,7 +72,7 @@ export class CoachTeamService {
           return {
             id: team.id,
             name: team.name,
-            logo: team.logo_url || undefined, // Map logo_url from database to logo
+            logo: getTeamLogoCdn(team.logo_url) || undefined, // ✅ CDN for faster loading
             coach_id: team.coach_id,
             tournament_id: team.tournament_id,
             approval_status: team.approval_status,
@@ -124,7 +125,7 @@ export class CoachTeamService {
       return {
         id: team.id,
         name: team.name,
-        logo: team.logo_url || undefined,
+        logo: getTeamLogoCdn(team.logo_url) || undefined, // ✅ CDN for faster loading
         coach_id: team.coach_id,
         tournament_id: team.tournament_id,
         approval_status: team.approval_status,
@@ -188,7 +189,7 @@ export class CoachTeamService {
       return {
         id: data.id,
         name: data.name,
-        logo: data.logo_url || undefined, // Map logo_url from database to logo
+        logo: getTeamLogoCdn(data.logo_url) || undefined, // ✅ CDN for faster loading
         coach_id: data.coach_id,
         visibility: data.visibility,
         is_official_team: data.is_official_team,

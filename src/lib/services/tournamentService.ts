@@ -2,6 +2,7 @@ import { Tournament, TournamentCreateRequest, TournamentUpdateRequest, Team, Pla
 import { supabase } from '@/lib/supabase';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import { logger } from '@/lib/utils/logger';
+import { getTeamLogoCdn } from '@/lib/utils/cdnUrl';
 
 // Tournament Business Logic Layer
 export class TournamentService {
@@ -1376,7 +1377,7 @@ export class TeamService {
       return {
         id: team.id,
         name: team.name,
-        logo: team.logo_url || undefined,
+        logo: getTeamLogoCdn(team.logo_url) || undefined, // ✅ CDN for faster loading
       };
     } catch (error) {
       logger.error('Error getting team info:', error);
@@ -1408,7 +1409,7 @@ export class TeamService {
         teamMap.set(team.id, {
           id: team.id,
           name: team.name,
-          logo: team.logo_url || undefined,
+          logo: getTeamLogoCdn(team.logo_url) || undefined, // ✅ CDN for faster loading
         });
       });
 

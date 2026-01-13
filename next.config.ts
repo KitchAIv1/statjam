@@ -65,7 +65,10 @@ const nextConfig: NextConfig = {
   
   // Image optimization
   images: {
-    domains: ['xhunnsczqjwfrwgjetff.supabase.co'], // Supabase storage domain
+    domains: [
+      'xhunnsczqjwfrwgjetff.supabase.co', // Supabase storage domain (origin)
+      'statjam-images.b-cdn.net',          // Bunny.net CDN (cached)
+    ],
     formats: ['image/webp', 'image/avif'],
   },
   
