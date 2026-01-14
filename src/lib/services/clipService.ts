@@ -3,7 +3,7 @@
  * Handles clip generation job management and clip access
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase, ensureSupabaseSession } from '@/lib/supabase';
 
 // ============================================================================
 // TYPES
@@ -93,6 +93,9 @@ export function isClipEligible(statType: string, modifier: string | null): boole
  */
 export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleStat[]> {
   try {
+    // ✅ CRITICAL: Ensure session is synced before RLS-protected queries
+    await ensureSupabaseSession();
+
     // Try with video_timestamp_ms filter first (video-tracked games)
     const { data, error } = await supabase
       .from('game_stats')
@@ -169,7 +172,7 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
       }));
     }
 
-    return (data || []).map((stat: any) => ({
+    const result = (data || []).map((stat: any) => ({
       id: stat.id,
       player_id: stat.player_id,
       custom_player_id: stat.custom_player_id,
@@ -185,6 +188,7 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
       is_clip_eligible: isClipEligible(stat.stat_type, stat.modifier),
       is_opponent_stat: stat.is_opponent_stat ?? false,
     }));
+    return result;
   } catch (err) {
     console.error('❌ Exception in getStatsForQCReview:', err);
     return [];
