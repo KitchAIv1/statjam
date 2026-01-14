@@ -17,6 +17,8 @@ interface QCReviewTimelineProps {
   currentVideoTimeMs?: number;
   /** Callback when marking a stat at current position */
   onMarkAtCurrentPosition?: (statId: string) => void;
+  /** Callback to update shot location */
+  onShotLocationUpdate?: (statId: string, x: number, y: number, zone: string) => void;
 }
 
 type FilterType = 'all' | 'clip_eligible' | 'not_eligible';
@@ -34,6 +36,7 @@ export function QCReviewTimeline({
   videoDurationMs,
   currentVideoTimeMs,
   onMarkAtCurrentPosition,
+  onShotLocationUpdate,
 }: QCReviewTimelineProps) {
   const [filter, setFilter] = useState<FilterType>('all');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -161,6 +164,7 @@ export function QCReviewTimeline({
                         isOutOfRange={isOutOfRange}
                         currentVideoTimeMs={currentVideoTimeMs}
                         onMarkAtCurrentPosition={onMarkAtCurrentPosition ? () => onMarkAtCurrentPosition(stat.id) : undefined}
+                        onShotLocationUpdate={onShotLocationUpdate}
                       />
                     );
                   })}

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Check, X, Film, Clock, User, Edit2, AlertTriangle, Crosshair } from 'lucide-react';
 import { ClipEligibleStat } from '@/lib/services/clipService';
+import { ShotLocationEditor } from '@/components/tracker-v3/modals/ShotLocationEditor';
 
 interface QCStatCardProps {
   stat: ClipEligibleStat;
@@ -16,6 +17,8 @@ interface QCStatCardProps {
   currentVideoTimeMs?: number;
   /** Callback to mark stat at current video position */
   onMarkAtCurrentPosition?: () => void;
+  /** Callback to update shot location */
+  onShotLocationUpdate?: (statId: string, x: number, y: number, zone: string) => void;
 }
 
 /**
@@ -31,7 +34,10 @@ export function QCStatCard({
   isOutOfRange = false,
   currentVideoTimeMs,
   onMarkAtCurrentPosition,
+  onShotLocationUpdate,
 }: QCStatCardProps) {
+  // Check if this is a shot stat (field_goal or three_pointer)
+  const isShotStat = stat.stat_type === 'field_goal' || stat.stat_type === 'three_pointer';
   // Format stat type for display
   const formatStatType = (type: string, modifier: string | null, points: number | null): string => {
     if (type === 'field_goal') {
@@ -164,6 +170,18 @@ export function QCStatCard({
           )}
         </div>
       </div>
+
+      {/* Shot Location Editor - only for shot stats */}
+      {isShotStat && onShotLocationUpdate && (
+        <div className="mt-3 pt-3 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
+          <ShotLocationEditor
+            locationX={stat.shot_location_x}
+            locationY={stat.shot_location_y}
+            zone={stat.shot_zone}
+            onLocationChange={(x, y, zone) => onShotLocationUpdate(stat.id, x, y, zone)}
+          />
+        </div>
+      )}
 
       {/* Selection Indicator */}
       {isSelected && (

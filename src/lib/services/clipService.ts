@@ -67,6 +67,9 @@ export interface ClipEligibleStat {
   video_timestamp_ms: number;
   is_clip_eligible: boolean;
   is_opponent_stat?: boolean;
+  shot_location_x: number | null;
+  shot_location_y: number | null;
+  shot_zone: string | null;
 }
 
 // ============================================================================
@@ -112,6 +115,9 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
         game_time_seconds,
         video_timestamp_ms,
         is_opponent_stat,
+        shot_location_x,
+        shot_location_y,
+        shot_zone,
         users:player_id (name),
         custom_players:custom_player_id (name)
       `)
@@ -138,6 +144,9 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
           game_time_seconds,
           video_timestamp_ms,
           is_opponent_stat,
+          shot_location_x,
+          shot_location_y,
+          shot_zone,
           users:player_id (name),
           custom_players:custom_player_id (name)
         `)
@@ -169,6 +178,9 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
         video_timestamp_ms: stat.video_timestamp_ms,
         is_clip_eligible: isClipEligible(stat.stat_type, stat.modifier),
         is_opponent_stat: stat.is_opponent_stat ?? false,
+        shot_location_x: stat.shot_location_x ?? null,
+        shot_location_y: stat.shot_location_y ?? null,
+        shot_zone: stat.shot_zone ?? null,
       }));
     }
 
@@ -187,6 +199,9 @@ export async function getStatsForQCReview(gameId: string): Promise<ClipEligibleS
       video_timestamp_ms: stat.video_timestamp_ms,
       is_clip_eligible: isClipEligible(stat.stat_type, stat.modifier),
       is_opponent_stat: stat.is_opponent_stat ?? false,
+      shot_location_x: stat.shot_location_x ?? null,
+      shot_location_y: stat.shot_location_y ?? null,
+      shot_zone: stat.shot_zone ?? null,
     }));
     return result;
   } catch (err) {

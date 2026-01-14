@@ -211,6 +211,26 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
     }
   }, [currentTime, gameId]);
 
+  // Handle shot location update from QC stat card
+  const handleShotLocationUpdate = useCallback(async (statId: string, x: number, y: number, zone: string) => {
+    try {
+      const { error } = await supabase
+        .from('game_stats')
+        .update({ shot_location_x: x, shot_location_y: y, shot_zone: zone })
+        .eq('id', statId);
+      
+      if (error) throw error;
+      
+      console.log(`✅ Updated shot location for stat ${statId}: ${zone} (${x.toFixed(1)}, ${y.toFixed(1)})`);
+      // Refresh stats to reflect the change
+      const updatedStats = await getStatsForQCReview(gameId);
+      setStats(updatedStats);
+    } catch (err) {
+      console.error('❌ Error updating shot location:', err);
+      alert('Failed to update shot location');
+    }
+  }, [gameId]);
+
   const handleSkip = useCallback((seconds: number) => {
     if (videoRef.current) {
       videoRef.current.currentTime += seconds;
@@ -625,6 +645,7 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
             videoDurationMs={duration}
             currentVideoTimeMs={currentTime}
             onMarkAtCurrentPosition={handleMarkAtCurrentPosition}
+            onShotLocationUpdate={handleShotLocationUpdate}
           />
         </div>
       </div>
