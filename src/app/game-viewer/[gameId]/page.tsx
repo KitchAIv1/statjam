@@ -28,6 +28,8 @@ import { TeamService } from '@/lib/services/tournamentService';
 import { PublicClipsTab } from './components/PublicClipsTab';
 import { getGameClips, GeneratedClip } from '@/lib/services/clipService';
 import { usePlayClips } from './hooks/usePlayClips';
+import { AICoachAnalysisHardcoded } from '@/components/game-viewer/AICoachAnalysisHardcoded';
+import { Brain } from 'lucide-react';
 
 interface GameViewerPageProps {
   params: Promise<{ gameId: string }>;
@@ -297,6 +299,15 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
                 </span>
               </TabsTrigger>
             )}
+            {/* ✅ AI Analysis Tab - Only for completed games */}
+            {isCompleted && (
+              <TabsTrigger value="ai-analysis" className={`flex-1 data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none py-3 ${isDark ? 'data-[state=active]:bg-slate-700/50 text-muted-foreground data-[state=active]:text-orange-400' : 'data-[state=active]:bg-orange-50 text-gray-600 data-[state=active]:text-orange-600'}`}>
+                <span className="flex items-center gap-1.5">
+                  <Brain className="w-4 h-4" />
+                  AI Analysis
+                </span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Feed Tab */}
@@ -432,6 +443,13 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
                 teamId={game.team_a_id} 
                 isDark={isDark} 
               />
+            </TabsContent>
+          )}
+
+          {/* ✅ AI Analysis Tab - AI-powered game analysis */}
+          {isCompleted && (
+            <TabsContent value="ai-analysis" className={`mt-0 ${isDark ? 'bg-slate-900' : 'bg-gradient-to-br from-orange-50/30 to-background'}`}>
+              <AICoachAnalysisHardcoded gameId={gameId} />
             </TabsContent>
           )}
         </Tabs>

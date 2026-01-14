@@ -218,18 +218,18 @@ function transformStatsToPlays(
     }
     
     // ✅ FIX: Use playersMap directly for player name lookup (same as Team Tabs)
+    // ✅ FIX: For opponent stats in coach mode, use "Opponent" (no individual player tracking)
     const statWithCustomId = stat as any;
-    const playerId = stat.player_id || statWithCustomId.custom_player_id;
-    const playerInfo = playersMap.get(playerId);
+    let playerName: string;
     
-    // 🔍 DEBUG: First stat only
-    if (sortedStats.indexOf(stat) === 0) {
-      console.log('🔍 TRANSFORM DEBUG:', 
-        `mapSize=${playersMap.size}, playerId=${playerId?.substring(0,8)}, found=${!!playerInfo}, name=${playerInfo?.name || 'NOT FOUND'}`
-      );
+    if (statWithOpponent.is_opponent_stat === true) {
+      // Coach mode opponent stats - use "Opponent" since we don't track individual opponent players
+      playerName = 'Opponent';
+    } else {
+      const playerId = stat.player_id || statWithCustomId.custom_player_id;
+      const playerInfo = playersMap.get(playerId);
+      playerName = playerInfo?.name || stat.player_name || `Player ${playerId?.substring(0, 8) || 'Unknown'}`;
     }
-    
-    const playerName = playerInfo?.name || stat.player_name || `Player ${playerId?.substring(0, 8) || 'Unknown'}`;
     
     let description = '';
     let points = 0;
@@ -802,7 +802,10 @@ export function useGameViewerV2(gameId: string): GameViewerData {
 
       // 8. Enrich game data
       const teamAName = teamsMap.get(gameInfo.team_a_id) || 'Team A';
-      const teamBName = teamsMap.get(gameInfo.team_b_id) || 'Team B';
+      // ✅ FIX: For coach games, use opponent_name from game record (not team lookup)
+      const teamBName = gameInfo.is_coach_game 
+        ? (gameInfo.opponent_name || 'Opponent')
+        : (teamsMap.get(gameInfo.team_b_id) || 'Team B');
       
       const enrichedGame: GameData = {
         ...gameInfo,

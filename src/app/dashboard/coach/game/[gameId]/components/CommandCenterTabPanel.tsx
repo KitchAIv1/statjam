@@ -20,6 +20,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { BarChart3, Users, Target, Trophy, Lock, Crown, Film } from 'lucide-react';
 import { ClipsTab } from './ClipsTab';
+import { AICoachAnalysisHardcoded } from '@/components/game-viewer/AICoachAnalysisHardcoded';
 
 interface CommandCenterTabPanelProps {
   gameId: string;
@@ -80,9 +81,9 @@ export function CommandCenterTabPanel({
   const { limits } = useSubscription('coach');
   const { user } = useAuthContext();
   
-  // ✅ Stat Admins are exempt from premium gates (they're tracking the game as a service)
-  const isStatAdmin = user?.role === 'stat_admin';
-  const hasAdvancedAnalytics = isStatAdmin || (limits?.hasAdvancedAnalytics ?? false);
+  // ✅ Stat Admins and Admins are exempt from premium gates
+  const isExempt = user?.role === 'stat_admin' || user?.role === 'admin';
+  const hasAdvancedAnalytics = isExempt || (limits?.hasAdvancedAnalytics ?? false);
   
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
@@ -215,15 +216,19 @@ export function CommandCenterTabPanel({
         {isCompleted && (
           <TabsContent value="analytics" className="mt-0 h-full bg-gradient-to-br from-orange-50/30 via-white to-red-50/20">
             {hasAdvancedAnalytics ? (
-              <CoachGameAnalyticsTab
-                gameId={gameId}
-                teamId={game.teamAId}
-                teamName={game.teamAName}
-                isDark={false}
-                prefetchedData={analyticsPrefetch && !analyticsPrefetch.loading && !analyticsPrefetch.error 
-                  ? analyticsPrefetch.analytics 
-                  : undefined}
-              />
+              <div className="space-y-0">
+                <CoachGameAnalyticsTab
+                  gameId={gameId}
+                  teamId={game.teamAId}
+                  teamName={game.teamAName}
+                  isDark={false}
+                  prefetchedData={analyticsPrefetch && !analyticsPrefetch.loading && !analyticsPrefetch.error 
+                    ? analyticsPrefetch.analytics 
+                    : undefined}
+                />
+                {/* AI Coach Analysis - Below Advanced Stats */}
+                <AICoachAnalysisHardcoded gameId={gameId} />
+              </div>
             ) : (
               /* Locked State for Free Users */
               <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center">

@@ -682,8 +682,8 @@ const StatAdminDashboard = () => {
                             </button>
                           )}
                           
-                          {/* Video Track Button - For completed games */}
-                          {game.status === 'completed' && (
+                          {/* Video Track Button - For all video-assigned games (not demo) */}
+                          {!game.is_demo && (
                             <button
                               onClick={() => {
                                 router.push(`/dashboard/stat-admin/video/${game.id}`);

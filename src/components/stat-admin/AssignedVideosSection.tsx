@@ -77,9 +77,9 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
 
   const handleStartTracking = async (videoItem: VideoQueueItem) => {
     try {
-      // For completed videos, navigate to game viewer
+      // For completed videos, still allow stat admin to access studio (to complete game)
       if (videoItem.video.assignmentStatus === 'completed') {
-        router.push(`/dashboard/coach/game/${videoItem.video.gameId}`);
+        router.push(`/dashboard/stat-admin/video/${videoItem.video.gameId}`);
         return;
       }
       
@@ -293,7 +293,7 @@ export function AssignedVideosSection({ userId }: AssignedVideosSectionProps) {
                     {item.video.assignmentStatus === 'completed' ? (
                       <>
                         <CheckCircle className="w-4 h-4" />
-                        View Stats
+                        Enter Studio
                       </>
                     ) : item.video.assignmentStatus === 'in_progress' ? (
                       <>
