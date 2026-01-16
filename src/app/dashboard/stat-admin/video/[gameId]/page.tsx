@@ -59,6 +59,7 @@ import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { GameAwardsService } from '@/lib/services/gameAwardsService';
 import { StatAdminDashboardService } from '@/lib/services/statAdminDashboardService';
 import { updateAssignmentStatus } from '@/lib/services/videoAssignmentService';
+import { AIAnalysisService } from '@/lib/services/aiAnalysisService';
 
 interface VideoStatTrackerPageProps {
   params: Promise<{ gameId: string }>;
@@ -476,6 +477,12 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
       }
       
       console.log('✅ Game completed with awards saved');
+      
+      // 🧠 FIRE-AND-FORGET: Pre-generate AI analysis for faster coach viewing
+      // This runs in background - failure doesn't affect game completion flow
+      AIAnalysisService.getAnalysis(gameId)
+        .then(() => console.log('🧠 AI Analysis pre-generation triggered for game:', gameId))
+        .catch((err) => console.warn('⚠️ AI Analysis pre-generation failed (fallback available):', err));
     } catch (error) {
       console.error('❌ Error completing game with awards:', error);
     }

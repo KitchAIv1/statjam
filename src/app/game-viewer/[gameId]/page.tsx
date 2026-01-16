@@ -28,7 +28,7 @@ import { TeamService } from '@/lib/services/tournamentService';
 import { PublicClipsTab } from './components/PublicClipsTab';
 import { getGameClips, GeneratedClip } from '@/lib/services/clipService';
 import { usePlayClips } from './hooks/usePlayClips';
-import { AICoachAnalysisHardcoded } from '@/components/game-viewer/AICoachAnalysisHardcoded';
+import { AICoachAnalysis } from '@/components/game-viewer/AICoachAnalysis';
 import { Brain } from 'lucide-react';
 
 interface GameViewerPageProps {
@@ -449,7 +449,7 @@ const GameViewerPage: React.FC<GameViewerPageProps> = ({ params }) => {
           {/* ✅ AI Analysis Tab - AI-powered game analysis */}
           {isCompleted && (
             <TabsContent value="ai-analysis" className={`mt-0 ${isDark ? 'bg-slate-900' : 'bg-gradient-to-br from-orange-50/30 to-background'}`}>
-              <AICoachAnalysisHardcoded gameId={gameId} />
+              <AICoachAnalysis gameId={gameId} />
             </TabsContent>
           )}
         </Tabs>

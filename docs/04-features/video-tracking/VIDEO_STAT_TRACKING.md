@@ -22,6 +22,7 @@ The Video Stat Tracking system enables stat admins to record basketball statisti
 - **Clock Synchronization**: Sync video playback with game clock using jumpball timestamp
 - **Keyboard-Driven Workflow**: Full keyboard shortcuts for video controls and stat entry
 - **Real-Time Stat Recording**: Record stats with precise video timestamps
+- **Shot Location Tracking**: Visual court diagram for recording shot locations (X, Y, zone)
 - **Auto-Sequences**: Automated prompts for assists, rebounds, turnovers, and fouls
 - **Stats Timeline**: Visual timeline of recorded stats with edit/delete functionality
 - **Coach Game Support**: Full support for coach-made games with custom players and opponent stats
@@ -444,7 +445,11 @@ quarter INTEGER,
 game_time_minutes INTEGER,
 game_time_seconds INTEGER,
 -- Video tracking column
-video_timestamp_ms INTEGER   -- Video position in milliseconds
+video_timestamp_ms INTEGER,  -- Video position in milliseconds
+-- Shot location columns
+shot_location_x DECIMAL(10, 2),  -- X coordinate (0-100)
+shot_location_y DECIMAL(10, 2),  -- Y coordinate (0-50)
+shot_zone TEXT                   -- Zone name (paint, mid_range, three_point, etc.)
 ```
 
 ---
@@ -592,12 +597,7 @@ CREATE POLICY "Coaches can view their uploaded videos" ON game_videos
 
 ### Planned Features
 
-1. **Shot Location Tracking**
-   - Click on court diagram to record shot location
-   - Store `shot_location_x`, `shot_location_y`, `shot_zone` in `game_stats`
-   - Generate shot charts from video tracking data
-
-2. **Multi-Video Support**
+1. **Multi-Video Support**
    - Support multiple camera angles
    - Switch between videos during tracking
    - Sync multiple videos to same game clock
@@ -616,6 +616,7 @@ CREATE POLICY "Coaches can view their uploaded videos" ON game_videos
 
 ## 📚 Related Documentation
 
+- [Video Shot Tracking](./VIDEO_SHOT_TRACKING.md) - Shot location tracking implementation
 - [Video Assignment Workflow](./VIDEO_ASSIGNMENT_WORKFLOW.md) - Admin-to-stat-admin assignment system
 - [Stat Tracker V3](../stat-tracker/STAT_TRACKER_V3.md) - Live game tracking system
 - [Coach Team Card](../coach-team-card/COACH_TEAM_CARD_IMPLEMENTATION.md) - Coach game system
@@ -627,7 +628,17 @@ CREATE POLICY "Coaches can view their uploaded videos" ON game_videos
 
 ## 🔄 Recent Updates (January 2025)
 
-### Upload Reliability Improvements
+### Shot Location Tracking (January 14, 2025)
+
+- **Court Diagram Input**: Visual half-court diagram for shot location selection
+- **Mode Toggle**: Switch between "Buttons" and "Court" input modes
+- **Zone Detection**: Automatic zone detection from coordinates (paint, mid-range, three-point)
+- **Edit Existing Locations**: Update shot locations via stat edit modal
+- **Data Consistency**: Same data structure as manual tracking (`shot_location_x`, `shot_location_y`, `shot_zone`)
+- **QC Review Integration**: Edit shot locations during quality control review
+- See [Video Shot Tracking](./VIDEO_SHOT_TRACKING.md) for complete documentation
+
+### Upload Reliability Improvements (January 2025)
 
 - **Retry Logic**: Automatic retry for failed upload chunks (3 attempts with exponential backoff)
 - **User-Friendly Errors**: Replaced "Failed to fetch" with actionable error messages
@@ -638,6 +649,6 @@ CREATE POLICY "Coaches can view their uploaded videos" ON game_videos
 - **Global State Management**: `VideoUploadContext` tracks upload state across pages
 - **Resume Capability**: localStorage persistence for interrupted uploads (future enhancement)
 
-**Last Updated**: January 2025  
+**Last Updated**: January 14, 2025  
 **Maintained By**: Development Team
 

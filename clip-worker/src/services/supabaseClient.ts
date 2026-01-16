@@ -260,7 +260,7 @@ function getClipTimingWindow(statType: string, modifier: string | null): { befor
   
   // Free throws - less context needed
   if (statType === 'free_throw') {
-    return { before: 1, after: 2 };
+    return { before: 2, after: 3 };
   }
   
   // Default fallback

@@ -20,7 +20,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { BarChart3, Users, Target, Trophy, Lock, Crown, Film } from 'lucide-react';
 import { ClipsTab } from './ClipsTab';
-import { AICoachAnalysisHardcoded } from '@/components/game-viewer/AICoachAnalysisHardcoded';
+import { AICoachAnalysis } from '@/components/game-viewer/AICoachAnalysis';
 
 interface CommandCenterTabPanelProps {
   gameId: string;
@@ -227,7 +227,7 @@ export function CommandCenterTabPanel({
                     : undefined}
                 />
                 {/* AI Coach Analysis - Below Advanced Stats */}
-                <AICoachAnalysisHardcoded gameId={gameId} />
+                <AICoachAnalysis gameId={gameId} />
               </div>
             ) : (
               /* Locked State for Free Users */

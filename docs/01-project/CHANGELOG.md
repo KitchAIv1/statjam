@@ -7,6 +7,137 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2025-01-XX
 
+### 🎯 **VIDEO TRACKING ENHANCEMENTS & CRITICAL FIXES (v0.17.11)**
+
+#### Shot Location Tracking for Video Mode
+- **ADDED**: Shot location tracking in video tracking mode
+  - Court diagram input for visual shot location selection
+  - Mode toggle between "Buttons" and "Court" input modes
+  - Automatic zone detection from coordinates (paint, mid-range, three-point)
+  - Shot location data (X, Y, zone) saved to `game_stats` table
+  - Edit existing shot locations via stat edit modal
+  - **Files Modified**:
+    - `src/hooks/useVideoStatHandlers.ts` - Extended to accept location data
+    - `src/components/video/VideoStatEntryPanel.tsx` - Added shot tracker mode toggle
+    - `src/components/video/VideoStatsTimeline.tsx` - Pass location to edit form
+    - `src/lib/services/videoStatService.ts` - Support location in stat recording
+  - **Testing**: Created `tests/video/videoShotTracker.test.ts` with 20 test cases
+  - See [Video Shot Tracking](../04-features/video-tracking/VIDEO_SHOT_TRACKING.md) for complete documentation
+
+#### QC Review Shot Location Editing
+- **ADDED**: Shot location editing in QC Review for made/missed shots
+  - Visual court diagram in QC stat cards
+  - Immediate save to database on location update
+  - Stats timeline auto-refreshes after location update
+  - **Files Modified**:
+    - `src/components/clips/QCStatCard.tsx` - Added location editor
+    - `src/components/clips/QCReviewTimeline.tsx` - Pass location update handler
+    - `src/app/dashboard/admin/qc-review/[gameId]/page.tsx` - Handle location updates
+  - See [QC Review Shot Location](../04-features/admin-dashboard/QC_REVIEW_SHOT_LOCATION.md) for complete documentation
+
+#### QC Review Stats Visibility Fix
+- **FIXED**: QC Review showing 0 stats despite 325 stats in database
+  - **Root Cause**: Supabase client session not synced before RLS-protected queries
+  - **Solution**: Added `await ensureSupabaseSession()` before queries in `getStatsForQCReview()`
+  - **Database**: Created `game_stats_admin_select` RLS policy for admin SELECT access
+  - **Impact**: Critical - QC Review now functional
+  - **Files Modified**:
+    - `src/lib/services/clipService.ts` - Added session sync
+  - **SQL Policy**:
+    ```sql
+    CREATE POLICY "game_stats_admin_select" ON game_stats
+      FOR SELECT TO authenticated
+      USING (
+        EXISTS (
+          SELECT 1 FROM users
+          WHERE users.id = auth.uid() AND users.role = 'admin'
+        )
+      );
+    ```
+
+#### Clip Worker Trigger Fix
+- **FIXED**: QC approval not triggering clip processing
+  - **Root Cause**: Missing `NEXT_PUBLIC_CLIP_WORKER_URL` environment variable
+  - **Solution**: Added environment variable to `.env.local`
+  - **Railway Deployment**: Fixed Dockerfile build step (added `npm run build` before `COPY dist`)
+  - **Impact**: High - Multi-clipping workflow now functional
+  - **Files Modified**:
+    - `statjam/clip-worker/Dockerfile` - Fixed build step
+  - **Environment Variable**:
+    ```env
+    NEXT_PUBLIC_CLIP_WORKER_URL=https://affectionate-elegance-production.up.railway.app
+    ```
+
+#### Opponent Name Display Fix
+- **FIXED**: Play-by-play feed showing stat admin's profile name as opponent
+  - **Root Cause**: Incorrect player name lookup for opponent stats
+  - **Solution**: 
+    - Set `playerName = 'Opponent'` when `is_opponent_stat === true`
+    - Fixed `teamBName` to use `gameInfo.opponent_name` for coach games
+  - **Impact**: High - Play-by-play accuracy improved
+  - **Files Modified**:
+    - `src/hooks/useGameViewerV2.ts` - Fixed player name and team name lookup
+
+#### Stat Admin Video Studio Access
+- **FIXED**: Stat admins couldn't access video studio for non-completed games
+  - **Root Cause**: Button condition too restrictive (`game.status === 'completed'`)
+  - **Solution**: Changed condition to `!game.is_demo` to allow access for all assigned games
+  - **Additional Fix**: Updated "View Stats" button text to "Enter Studio" for completed videos
+  - **Impact**: Medium - Workflow improvement, enables multi-clipping before completion
+  - **Files Modified**:
+    - `src/app/dashboard/stat-admin/page.tsx` - Updated button condition
+    - `src/components/stat-admin/AssignedVideosSection.tsx` - Updated button text and navigation
+
+#### AI Coach Analysis Integration
+- **ADDED**: AI Coach Analysis component integrated into Analytics tab
+  - Comprehensive game breakdown with AI-powered insights
+  - Game Overview, Winning Factors, Key Player Impact, Quarter Analysis, Coach Action Items, Bottom Line
+  - Currently hardcoded for game `06977421-52b9-4543-bab8-6480084c5e45`
+  - Only visible in Analytics tab for completed games
+  - Admin/stat_admin exempt from premium gate
+  - **Files Created**:
+    - `src/components/game-viewer/AICoachAnalysisHardcoded.tsx` - Main analysis component
+    - `src/lib/types/aiAnalysis.ts` - Type definitions
+  - **Files Modified**:
+    - `src/app/dashboard/coach/game/[gameId]/components/CommandCenterTabPanel.tsx` - Integrated into Analytics tab
+  - See [AI Coach Analysis](../04-features/game-viewer/AI_COACH_ANALYSIS.md) for complete documentation
+
+#### Technical Implementation
+- **Files Modified**: 15 total
+  - 4 files for shot location tracking
+  - 3 files for QC Review location editing
+  - 1 file for QC Review stats fix
+  - 1 file for clip worker fix
+  - 1 file for opponent name fix
+  - 2 files for stat admin access
+  - 3 files for AI analysis
+- **New Components**: 1 (`AICoachAnalysisHardcoded`)
+- **New Tests**: 1 (`videoShotTracker.test.ts` with 20 test cases)
+- **New Types**: 1 (`aiAnalysis.ts`)
+
+#### Documentation Updates
+- **CREATED**: `docs/01-project/DOCUMENTATION_UPDATE_SUMMARY_0.17.11.md`
+  - Complete update summary with all changes
+  - Technical implementation details
+  - Testing and verification results
+- **CREATED**: `docs/04-features/video-tracking/VIDEO_SHOT_TRACKING.md`
+  - Shot location tracking implementation guide
+  - User workflows and technical details
+- **CREATED**: `docs/04-features/admin-dashboard/QC_REVIEW_SHOT_LOCATION.md`
+  - QC Review shot location editing guide
+- **CREATED**: `docs/04-features/game-viewer/AI_COACH_ANALYSIS.md`
+  - AI Coach Analysis feature documentation
+- **UPDATED**: `docs/04-features/video-tracking/VIDEO_STAT_TRACKING.md`
+  - Added shot location to features list
+  - Updated database schema
+  - Moved shot location from "Future Enhancements" to "Recent Updates"
+- **UPDATED**: `docs/04-features/video-tracking/README.md`
+  - Added shot location to quick reference
+  - Updated recent updates section
+- **UPDATED**: `docs/01-project/CHANGELOG.md` - This entry
+
+---
+
 ### 🚀 **CRITICAL PERFORMANCE OPTIMIZATIONS & FIXES (v0.17.10)**
 
 #### Database RLS Policy Optimizations

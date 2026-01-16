@@ -41,6 +41,7 @@
 - ✅ Clock synchronization (jumpball timestamp)
 - ✅ Keyboard-driven workflow
 - ✅ Real-time stat recording with video timestamps
+- ✅ **Shot location tracking** (court diagram input)
 - ✅ Auto-sequences (assists, rebounds, turnovers, fouls)
 - ✅ Stats timeline with edit/delete
 - ✅ **Coach game support** (custom players, opponent stats)
@@ -156,6 +157,14 @@ See [VIDEO_STAT_TRACKING.md](./VIDEO_STAT_TRACKING.md#troubleshooting) for detai
 
 ## 📊 Recent Updates
 
+### January 14, 2025 - Shot Location Tracking
+- ✅ Court diagram input for shot location
+- ✅ Mode toggle (Buttons/Court)
+- ✅ Zone detection from coordinates
+- ✅ Edit existing shot locations
+- ✅ QC Review location editing
+- See [Video Shot Tracking](./VIDEO_SHOT_TRACKING.md) for details
+
 ### December 27, 2025 - Coach Game Support
 - ✅ Full support for coach-made games
 - ✅ Custom player loading
@@ -170,6 +179,6 @@ See [VIDEO_STAT_TRACKING.md](./VIDEO_STAT_TRACKING.md#troubleshooting) for detai
 
 ---
 
-**Last Updated**: December 27, 2025  
+**Last Updated**: January 14, 2025  
 **Maintained By**: Development Team
 
