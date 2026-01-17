@@ -26,7 +26,6 @@ interface CompactTeamCardProps {
   onQuickTrack: (team: CoachTeam) => void;
   onVideoTrack: (team: CoachTeam) => void;
   onManage: (team: CoachTeam) => void;
-  onAnalytics: (team: CoachTeam) => void;
   onJoinTournament: (team: CoachTeam) => void;
   onViewGames: (team: CoachTeam) => void;
   onSeasons: (team: CoachTeam) => void;
@@ -38,7 +37,6 @@ export function CompactTeamCard({
   onQuickTrack,
   onVideoTrack,
   onManage,
-  onAnalytics,
   onJoinTournament,
   onViewGames,
   onSeasons,
@@ -108,10 +106,6 @@ export function CompactTeamCard({
             <DropdownMenuItem onClick={() => onViewGames(team)}>
               <Calendar className="w-4 h-4 mr-2" />
               View Games
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAnalytics(team)}>
-              <PlayCircle className="w-4 h-4 mr-2" />
-              Analytics
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onJoinTournament(team)}>
               <Trophy className="w-4 h-4 mr-2" />

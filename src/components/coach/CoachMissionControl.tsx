@@ -262,7 +262,6 @@ export function CoachMissionControl({
         onQuickTrack={handleQuickTrack}
         onVideoTrack={handleVideoTrack}
         onManage={handleManage}
-        onAnalytics={handleAnalytics}
         onJoinTournament={handleJoinTournament}
         onViewGames={handleViewGames}
         onSeasons={handleSeasons}

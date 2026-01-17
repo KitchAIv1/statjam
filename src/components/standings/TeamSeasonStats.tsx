@@ -8,7 +8,7 @@
 
 import React, { useMemo } from 'react';
 import { PlayerSeasonStats } from './PlayerStatsTable';
-import { Target, Activity, Shield } from 'lucide-react';
+import { Target, Activity, Shield, Zap } from 'lucide-react';
 import { TeamStatsGuide } from '@/components/shared/TeamStatsGuide';
 
 interface TeamSeasonStatsProps {
@@ -55,6 +55,24 @@ export function TeamSeasonStats({ players, gamesPlayed }: TeamSeasonStatsProps) 
   const threePct = totals.threePtAttempts > 0 ? ((totals.threePtMade / totals.threePtAttempts) * 100).toFixed(1) : '0.0';
   const ftPct = totals.ftAttempts > 0 ? ((totals.ftMade / totals.ftAttempts) * 100).toFixed(1) : '0.0';
 
+  // Advanced Stats (accurate formulas matching industry standards)
+  // eFG% = (FGM + 0.5 * 3PM) / FGA - weights 3s for their extra value
+  const efgPct = totals.fgAttempts > 0 
+    ? (((totals.fgMade + 0.5 * totals.threePtMade) / totals.fgAttempts) * 100).toFixed(1) 
+    : '0.0';
+  // TS% = PTS / (2 * (FGA + 0.44 * FTA)) - true scoring efficiency including FTs
+  const tsPct = (totals.fgAttempts + 0.44 * totals.ftAttempts) > 0
+    ? ((totals.points / (2 * (totals.fgAttempts + 0.44 * totals.ftAttempts))) * 100).toFixed(1)
+    : '0.0';
+  // AST/TO Ratio - ball security metric
+  const astToRatio = totals.turnovers > 0 
+    ? (totals.assists / totals.turnovers).toFixed(1) 
+    : totals.assists > 0 ? totals.assists.toFixed(1) : '0.0';
+  // 3PA Rate = 3PA / FGA - how often team shoots 3s
+  const threePtRate = totals.fgAttempts > 0 
+    ? ((totals.threePtAttempts / totals.fgAttempts) * 100).toFixed(1) 
+    : '0.0';
+
   // Per-game averages
   const games = gamesPlayed || 1;
   const ppg = (totals.points / games).toFixed(1);
@@ -90,6 +108,18 @@ export function TeamSeasonStats({ players, gamesPlayed }: TeamSeasonStatsProps) 
         <StatBox label="FG%" value={`${fgPct}%`} sub={`${totals.fgMade}/${totals.fgAttempts}`} />
         <StatBox label="3P%" value={`${threePct}%`} sub={`${totals.threePtMade}/${totals.threePtAttempts}`} />
         <StatBox label="FT%" value={`${ftPct}%`} sub={`${totals.ftMade}/${totals.ftAttempts}`} />
+      </div>
+
+      {/* Advanced Stats */}
+      <div className="flex items-center gap-2 mb-2 mt-6">
+        <Zap className="w-4 h-4 text-orange-500" />
+        <span className="text-sm font-semibold text-gray-700">Advanced</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatBox label="eFG%" value={`${efgPct}%`} sub="Effective FG" />
+        <StatBox label="TS%" value={`${tsPct}%`} sub="True Shooting" />
+        <StatBox label="AST/TO" value={astToRatio} sub="Ball Security" />
+        <StatBox label="3PA Rate" value={`${threePtRate}%`} sub="3PT Frequency" />
       </div>
 
       {/* Per Game Averages */}

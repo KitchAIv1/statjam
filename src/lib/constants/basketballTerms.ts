@@ -48,6 +48,13 @@ export const TEAM_SHOOTING_STATS: StatTerm[] = [
   { abbr: 'FT%', full: 'Free Throw Percentage', description: 'Percentage of foul shots made' },
 ];
 
+export const TEAM_ADVANCED_STATS: StatTerm[] = [
+  { abbr: 'eFG%', full: 'Effective Field Goal %', description: 'FG% adjusted for 3-pointers being worth more. Higher = more efficient scoring' },
+  { abbr: 'TS%', full: 'True Shooting %', description: 'Overall scoring efficiency including FTs. The gold standard for shooting efficiency' },
+  { abbr: 'AST/TO', full: 'Assist-to-Turnover Ratio', description: 'Ball security metric. Higher = better decision-making with the ball' },
+  { abbr: '3PA Rate', full: '3PT Attempt Rate', description: 'Percentage of shots taken from 3PT range. Shows team shot selection' },
+];
+
 export const TEAM_PER_GAME_STATS: StatTerm[] = [
   { abbr: 'PPG', full: 'Points Per Game', description: 'Average points scored per game' },
   { abbr: 'RPG', full: 'Rebounds Per Game', description: 'Average total rebounds per game' },

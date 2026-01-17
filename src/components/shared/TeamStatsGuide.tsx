@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { HelpCircle, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { TEAM_SHOOTING_STATS, TEAM_PER_GAME_STATS, TEAM_TOTAL_STATS, StatTerm } from '@/lib/constants/basketballTerms';
+import { TEAM_SHOOTING_STATS, TEAM_ADVANCED_STATS, TEAM_PER_GAME_STATS, TEAM_TOTAL_STATS, StatTerm } from '@/lib/constants/basketballTerms';
 
 export function TeamStatsGuide() {
   const [isOpen, setIsOpen] = useState(false);
@@ -33,8 +33,9 @@ export function TeamStatsGuide() {
             </button>
           </div>
 
-          <div className="p-3 max-h-[320px] overflow-y-auto space-y-4 stats-guide-scroll">
+          <div className="p-3 max-h-[360px] overflow-y-auto space-y-4 stats-guide-scroll">
             <StatSection title="Shooting Efficiency" stats={TEAM_SHOOTING_STATS} />
+            <StatSection title="Advanced Stats" stats={TEAM_ADVANCED_STATS} />
             <StatSection title="Per Game Averages" stats={TEAM_PER_GAME_STATS} />
             <StatSection title="Season Totals" stats={TEAM_TOTAL_STATS} />
           </div>
