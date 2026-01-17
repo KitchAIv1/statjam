@@ -50,6 +50,7 @@ export default function OrganizerVideoPage({ params }: OrganizerVideoPageProps) 
   const [uploadedVideoId, setUploadedVideoId] = useState<string | null>(null);
   const [gameData, setGameData] = useState<any>(null);
   const [teamPlayers, setTeamPlayers] = useState<any[]>([]);
+  const [teamBPlayers, setTeamBPlayers] = useState<any[]>([]);
   const [setupComplete, setSetupComplete] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showVideoCreditsModal, setShowVideoCreditsModal] = useState(false);
@@ -136,6 +137,7 @@ export default function OrganizerVideoPage({ params }: OrganizerVideoPageProps) 
           setGameData({
             id: game.id,
             team_a_name: game.team_a?.name || 'Team A',
+            team_b_name: game.team_b?.name || 'Team B',
             opponent_name: game.team_b?.name || 'Team B',
             game_date: game.start_time,
             venue: game.venue,
@@ -143,10 +145,20 @@ export default function OrganizerVideoPage({ params }: OrganizerVideoPageProps) 
             away_score: game.team_b_score,
           });
           
-          // Fetch players from team_a using same source as coach dashboard
+          // Fetch players from team_a
           if (game.team_a_id) {
             const players = await CoachPlayerService.getCoachTeamPlayers(game.team_a_id);
             setTeamPlayers(players.map((p: any) => ({
+              id: p.id,
+              name: p.name || 'Unknown',
+              jerseyNumber: p.jersey_number,
+            })));
+          }
+          
+          // Fetch players from team_b (organizer needs both teams)
+          if (game.team_b_id) {
+            const playersB = await CoachPlayerService.getCoachTeamPlayers(game.team_b_id);
+            setTeamBPlayers(playersB.map((p: any) => ({
               id: p.id,
               name: p.name || 'Unknown',
               jerseyNumber: p.jersey_number,
@@ -253,12 +265,15 @@ export default function OrganizerVideoPage({ params }: OrganizerVideoPageProps) 
           
           {/* Main Content */}
           {!gameVideo && !setupComplete ? (
-            /* Setup Phase */
+            /* Setup Phase - Organizer mode shows both team rosters */
             <div className="flex items-center justify-center py-8">
               <VideoSetupPanel
                 gameData={gameData || { id: gameId }}
                 teamPlayers={teamPlayers}
                 onPlayersUpdate={setTeamPlayers}
+                teamBPlayers={teamBPlayers}
+                onTeamBPlayersUpdate={setTeamBPlayers}
+                isOrganizerMode={true}
                 onSetupComplete={() => setSetupComplete(true)}
                 onGameDataUpdate={(updates) => setGameData((prev: any) => ({ ...prev, ...updates }))}
                 onSaveScore={handleSaveScore}

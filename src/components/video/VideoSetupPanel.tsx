@@ -3,19 +3,16 @@
 /**
  * VideoSetupPanel - Pre-flight setup for video tracking
  * 
- * Displays game details, score input, and player roster with editable jerseys.
- * User completes setup before uploading video.
- * 
- * Theme: Warm cream (matches coach dashboard)
- * Layout: Inline sections (not modal-like)
+ * Supports both coach mode (1 team) and organizer mode (2 teams).
+ * Follows .cursorrules: <400 lines, modular design
  */
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
-import { EditableJerseyNumber } from '@/components/tracker-v3/EditableJerseyNumber';
+import { PlayerRosterCard } from './PlayerRosterCard';
 import { 
-  Video, Users, Trophy, Calendar, ArrowRight, Loader2, AlertCircle
+  Video, Trophy, Calendar, ArrowRight, Loader2, AlertCircle
 } from 'lucide-react';
 
 interface Player {
@@ -33,12 +30,19 @@ interface GameData {
   home_score?: number;
   away_score?: number;
   team_a_name?: string;
+  team_b_name?: string;
 }
 
 interface VideoSetupPanelProps {
   gameData: GameData;
+  /** Team A (home) players */
   teamPlayers: Player[];
   onPlayersUpdate: (players: Player[]) => void;
+  /** Team B (away) players - required for organizer mode */
+  teamBPlayers?: Player[];
+  onTeamBPlayersUpdate?: (players: Player[]) => void;
+  /** When true, shows both team rosters */
+  isOrganizerMode?: boolean;
   onSetupComplete: () => void;
   onGameDataUpdate?: (data: Partial<GameData>) => void;
   /** Optional callback to save score - if not provided, skips saving */
@@ -49,6 +53,9 @@ export function VideoSetupPanel({
   gameData,
   teamPlayers,
   onPlayersUpdate,
+  teamBPlayers = [],
+  onTeamBPlayersUpdate,
+  isOrganizerMode = false,
   onSetupComplete,
   onGameDataUpdate,
   onSaveScore,
@@ -58,11 +65,19 @@ export function VideoSetupPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handlePlayerUpdate = (playerId: string, updatedPlayer: Player) => {
+  const handleTeamAPlayerUpdate = (playerId: string, updatedPlayer: Player) => {
     const updated = teamPlayers.map(p => 
       p.id === playerId ? updatedPlayer : p
     );
     onPlayersUpdate(updated);
+  };
+
+  const handleTeamBPlayerUpdate = (playerId: string, updatedPlayer: Player) => {
+    if (!onTeamBPlayersUpdate) return;
+    const updated = teamBPlayers.map(p => 
+      p.id === playerId ? updatedPlayer : p
+    );
+    onTeamBPlayersUpdate(updated);
   };
 
   const handleContinue = async () => {
@@ -194,41 +209,24 @@ export function VideoSetupPanel({
         </div>
       </div>
 
-      {/* Player Roster Card */}
-      <div className="bg-white rounded-xl border border-orange-200 shadow-sm overflow-hidden">
-        <div className="bg-orange-50 px-4 py-3 border-b border-orange-200">
-          <div className="flex items-center gap-2 text-orange-700">
-            <Users className="w-4 h-4" />
-            <span className="font-semibold text-sm">Player Roster - Click to Edit Jersey</span>
-          </div>
-        </div>
-        
-        <div className="p-4">
-          {teamPlayers.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-6">
-              No players found. Add players to your team first.
-            </p>
-          ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-              {teamPlayers.map((player) => (
-                <div
-                  key={player.id}
-                  className="flex flex-col items-center gap-2 p-3 bg-gray-50 rounded-lg 
-                             border border-gray-100 hover:border-orange-200 transition-colors"
-                >
-                  <EditableJerseyNumber
-                    player={player}
-                    onUpdate={handlePlayerUpdate}
-                  />
-                  <span className="text-foreground text-xs font-medium text-center truncate w-full">
-                    {player.name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Team A (Home) Roster */}
+      <PlayerRosterCard
+        teamName={gameData.team_a_name || 'Home Team'}
+        players={teamPlayers}
+        onPlayerUpdate={handleTeamAPlayerUpdate}
+        themeColor="orange"
+        label={isOrganizerMode ? `${gameData.team_a_name || 'Home Team'} Roster` : undefined}
+      />
+
+      {/* Team B (Away) Roster - Organizer Mode Only */}
+      {isOrganizerMode && (
+        <PlayerRosterCard
+          teamName={gameData.team_b_name || gameData.opponent_name || 'Away Team'}
+          players={teamBPlayers}
+          onPlayerUpdate={handleTeamBPlayerUpdate}
+          themeColor="blue"
+        />
+      )}
 
       {/* Error */}
       {saveError && (

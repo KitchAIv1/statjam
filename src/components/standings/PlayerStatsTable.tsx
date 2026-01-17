@@ -9,8 +9,9 @@
 import React, { useState, useMemo, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { ChevronUp, ChevronDown, Search } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { PlayerGameBreakdown } from './PlayerGameBreakdown';
 
 export interface PlayerSeasonStats {
   playerId: string;
@@ -38,6 +39,8 @@ interface PlayerStatsTableProps {
   showAverages?: boolean;
   className?: string;
   totalGames?: number; // ✅ Actual season game count for Total row
+  gameIds?: string[]; // ✅ For expandable game breakdown
+  enableBreakdown?: boolean; // ✅ Enable click-to-expand feature
 }
 
 type SortKey = keyof PlayerSeasonStats;
@@ -49,10 +52,17 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
   showAverages = true,
   className,
   totalGames,
+  gameIds = [],
+  enableBreakdown = false,
 }: PlayerStatsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('points');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [search, setSearch] = useState('');
+  const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
+
+  const toggleExpand = useCallback((playerId: string) => {
+    setExpandedPlayerId(prev => prev === playerId ? null : playerId);
+  }, []);
 
   const handleSort = useCallback((key: SortKey) => {
     setSortKey(prev => {
@@ -160,44 +170,74 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
           </thead>
           <tbody className="divide-y divide-gray-100">
             <AnimatePresence mode="popLayout">
-              {sortedPlayers.map((p, idx) => (
-                <motion.tr
-                  key={p.playerId}
-                  layout
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={cn(idx % 2 === 0 ? 'bg-white' : 'bg-gray-50', 'hover:bg-orange-50/50 transition-colors')}
-                >
-                  <td className="px-2 py-2">
-                    <div className="flex items-center gap-2">
-                      {p.profilePhotoUrl ? (
-                        <img src={p.profilePhotoUrl} className="w-6 h-6 rounded-full object-cover" alt="" />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-500">
-                          {p.jerseyNumber || p.playerName[0]}
-                        </div>
+              {sortedPlayers.map((p, idx) => {
+                const isExpanded = expandedPlayerId === p.playerId;
+                return (
+                  <React.Fragment key={p.playerId}>
+                    <motion.tr
+                      layout
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => enableBreakdown && toggleExpand(p.playerId)}
+                      className={cn(
+                        idx % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                        'hover:bg-orange-50/50 transition-colors',
+                        enableBreakdown && 'cursor-pointer',
+                        isExpanded && 'bg-orange-50'
                       )}
-                      <span className="font-medium truncate max-w-[120px]">{p.playerName}</span>
-                    </div>
-                  </td>
-                  <td className="text-center text-gray-600 tabular-nums">{p.gamesPlayed}</td>
-                  <td className="text-center font-semibold tabular-nums">{showAverages ? avg(p.points, p.gamesPlayed) : p.points}</td>
-                  <td className="text-center tabular-nums">{showAverages ? avg(p.rebounds, p.gamesPlayed) : p.rebounds}</td>
-                  <td className="text-center tabular-nums">{showAverages ? avg(p.assists, p.gamesPlayed) : p.assists}</td>
-                  <td className="text-center tabular-nums">{showAverages ? avg(p.steals, p.gamesPlayed) : p.steals}</td>
-                  {variant === 'full' && (
-                    <>
-                      <td className="text-center tabular-nums">{showAverages ? avg(p.blocks, p.gamesPlayed) : p.blocks}</td>
-                      <td className="text-center text-gray-500 tabular-nums">{showAverages ? avg(p.turnovers, p.gamesPlayed) : p.turnovers}</td>
-                      <td className="text-center tabular-nums">{pct(p.fgMade, p.fgAttempts)}</td>
-                      <td className="text-center tabular-nums">{pct(p.threePtMade, p.threePtAttempts)}</td>
-                      <td className="text-center tabular-nums">{pct(p.ftMade, p.ftAttempts)}</td>
-                    </>
-                  )}
-                </motion.tr>
-              ))}
+                    >
+                      <td className="px-2 py-2">
+                        <div className="flex items-center gap-2">
+                          {enableBreakdown && (
+                            <ChevronRight className={cn(
+                              'w-4 h-4 text-gray-400 transition-transform flex-shrink-0',
+                              isExpanded && 'rotate-90 text-orange-500'
+                            )} />
+                          )}
+                          {p.profilePhotoUrl ? (
+                            <img src={p.profilePhotoUrl} className="w-6 h-6 rounded-full object-cover" alt="" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-500">
+                              {p.jerseyNumber || p.playerName[0]}
+                            </div>
+                          )}
+                          <span className="font-medium truncate max-w-[120px]">{p.playerName}</span>
+                        </div>
+                      </td>
+                      <td className="text-center text-gray-600 tabular-nums">{p.gamesPlayed}</td>
+                      <td className="text-center font-semibold tabular-nums">{showAverages ? avg(p.points, p.gamesPlayed) : p.points}</td>
+                      <td className="text-center tabular-nums">{showAverages ? avg(p.rebounds, p.gamesPlayed) : p.rebounds}</td>
+                      <td className="text-center tabular-nums">{showAverages ? avg(p.assists, p.gamesPlayed) : p.assists}</td>
+                      <td className="text-center tabular-nums">{showAverages ? avg(p.steals, p.gamesPlayed) : p.steals}</td>
+                      {variant === 'full' && (
+                        <>
+                          <td className="text-center tabular-nums">{showAverages ? avg(p.blocks, p.gamesPlayed) : p.blocks}</td>
+                          <td className="text-center text-gray-500 tabular-nums">{showAverages ? avg(p.turnovers, p.gamesPlayed) : p.turnovers}</td>
+                          <td className="text-center tabular-nums">{pct(p.fgMade, p.fgAttempts)}</td>
+                          <td className="text-center tabular-nums">{pct(p.threePtMade, p.threePtAttempts)}</td>
+                          <td className="text-center tabular-nums">{pct(p.ftMade, p.ftAttempts)}</td>
+                        </>
+                      )}
+                    </motion.tr>
+                    {/* Expandable Game Breakdown */}
+                    <AnimatePresence>
+                      {enableBreakdown && isExpanded && gameIds.length > 0 && (
+                        <tr>
+                          <td colSpan={columns.length} className="p-0">
+                            <PlayerGameBreakdown
+                              playerId={p.playerId}
+                              playerName={p.playerName}
+                              gameIds={gameIds}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </AnimatePresence>
+                  </React.Fragment>
+                );
+              })}
             </AnimatePresence>
             {/* ✅ Total Row */}
             {sortedPlayers.length > 0 && (

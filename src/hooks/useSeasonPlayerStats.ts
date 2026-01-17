@@ -9,6 +9,7 @@ import { PlayerSeasonStats } from '@/components/standings/PlayerStatsTable';
 
 export function useSeasonPlayerStats(seasonId: string | null) {
   const [players, setPlayers] = useState<PlayerSeasonStats[]>([]);
+  const [gameIds, setGameIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,19 +25,40 @@ export function useSeasonPlayerStats(seasonId: string | null) {
         const { data: seasonGames, error: gamesErr } = await supabase
           .from('season_games').select('game_id').eq('season_id', seasonId);
         if (gamesErr) throw gamesErr;
-        if (!seasonGames?.length) { setPlayers([]); return; }
+        if (!seasonGames?.length) { setPlayers([]); setGameIds([]); return; }
 
-        const gameIds = seasonGames.map(sg => sg.game_id);
+        const fetchedGameIds = seasonGames.map(sg => sg.game_id);
+        setGameIds(fetchedGameIds);
+        const gameIds = fetchedGameIds;
 
-        // Fetch stats with modifier (matches Game Viewer query)
-        // ✅ FIX: Filter out opponent stats - they should NOT appear in player leaderboard
-        const { data: stats, error: statsErr } = await supabase
-          .from('game_stats')
-          .select('player_id, custom_player_id, stat_type, modifier, game_id')
-          .in('game_id', gameIds)
-          .eq('is_opponent_stat', false);
-        if (statsErr) throw statsErr;
-
+        // ✅ FIX: Supabase has server-side max_rows limit (default 1000)
+        // Must use pagination to fetch all stats for seasons with 1000+ stats
+        const PAGE_SIZE = 1000;
+        let allStats: any[] = [];
+        let page = 0;
+        let hasMore = true;
+        
+        while (hasMore) {
+          const { data: pageStats, error: statsErr } = await supabase
+            .from('game_stats')
+            .select('player_id, custom_player_id, stat_type, modifier, game_id')
+            .in('game_id', gameIds)
+            .or('is_opponent_stat.eq.false,is_opponent_stat.is.null')
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+          
+          if (statsErr) throw statsErr;
+          
+          if (pageStats && pageStats.length > 0) {
+            allStats = [...allStats, ...pageStats];
+            hasMore = pageStats.length === PAGE_SIZE; // If we got full page, there might be more
+            page++;
+          } else {
+            hasMore = false;
+          }
+        }
+        
+        const stats = allStats;
+        
         // ✅ FIX: Separate player_id (users) from custom_player_id (custom_players)
         const regularPlayerIds = [...new Set(stats?.filter(s => s.player_id).map(s => s.player_id))];
         const customPlayerIds = [...new Set(stats?.filter(s => s.custom_player_id).map(s => s.custom_player_id))];
@@ -123,5 +145,5 @@ export function useSeasonPlayerStats(seasonId: string | null) {
     fetchStats();
   }, [seasonId]);
 
-  return { players, loading, error };
+  return { players, gameIds, loading, error };
 }

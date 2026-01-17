@@ -32,7 +32,7 @@ export default function SeasonDetailPage({ params }: SeasonDetailPageProps) {
 
   // Data hooks
   const { season, games, loading, error } = useSeasonDetails(seasonId);
-  const { players, loading: playersLoading } = useSeasonPlayerStats(seasonId);
+  const { players, gameIds, loading: playersLoading } = useSeasonPlayerStats(seasonId);
   
   // Memoized standings calculation
   const standingsInput = useMemo(() => ({
@@ -181,7 +181,12 @@ export default function SeasonDetailPage({ params }: SeasonDetailPageProps) {
                   </div>
                 </div>
               ) : players.length > 0 ? (
-                <PlayerStatsTable players={players} totalGames={games.length} />
+                <PlayerStatsTable 
+                  players={players} 
+                  totalGames={games.length}
+                  gameIds={gameIds}
+                  enableBreakdown={true}
+                />
               ) : (
                 <div className="py-8 text-center text-gray-500 rounded-xl border border-gray-200 bg-white">
                   <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
