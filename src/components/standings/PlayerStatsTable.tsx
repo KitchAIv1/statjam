@@ -7,7 +7,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ChevronUp, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -169,25 +169,22 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            <AnimatePresence mode="popLayout">
-              {sortedPlayers.map((p, idx) => {
-                const isExpanded = expandedPlayerId === p.playerId;
-                return (
-                  <React.Fragment key={p.playerId}>
-                    <motion.tr
-                      layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      onClick={() => enableBreakdown && toggleExpand(p.playerId)}
-                      className={cn(
-                        idx % 2 === 0 ? 'bg-white' : 'bg-gray-50',
-                        'hover:bg-orange-50/50 transition-colors',
-                        enableBreakdown && 'cursor-pointer',
-                        isExpanded && 'bg-orange-50'
-                      )}
-                    >
+            {sortedPlayers.map((p, idx) => {
+              const isExpanded = expandedPlayerId === p.playerId;
+              return (
+                <React.Fragment key={p.playerId}>
+                  <motion.tr
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.15, delay: idx * 0.02 }}
+                    onClick={() => enableBreakdown && toggleExpand(p.playerId)}
+                    className={cn(
+                      idx % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                      'hover:bg-orange-50/50 transition-colors',
+                      enableBreakdown && 'cursor-pointer',
+                      isExpanded && 'bg-orange-50'
+                    )}
+                  >
                       <td className="px-2 py-2">
                         <div className="flex items-center gap-2">
                           {enableBreakdown && (
@@ -221,24 +218,17 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
                         </>
                       )}
                     </motion.tr>
-                    {/* Expandable Game Breakdown */}
-                    <AnimatePresence>
-                      {enableBreakdown && isExpanded && gameIds.length > 0 && (
-                        <tr>
-                          <td colSpan={columns.length} className="p-0">
-                            <PlayerGameBreakdown
-                              playerId={p.playerId}
-                              playerName={p.playerName}
-                              gameIds={gameIds}
-                            />
-                          </td>
-                        </tr>
-                      )}
-                    </AnimatePresence>
-                  </React.Fragment>
-                );
-              })}
-            </AnimatePresence>
+                    {/* Expandable Game Breakdown - renders <tr> elements directly */}
+                    {enableBreakdown && isExpanded && gameIds.length > 0 && (
+                      <PlayerGameBreakdown
+                        playerId={p.playerId}
+                        gameIds={gameIds}
+                        variant={variant}
+                      />
+                    )}
+                </React.Fragment>
+              );
+            })}
             {/* ✅ Total Row */}
             {sortedPlayers.length > 0 && (
               <tr className="bg-gray-100 font-semibold border-t-2 border-gray-300">

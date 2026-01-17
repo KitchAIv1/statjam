@@ -53,10 +53,10 @@ export function usePlayerGameBreakdown(): UsePlayerGameBreakdownResult {
       
       if (statsErr) throw statsErr;
 
-      // Fetch game details (date, teams)
+      // Fetch game details (date, opponent_name direct field)
       const { data: gamesData, error: gamesErr } = await supabase
         .from('games')
-        .select('id, start_time, team_a_id, team_b_id, teams_a:teams!games_team_a_id_fkey(name), teams_b:teams!games_team_b_id_fkey(name)')
+        .select('id, start_time, opponent_name')
         .in('id', gameIds)
         .order('start_time', { ascending: false });
       
@@ -69,7 +69,7 @@ export function usePlayerGameBreakdown(): UsePlayerGameBreakdownResult {
         gameMap.set(game.id, {
           gameId: game.id,
           gameDate: game.start_time,
-          opponentName: (game.teams_b as any)?.name || 'Opponent',
+          opponentName: game.opponent_name || 'Opponent',
           points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, turnovers: 0,
           fgMade: 0, fgAttempts: 0, threePtMade: 0, threePtAttempts: 0, ftMade: 0, ftAttempts: 0,
         });

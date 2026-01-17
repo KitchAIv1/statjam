@@ -7,22 +7,20 @@
 
 import React, { useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { Calendar, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { usePlayerGameBreakdown, PlayerGameStat } from '@/hooks/usePlayerGameBreakdown';
 
 interface PlayerGameBreakdownProps {
   playerId: string;
   playerName: string;
   gameIds: string[];
-  className?: string;
+  variant?: 'full' | 'compact';
 }
 
 export const PlayerGameBreakdown = memo(function PlayerGameBreakdown({
   playerId,
-  playerName,
   gameIds,
-  className,
+  variant = 'full',
 }: PlayerGameBreakdownProps) {
   const { games, loading, error, fetchBreakdown } = usePlayerGameBreakdown();
 
@@ -35,112 +33,82 @@ export const PlayerGameBreakdown = memo(function PlayerGameBreakdown({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const pct = (made: number, att: number) => 
-    att > 0 ? `${Math.round((made / att) * 100)}%` : '-';
+  // Calculate column count for colSpan
+  const colCount = variant === 'full' ? 11 : 6;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-6 text-gray-400">
-        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-        Loading game breakdown...
-      </div>
+      <tr className="bg-orange-50/30">
+        <td colSpan={colCount} className="text-center py-3 text-gray-400 text-xs">
+          <span className="inline-flex items-center">
+            <Loader2 className="w-3 h-3 animate-spin mr-2" />
+            Loading...
+          </span>
+        </td>
+      </tr>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-4 text-red-400 text-sm">
-        {error}
-      </div>
+      <tr className="bg-orange-50/30">
+        <td colSpan={colCount} className="text-center py-3 text-red-400 text-xs">{error}</td>
+      </tr>
     );
   }
 
   if (!games.length) {
     return (
-      <div className="text-center py-4 text-gray-400 text-sm">
-        No game data available
-      </div>
+      <tr className="bg-orange-50/30">
+        <td colSpan={colCount} className="text-center py-3 text-gray-400 text-xs">No game data</td>
+      </tr>
     );
   }
 
+  // Return actual <tr> elements - 11 cells matching parent table exactly
   return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.2 }}
-      className={cn('bg-gray-50 border-t border-gray-200', className)}
-    >
-      <div className="px-4 py-3">
-        <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2 flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
-          {playerName}&apos;s Game Log
-        </h4>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="text-gray-500 uppercase">
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-1.5 px-2 font-medium">Date</th>
-                <th className="text-left py-1.5 px-2 font-medium">vs</th>
-                <th className="text-center py-1.5 px-1 font-medium">PTS</th>
-                <th className="text-center py-1.5 px-1 font-medium">REB</th>
-                <th className="text-center py-1.5 px-1 font-medium">AST</th>
-                <th className="text-center py-1.5 px-1 font-medium">STL</th>
-                <th className="text-center py-1.5 px-1 font-medium">BLK</th>
-                <th className="text-center py-1.5 px-1 font-medium">TO</th>
-                <th className="text-center py-1.5 px-1 font-medium">FG</th>
-                <th className="text-center py-1.5 px-1 font-medium">3PT</th>
-                <th className="text-center py-1.5 px-1 font-medium">FT</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {games.map((game) => (
-                <GameRow key={game.gameId} game={game} formatDate={formatDate} pct={pct} />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </motion.div>
-  );
-});
-
-// Extracted row component for performance
-const GameRow = memo(function GameRow({
-  game,
-  formatDate,
-  pct,
-}: {
-  game: PlayerGameStat;
-  formatDate: (d: string) => string;
-  pct: (m: number, a: number) => string;
-}) {
-  return (
-    <tr className="hover:bg-gray-100/50 transition-colors">
-      <td className="py-1.5 px-2 text-gray-600 whitespace-nowrap">
-        {formatDate(game.gameDate)}
-      </td>
-      <td className="py-1.5 px-2 text-gray-700 font-medium truncate max-w-[100px]">
-        {game.opponentName}
-      </td>
-      <td className="text-center py-1.5 px-1 font-semibold tabular-nums">
-        {game.points}
-      </td>
-      <td className="text-center py-1.5 px-1 tabular-nums">{game.rebounds}</td>
-      <td className="text-center py-1.5 px-1 tabular-nums">{game.assists}</td>
-      <td className="text-center py-1.5 px-1 tabular-nums">{game.steals}</td>
-      <td className="text-center py-1.5 px-1 tabular-nums">{game.blocks}</td>
-      <td className="text-center py-1.5 px-1 text-gray-500 tabular-nums">{game.turnovers}</td>
-      <td className="text-center py-1.5 px-1 tabular-nums text-gray-600">
-        {game.fgMade}/{game.fgAttempts}
-      </td>
-      <td className="text-center py-1.5 px-1 tabular-nums text-gray-600">
-        {game.threePtMade}/{game.threePtAttempts}
-      </td>
-      <td className="text-center py-1.5 px-1 tabular-nums text-gray-600">
-        {game.ftMade}/{game.ftAttempts}
-      </td>
-    </tr>
+    <>
+      {games.map((game, idx) => (
+        <motion.tr
+          key={game.gameId}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, delay: idx * 0.03 }}
+          className="bg-orange-50/50 text-xs border-b border-orange-100 last:border-b-0 hover:bg-orange-100/50 transition-colors"
+        >
+          {/* Player column - Date + Opponent */}
+          <td className="px-2 py-1.5 text-gray-500">
+            <span>{formatDate(game.gameDate)}</span>
+            <span className="text-gray-400 mx-1">vs</span>
+            <span className="text-gray-600 font-medium">{game.opponentName}</span>
+          </td>
+          {/* GP - empty */}
+          <td className="text-center text-gray-300">-</td>
+          {/* PTS */}
+          <td className="text-center font-semibold tabular-nums">{game.points}</td>
+          {/* REB */}
+          <td className="text-center tabular-nums">{game.rebounds}</td>
+          {/* AST */}
+          <td className="text-center tabular-nums">{game.assists}</td>
+          {/* STL */}
+          <td className="text-center tabular-nums">{game.steals}</td>
+          {variant === 'full' && (
+            <>
+              {/* BLK */}
+              <td className="text-center tabular-nums">{game.blocks}</td>
+              {/* TO */}
+              <td className="text-center text-gray-500 tabular-nums">{game.turnovers}</td>
+              {/* FG */}
+              <td className="text-center tabular-nums text-gray-600">{game.fgMade}/{game.fgAttempts}</td>
+              {/* 3PT */}
+              <td className="text-center tabular-nums text-gray-600">{game.threePtMade}/{game.threePtAttempts}</td>
+              {/* FT */}
+              <td className="text-center tabular-nums text-gray-600">{game.ftMade}/{game.ftAttempts}</td>
+            </>
+          )}
+        </motion.tr>
+      ))}
+    </>
   );
 });
