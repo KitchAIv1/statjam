@@ -209,6 +209,21 @@ export function TournamentsListPage() {
   const filteredTournaments = useMemo(() => {
     // ✅ EDGE CASE: Filter out empty tournaments (no games AND no teams)
     let filtered = tournamentsWithStats.filter(t => t.teamCount > 0 || t.gameCount > 0);
+    
+    // ✅ FILTER: Remove tournaments with "TEST" in name
+    filtered = filtered.filter(t => !t.name.toLowerCase().includes('test'));
+    
+    // ✅ FILTER: Remove completed tournaments with 0 games OR 0 teams
+    filtered = filtered.filter(t => {
+      const isCompleted = isTournamentEffectivelyCompleted(t);
+      if (isCompleted && (t.gameCount === 0 || t.teamCount === 0)) {
+        return false;
+      }
+      return true;
+    });
+    
+    // ✅ FILTER: Remove tournaments with teams but 0 games
+    filtered = filtered.filter(t => !(t.teamCount > 0 && t.gameCount === 0));
 
     if (selectedFilter !== 'all') {
       filtered = filtered.filter(t => {
@@ -376,8 +391,19 @@ export function TournamentsListPage() {
   }, [filteredTournaments, featuredTournaments, displayLimit, isTournamentEffectivelyCompleted, isTournamentTrulyUpcoming]);
 
   const completedTournaments = useMemo(() => {
-    // Use the helper function for consistent derived-completion logic
-    return tournamentsWithStats.filter(t => isTournamentEffectivelyCompleted(t));
+    // Get all completed tournaments
+    let completed = tournamentsWithStats.filter(t => isTournamentEffectivelyCompleted(t));
+    
+    // ✅ FILTER: Remove tournaments with "TEST" in name
+    completed = completed.filter(t => !t.name.toLowerCase().includes('test'));
+    
+    // ✅ FILTER: Remove completed tournaments with 0 games OR 0 teams
+    completed = completed.filter(t => !(t.gameCount === 0 || t.teamCount === 0));
+    
+    // ✅ FILTER: Remove tournaments with teams but 0 games
+    completed = completed.filter(t => !(t.teamCount > 0 && t.gameCount === 0));
+    
+    return completed;
   }, [tournamentsWithStats, isTournamentEffectivelyCompleted]);
 
   return (

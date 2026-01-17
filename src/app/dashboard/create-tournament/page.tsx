@@ -542,7 +542,8 @@ const CreateTournamentV2 = () => {
               {errors.tournamentType && <span style={styles.errorText}>{errors.tournamentType}</span>}
             </div>
 
-            {/* Tournament Structure - Divisions */}
+            {/* Tournament Structure - Divisions - DISABLED */}
+            {/* 
             <div style={styles.fieldGroup}>
               <label style={styles.label}>Tournament Structure</label>
               <div style={{ marginBottom: '8px', fontSize: '13px', color: 'var(--dashboard-text-secondary)' }}>
@@ -576,7 +577,6 @@ const CreateTournamentV2 = () => {
               </div>
             </div>
 
-            {/* Division Configuration (shown only if divisions enabled) */}
             {data.has_divisions && (
               <div style={styles.fieldGroup}>
                 <label style={styles.label}>Number of Divisions *</label>
@@ -585,7 +585,6 @@ const CreateTournamentV2 = () => {
                   onChange={(e) => {
                     const count = parseInt(e.target.value);
                     updateData('division_count', count);
-                    // Auto-generate division names (A, B, C, etc.)
                     const names = Array.from({ length: count }, (_, i) => 
                       String.fromCharCode(65 + i)
                     );
@@ -606,6 +605,7 @@ const CreateTournamentV2 = () => {
                 </div>
               </div>
             )}
+            */}
 
             <div style={styles.formRow}>
               <div style={styles.fieldGroup}>
@@ -842,6 +842,8 @@ const CreateTournamentV2 = () => {
                     {data.tournamentType?.replace('_', ' ').toUpperCase()}
                   </span>
                 </div>
+                {/* Tournament Structure - DISABLED */}
+                {/* 
                 <div style={styles.reviewItem}>
                   <span style={styles.reviewLabel}>Tournament Structure</span>
                   <span style={styles.reviewValue}>
@@ -850,6 +852,7 @@ const CreateTournamentV2 = () => {
                       : 'Single Bracket'}
                   </span>
                 </div>
+                */}
                 <div style={styles.reviewItem}>
                   <span style={styles.reviewLabel}>Game Rules</span>
                   <span style={styles.reviewValue}>

@@ -754,7 +754,8 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                 />
               </div>
 
-              {/* Tournament Structure - Divisions (FIRST - fundamental decision) */}
+              {/* Tournament Structure - Divisions - DISABLED */}
+              {/* 
               <div className="grid gap-2">
                 <Label>Tournament Structure</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -801,7 +802,6 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                 </div>
               </div>
 
-              {/* Division Configuration (shown only if divisions enabled) */}
               {newTournament.has_divisions && (
                 <div className="grid gap-2">
                   <Label htmlFor="division_count">Number of Divisions <span className="text-red-500">*</span></Label>
@@ -835,6 +835,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
                   </p>
                 </div>
               )}
+              */}
 
               {/* Tournament Format (AFTER structure - depends on how teams are organized) */}
               <div className="grid gap-2">
