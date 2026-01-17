@@ -6,12 +6,14 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback, memo } from 'react';
+import React, { useState, useMemo, useCallback, useRef, memo } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ChevronUp, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { PlayerGameBreakdown } from './PlayerGameBreakdown';
+import { useBreakdownCache } from '@/hooks/useBreakdownCache';
+import { PlayerGameStat } from '@/hooks/usePlayerGameBreakdown';
 
 export interface PlayerSeasonStats {
   playerId: string;
@@ -59,9 +61,35 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [search, setSearch] = useState('');
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
+  const [cachedData, setCachedData] = useState<Map<string, PlayerGameStat[]>>(new Map());
+  const hoverTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const toggleExpand = useCallback((playerId: string) => {
-    setExpandedPlayerId(prev => prev === playerId ? null : playerId);
+  // Get top 3 player IDs for automatic prefetch
+  const topPlayerIds = useMemo(() => {
+    if (!enableBreakdown) return [];
+    return [...players].sort((a, b) => b.points - a.points).slice(0, 3).map(p => p.playerId);
+  }, [enableBreakdown, players]);
+
+  // Breakdown cache with auto-prefetch of top players
+  const { getBreakdown, prefetch, isCached } = useBreakdownCache(gameIds, topPlayerIds);
+
+  const toggleExpand = useCallback(async (playerId: string) => {
+    if (expandedPlayerId === playerId) { setExpandedPlayerId(null); return; }
+    if (!cachedData.has(playerId)) {
+      const data = await getBreakdown(playerId);
+      setCachedData(prev => new Map(prev).set(playerId, data));
+    }
+    setExpandedPlayerId(playerId);
+  }, [expandedPlayerId, cachedData, getBreakdown]);
+
+  // Prefetch on hover (150ms delay)
+  const handleMouseEnter = useCallback((playerId: string) => {
+    if (!enableBreakdown || isCached(playerId)) return;
+    hoverTimer.current = setTimeout(() => prefetch(playerId), 150);
+  }, [enableBreakdown, isCached, prefetch]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
   }, []);
 
   const handleSort = useCallback((key: SortKey) => {
@@ -178,6 +206,8 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.15, delay: idx * 0.02 }}
                     onClick={() => enableBreakdown && toggleExpand(p.playerId)}
+                    onMouseEnter={() => handleMouseEnter(p.playerId)}
+                    onMouseLeave={handleMouseLeave}
                     className={cn(
                       idx % 2 === 0 ? 'bg-white' : 'bg-gray-50',
                       'hover:bg-orange-50/50 transition-colors',
@@ -224,6 +254,8 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
                         playerId={p.playerId}
                         gameIds={gameIds}
                         variant={variant}
+                        preloadedData={cachedData.get(p.playerId)}
+                        fetchFn={getBreakdown}
                       />
                     )}
                 </React.Fragment>

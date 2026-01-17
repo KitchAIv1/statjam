@@ -5,28 +5,46 @@
 
 'use client';
 
-import React, { useEffect, memo } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import { usePlayerGameBreakdown, PlayerGameStat } from '@/hooks/usePlayerGameBreakdown';
+import { PlayerGameStat } from '@/hooks/usePlayerGameBreakdown';
 
 interface PlayerGameBreakdownProps {
   playerId: string;
-  playerName: string;
   gameIds: string[];
   variant?: 'full' | 'compact';
+  // Optimization: Accept pre-loaded data for instant rendering
+  preloadedData?: PlayerGameStat[];
+  fetchFn?: (playerId: string) => Promise<PlayerGameStat[]>;
 }
 
 export const PlayerGameBreakdown = memo(function PlayerGameBreakdown({
   playerId,
   gameIds,
   variant = 'full',
+  preloadedData,
+  fetchFn,
 }: PlayerGameBreakdownProps) {
-  const { games, loading, error, fetchBreakdown } = usePlayerGameBreakdown();
+  const [games, setGames] = useState<PlayerGameStat[]>(preloadedData || []);
+  const [loading, setLoading] = useState(!preloadedData && !!fetchFn);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchBreakdown(playerId, gameIds);
-  }, [playerId, gameIds, fetchBreakdown]);
+    // Skip fetch if we have preloaded data or no fetch function
+    if (preloadedData || !fetchFn) return;
+    
+    setLoading(true);
+    fetchFn(playerId)
+      .then(data => {
+        setGames(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err instanceof Error ? err.message : 'Failed to load');
+        setLoading(false);
+      });
+  }, [playerId, preloadedData, fetchFn]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
