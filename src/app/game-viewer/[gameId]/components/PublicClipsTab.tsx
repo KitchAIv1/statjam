@@ -13,7 +13,7 @@
 import React, { useEffect, useState } from 'react';
 import { Film, Loader2 } from 'lucide-react';
 import { ClipGrid } from '@/components/clips/ClipGrid';
-import { getGameClips, GeneratedClip } from '@/lib/services/clipService';
+import { getGameClips, GeneratedClip, hasClipsCache, getCachedClipsSync } from '@/lib/services/clipService';
 import { supabase } from '@/lib/supabase';
 
 interface Player {
@@ -75,13 +75,18 @@ async function fetchTeamPlayers(teamId: string): Promise<Player[]> {
 }
 
 export function PublicClipsTab({ gameId, teamId, isDark = false }: PublicClipsTabProps) {
-  const [clips, setClips] = useState<GeneratedClip[]>([]);
+  // Initialize from cache for instant render (no flash)
+  const [clips, setClips] = useState<GeneratedClip[]>(() => getCachedClipsSync(gameId) || []);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Don't show loading if clips are cached (instant load)
+  const [loading, setLoading] = useState(!hasClipsCache(gameId));
 
   useEffect(() => {
     async function loadData() {
-      setLoading(true);
+      // Only show loading if not cached
+      if (!hasClipsCache(gameId)) {
+        setLoading(true);
+      }
       try {
         const [gameClips, teamPlayers] = await Promise.all([
           getGameClips(gameId),

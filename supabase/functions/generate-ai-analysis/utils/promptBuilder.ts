@@ -38,6 +38,29 @@ CRITICAL ANALYSIS REQUIREMENTS:
    - Look at: dominant quarters, rebounding, defense (steals/blocks), shooting efficiency
    - Each factor needs specific player contributions
    - Include exact statistics with context
+   
+   CRITICAL STYLE REQUIREMENT FOR onCourt AND takeaways:
+   - ALWAYS write FULL NARRATIVE SENTENCES, never bullet abbreviations
+   - WRONG: "Murrell: 16 REB" or "Ward Jr: 3 PTS, 2 REB"
+   - RIGHT: "Murrell controlled the boards with an impressive 16 rebounds, dominating inside"
+   - RIGHT: "Ward Jr's 18 points led the team with consistent scoring across all quarters"
+   - Each onCourt item should describe IMPACT, not just list stats
+   
+   EXAMPLE OF CORRECT FORMAT:
+   {
+     "title": "Rebounding Dominance",
+     "value": "Outrebounded MONROE 45-28, leading to second-chance opportunities",
+     "onCourt": [
+       "Murrell controlled the glass with an impressive 20 rebounds",
+       "Haines' defensive presence with 4 blocks limited opponent scoring chances",
+       "Thorton's hustle on the boards with 7 rebounds contributed to the advantage"
+     ],
+     "takeaways": [
+       "Continue crashing the boards aggressively for extra possessions",
+       "Emphasize boxing out to limit opponent's second-chance points",
+       "Recognition of rebounding efforts can boost team morale"
+     ]
+   }
 
 3. PLAYER ANALYSIS:
    - Use quarter_points to show WHEN players scored (e.g., "10 fourth-quarter points closed the game")
@@ -73,10 +96,10 @@ export function getJSONSchema(): string {
   },
   "winningFactors": [
     {
-      "title": "Factor name (e.g., 'First Quarter Explosion')",
-      "value": "Statistic with context (e.g., '+13 Margin (17-4)')",
-      "onCourt": ["3 specific facts with player names and numbers"],
-      "takeaways": ["3 coaching insights"]
+      "title": "Factor name (e.g., 'Rebounding Dominance')",
+      "value": "Statistic with context (e.g., 'Outrebounded Opponent 45-28, leading to second-chance opportunities')",
+      "onCourt": ["FULL NARRATIVE SENTENCES describing player impact - e.g., 'Murrell controlled the glass with an impressive 20 rebounds' NOT 'Murrell: 20 REB'"],
+      "takeaways": ["3 coaching insights as complete sentences"]
     }
   ],
   "keyPlayers": [
@@ -159,12 +182,27 @@ PATTERN ANALYSIS:
 ${q2q3Combined < -5 ? '⚠️ MIDDLE QUARTER COLLAPSE DETECTED - Analyze why' : ''}
 ${q1q4Combined > 10 ? '✓ STRONG START/FINISH - Team shows up in crucial moments' : ''}
 
-TEAM TOTALS:
+TEAM TOTALS (${teamName}):
 - Rebounds: ${gameData.team_totals.rebounds}
 - Steals: ${gameData.team_totals.steals}
 - Blocks: ${gameData.team_totals.blocks}
 - Turnovers: ${gameData.team_totals.turnovers}${gameData.team_totals.turnovers > 15 ? ' ⚠️ HIGH' : ''}
 - Free Throws: ${gameData.team_totals.ft_made}/${gameData.team_totals.ft_attempted} (${gameData.team_totals.ft_percentage}%)
+
+OPPONENT TOTALS (${oppName}):
+- Points: ${gameData.opponent_totals?.points || awayScore}
+- Rebounds: ${gameData.opponent_totals?.rebounds || 'N/A'}
+- Assists: ${gameData.opponent_totals?.assists || 'N/A'}
+- Steals: ${gameData.opponent_totals?.steals || 'N/A'}
+- Blocks: ${gameData.opponent_totals?.blocks || 'N/A'}
+- Turnovers: ${gameData.opponent_totals?.turnovers || 'N/A'}
+- FG: ${gameData.opponent_totals?.fg_made || 0}/${gameData.opponent_totals?.fg_attempted || 0} (${gameData.opponent_totals?.fg_percentage || 0}%)
+- 3PT: ${gameData.opponent_totals?.three_made || 0}/${gameData.opponent_totals?.three_attempted || 0} (${gameData.opponent_totals?.three_percentage || 0}%)
+
+REBOUNDING COMPARISON:
+- ${teamName}: ${gameData.team_totals.rebounds} rebounds
+- ${oppName}: ${gameData.opponent_totals?.rebounds || 'N/A'} rebounds
+- Differential: ${gameData.opponent_totals?.rebounds ? (gameData.team_totals.rebounds > gameData.opponent_totals.rebounds ? '+' : '') + (gameData.team_totals.rebounds - gameData.opponent_totals.rebounds) : 'N/A'}
 
 TOP 4 PLAYERS (by impact score):
 `;

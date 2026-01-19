@@ -6,6 +6,51 @@
 import { supabase, ensureSupabaseSession } from '@/lib/supabase';
 
 // ============================================================================
+// IN-MEMORY CACHE - Instant tab switching without re-fetching
+// ============================================================================
+interface CachedClips {
+  data: GeneratedClip[];
+  timestamp: number;
+}
+
+const clipsCache = new Map<string, CachedClips>();
+const CLIPS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getCachedClips(gameId: string): GeneratedClip[] | null {
+  const cached = clipsCache.get(gameId);
+  if (cached && Date.now() - cached.timestamp < CLIPS_CACHE_TTL_MS) {
+    return cached.data;
+  }
+  if (cached) clipsCache.delete(gameId);
+  return null;
+}
+
+function setCachedClips(gameId: string, data: GeneratedClip[]): void {
+  clipsCache.set(gameId, { data, timestamp: Date.now() });
+}
+
+/** Clear clips cache for a game (call after new clips are generated) */
+export function clearClipsCache(gameId: string): void {
+  clipsCache.delete(gameId);
+}
+
+/** Check if clips are cached (synchronous - for avoiding loading spinner) */
+export function hasClipsCache(gameId: string): boolean {
+  const cached = clipsCache.get(gameId);
+  return !!(cached && Date.now() - cached.timestamp < CLIPS_CACHE_TTL_MS);
+}
+
+/** Get cached clips synchronously (for instant initial render) */
+export function getCachedClipsSync(gameId: string): GeneratedClip[] | null {
+  const cached = clipsCache.get(gameId);
+  if (cached && Date.now() - cached.timestamp < CLIPS_CACHE_TTL_MS) {
+    return cached.data;
+  }
+  return null;
+}
+// ============================================================================
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -511,8 +556,16 @@ export async function getAllClipJobs(): Promise<ClipGenerationJob[]> {
 
 /**
  * Get generated clips for a game
+ * Uses in-memory cache for instant tab switching
  */
 export async function getGameClips(gameId: string): Promise<GeneratedClip[]> {
+  // Check memory cache first
+  const cached = getCachedClips(gameId);
+  if (cached) {
+    console.log('⚡ ClipService: Returning cached clips for:', gameId);
+    return cached;
+  }
+
   const { data, error } = await supabase
     .from('generated_clips')
     .select('*')
@@ -525,7 +578,12 @@ export async function getGameClips(gameId: string): Promise<GeneratedClip[]> {
     return [];
   }
 
-  return data || [];
+  const clips = data || [];
+  
+  // Store in cache
+  setCachedClips(gameId, clips);
+  
+  return clips;
 }
 
 /**

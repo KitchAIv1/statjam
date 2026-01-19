@@ -7,6 +7,36 @@
 
 import { supabase, ensureSupabaseSession } from '@/lib/supabase';
 
+// ============================================================================
+// IN-MEMORY CACHE - Instant tab switching without re-fetching
+// ============================================================================
+interface CachedAnalysis {
+  data: AIAnalysisData;
+  timestamp: number;
+}
+
+const memoryCache = new Map<string, CachedAnalysis>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getCachedAnalysis(gameId: string): AIAnalysisData | null {
+  const cached = memoryCache.get(gameId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+  // Expired - remove from cache
+  if (cached) memoryCache.delete(gameId);
+  return null;
+}
+
+function setCachedAnalysis(gameId: string, data: AIAnalysisData): void {
+  memoryCache.set(gameId, { data, timestamp: Date.now() });
+}
+
+function clearMemoryCache(gameId: string): void {
+  memoryCache.delete(gameId);
+}
+// ============================================================================
+
 export interface AIAnalysisData {
   gameOverview: {
     narrative: string;
@@ -57,8 +87,16 @@ export interface AIAnalysisData {
 export class AIAnalysisService {
   /**
    * Generate or fetch AI analysis for a game
+   * Uses in-memory cache for instant tab switching
    */
   static async getAnalysis(gameId: string): Promise<AIAnalysisData | null> {
+    // Check memory cache first - instant return if cached
+    const cached = getCachedAnalysis(gameId);
+    if (cached) {
+      console.log('⚡ AI Analysis Service: Returning cached analysis for:', gameId);
+      return cached;
+    }
+
     try {
       await ensureSupabaseSession();
 
@@ -116,7 +154,12 @@ export class AIAnalysisService {
         throw new Error(errorMsg);
       }
 
-      return data.analysis as AIAnalysisData;
+      const analysis = data.analysis as AIAnalysisData;
+      
+      // Store in memory cache for instant tab switching
+      setCachedAnalysis(gameId, analysis);
+      
+      return analysis;
     } catch (err) {
       console.error('❌ AIAnalysisService.getAnalysis error:', err);
       return null;
@@ -145,8 +188,12 @@ export class AIAnalysisService {
 
   /**
    * Clear cached analysis to force regeneration
+   * Clears both database cache and in-memory cache
    */
   static async clearCache(gameId: string): Promise<boolean> {
+    // Clear memory cache first
+    clearMemoryCache(gameId);
+    
     try {
       await ensureSupabaseSession();
 

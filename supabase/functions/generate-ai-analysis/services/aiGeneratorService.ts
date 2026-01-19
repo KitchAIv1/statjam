@@ -11,7 +11,7 @@ import { validateResponse } from '../utils/responseValidator.ts';
 export class AIGeneratorService {
   private readonly OPENAI_API_KEY: string;
   private readonly OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-  private readonly MODEL = 'gpt-3.5-turbo'; // Using gpt-3.5-turbo for wider availability
+  private readonly MODEL = 'gpt-4o'; // GPT-4o for high-quality narrative analysis
   private readonly MAX_RETRIES = 2;
 
   constructor() {
@@ -67,7 +67,7 @@ export class AIGeneratorService {
       body: JSON.stringify({
         model: this.MODEL,
         messages,
-        temperature: 0.7,
+        temperature: 0.4, // Lower for consistent, high-quality output
         response_format: { type: 'json_object' },
       }),
     });

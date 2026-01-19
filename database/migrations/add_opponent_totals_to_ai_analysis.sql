@@ -1,10 +1,10 @@
 -- ============================================================================
--- AI ANALYSIS DATA AGGREGATION FUNCTION
+-- MIGRATION: Add opponent_totals to get_ai_analysis_data RPC
 -- 
--- PURPOSE: Aggregate all game data required for AI analysis generation
--- Returns structured JSONB with all metrics, stats, and calculated values
+-- PURPOSE: Provide accurate opponent statistics for AI analysis
+-- FIX: AI was hallucinating opponent rebounds (showed 30, actual 25)
 -- 
--- Follows .cursorrules: Single responsibility, efficient SQL queries
+-- Run this in Supabase SQL Editor
 -- ============================================================================
 
 DROP FUNCTION IF EXISTS get_ai_analysis_data(UUID);
@@ -363,3 +363,7 @@ BEGIN
   RETURN v_result;
 END;
 $$;
+
+-- Verification query (run after deploying to test):
+-- SELECT get_ai_analysis_data('0d1f2b04-e463-4ae9-b5fa-8a63c9bab491')::jsonb->'opponent_totals';
+-- Expected: {"points": 42, "rebounds": 25, "assists": 7, "steals": 16, "blocks": 8, ...}
