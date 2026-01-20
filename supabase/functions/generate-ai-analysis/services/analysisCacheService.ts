@@ -3,11 +3,13 @@
  * 
  * PURPOSE: Check cache and save generated analysis
  * Follows .cursorrules: <200 lines, single responsibility
+ * 
+ * FIX (Jan 2026): Removed 24-hour TTL - analysis is permanent for completed games
+ * FIX (Jan 2026): Changed INSERT to UPSERT to handle re-generation properly
  */
 
 export class AnalysisCacheService {
   private supabase: any;
-  private readonly CACHE_TTL_HOURS = 24;
 
   constructor(supabase: any) {
     this.supabase = supabase;
@@ -19,7 +21,6 @@ export class AnalysisCacheService {
         .from('ai_analysis')
         .select('analysis_data, generated_at')
         .eq('game_id', gameId)
-        .order('generated_at', { ascending: false })
         .limit(1)
         .single();
 
@@ -30,16 +31,8 @@ export class AnalysisCacheService {
 
       if (!data) return null;
 
-      // Check if cache is still valid (within TTL)
-      const generatedAt = new Date(data.generated_at);
-      const now = new Date();
-      const hoursDiff = (now.getTime() - generatedAt.getTime()) / (1000 * 60 * 60);
-
-      if (hoursDiff > this.CACHE_TTL_HOURS) {
-        console.log(`⏰ Cache expired (${hoursDiff.toFixed(1)} hours old)`);
-        return null;
-      }
-
+      // ✅ FIX: No TTL check - analysis is permanent for completed games
+      // Users can manually regenerate via "Retry" button if needed
       console.log('✅ Using cached analysis');
       return data.analysis_data;
     } catch (err) {
@@ -54,14 +47,20 @@ export class AnalysisCacheService {
     generatedBy: string
   ): Promise<void> {
     try {
+      // ✅ FIX: Use UPSERT instead of INSERT to handle re-generation
+      // This updates the existing row if game_id already exists
       const { error } = await this.supabase
         .from('ai_analysis')
-        .insert({
-          game_id: gameId,
-          analysis_data: analysisData,
-          generated_by: generatedBy,
-          version: 1,
-        });
+        .upsert(
+          {
+            game_id: gameId,
+            analysis_data: analysisData,
+            generated_by: generatedBy,
+            generated_at: new Date().toISOString(),
+            version: 1,
+          },
+          { onConflict: 'game_id' }
+        );
 
       if (error) {
         console.error('❌ Failed to save analysis:', error);

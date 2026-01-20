@@ -216,10 +216,17 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
   
   // ✅ OPTIMIZED: Debounced score refresh to prevent DB timeouts from rapid stat recording
   const scoreRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timelineRefreshCountRef = useRef(0);
   
   // Handle stat recorded - store ID for undo + refresh scores + auto-freeze on foul
   const handleStatRecorded = useCallback((statType: string, statId?: string) => {
-    setTimelineRefreshTrigger(prev => prev + 1);
+    // ✅ OPTIMIZATION: Batch timeline refreshes - only trigger every 3 stats or after 5s
+    timelineRefreshCountRef.current += 1;
+    if (timelineRefreshCountRef.current >= 3) {
+      setTimelineRefreshTrigger(prev => prev + 1);
+      timelineRefreshCountRef.current = 0;
+    }
+    
     if (statId) {
       setLastRecordedStatId(statId);
     }
@@ -231,14 +238,19 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
       setFrozenClockValue(gameClock);
     }
     
-    // ✅ DEBOUNCED: Refresh scores with 2s debounce to prevent rapid query timeouts
-    // Increased from 500ms to 2000ms to reduce HTTP call frequency during rapid stat entry
+    // ✅ DEBOUNCED: Refresh scores with 5s debounce to prevent rapid query timeouts
+    // Increased from 2000ms to 5000ms to reduce HTTP call frequency during rapid stat entry
     if (scoreRefreshTimeoutRef.current) {
       clearTimeout(scoreRefreshTimeoutRef.current);
     }
     scoreRefreshTimeoutRef.current = setTimeout(() => {
       loadScores();
-    }, 2000);
+      // Also trigger timeline refresh if any pending
+      if (timelineRefreshCountRef.current > 0) {
+        setTimelineRefreshTrigger(prev => prev + 1);
+        timelineRefreshCountRef.current = 0;
+      }
+    }, 5000);
   }, [loadScores, gameClock, clockFrozen]);
   
   // Resume (unfreeze) game clock and recalibrate to current video position

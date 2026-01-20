@@ -22,6 +22,9 @@ import { StatEditForm } from '@/components/tracker-v3/modals/StatEditForm';
 import type { VideoStat } from '@/lib/types/video';
 import type { GameStatRecord } from '@/lib/services/statEditService';
 
+// ✅ OPTIMIZATION: Debounce delay for timeline refresh (prevents connection storms)
+const REFRESH_DEBOUNCE_MS = 3000;
+
 interface Player {
   id: string;
   name: string;
@@ -173,6 +176,10 @@ export function VideoStatsTimeline({
   
   // Scroll position preservation
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // ✅ OPTIMIZATION: Debounce ref for refresh
+  const refreshDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const lastRefreshTriggerRef = useRef(refreshTrigger);
 
   // Helper to get player name by ID
   const getPlayerNameById = useCallback((playerId: string | null, customPlayerId: string | null): string => {
@@ -213,9 +220,38 @@ export function VideoStatsTimeline({
     });
   }, [loadStats]);
 
+  // ✅ OPTIMIZATION: Initial load only (no dependency on refreshTrigger)
   useEffect(() => {
     loadStats(true);
-  }, [loadStats, refreshTrigger]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId]);
+  
+  // ✅ OPTIMIZATION: Debounced refresh on trigger change (prevents connection storms)
+  useEffect(() => {
+    // Skip if this is initial mount or same trigger
+    if (refreshTrigger === 0 || refreshTrigger === lastRefreshTriggerRef.current) {
+      return;
+    }
+    lastRefreshTriggerRef.current = refreshTrigger;
+    
+    // Clear existing debounce
+    if (refreshDebounceRef.current) {
+      clearTimeout(refreshDebounceRef.current);
+    }
+    
+    // Debounce the refresh
+    refreshDebounceRef.current = setTimeout(() => {
+      console.log('🔄 Timeline: Debounced refresh triggered');
+      silentRefresh();
+    }, REFRESH_DEBOUNCE_MS);
+    
+    // Cleanup on unmount
+    return () => {
+      if (refreshDebounceRef.current) {
+        clearTimeout(refreshDebounceRef.current);
+      }
+    };
+  }, [refreshTrigger, silentRefresh]);
 
   // Build unified timeline entries
   const timelineEntries = useMemo((): TimelineEntry[] => {

@@ -358,11 +358,12 @@ export async function recordVideoStat(params: RecordVideoStatParams): Promise<st
 
 /**
  * Get all stats with video timestamps for a game
+ * @param limit - Optional limit for pagination (default: all)
  */
-export async function getVideoStats(gameId: string): Promise<VideoStat[]> {
+export async function getVideoStats(gameId: string, limit?: number): Promise<VideoStat[]> {
   if (!supabase) throw new Error('Supabase not initialized');
   
-  const { data, error } = await supabase
+  let query = supabase
     .from('game_stats')
     .select(`
       id,
@@ -386,6 +387,13 @@ export async function getVideoStats(gameId: string): Promise<VideoStat[]> {
     .eq('game_id', gameId)
     .not('video_timestamp_ms', 'is', null)
     .order('video_timestamp_ms', { ascending: false });
+  
+  // Apply limit if specified (for windowed fetching)
+  if (limit) {
+    query = query.limit(limit);
+  }
+  
+  const { data, error } = await query;
   
   if (error) {
     console.error('Error fetching video stats:', error);
@@ -436,6 +444,78 @@ export async function getVideoStats(gameId: string): Promise<VideoStat[]> {
       createdAt: stat.created_at as string,
     };
   });
+}
+
+/**
+ * Get recent stats only (for efficient timeline updates)
+ * Fetches last N stats by created_at, much lighter than full getVideoStats
+ */
+export async function getRecentVideoStats(gameId: string, limit: number = 50): Promise<VideoStat[]> {
+  if (!supabase) throw new Error('Supabase not initialized');
+  
+  const { data, error } = await supabase
+    .from('game_stats')
+    .select(`
+      id, game_id, player_id, custom_player_id, is_opponent_stat, team_id,
+      stat_type, modifier, stat_value, quarter, game_time_minutes,
+      game_time_seconds, video_timestamp_ms, shot_location_x,
+      shot_location_y, shot_zone, created_at
+    `)
+    .eq('game_id', gameId)
+    .not('video_timestamp_ms', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  
+  if (error) {
+    console.error('Error fetching recent video stats:', error);
+    throw new Error('Failed to fetch recent video stats');
+  }
+  
+  // Transform without fetching player names (caller provides them)
+  return (data || []).map((stat: Record<string, unknown>) => {
+    const minutes = (stat.game_time_minutes as number) || 0;
+    const seconds = (stat.game_time_seconds as number) || 0;
+    return {
+      id: stat.id as string,
+      gameStatId: stat.id as string,
+      videoTimestampMs: stat.video_timestamp_ms as number,
+      quarter: stat.quarter as number,
+      gameClockSeconds: minutes * 60 + seconds,
+      playerId: stat.player_id as string | null,
+      customPlayerId: stat.custom_player_id as string | null,
+      isOpponentStat: stat.is_opponent_stat === true,
+      playerName: '', // Caller resolves names from preloaded players
+      jerseyNumber: '',
+      teamId: stat.team_id as string,
+      statType: stat.stat_type as string,
+      modifier: stat.modifier as string | undefined,
+      statValue: stat.stat_value as number,
+      shotLocationX: stat.shot_location_x as number | undefined,
+      shotLocationY: stat.shot_location_y as number | undefined,
+      shotZone: stat.shot_zone as string | undefined,
+      createdAt: stat.created_at as string,
+    };
+  });
+}
+
+/**
+ * Get total count of video stats for a game (lightweight query)
+ */
+export async function getVideoStatsCount(gameId: string): Promise<number> {
+  if (!supabase) throw new Error('Supabase not initialized');
+  
+  const { count, error } = await supabase
+    .from('game_stats')
+    .select('id', { count: 'exact', head: true })
+    .eq('game_id', gameId)
+    .not('video_timestamp_ms', 'is', null);
+  
+  if (error) {
+    console.error('Error counting video stats:', error);
+    return 0;
+  }
+  
+  return count || 0;
 }
 
 /**
@@ -881,6 +961,8 @@ export const VideoStatService = {
   // Video stats
   recordVideoStat,
   getVideoStats,
+  getRecentVideoStats, // ✅ OPTIMIZATION: Lightweight recent stats fetch
+  getVideoStatsCount,  // ✅ OPTIMIZATION: Lightweight count query
   updateStatsCount,
   backfillVideoTimestamps,
   
@@ -896,10 +978,5 @@ export const VideoStatService = {
   
   // Daily upload limit
   getDailyUploadStatus,
-  
-  // ✅ OPTIMIZATION: Batch cleanup helpers (call once after batch inserts)
-  // These are already exported above but explicitly listed for batch callers
-  // updateStatsCount - call once after batch to update video stats_count
-  // updateGameClockState - call once after batch with final clock state
 };
 

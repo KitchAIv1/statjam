@@ -10,7 +10,7 @@
  */
 
 import { useCallback } from 'react';
-import { VideoStatService } from '@/lib/services/videoStatService';
+import { StatBatchQueue } from '@/lib/services/statBatchQueue';
 import { GameService } from '@/lib/services/gameService';
 import { getShotValue } from '@/hooks/useVideoStatPrompts';
 import type { GameClock } from '@/lib/types/video';
@@ -169,16 +169,15 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       }
     }
 
-    // ✅ FIRE-AND-FORGET: Fire DB write, update UI immediately
-    // ✅ PERFORMANCE: skipPostUpdates prevents COUNT query + games table UPDATE per stat
-    VideoStatService.recordVideoStat({
-        gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId, statType, modifier,
-        videoTimestampMs: currentVideoTimeMs, quarter: gameClock.quarter,
-        gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-        shotLocationX: locationData?.shotLocationX,
-        shotLocationY: locationData?.shotLocationY,
-        shotZone: locationData?.shotZone,
-      skipPostUpdates: true,
+    // ✅ OPTIMIZED: Use batch queue to prevent connection storms
+    // Queue the stat insert - batch queue flushes periodically
+    StatBatchQueue.queueStat({
+      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId, statType, modifier,
+      videoTimestampMs: currentVideoTimeMs, quarter: gameClock.quarter,
+      gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+      shotLocationX: locationData?.shotLocationX,
+      shotLocationY: locationData?.shotLocationY,
+      shotZone: locationData?.shotZone,
     })
       .then((statId) => {
         onStatRecorded?.(statType, statId);
@@ -186,6 +185,9 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       .catch((error) => {
         console.error('Error recording stat:', error);
       });
+    
+    // ✅ OPTIMISTIC: Notify UI immediately (stat ID will come later from batch)
+    onStatRecorded?.(statType);
     
     // ✅ UI updates happen IMMEDIATELY (no await)
     // ✅ AUTO-SEQUENCE PROMPTS - Controlled by sequenceFlags for manual mode support
@@ -214,11 +216,10 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
         if (isCoachMode) {
           // ✅ Coach mode: Auto-record opponent turnover (not affected by manual mode - it's a linked stat)
           onStatRecorded?.('turnover');
-          VideoStatService.recordVideoStat({
+          StatBatchQueue.queueStat({
             gameId, videoId, playerId: userId, isOpponentStat: true, teamId: gameData.team_a_id,
             statType: 'turnover', modifier: 'steal', videoTimestampMs: currentVideoTimeMs,
             quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-            skipPostUpdates: true,
           })
             .catch((error) => console.error('Error recording auto turnover:', error));
         } else if (autoPromptRebounds) {
@@ -277,12 +278,11 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     // ✅ OPTIMIZED: Trigger timeline refresh immediately
     onStatRecorded?.('turnover');
     
-    // Fire-and-forget
-    VideoStatService.recordVideoStat({
-        gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
-        statType: 'turnover', modifier, videoTimestampMs: lastEvent.videoTimestampMs,
-        quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-        skipPostUpdates: true,
+    // ✅ OPTIMIZED: Use batch queue
+    StatBatchQueue.queueStat({
+      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
+      statType: 'turnover', modifier, videoTimestampMs: lastEvent.videoTimestampMs,
+      quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
     })
       .catch((error) => console.error('Error recording turnover:', error));
     
@@ -333,12 +333,11 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     // ✅ OPTIMIZED: Trigger timeline refresh immediately
     onStatRecorded?.('rebound');
     
-    // Fire-and-forget
-    VideoStatService.recordVideoStat({
-        gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
-        statType: 'rebound', modifier: reboundType, videoTimestampMs: lastEvent.videoTimestampMs,
-        quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-        skipPostUpdates: true,
+    // ✅ OPTIMIZED: Use batch queue
+    StatBatchQueue.queueStat({
+      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
+      statType: 'rebound', modifier: reboundType, videoTimestampMs: lastEvent.videoTimestampMs,
+      quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
     })
       .catch((error) => console.error('Error recording rebound:', error));
     
@@ -389,12 +388,11 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     // ✅ OPTIMIZED: Trigger timeline refresh immediately
     onStatRecorded?.('foul');
     
-    // Fire-and-forget
-    VideoStatService.recordVideoStat({
-        gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
-        statType: 'foul', modifier: foulType, videoTimestampMs: lastEvent.videoTimestampMs,
-        quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-        skipPostUpdates: true,
+    // ✅ OPTIMIZED: Use batch queue
+    StatBatchQueue.queueStat({
+      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
+      statType: 'foul', modifier: foulType, videoTimestampMs: lastEvent.videoTimestampMs,
+      quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
     })
       .catch((error) => console.error('Error recording foul:', error));
       
@@ -449,24 +447,19 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     try {
       setIsRecording(true);
       
-      // ✅ OPTIMIZATION: Batch all FT inserts with Promise.all (skip post-updates per insert)
+      // ✅ OPTIMIZATION: Queue all FT inserts via batch queue (handles cleanup automatically)
       const ftPromises = results.map(result => 
-        VideoStatService.recordVideoStat({
+        StatBatchQueue.queueStat({
           gameId, videoId, playerId, customPlayerId, teamId: lastEvent.teamId,
           statType: 'free_throw', modifier: result.made ? 'made' : 'missed',
           videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
           gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-          skipPostUpdates: true, // ✅ Skip per-insert updates, do batch cleanup below
         })
       );
       
+      // Force flush to ensure FTs are saved before rebound prompt
+      await StatBatchQueue.forceFlush();
       await Promise.all(ftPromises);
-      
-      // ✅ OPTIMIZATION: Single batch cleanup after all FTs recorded
-      await Promise.all([
-        VideoStatService.updateStatsCount(gameId),
-        VideoStatService.updateGameClockState(gameId, gameClock.quarter, gameClock.minutesRemaining, gameClock.secondsRemaining),
-      ]);
       
       // Notify UI for each FT recorded
       results.forEach(() => onStatRecorded?.('free_throw'));
@@ -514,18 +507,17 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       // ✅ OPTIMIZED: Trigger timeline refresh immediately
       onStatRecorded?.(statTypeName);
       
-      VideoStatService.recordVideoStat({
-          gameId, videoId, 
-          playerId: actualPlayerId, 
-          customPlayerId,
+      StatBatchQueue.queueStat({
+        gameId, videoId, 
+        playerId: actualPlayerId, 
+        customPlayerId,
         teamId: gameData.team_a_id,
         statType: statTypeName,
-          modifier: 'made',
-          videoTimestampMs: lastEvent.videoTimestampMs,
-          quarter: gameClock.quarter,
-          gameTimeMinutes: gameClock.minutesRemaining,
-          gameTimeSeconds: gameClock.secondsRemaining,
-          skipPostUpdates: true,
+        modifier: 'made',
+        videoTimestampMs: lastEvent.videoTimestampMs,
+        quarter: gameClock.quarter,
+        gameTimeMinutes: gameClock.minutesRemaining,
+        gameTimeSeconds: gameClock.secondsRemaining,
       })
         .catch((error) => console.error('Error recording and-1 shot:', error));
       }
@@ -565,13 +557,12 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     // ✅ OPTIMIZED: Trigger timeline refresh immediately
     onStatRecorded?.(shotType);
     
-    // Fire-and-forget: Coach's player blocked opponent's shot: record opponent's missed shot
-    VideoStatService.recordVideoStat({
+    // ✅ OPTIMIZED: Use batch queue - Coach's player blocked opponent's shot
+    StatBatchQueue.queueStat({
       gameId, videoId, playerId: isCoachMode ? userId : undefined, isOpponentStat: true,
       teamId: gameData.team_a_id, statType: shotType, modifier: 'missed',
       videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
       gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-      skipPostUpdates: true,
     })
       .catch((error) => console.error('Error recording blocked shot:', error));
     
@@ -642,12 +633,11 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       // ✅ OPTIMIZED: Trigger timeline refresh immediately
       onStatRecorded?.(shotType);
       
-      VideoStatService.recordVideoStat({
+      StatBatchQueue.queueStat({
         gameId, videoId, playerId: actualPlayerId, customPlayerId, isOpponentStat: false,
         teamId: gameData.team_a_id, statType: shotType, modifier: 'missed',
         videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
         gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-        skipPostUpdates: true,
       })
         .catch((error) => console.error('Error recording blocked shooter:', error));
       
@@ -664,11 +654,10 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     // ✅ OPTIMIZED: Trigger timeline refresh immediately for all stat types
     if (promptType === 'assist') {
       onStatRecorded?.('assist');
-      VideoStatService.recordVideoStat({
+      StatBatchQueue.queueStat({
         gameId, videoId, playerId: actualPlayerId, customPlayerId, teamId: lastEvent.teamId,
         statType: 'assist', videoTimestampMs: lastEvent.videoTimestampMs,
         quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-        skipPostUpdates: true,
       })
         .catch((error) => console.error('Error recording assist:', error));
     } else if (promptType === 'rebound') {
@@ -679,42 +668,38 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       
       if (isOpponentRebound) {
         isOffensive = lastEvent.statType === 'block' || wasOpponentShot;
-        VideoStatService.recordVideoStat({
+        StatBatchQueue.queueStat({
           gameId, videoId, playerId: userId, isOpponentStat: true, teamId: gameData.team_a_id,
           statType: 'rebound', modifier: isOffensive ? 'offensive' : 'defensive',
           videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
           gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-          skipPostUpdates: true,
         })
           .catch((error) => console.error('Error recording opponent rebound:', error));
       } else {
         isOffensive = lastEvent.statType === 'block' ? false : (wasOpponentShot ? false : true);
-        VideoStatService.recordVideoStat({
+        StatBatchQueue.queueStat({
           gameId, videoId, playerId: actualPlayerId, customPlayerId, teamId: playerTeamId,
           statType: 'rebound', modifier: isOffensive ? 'offensive' : 'defensive',
           videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
           gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-          skipPostUpdates: true,
         })
           .catch((error) => console.error('Error recording rebound:', error));
       }
     } else if (promptType === 'turnover') {
       onStatRecorded?.('turnover');
       if (isCoachMode && lastEvent.isOpponentStat) {
-        VideoStatService.recordVideoStat({
+        StatBatchQueue.queueStat({
           gameId, videoId, playerId: actualPlayerId, customPlayerId, isOpponentStat: false,
           teamId: gameData.team_a_id, statType: 'turnover', modifier: 'steal',
           videoTimestampMs: lastEvent.videoTimestampMs, quarter: gameClock.quarter,
           gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-          skipPostUpdates: true,
         })
           .catch((error) => console.error('Error recording turnover:', error));
       } else {
-        VideoStatService.recordVideoStat({
+        StatBatchQueue.queueStat({
           gameId, videoId, playerId: actualPlayerId, customPlayerId, teamId: playerTeamId,
           statType: 'turnover', modifier: 'steal', videoTimestampMs: lastEvent.videoTimestampMs,
           quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
-          skipPostUpdates: true,
         })
           .catch((error) => console.error('Error recording turnover:', error));
       }
