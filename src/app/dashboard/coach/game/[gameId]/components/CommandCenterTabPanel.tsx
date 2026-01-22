@@ -21,6 +21,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { BarChart3, Users, Target, Trophy, Lock, Crown, Film } from 'lucide-react';
 import { ClipsTab } from './ClipsTab';
 import { AICoachAnalysis } from '@/components/game-viewer/AICoachAnalysis';
+import { TeamShotChart } from './TeamShotChart';
 
 interface CommandCenterTabPanelProps {
   gameId: string;
@@ -191,6 +192,13 @@ export function CommandCenterTabPanel({
                 </div>
               </div>
             </div>
+
+            {/* Team Shot Chart - Court diagram with shot locations */}
+            <TeamShotChart
+              gameId={gameId}
+              teamId={game.teamAId}
+              teamName={game.teamAName}
+            />
 
             {/* Game Awards - Only for completed games */}
             {isCompleted && gameAwardsPrefetch && (
