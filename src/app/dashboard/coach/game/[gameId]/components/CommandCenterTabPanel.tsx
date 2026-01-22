@@ -67,6 +67,11 @@ interface CommandCenterTabPanelProps {
     error: string | null;
     analytics: any;
   };
+  shotChartPrefetch?: {
+    data: any;
+    loading: boolean;
+    error: string | null;
+  };
 }
 
 export function CommandCenterTabPanel({
@@ -77,6 +82,7 @@ export function CommandCenterTabPanel({
   teamBPrefetch,
   gameAwardsPrefetch,
   analyticsPrefetch,
+  shotChartPrefetch,
 }: CommandCenterTabPanelProps) {
   // Subscription check for analytics gate
   const { limits } = useSubscription('coach');
@@ -198,6 +204,9 @@ export function CommandCenterTabPanel({
               gameId={gameId}
               teamId={game.teamAId}
               teamName={game.teamAName}
+              prefetchedData={shotChartPrefetch && !shotChartPrefetch.loading && !shotChartPrefetch.error
+                ? shotChartPrefetch.data
+                : undefined}
             />
 
             {/* Game Awards - Only for completed games */}

@@ -4,46 +4,79 @@
  * Shows shot locations on half-court with made/missed markers.
  * Integrates existing HalfCourtDiagram and shotChartService.
  * 
+ * OPTIMIZATIONS:
+ * - Accepts prefetched data to avoid redundant API calls
+ * - Falls back to internal fetch if no prefetched data
+ * - Hidden when no shot location data exists
+ * 
  * @module TeamShotChart
  */
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Target } from 'lucide-react';
-import { getTeamShotChart, ShotChartData, ShotRecord } from '@/lib/services/shotChartService';
+import { getTeamShotChart, ShotChartData } from '@/lib/services/shotChartService';
 import { ShotLocationMarker } from '@/components/tracker-v3/shot-tracker/ShotLocationMarker';
 
 interface TeamShotChartProps {
   gameId: string;
   teamId: string;
   teamName: string;
+  /** Prefetched data from parent - avoids redundant API call */
+  prefetchedData?: ShotChartData;
 }
 
-export function TeamShotChart({ gameId, teamId, teamName }: TeamShotChartProps) {
-  const [data, setData] = useState<ShotChartData | null>(null);
-  const [loading, setLoading] = useState(true);
+export function TeamShotChart({ 
+  gameId, 
+  teamId, 
+  teamName, 
+  prefetchedData 
+}: TeamShotChartProps) {
+  const [data, setData] = useState<ShotChartData | null>(prefetchedData || null);
+  const [loading, setLoading] = useState(!prefetchedData);
   const [error, setError] = useState<string | null>(null);
+  
+  // Track mounted state to prevent state updates after unmount
+  const isMountedRef = useRef(true);
 
+  // Only fetch if no prefetched data provided
   useEffect(() => {
+    // If prefetched data is available, use it directly
+    if (prefetchedData) {
+      setData(prefetchedData);
+      setLoading(false);
+      return;
+    }
+
+    // Otherwise fetch data
+    isMountedRef.current = true;
+    
     async function fetchData() {
       if (!gameId || !teamId) return;
       
       try {
-        setLoading(true);
         const chartData = await getTeamShotChart(gameId, teamId);
-        setData(chartData);
+        if (isMountedRef.current) {
+          setData(chartData);
+          setLoading(false);
+        }
       } catch (err) {
         console.error('Failed to load shot chart:', err);
-        setError('Failed to load shot data');
-      } finally {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setError('Failed to load shot data');
+          setLoading(false);
+        }
       }
     }
     
-    fetchData();
-  }, [gameId, teamId]);
+    void fetchData();
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [gameId, teamId, prefetchedData]);
 
   // Don't render anything while loading (avoids layout shift)
   if (loading) {
