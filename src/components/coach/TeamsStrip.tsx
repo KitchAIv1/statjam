@@ -23,6 +23,7 @@ interface TeamsStripProps {
   onQuickTrack: (team: CoachTeam) => void;
   onVideoTrack: (team: CoachTeam) => void;
   onManage: (team: CoachTeam) => void;
+  onEditTeam: (team: CoachTeam) => void;
   onJoinTournament: (team: CoachTeam) => void;
   onViewGames: (team: CoachTeam) => void;
   onSeasons: (team: CoachTeam) => void;
@@ -36,6 +37,7 @@ export function TeamsStrip({
   onQuickTrack,
   onVideoTrack,
   onManage,
+  onEditTeam,
   onJoinTournament,
   onViewGames,
   onSeasons,
@@ -89,6 +91,7 @@ export function TeamsStrip({
               onQuickTrack={onQuickTrack}
               onVideoTrack={onVideoTrack}
               onManage={onManage}
+              onEditTeam={onEditTeam}
               onJoinTournament={onJoinTournament}
               onViewGames={onViewGames}
               onSeasons={onSeasons}

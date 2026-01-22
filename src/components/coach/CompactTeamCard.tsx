@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { Users, PlayCircle, Video, MoreHorizontal, Trophy, Calendar, CalendarDays } from 'lucide-react';
+import { Users, PlayCircle, Video, MoreHorizontal, Trophy, Calendar, CalendarDays, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -26,6 +26,7 @@ interface CompactTeamCardProps {
   onQuickTrack: (team: CoachTeam) => void;
   onVideoTrack: (team: CoachTeam) => void;
   onManage: (team: CoachTeam) => void;
+  onEditTeam: (team: CoachTeam) => void;
   onJoinTournament: (team: CoachTeam) => void;
   onViewGames: (team: CoachTeam) => void;
   onSeasons: (team: CoachTeam) => void;
@@ -37,6 +38,7 @@ export function CompactTeamCard({
   onQuickTrack,
   onVideoTrack,
   onManage,
+  onEditTeam,
   onJoinTournament,
   onViewGames,
   onSeasons,
@@ -102,6 +104,10 @@ export function CompactTeamCard({
             <DropdownMenuItem onClick={() => onManage(team)}>
               <Users className="w-4 h-4 mr-2" />
               Manage Roster
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEditTeam(team)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Team
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onViewGames(team)}>
               <Calendar className="w-4 h-4 mr-2" />

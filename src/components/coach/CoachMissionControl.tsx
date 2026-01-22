@@ -15,8 +15,18 @@ import { CoachTeam } from '@/lib/types/coach';
 import { useCoachDashboardData } from '@/hooks/useCoachDashboardData';
 import { useSubscription } from '@/hooks/useSubscription';
 import { VideoStatService, DailyUploadStatus } from '@/lib/services/videoStatService';
+import { CoachTeamService } from '@/lib/services/coachTeamService';
 import { ProfileCard, ProfileCardSkeleton } from '@/components/profile/ProfileCard';
 import { ProfileService } from '@/lib/services/profileService';
+import { usePhotoUpload } from '@/hooks/usePhotoUpload';
+import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/Button';
+import { Trophy, Dumbbell, Info, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { invalidateCoachTeams } from '@/lib/utils/cache';
 import { LiveActionHub } from './LiveActionHub';
 import { TeamsStrip } from './TeamsStrip';
 import { VideoTrackingWidget } from './VideoTrackingWidget';
@@ -93,8 +103,22 @@ export function CoachMissionControl({
   const [showVideoCreditsModal, setShowVideoCreditsModal] = useState(false);
   const [showSeasonList, setShowSeasonList] = useState(false);
   const [showSeasonCreate, setShowSeasonCreate] = useState(false);
+  const [showEditTeam, setShowEditTeam] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<CoachTeam | null>(null);
   const [selectedSeasonForEdit, setSelectedSeasonForEdit] = useState<Season | null>(null);
+  
+  // Edit team form state
+  const [editFormData, setEditFormData] = useState({ name: '', is_official_team: false, logo: '' });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  
+  // Photo upload for edit modal
+  const editLogoUpload = usePhotoUpload({
+    photoType: 'team_logo',
+    teamId: selectedTeam?.id,
+    currentPhotoUrl: selectedTeam?.logo,
+    onSuccess: (url: string) => setEditFormData(prev => ({ ...prev, logo: url })),
+  });
   
   // Daily upload limit
   const [dailyUploads, setDailyUploads] = useState<DailyUploadStatus>({ 
@@ -159,6 +183,54 @@ export function CoachMissionControl({
   const handleSeasons = (team: CoachTeam) => {
     setSelectedTeam(team);
     setShowSeasonList(true);
+  };
+
+  const handleEditTeam = (team: CoachTeam) => {
+    setSelectedTeam(team);
+    setEditFormData({
+      name: team.name,
+      is_official_team: team.is_official_team || false,
+      logo: team.logo || ''
+    });
+    setEditError(null);
+    setShowEditTeam(true);
+  };
+
+  const handleSaveEditTeam = async () => {
+    if (!selectedTeam) return;
+    
+    try {
+      setEditLoading(true);
+      setEditError(null);
+
+      if (!editFormData.name.trim()) {
+        setEditError('Team name is required');
+        return;
+      }
+
+      await CoachTeamService.updateTeam(selectedTeam.id, {
+        name: editFormData.name,
+        is_official_team: editFormData.is_official_team,
+        logo: editFormData.logo || undefined
+      });
+
+      setShowEditTeam(false);
+      setSelectedTeam(null);
+      if (user?.id) {
+        invalidateCoachTeams(user.id);
+      }
+      onTeamUpdate();
+    } catch (err) {
+      console.error('Failed to update team:', err);
+      setEditError(err instanceof Error ? err.message : 'Failed to update team');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleLogoRemove = () => {
+    setEditFormData(prev => ({ ...prev, logo: '' }));
+    editLogoUpload.clearPreview();
   };
 
   const handleCreateSeason = () => {
@@ -262,6 +334,7 @@ export function CoachMissionControl({
         onQuickTrack={handleQuickTrack}
         onVideoTrack={handleVideoTrack}
         onManage={handleManage}
+        onEditTeam={handleEditTeam}
         onJoinTournament={handleJoinTournament}
         onViewGames={handleViewGames}
         onSeasons={handleSeasons}
@@ -387,6 +460,130 @@ export function CoachMissionControl({
           }}
           existingSeason={selectedSeasonForEdit || undefined}
         />
+      )}
+
+      {/* Edit Team Modal */}
+      {showEditTeam && selectedTeam && (
+        <Dialog open={showEditTeam} onOpenChange={() => { setShowEditTeam(false); setSelectedTeam(null); }}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Edit Team</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              {/* Team Logo Upload */}
+              <div className="space-y-2">
+                <Label>Team Logo</Label>
+                <PhotoUploadField
+                  label="Upload Team Logo"
+                  value={editFormData.logo || null}
+                  previewUrl={editLogoUpload.previewUrl || editFormData.logo}
+                  uploading={editLogoUpload.uploading}
+                  progress={editLogoUpload.progress}
+                  error={editLogoUpload.error}
+                  onFileSelect={editLogoUpload.handleFileSelect}
+                  onRemove={handleLogoRemove}
+                  onClearError={editLogoUpload.clearError}
+                />
+              </div>
+
+              {/* Team Name */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-team-name">Team Name *</Label>
+                <Input
+                  id="edit-team-name"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Eagles U16"
+                />
+              </div>
+
+              {/* Team Type Toggle */}
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="edit-is-official" className="text-base font-semibold cursor-pointer">
+                      Team Type
+                    </Label>
+                    {editFormData.is_official_team ? (
+                      <Trophy className="w-4 h-4 text-orange-600" />
+                    ) : (
+                      <Dumbbell className="w-4 h-4 text-amber-600" />
+                    )}
+                  </div>
+                  <Switch
+                    id="edit-is-official"
+                    checked={editFormData.is_official_team}
+                    onCheckedChange={(checked) => 
+                      setEditFormData(prev => ({ ...prev, is_official_team: checked }))
+                    }
+                  />
+                </div>
+                
+                <div className="text-sm">
+                  {editFormData.is_official_team ? (
+                    <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                      <Info className="w-4 h-4 mt-0.5 shrink-0 text-orange-600" />
+                      <div>
+                        <span className="font-medium text-orange-800">Official Team</span>
+                        <p className="text-orange-700 mt-0.5">
+                          Players can claim their profile and build their stats history.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                      <Info className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+                      <div>
+                        <span className="font-medium text-amber-800">Practice/Scrimmage Team</span>
+                        <p className="text-amber-700 mt-0.5">
+                          For practice games. Stats are not linked to player profiles.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Warning when changing from official to practice */}
+              {editFormData.is_official_team === false && selectedTeam.is_official_team === true && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Warning</AlertTitle>
+                  <AlertDescription>
+                    Changing to practice team will unlink all player profiles from this team&apos;s stats.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Error */}
+              {editError && (
+                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                  {editError}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => { setShowEditTeam(false); setSelectedTeam(null); }}
+                className="flex-1"
+                disabled={editLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveEditTeam}
+                disabled={editLoading || !editFormData.name.trim()}
+                className="flex-1"
+              >
+                {editLoading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
