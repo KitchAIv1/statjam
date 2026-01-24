@@ -21,23 +21,11 @@ export class OverlayDrawer {
   
   /**
    * Draw gradient background bar at top with backdrop-blur simulation
-   * Starts at top edge (y=0)
+   * Currently disabled - no background gradient
    */
   drawBackground(): void {
-    // Main gradient (matches React: from-black/95 via-black/90 to-transparent)
-    // Starts at y=0 (top edge of canvas)
-    // Opacity increased by 25% + 10%: 0.95 → 0.97, 0.90 → 0.94
-    const gradient = this.ctx.createLinearGradient(0, 0, 0, 160);
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.97)');
-    gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.94)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    
-    this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(0, 0, this.width, 160);
-    
-    // Simulate backdrop-blur with semi-transparent overlay
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-    this.ctx.fillRect(0, 0, this.width, 120);
+    // Gradient background removed for cleaner NBA-style look
+    // No background drawing
   }
   
   /**
@@ -105,68 +93,62 @@ export class OverlayDrawer {
   ): void {
     const isHome = side === 'home';
     const containerStartX = (this.width - this.MAX_WIDTH) / 2;
-    const padding = 48;
-    const gap = 20; // Reduced gap to bring badge closer to score
+    const padding = 32;
     const centerX = this.width / 2;
-    const scoreOffsetFromCenter = 180; // Reduced distance to bring scores closer to center
     
-    // Calculate vertical center of score for alignment
-    // Score font is 64px, drawn with textBaseline='top' at y
-    // Visual center of score is approximately y + fontSize/2 = y + 32
-    const scoreFontSize = 64; // Increased from 52px to 64px
-    const scoreTopY = 60; // Top of score text
-    const scoreCenterY = scoreTopY + scoreFontSize / 2; // Vertical center of score (92px)
+    // NBA-style dimensions
+    const logoSize = 52; // Increased from 32px - prominent like NBA
+    const logoGap = 16; // Gap between logo and badge
+    const scoreFontSize = 80; // Increased from 72px for NBA impact
+    const scoreTopY = 56;
+    const scoreCenterY = scoreTopY + scoreFontSize / 2;
     
-    // Align all elements to score center
-    const badgeHeight = 110; // Updated to match new badge height
-    const badgeTopY = scoreCenterY - badgeHeight / 2; // Center badge vertically with score
+    // Badge dimensions (simplified - no logo inside)
+    const badgeHeight = 70; // Reduced - cleaner without logo inside
+    const badgeTopY = scoreCenterY - badgeHeight / 2;
     
-    const y = badgeTopY; // Use badge top Y for all team section elements
-    const logoSize = 28;
-    
-    // Calculate score positions (symmetric from center)
+    // Score positions - increased gap from center for breathing room
+    const scoreOffsetFromCenter = 180;
     const awayScoreX = centerX - scoreOffsetFromCenter;
     const homeScoreX = centerX + scoreOffsetFromCenter;
     
+    // Logo vertical centering
+    const logoY = scoreCenterY - logoSize / 2;
+    
     if (isHome) {
-      // Home: Logo → Badge → Score (from right edge inward, towards center)
-      // Calculate badge width first to position logo correctly
-      this.ctx.font = '900 22px Arial, sans-serif'; // Updated to match new team name font size
-      const teamName = data.teamBName;
-      const nameWidth = Math.min(this.ctx.measureText(teamName).width, 260);
-      const approximateBadgeWidth = Math.max(nameWidth + 32, 240); // padding * 2 = 32, updated min width
-      
-      // Badge at outer right (accounting for logo)
+      // Home: [Score] [Badge] [Logo] (right side)
       const rightEdgeX = containerStartX + this.MAX_WIDTH - padding;
-      const badgeX = rightEdgeX - logoSize - gap - approximateBadgeWidth;
-      const badgeWidth = this.drawTeamBadge(badgeX, y, data, side);
       
-      // Logo to the right of badge (aligned with badge edge)
-      const logoX = badgeX + badgeWidth + gap;
-      this.drawTeamLogo(logoX, y, teamLogo, teamLogoFallback, data, side);
+      // Logo at far right
+      const logoX = rightEdgeX - logoSize;
+      this.drawTeamLogo(logoX, logoY, teamLogo, teamLogoFallback, data, side, logoSize);
       
-      // Score towards center (left-aligned at homeScoreX, vertically centered)
+      // Badge next to logo
+      const badgeWidth = this.calculateBadgeWidth(data.teamBName);
+      const badgeX = logoX - logoGap - badgeWidth;
+      this.drawTeamBadge(badgeX, badgeTopY, data, side);
+      
+      // Score towards center
       this.drawTeamScore(homeScoreX, scoreTopY, data, side);
       
-      // Stats inside badge (not below)
-      this.drawTeamStats(badgeX, y, data, side, badgeWidth);
+      // Stats below badge
+      this.drawTeamStats(badgeX, badgeTopY, data, side, badgeWidth);
     } else {
-      // Away: Logo → Badge → Score (left to right, towards center)
-      // Calculate positions from left, working towards center
+      // Away: [Logo] [Badge] [Score] (left side)
       const leftStartX = containerStartX + padding;
       
       // Logo at far left
-      this.drawTeamLogo(leftStartX, y, teamLogo, teamLogoFallback, data, side);
+      this.drawTeamLogo(leftStartX, logoY, teamLogo, teamLogoFallback, data, side, logoSize);
       
       // Badge next to logo
-      const badgeX = leftStartX + logoSize + gap;
-      const badgeWidth = this.drawTeamBadge(badgeX, y, data, side);
+      const badgeX = leftStartX + logoSize + logoGap;
+      const badgeWidth = this.drawTeamBadge(badgeX, badgeTopY, data, side);
       
-      // Score towards center (right-aligned at awayScoreX, vertically centered)
+      // Score towards center
       this.drawTeamScore(awayScoreX, scoreTopY, data, side);
       
-      // Stats inside badge (not below)
-      this.drawTeamStats(badgeX, y, data, side, badgeWidth);
+      // Stats below badge
+      this.drawTeamStats(badgeX, badgeTopY, data, side, badgeWidth);
     }
   }
   
@@ -178,13 +160,13 @@ export class OverlayDrawer {
   drawCenterSection(data: GameOverlayData): void {
     const x = this.width / 2;
     
-    // Calculate vertical center of score for alignment
-    const scoreFontSize = 64; // Increased from 52px to 64px
-    const scoreTopY = 60;
-    const scoreCenterY = scoreTopY + scoreFontSize / 2; // Vertical center of score (92px)
+    // Calculate vertical center of score for alignment (matches drawTeamSection)
+    const scoreFontSize = 80; // Matches NBA-style score font
+    const scoreTopY = 56;
+    const scoreCenterY = scoreTopY + scoreFontSize / 2;
     
-    // Group dimensions
-    const clockHeight = 50;
+    // Group dimensions - updated to match enhanced clock
+    const clockHeight = 54; // Increased from 50px to match enhanced game clock
     const quarterHeight = 30; // Increased to match larger font
     const verticalGap = 8; // Gap between clock and quarter/shot row
     const horizontalGap = 8; // Gap between quarter and shot clock
@@ -229,10 +211,21 @@ export class OverlayDrawer {
   }
   
   /**
-   * Draw team badge with name and label
-   * React: bg-white/10 backdrop-blur-sm rounded-lg border, padding var(--padding)
-   * Stats (fouls/timeouts) are drawn inside by drawTeamStats
-   * Returns badge width and height for positioning calculations
+   * Calculate badge width without drawing (for positioning)
+   * NBA-style: simplified badge without logo inside
+   */
+  private calculateBadgeWidth(teamName: string): number {
+    const padding = 24;
+    const teamNameFontSize = 26; // Matches drawTeamBadge
+    this.ctx.font = `800 ${teamNameFontSize}px Arial, sans-serif`;
+    const nameWidth = Math.min(this.ctx.measureText(teamName).width, 220);
+    return Math.max(padding + nameWidth + padding, 160);
+  }
+  
+  /**
+   * Draw team badge with name only (NBA-style - logo is separate)
+   * Clean, minimal badge with team name centered
+   * Returns badge width for positioning calculations
    */
   private drawTeamBadge(
     x: number,
@@ -243,51 +236,39 @@ export class OverlayDrawer {
     const isHome = side === 'home';
     const teamName = isHome ? data.teamBName : data.teamAName;
     const primaryColor = isHome ? data.teamBPrimaryColor : data.teamAPrimaryColor;
-    const padding = 16;
+    const padding = 24;
+    const teamNameFontSize = 26; // Increased from 20px
     
-    // Measure badge width dynamically - increased size for larger team name font
-    this.ctx.font = '900 22px Arial, sans-serif'; // Increased font for team name
-    const nameWidth = Math.min(this.ctx.measureText(teamName).width, 260);
-    const badgeWidth = Math.max(nameWidth + padding * 2, 240); // Increased min width for larger font
+    // Measure badge width - simpler without logo
+    this.ctx.font = `800 ${teamNameFontSize}px Arial, sans-serif`;
+    const nameWidth = Math.min(this.ctx.measureText(teamName).width, 220);
+    const badgeWidth = Math.max(padding + nameWidth + padding, 160);
+    const badgeHeight = 75; // Slightly increased to accommodate larger font
     
-    // Badge height increased to accommodate larger team name and stats
-    // Layout: padding (18) + label (12) + margin (6) + name (22) + margin (8) + stats (24) + padding (18) = 108px
-    const badgeHeight = 110; // Increased height for larger team name
+    // Badge background - clean with team color accent
+    const bgColor = primaryColor 
+      ? hexToRgba(primaryColor, 0.25)
+      : 'rgba(255, 255, 255, 0.12)';
+    this.drawRoundedRect(x, y, badgeWidth, badgeHeight, 8, bgColor);
     
-    // Badge background with backdrop-blur simulation
-    this.drawRoundedRect(x, y, badgeWidth, badgeHeight, 8, 'rgba(255, 255, 255, 0.1)');
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
-    this.ctx.fillRect(x, y, badgeWidth, badgeHeight);
-    
-    // Border with team color (primaryColor + '80' = 50% opacity)
+    // Strong border with team color
     const borderColor = primaryColor 
-      ? hexToRgba(primaryColor, 0.5) 
-      : 'rgba(255, 255, 255, 0.2)';
+      ? hexToRgba(primaryColor, 0.8)
+      : 'rgba(255, 255, 255, 0.4)';
     this.ctx.strokeStyle = borderColor;
-    this.ctx.lineWidth = 1;
+    this.ctx.lineWidth = 2;
     this.drawRoundedRect(x, y, badgeWidth, badgeHeight, 8, undefined, borderColor);
     
-    // "Away" or "Home" label (text-xs text-gray-400 uppercase tracking-widest font-semibold)
-    this.ctx.fillStyle = '#9CA3AF'; // gray-400
-    this.ctx.font = '600 12px Arial, sans-serif'; // Decreased from 14px to 12px
-    this.ctx.letterSpacing = '0.1em'; // tracking-widest
-    this.ctx.textAlign = isHome ? 'right' : 'left';
-    this.ctx.textBaseline = 'top';
-    const labelText = (isHome ? 'HOME' : 'AWAY').toUpperCase();
-    this.ctx.fillText(labelText, isHome ? x + badgeWidth - padding : x + padding, y + padding);
-    this.ctx.letterSpacing = '0'; // Reset
-    
-    // Team name (font-black text-white) - increased size
-    // Position: below label (6px margin)
+    // Team name - centered vertically and horizontally
     this.ctx.fillStyle = '#FFFFFF';
-    this.ctx.font = '900 22px Arial, sans-serif'; // Increased from 18px to 22px for better visibility
+    this.ctx.font = `800 ${teamNameFontSize}px Arial, sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
     
-    // Measure actual text width and truncate properly with ellipsis
-    const maxNameWidth = 260 - padding * 2; // Account for padding (increased for larger font)
+    // Truncate if needed
+    const maxNameWidth = badgeWidth - padding * 2;
     let displayName = teamName;
     let measuredWidth = this.ctx.measureText(displayName).width;
-    
-    // Truncate if needed with ellipsis
     if (measuredWidth > maxNameWidth) {
       while (measuredWidth > maxNameWidth && displayName.length > 0) {
         displayName = displayName.substring(0, displayName.length - 1);
@@ -296,15 +277,22 @@ export class OverlayDrawer {
       displayName += '...';
     }
     
-    // Use maxWidth parameter to ensure text stays within bounds
-    const nameX = isHome ? x + badgeWidth - padding : x + padding;
-    this.ctx.fillText(displayName, nameX, y + padding + 20, maxNameWidth); // Increased margin
+    // Draw centered text with shadow
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    this.ctx.shadowBlur = 3;
+    this.ctx.shadowOffsetX = 1;
+    this.ctx.shadowOffsetY = 1;
+    this.ctx.fillText(displayName, x + badgeWidth / 2, y + badgeHeight / 2);
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowOffsetX = 0;
+    this.ctx.shadowOffsetY = 0;
     
     return badgeWidth;
   }
   
   /**
-   * Draw large score number (font-black, tabular-nums, tracking-tight)
+   * Draw large score number (NBA-style bold)
    * Scores aligned towards center, right-aligned for away, left-aligned for home
    */
   private drawTeamScore(
@@ -316,21 +304,34 @@ export class OverlayDrawer {
     const isHome = side === 'home';
     const score = isHome ? data.homeScore : data.awayScore;
     
+    // NBA-style large bold score
     this.ctx.fillStyle = '#FFFFFF';
-    // font-black (900), tabular-nums (monospace), tracking-tight (-0.025em)
-    this.ctx.font = '900 64px "Courier New", monospace'; // Increased from 52px to 64px
-    this.ctx.letterSpacing = '-0.025em'; // tracking-tight
+    this.ctx.font = '900 80px "Arial Black", Arial, sans-serif';
+    this.ctx.letterSpacing = '-0.02em';
+    
+    // Strong shadow for depth
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.shadowBlur = 6;
+    this.ctx.shadowOffsetX = 2;
+    this.ctx.shadowOffsetY = 2;
     
     // Away score: right-aligned (points towards center)
     // Home score: left-aligned (points towards center)
     this.ctx.textAlign = isHome ? 'left' : 'right';
     this.ctx.textBaseline = 'top';
     this.ctx.fillText(score.toString(), x, y);
-    this.ctx.letterSpacing = '0'; // Reset
+    
+    // Reset
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowOffsetX = 0;
+    this.ctx.shadowOffsetY = 0;
+    this.ctx.letterSpacing = '0';
   }
   
   /**
-   * Draw team logo with fallback (no text labels - just clean circle)
+   * Draw team logo with fallback (square with rounded corners)
+   * Enhanced with shadow for depth
    */
   private drawTeamLogo(
     x: number,
@@ -338,40 +339,71 @@ export class OverlayDrawer {
     logo: HTMLImageElement | null,
     useFallback: boolean,
     data: GameOverlayData,
-    side: 'away' | 'home'
+    side: 'away' | 'home',
+    logoSize: number = 32
   ): void {
     const isHome = side === 'home';
     const teamColor = isHome 
       ? (data.teamBPrimaryColor || '#3b82f6')
       : (data.teamAPrimaryColor || '#3b82f6');
-    const logoSize = 28;
+    const cornerRadius = 6; // Rounded corners for square
     
     if (logo && !useFallback) {
-      // Draw logo rounded
+      // Draw logo with shadow in square shape
       this.ctx.save();
+      
+      // Add drop shadow
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+      this.ctx.shadowBlur = 3;
+      this.ctx.shadowOffsetX = 1;
+      this.ctx.shadowOffsetY = 1;
+      
+      // Create rounded square path for clipping
       this.ctx.beginPath();
-      this.ctx.arc(x + logoSize / 2, y + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+      this.ctx.moveTo(x + cornerRadius, y);
+      this.ctx.lineTo(x + logoSize - cornerRadius, y);
+      this.ctx.quadraticCurveTo(x + logoSize, y, x + logoSize, y + cornerRadius);
+      this.ctx.lineTo(x + logoSize, y + logoSize - cornerRadius);
+      this.ctx.quadraticCurveTo(x + logoSize, y + logoSize, x + logoSize - cornerRadius, y + logoSize);
+      this.ctx.lineTo(x + cornerRadius, y + logoSize);
+      this.ctx.quadraticCurveTo(x, y + logoSize, x, y + logoSize - cornerRadius);
+      this.ctx.lineTo(x, y + cornerRadius);
+      this.ctx.quadraticCurveTo(x, y, x + cornerRadius, y);
+      this.ctx.closePath();
       this.ctx.clip();
       this.ctx.drawImage(logo, x, y, logoSize, logoSize);
       this.ctx.restore();
-    } else {
-      // Fallback: simple colored circle (no text - clean design)
-      this.ctx.fillStyle = hexToRgba(teamColor, 0.3);
-      this.ctx.beginPath();
-      this.ctx.arc(x + logoSize / 2, y + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
-      this.ctx.fill();
       
-      // Subtle border
+      // Border around square logo
+      this.ctx.strokeStyle = hexToRgba(teamColor, 0.4);
+      this.ctx.lineWidth = 2;
+      this.drawRoundedRect(x, y, logoSize, logoSize, cornerRadius, undefined, hexToRgba(teamColor, 0.4));
+    } else {
+      // Fallback: simple colored square with enhanced styling
+      this.ctx.save();
+      
+      // Add shadow
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+      this.ctx.shadowBlur = 3;
+      this.ctx.shadowOffsetX = 1;
+      this.ctx.shadowOffsetY = 1;
+      
+      // Draw rounded square background
+      this.ctx.fillStyle = hexToRgba(teamColor, 0.3);
+      this.drawRoundedRect(x, y, logoSize, logoSize, cornerRadius, hexToRgba(teamColor, 0.3));
+      
+      this.ctx.restore();
+      
+      // Border
       this.ctx.strokeStyle = hexToRgba(teamColor, 0.5);
-      this.ctx.lineWidth = 1;
-      this.ctx.stroke();
+      this.ctx.lineWidth = 2;
+      this.drawRoundedRect(x, y, logoSize, logoSize, cornerRadius, undefined, hexToRgba(teamColor, 0.5));
     }
   }
   
   /**
-   * Draw team stats (fouls, timeouts) INSIDE badge container
-   * Matches React: gap-2 (8px) between elements, positioned BELOW team name
-   * Layout: Label (y + 16) → Name (y + 32) → Stats (y + 51)
+   * Draw team stats (fouls, timeouts) BELOW the badge
+   * NBA-style: clean row of indicators below team name badge
    */
   private drawTeamStats(
     x: number,
@@ -384,86 +416,93 @@ export class OverlayDrawer {
     const fouls = isHome ? data.teamBFouls : data.teamAFouls;
     const timeouts = isHome ? data.teamBTimeouts : data.teamATimeouts;
     
-    const padding = 18; // Increased padding to match larger badge
-    // Position stats BELOW team name (matching React layout):
-    // Label: y + padding (18px) = y + 18
-    // Name: y + padding + 12 (label height, decreased) + 6 (margin) = y + 36
-    // Stats: y + 36 + 22 (name height, increased) + 8 (margin) = y + 66
-    const statsY = y + padding + 12 + 6 + 22 + 8; // y + 66 (below team name, adjusted for larger font)
-    const align = isHome ? 'right' : 'left';
-    const gap = 8; // gap-2 = 8px
+    const badgeHeight = 70; // Matches simplified badge
+    const statsGap = 8; // Gap below badge
+    const statsY = y + badgeHeight + statsGap;
+    const gap = 10; // Gap between fouls and timeouts
     
-    // Calculate exact widths - using increased font size
-    this.ctx.font = '700 14px Arial, sans-serif'; // Increased to match foul indicator
+    // Calculate foul indicator dimensions
+    this.ctx.font = '700 14px Arial, sans-serif';
     const foulText = fouls >= 5 ? `${fouls} BONUS` : fouls.toString();
-    const foulWidth = this.ctx.measureText(foulText).width + 20; // Text + padding (increased)
+    const foulWidth = this.ctx.measureText(foulText).width + 24;
+    const foulIndicatorHeight = 26;
+    const foulIndicatorCenterY = statsY + foulIndicatorHeight / 2;
     
-    // Calculate foul indicator center Y for timeout dots alignment
-    const foulIndicatorHeight = 24;
-    const foulIndicatorCenterY = statsY + foulIndicatorHeight / 2; // Center of foul indicator
-    
-    // React order: Away = Fouls → Timeouts, Home = Timeouts → Fouls
     if (isHome) {
-      // Home: Timeouts → Fouls (right to left, right-aligned)
-      // Ensure stats fit within badge bounds
-      const maxStatsX = x + badgeWidth - padding;
-      const minStatsX = x + padding;
+      // Home: Stats right-aligned under badge
+      const statsEndX = x + badgeWidth;
       
-      // Start from right edge, work left
-      let currentX = maxStatsX;
+      // Draw timeouts first (rightmost)
+      const timeoutWidth = this.drawTimeoutDots(statsEndX, statsY, timeouts, 'right', foulIndicatorCenterY);
       
-      // Draw timeouts first (rightmost) - aligned to foul center
-      const timeoutWidth = this.drawTimeoutDots(currentX, statsY, timeouts, align, foulIndicatorCenterY);
-      currentX -= timeoutWidth + gap;
-      
-      // Draw fouls (to the left of timeouts)
-      this.drawFoulIndicator(currentX, statsY, fouls, align);
-      
-      // Verify we didn't exceed bounds
-      if (currentX < minStatsX) {
-        // If stats are too wide, adjust positioning (fallback to left alignment)
-        currentX = minStatsX;
-        this.drawFoulIndicator(currentX, statsY, fouls, 'left');
-        currentX += foulWidth + gap;
-        this.drawTimeoutDots(currentX, statsY, timeouts, 'left', foulIndicatorCenterY);
-      }
+      // Draw fouls to the left of timeouts
+      this.drawFoulIndicator(statsEndX - timeoutWidth - gap, statsY, fouls, 'right');
     } else {
-      // Away: Fouls → Timeouts (left to right, left-aligned)
-      const statsX = x + padding;
+      // Away: Stats left-aligned under badge
+      const statsStartX = x;
       
       // Draw fouls first (leftmost)
-      this.drawFoulIndicator(statsX, statsY, fouls, align);
+      this.drawFoulIndicator(statsStartX, statsY, fouls, 'left');
       
-      // Draw timeouts (to the right of fouls) - aligned to foul center
-      this.drawTimeoutDots(statsX + foulWidth + gap, statsY, timeouts, align, foulIndicatorCenterY);
+      // Draw timeouts to the right of fouls
+      this.drawTimeoutDots(statsStartX + foulWidth + gap, statsY, timeouts, 'left', foulIndicatorCenterY);
     }
   }
   
   /**
    * Draw game clock with red background (text-3xl font-black tabular-nums tracking-wider)
+   * Enhanced with gradient, larger size, and stronger shadows for NBA-style
    */
   private drawGameClock(x: number, y: number, minutes: number, seconds: number): void {
     const clockText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
-    // Measure text for dynamic width (px-6 py-2 = 24px horizontal, 8px vertical)
-    this.ctx.font = '900 30px "Courier New", monospace';
+    // Measure text for dynamic width - increased font size
+    this.ctx.font = '900 34px "Courier New", monospace'; // Increased from 30px to 34px
     this.ctx.letterSpacing = '0.05em'; // tracking-wider
     const textWidth = this.ctx.measureText(clockText).width;
-    const clockWidth = textWidth + 48; // px-6 = 24px each side
-    const clockHeight = 50;
+    const clockWidth = textWidth + 52; // Increased padding
+    const clockHeight = 54; // Increased from 50px
     
-    // Red background (bg-red-600) with shadow-lg simulation
-    this.drawRoundedRect(x - clockWidth / 2, y, clockWidth, clockHeight, 8, getTailwindColor('red-600'));
+    const clockX = x - clockWidth / 2;
     
-    // Shadow simulation (darken edges slightly)
+    // Red background with gradient (darker at bottom for depth)
+    const gradient = this.ctx.createLinearGradient(clockX, y, clockX, y + clockHeight);
+    gradient.addColorStop(0, getTailwindColor('red-600'));
+    gradient.addColorStop(1, getTailwindColor('red-700')); // Darker at bottom
+    this.drawRoundedRect(clockX, y, clockWidth, clockHeight, 8, gradient);
+    
+    // Stronger shadow for prominence
+    this.ctx.save();
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    this.ctx.shadowBlur = 6;
+    this.ctx.shadowOffsetX = 0;
+    this.ctx.shadowOffsetY = 3;
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    this.ctx.fillRect(x - clockWidth / 2, y + clockHeight - 2, clockWidth, 2);
+    this.ctx.fillRect(clockX, y + clockHeight - 3, clockWidth, 3);
+    this.ctx.restore();
     
-    // Clock text
+    // Subtle inner highlight at top
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    this.ctx.fillRect(clockX, y, clockWidth, 2);
+    
+    // Clock text with shadow
     this.ctx.fillStyle = '#FFFFFF';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
+    
+    // Add text shadow
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    this.ctx.shadowBlur = 2;
+    this.ctx.shadowOffsetX = 1;
+    this.ctx.shadowOffsetY = 1;
+    
     this.ctx.fillText(clockText, x, y + clockHeight / 2);
+    
+    // Reset shadow
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowOffsetX = 0;
+    this.ctx.shadowOffsetY = 0;
     this.ctx.letterSpacing = '0'; // Reset
   }
   
