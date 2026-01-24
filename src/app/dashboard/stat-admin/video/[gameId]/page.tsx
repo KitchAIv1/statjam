@@ -720,10 +720,14 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
           setTeamAPlayers(playersA.map((p: any) => ({
             id: p.id, name: p.name || 'Unknown',
             jerseyNumber: p.jerseyNumber || p.jersey_number,
+            // ✅ FIX: Preserve is_custom_player flag for organizer games with coach-created teams
+            is_custom_player: p.is_custom_player === true,
           })));
           setTeamBPlayers(playersB.map((p: any) => ({
             id: p.id, name: p.name || 'Unknown',
             jerseyNumber: p.jerseyNumber || p.jersey_number,
+            // ✅ FIX: Preserve is_custom_player flag for organizer games with coach-created teams
+            is_custom_player: p.is_custom_player === true,
           })));
         }
       } catch (error) {
@@ -1262,6 +1266,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                     }
                   }}
                   onClockResume={handleClockResume}
+                  onScoresChanged={loadScores}
                 />
               </div>
             </div>

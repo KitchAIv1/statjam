@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { VideoCompositionPreview } from '@/components/live-streaming/VideoCompositionPreview';
 import { BroadcastControls } from '@/components/live-streaming/BroadcastControls';
 import { useWebcam } from '@/hooks/useWebcam';
@@ -17,7 +17,8 @@ import { useBroadcast } from '@/hooks/useBroadcast';
 import { GameOverlayData } from '@/lib/services/canvas-overlay';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
-import { Video, Camera, Smartphone, RefreshCw } from 'lucide-react';
+import { Video, Camera, Smartphone, RefreshCw, Mic, MicOff } from 'lucide-react';
+import { useMicrophone } from '@/hooks/useMicrophone';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useTournaments } from '@/lib/hooks/useTournaments';
 import { GameService } from '@/lib/services/gameService';
@@ -65,11 +66,24 @@ export default function VideoCompositionTestPage() {
       video: {
         width: { ideal: 1920, min: 1280 },
         height: { ideal: 1080, min: 720 },
-        frameRate: { ideal: 30, min: 24 },
+        // 60fps for smooth basketball camera panning
+        frameRate: { ideal: 60, min: 30 },
       },
       audio: false,
     },
   });
+  
+  // Microphone hook
+  const {
+    audioStream: micStream,
+    isEnabled: micEnabled,
+    isMuted: micMuted,
+    error: micError,
+    isLoading: micLoading,
+    start: startMic,
+    stop: stopMic,
+    toggleMute: toggleMicMute,
+  } = useMicrophone();
   
   // iPhone WebRTC hook
   const {
@@ -97,7 +111,7 @@ export default function VideoCompositionTestPage() {
     stop: stopComposition,
   } = useVideoComposition({
     videoStream: activeVideoStream,
-    overlayData: overlayData || undefined,
+    overlayData: overlayData ?? null,
     enabled: false,
   });
 
@@ -337,10 +351,83 @@ export default function VideoCompositionTestPage() {
       <VideoCompositionPreview
         composedStream={composedStream}
         isComposing={state.isComposing}
-        error={compositionError || undefined}
+        error={compositionError ?? null}
         onStart={handleToggleComposition}
         onStop={handleToggleComposition}
       />
+
+      {/* Microphone Control */}
+      {composedStream && state.isComposing && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {micMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              Microphone
+            </CardTitle>
+            <CardDescription>Enable microphone for live commentary</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm">
+                    Status: {micEnabled ? (micMuted ? 'Muted' : 'Active') : 'Off'}
+                  </p>
+                  {micError && <p className="text-sm text-destructive">{micError}</p>}
+                </div>
+                <div className="flex gap-2">
+                  {!micEnabled ? (
+                    <Button
+                      onClick={startMic}
+                      disabled={micLoading || broadcastState.isBroadcasting}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {micLoading ? 'Starting...' : 'Enable Mic'}
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        onClick={toggleMicMute}
+                        variant={micMuted ? 'outline' : 'default'}
+                        size="sm"
+                      >
+                        {micMuted ? 'Unmute' : 'Mute'}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (broadcastState.isBroadcasting) {
+                            if (confirm('Disabling mic will permanently cut audio for this broadcast. Continue?')) {
+                              stopMic();
+                            }
+                          } else {
+                            stopMic();
+                          }
+                        }}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        Disable
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+              {/* Broadcast warning */}
+              {broadcastState.isBroadcasting && !micEnabled && (
+                <p className="text-xs text-muted-foreground">
+                  Note: Enable mic before starting broadcast to include audio
+                </p>
+              )}
+              {broadcastState.isBroadcasting && micEnabled && (
+                <p className="text-xs text-green-600">
+                  🔴 Live - Mute/Unmute controls broadcast audio in real-time
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Broadcast Controls */}
       {composedStream && state.isComposing && (
@@ -349,11 +436,38 @@ export default function VideoCompositionTestPage() {
           isConnecting={broadcastState.isConnecting}
           connectionStatus={broadcastState.connectionStatus}
           error={broadcastState.error}
-          onStart={async (platform, streamKey) => {
+          onStart={async (platform, streamKey, quality) => {
             const rtmpUrl = platform === 'youtube' 
               ? 'rtmp://a.rtmp.youtube.com/live2'
               : 'rtmp://live.twitch.tv/app';
-            await startBroadcast(composedStream, { platform, streamKey, rtmpUrl });
+            
+            // Build broadcast stream - always start with composed video
+            const broadcastStream = new MediaStream();
+            composedStream.getVideoTracks().forEach(track => {
+              broadcastStream.addTrack(track);
+              console.log('🎥 Added video track:', track.label, track.readyState);
+            });
+            
+            // Add audio if mic is enabled and has tracks
+            // NOTE: Using same track reference (not clone) so mute/unmute affects broadcast
+            if (micEnabled && micStream) {
+              const audioTracks = micStream.getAudioTracks();
+              console.log('🎤 Mic state:', { micEnabled, micMuted, trackCount: audioTracks.length });
+              audioTracks.forEach(track => {
+                broadcastStream.addTrack(track);
+                console.log('🎤 Added audio track:', track.label, track.enabled, track.readyState);
+              });
+            } else {
+              console.log('🎤 No mic stream:', { micEnabled, hasMicStream: !!micStream });
+            }
+            
+            console.log('📡 Broadcast stream tracks:', {
+              video: broadcastStream.getVideoTracks().length,
+              audio: broadcastStream.getAudioTracks().length,
+            });
+            console.log('📊 Quality:', quality);
+            
+            await startBroadcast(broadcastStream, { platform, streamKey, rtmpUrl, quality });
           }}
           onStop={stopBroadcast}
         />
@@ -371,6 +485,7 @@ export default function VideoCompositionTestPage() {
             <div><span className="font-semibold">Frames Rendered:</span> {state.frameCount}</div>
             <div><span className="font-semibold">Video Stream:</span> {activeVideoStream ? 'Active' : 'Inactive'}</div>
             <div><span className="font-semibold">Composed Stream:</span> {composedStream ? 'Active' : 'Inactive'}</div>
+            <div><span className="font-semibold">Microphone:</span> {micEnabled ? (micMuted ? 'Muted' : 'Active') : 'Off'}</div>
           </div>
         </CardContent>
       </Card>

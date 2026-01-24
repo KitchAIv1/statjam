@@ -61,6 +61,8 @@ interface VideoStatsTimelineProps {
   gameClock?: { quarter: number; minutesRemaining: number; secondsRemaining: number } | null;
   onClockPause?: () => void;
   onClockResume?: () => void;
+  // ✅ Callback when scores may have changed (stat edited/deleted)
+  onScoresChanged?: () => void;
 }
 
 // Format milliseconds to MM:SS
@@ -151,6 +153,7 @@ export function VideoStatsTimeline({
   gameClock,
   onClockPause,
   onClockResume,
+  onScoresChanged,
 }: VideoStatsTimelineProps) {
   
   // Helper to get display name for a stat (handles opponent stats)
@@ -314,6 +317,8 @@ export function VideoStatsTimeline({
     try {
       await StatEditServiceV2.deleteStat(statId, gameId);
       // Success - item already removed from UI
+      // ✅ FIX: Notify parent to refresh scores after stat delete
+      onScoresChanged?.();
     } catch (error) {
       console.error('Error deleting stat:', error);
       alert('Failed to delete stat. Refreshing...');
@@ -327,7 +332,7 @@ export function VideoStatsTimeline({
         scrollContainerRef.current.scrollTop = scrollTop;
       }
     });
-  }, [gameId, silentRefresh]);
+  }, [gameId, silentRefresh, onScoresChanged]);
 
   // Handle delete substitution (optimistic update)
   const handleDeleteSubstitution = useCallback(async (subId: string) => {
@@ -433,6 +438,11 @@ export function VideoStatsTimeline({
         alert(`Some items failed to delete. Refreshing...`);
         await silentRefresh();
       }
+      
+      // ✅ FIX: Notify parent to refresh scores if any stats were deleted
+      if (statIdsToDelete.size > 0) {
+        onScoresChanged?.();
+      }
     } catch (error) {
       console.error('Batch delete error:', error);
       alert('Error during batch delete. Refreshing...');
@@ -446,7 +456,7 @@ export function VideoStatsTimeline({
         }
       });
     }
-  }, [selectedIds, gameId, silentRefresh]);
+  }, [selectedIds, gameId, silentRefresh, onScoresChanged]);
 
   // Handle edit click - convert VideoStat to GameStatRecord format
   const handleEditClick = useCallback((stat: VideoStat) => {
@@ -482,7 +492,9 @@ export function VideoStatsTimeline({
   const handleEditSuccess = useCallback(async () => {
     setEditingStat(null);
     await silentRefresh();
-  }, [silentRefresh]);
+    // ✅ FIX: Notify parent to refresh scores after stat edit
+    onScoresChanged?.();
+  }, [silentRefresh, onScoresChanged]);
 
   // Handle "Mark at current position" - update stat's video_timestamp_ms to current playhead
   const handleMarkAtCurrentPosition = useCallback(async (statId: string) => {

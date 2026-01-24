@@ -339,19 +339,30 @@ export type TeamFilter = 'all' | 'my_team' | 'opponent';
 
 /**
  * Create a new clip generation job (submit for QC)
+ * @param gameContext - Optional game context for organizer games (team_id filtering)
  */
 export async function createClipJob(
   gameId: string,
   videoId: string,
-  teamFilter: TeamFilter = 'all'
+  teamFilter: TeamFilter = 'all',
+  gameContext?: { isCoachGame: boolean; teamAId: string; teamBId?: string }
 ): Promise<ClipGenerationJob | null> {
   try {
     // Count clip-eligible stats (filtered)
     const allStats = await getStatsForQCReview(gameId);
+    // ✅ FIX: Use team_id for organizer games, is_opponent_stat for coach games
     const filteredStats = allStats.filter(stat => {
       if (teamFilter === 'all') return true;
-      if (teamFilter === 'my_team') return !stat.is_opponent_stat;
-      if (teamFilter === 'opponent') return stat.is_opponent_stat;
+      
+      if (!gameContext || gameContext.isCoachGame) {
+        // Coach game (or no context): use is_opponent_stat flag
+        if (teamFilter === 'my_team') return !stat.is_opponent_stat;
+        if (teamFilter === 'opponent') return stat.is_opponent_stat;
+      } else {
+        // Organizer game: use team_id comparison
+        if (teamFilter === 'my_team') return stat.team_id === gameContext.teamAId;
+        if (teamFilter === 'opponent') return stat.team_id === gameContext.teamBId;
+      }
       return true;
     });
     const clipCount = filteredStats.filter(s => s.is_clip_eligible).length;

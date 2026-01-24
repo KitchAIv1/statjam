@@ -22,6 +22,7 @@ import { ClipValidationBanner } from '@/components/clips/ClipValidationBanner';
 import { QCReviewTimeline } from '@/components/clips/QCReviewTimeline';
 import { StatEditForm } from '@/components/tracker-v3/modals/StatEditForm';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
+import { TeamServiceV3 } from '@/lib/services/teamServiceV3';
 import { GameStatRecord } from '@/lib/services/statEditService';
 import { supabase } from '@/lib/supabase';
 import {
@@ -129,8 +130,25 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
             is_custom_player: true,
           })));
         } else {
-          // Organizer game: would need to load from teams - simplified for now
-          setAllPlayers([]);
+          // ✅ FIX: Organizer game - load players from both teams
+          const [teamAPlayers, teamBPlayers] = await Promise.all([
+            TeamServiceV3.getTeamPlayersWithSubstitutions(gameData.team_a_id, gameId),
+            TeamServiceV3.getTeamPlayersWithSubstitutions(gameData.team_b_id, gameId),
+          ]);
+          setAllPlayers([
+            ...teamAPlayers.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              jersey_number: p.jerseyNumber || p.jersey_number,
+              is_custom_player: p.is_custom_player === true,
+            })),
+            ...teamBPlayers.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              jersey_number: p.jerseyNumber || p.jersey_number,
+              is_custom_player: p.is_custom_player === true,
+            })),
+          ]);
         }
 
       } catch (err) {
@@ -309,8 +327,13 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
         return;
       }
 
-      // Pass team filter to create job with correct clip count
-      const newJob = await createClipJob(gameId, videoData.id, teamFilter);
+      // Pass team filter and game context to create job with correct clip count
+      const gameContext = game ? {
+        isCoachGame: game.is_coach_game === true,
+        teamAId: game.team_a_id,
+        teamBId: game.team_b_id,
+      } : undefined;
+      const newJob = await createClipJob(gameId, videoData.id, teamFilter, gameContext);
       if (newJob) {
         setJob(newJob);
       }
@@ -375,10 +398,19 @@ export default function QCReviewPage({ params }: QCReviewPageProps) {
   };
 
   // Filter stats by team
+  // ✅ FIX: Use team_id for organizer games, is_opponent_stat for coach games
   const filteredStats = stats.filter(stat => {
     if (teamFilter === 'all') return true;
-    if (teamFilter === 'my_team') return !stat.is_opponent_stat;
-    if (teamFilter === 'opponent') return stat.is_opponent_stat;
+    
+    if (game?.is_coach_game) {
+      // Coach game: use is_opponent_stat flag
+      if (teamFilter === 'my_team') return !stat.is_opponent_stat;
+      if (teamFilter === 'opponent') return stat.is_opponent_stat;
+    } else {
+      // Organizer game: use team_id comparison
+      if (teamFilter === 'my_team') return stat.team_id === game?.team_a_id;
+      if (teamFilter === 'opponent') return stat.team_id === game?.team_b_id;
+    }
     return true;
   });
 

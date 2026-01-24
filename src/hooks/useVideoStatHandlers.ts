@@ -156,16 +156,23 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     
     let teamId = selectedTeam === 'A' ? gameData.team_a_id : 
                  selectedTeam === 'opponent' ? 'opponent' : gameData.team_b_id;
-    let playerId: string | undefined = selectedPlayer;
+    let playerId: string | undefined;
     let customPlayerId: string | undefined;
 
-    if (isCoachMode) {
-      if (isOpponentStat) {
-        playerId = userId;
-        teamId = gameData.team_a_id;
+    // ✅ FIX: Handle opponent stats (coach mode only)
+    if (isOpponentStat) {
+      playerId = userId;
+      teamId = gameData.team_a_id;
+    } else {
+      // ✅ FIX: Check is_custom_player for BOTH coach and organizer games
+      // Organizer games can have both regular players (users table) and custom players (custom_players table)
+      const isCustomPlayer = playerData?.is_custom_player || selectedPlayer.startsWith('custom-');
+      if (isCustomPlayer) {
+        customPlayerId = selectedPlayer;
+        playerId = undefined;
       } else {
-        const isCustomPlayer = playerData?.is_custom_player || selectedPlayer.startsWith('custom-');
-        if (isCustomPlayer) { customPlayerId = selectedPlayer; playerId = undefined; }
+        playerId = selectedPlayer;
+        customPlayerId = undefined;
       }
     }
 
@@ -262,17 +269,24 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     const modifier = turnoverType === 'other' ? undefined : turnoverType;
     
     const isOpponentStat = lastEvent.isOpponentStat === true;
-    let playerId: string | undefined = lastEvent.playerId;
+    let playerId: string | undefined;
     let customPlayerId: string | undefined;
     let teamId = lastEvent.teamId;
     
     if (isOpponentStat) {
       playerId = userId;
       teamId = gameData.team_a_id;
-    } else if (isCoachMode) {
-      const playerData = teamAPlayers.find(p => p.id === lastEvent.playerId);
+    } else {
+      // ✅ FIX: Check is_custom_player for BOTH coach and organizer games
+      const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastEvent.playerId);
       const isCustomPlayer = playerData?.is_custom_player || lastEvent.playerId.startsWith('custom-');
-      if (isCustomPlayer) { customPlayerId = lastEvent.playerId; playerId = undefined; }
+      if (isCustomPlayer) {
+        customPlayerId = lastEvent.playerId;
+        playerId = undefined;
+      } else {
+        playerId = lastEvent.playerId;
+        customPlayerId = undefined;
+      }
     }
     
     // ✅ OPTIMIZED: Trigger timeline refresh immediately
@@ -317,17 +331,24 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     if (!lastEvent || !gameClock || !gameData) return;
     
     const isOpponentStat = lastEvent.isOpponentStat === true;
-    let playerId: string | undefined = lastEvent.playerId;
+    let playerId: string | undefined;
     let customPlayerId: string | undefined;
     let teamId = lastEvent.teamId;
     
     if (isOpponentStat) {
       playerId = userId;
       teamId = gameData.team_a_id;
-    } else if (isCoachMode) {
-      const playerData = teamAPlayers.find(p => p.id === lastEvent.playerId);
+    } else {
+      // ✅ FIX: Check is_custom_player for BOTH coach and organizer games
+      const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastEvent.playerId);
       const isCustomPlayer = playerData?.is_custom_player || lastEvent.playerId.startsWith('custom-');
-      if (isCustomPlayer) { customPlayerId = lastEvent.playerId; playerId = undefined; }
+      if (isCustomPlayer) {
+        customPlayerId = lastEvent.playerId;
+        playerId = undefined;
+      } else {
+        playerId = lastEvent.playerId;
+        customPlayerId = undefined;
+      }
     }
     
     // ✅ OPTIMIZED: Trigger timeline refresh immediately
@@ -372,17 +393,24 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     if (!lastEvent || !gameClock || !gameData) return;
     
     const isOpponentStat = lastEvent.isOpponentStat === true;
-    let playerId: string | undefined = lastEvent.playerId;
+    let playerId: string | undefined;
     let customPlayerId: string | undefined;
     let teamId = lastEvent.teamId;
     
     if (isOpponentStat) {
       playerId = userId;
       teamId = gameData.team_a_id;
-    } else if (isCoachMode) {
-      const playerData = teamAPlayers.find(p => p.id === lastEvent.playerId);
+    } else {
+      // ✅ FIX: Check is_custom_player for BOTH coach and organizer games
+      const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastEvent.playerId);
       const isCustomPlayer = playerData?.is_custom_player || lastEvent.playerId.startsWith('custom-');
-      if (isCustomPlayer) { customPlayerId = lastEvent.playerId; playerId = undefined; }
+      if (isCustomPlayer) {
+        customPlayerId = lastEvent.playerId;
+        playerId = undefined;
+      } else {
+        playerId = lastEvent.playerId;
+        customPlayerId = undefined;
+      }
     }
     
     // ✅ OPTIMIZED: Trigger timeline refresh immediately
@@ -435,13 +463,18 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
   // Free throw handler - ✅ OPTIMIZED: Batch inserts with Promise.all
   const handleFreeThrowComplete = useCallback(async (results: { made: boolean }[]) => {
     if (!lastEvent || !gameClock) return;
-    let playerId: string | undefined = lastEvent.playerId;
+    let playerId: string | undefined;
     let customPlayerId: string | undefined;
     
-    if (isCoachMode) {
-      const playerData = teamAPlayers.find(p => p.id === lastEvent.playerId);
-      const isCustomPlayer = playerData?.is_custom_player || lastEvent.playerId.startsWith('custom-');
-      if (isCustomPlayer) { customPlayerId = lastEvent.playerId; playerId = undefined; }
+    // ✅ FIX: Check is_custom_player for BOTH coach and organizer games
+    const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastEvent.playerId);
+    const isCustomPlayer = playerData?.is_custom_player || lastEvent.playerId.startsWith('custom-');
+    if (isCustomPlayer) {
+      customPlayerId = lastEvent.playerId;
+      playerId = undefined;
+    } else {
+      playerId = lastEvent.playerId;
+      customPlayerId = undefined;
     }
     
     try {
@@ -491,13 +524,18 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     const shotType = lastEvent.shootingFoulShotType || '2pt';
     
     // Determine victim player details
-    const victimPlayer = teamAPlayers.find(p => p.id === victimPlayerId);
-    let actualPlayerId: string | undefined = victimPlayerId;
+    const victimPlayer = [...teamAPlayers, ...teamBPlayers].find(p => p.id === victimPlayerId);
+    let actualPlayerId: string | undefined;
     let customPlayerId: string | undefined;
     
-    if (isCoachMode) {
-      const isCustomPlayer = victimPlayer?.is_custom_player || victimPlayerId.startsWith('custom-');
-      if (isCustomPlayer) { customPlayerId = victimPlayerId; actualPlayerId = undefined; }
+    // ✅ FIX: Check is_custom_player for BOTH coach and organizer games
+    const isCustomPlayer = victimPlayer?.is_custom_player || victimPlayerId.startsWith('custom-');
+    if (isCustomPlayer) {
+      customPlayerId = victimPlayerId;
+      actualPlayerId = undefined;
+    } else {
+      actualPlayerId = victimPlayerId;
+      customPlayerId = undefined;
     }
     
     // If shot was made (and-1), record the made shot (fire-and-forget)
@@ -580,12 +618,17 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     const player = [...teamAPlayers, ...teamBPlayers].find(p => p.id === playerId);
     const playerTeamId = player?.teamId || lastEvent.teamId;
     
-    let actualPlayerId: string | undefined = playerId;
+    let actualPlayerId: string | undefined;
     let customPlayerId: string | undefined;
     
-    if (isCoachMode) {
-      const isCustomPlayer = player?.is_custom_player || playerId.startsWith('custom-');
-      if (isCustomPlayer) { customPlayerId = playerId; actualPlayerId = undefined; }
+    // ✅ FIX: Check is_custom_player for BOTH coach and organizer games
+    const isCustomPlayer = player?.is_custom_player || playerId.startsWith('custom-');
+    if (isCustomPlayer) {
+      customPlayerId = playerId;
+      actualPlayerId = undefined;
+    } else {
+      actualPlayerId = playerId;
+      customPlayerId = undefined;
     }
     
     // Handle fouled_player case (no DB write, just show prompt)

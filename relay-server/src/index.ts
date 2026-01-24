@@ -1,56 +1,275 @@
 /**
  * Relay Server Entry Point
  * 
- * WebSocket server that receives WebRTC from browser
- * and converts to RTMP for YouTube/Twitch.
+ * Receives MediaRecorder chunks via WebSocket and pipes to FFmpeg for RTMP.
+ * Supports multiple simultaneous users.
  */
 
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { WebRTCHandler } from './webrtcHandler';
-import { WebSocketMessage } from './types';
+import { spawn, ChildProcess } from 'child_process';
 
 const PORT = process.env.PORT || 8080;
-const wss = new WebSocketServer({ port: Number(PORT) });
+
+interface StreamSession {
+  ffmpeg: ChildProcess | null;
+  rtmpUrl: string;
+  isActive: boolean;
+}
+
+const sessions = new Map<WebSocket, StreamSession>();
+
+// Create HTTP server
+const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({
+    status: 'ok',
+    service: 'StatJam Relay Server',
+    version: '2.0.0',
+    protocol: 'WebSocket + MediaRecorder',
+    activeSessions: sessions.size,
+  }));
+});
+
+// Attach WebSocket server
+const wss = new WebSocketServer({ server: httpServer });
 
 console.log(`🚀 Relay server starting on port ${PORT}...`);
 
-wss.on('connection', (ws: WebSocket) => {
-  console.log('📡 New WebSocket connection');
+interface QualityParams {
+  bitrate: number;   // kbps
+  maxrate: number;   // kbps
+}
+
+// Default quality (1080p standard)
+const DEFAULT_QUALITY: QualityParams = { bitrate: 6000, maxrate: 7000 };
+
+/**
+ * Build FFmpeg args when WebM has real audio (mic enabled)
+ * Uses quality params from client for flexible bitrate control
+ */
+function buildArgsWithAudio(rtmpUrl: string, quality: QualityParams): string[] {
+  const bufsize = quality.maxrate * 2; // 2-second buffer
   
-  const handler = new WebRTCHandler();
+  return [
+    '-f', 'webm',
+    '-i', 'pipe:0',
+    // Video settings - Sports optimized
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-tune', 'film',
+    '-profile:v', 'high',
+    '-level', '4.2',
+    '-r', '60',
+    '-g', '60',
+    '-keyint_min', '30',
+    `-b:v`, `${quality.bitrate}k`,
+    `-maxrate`, `${quality.maxrate}k`,
+    `-bufsize`, `${bufsize}k`,
+    '-pix_fmt', 'yuv420p',
+    '-x264-params', 'nal-hrd=cbr:force-cfr=1',
+    // Audio from WebM (mic)
+    '-c:a', 'aac',
+    '-b:a', '192k',
+    '-ar', '48000',
+    '-map', '0:v:0',
+    '-map', '0:a:0',
+    '-f', 'flv',
+    rtmpUrl,
+  ];
+}
 
-  ws.on('message', async (data: Buffer) => {
+/**
+ * Build FFmpeg args when no audio (generates silent audio)
+ * Uses quality params from client for flexible bitrate control
+ */
+function buildArgsWithSilentAudio(rtmpUrl: string, quality: QualityParams): string[] {
+  const bufsize = quality.maxrate * 2;
+  
+  return [
+    '-f', 'webm',
+    '-i', 'pipe:0',
+    '-f', 'lavfi',
+    '-t', '36000',
+    '-i', 'anullsrc=r=48000:cl=stereo',
+    // Video settings - Sports optimized
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-tune', 'film',
+    '-profile:v', 'high',
+    '-level', '4.2',
+    '-r', '60',
+    '-g', '60',
+    '-keyint_min', '30',
+    `-b:v`, `${quality.bitrate}k`,
+    `-maxrate`, `${quality.maxrate}k`,
+    `-bufsize`, `${bufsize}k`,
+    '-pix_fmt', 'yuv420p',
+    '-x264-params', 'nal-hrd=cbr:force-cfr=1',
+    // Audio settings
+    '-c:a', 'aac',
+    '-b:a', '192k',
+    '-ar', '48000',
+    '-map', '0:v:0',
+    '-map', '1:a:0',
+    '-shortest',
+    '-async', '1',
+    '-f', 'flv',
+    rtmpUrl,
+  ];
+}
+
+wss.on('connection', (ws: WebSocket) => {
+  console.log(`📡 New connection (total: ${wss.clients.size})`);
+
+  ws.on('message', (message: Buffer, isBinary: boolean) => {
     try {
-      const message: WebSocketMessage = JSON.parse(data.toString());
-
-      switch (message.type) {
-        case 'offer':
-          if (message.data && message.config) {
-            const answer = await handler.handleOffer(message.data, message.config);
-            ws.send(JSON.stringify({ type: 'answer', data: answer }));
-          }
-          break;
-
-        case 'ice-candidate':
-          if (message.data) {
-            await handler.handleIceCandidate(message.data);
-          }
-          break;
-
-        default:
-          console.warn('Unknown message type:', message.type);
+      // Text message = config, Binary message = video data
+      if (!isBinary) {
+        const config = JSON.parse(message.toString());
+        handleConfig(ws, config);
+      } else {
+        handleVideoData(ws, message);
       }
     } catch (err) {
-      console.error('Error handling message:', err);
-      ws.send(JSON.stringify({ type: 'error', error: String(err) }));
+      console.error('❌ Message error:', err);
+      sendError(ws, 'Invalid message format');
     }
   });
 
   ws.on('close', () => {
-    console.log('📡 WebSocket connection closed');
-    handler.cleanup();
+    console.log(`📡 Connection closed (remaining: ${wss.clients.size - 1})`);
+    cleanupSession(ws);
+  });
+
+  ws.on('error', (err) => {
+    console.error('❌ WebSocket error:', err.message);
+    cleanupSession(ws);
   });
 });
 
-console.log(`✅ Relay server running on ws://localhost:${PORT}`);
+/**
+ * Handle config message - start FFmpeg process
+ */
+function handleConfig(ws: WebSocket, config: { 
+  rtmpUrl: string; 
+  streamKey: string; 
+  hasAudio?: boolean;
+  ffmpegBitrate?: number;
+  ffmpegMaxrate?: number;
+}): void {
+  const { rtmpUrl, streamKey, hasAudio = false, ffmpegBitrate, ffmpegMaxrate } = config;
+  
+  if (!rtmpUrl || !streamKey) {
+    sendError(ws, 'Missing rtmpUrl or streamKey');
+    return;
+  }
 
+  // Use provided quality or defaults
+  const quality: QualityParams = {
+    bitrate: ffmpegBitrate || DEFAULT_QUALITY.bitrate,
+    maxrate: ffmpegMaxrate || DEFAULT_QUALITY.maxrate,
+  };
+
+  const fullRtmpUrl = `${rtmpUrl}/${streamKey}`;
+  const maskedUrl = fullRtmpUrl.replace(/\/[^/]+$/, '/***');
+  console.log(`🎬 Starting stream to: ${maskedUrl} (audio: ${hasAudio ? 'mic' : 'silent'}, bitrate: ${quality.bitrate}kbps)`);
+
+  // Build FFmpeg args with quality settings
+  const ffmpegArgs = hasAudio 
+    ? buildArgsWithAudio(fullRtmpUrl, quality)
+    : buildArgsWithSilentAudio(fullRtmpUrl, quality);
+
+  const ffmpeg = spawn('ffmpeg', ffmpegArgs, { stdio: ['pipe', 'pipe', 'pipe'] });
+
+  ffmpeg.stderr?.on('data', (chunk: Buffer) => {
+    let msg = chunk.toString();
+    // Mask stream key in logs for security
+    msg = msg.replace(/live2\/[^\s'"]+/g, 'live2/***');
+    msg = msg.replace(/app\/[^\s'"]+/g, 'app/***');
+    console.log('📺 FFmpeg:', msg.slice(0, 300));
+  });
+
+  ffmpeg.on('error', (err) => {
+    console.error('❌ FFmpeg process error:', err.message);
+    sendError(ws, 'FFmpeg failed to start');
+  });
+
+  ffmpeg.on('close', (code) => {
+    console.log(`🏁 FFmpeg exited (code: ${code})`);
+    const session = sessions.get(ws);
+    if (session) session.isActive = false;
+  });
+
+  // Handle stdin errors to prevent crashes
+  ffmpeg.stdin?.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code !== 'EPIPE') {
+      console.error('❌ FFmpeg stdin error:', err.message);
+    }
+  });
+
+  sessions.set(ws, { ffmpeg, rtmpUrl: fullRtmpUrl, isActive: true });
+  
+  ws.send(JSON.stringify({ type: 'ready' }));
+  console.log(`✅ FFmpeg ready, waiting for video data...`);
+}
+
+// Track bytes for logging
+let totalBytesReceived = 0;
+let lastLogTime = Date.now();
+
+/**
+ * Handle binary video data - pipe to FFmpeg
+ */
+function handleVideoData(ws: WebSocket, videoData: Buffer): void {
+  const session = sessions.get(ws);
+  
+  if (!session?.ffmpeg?.stdin || !session.isActive) {
+    return; // Silently ignore if no active session
+  }
+
+  try {
+    if (!session.ffmpeg.stdin.destroyed) {
+      session.ffmpeg.stdin.write(videoData);
+      totalBytesReceived += videoData.length;
+      
+      // Log every 5 seconds
+      const now = Date.now();
+      if (now - lastLogTime > 5000) {
+        console.log(`📊 Received ${(totalBytesReceived / 1024 / 1024).toFixed(2)} MB total`);
+        lastLogTime = now;
+      }
+    }
+  } catch (err) {
+    // Ignore write errors (stream may have closed)
+  }
+}
+
+/**
+ * Cleanup session on disconnect
+ */
+function cleanupSession(ws: WebSocket): void {
+  const session = sessions.get(ws);
+  if (session?.ffmpeg) {
+    console.log(`🧹 Cleaning up session`);
+    session.ffmpeg.stdin?.end();
+    session.ffmpeg.kill('SIGTERM');
+  }
+  sessions.delete(ws);
+}
+
+/**
+ * Send error message to client
+ */
+function sendError(ws: WebSocket, error: string): void {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'error', error }));
+  }
+}
+
+// Start server
+httpServer.listen(PORT, () => {
+  console.log(`✅ Relay server running:`);
+  console.log(`   HTTP: http://localhost:${PORT}`);
+  console.log(`   WS:   ws://localhost:${PORT}`);
+});

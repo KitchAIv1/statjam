@@ -2,15 +2,18 @@
  * Relay Server Types
  */
 
-export interface BroadcastConfig {
-  platform: 'youtube' | 'twitch';
-  streamKey: string;
+export interface StreamConfig {
   rtmpUrl: string;
+  streamKey: string;
 }
 
-export interface WebSocketMessage {
-  type: 'offer' | 'answer' | 'ice-candidate' | 'config';
-  data?: any;
-  config?: BroadcastConfig;
+export interface ServerMessage {
+  type: 'ready' | 'error';
+  error?: string;
 }
 
+/** RTMP URL presets for common platforms */
+export const RTMP_PRESETS = {
+  youtube: 'rtmp://a.rtmp.youtube.com/live2',
+  twitch: 'rtmp://live.twitch.tv/app',
+} as const;

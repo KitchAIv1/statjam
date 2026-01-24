@@ -13,15 +13,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Radio, Youtube, Twitch, Send } from 'lucide-react';
-import { BroadcastPlatform } from '@/lib/services/broadcast/types';
+import { Radio, Youtube, Twitch, Send, Gauge } from 'lucide-react';
+import { BroadcastPlatform, QualityPreset, QUALITY_PRESETS } from '@/lib/services/broadcast/types';
 
 interface BroadcastControlsProps {
   isBroadcasting: boolean;
   isConnecting: boolean;
   connectionStatus: string;
   error: string | null;
-  onStart: (platform: BroadcastPlatform, streamKey: string) => void;
+  onStart: (platform: BroadcastPlatform, streamKey: string, quality: QualityPreset) => void;
   onStop: () => void;
 }
 
@@ -35,12 +35,13 @@ export function BroadcastControls({
 }: BroadcastControlsProps) {
   const [platform, setPlatform] = useState<BroadcastPlatform>('youtube');
   const [streamKey, setStreamKey] = useState('');
+  const [quality, setQuality] = useState<QualityPreset>('720p');
 
   const handleStart = () => {
     if (!streamKey.trim()) {
       return;
     }
-    onStart(platform, streamKey.trim());
+    onStart(platform, streamKey.trim(), quality);
   };
 
   const getRtmpUrl = (platform: BroadcastPlatform): string => {
@@ -80,6 +81,31 @@ export function BroadcastControls({
                 Twitch
               </Label>
             </div>
+          </RadioGroup>
+        </div>
+
+        {/* Quality Selection */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Gauge className="h-4 w-4" />
+            Stream Quality
+          </Label>
+          <RadioGroup 
+            value={quality} 
+            onValueChange={(v) => setQuality(v as QualityPreset)}
+            disabled={isBroadcasting || isConnecting}
+          >
+            {(Object.keys(QUALITY_PRESETS) as QualityPreset[]).map((preset) => (
+              <div key={preset} className="flex items-center space-x-2">
+                <RadioGroupItem value={preset} id={`quality-${preset}`} />
+                <Label htmlFor={`quality-${preset}`} className="cursor-pointer">
+                  <span className="font-medium">{QUALITY_PRESETS[preset].label}</span>
+                  <span className="text-xs text-muted-foreground ml-2">
+                    {QUALITY_PRESETS[preset].description}
+                  </span>
+                </Label>
+              </div>
+            ))}
           </RadioGroup>
         </div>
 
