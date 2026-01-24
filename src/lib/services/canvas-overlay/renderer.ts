@@ -3,21 +3,29 @@
  * 
  * Main orchestration class for rendering game overlay to Canvas.
  * Composites video + overlay for YouTube/Twitch broadcasting.
+ * Supports multiple overlay variants: 'classic' and 'nba'.
  */
 
-import { GameOverlayData, LogoCache } from './utils';
+import { GameOverlayData, LogoCache, OverlayVariant } from './utils';
 import { OverlayDrawer } from './drawing';
 import { PlayerStatsDrawer } from './playerStatsDrawer';
+import { NBAOverlayDrawer } from './nbaDrawing';
 
 export class CanvasOverlayRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private logoCache: LogoCache;
   private drawer: OverlayDrawer;
+  private nbaDrawer: NBAOverlayDrawer;
   private playerStatsDrawer: PlayerStatsDrawer;
   private initialized = false;
+  private variant: OverlayVariant = 'classic';
+  private readonly width: number;
+  private readonly height: number;
   
   constructor(width: number = 1920, height: number = 1080) {
+    this.width = width;
+    this.height = height;
     this.canvas = document.createElement('canvas');
     this.canvas.width = width;
     this.canvas.height = height;
@@ -30,7 +38,22 @@ export class CanvasOverlayRenderer {
     
     this.logoCache = new LogoCache();
     this.drawer = new OverlayDrawer(this.ctx, width, height);
+    this.nbaDrawer = new NBAOverlayDrawer(this.ctx, width, height);
     this.playerStatsDrawer = new PlayerStatsDrawer(this.ctx, width, height);
+  }
+  
+  /**
+   * Set overlay variant ('classic' or 'nba')
+   */
+  setVariant(variant: OverlayVariant): void {
+    this.variant = variant;
+  }
+  
+  /**
+   * Get current overlay variant
+   */
+  getVariant(): OverlayVariant {
+    return this.variant;
   }
   
   /**
@@ -82,22 +105,28 @@ export class CanvasOverlayRenderer {
         ? await this.logoCache.load(overlayData.tournamentLogo)
         : null;
       
-      // Draw components in order
-      this.drawer.drawBackground();
-      
-      // Tournament header (if data provided)
-      if (overlayData.tournamentName || tournamentLogo || overlayData.venue) {
-        this.drawer.drawTournamentHeader(overlayData, tournamentLogo);
+      // Draw based on selected variant
+      if (this.variant === 'nba') {
+        // NBA-style horizontal bar overlay
+        this.nbaDrawer.draw(overlayData, teamALogo, teamBLogo, tournamentLogo);
+      } else {
+        // Classic floating elements overlay
+        this.drawer.drawBackground();
+        
+        // Tournament header (if data provided)
+        if (overlayData.tournamentName || tournamentLogo || overlayData.venue) {
+          this.drawer.drawTournamentHeader(overlayData, tournamentLogo);
+        }
+        
+        // Team sections
+        this.drawer.drawTeamSection('away', overlayData, teamALogo, !teamALogo);
+        this.drawer.drawTeamSection('home', overlayData, teamBLogo, !teamBLogo);
+        
+        // Center section (clock, quarter, shot clock)
+        this.drawer.drawCenterSection(overlayData);
       }
       
-      // Team sections
-      this.drawer.drawTeamSection('away', overlayData, teamALogo, !teamALogo);
-      this.drawer.drawTeamSection('home', overlayData, teamBLogo, !teamBLogo);
-      
-      // Center section (clock, quarter, shot clock)
-      this.drawer.drawCenterSection(overlayData);
-      
-      // NBA-style player stats overlay (if active)
+      // Player stats overlay works with both variants
       if (overlayData.activePlayerStats) {
         this.playerStatsDrawer.draw(overlayData.activePlayerStats);
       }

@@ -17,6 +17,7 @@ import { useWebRTCStream } from '@/hooks/useWebRTCStream';
 import { useVideoComposition } from '@/hooks/useVideoComposition';
 import { useBroadcast } from '@/hooks/useBroadcast';
 import { BroadcastPlatform, QualityPreset } from '@/lib/services/broadcast/types';
+import { OverlayVariant } from '@/lib/services/canvas-overlay';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -56,6 +57,7 @@ export default function VideoCompositionTestPage() {
   const [loadingGames, setLoadingGames] = useState(true);
   const [autoTriggerEnabled, setAutoTriggerEnabled] = useState(true);
   const [broadcastStartTime, setBroadcastStartTime] = useState<number | null>(null);
+  const [overlayVariant, setOverlayVariant] = useState<OverlayVariant>('classic');
   const videoRef = useRef<HTMLVideoElement>(null);
   
   const { tournaments, loading: tournamentsLoading } = useTournaments(user);
@@ -79,11 +81,16 @@ export default function VideoCompositionTestPage() {
     return { ...overlayData, activePlayerStats: activePlayerStats ?? undefined };
   }, [overlayData, activePlayerStats]);
   
-  const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition } = useVideoComposition({
+  const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition, setVariant } = useVideoComposition({
     videoStream: activeVideoStream,
     overlayData: fullOverlayData,
     enabled: false,
   });
+  
+  // Update variant when changed
+  useEffect(() => {
+    setVariant(overlayVariant);
+  }, [overlayVariant, setVariant]);
 
   const { state: broadcastState, start: startBroadcast, stop: stopBroadcast } = useBroadcast({
     relayServerUrl: process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8080',
@@ -562,7 +569,32 @@ export default function VideoCompositionTestPage() {
           </div>
           
           {/* Right Sidebar - Overlay Controls (3 columns) */}
-          <div className="col-span-3 flex flex-col overflow-y-auto">
+          <div className="col-span-3 flex flex-col gap-2 overflow-y-auto">
+            {/* Overlay Variant Selector */}
+            <Card className="p-3 flex-shrink-0">
+              <h3 className="text-sm font-semibold mb-2">Overlay Style</h3>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setOverlayVariant('classic')}
+                  size="sm"
+                  variant={overlayVariant === 'classic' ? 'default' : 'outline'}
+                  className="flex-1 h-auto py-2 flex flex-col items-center gap-0.5"
+                >
+                  <span className="text-xs font-semibold">Classic</span>
+                  <span className="text-[10px] opacity-70">Floating</span>
+                </Button>
+                <Button
+                  onClick={() => setOverlayVariant('nba')}
+                  size="sm"
+                  variant={overlayVariant === 'nba' ? 'default' : 'outline'}
+                  className="flex-1 h-auto py-2 flex flex-col items-center gap-0.5"
+                >
+                  <span className="text-xs font-semibold">NBA</span>
+                  <span className="text-[10px] opacity-70">ESPN Bar</span>
+                </Button>
+              </div>
+            </Card>
+            
             {isComposing && selectedGameId && (
               <OverlayControlPanel
                 teamAPlayers={teamAPlayers}

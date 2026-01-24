@@ -6,6 +6,13 @@
  */
 
 /**
+ * Overlay variant type
+ * 'classic' - Original floating elements design
+ * 'nba' - ESPN/NBA-style horizontal bar design
+ */
+export type OverlayVariant = 'classic' | 'nba';
+
+/**
  * Game overlay data interface
  * Matches EnhancedScoreOverlayProps from React component
  */

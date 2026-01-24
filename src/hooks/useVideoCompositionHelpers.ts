@@ -6,7 +6,7 @@
  */
 
 import { VideoComposer, VideoCompositionState } from '@/lib/services/video-composition';
-import { GameOverlayData } from '@/lib/services/canvas-overlay';
+import { GameOverlayData, OverlayVariant } from '@/lib/services/canvas-overlay';
 
 export function initializeComposer(): VideoComposer {
   const composer = new VideoComposer({

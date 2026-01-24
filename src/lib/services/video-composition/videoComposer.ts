@@ -11,7 +11,7 @@
  * - Captures Canvas as MediaStream using captureStream()
  */
 
-import { CanvasOverlayRenderer, GameOverlayData } from '../canvas-overlay';
+import { CanvasOverlayRenderer, GameOverlayData, OverlayVariant } from '../canvas-overlay';
 import { VideoCompositionOptions, VideoCompositionState, VideoCompositionCallbacks } from './types';
 import { CompositionLoop } from './compositionLoop';
 import { VideoSourceManager } from './videoSourceManager';
@@ -63,6 +63,20 @@ export class VideoComposer {
    */
   async setVideoSource(stream: MediaStream | null): Promise<void> {
     await this.videoSourceManager.setSource(stream);
+  }
+  
+  /**
+   * Set overlay variant ('classic' or 'nba')
+   */
+  setOverlayVariant(variant: OverlayVariant): void {
+    this.overlayRenderer.setVariant(variant);
+  }
+  
+  /**
+   * Get current overlay variant
+   */
+  getOverlayVariant(): OverlayVariant {
+    return this.overlayRenderer.getVariant();
   }
   
   /**

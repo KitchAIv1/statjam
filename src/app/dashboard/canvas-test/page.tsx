@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CanvasOverlayRenderer, GameOverlayData, PlayerStatsOverlayData } from '@/lib/services/canvas-overlay';
+import { CanvasOverlayRenderer, GameOverlayData, PlayerStatsOverlayData, OverlayVariant } from '@/lib/services/canvas-overlay';
 import { EnhancedScoreOverlay } from '@/components/live-streaming/EnhancedScoreOverlay';
 
 // Mock player data for testing player stats overlay
@@ -43,6 +43,9 @@ export default function CanvasTestPage() {
   const [playerStatsVisible, setPlayerStatsVisible] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(MOCK_PLAYERS[0]);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Overlay variant state
+  const [overlayVariant, setOverlayVariant] = useState<OverlayVariant>('classic');
   
   const [renderTime, setRenderTime] = useState<number>(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -104,10 +107,17 @@ export default function CanvasTestPage() {
     };
   }, []);
   
-  // Update canvas when game data or player stats changes
+  // Update canvas when game data, player stats, or variant changes
   useEffect(() => {
     updateCanvas();
-  }, [gameData, playerStatsVisible, selectedPlayer]);
+  }, [gameData, playerStatsVisible, selectedPlayer, overlayVariant]);
+  
+  // Update variant in renderer
+  useEffect(() => {
+    if (rendererRef.current) {
+      rendererRef.current.setVariant(overlayVariant);
+    }
+  }, [overlayVariant]);
   
   const updateCanvas = async () => {
     if (!rendererRef.current || !canvasRef.current) return;
@@ -136,6 +146,35 @@ export default function CanvasTestPage() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Canvas Overlay Test</h1>
+      
+      {/* Overlay Variant Selector */}
+      <div className="mb-4 p-4 bg-blue-50 rounded border border-blue-200">
+        <h3 className="text-lg font-semibold mb-2">Overlay Variant</h3>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setOverlayVariant('classic')}
+            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+              overlayVariant === 'classic'
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            Option 1: Classic
+            <span className="block text-xs font-normal mt-1">Floating elements</span>
+          </button>
+          <button
+            onClick={() => setOverlayVariant('nba')}
+            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+              overlayVariant === 'nba'
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            Option 2: NBA-Style
+            <span className="block text-xs font-normal mt-1">ESPN/TNT horizontal bar</span>
+          </button>
+        </div>
+      </div>
       
       {/* Performance Metrics */}
       <div className="mb-4 p-4 bg-gray-100 rounded">
@@ -176,7 +215,9 @@ export default function CanvasTestPage() {
         
         {/* Canvas Version */}
         <div>
-          <h2 className="text-lg font-semibold mb-2">Canvas Overlay (New)</h2>
+          <h2 className="text-lg font-semibold mb-2">
+            Canvas Overlay ({overlayVariant === 'classic' ? 'Classic' : 'NBA-Style'})
+          </h2>
           <canvas 
             ref={canvasRef}
             width={1920}
