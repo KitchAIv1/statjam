@@ -48,6 +48,37 @@ export interface GameOverlayData {
   tournamentName?: string;
   tournamentLogo?: string;
   venue?: string;
+  
+  // NBA-style player stats overlay (shows during free throws)
+  activePlayerStats?: PlayerStatsOverlayData;
+}
+
+/**
+ * Player stats overlay data for NBA-style free throw display
+ * Follows existing calculatePlayerStats pattern from game-viewer
+ */
+export interface PlayerStatsOverlayData {
+  // Player identification
+  playerId: string;
+  playerName: string;
+  jerseyNumber?: number;
+  teamName: string;
+  teamId: string;
+  teamPrimaryColor?: string;
+  profilePhotoUrl?: string;
+  
+  // Current game stats (matches game-viewer calculatePlayerStats)
+  points: number;
+  rebounds: number;
+  assists: number;
+  
+  // Free throw line
+  freeThrowMade: number;
+  freeThrowAttempts: number;
+  
+  // Display control
+  isVisible: boolean;
+  showUntil?: number; // Timestamp to auto-hide (7 seconds after trigger)
 }
 
 /**

@@ -7,12 +7,14 @@
 
 import { GameOverlayData, LogoCache } from './utils';
 import { OverlayDrawer } from './drawing';
+import { PlayerStatsDrawer } from './playerStatsDrawer';
 
 export class CanvasOverlayRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private logoCache: LogoCache;
   private drawer: OverlayDrawer;
+  private playerStatsDrawer: PlayerStatsDrawer;
   private initialized = false;
   
   constructor(width: number = 1920, height: number = 1080) {
@@ -28,6 +30,7 @@ export class CanvasOverlayRenderer {
     
     this.logoCache = new LogoCache();
     this.drawer = new OverlayDrawer(this.ctx, width, height);
+    this.playerStatsDrawer = new PlayerStatsDrawer(this.ctx, width, height);
   }
   
   /**
@@ -93,6 +96,11 @@ export class CanvasOverlayRenderer {
       
       // Center section (clock, quarter, shot clock)
       this.drawer.drawCenterSection(overlayData);
+      
+      // NBA-style player stats overlay (if active)
+      if (overlayData.activePlayerStats) {
+        this.playerStatsDrawer.draw(overlayData.activePlayerStats);
+      }
       
       // Log performance (only if slow or every 100 frames)
       const renderTime = performance.now() - startTime;

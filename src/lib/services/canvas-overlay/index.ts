@@ -5,6 +5,7 @@
  */
 
 export { CanvasOverlayRenderer } from './renderer';
-export { type GameOverlayData } from './utils';
+export { type GameOverlayData, type PlayerStatsOverlayData } from './utils';
 export { LogoCache, hexToRgba, getTailwindColor, measureText } from './utils';
+export { PlayerStatsDrawer } from './playerStatsDrawer';
 
