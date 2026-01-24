@@ -56,6 +56,36 @@ function calculateScoresFromStats(
   return { homeScore, awayScore };
 }
 
+/**
+ * Calculate fouls from game_stats
+ * Counts all foul stats per team for accurate overlay display
+ */
+function calculateFoulsFromStats(
+  stats: GameStat[],
+  teamAId: string,
+  teamBId: string
+): { teamAFouls: number; teamBFouls: number } {
+  let teamAFouls = 0;
+  let teamBFouls = 0;
+
+  for (const stat of stats) {
+    // Only count foul stat types
+    if (stat.stat_type !== 'foul') continue;
+    
+    // ✅ Handle is_opponent_stat flag (COACH mode)
+    if (stat.is_opponent_stat) {
+      // Opponent fouls go to away team (Team B)
+      teamBFouls++;
+    } else if (stat.team_id === teamAId) {
+      teamAFouls++;
+    } else if (stat.team_id === teamBId) {
+      teamBFouls++;
+    }
+  }
+
+  return { teamAFouls, teamBFouls };
+}
+
 export function useGameOverlayData(gameId: string | null) {
   const [overlayData, setOverlayData] = useState<GameOverlayData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -106,7 +136,14 @@ export function useGameOverlayData(gameId: string | null) {
         .select('id, game_id, player_id, team_id, stat_type, stat_value, modifier, is_opponent_stat')
         .eq('game_id', gameId);
 
+      // Calculate scores and fouls from game_stats (source of truth)
       const calculatedScores = calculateScoresFromStats(
+        stats || [],
+        game.team_a_id,
+        game.team_b_id
+      );
+      
+      const calculatedFouls = calculateFoulsFromStats(
         stats || [],
         game.team_a_id,
         game.team_b_id
@@ -133,8 +170,9 @@ export function useGameOverlayData(gameId: string | null) {
         teamBSecondaryColor: teamB?.secondary_color,
         teamAAccentColor: teamA?.accent_color,
         teamBAccentColor: teamB?.accent_color,
-        teamAFouls: game.team_a_fouls || 0,
-        teamBFouls: game.team_b_fouls || 0,
+        // ✅ Calculate fouls from stats (not games table) for accurate display
+        teamAFouls: calculatedFouls.teamAFouls,
+        teamBFouls: calculatedFouls.teamBFouls,
         teamATimeouts: game.team_a_timeouts_remaining ?? 5,
         teamBTimeouts: game.team_b_timeouts_remaining ?? 5,
         currentPossessionTeamId: game.current_possession_team_id,
