@@ -2,6 +2,7 @@
  * Broadcast Controls Component
  * 
  * UI for managing YouTube/Twitch broadcasting.
+ * Compact collapsible design for single-screen layout.
  * Limits: < 200 lines
  */
 
@@ -9,11 +10,11 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Radio, Youtube, Twitch, Send, Gauge } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ChevronDown, ChevronUp, Youtube, Twitch } from 'lucide-react';
 import { BroadcastPlatform, QualityPreset, QUALITY_PRESETS } from '@/lib/services/broadcast/types';
 
 interface BroadcastControlsProps {
@@ -36,6 +37,7 @@ export function BroadcastControls({
   const [platform, setPlatform] = useState<BroadcastPlatform>('youtube');
   const [streamKey, setStreamKey] = useState('');
   const [quality, setQuality] = useState<QualityPreset>('720p');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleStart = () => {
     if (!streamKey.trim()) {
@@ -44,132 +46,128 @@ export function BroadcastControls({
     onStart(platform, streamKey.trim(), quality);
   };
 
-  const getRtmpUrl = (platform: BroadcastPlatform): string => {
-    if (platform === 'youtube') {
-      return 'rtmp://a.rtmp.youtube.com/live2';
-    }
-    return 'rtmp://live.twitch.tv/app';
-  };
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Send className="h-5 w-5" />
-          Broadcast to YouTube/Twitch
-        </CardTitle>
-        <CardDescription>
-          Enter your stream key to broadcast the composed video
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Platform Selection */}
-        <div className="space-y-2">
-          <Label>Platform</Label>
-          <RadioGroup value={platform} onValueChange={(v) => setPlatform(v as BroadcastPlatform)}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="youtube" id="youtube" />
-              <Label htmlFor="youtube" className="flex items-center gap-2 cursor-pointer">
-                <Youtube className="h-4 w-4" />
-                YouTube
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="twitch" id="twitch" />
-              <Label htmlFor="twitch" className="flex items-center gap-2 cursor-pointer">
-                <Twitch className="h-4 w-4" />
-                Twitch
-              </Label>
-            </div>
-          </RadioGroup>
-        </div>
+    <Card className="p-3">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold">Broadcast</h3>
+        {!isBroadcasting && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="h-6 text-xs"
+              >
+                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isExpanded ? 'Hide' : 'Show'} advanced settings</p>
+              <p className="text-[10px] opacity-80">Quality and stream key</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
 
-        {/* Quality Selection */}
+      {!isBroadcasting ? (
         <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            <Gauge className="h-4 w-4" />
-            Stream Quality
-          </Label>
-          <RadioGroup 
-            value={quality} 
-            onValueChange={(v) => setQuality(v as QualityPreset)}
-            disabled={isBroadcasting || isConnecting}
-          >
-            {(Object.keys(QUALITY_PRESETS) as QualityPreset[]).map((preset) => (
-              <div key={preset} className="flex items-center space-x-2">
-                <RadioGroupItem value={preset} id={`quality-${preset}`} />
-                <Label htmlFor={`quality-${preset}`} className="cursor-pointer">
-                  <span className="font-medium">{QUALITY_PRESETS[preset].label}</span>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    {QUALITY_PRESETS[preset].description}
-                  </span>
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </div>
-
-        {/* Stream Key Input */}
-        <div className="space-y-2">
-          <Label htmlFor="streamKey">Stream Key</Label>
-          <Input
-            id="streamKey"
-            type="password"
-            placeholder={`Enter your ${platform} stream key`}
-            value={streamKey}
-            onChange={(e) => setStreamKey(e.target.value)}
-            disabled={isBroadcasting || isConnecting}
-          />
-          <p className="text-xs text-muted-foreground">
-            Get your stream key from {platform === 'youtube' ? 'YouTube Studio' : 'Twitch Dashboard'}
-          </p>
-        </div>
-
-        {/* RTMP URL Display */}
-        <div className="space-y-2">
-          <Label>RTMP URL</Label>
-          <Input
-            value={getRtmpUrl(platform)}
-            readOnly
-            className="bg-muted"
-          />
-        </div>
-
-        {/* Status */}
-        {connectionStatus !== 'idle' && (
-          <div className="flex items-center gap-2 text-sm">
-            <Radio className={`h-4 w-4 ${connectionStatus === 'connected' ? 'text-green-500' : 'text-yellow-500'}`} />
-            <span>Status: {connectionStatus}</span>
+          {/* Platform Selection - Always Visible */}
+          <div className="flex gap-1.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setPlatform('youtube')}
+                  className={`flex-1 p-1.5 text-xs rounded transition-colors ${
+                    platform === 'youtube' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                  }`}
+                >
+                  <Youtube className="h-3.5 w-3.5 mx-auto mb-0.5" />
+                  YouTube
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Stream to YouTube</p>
+                <p className="text-[10px] opacity-80">Get stream key from YouTube Studio</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setPlatform('twitch')}
+                  className={`flex-1 p-1.5 text-xs rounded transition-colors ${
+                    platform === 'twitch' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                  }`}
+                >
+                  <Twitch className="h-3.5 w-3.5 mx-auto mb-0.5" />
+                  Twitch
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Stream to Twitch</p>
+                <p className="text-[10px] opacity-80">Get stream key from Twitch Dashboard</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
-        )}
 
-        {/* Error Display */}
-        {error && (
-          <div className="text-sm text-destructive">{error}</div>
-        )}
+          {/* Advanced Settings - Collapsible */}
+          {isExpanded && (
+            <div className="space-y-2 pt-2 border-t">
+              {/* Quality selection - compact */}
+              <div className="space-y-1">
+                <Label className="text-xs">Quality</Label>
+                <select
+                  value={quality}
+                  onChange={(e) => setQuality(e.target.value as QualityPreset)}
+                  className="w-full text-xs px-2 py-1 bg-background border rounded"
+                >
+                  {Object.keys(QUALITY_PRESETS).map((preset) => (
+                    <option key={preset} value={preset}>
+                      {QUALITY_PRESETS[preset as QualityPreset].label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        {/* Control Buttons */}
-        <div className="flex gap-2">
-          {!isBroadcasting ? (
-            <Button
-              onClick={handleStart}
-              disabled={!streamKey.trim() || isConnecting}
-              className="flex-1"
-            >
-              {isConnecting ? 'Connecting...' : 'Start Broadcast'}
-            </Button>
-          ) : (
-            <Button
-              onClick={onStop}
-              variant="destructive"
-              className="flex-1"
-            >
-              Stop Broadcast
-            </Button>
+              {/* Stream key */}
+              <div className="space-y-1">
+                <Label className="text-xs">Stream Key</Label>
+                <Input
+                  type="password"
+                  placeholder="Enter key"
+                  value={streamKey}
+                  onChange={(e) => setStreamKey(e.target.value)}
+                  className="h-7 text-xs"
+                />
+              </div>
+            </div>
           )}
+
+          {/* Start Button */}
+          <Button
+            onClick={handleStart}
+            disabled={!streamKey.trim() || isConnecting}
+            className="w-full h-7 text-xs"
+          >
+            {isConnecting ? 'Connecting...' : 'Start Broadcast'}
+          </Button>
+
+          {/* Error Display */}
+          {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
-      </CardContent>
+      ) : (
+        <div className="space-y-2">
+          <Button onClick={onStop} variant="destructive" className="w-full h-7 text-xs">
+            Stop Broadcast
+          </Button>
+          {connectionStatus !== 'idle' && (
+            <p className="text-xs text-muted-foreground">
+              Status: <span className={connectionStatus === 'connected' ? 'text-green-600' : 'text-yellow-600'}>{connectionStatus}</span>
+            </p>
+          )}
+          {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+      )}
     </Card>
   );
 }
-

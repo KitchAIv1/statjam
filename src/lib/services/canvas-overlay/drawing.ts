@@ -26,9 +26,10 @@ export class OverlayDrawer {
   drawBackground(): void {
     // Main gradient (matches React: from-black/95 via-black/90 to-transparent)
     // Starts at y=0 (top edge of canvas)
+    // Opacity increased by 25% + 10%: 0.95 → 0.97, 0.90 → 0.94
     const gradient = this.ctx.createLinearGradient(0, 0, 0, 160);
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.95)');
-    gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.90)');
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.97)');
+    gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.94)');
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
     
     this.ctx.fillStyle = gradient;

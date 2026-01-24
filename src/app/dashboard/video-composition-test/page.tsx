@@ -2,23 +2,26 @@
  * Video Composition Test Page
  * 
  * Live streaming studio with webcam + Canvas overlay composition.
- * UI Layout: Setup on left, Preview + Controls on right.
+ * Compact single-screen design - all controls visible without scrolling.
  */
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { VideoCompositionPreview } from '@/components/live-streaming/VideoCompositionPreview';
 import { BroadcastControls } from '@/components/live-streaming/BroadcastControls';
 import { OverlayControlPanel } from '@/components/live-streaming/OverlayControlPanel';
+import { BroadcastReadinessIndicator } from '@/components/live-streaming/BroadcastReadinessIndicator';
 import { useWebcam } from '@/hooks/useWebcam';
 import { useWebRTCStream } from '@/hooks/useWebRTCStream';
 import { useVideoComposition } from '@/hooks/useVideoComposition';
 import { useBroadcast } from '@/hooks/useBroadcast';
 import { BroadcastPlatform, QualityPreset } from '@/lib/services/broadcast/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
-import { Video, Camera, Smartphone, Mic, MicOff } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Video, Camera, Smartphone, Mic, MicOff, Loader2 } from 'lucide-react';
 import { useMicrophone } from '@/hooks/useMicrophone';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useTournaments } from '@/lib/hooks/useTournaments';
@@ -27,6 +30,8 @@ import { supabase } from '@/lib/supabase';
 import { useGameOverlayData } from '@/hooks/useGameOverlayData';
 import { useGamePlayers } from '@/hooks/useGamePlayers';
 import { usePlayerStatsOverlay } from '@/hooks/usePlayerStatsOverlay';
+import { useBroadcastReadiness } from '@/hooks/useBroadcastReadiness';
+import { notify } from '@/lib/services/notificationService';
 
 interface LiveGame {
   id: string;
@@ -50,9 +55,10 @@ export default function VideoCompositionTestPage() {
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [loadingGames, setLoadingGames] = useState(true);
   const [autoTriggerEnabled, setAutoTriggerEnabled] = useState(true);
+  const [broadcastStartTime, setBroadcastStartTime] = useState<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   
   const { tournaments, loading: tournamentsLoading } = useTournaments(user);
-  // Stable reference for tournament IDs to prevent infinite loops
   const tournamentIds = useMemo(() => tournaments.map(t => t.id).join(','), [tournaments]);
   const { overlayData } = useGameOverlayData(selectedGameId);
   const { teamAPlayers, teamBPlayers, teamAName, teamBName, loading: playersLoading } = useGamePlayers(selectedGameId);
@@ -68,7 +74,6 @@ export default function VideoCompositionTestPage() {
   
   const activeVideoStream = videoSource === 'webcam' ? webcamStream : videoSource === 'iphone' ? iphoneStream : null;
   
-  // Always include activePlayerStats - autoTriggerEnabled only controls auto-detection, not manual triggers
   const fullOverlayData = useMemo(() => {
     if (!overlayData) return null;
     return { ...overlayData, activePlayerStats: activePlayerStats ?? undefined };
@@ -84,7 +89,19 @@ export default function VideoCompositionTestPage() {
     relayServerUrl: process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8080',
   });
   
-  // Fetch games - use tournamentIds for stable dependency
+  // Update video element when stream changes
+  useEffect(() => {
+    if (videoRef.current && composedStream) {
+      videoRef.current.srcObject = composedStream;
+      videoRef.current.play().catch(err => {
+        console.error('Error playing composed stream:', err);
+      });
+    } else if (videoRef.current && !composedStream) {
+      videoRef.current.srcObject = null;
+    }
+  }, [composedStream]);
+  
+  // Fetch games
   useEffect(() => {
     async function fetchGames() {
       if (!user?.id || !tournamentIds) { setLoadingGames(false); return; }
@@ -113,14 +130,26 @@ export default function VideoCompositionTestPage() {
   };
   
   const handleSelectiPhone = () => {
-    if (!selectedGameId) { alert('Please select a game first'); return; }
+    if (!selectedGameId) {
+      notify.warning('Select a game first', 'Please choose a game before connecting iPhone');
+      return;
+    }
     if (videoSource === 'webcam' && webcamEnabled) { stopComposition(); stopWebcam(); setWebcamEnabled(false); }
     if (videoSource === 'iphone') { setVideoSource(null); disconnectWebRTC(); } else { setVideoSource('iphone'); }
   };
   
   const handleToggleComposition = async () => {
-    if (state.isComposing) stopComposition();
-    else { if (!overlayData) { alert('Please select a game first'); return; } await startComposition(); }
+    if (state.isComposing) {
+      stopComposition();
+      notify.info('Composition stopped');
+    } else {
+      if (!overlayData) {
+        notify.warning('Select a game first', 'Please choose a game to start composition');
+        return;
+      }
+      await startComposition();
+      notify.success('Composition started', 'Video and overlay are now composing');
+    }
   };
   
   const handleStartBroadcast = useCallback(async (platform: BroadcastPlatform, streamKey: string, quality?: QualityPreset) => {
@@ -129,142 +158,428 @@ export default function VideoCompositionTestPage() {
     const broadcastStream = new MediaStream();
     composedStream.getVideoTracks().forEach(track => broadcastStream.addTrack(track));
     if (micEnabled && micStream) micStream.getAudioTracks().forEach(track => broadcastStream.addTrack(track));
+    setBroadcastStartTime(Date.now());
     await startBroadcast(broadcastStream, { platform, streamKey, rtmpUrl, quality });
+    notify.success('Broadcast started', `Streaming to ${platform === 'youtube' ? 'YouTube' : 'Twitch'}`);
   }, [composedStream, micEnabled, micStream, startBroadcast]);
 
+  const handleStopBroadcast = useCallback(() => {
+    stopBroadcast();
+    setBroadcastStartTime(null);
+    notify.info('Broadcast stopped');
+  }, [stopBroadcast]);
+
+  // Format broadcast duration
+  const formatDuration = useCallback((seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+    return `${minutes}:${String(secs).padStart(2, '0')}`;
+  }, []);
+
+  const [broadcastDuration, setBroadcastDuration] = useState(0);
+
+  // Update broadcast duration timer
+  useEffect(() => {
+    if (!broadcastState.isBroadcasting || !broadcastStartTime) {
+      setBroadcastDuration(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setBroadcastDuration(Math.floor((Date.now() - broadcastStartTime) / 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [broadcastState.isBroadcasting, broadcastStartTime]);
+
+  // Reset timer when broadcast stops
+  useEffect(() => {
+    if (!broadcastState.isBroadcasting) {
+      setBroadcastStartTime(null);
+      setBroadcastDuration(0);
+    }
+  }, [broadcastState.isBroadcasting]);
+
   const selectedGame = games.find(g => g.id === selectedGameId);
-  const isComposing = state.isComposing && composedStream;
+  const isComposing = !!(state.isComposing && composedStream);
+  
+  const broadcastReadiness = useBroadcastReadiness(selectedGameId, activeVideoStream, isComposing);
   
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold">Live Stream Studio</h1>
-        <p className="text-sm text-muted-foreground">Compose and broadcast with overlays</p>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left Column: Setup */}
-        <div className="space-y-4">
-          {/* Game Selection */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Select Game</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingGames || tournamentsLoading ? (
-                <p className="text-xs text-muted-foreground">Loading...</p>
-              ) : games.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No live games</p>
-              ) : (
-                <select value={selectedGameId || ''} onChange={(e) => setSelectedGameId(e.target.value || null)} className="w-full bg-background border rounded-md px-2 py-1.5 text-sm">
-                  <option value="">-- Select --</option>
-                  {games.map(g => <option key={g.id} value={g.id}>{g.team_b_name} vs {g.team_a_name}</option>)}
-                </select>
-              )}
-              {selectedGame && overlayData && (
-                <div className="mt-2 p-2 bg-muted rounded text-xs">
-                  <p><strong>{overlayData.teamBName}</strong> {overlayData.awayScore} - {overlayData.homeScore} <strong>{overlayData.teamAName}</strong></p>
-                  <p className="text-muted-foreground">Q{overlayData.quarter} | {overlayData.gameClockMinutes}:{String(overlayData.gameClockSeconds).padStart(2, '0')}</p>
+    <div className="h-screen flex flex-col overflow-hidden bg-background">
+      {/* Compact Header */}
+      <div className="px-4 py-2 border-b bg-card flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold">Live Stream Studio</h1>
+            <p className="text-xs text-muted-foreground">Compose and broadcast with overlays</p>
+          </div>
+          {/* Quick Status Indicators */}
+          <div className="flex items-center gap-4 text-xs">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 cursor-help">
+                  <div className={`w-2 h-2 rounded-full ${selectedGameId ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <span>Game</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-          
-          {/* Video Source */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2"><Video className="h-4 w-4" />Video Source</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex items-center justify-between p-2 border rounded">
-                <div className="flex items-center gap-2"><Camera className="h-4 w-4" /><span className="text-sm">Webcam</span></div>
-                <Button onClick={handleSelectWebcam} disabled={webcamLoading} variant={videoSource === 'webcam' ? 'destructive' : 'outline'} size="sm" className="h-7 text-xs">
-                  {videoSource === 'webcam' ? 'Stop' : 'Start'}
-                </Button>
-              </div>
-              <div className="flex items-center justify-between p-2 border rounded">
-                <div className="flex items-center gap-2"><Smartphone className="h-4 w-4" /><span className="text-sm">iPhone</span></div>
-                <Button onClick={handleSelectiPhone} disabled={!selectedGameId} variant={videoSource === 'iphone' ? 'destructive' : 'outline'} size="sm" className="h-7 text-xs">
-                  {videoSource === 'iphone' ? 'Stop' : 'Connect'}
-                </Button>
-              </div>
-              {webcamError && <p className="text-xs text-destructive">{webcamError}</p>}
-              {webrtcError && <p className="text-xs text-destructive">{webrtcError}</p>}
-              {videoSource === 'iphone' && <p className="text-xs text-muted-foreground">Status: {connectionStatus}</p>}
-            </CardContent>
-          </Card>
-          
-          {/* Broadcast Settings */}
-          {isComposing && (
-            <BroadcastControls
-              isBroadcasting={broadcastState.isBroadcasting}
-              isConnecting={broadcastState.isConnecting}
-              connectionStatus={broadcastState.connectionStatus}
-              error={broadcastState.error}
-              onStart={handleStartBroadcast}
-              onStop={stopBroadcast}
-            />
-          )}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Game selected for overlay data</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 cursor-help">
+                  <div className={`w-2 h-2 rounded-full ${activeVideoStream ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <span>Video</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Video source active</p>
+                <p className="text-[10px] opacity-80">Webcam or iPhone connected</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 cursor-help">
+                  <div className={`w-2 h-2 rounded-full ${state.isComposing ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <span>Composing</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Video composition active</p>
+                <p className="text-[10px] opacity-80">Overlay rendering on video</p>
+              </TooltipContent>
+            </Tooltip>
+            {broadcastState.isBroadcasting && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-2 text-red-600 cursor-help">
+                    <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                    <span className="font-semibold">LIVE</span>
+                    <span className="font-mono text-xs">{formatDuration(broadcastDuration)}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Broadcasting live</p>
+                  <p className="text-[10px] opacity-80">Stream duration: {formatDuration(broadcastDuration)}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
-        
-        {/* Center Column: Preview */}
-        <div className="lg:col-span-2 space-y-4">
-          <VideoCompositionPreview
-            composedStream={composedStream}
-            isComposing={state.isComposing}
-            error={compositionError ?? null}
-            onStart={handleToggleComposition}
-            onStop={handleToggleComposition}
-          />
-          
-          {/* Status Bar with Mic Controls */}
-          {isComposing && (
-            <div className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
-              <div className="flex gap-3 text-xs text-muted-foreground">
-                <span>Game: {selectedGameId ? '✓' : '○'}</span>
-                <span>Video: {activeVideoStream ? '✓' : '○'}</span>
-                <span>Frames: {state.frameCount}</span>
+      </div>
+
+      {/* Main Content - Grid Layout */}
+      <div className="flex-1 overflow-hidden p-3">
+        <div className="h-full grid grid-cols-12 gap-3">
+          {/* Left Sidebar - Compact (3 columns) */}
+          <div className="col-span-3 flex flex-col gap-2 overflow-y-auto">
+            {/* Game Selection - Compact */}
+            <Card className="p-3 flex-shrink-0">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">Game</h3>
+                  {selectedGame && overlayData && (
+                    <span className="text-xs px-1.5 py-0.5 bg-green-500/10 text-green-600 rounded">LIVE</span>
+                  )}
+                </div>
+                {loadingGames || tournamentsLoading ? (
+                  <div className="space-y-2 py-2 animate-in fade-in-0">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-6 w-3/4" />
+                  </div>
+                ) : games.length === 0 ? (
+                  <div className="py-3 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">No live games</p>
+                    <p className="text-[10px] text-muted-foreground">Start a game in your tournament to begin streaming</p>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedGameId || ''}
+                    onChange={(e) => setSelectedGameId(e.target.value || null)}
+                    className="w-full text-xs px-2 py-1.5 bg-background border rounded transition-all duration-200 animate-in fade-in-0"
+                  >
+                    <option value="">-- Select --</option>
+                    {games.map(g => (
+                      <option key={g.id} value={g.id}>
+                        {g.team_b_name} vs {g.team_a_name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {selectedGame && overlayData && (
+                  <div className="text-xs space-y-0.5 pt-1 border-t animate-in fade-in-0 slide-in-from-top-1 duration-200">
+                    <p className="font-medium">
+                      {overlayData.teamBName} {overlayData.awayScore} - {overlayData.homeScore} {overlayData.teamAName}
+                    </p>
+                    <p className="text-muted-foreground">
+                      Q{overlayData.quarter} | {overlayData.gameClockMinutes}:{String(overlayData.gameClockSeconds).padStart(2, '0')}
+                    </p>
+                  </div>
+                )}
               </div>
-              {/* Compact Mic Controls */}
-              <div className="flex items-center gap-2">
-                {micMuted ? <MicOff className="h-4 w-4 text-muted-foreground" /> : <Mic className="h-4 w-4 text-green-600" />}
-                <span className="text-xs">{micEnabled ? (micMuted ? 'Muted' : 'Live') : 'Off'}</span>
-                {!micEnabled ? (
-                  <Button onClick={startMic} disabled={micLoading || broadcastState.isBroadcasting} variant="outline" size="sm" className="h-6 text-xs px-2">
-                    {micLoading ? '...' : 'Enable'}
+            </Card>
+            
+            {/* Video Source - Compact */}
+            <Card className="p-3 flex-shrink-0">
+              <h3 className="text-sm font-semibold mb-2">Video Source</h3>
+              <div className="space-y-1.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={handleSelectWebcam}
+                      disabled={webcamLoading}
+                      className={`w-full flex items-center justify-between p-2 text-xs rounded transition-all duration-200 ${
+                        videoSource === 'webcam'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted hover:bg-muted/80'
+                      } ${webcamLoading ? 'opacity-60 cursor-wait' : ''}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {webcamLoading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Camera className="h-3.5 w-3.5" />
+                        )}
+                        <span>{webcamLoading ? 'Connecting...' : 'Webcam'}</span>
+                      </div>
+                      {videoSource === 'webcam' && !webcamLoading && <div className="w-2 h-2 bg-green-500 rounded-full animate-in fade-in-0" />}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Use your computer's camera</p>
+                    <p className="text-[10px] opacity-80">Best for stationary setups</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={handleSelectiPhone}
+                      disabled={!selectedGameId || (videoSource === 'iphone' && connectionStatus === 'connecting')}
+                      className={`w-full flex items-center justify-between p-2 text-xs rounded transition-all duration-200 ${
+                        videoSource === 'iphone'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted hover:bg-muted/80'
+                      } ${videoSource === 'iphone' && connectionStatus === 'connecting' ? 'opacity-60 cursor-wait' : ''}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {videoSource === 'iphone' && connectionStatus === 'connecting' ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Smartphone className="h-3.5 w-3.5" />
+                        )}
+                        <span>
+                          {videoSource === 'iphone' && connectionStatus === 'connecting' ? 'Connecting...' : 'iPhone'}
+                        </span>
+                      </div>
+                      {videoSource === 'iphone' && connectionStatus === 'connected' && (
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-in fade-in-0" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Connect iPhone via WebRTC</p>
+                    {!selectedGameId ? (
+                      <p className="text-[10px] opacity-80">Select a game first</p>
+                    ) : videoSource === 'iphone' && connectionStatus === 'connecting' ? (
+                      <p className="text-[10px] opacity-80">Connecting to iPhone...</p>
+                    ) : videoSource === 'iphone' && connectionStatus === 'connected' ? (
+                      <p className="text-[10px] opacity-80">Connected - ready to stream</p>
+                    ) : videoSource === 'iphone' ? (
+                      <p className="text-[10px] opacity-80">Click to disconnect</p>
+                    ) : (
+                      <p className="text-[10px] opacity-80">Click to connect iPhone</p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              {webcamError && <p className="text-xs text-destructive mt-1">{webcamError}</p>}
+              {webrtcError && <p className="text-xs text-destructive mt-1">{webrtcError}</p>}
+            </Card>
+            
+            {/* Ready to Broadcast Indicator */}
+            <BroadcastReadinessIndicator
+              readiness={broadcastReadiness}
+              isBroadcasting={broadcastState.isBroadcasting}
+            />
+            
+            {/* Broadcast Settings - Collapsible when not composing */}
+            {isComposing && (
+              <div className="flex-shrink-0">
+                <BroadcastControls
+                  isBroadcasting={broadcastState.isBroadcasting}
+                  isConnecting={broadcastState.isConnecting}
+                  connectionStatus={broadcastState.connectionStatus}
+                  error={broadcastState.error}
+                  onStart={handleStartBroadcast}
+                  onStop={handleStopBroadcast}
+                />
+              </div>
+            )}
+          </div>
+          
+          {/* Center - Preview (6 columns) */}
+          <div className="col-span-6 flex flex-col gap-2">
+            <Card className="flex-1 flex flex-col overflow-hidden p-3 min-h-0">
+              <div className="flex items-center justify-between mb-2 flex-shrink-0">
+                <h3 className="text-sm font-semibold">Preview</h3>
+                {!isComposing ? (
+                  <Button onClick={handleToggleComposition} size="sm" className="h-7 text-xs">
+                    Start Composition
                   </Button>
                 ) : (
-                  <>
-                    <Button onClick={toggleMicMute} variant={micMuted ? 'ghost' : 'default'} size="sm" className="h-6 text-xs px-2">
-                      {micMuted ? 'Unmute' : 'Mute'}
-                    </Button>
-                    <Button onClick={() => { if (broadcastState.isBroadcasting) { if (confirm('Cut audio permanently?')) stopMic(); } else stopMic(); }} variant="ghost" size="sm" className="h-6 text-xs px-2 text-destructive">
-                      Off
-                    </Button>
-                  </>
+                  <Button onClick={handleToggleComposition} variant="destructive" size="sm" className="h-7 text-xs">
+                    Stop
+                  </Button>
                 )}
-                {micError && <span className="text-xs text-destructive">{micError}</span>}
               </div>
-            </div>
-          )}
+              <div className="flex-1 relative bg-black rounded overflow-hidden min-h-0">
+                {isComposing && composedStream ? (
+                  <>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-contain"
+                    />
+                    {broadcastState.isBroadcasting && (
+                      <div className="absolute top-2 right-2">
+                        <div className="flex items-center gap-1.5 bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold">
+                          <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                          LIVE
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                    <Video className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                    <p className="text-xs text-muted-foreground mb-1">Ready to compose</p>
+                    <p className="text-[10px] text-muted-foreground">Select a game and video source, then start composition</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+            
+            {/* Compact Controls Row */}
+            {isComposing && (
+              <div className="grid grid-cols-2 gap-2 flex-shrink-0">
+                {/* Mic Control - Compact */}
+                <Card className="p-2">
+                  <div className="flex items-center justify-between">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-help">
+                          {micMuted ? (
+                            <MicOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Mic className={`h-4 w-4 ${micEnabled ? 'text-green-600' : 'text-muted-foreground'}`} />
+                          )}
+                          <span className="text-xs">{micEnabled ? (micMuted ? 'Muted' : 'Live') : 'Off'}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Microphone status</p>
+                        <p className="text-[10px] opacity-80">
+                          {micEnabled ? (micMuted ? 'Muted - audio disabled' : 'Live - audio active') : 'Off - enable to add commentary'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <div className="flex gap-1">
+                      {!micEnabled ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button onClick={startMic} disabled={micLoading || broadcastState.isBroadcasting} size="sm" variant="outline" className="h-6 text-xs px-2">
+                              Enable
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Enable microphone</p>
+                            <p className="text-[10px] opacity-80">Add live commentary to stream</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button onClick={toggleMicMute} size="sm" variant="ghost" className="h-6 text-xs px-2">
+                                {micMuted ? 'Unmute' : 'Mute'}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{micMuted ? 'Unmute microphone' : 'Mute microphone'}</p>
+                              <p className="text-[10px] opacity-80">
+                                {micMuted ? 'Restore audio to stream' : 'Temporarily disable audio'}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                onClick={() => {
+                                  if (broadcastState.isBroadcasting) {
+                                    if (confirm('Cut audio permanently?')) stopMic();
+                                  } else {
+                                    stopMic();
+                                  }
+                                }}
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-xs px-2 text-destructive"
+                              >
+                                Off
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Disable microphone</p>
+                              <p className="text-[10px] opacity-80">
+                                {broadcastState.isBroadcasting ? 'Permanently removes audio from stream' : 'Turn off microphone'}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {micError && <p className="text-xs text-destructive mt-1">{micError}</p>}
+                </Card>
+                
+                {/* Quick Stats */}
+                <Card className="p-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Frames:</span>
+                    <span className="font-mono">{state.frameCount}</span>
+                  </div>
+                </Card>
+              </div>
+            )}
+          </div>
           
-          {/* Overlay Controls - Full Width */}
-          {isComposing && selectedGameId && (
-            <OverlayControlPanel
-              teamAPlayers={teamAPlayers}
-              teamBPlayers={teamBPlayers}
-              teamAName={teamAName}
-              teamBName={teamBName}
-              teamAPrimaryColor={overlayData?.teamAPrimaryColor}
-              teamBPrimaryColor={overlayData?.teamBPrimaryColor}
-              activePlayerStats={activePlayerStats}
-              autoTriggerEnabled={autoTriggerEnabled}
-              playersLoading={playersLoading}
-              onTriggerPlayer={(player) => triggerOverlay(player.id, player.teamId, player.isCustomPlayer)}
-              onHideOverlay={hideOverlay}
-              onToggleAutoTrigger={setAutoTriggerEnabled}
-            />
-          )}
+          {/* Right Sidebar - Overlay Controls (3 columns) */}
+          <div className="col-span-3 flex flex-col overflow-y-auto">
+            {isComposing && selectedGameId && (
+              <OverlayControlPanel
+                teamAPlayers={teamAPlayers}
+                teamBPlayers={teamBPlayers}
+                teamAName={teamAName}
+                teamBName={teamBName}
+                teamAPrimaryColor={overlayData?.teamAPrimaryColor}
+                teamBPrimaryColor={overlayData?.teamBPrimaryColor}
+                activePlayerStats={activePlayerStats}
+                autoTriggerEnabled={autoTriggerEnabled}
+                playersLoading={playersLoading}
+                onTriggerPlayer={(player) => triggerOverlay(player.id, player.teamId, player.isCustomPlayer)}
+                onHideOverlay={hideOverlay}
+                onToggleAutoTrigger={setAutoTriggerEnabled}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
