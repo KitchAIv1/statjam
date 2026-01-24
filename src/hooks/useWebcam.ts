@@ -3,6 +3,7 @@
  * 
  * Manages webcam access and stream.
  * Returns MediaStream from user's webcam.
+ * Auto-detects mobile devices and prefers rear camera.
  * 
  * Limits: < 100 lines
  */
@@ -20,6 +21,35 @@ interface UseWebcamReturn {
   isLoading: boolean;
   start: () => Promise<void>;
   stop: () => void;
+}
+
+/** Detect if running on mobile device */
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+/** Build video constraints with mobile rear camera support */
+function buildVideoConstraints(baseConstraints: MediaStreamConstraints): MediaStreamConstraints {
+  const isMobile = isMobileDevice();
+  const baseVideo = baseConstraints.video;
+  
+  // If video is false or specific deviceId is set, use as-is
+  if (!baseVideo || (typeof baseVideo === 'object' && 'deviceId' in baseVideo)) {
+    return baseConstraints;
+  }
+  
+  // On mobile: add facingMode: 'environment' for rear camera
+  if (isMobile) {
+    const videoObj = typeof baseVideo === 'object' ? baseVideo : {};
+    return {
+      ...baseConstraints,
+      video: { ...videoObj, facingMode: { ideal: 'environment' } },
+    };
+  }
+  
+  // Desktop: use constraints as-is (browser picks available camera)
+  return baseConstraints;
 }
 
 export function useWebcam({
@@ -40,13 +70,16 @@ export function useWebcam({
     setError(null);
     
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const finalConstraints = buildVideoConstraints(constraints);
+      console.log('📹 Requesting camera with constraints:', finalConstraints);
+      const mediaStream = await navigator.mediaDevices.getUserMedia(finalConstraints);
       streamRef.current = mediaStream;
       setStream(mediaStream);
+      console.log('✅ Camera access granted');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to access webcam';
       setError(errorMessage);
-      console.error('Webcam access error:', err);
+      console.error('❌ Webcam access error:', err);
     } finally {
       setIsLoading(false);
     }
