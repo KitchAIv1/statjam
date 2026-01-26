@@ -8,21 +8,23 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { VideoCompositionPreview } from '@/components/live-streaming/VideoCompositionPreview';
 import { BroadcastControls } from '@/components/live-streaming/BroadcastControls';
 import { OverlayControlPanel } from '@/components/live-streaming/OverlayControlPanel';
 import { BroadcastReadinessIndicator } from '@/components/live-streaming/BroadcastReadinessIndicator';
-import { useWebcam } from '@/hooks/useWebcam';
+import { StudioHeader } from '@/components/live-streaming/StudioHeader';
+import { VideoSourceSelector } from '@/components/video-sources';
 import { useWebRTCStream } from '@/hooks/useWebRTCStream';
 import { useVideoComposition } from '@/hooks/useVideoComposition';
 import { useBroadcast } from '@/hooks/useBroadcast';
+import { useVideoSourceSelector } from '@/hooks/useVideoSourceSelector';
 import { BroadcastPlatform, QualityPreset } from '@/lib/services/broadcast/types';
 import { OverlayVariant } from '@/lib/services/canvas-overlay';
-import { Card, CardContent } from '@/components/ui/card';
+import { ConnectionStatus } from '@/lib/services/video-sources/types';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Video, Camera, Smartphone, Mic, MicOff, Loader2 } from 'lucide-react';
+import { Video, Mic, MicOff } from 'lucide-react';
 import { useMicrophone } from '@/hooks/useMicrophone';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useTournaments } from '@/lib/hooks/useTournaments';
@@ -50,8 +52,6 @@ interface LiveGame {
 
 export default function VideoCompositionTestPage() {
   const { user } = useAuthContext();
-  const [videoSource, setVideoSource] = useState<'webcam' | 'iphone' | null>(null);
-  const [webcamEnabled, setWebcamEnabled] = useState(false);
   const [games, setGames] = useState<LiveGame[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [loadingGames, setLoadingGames] = useState(true);
@@ -66,15 +66,30 @@ export default function VideoCompositionTestPage() {
   const { teamAPlayers, teamBPlayers, teamAName, teamBName, loading: playersLoading } = useGamePlayers(selectedGameId);
   const { activePlayerStats, triggerOverlay, hideOverlay } = usePlayerStatsOverlay(selectedGameId, autoTriggerEnabled);
   
-  const { stream: webcamStream, error: webcamError, isLoading: webcamLoading, start: startWebcam, stop: stopWebcam } = useWebcam({
-    enabled: false,
-    constraints: { video: { width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 }, frameRate: { ideal: 60, min: 30 } }, audio: false },
+  const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();
+  
+  // WebRTC for iPhone streaming
+  const { remoteStream: iphoneStream, connectionStatus: iphoneConnectionStatus } = useWebRTCStream({ gameId: selectedGameId, role: 'dashboard' });
+  
+  // Map WebRTC connection status to our ConnectionStatus type
+  const mappedIphoneStatus: ConnectionStatus = iphoneConnectionStatus === 'connected' ? 'connected' 
+    : iphoneConnectionStatus === 'connecting' ? 'connecting'
+    : iphoneConnectionStatus === 'error' ? 'error' 
+    : 'idle';
+  
+  // Video source selector (OBS-like)
+  const { 
+    state: videoSourceState, 
+    selectWebcam, 
+    selectiPhone, 
+    selectScreen, 
+    clearSource 
+  } = useVideoSourceSelector({
+    iphoneStream,
+    iphoneConnectionStatus: mappedIphoneStatus,
   });
   
-  const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();
-  const { remoteStream: iphoneStream, connectionStatus, error: webrtcError, disconnect: disconnectWebRTC } = useWebRTCStream({ gameId: selectedGameId, role: 'dashboard' });
-  
-  const activeVideoStream = videoSource === 'webcam' ? webcamStream : videoSource === 'iphone' ? iphoneStream : null;
+  const activeVideoStream = videoSourceState.stream;
   
   const fullOverlayData = useMemo(() => {
     if (!overlayData) return null;
@@ -129,21 +144,6 @@ export default function VideoCompositionTestPage() {
     if (!tournamentsLoading && tournamentIds) fetchGames();
     else if (!tournamentsLoading) setLoadingGames(false);
   }, [user?.id, tournamentIds, tournamentsLoading]);
-  
-  const handleSelectWebcam = async () => {
-    if (videoSource === 'iphone') disconnectWebRTC();
-    if (videoSource === 'webcam' && webcamEnabled) { setVideoSource(null); setWebcamEnabled(false); stopComposition(); stopWebcam(); }
-    else { setVideoSource('webcam'); setWebcamEnabled(true); await startWebcam(); }
-  };
-  
-  const handleSelectiPhone = () => {
-    if (!selectedGameId) {
-      notify.warning('Select a game first', 'Please choose a game before connecting iPhone');
-      return;
-    }
-    if (videoSource === 'webcam' && webcamEnabled) { stopComposition(); stopWebcam(); setWebcamEnabled(false); }
-    if (videoSource === 'iphone') { setVideoSource(null); disconnectWebRTC(); } else { setVideoSource('iphone'); }
-  };
   
   const handleToggleComposition = async () => {
     if (state.isComposing) {
@@ -218,68 +218,13 @@ export default function VideoCompositionTestPage() {
   
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
-      {/* Compact Header */}
-      <div className="px-4 py-2 border-b bg-card flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold">Live Stream Studio</h1>
-            <p className="text-xs text-muted-foreground">Compose and broadcast with overlays</p>
-          </div>
-          {/* Quick Status Indicators */}
-          <div className="flex items-center gap-4 text-xs">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 cursor-help">
-                  <div className={`w-2 h-2 rounded-full ${selectedGameId ? 'bg-green-500' : 'bg-gray-400'}`} />
-                  <span>Game</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Game selected for overlay data</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 cursor-help">
-                  <div className={`w-2 h-2 rounded-full ${activeVideoStream ? 'bg-green-500' : 'bg-gray-400'}`} />
-                  <span>Video</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Video source active</p>
-                <p className="text-[10px] opacity-80">Webcam or iPhone connected</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 cursor-help">
-                  <div className={`w-2 h-2 rounded-full ${state.isComposing ? 'bg-green-500' : 'bg-gray-400'}`} />
-                  <span>Composing</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Video composition active</p>
-                <p className="text-[10px] opacity-80">Overlay rendering on video</p>
-              </TooltipContent>
-            </Tooltip>
-            {broadcastState.isBroadcasting && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2 text-red-600 cursor-help">
-                    <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-                    <span className="font-semibold">LIVE</span>
-                    <span className="font-mono text-xs">{formatDuration(broadcastDuration)}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Broadcasting live</p>
-                  <p className="text-[10px] opacity-80">Stream duration: {formatDuration(broadcastDuration)}</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-      </div>
+      <StudioHeader
+        hasGameSelected={!!selectedGameId}
+        hasVideoStream={!!activeVideoStream}
+        isComposing={state.isComposing}
+        isBroadcasting={broadcastState.isBroadcasting}
+        broadcastDuration={formatDuration(broadcastDuration)}
+      />
 
       {/* Main Content - Grid Layout */}
       <div className="flex-1 overflow-hidden p-3">
@@ -332,82 +277,18 @@ export default function VideoCompositionTestPage() {
               </div>
             </Card>
             
-            {/* Video Source - Compact */}
-            <Card className="p-3 flex-shrink-0">
-              <h3 className="text-sm font-semibold mb-2">Video Source</h3>
-              <div className="space-y-1.5">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={handleSelectWebcam}
-                      disabled={webcamLoading}
-                      className={`w-full flex items-center justify-between p-2 text-xs rounded transition-all duration-200 ${
-                        videoSource === 'webcam'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted hover:bg-muted/80'
-                      } ${webcamLoading ? 'opacity-60 cursor-wait' : ''}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {webcamLoading ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Camera className="h-3.5 w-3.5" />
-                        )}
-                        <span>{webcamLoading ? 'Connecting...' : 'Webcam'}</span>
-                      </div>
-                      {videoSource === 'webcam' && !webcamLoading && <div className="w-2 h-2 bg-green-500 rounded-full animate-in fade-in-0" />}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Use your computer's camera</p>
-                    <p className="text-[10px] opacity-80">Best for stationary setups</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={handleSelectiPhone}
-                      disabled={!selectedGameId || (videoSource === 'iphone' && connectionStatus === 'connecting')}
-                      className={`w-full flex items-center justify-between p-2 text-xs rounded transition-all duration-200 ${
-                        videoSource === 'iphone'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted hover:bg-muted/80'
-                      } ${videoSource === 'iphone' && connectionStatus === 'connecting' ? 'opacity-60 cursor-wait' : ''}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {videoSource === 'iphone' && connectionStatus === 'connecting' ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Smartphone className="h-3.5 w-3.5" />
-                        )}
-                        <span>
-                          {videoSource === 'iphone' && connectionStatus === 'connecting' ? 'Connecting...' : 'iPhone'}
-                        </span>
-                      </div>
-                      {videoSource === 'iphone' && connectionStatus === 'connected' && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-in fade-in-0" />
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Connect iPhone via WebRTC</p>
-                    {!selectedGameId ? (
-                      <p className="text-[10px] opacity-80">Select a game first</p>
-                    ) : videoSource === 'iphone' && connectionStatus === 'connecting' ? (
-                      <p className="text-[10px] opacity-80">Connecting to iPhone...</p>
-                    ) : videoSource === 'iphone' && connectionStatus === 'connected' ? (
-                      <p className="text-[10px] opacity-80">Connected - ready to stream</p>
-                    ) : videoSource === 'iphone' ? (
-                      <p className="text-[10px] opacity-80">Click to disconnect</p>
-                    ) : (
-                      <p className="text-[10px] opacity-80">Click to connect iPhone</p>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              {webcamError && <p className="text-xs text-destructive mt-1">{webcamError}</p>}
-              {webrtcError && <p className="text-xs text-destructive mt-1">{webrtcError}</p>}
-            </Card>
+            {/* Video Source Selector (OBS-like) */}
+            <VideoSourceSelector
+              activeSource={videoSourceState.activeSource}
+              connectionStatus={videoSourceState.connectionStatus}
+              selectedDeviceId={videoSourceState.selectedDeviceId}
+              gameId={selectedGameId}
+              onSelectWebcam={selectWebcam}
+              onSelectiPhone={selectiPhone}
+              onSelectScreen={selectScreen}
+              onClear={clearSource}
+              error={videoSourceState.error}
+            />
             
             {/* Ready to Broadcast Indicator */}
             <BroadcastReadinessIndicator
