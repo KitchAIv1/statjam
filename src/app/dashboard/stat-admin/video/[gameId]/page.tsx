@@ -24,6 +24,7 @@ import { VideoStatsTimeline } from '@/components/video/VideoStatsTimeline';
 import { ActiveRosterDisplay } from '@/components/video/ActiveRosterDisplay';
 import { VideoStatEntryButtons } from '@/components/video/VideoStatEntryButtons';
 import { useVideoStatEntry } from '@/hooks/useVideoStatEntry';
+import { useOptimisticTimeline } from '@/hooks/useOptimisticTimeline';
 import { VideoStatPromptRenderer } from '@/components/video/VideoStatPromptRenderer';
 import { SubstitutionModalV4 } from '@/components/tracker-v3/SubstitutionModalV4';
 import { useVideoPlayer } from '@/hooks/useVideoPlayer';
@@ -252,6 +253,13 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     }, 2000);
   }, [loadScores, gameClock, clockFrozen]);
   
+  // ✅ OPTIMISTIC UI: Manage pending stats for instant timeline display
+  const optimisticTimeline = useOptimisticTimeline({
+    onBackgroundSync: useCallback(async () => {
+      return VideoStatService.getVideoStats(gameId);
+    }, [gameId]),
+  });
+  
   // Video stat entry hook for bottom buttons (must be called after handleStatRecorded is defined)
   const videoStatEntry = useVideoStatEntry({
     gameId,
@@ -260,6 +268,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     gameClock,
     onStatRecorded: handleStatRecorded,
     onBeforeRecord: handleBeforeStatRecord,
+    onOptimisticStatAdded: optimisticTimeline.addPendingStat, // ✅ OPTIMISTIC UI
     isCoachMode: isCoachGame,
     userId: user?.id,
     opponentName,
@@ -1445,6 +1454,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                         }}
                         onClockResume={handleClockResume}
                         onScoresChanged={loadScores}
+                        pendingStats={optimisticTimeline.pendingStats}
                       />
                     </div>
                   </div>
@@ -1629,6 +1639,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                   }}
                   onClockResume={handleClockResume}
                   onScoresChanged={loadScores}
+                  pendingStats={optimisticTimeline.pendingStats}
                 />
               </div>
             </div>

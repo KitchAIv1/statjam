@@ -63,6 +63,8 @@ interface VideoStatsTimelineProps {
   onClockResume?: () => void;
   // ✅ Callback when scores may have changed (stat edited/deleted)
   onScoresChanged?: () => void;
+  // ✅ OPTIMISTIC UI: Pending stats to show immediately before DB confirmation
+  pendingStats?: VideoStat[];
 }
 
 // Format milliseconds to MM:SS
@@ -154,6 +156,7 @@ export function VideoStatsTimeline({
   onClockPause,
   onClockResume,
   onScoresChanged,
+  pendingStats = [],
 }: VideoStatsTimelineProps) {
   
   // Helper to get display name for a stat (handles opponent stats)
@@ -259,9 +262,34 @@ export function VideoStatsTimeline({
   const timelineEntries = useMemo((): TimelineEntry[] => {
     const entries: TimelineEntry[] = [];
     
-    // Add stats - convert gameClockSeconds to minutes/seconds
+    // ✅ OPTIMISTIC: Add pending stats first (they appear at top)
+    pendingStats.forEach(stat => {
+      const totalSeconds = stat.gameClockSeconds || 0;
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      
+      entries.push({
+        id: stat.id,
+        type: 'stat',
+        quarter: stat.quarter,
+        gameTimeMinutes: minutes,
+        gameTimeSeconds: seconds,
+        createdAt: stat.createdAt || '',
+        stat,
+      });
+    });
+    
+    // Add confirmed stats - convert gameClockSeconds to minutes/seconds
     stats.forEach(stat => {
-      // VideoStat has gameClockSeconds (total), convert to minutes/seconds
+      // Skip if this stat is already in pending (avoid duplicates during reconciliation)
+      if (pendingStats.some(p => 
+        p.videoTimestampMs === stat.videoTimestampMs &&
+        p.statType === stat.statType &&
+        p.teamId === stat.teamId
+      )) {
+        return;
+      }
+      
       const totalSeconds = stat.gameClockSeconds || 0;
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
@@ -296,7 +324,7 @@ export function VideoStatsTimeline({
     entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     
     return entries;
-  }, [stats, substitutions, getPlayerNameById]);
+  }, [stats, substitutions, pendingStats, getPlayerNameById]);
 
   // Filter by quarter
   const filteredEntries = useMemo(() => {

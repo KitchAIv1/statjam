@@ -47,6 +47,8 @@ interface UseVideoStatEntryProps {
   gameClock: GameClock | null;
   onStatRecorded?: (statType: string, statId?: string) => void;
   onBeforeRecord?: () => void;
+  // ✅ OPTIMISTIC UI: Callback with full stat object for immediate timeline display
+  onOptimisticStatAdded?: (stat: import('@/lib/types/video').VideoStat) => void;
   isCoachMode?: boolean;
   userId?: string;
   opponentName?: string;
@@ -63,7 +65,7 @@ interface UseVideoStatEntryProps {
 export function useVideoStatEntry(props: UseVideoStatEntryProps) {
   const {
     gameId, videoId, currentVideoTimeMs, gameClock,
-    onStatRecorded, onBeforeRecord,
+    onStatRecorded, onBeforeRecord, onOptimisticStatAdded,
     isCoachMode = false, userId, opponentName,
     preloadedTeamAPlayers, preloadedTeamBPlayers, preloadedGameData,
     sequenceFlags = DEFAULT_SEQUENCE_FLAGS, // ✅ Default: all auto-prompts enabled
@@ -101,7 +103,7 @@ export function useVideoStatEntry(props: UseVideoStatEntryProps) {
     sequenceFlags, // ✅ NEW: Controls auto-prompts
     setIsRecording, setSelectedPlayer, setShowSubModal,
     setOnCourtA, setBenchA, setOnCourtB, setBenchB,
-    onStatRecorded, onBeforeRecord,
+    onStatRecorded, onBeforeRecord, onOptimisticStatAdded,
     showAssistPrompt, showReboundPrompt, showReboundTypePrompt, showTurnoverPrompt,
     showTurnoverTypePrompt, showFoulTypePrompt, showBlockedShotPrompt,
     showBlockedShooterPrompt, showFreeThrowPrompt, showFouledPlayerPrompt,

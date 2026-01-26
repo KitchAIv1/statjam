@@ -12,6 +12,7 @@
 import { useCallback } from 'react';
 import { StatBatchQueue } from '@/lib/services/statBatchQueue';
 import { GameService } from '@/lib/services/gameService';
+import { buildOptimisticStat } from '@/lib/services/OptimisticStatBuilder';
 import { getShotValue } from '@/hooks/useVideoStatPrompts';
 import type { GameClock } from '@/lib/types/video';
 import type { SequenceAutomationFlags } from '@/lib/types/automation';
@@ -103,6 +104,8 @@ interface UseVideoStatHandlersProps {
   setBenchB: React.Dispatch<React.SetStateAction<Player[]>>;
   onStatRecorded?: (statType: string, statId?: string) => void;
   onBeforeRecord?: () => void;
+  // ✅ OPTIMISTIC UI: Callback with full stat object for immediate timeline display
+  onOptimisticStatAdded?: (stat: import('@/lib/types/video').VideoStat) => void;
   // Prompt functions
   showAssistPrompt: (e: LastEventInfo) => void;
   showReboundPrompt: (e: LastEventInfo) => void;
@@ -127,7 +130,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     sequenceFlags = DEFAULT_SEQUENCE_FLAGS, // ✅ Default: all auto-prompts enabled
     setIsRecording, setSelectedPlayer, setShowSubModal,
     setOnCourtA, setBenchA, setOnCourtB, setBenchB,
-    onStatRecorded, onBeforeRecord,
+    onStatRecorded, onBeforeRecord, onOptimisticStatAdded,
     showAssistPrompt, showReboundPrompt, showReboundTypePrompt, showTurnoverPrompt,
     showTurnoverTypePrompt, showFoulTypePrompt, showBlockedShotPrompt,
     showBlockedShooterPrompt, showFreeThrowPrompt, showFouledPlayerPrompt,
@@ -176,6 +179,20 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       }
     }
 
+    // ✅ OPTIMISTIC UI: Build stat object for immediate timeline display
+    const optimisticStat = buildOptimisticStat({
+      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId, statType, modifier,
+      videoTimestampMs: currentVideoTimeMs, quarter: gameClock.quarter,
+      gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+      playerName, jerseyNumber: String(playerData?.jerseyNumber || ''),
+      shotLocationX: locationData?.shotLocationX,
+      shotLocationY: locationData?.shotLocationY,
+      shotZone: locationData?.shotZone,
+    });
+    
+    // ✅ OPTIMISTIC: Show in timeline IMMEDIATELY (before DB write)
+    onOptimisticStatAdded?.(optimisticStat);
+    
     // ✅ OPTIMIZED: Use batch queue to prevent connection storms
     // Queue the stat insert - batch queue flushes periodically
     StatBatchQueue.queueStat({
@@ -240,7 +257,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     }
 
     setSelectedPlayer(null);
-  }, [selectedPlayer, gameData, gameClock, selectedTeam, gameId, videoId, currentVideoTimeMs, onStatRecorded, onBeforeRecord, teamAPlayers, teamBPlayers, showAssistPrompt, showReboundPrompt, showTurnoverPrompt, showBlockedShotPrompt, isCoachMode, userId, opponentName, setSelectedPlayer, autoPromptAssists, autoPromptRebounds, autoPromptBlocks]);
+  }, [selectedPlayer, gameData, gameClock, selectedTeam, gameId, videoId, currentVideoTimeMs, onStatRecorded, onBeforeRecord, onOptimisticStatAdded, teamAPlayers, teamBPlayers, showAssistPrompt, showReboundPrompt, showTurnoverPrompt, showBlockedShotPrompt, isCoachMode, userId, opponentName, setSelectedPlayer, autoPromptAssists, autoPromptRebounds, autoPromptBlocks]);
 
   // Turnover handlers
   const handleInitiateTurnover = useCallback(() => {
