@@ -159,6 +159,15 @@ export default function VideoCompositionTestPage() {
         notify.warning('Select a game first', 'Please choose a game to start composition');
         return;
       }
+      if (!activeVideoStream) {
+        // Check if iPhone is selected but not connected
+        if (videoSourceState.activeSource === 'iphone' && videoSourceState.connectionStatus !== 'connected') {
+          notify.warning('iPhone not connected', 'Wait for iPhone to connect or select a different source');
+        } else {
+          notify.warning('No video source', 'Select a video source (webcam, iPhone, or screen) first');
+        }
+        return;
+      }
       await startComposition();
       notify.success('Composition started', 'Video and overlay are now composing');
     }
@@ -322,8 +331,15 @@ export default function VideoCompositionTestPage() {
               <div className="flex items-center justify-between mb-2 flex-shrink-0">
                 <h3 className="text-sm font-semibold">Preview</h3>
                 {!isComposing ? (
-                  <Button onClick={handleToggleComposition} size="sm" className="h-7 text-xs">
-                    Start Composition
+                  <Button 
+                    onClick={handleToggleComposition} 
+                    size="sm" 
+                    className="h-7 text-xs"
+                    disabled={!activeVideoStream || !overlayData}
+                  >
+                    {videoSourceState.activeSource === 'iphone' && videoSourceState.connectionStatus === 'connecting' 
+                      ? 'Connecting...' 
+                      : 'Start Composition'}
                   </Button>
                 ) : (
                   <Button onClick={handleToggleComposition} variant="destructive" size="sm" className="h-7 text-xs">

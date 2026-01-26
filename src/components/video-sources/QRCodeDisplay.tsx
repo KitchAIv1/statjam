@@ -9,16 +9,24 @@
 
 import { useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Check, ExternalLink } from 'lucide-react';
+import { Copy, Check, ExternalLink, Loader2, CheckCircle } from 'lucide-react';
 import { createSimplePairingUrl } from '@/lib/services/video-sources';
+import { ConnectionStatus } from '@/lib/services/video-sources/types';
 import { Button } from '@/components/ui/Button';
 
 interface QRCodeDisplayProps {
   gameId: string;
   onConnect: () => void;
+  isActive?: boolean;
+  connectionStatus?: ConnectionStatus;
 }
 
-export function QRCodeDisplay({ gameId, onConnect }: QRCodeDisplayProps) {
+export function QRCodeDisplay({ 
+  gameId, 
+  onConnect, 
+  isActive = false,
+  connectionStatus = 'idle' 
+}: QRCodeDisplayProps) {
   const [copied, setCopied] = useState(false);
   
   const pairingUrl = useMemo(() => {
@@ -36,8 +44,40 @@ export function QRCodeDisplay({ gameId, onConnect }: QRCodeDisplayProps) {
     }
   };
 
+  const isConnected = connectionStatus === 'connected';
+  const isConnecting = connectionStatus === 'connecting';
+  const isWaiting = isActive && !isConnected;
+
   return (
     <div className="bg-white rounded-lg p-4 text-center">
+      {/* Connection Status Banner */}
+      {isActive && (
+        <div className={`mb-3 py-2 px-3 rounded text-xs font-medium ${
+          isConnected 
+            ? 'bg-green-100 text-green-700' 
+            : isConnecting 
+              ? 'bg-yellow-100 text-yellow-700'
+              : 'bg-blue-100 text-blue-700'
+        }`}>
+          {isConnected ? (
+            <span className="flex items-center justify-center gap-1">
+              <CheckCircle className="h-3 w-3" />
+              iPhone Connected!
+            </span>
+          ) : isConnecting ? (
+            <span className="flex items-center justify-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Connecting to iPhone...
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Waiting for iPhone to scan QR...
+            </span>
+          )}
+        </div>
+      )}
+      
       <QRCodeSVG
         value={pairingUrl}
         size={140}
@@ -83,14 +123,21 @@ export function QRCodeDisplay({ gameId, onConnect }: QRCodeDisplayProps) {
         </a>
       </div>
       
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onConnect}
-        className="mt-3 text-xs w-full"
-      >
-        I've scanned it - Connect
-      </Button>
+      {/* Show different button state based on connection */}
+      {!isActive ? (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onConnect}
+          className="mt-3 text-xs w-full"
+        >
+          Use iPhone Camera
+        </Button>
+      ) : isWaiting ? (
+        <p className="mt-3 text-[10px] text-amber-600">
+          Have iPhone scan QR code, then wait for connection
+        </p>
+      ) : null}
     </div>
   );
 }

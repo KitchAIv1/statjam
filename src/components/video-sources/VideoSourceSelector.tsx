@@ -166,7 +166,12 @@ export function VideoSourceSelector({
           
           {expandedSection === 'iphone' && gameId && (
             <div className="mt-2 animate-in slide-in-from-top-1 duration-200">
-              <QRCodeDisplay gameId={gameId} onConnect={onSelectiPhone} />
+              <QRCodeDisplay 
+                gameId={gameId} 
+                onConnect={onSelectiPhone} 
+                isActive={activeSource === 'iphone'}
+                connectionStatus={activeSource === 'iphone' ? connectionStatus : 'idle'}
+              />
             </div>
           )}
         </div>
