@@ -386,6 +386,11 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     
     try {
       setIsSyncingStats(true);
+      
+      // ✅ FIX: Clear pending optimistic stats BEFORE refresh to prevent duplicates
+      // When user clicks "Sync Stats", they want authoritative DB data
+      optimisticTimeline.clearPendingStats();
+      
       const count = await VideoStatService.backfillVideoTimestamps(gameId, clockSyncConfig);
       console.log(`✅ Synced ${count} existing stats`);
       
@@ -393,15 +398,14 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
       await VideoStatService.backfillGameClockFromStats(gameId);
       console.log('✅ Game clock synced for minutes calculation');
       
-      if (count > 0) {
-        setTimelineRefreshTrigger(prev => prev + 1);
-      }
+      // Always refresh timeline after sync to show latest DB state
+      setTimelineRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('❌ Error syncing stats:', error);
     } finally {
       setIsSyncingStats(false);
     }
-  }, [clockSyncConfig, gameId]);
+  }, [clockSyncConfig, gameId, optimisticTimeline]);
   
   // Register stat handlers from VideoStatEntryPanel
   const handleRegisterStatHandlers = useCallback((handlers: VideoStatHandlers) => {
@@ -1454,6 +1458,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                         onClockResume={handleClockResume}
                         onScoresChanged={loadScores}
                         pendingStats={optimisticTimeline.pendingStats}
+                        onClearPendingStats={optimisticTimeline.clearPendingStats}
                       />
                     </div>
                   </div>
@@ -1639,6 +1644,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                   onClockResume={handleClockResume}
                   onScoresChanged={loadScores}
                   pendingStats={optimisticTimeline.pendingStats}
+                  onClearPendingStats={optimisticTimeline.clearPendingStats}
                 />
               </div>
             </div>

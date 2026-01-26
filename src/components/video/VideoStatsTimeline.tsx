@@ -65,6 +65,8 @@ interface VideoStatsTimelineProps {
   onScoresChanged?: () => void;
   // ✅ OPTIMISTIC UI: Pending stats to show immediately before DB confirmation
   pendingStats?: VideoStat[];
+  // ✅ Callback to clear pending stats (called when user manually refreshes)
+  onClearPendingStats?: () => void;
 }
 
 // Format milliseconds to MM:SS
@@ -157,6 +159,7 @@ export function VideoStatsTimeline({
   onClockResume,
   onScoresChanged,
   pendingStats = [],
+  onClearPendingStats,
 }: VideoStatsTimelineProps) {
   
   // Helper to get display name for a stat (handles opponent stats)
@@ -282,10 +285,17 @@ export function VideoStatsTimeline({
     // Add confirmed stats - convert gameClockSeconds to minutes/seconds
     stats.forEach(stat => {
       // Skip if this stat is already in pending (avoid duplicates during reconciliation)
+      // Use 1000ms tolerance for timestamp matching to handle minor timing differences
+      const TIMESTAMP_TOLERANCE_MS = 1000;
       if (pendingStats.some(p => 
-        p.videoTimestampMs === stat.videoTimestampMs &&
+        Math.abs(p.videoTimestampMs - stat.videoTimestampMs) < TIMESTAMP_TOLERANCE_MS &&
         p.statType === stat.statType &&
-        p.teamId === stat.teamId
+        p.teamId === stat.teamId &&
+        p.quarter === stat.quarter &&
+        // Match on player identity (either playerId, customPlayerId, or playerName for opponent stats)
+        (p.playerId === stat.playerId || 
+         p.customPlayerId === stat.customPlayerId ||
+         (p.isOpponentStat && stat.isOpponentStat))
       )) {
         return;
       }
@@ -608,6 +618,8 @@ export function VideoStatsTimeline({
             type="button"
             onClick={async () => {
               setIsRefreshing(true);
+              // ✅ FIX: Clear pending stats before refresh to prevent duplicates
+              onClearPendingStats?.();
               await silentRefresh();
               setIsRefreshing(false);
             }}
