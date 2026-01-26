@@ -2,12 +2,16 @@
  * Video Source Manager
  * 
  * Manages video element and stream lifecycle.
+ * Handles rotation detection for iPhone streams.
  * Extracted from VideoComposer to keep service under 200 lines.
  */
+
+import { detectVideoOrientation, VideoOrientation } from '@/lib/utils/videoRotation';
 
 export class VideoSourceManager {
   private videoElement: HTMLVideoElement | null = null;
   private videoStream: MediaStream | null = null;
+  private orientation: VideoOrientation | null = null;
   
   setSource(stream: MediaStream | null): Promise<HTMLVideoElement | null> {
     this.cleanup();
@@ -28,6 +32,8 @@ export class VideoSourceManager {
           .then(() => {
             this.videoElement = video;
             this.videoStream = stream;
+            // Detect rotation after video metadata is loaded
+            this.orientation = detectVideoOrientation(video);
             resolve(video);
           })
           .catch(err => {
@@ -100,6 +106,14 @@ export class VideoSourceManager {
   
   getVideoElement(): HTMLVideoElement | null {
     return this.videoElement;
+  }
+  
+  getOrientation(): VideoOrientation | null {
+    return this.orientation;
+  }
+  
+  needsRotation(): boolean {
+    return this.orientation?.needsRotation ?? false;
   }
   
   cleanup(): void {

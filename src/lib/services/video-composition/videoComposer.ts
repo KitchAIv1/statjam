@@ -132,13 +132,17 @@ export class VideoComposer {
     this.composedStream = this.canvas.captureStream(this.frameRate);
     
     console.log('VideoComposer.startComposition: Creating composition loop...');
+    // Check if video needs rotation (common with iPhone streams)
+    const needsRotation = this.videoSourceManager.needsRotation();
+    
     // Create and start composition loop
     this.compositionLoop = new CompositionLoop(
       this.ctx,
       this.overlayRenderer,
       videoElement,
       this.width,
-      this.height
+      this.height,
+      needsRotation
     );
     
     this.compositionLoop.start(overlayData, {

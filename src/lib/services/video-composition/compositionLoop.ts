@@ -19,6 +19,7 @@ export class CompositionLoop {
   private videoElement: HTMLVideoElement;
   private width: number;
   private height: number;
+  private needsRotation: boolean;
   private animationFrameId: number | null = null;
   private isRunning = false;
   private frameCount = 0;
@@ -30,13 +31,19 @@ export class CompositionLoop {
     overlayRenderer: CanvasOverlayRenderer,
     videoElement: HTMLVideoElement,
     width: number,
-    height: number
+    height: number,
+    needsRotation = false
   ) {
     this.ctx = ctx;
     this.overlayRenderer = overlayRenderer;
     this.videoElement = videoElement;
     this.width = width;
     this.height = height;
+    this.needsRotation = needsRotation;
+    
+    if (needsRotation) {
+      console.log('🔄 [CompositionLoop] Rotation enabled for portrait video stream');
+    }
   }
   
   start(initialOverlayData: GameOverlayData, callbacks?: CompositionLoopCallbacks): void {
@@ -80,6 +87,44 @@ export class CompositionLoop {
     return this.frameCount;
   }
   
+  /**
+   * Draw video frame with rotation correction if needed.
+   * For portrait iPhone streams, rotates 90° clockwise to show landscape.
+   */
+  private drawVideoFrame(): void {
+    if (this.needsRotation) {
+      // Video is portrait but should be landscape - rotate 90° clockwise
+      const { videoWidth, videoHeight } = this.videoElement;
+      
+      this.ctx.save();
+      // Move to center, rotate, then draw offset so video fills canvas
+      this.ctx.translate(this.width / 2, this.height / 2);
+      this.ctx.rotate(Math.PI / 2); // 90° clockwise
+      
+      // After rotation, draw centered (swap width/height for drawing)
+      const drawWidth = this.height;  // After rotation: canvas height becomes draw width
+      const drawHeight = this.width;  // After rotation: canvas width becomes draw height
+      
+      this.ctx.drawImage(
+        this.videoElement,
+        -drawWidth / 2,
+        -drawHeight / 2,
+        drawWidth,
+        drawHeight
+      );
+      this.ctx.restore();
+    } else {
+      // Normal draw - no rotation needed
+      this.ctx.drawImage(
+        this.videoElement,
+        0,
+        0,
+        this.width,
+        this.height
+      );
+    }
+  }
+  
   private async composeFrame(overlayData: GameOverlayData): Promise<void> {
     if (!this.isRunning) {
       return;
@@ -110,13 +155,7 @@ export class CompositionLoop {
       // Draw video frame (only if video has dimensions)
       if (this.videoElement.videoWidth > 0 && this.videoElement.videoHeight > 0) {
         try {
-          this.ctx.drawImage(
-            this.videoElement,
-            0,
-            0,
-            this.width,
-            this.height
-          );
+          this.drawVideoFrame();
         } catch (drawError) {
           console.warn('Video drawImage error (non-fatal):', drawError);
           // Fill with black if draw fails

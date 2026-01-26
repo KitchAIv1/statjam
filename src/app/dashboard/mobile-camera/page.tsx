@@ -185,20 +185,26 @@ function MobileCameraPageContent() {
           console.warn('⚠️ Could not enumerate devices, falling back to facingMode:', enumError);
         }
         
-        // Request rear camera with high quality
+        // Request rear camera with HIGH QUALITY + LANDSCAPE constraints
+        // Using min values ensures quality doesn't degrade during WebRTC
+        // aspectRatio forces landscape orientation for basketball court view
         const constraints: MediaStreamConstraints = {
           video: rearCameraId
             ? {
-                deviceId: { exact: rearCameraId }, // Explicit device selection
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
+                deviceId: { exact: rearCameraId },
+                width: { min: 1280, ideal: 1920 },
+                height: { min: 720, ideal: 1080 },
+                aspectRatio: { ideal: 16/9 },
+                frameRate: { min: 24, ideal: 30 },
               }
             : {
-                facingMode: 'environment', // Fallback to facingMode
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
+                facingMode: { exact: 'environment' },
+                width: { min: 1280, ideal: 1920 },
+                height: { min: 720, ideal: 1080 },
+                aspectRatio: { ideal: 16/9 },
+                frameRate: { min: 24, ideal: 30 },
               },
-          audio: false, // No audio for MVP
+          audio: false,
         };
         
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -418,10 +424,6 @@ function MobileCameraPageContent() {
     </div>
   );
 }
-
-
-// Force dynamic rendering (required for useSearchParams)
-export const dynamic = 'force-dynamic';
 
 export default function MobileCameraPage() {
   return (
