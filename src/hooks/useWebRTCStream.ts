@@ -176,27 +176,37 @@ export function useWebRTCStream({
       const peer = createPeer(signaling);
       const isInitiator = role === 'mobile';
 
-      // Set up signaling listeners
+      // Helper to safely signal peer (guards against destroyed peer)
+      const safeSignal = (data: string, type: string) => {
+        const currentPeer = peerRef.current;
+        if (!currentPeer || currentPeer.destroyed) {
+          console.log(`⏸️ [WebRTC Hook] Ignoring ${type} - peer not ready or destroyed`);
+          return;
+        }
+        try {
+          currentPeer.signal(JSON.parse(data));
+        } catch (e) {
+          console.error(`❌ [WebRTC Hook] Error signaling ${type}:`, e);
+        }
+      };
+
+      // Set up signaling listeners (use peerRef.current via safeSignal for reconnect support)
       if (isInitiator) {
         signaling.onAnswer((answerSdp) => {
           console.log('📥 [WebRTC Hook] Received answer');
-          try { peer.signal(JSON.parse(answerSdp)); } catch (e) { console.error('❌ Parse error:', e); }
+          safeSignal(answerSdp, 'answer');
         });
       } else {
         signaling.onOffer((offerSdp) => {
           console.log('📥 [WebRTC Hook] Received offer');
-          try {
-            if (peerRef.current) peerRef.current.signal(JSON.parse(offerSdp));
-          } catch (e) { console.error('❌ Parse error:', e); }
+          safeSignal(offerSdp, 'offer');
         });
       }
 
       // ICE candidates listener
       signaling.onCandidate((candidateData) => {
         console.log('📥 [WebRTC Hook] Received ICE candidate');
-        try {
-          if (peerRef.current) peerRef.current.signal(JSON.parse(candidateData));
-        } catch (e) { console.error('❌ Parse error:', e); }
+        safeSignal(candidateData, 'candidate');
       });
 
       // CRITICAL: Listen for reconnect requests from the other peer
