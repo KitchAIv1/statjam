@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useWebRTCStream } from '@/hooks/useWebRTCStream';
 import { isRealtimeConfigured } from '@/lib/services/webrtcService';
@@ -75,6 +76,7 @@ function sortGamesByCreatedAt(games: LiveGame[], allGames: any[]): LiveGame[] {
 
 export default function MobileCameraPage() {
   const { user } = useAuthContext();
+  const searchParams = useSearchParams();
   const [games, setGames] = useState<LiveGame[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -85,6 +87,16 @@ export default function MobileCameraPage() {
 
   // Get organizer's tournaments (same pattern as OrganizerLiveStream)
   const { tournaments } = useTournaments(user);
+
+  // Auto-select game from QR code URL parameter (only after camera is ready)
+  useEffect(() => {
+    const gameIdFromUrl = searchParams.get('game');
+    if (gameIdFromUrl && !selectedGameId && localStream) {
+      console.log('📱 Auto-selecting game from QR code:', gameIdFromUrl);
+      console.log('📹 Camera stream ready, starting WebRTC connection');
+      setSelectedGameId(gameIdFromUrl);
+    }
+  }, [searchParams, selectedGameId, localStream]);
 
   // Initialize WebRTC connection
   const { connectionStatus, error: webrtcError } = useWebRTCStream({
@@ -357,6 +369,27 @@ export default function MobileCameraPage() {
           {!selectedGameId && !cameraError && (
             <div className="text-center text-sm text-muted-foreground">
               Select a game above to start streaming
+            </div>
+          )}
+
+          {selectedGameId && connectionStatus === 'connecting' && (
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-4 py-2">
+                <Wifi className="w-4 h-4 text-yellow-500 animate-pulse" />
+                <span className="text-sm font-medium text-yellow-500">Connecting to Studio...</span>
+              </div>
+            </div>
+          )}
+
+          {selectedGameId && connectionStatus === 'idle' && (
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-4 py-2">
+                <WifiOff className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium text-blue-500">Waiting for Studio...</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Make sure the Studio page has iPhone source selected
+              </p>
             </div>
           )}
 

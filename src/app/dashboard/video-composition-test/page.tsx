@@ -69,7 +69,12 @@ export default function VideoCompositionTestPage() {
   const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();
   
   // WebRTC for iPhone streaming
-  const { remoteStream: iphoneStream, connectionStatus: iphoneConnectionStatus } = useWebRTCStream({ gameId: selectedGameId, role: 'dashboard' });
+  const { remoteStream: iphoneStream, connectionStatus: iphoneConnectionStatus, reconnect: reconnectWebRTC } = useWebRTCStream({ gameId: selectedGameId, role: 'dashboard' });
+  
+  // Log WebRTC status changes for debugging
+  useEffect(() => {
+    console.log(`🔌 [Studio] WebRTC status: ${iphoneConnectionStatus}, stream: ${iphoneStream ? 'available' : 'null'}`);
+  }, [iphoneConnectionStatus, iphoneStream]);
   
   // Map WebRTC connection status to our ConnectionStatus type
   const mappedIphoneStatus: ConnectionStatus = iphoneConnectionStatus === 'connected' ? 'connected' 
