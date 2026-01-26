@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useWebRTCStream } from '@/hooks/useWebRTCStream';
@@ -74,7 +74,7 @@ function sortGamesByCreatedAt(games: LiveGame[], allGames: any[]): LiveGame[] {
   });
 }
 
-export default function MobileCameraPage() {
+function MobileCameraPageContent() {
   const { user } = useAuthContext();
   const searchParams = useSearchParams();
   const [games, setGames] = useState<LiveGame[]>([]);
@@ -419,3 +419,21 @@ export default function MobileCameraPage() {
   );
 }
 
+
+// Force dynamic rendering (required for useSearchParams)
+export const dynamic = 'force-dynamic';
+
+export default function MobileCameraPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <div className="text-center">
+          <Video className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <p className="text-sm text-muted-foreground">Loading camera...</p>
+        </div>
+      </div>
+    }>
+      <MobileCameraPageContent />
+    </Suspense>
+  );
+}
