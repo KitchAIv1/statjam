@@ -229,10 +229,9 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
   const scoreRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Handle stat recorded - store ID for undo + refresh scores + auto-freeze on foul
+  // ✅ OPTIMISTIC UI: No longer triggers timeline refresh (optimistic stat already shows)
   const handleStatRecorded = useCallback((statType: string, statId?: string) => {
-    // ✅ FIX: Trigger timeline refresh on EVERY stat (no batching)
-      setTimelineRefreshTrigger(prev => prev + 1);
-    
+    // Store stat ID for undo functionality
     if (statId) {
       setLastRecordedStatId(statId);
     }

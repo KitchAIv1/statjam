@@ -239,6 +239,14 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
         // Sequence #6: Steal → Turnover Prompt (or auto-record in coach mode)
         if (isCoachMode) {
           // ✅ Coach mode: Auto-record opponent turnover (not affected by manual mode - it's a linked stat)
+          // ✅ OPTIMISTIC UI: Build and show linked turnover immediately
+          const linkedTurnoverStat = buildOptimisticStat({
+            gameId, videoId, playerId: userId, isOpponentStat: true, teamId: gameData.team_a_id,
+            statType: 'turnover', modifier: 'steal', videoTimestampMs: currentVideoTimeMs,
+            quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+            playerName: opponentName || 'Opponent', jerseyNumber: '',
+          });
+          onOptimisticStatAdded?.(linkedTurnoverStat);
           onStatRecorded?.('turnover');
           StatBatchQueue.queueStat({
             gameId, videoId, playerId: userId, isOpponentStat: true, teamId: gameData.team_a_id,
@@ -286,6 +294,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     const modifier = turnoverType === 'other' ? undefined : turnoverType;
     
     const isOpponentStat = lastEvent.isOpponentStat === true;
+    const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastEvent.playerId);
     let playerId: string | undefined;
     let customPlayerId: string | undefined;
     let teamId = lastEvent.teamId;
@@ -295,7 +304,6 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       teamId = gameData.team_a_id;
     } else {
       // ✅ FIX: Check is_custom_player for BOTH coach and organizer games
-      const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastEvent.playerId);
       const isCustomPlayer = playerData?.is_custom_player || lastEvent.playerId.startsWith('custom-');
       if (isCustomPlayer) {
         customPlayerId = lastEvent.playerId;
@@ -305,6 +313,15 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
         customPlayerId = undefined;
       }
     }
+    
+    // ✅ OPTIMISTIC UI: Build and show stat immediately
+    const optimisticStat = buildOptimisticStat({
+      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
+      statType: 'turnover', modifier, videoTimestampMs: lastEvent.videoTimestampMs,
+      quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+      playerName: lastEvent.playerName, jerseyNumber: String(playerData?.jerseyNumber || ''),
+    });
+    onOptimisticStatAdded?.(optimisticStat);
     
     // ✅ OPTIMIZED: Trigger timeline refresh immediately
     onStatRecorded?.('turnover');
@@ -320,7 +337,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     // UI updates immediately
       setSelectedPlayer(null);
       closePrompt();
-  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, isCoachMode, userId, teamAPlayers, setSelectedPlayer]);
+  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, onOptimisticStatAdded, closePrompt, userId, teamAPlayers, teamBPlayers, setSelectedPlayer]);
 
   // Rebound handlers (standalone R key press - not sequence after missed shot)
   const handleInitiateRebound = useCallback(() => {
@@ -348,6 +365,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     if (!lastEvent || !gameClock || !gameData) return;
     
     const isOpponentStat = lastEvent.isOpponentStat === true;
+    const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastEvent.playerId);
     let playerId: string | undefined;
     let customPlayerId: string | undefined;
     let teamId = lastEvent.teamId;
@@ -357,7 +375,6 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       teamId = gameData.team_a_id;
     } else {
       // ✅ FIX: Check is_custom_player for BOTH coach and organizer games
-      const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastEvent.playerId);
       const isCustomPlayer = playerData?.is_custom_player || lastEvent.playerId.startsWith('custom-');
       if (isCustomPlayer) {
         customPlayerId = lastEvent.playerId;
@@ -367,6 +384,15 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
         customPlayerId = undefined;
       }
     }
+    
+    // ✅ OPTIMISTIC UI: Build and show stat immediately
+    const optimisticStat = buildOptimisticStat({
+      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
+      statType: 'rebound', modifier: reboundType, videoTimestampMs: lastEvent.videoTimestampMs,
+      quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+      playerName: lastEvent.playerName, jerseyNumber: String(playerData?.jerseyNumber || ''),
+    });
+    onOptimisticStatAdded?.(optimisticStat);
     
     // ✅ OPTIMIZED: Trigger timeline refresh immediately
     onStatRecorded?.('rebound');
@@ -382,7 +408,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     // UI updates immediately
       setSelectedPlayer(null);
       closePrompt();
-  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, isCoachMode, userId, teamAPlayers, setSelectedPlayer]);
+  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, onOptimisticStatAdded, closePrompt, userId, teamAPlayers, teamBPlayers, setSelectedPlayer]);
 
   // Foul handlers
   const handleInitiateFoul = useCallback(() => {
@@ -410,6 +436,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     if (!lastEvent || !gameClock || !gameData) return;
     
     const isOpponentStat = lastEvent.isOpponentStat === true;
+    const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastEvent.playerId);
     let playerId: string | undefined;
     let customPlayerId: string | undefined;
     let teamId = lastEvent.teamId;
@@ -419,7 +446,6 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
       teamId = gameData.team_a_id;
     } else {
       // ✅ FIX: Check is_custom_player for BOTH coach and organizer games
-      const playerData = [...teamAPlayers, ...teamBPlayers].find(p => p.id === lastEvent.playerId);
       const isCustomPlayer = playerData?.is_custom_player || lastEvent.playerId.startsWith('custom-');
       if (isCustomPlayer) {
         customPlayerId = lastEvent.playerId;
@@ -429,6 +455,15 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
         customPlayerId = undefined;
       }
     }
+    
+    // ✅ OPTIMISTIC UI: Build and show stat immediately
+    const optimisticStat = buildOptimisticStat({
+      gameId, videoId, playerId, customPlayerId, isOpponentStat, teamId,
+      statType: 'foul', modifier: foulType, videoTimestampMs: lastEvent.videoTimestampMs,
+      quarter: gameClock.quarter, gameTimeMinutes: gameClock.minutesRemaining, gameTimeSeconds: gameClock.secondsRemaining,
+      playerName: lastEvent.playerName, jerseyNumber: String(playerData?.jerseyNumber || ''),
+    });
+    onOptimisticStatAdded?.(optimisticStat);
     
     // ✅ OPTIMIZED: Trigger timeline refresh immediately
     onStatRecorded?.('foul');
@@ -475,7 +510,7 @@ export function useVideoStatHandlers(props: UseVideoStatHandlersProps) {
     // No follow-up prompt needed (either ftCount=0 or manual mode)
     setSelectedPlayer(null);
     closePrompt();
-  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, closePrompt, showFreeThrowPrompt, showFouledPlayerPrompt, isCoachMode, userId, opponentName, teamAPlayers, setSelectedPlayer, autoFreeThrowSequence]);
+  }, [lastEvent, gameClock, gameData, gameId, videoId, onStatRecorded, onOptimisticStatAdded, closePrompt, showFreeThrowPrompt, showFouledPlayerPrompt, userId, opponentName, teamAPlayers, teamBPlayers, setSelectedPlayer, autoFreeThrowSequence]);
 
   // Free throw handler - ✅ OPTIMIZED: Batch inserts with Promise.all
   const handleFreeThrowComplete = useCallback(async (results: { made: boolean }[]) => {
