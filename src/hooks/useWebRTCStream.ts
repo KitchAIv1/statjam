@@ -25,9 +25,18 @@ interface UseWebRTCStreamReturn {
   disconnect: () => void;
 }
 
+// ICE servers configuration
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+];
+
 /**
  * Custom hook for managing WebRTC peer connections using Simple-Peer
  * Handles both mobile camera (initiator) and dashboard viewer (receiver) roles
+ * Supports bidirectional reconnection sync
  */
 export function useWebRTCStream({
   gameId,
@@ -48,253 +57,198 @@ export function useWebRTCStream({
 
   // Update parent component when status changes
   useEffect(() => {
-    if (onConnectionStatus) {
-      onConnectionStatus(connectionStatus);
-    }
+    if (onConnectionStatus) onConnectionStatus(connectionStatus);
   }, [connectionStatus, onConnectionStatus]);
 
-  // Update status helper
   const updateStatus = useCallback((status: ConnectionStatus) => {
     console.log(`🔄 [WebRTC Hook] Status changed: ${status}`);
     setConnectionStatus(status);
   }, []);
 
-  // Cleanup function
-  const cleanup = useCallback(() => {
-    console.log('🧹 [WebRTC Hook] Cleaning up...');
-
+  // Cleanup peer only (keep signaling channel open)
+  const cleanupPeerOnly = useCallback(() => {
     if (peerRef.current) {
-      try {
-        peerRef.current.destroy();
-      } catch (err) {
-        console.warn('⚠️ Error destroying peer:', err);
-      }
+      try { peerRef.current.destroy(); } catch (e) { console.warn('⚠️ Error destroying peer:', e); }
       peerRef.current = null;
     }
-
-    if (signalingRef.current) {
-      signalingRef.current.leaveRoom().catch(err => {
-        console.warn('⚠️ Error leaving signaling room:', err);
-      });
-      signalingRef.current = null;
-    }
-
-    isInitializedRef.current = false;
   }, []);
 
-  // Initialize WebRTC connection
+  // Full cleanup (peer + signaling)
+  const cleanup = useCallback(() => {
+    console.log('🧹 [WebRTC Hook] Full cleanup...');
+    cleanupPeerOnly();
+    if (signalingRef.current) {
+      signalingRef.current.leaveRoom().catch(e => console.warn('⚠️ Error leaving room:', e));
+      signalingRef.current = null;
+    }
+    isInitializedRef.current = false;
+  }, [cleanupPeerOnly]);
+
+  // Create a new SimplePeer instance with existing signaling
+  const createPeer = useCallback((signaling: WebRTCSignalingService) => {
+    const isInitiator = role === 'mobile';
+    console.log(`🔧 [WebRTC Hook] Creating SimplePeer (initiator: ${isInitiator})`);
+
+    const peer = new SimplePeer({
+      initiator: isInitiator,
+      stream: localStream || undefined,
+      trickle: true,
+      config: { iceServers: ICE_SERVERS, sdpSemantics: 'unified-plan', iceTransportPolicy: 'all' },
+    });
+
+    peerRef.current = peer;
+
+    // Signal handler
+    peer.on('signal', async (signalData) => {
+      console.log('📡 [WebRTC Hook] Signal generated:', signalData.type || 'candidate');
+      try {
+        if (signalData.type === 'offer') await signaling.sendOffer(JSON.stringify(signalData));
+        else if (signalData.type === 'answer') await signaling.sendAnswer(JSON.stringify(signalData));
+        else if (signalData.candidate) await signaling.sendCandidate(JSON.stringify(signalData));
+      } catch (err) {
+        console.error('❌ [WebRTC Hook] Error sending signal:', err);
+      }
+    });
+
+    // Stream handler
+    peer.on('stream', (stream: MediaStream) => {
+      console.log('📹 [WebRTC Hook] Received remote stream');
+      setRemoteStream(stream);
+      if (onRemoteStream) onRemoteStream(stream);
+    });
+
+    // Connection success
+    peer.on('connect', () => {
+      console.log('✅ [WebRTC Hook] Peer connected');
+      reconnectAttempts.current = 0;
+      updateStatus('connected');
+    });
+
+    // Connection closed
+    peer.on('close', () => {
+      console.log('👋 [WebRTC Hook] Peer connection closed');
+      updateStatus('disconnected');
+    });
+
+    // Error handler with bidirectional reconnect
+    peer.on('error', (err) => {
+      console.error('❌ [WebRTC Hook] Peer error:', err);
+      setError(err.message || 'WebRTC connection error');
+      updateStatus('error');
+      
+      if (err.message === 'Connection failed.' && reconnectAttempts.current < maxReconnectAttempts) {
+        reconnectAttempts.current++;
+        console.log(`🔄 [WebRTC Hook] Reconnect attempt ${reconnectAttempts.current}/${maxReconnectAttempts}`);
+        
+        // Tell the other peer to restart too
+        signaling.sendReconnectRequest().catch(e => console.warn('⚠️ Failed to send reconnect:', e));
+        
+        setTimeout(() => {
+          console.log('🔄 [WebRTC Hook] Recreating peer...');
+          cleanupPeerOnly();
+          createPeer(signaling);
+        }, 2000);
+      } else if (reconnectAttempts.current >= maxReconnectAttempts) {
+        setError('Connection unstable. Click Reconnect to try again.');
+      }
+    });
+
+    return peer;
+  }, [role, localStream, onRemoteStream, updateStatus, cleanupPeerOnly]);
+
+  // Initialize full connection (signaling + peer)
   const initializeConnection = useCallback(async () => {
-    if (!gameId) {
-      console.log('⏸️ [WebRTC Hook] No gameId, skipping initialization');
-      return;
-    }
+    if (!gameId || isInitializedRef.current) return;
 
-    if (isInitializedRef.current) {
-      console.log('⏸️ [WebRTC Hook] Already initialized');
-      return;
-    }
-
-    console.log(`🚀 [WebRTC Hook] Initializing connection as ${role} for game:`, gameId);
+    console.log(`🚀 [WebRTC Hook] Initializing as ${role} for game:`, gameId);
     
     try {
       updateStatus('connecting');
       setError(null);
       isInitializedRef.current = true;
 
-      // Initialize signaling service
       const signaling = new WebRTCSignalingService(role);
       signalingRef.current = signaling;
       
-      if (!gameId) {
-        throw new Error('gameId is required for WebRTC connection');
-      }
-      
       await signaling.joinRoom(gameId);
-      
-      // Verify room join completed successfully
-      if (!signalingRef.current) {
-        throw new Error('Signaling service was cleared during room join');
-      }
+      if (!signalingRef.current) throw new Error('Signaling cleared during join');
 
-      // Configure ICE servers (STUN for discovery + TURN for relay on localhost)
-      const iceServers = [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        // Free TURN server for localhost testing (relays connection)
-        {
-          urls: 'turn:openrelay.metered.ca:80',
-          username: 'openrelayproject',
-          credential: 'openrelayproject',
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443',
-          username: 'openrelayproject',
-          credential: 'openrelayproject',
-        },
-      ];
-
-      // Determine if this peer should initiate the connection
+      const peer = createPeer(signaling);
       const isInitiator = role === 'mobile';
 
-      console.log(`🔧 [WebRTC Hook] Creating SimplePeer (initiator: ${isInitiator})`);
-
-      // Create SimplePeer instance with optimized settings
-      const peer = new SimplePeer({
-        initiator: isInitiator,
-        stream: localStream || undefined,
-        trickle: true,
-        config: { 
-          iceServers,
-          sdpSemantics: 'unified-plan',
-          // Optimize for localhost connections
-          iceTransportPolicy: 'all',
-        },
-      });
-
-      peerRef.current = peer;
-
-      // Handle signaling: send offer/answer
-      peer.on('signal', async (signalData) => {
-        console.log('📡 [WebRTC Hook] Signal generated:', signalData.type);
-
-        try {
-          if (signalData.type === 'offer') {
-            await signaling.sendOffer(JSON.stringify(signalData));
-          } else if (signalData.type === 'answer') {
-            await signaling.sendAnswer(JSON.stringify(signalData));
-          } else if (signalData.candidate) {
-            // ICE candidate
-            await signaling.sendCandidate(JSON.stringify(signalData));
-          }
-        } catch (err) {
-          console.error('❌ [WebRTC Hook] Error sending signal:', err);
-        }
-      });
-
-      // Handle incoming stream
-      peer.on('stream', (stream: MediaStream) => {
-        console.log('📹 [WebRTC Hook] Received remote stream');
-        setRemoteStream(stream);
-        if (onRemoteStream) {
-          onRemoteStream(stream);
-        }
-      });
-
-      // Handle connection events
-      peer.on('connect', () => {
-        console.log('✅ [WebRTC Hook] Peer connected');
-        reconnectAttempts.current = 0; // Reset on successful connection
-        updateStatus('connected');
-      });
-
-      peer.on('close', () => {
-        console.log('👋 [WebRTC Hook] Peer connection closed');
-        updateStatus('disconnected');
-      });
-
-      peer.on('error', (err) => {
-        console.error('❌ [WebRTC Hook] Peer error:', err);
-        setError(err.message || 'WebRTC connection error');
-        updateStatus('error');
-        
-        // Auto-retry for "Connection failed" errors (common on localhost)
-        if (err.message === 'Connection failed.' && reconnectAttempts.current < maxReconnectAttempts) {
-          reconnectAttempts.current++;
-          console.log(`🔄 [WebRTC Hook] Auto-reconnect attempt ${reconnectAttempts.current}/${maxReconnectAttempts} in 2 seconds...`);
-          
-          setTimeout(() => {
-            console.log('🔄 [WebRTC Hook] Retrying connection...');
-            cleanup();
-            isInitializedRef.current = false;
-            initializeConnection();
-          }, 2000);
-        } else if (reconnectAttempts.current >= maxReconnectAttempts) {
-          console.log('❌ [WebRTC Hook] Max reconnection attempts reached. Please try manual reconnect.');
-          setError('Connection unstable. Click Reconnect to try again.');
-        }
-      });
-
-      // Ensure signaling service is ready (gameId should be set by joinRoom)
-
-      // Listen for signaling messages
+      // Set up signaling listeners
       if (isInitiator) {
-        // Mobile waits for answer from dashboard
         signaling.onAnswer((answerSdp) => {
-          console.log('📥 [WebRTC Hook] Received answer, signaling peer');
-          try {
-            const answerData = JSON.parse(answerSdp);
-            peer.signal(answerData);
-          } catch (err) {
-            console.error('❌ [WebRTC Hook] Error parsing answer:', err);
-          }
+          console.log('📥 [WebRTC Hook] Received answer');
+          try { peer.signal(JSON.parse(answerSdp)); } catch (e) { console.error('❌ Parse error:', e); }
         });
       } else {
-        // Dashboard waits for offer from mobile
         signaling.onOffer((offerSdp) => {
-          console.log('📥 [WebRTC Hook] Received offer, signaling peer');
+          console.log('📥 [WebRTC Hook] Received offer');
           try {
-            const offerData = JSON.parse(offerSdp);
-            peer.signal(offerData);
-          } catch (err) {
-            console.error('❌ [WebRTC Hook] Error parsing offer:', err);
-          }
+            if (peerRef.current) peerRef.current.signal(JSON.parse(offerSdp));
+          } catch (e) { console.error('❌ Parse error:', e); }
         });
       }
 
-      // Listen for ICE candidates
+      // ICE candidates listener
       signaling.onCandidate((candidateData) => {
         console.log('📥 [WebRTC Hook] Received ICE candidate');
         try {
-          const candidate = JSON.parse(candidateData);
-          peer.signal(candidate);
-        } catch (err) {
-          console.error('❌ [WebRTC Hook] Error parsing ICE candidate:', err);
-        }
+          if (peerRef.current) peerRef.current.signal(JSON.parse(candidateData));
+        } catch (e) { console.error('❌ Parse error:', e); }
       });
 
-      console.log('✅ [WebRTC Hook] Connection initialized successfully');
+      // CRITICAL: Listen for reconnect requests from the other peer
+      signaling.onReconnectRequest(() => {
+        console.log('🔄 [WebRTC Hook] Peer requested reconnect - restarting...');
+        reconnectAttempts.current = 0;
+        cleanupPeerOnly();
+        
+        // Small delay to allow both sides to cleanup
+        setTimeout(() => {
+          if (signalingRef.current) {
+            createPeer(signalingRef.current);
+            updateStatus('connecting');
+          }
+        }, 500);
+      });
+
+      console.log('✅ [WebRTC Hook] Connection initialized');
     } catch (err) {
-      console.error('❌ [WebRTC Hook] Initialization error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to initialize connection');
+      console.error('❌ [WebRTC Hook] Init error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to initialize');
       updateStatus('error');
       isInitializedRef.current = false;
     }
-  }, [gameId, role, localStream, onRemoteStream, updateStatus]);
+  }, [gameId, role, updateStatus, createPeer, cleanupPeerOnly]);
 
-  // Initialize on mount or when dependencies change
+  // Initialize on mount
   useEffect(() => {
-    if (gameId && !isInitializedRef.current) {
-      initializeConnection();
-    }
-
-    return () => {
-      cleanup();
-    };
+    if (gameId && !isInitializedRef.current) initializeConnection();
+    return () => { cleanup(); };
   }, [gameId, initializeConnection, cleanup]);
 
-  // Reconnect function
+  // Manual reconnect (both sides restart)
   const reconnect = useCallback(() => {
-    console.log('🔄 [WebRTC Hook] Manual reconnect triggered');
-    reconnectAttempts.current = 0; // Reset counter on manual reconnect
+    console.log('🔄 [WebRTC Hook] Manual reconnect');
+    reconnectAttempts.current = 0;
+    
+    // Notify peer to restart too
+    if (signalingRef.current) {
+      signalingRef.current.sendReconnectRequest().catch(() => {});
+    }
+    
     cleanup();
-    setTimeout(() => {
-      initializeConnection();
-    }, 500);
+    setTimeout(() => initializeConnection(), 500);
   }, [cleanup, initializeConnection]);
 
-  // Disconnect function
+  // Disconnect
   const disconnect = useCallback(() => {
-    console.log('🔌 [WebRTC Hook] Manual disconnect triggered');
+    console.log('🔌 [WebRTC Hook] Disconnect');
     cleanup();
     updateStatus('idle');
   }, [cleanup, updateStatus]);
 
-  return {
-    connectionStatus,
-    remoteStream,
-    error,
-    reconnect,
-    disconnect,
-  };
+  return { connectionStatus, remoteStream, error, reconnect, disconnect };
 }
-

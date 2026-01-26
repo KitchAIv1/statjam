@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
-export type SignalType = 'offer' | 'answer' | 'candidate';
+export type SignalType = 'offer' | 'answer' | 'candidate' | 'reconnect' | 'ready';
 export type PeerRole = 'mobile' | 'dashboard';
 
 export interface SignalData {
