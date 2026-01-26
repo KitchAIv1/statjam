@@ -215,6 +215,89 @@ export class WebRTCSignalingService {
   }
 
   /**
+   * Send reconnect request to the other peer
+   * This tells them to restart their peer connection for a fresh handshake
+   */
+  async sendReconnectRequest(): Promise<void> {
+    if (!this.channel || !this.gameId) {
+      throw new Error('Not connected to a room');
+    }
+
+    console.log('🔄 [WebRTC] Sending reconnect request...');
+    
+    await this.channel.send({
+      type: 'broadcast',
+      event: 'reconnect',
+      payload: {
+        from: this.role,
+        timestamp: Date.now(),
+      },
+    });
+
+    console.log('✅ [WebRTC] Reconnect request sent');
+  }
+
+  /**
+   * Listen for reconnect requests from the other peer
+   */
+  onReconnectRequest(callback: () => void): void {
+    if (!this.channel) {
+      throw new Error('Not connected to a room');
+    }
+
+    console.log('👂 [WebRTC] Listening for reconnect requests...');
+    
+    this.channel.on('broadcast', { event: 'reconnect' }, (payload) => {
+      const data = payload.payload;
+      if (data && data.from !== this.role) {
+        console.log('📥 [WebRTC] Received reconnect request from', data.from);
+        callback();
+      }
+    });
+  }
+
+  /**
+   * Send ready signal indicating this peer is ready for handshake
+   */
+  async sendReady(): Promise<void> {
+    if (!this.channel || !this.gameId) {
+      throw new Error('Not connected to a room');
+    }
+
+    console.log('✋ [WebRTC] Sending ready signal...');
+    
+    await this.channel.send({
+      type: 'broadcast',
+      event: 'ready',
+      payload: {
+        from: this.role,
+        timestamp: Date.now(),
+      },
+    });
+
+    console.log('✅ [WebRTC] Ready signal sent');
+  }
+
+  /**
+   * Listen for ready signals from the other peer
+   */
+  onPeerReady(callback: (peerRole: PeerRole) => void): void {
+    if (!this.channel) {
+      throw new Error('Not connected to a room');
+    }
+
+    console.log('👂 [WebRTC] Listening for peer ready signals...');
+    
+    this.channel.on('broadcast', { event: 'ready' }, (payload) => {
+      const data = payload.payload;
+      if (data && data.from !== this.role) {
+        console.log('📥 [WebRTC] Peer is ready:', data.from);
+        callback(data.from as PeerRole);
+      }
+    });
+  }
+
+  /**
    * Get current room status from presence
    */
   async getRoomStatus(): Promise<RoomStatus | null> {
