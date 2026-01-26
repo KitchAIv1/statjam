@@ -22,8 +22,8 @@ import { StatEditForm } from '@/components/tracker-v3/modals/StatEditForm';
 import type { VideoStat } from '@/lib/types/video';
 import type { GameStatRecord } from '@/lib/services/statEditService';
 
-// ✅ OPTIMIZATION: Debounce delay for timeline refresh (prevents connection storms)
-const REFRESH_DEBOUNCE_MS = 3000;
+// Minimal delay for timeline refresh (allows React to batch renders)
+const REFRESH_DELAY_MS = 100;
 
 interface Player {
   id: string;
@@ -180,8 +180,8 @@ export function VideoStatsTimeline({
   // Scroll position preservation
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
-  // ✅ OPTIMIZATION: Debounce ref for refresh
-  const refreshDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  // Refresh timing ref
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastRefreshTriggerRef = useRef(refreshTrigger);
 
   // Helper to get player name by ID
@@ -229,7 +229,7 @@ export function VideoStatsTimeline({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
   
-  // ✅ OPTIMIZATION: Debounced refresh on trigger change (prevents connection storms)
+  // ✅ FIX: Immediate refresh on trigger change (minimal delay for React batching)
   useEffect(() => {
     // Skip if this is initial mount or same trigger
     if (refreshTrigger === 0 || refreshTrigger === lastRefreshTriggerRef.current) {
@@ -237,21 +237,20 @@ export function VideoStatsTimeline({
     }
     lastRefreshTriggerRef.current = refreshTrigger;
     
-    // Clear existing debounce
-    if (refreshDebounceRef.current) {
-      clearTimeout(refreshDebounceRef.current);
+    // Clear existing timeout
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
     }
     
-    // Debounce the refresh
-    refreshDebounceRef.current = setTimeout(() => {
-      console.log('🔄 Timeline: Debounced refresh triggered');
+    // Minimal delay to allow React to batch renders
+    refreshTimeoutRef.current = setTimeout(() => {
       silentRefresh();
-    }, REFRESH_DEBOUNCE_MS);
+    }, REFRESH_DELAY_MS);
     
     // Cleanup on unmount
     return () => {
-      if (refreshDebounceRef.current) {
-        clearTimeout(refreshDebounceRef.current);
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
       }
     };
   }, [refreshTrigger, silentRefresh]);

@@ -224,18 +224,13 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
     }
   }, [gameId, gameData?.team_a_id, gameData?.team_b_id, isCoachGame]);
   
-  // ✅ OPTIMIZED: Debounced score refresh to prevent DB timeouts from rapid stat recording
+  // Debounced score refresh to prevent DB timeouts from rapid stat recording
   const scoreRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const timelineRefreshCountRef = useRef(0);
   
   // Handle stat recorded - store ID for undo + refresh scores + auto-freeze on foul
   const handleStatRecorded = useCallback((statType: string, statId?: string) => {
-    // ✅ OPTIMIZATION: Batch timeline refreshes - only trigger every 3 stats or after 5s
-    timelineRefreshCountRef.current += 1;
-    if (timelineRefreshCountRef.current >= 3) {
+    // ✅ FIX: Trigger timeline refresh on EVERY stat (no batching)
       setTimelineRefreshTrigger(prev => prev + 1);
-      timelineRefreshCountRef.current = 0;
-    }
     
     if (statId) {
       setLastRecordedStatId(statId);
@@ -248,19 +243,13 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
       setFrozenClockValue(gameClock);
     }
     
-    // ✅ DEBOUNCED: Refresh scores with 5s debounce to prevent rapid query timeouts
-    // Increased from 2000ms to 5000ms to reduce HTTP call frequency during rapid stat entry
+    // Debounced score refresh (2s) to prevent rapid query timeouts
     if (scoreRefreshTimeoutRef.current) {
       clearTimeout(scoreRefreshTimeoutRef.current);
     }
     scoreRefreshTimeoutRef.current = setTimeout(() => {
       loadScores();
-      // Also trigger timeline refresh if any pending
-      if (timelineRefreshCountRef.current > 0) {
-        setTimelineRefreshTrigger(prev => prev + 1);
-        timelineRefreshCountRef.current = 0;
-      }
-    }, 5000);
+    }, 2000);
   }, [loadScores, gameClock, clockFrozen]);
   
   // Video stat entry hook for bottom buttons (must be called after handleStatRecorded is defined)
@@ -1000,9 +989,9 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
         {/* Legacy Header - Keep for non-calibrated states */}
         {(!gameVideo || gameVideo.status !== 'ready' || !isCalibrated) && (
           <div className="flex-shrink-0 px-4 py-4">
-            <div className="max-w-[1800px] mx-auto">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6">
+        <div className="max-w-[1800px] mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
@@ -1102,11 +1091,11 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
             </div>
           </div>
         )}
-        
+          
         {/* Loading and Non-Calibrated States */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           <div className="max-w-[1800px] mx-auto">
-            {/* Loading */}
+          {/* Loading */}
           {videoLoading && (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
@@ -1244,19 +1233,19 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                     <div className="flex items-center justify-between gap-4">
                       {/* Left: Clock Display (Compact) */}
                       <div className="flex-shrink-0">
-                        <DualClockDisplay
-                          videoTimeMs={currentTimeMs}
-                          gameClock={gameClock}
-                          isCalibrated={isCalibrated}
-                          showQuarterExpiredWarning={!showQuarterPrompt}
+                  <DualClockDisplay
+                    videoTimeMs={currentTimeMs}
+                    gameClock={gameClock}
+                    isCalibrated={isCalibrated}
+                    showQuarterExpiredWarning={!showQuarterPrompt}
                           showScores={false}
-                          teamAName={gameData?.team_a?.name || gameData?.teamAName || 'My Team'}
-                          teamBName={isCoachGame ? opponentName : (gameData?.team_b?.name || 'Team B')}
-                          teamAScore={teamAScore}
-                          teamBScore={teamBScore}
-                          onClockEdit={handleClockEdit}
-                          quarterLength={clockSyncConfig?.quarterLengthMinutes || 12}
-                        />
+                    teamAName={gameData?.team_a?.name || gameData?.teamAName || 'My Team'}
+                    teamBName={isCoachGame ? opponentName : (gameData?.team_b?.name || 'Team B')}
+                    teamAScore={teamAScore}
+                    teamBScore={teamBScore}
+                    onClockEdit={handleClockEdit}
+                    quarterLength={clockSyncConfig?.quarterLengthMinutes || 12}
+                  />
                       </div>
                       
                       {/* Center: Score Display (Compact) */}
@@ -1279,73 +1268,73 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                       {/* Right: Clock Controls (Compact) */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {clockFrozen && frozenClockValue ? (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={handleClockResume}
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleClockResume}
                             className="gap-1.5 bg-orange-600 hover:bg-orange-700 text-white h-8 px-3 text-xs animate-pulse"
-                          >
+                      >
                             <Play className="w-3.5 h-3.5" />
                             Resume
-                          </Button>
+                      </Button>
                         ) : (
                           gameClock && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                if (gameClock) {
-                                  setClockFrozen(true);
-                                  setFrozenClockValue(gameClock);
-                                }
-                              }}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (gameClock) {
+                            setClockFrozen(true);
+                            setFrozenClockValue(gameClock);
+                          }
+                        }}
                               className="gap-1.5 text-orange-400 border-orange-500/50 hover:bg-orange-900/30 h-8 px-3 text-xs"
-                            >
+                      >
                               <Pause className="w-3.5 h-3.5" />
                               Pause
-                            </Button>
+                      </Button>
                           )
-                        )}
-                        
-                        {gameClock && gameClock.quarter < 7 && !clockFrozen && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowQuarterPrompt(true)}
+                    )}
+                    
+                    {gameClock && gameClock.quarter < 7 && !clockFrozen && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowQuarterPrompt(true)}
                             className="gap-1.5 text-orange-400 border-orange-500/50 hover:bg-orange-900/30 h-8 px-3 text-xs"
-                          >
+                      >
                             <FastForward className="w-3.5 h-3.5" />
                             Q{gameClock.quarter + 1 > 4 ? `OT${gameClock.quarter - 3}` : gameClock.quarter + 1}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
                     {/* Frozen Clock Banner (Compact) */}
-                    {clockFrozen && frozenClockValue && (
+                {clockFrozen && frozenClockValue && (
                       <div className="mt-2 px-3 py-1.5 bg-orange-900/40 border border-orange-500/40 rounded flex items-center gap-2">
                         <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
                         <span className="text-orange-300 text-xs font-medium">
                           ❄️ Clock frozen at Q{frozenClockValue.quarter > 4 ? `OT${frozenClockValue.quarter - 4}` : frozenClockValue.quarter} {frozenClockValue.minutesRemaining}:{frozenClockValue.secondsRemaining.toString().padStart(2, '0')}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Quarter Advance Prompt */}
-                    {showQuarterPrompt && gameClock && (
-                      <div className="mt-2">
-                        <VideoQuarterAdvancePrompt
-                          currentQuarter={gameClock.quarter}
-                          onAdvanceQuarter={handleAdvanceQuarter}
-                          onDismiss={() => setShowQuarterPrompt(false)}
-                          isOvertime={gameClock.isOvertime}
-                          teamAScore={teamAScore}
-                          teamBScore={teamBScore}
-                        />
-                      </div>
-                    )}
+                    </span>
                   </div>
-                  
+                )}
+                
+                {/* Quarter Advance Prompt */}
+                {showQuarterPrompt && gameClock && (
+                      <div className="mt-2">
+                    <VideoQuarterAdvancePrompt
+                      currentQuarter={gameClock.quarter}
+                      onAdvanceQuarter={handleAdvanceQuarter}
+                      onDismiss={() => setShowQuarterPrompt(false)}
+                      isOvertime={gameClock.isOvertime}
+                      teamAScore={teamAScore}
+                      teamBScore={teamBScore}
+                    />
+                  </div>
+                )}
+              </div>
+              
                   {/* Video Player */}
                   <div className="flex-1 flex items-center justify-center p-4 min-h-0">
                     <div className="w-full h-full max-w-full max-h-full flex items-center justify-center">
@@ -1363,10 +1352,10 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                 
                 {/* Right Sidebar - Active Roster + Stats Feed (Full Height) */}
                 <div className="w-[400px] flex-shrink-0 flex flex-col h-full min-h-0 bg-white border-l border-gray-200">
-                  {/* Active Roster - Compact, fixed height */}
+                  {/* Active Roster - Uses live hook state for immediate substitution updates */}
                   <ActiveRosterDisplay
-                    teamAPlayers={teamAPlayers}
-                    teamBPlayers={teamBPlayers}
+                    teamAPlayers={videoStatEntry.onCourtA}
+                    teamBPlayers={videoStatEntry.onCourtB}
                     teamAName={gameData?.team_a?.name || gameData?.teamAName || 'Team A'}
                     teamBName={isCoachGame ? opponentName : (gameData?.team_b?.name || 'Team B')}
                     selectedPlayerId={selectedPlayerId}
@@ -1379,8 +1368,8 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
                     }}
                     isCoachMode={isCoachGame}
                     opponentName={opponentName}
-                    onCourtA={teamAPlayers.slice(0, 5)}
-                    onCourtB={teamBPlayers.slice(0, 5)}
+                    onCourtA={videoStatEntry.onCourtA}
+                    onCourtB={videoStatEntry.onCourtB}
                   />
                   
                   {/* Stats Feed - Takes all remaining space */}
