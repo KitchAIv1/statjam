@@ -84,6 +84,26 @@ CRITICAL ANALYSIS REQUIREMENTS:
    - C+/C: Close game or significant issues despite win
    - D/F: Loss or major problems
 
+6. THREE-POINT SHOOTING ANALYSIS (NEW - CRITICAL):
+   - Compare team 3PT vs opponent 3PT (e.g., "2-for-14 (14.3%) vs 8-for-24 (33.3%)")
+   - Calculate 3PT point differential (e.g., "-18 points from beyond the arc")
+   - If 3PT differential > 12 or < -12 points: THIS MUST BE A WINNING FACTOR OR KEY CONCERN
+   - Use in narrative: "The opponent's 3-point shooting (+18 points from beyond the arc) was the single biggest factor"
+
+7. STEAL-TURNOVER CORRELATION (NEW - CRITICAL):
+   - Connect opponent steals to team turnovers (e.g., "48% of our 31 turnovers were caused by opponent steals")
+   - This changes the narrative: NOT just "ball security" but "pressure problem"
+   - If steals_caused_turnovers_pct > 40%: mention "active hands", "defensive pressure disrupted our offense"
+
+8. ASSIST-TO-TURNOVER RATIO (NEW):
+   - Compare A:TO ratios (team vs opponent)
+   - A:TO < 0.5 = CRITICAL (offense is chaotic)
+   - Include in action items if team A:TO < 0.5
+
+9. BENCH CONTRIBUTION (NEW):
+   - Note if bench players contributed (or didn't)
+   - If bench combined for < 5 points with high turnovers, note "starters carried the load"
+
 You must return valid JSON matching the exact structure provided. Be analytical, specific, and actionable.`;
 }
 
@@ -183,27 +203,102 @@ ${q2q3Combined < -5 ? '⚠️ MIDDLE QUARTER COLLAPSE DETECTED - Analyze why' : 
 ${q1q4Combined > 10 ? '✓ STRONG START/FINISH - Team shows up in crucial moments' : ''}
 
 TEAM TOTALS (${teamName}):
-- Rebounds: ${gameData.team_totals.rebounds}
+- Points: ${gameData.team_totals.points || homeScore}
+- FG: ${gameData.team_totals.fg_made || 'N/A'}/${gameData.team_totals.fg_attempted || 'N/A'} (${gameData.team_totals.fg_percentage || 'N/A'}%)
+- 3PT: ${gameData.team_totals.three_made || 'N/A'}/${gameData.team_totals.three_attempted || 'N/A'} (${gameData.team_totals.three_percentage || 'N/A'}%)
+- Free Throws: ${gameData.team_totals.ft_made}/${gameData.team_totals.ft_attempted} (${gameData.team_totals.ft_percentage}%)
+- Rebounds: ${gameData.team_totals.rebounds} (OFF: ${gameData.team_totals.offensive_rebounds || 'N/A'}, DEF: ${gameData.team_totals.defensive_rebounds || 'N/A'})
+- Assists: ${gameData.team_totals.assists || 'N/A'}
 - Steals: ${gameData.team_totals.steals}
 - Blocks: ${gameData.team_totals.blocks}
 - Turnovers: ${gameData.team_totals.turnovers}${gameData.team_totals.turnovers > 15 ? ' ⚠️ HIGH' : ''}
-- Free Throws: ${gameData.team_totals.ft_made}/${gameData.team_totals.ft_attempted} (${gameData.team_totals.ft_percentage}%)
+- Fouls: ${gameData.team_totals.fouls || 'N/A'}
 
 OPPONENT TOTALS (${oppName}):
 - Points: ${gameData.opponent_totals?.points || awayScore}
-- Rebounds: ${gameData.opponent_totals?.rebounds || 'N/A'}
+- FG: ${gameData.opponent_totals?.fg_made || 0}/${gameData.opponent_totals?.fg_attempted || 0} (${gameData.opponent_totals?.fg_percentage || 0}%)
+- 3PT: ${gameData.opponent_totals?.three_made || 0}/${gameData.opponent_totals?.three_attempted || 0} (${gameData.opponent_totals?.three_percentage || 0}%)
+- FT: ${gameData.opponent_totals?.ft_made || 0}/${gameData.opponent_totals?.ft_attempted || 0} (${gameData.opponent_totals?.ft_percentage || 0}%)
+- Rebounds: ${gameData.opponent_totals?.rebounds || 'N/A'} (OFF: ${gameData.opponent_totals?.offensive_rebounds || 'N/A'}, DEF: ${gameData.opponent_totals?.defensive_rebounds || 'N/A'})
 - Assists: ${gameData.opponent_totals?.assists || 'N/A'}
 - Steals: ${gameData.opponent_totals?.steals || 'N/A'}
 - Blocks: ${gameData.opponent_totals?.blocks || 'N/A'}
 - Turnovers: ${gameData.opponent_totals?.turnovers || 'N/A'}
-- FG: ${gameData.opponent_totals?.fg_made || 0}/${gameData.opponent_totals?.fg_attempted || 0} (${gameData.opponent_totals?.fg_percentage || 0}%)
-- 3PT: ${gameData.opponent_totals?.three_made || 0}/${gameData.opponent_totals?.three_attempted || 0} (${gameData.opponent_totals?.three_percentage || 0}%)
+- Fouls: ${gameData.opponent_totals?.fouls || 'N/A'}
 
 REBOUNDING COMPARISON:
 - ${teamName}: ${gameData.team_totals.rebounds} rebounds
 - ${oppName}: ${gameData.opponent_totals?.rebounds || 'N/A'} rebounds
 - Differential: ${gameData.opponent_totals?.rebounds ? (gameData.team_totals.rebounds > gameData.opponent_totals.rebounds ? '+' : '') + (gameData.team_totals.rebounds - gameData.opponent_totals.rebounds) : 'N/A'}
+`;
 
+  // =========================================================================
+  // NEW: THREE-POINT SHOOTING COMPARISON (from shooting_comparison)
+  // =========================================================================
+  if (gameData.shooting_comparison) {
+    const sc = gameData.shooting_comparison;
+    const threePtDiff = sc.three_point_differential || 0;
+    prompt += `
+⚠️ THREE-POINT SHOOTING COMPARISON (KEY FACTOR):
+- ${teamName}: ${sc.team_three_made}/${sc.team_three_attempted} (${sc.team_three_pct}%)
+- ${oppName}: ${sc.opp_three_made}/${sc.opp_three_attempted} (${sc.opp_three_pct}%)
+- 3PT POINTS DIFFERENTIAL: ${threePtDiff > 0 ? '+' : ''}${threePtDiff} points
+- 3PT MAKES DIFFERENTIAL: ${sc.three_made_differential > 0 ? '+' : ''}${sc.three_made_differential}
+${Math.abs(threePtDiff) >= 12 ? `🔴 CRITICAL: ${Math.abs(threePtDiff)}-point swing from 3PT alone - MUST include in analysis` : ''}
+
+TRUE FG% COMPARISON (2PT + 3PT combined):
+- ${teamName}: ${sc.team_true_fg_made}/${sc.team_true_fg_attempted} (${sc.team_true_fg_pct}%)
+- ${oppName}: ${sc.opp_true_fg_made}/${sc.opp_true_fg_attempted} (${sc.opp_true_fg_pct}%)
+`;
+  }
+
+  // =========================================================================
+  // NEW: EFFICIENCY METRICS (from efficiency_metrics)
+  // =========================================================================
+  if (gameData.efficiency_metrics) {
+    const em = gameData.efficiency_metrics;
+    prompt += `
+⚠️ EFFICIENCY METRICS (KEY INSIGHTS):
+ASSIST-TO-TURNOVER RATIO:
+- ${teamName}: ${em.team_assists} AST / ${em.team_turnovers} TO = ${em.team_ast_to_ratio} ratio${em.team_ast_to_ratio < 0.5 ? ' 🔴 CRITICAL (chaotic offense)' : ''}
+- ${oppName}: ${em.opp_assists} AST / ${em.opp_turnovers} TO = ${em.opp_ast_to_ratio} ratio
+
+STEAL-TURNOVER CORRELATION:
+- ${teamName} steals: ${em.team_steals}
+- ${oppName} steals: ${em.opp_steals}
+- ${em.steals_caused_turnovers_pct}% of ${teamName}'s turnovers were caused by ${oppName} steals${em.steals_caused_turnovers_pct > 40 ? ' 🔴 PRESSURE PROBLEM' : ''}
+- ${em.steals_forced_turnovers_pct}% of ${oppName}'s turnovers were forced by ${teamName} steals
+
+REBOUND DIFFERENTIALS:
+- Total: ${em.rebound_differential > 0 ? '+' : ''}${em.rebound_differential}
+- Offensive: ${em.offensive_rebound_differential > 0 ? '+' : ''}${em.offensive_rebound_differential}
+- Defensive: ${em.defensive_rebound_differential > 0 ? '+' : ''}${em.defensive_rebound_differential}
+`;
+  }
+
+  // =========================================================================
+  // NEW: BENCH PLAYERS (from bench_players)
+  // =========================================================================
+  if (gameData.bench_players && gameData.bench_players.length > 0) {
+    const benchPoints = gameData.bench_players.reduce((sum: number, p: any) => sum + (p.points || 0), 0);
+    const benchTurnovers = gameData.bench_players.reduce((sum: number, p: any) => sum + (p.turnovers || 0), 0);
+    prompt += `
+BENCH CONTRIBUTION:
+- Total Bench Points: ${benchPoints}
+- Total Bench Turnovers: ${benchTurnovers}
+${benchPoints < 5 && benchTurnovers > 3 ? '⚠️ LIMITED BENCH IMPACT: Starters carried the offensive load' : ''}
+`;
+    gameData.bench_players.forEach((p: any) => {
+      prompt += `  - ${p.name} (#${p.jersey_number}): ${p.points} PTS, ${p.rebounds} REB, ${p.assists} AST, ${p.turnovers} TOV (Impact: ${p.impact_score})
+`;
+    });
+  } else {
+    prompt += `
+BENCH CONTRIBUTION: No bench players recorded (only starters played)
+`;
+  }
+
+  prompt += `
 TOP 4 PLAYERS (by impact score):
 `;
 
@@ -226,11 +321,15 @@ ${idx + 1}. ${p.name} (#${p.jersey_number}) - Impact: ${p.impact_score}
 
   prompt += `
 ANALYSIS REQUIREMENTS:
-1. Identify exactly 4 winning factors from: quarter dominance, rebounding, defense, shooting
+1. Identify exactly 4 winning factors from: quarter dominance, rebounding, defense, shooting, 3PT differential
 2. Use quarter_points to describe WHEN key players scored
 3. Assign badges: 🏆 Player of the Game (highest impact or double-double), 💪 Hustle Player (best defensive stats)
 4. Be specific with numbers in all sections
 5. Generate 3-4 action items with specific targets
+6. IF 3PT differential >= 12 or <= -12: MUST include as winning factor or area of concern
+7. IF steals_caused_turnovers_pct > 40%: Turnovers are a PRESSURE problem, not just ball security
+8. IF team A:TO ratio < 0.5: Include "Improve ball movement" as CRITICAL action item
+9. IF bench contributed < 5 points: Note "starters carried the load" in summary
 
 Return JSON in the exact format provided.`;
 
