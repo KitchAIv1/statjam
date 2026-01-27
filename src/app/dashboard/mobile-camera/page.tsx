@@ -186,23 +186,22 @@ function MobileCameraPageContent() {
         }
         
         // Request rear camera with HIGH QUALITY + LANDSCAPE constraints
-        // Using min values ensures quality doesn't degrade during WebRTC
-        // aspectRatio forces landscape orientation for basketball court view
+        // Using ideal (not min) to allow graceful fallback on older devices
         const constraints: MediaStreamConstraints = {
           video: rearCameraId
             ? {
                 deviceId: { exact: rearCameraId },
-                width: { min: 1280, ideal: 1920 },
-                height: { min: 720, ideal: 1080 },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
                 aspectRatio: { ideal: 16/9 },
-                frameRate: { min: 24, ideal: 30 },
+                frameRate: { ideal: 30 },
               }
             : {
-                facingMode: { exact: 'environment' },
-                width: { min: 1280, ideal: 1920 },
-                height: { min: 720, ideal: 1080 },
+                facingMode: 'environment', // Don't use exact - some devices don't support it
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
                 aspectRatio: { ideal: 16/9 },
-                frameRate: { min: 24, ideal: 30 },
+                frameRate: { ideal: 30 },
               },
           audio: false,
         };

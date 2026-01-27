@@ -143,11 +143,13 @@ export function useWebRTCStream({
         // Tell the other peer to restart too
         signaling.sendReconnectRequest().catch(e => console.warn('⚠️ Failed to send reconnect:', e));
         
+        // Quick cleanup and recreate - shorter delay for faster reconnect
         setTimeout(() => {
           console.log('🔄 [WebRTC Hook] Recreating peer...');
           cleanupPeerOnly();
           createPeer(signaling);
-        }, 2000);
+          updateStatus('connecting');
+        }, 500);
       } else if (reconnectAttempts.current >= maxReconnectAttempts) {
         setError('Connection unstable. Click Reconnect to try again.');
       }
@@ -215,13 +217,11 @@ export function useWebRTCStream({
         reconnectAttempts.current = 0;
         cleanupPeerOnly();
         
-        // Small delay to allow both sides to cleanup
-        setTimeout(() => {
-          if (signalingRef.current) {
-            createPeer(signalingRef.current);
-            updateStatus('connecting');
-          }
-        }, 500);
+        // Immediate recreation - peer will wait for new offer/answer
+        if (signalingRef.current) {
+          createPeer(signalingRef.current);
+          updateStatus('connecting');
+        }
       });
 
       console.log('✅ [WebRTC Hook] Connection initialized');
