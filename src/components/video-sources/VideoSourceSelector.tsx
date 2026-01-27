@@ -82,30 +82,38 @@ export function VideoSourceSelector({
       <div className="space-y-1.5">
         {/* Webcam Section */}
         <div>
-          <button
-            onClick={handleWebcamToggle}
-            className={`w-full flex items-center justify-between p-2 text-xs rounded transition-all ${
-              activeSource === 'webcam' 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted hover:bg-muted/80'
-            }`}
-            type="button"
-          >
-            <div className="flex items-center gap-2">
-              {activeSource === 'webcam' && isConnecting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Camera className="h-3.5 w-3.5" />
-              )}
-              <span>Webcam</span>
-            </div>
-            <div className="flex items-center gap-1">
-              {activeSource === 'webcam' && <SourceStatusBadge status={connectionStatus} />}
-              <ChevronDown 
-                className={`h-3 w-3 transition-transform ${expandedSection === 'webcam' ? 'rotate-180' : ''}`} 
-              />
-            </div>
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleWebcamToggle}
+                className={`w-full flex items-center justify-between p-2 text-xs rounded transition-all ${
+                  activeSource === 'webcam' 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted hover:bg-muted/80'
+                }`}
+                type="button"
+              >
+                <div className="flex items-center gap-2">
+                  {activeSource === 'webcam' && isConnecting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Camera className="h-3.5 w-3.5" />
+                  )}
+                  <span>Webcam</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {activeSource === 'webcam' && <SourceStatusBadge status={connectionStatus} />}
+                  <ChevronDown 
+                    className={`h-3 w-3 transition-transform ${expandedSection === 'webcam' ? 'rotate-180' : ''}`} 
+                  />
+                </div>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>Use computer&apos;s camera</p>
+              <p className="text-[10px] opacity-80">Built-in or USB webcam</p>
+            </TooltipContent>
+          </Tooltip>
           
           {expandedSection === 'webcam' && (
             <div className="mt-1 ml-4 space-y-1 animate-in slide-in-from-top-1 duration-200">
@@ -157,11 +165,16 @@ export function VideoSourceSelector({
                 </div>
               </button>
             </TooltipTrigger>
-            {!gameId && (
-              <TooltipContent>
+            <TooltipContent side="left">
+              {!gameId ? (
                 <p>Select a game first</p>
-              </TooltipContent>
-            )}
+              ) : (
+                <>
+                  <p>Use iPhone as wireless camera</p>
+                  <p className="text-[10px] opacity-80">Scan QR code from your iPhone</p>
+                </>
+              )}
+            </TooltipContent>
           </Tooltip>
           
           {expandedSection === 'iphone' && gameId && (
@@ -177,25 +190,33 @@ export function VideoSourceSelector({
         </div>
 
         {/* Screen Capture */}
-        <button
-          onClick={onSelectScreen}
-          className={`w-full flex items-center justify-between p-2 text-xs rounded transition-all ${
-            activeSource === 'screen' 
-              ? 'bg-primary text-primary-foreground' 
-              : 'bg-muted hover:bg-muted/80'
-          }`}
-          type="button"
-        >
-          <div className="flex items-center gap-2">
-            {activeSource === 'screen' && isConnecting ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Monitor className="h-3.5 w-3.5" />
-            )}
-            <span>Screen Capture</span>
-          </div>
-          {activeSource === 'screen' && <SourceStatusBadge status={connectionStatus} />}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onSelectScreen}
+              className={`w-full flex items-center justify-between p-2 text-xs rounded transition-all ${
+                activeSource === 'screen' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted hover:bg-muted/80'
+              }`}
+              type="button"
+            >
+              <div className="flex items-center gap-2">
+                {activeSource === 'screen' && isConnecting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Monitor className="h-3.5 w-3.5" />
+                )}
+                <span>Screen Capture</span>
+              </div>
+              {activeSource === 'screen' && <SourceStatusBadge status={connectionStatus} />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left">
+            <p>Capture desktop or window</p>
+            <p className="text-[10px] opacity-80">Share screen, app, or browser tab</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Error Display */}

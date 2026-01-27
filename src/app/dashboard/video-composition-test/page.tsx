@@ -331,20 +331,40 @@ export default function VideoCompositionTestPage() {
               <div className="flex items-center justify-between mb-2 flex-shrink-0">
                 <h3 className="text-sm font-semibold">Preview</h3>
                 {!isComposing ? (
-                  <Button 
-                    onClick={handleToggleComposition} 
-                    size="sm" 
-                    className="h-7 text-xs"
-                    disabled={!activeVideoStream || !overlayData}
-                  >
-                    {videoSourceState.activeSource === 'iphone' && videoSourceState.connectionStatus === 'connecting' 
-                      ? 'Connecting...' 
-                      : 'Start Composition'}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button 
+                          onClick={handleToggleComposition} 
+                          size="sm" 
+                          className="h-7 text-xs"
+                          disabled={!activeVideoStream || !overlayData}
+                        >
+                          {videoSourceState.activeSource === 'iphone' && videoSourceState.connectionStatus === 'connecting' 
+                            ? 'Connecting...' 
+                            : 'Start Composition'}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Combine video with game overlay</p>
+                      <p className="text-[10px] opacity-80">
+                        {!activeVideoStream ? 'Select a video source first' : !overlayData ? 'Select a game for overlay' : 'Ready to compose'}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 ) : (
-                  <Button onClick={handleToggleComposition} variant="destructive" size="sm" className="h-7 text-xs">
-                    Stop
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button onClick={handleToggleComposition} variant="destructive" size="sm" className="h-7 text-xs">
+                        Stop
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Stop composition</p>
+                      <p className="text-[10px] opacity-80">End overlay rendering</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
               <div className="flex-1 relative bg-black rounded overflow-hidden min-h-0">

@@ -43,7 +43,7 @@ export function StudioHeader({
             isActive={hasVideoStream} 
             label="Video" 
             tooltip="Video source active"
-            subTooltip="Webcam or iPhone connected"
+            subTooltip="Webcam, iPhone Camera, or Screen Capture"
           />
           <StatusIndicator 
             isActive={isComposing} 
