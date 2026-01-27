@@ -268,6 +268,10 @@ function MobileCameraPageContent() {
       icon = <CheckCircle className="w-5 h-5" />;
       text = 'Connected';
       colorClass = 'text-green-500';
+    } else if (connectionStatus === 'disconnected') {
+      icon = <WifiOff className="w-5 h-5" />;
+      text = 'Studio Disconnected';
+      colorClass = 'text-amber-500';
     } else if (connectionStatus === 'error') {
       icon = <AlertCircle className="w-5 h-5" />;
       text = 'Error';
@@ -404,6 +408,18 @@ function MobileCameraPageContent() {
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                 <span className="text-sm font-medium text-green-500">Live</span>
               </div>
+            </div>
+          )}
+
+          {selectedGameId && connectionStatus === 'disconnected' && (
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-4 py-2">
+                <WifiOff className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-medium text-amber-500">Studio Disconnected</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Camera ready — will auto-reconnect when Studio rejoins
+              </p>
             </div>
           )}
         </div>
