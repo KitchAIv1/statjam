@@ -6,6 +6,7 @@
  */
 
 import { logger } from '@/lib/utils/logger';
+import { LoginRateLimiter } from './loginRateLimiter';
 
 interface AuthConfig {
   url: string;
@@ -146,11 +147,18 @@ export class AuthServiceV2 {
 
   /**
    * 🔐 SIGN IN - Raw HTTP (never hangs)
+   * Includes brute force protection via LoginRateLimiter
    */
   async signIn(email: string, password: string): Promise<{ data: SignInResponse | null; error: Error | null }> {
     try {
       // ✅ CRITICAL FIX #1: Normalize email (trim and lowercase) for sign-in too
       email = email.trim().toLowerCase();
+      
+      // 🔒 SECURITY: Check if account is locked due to failed attempts
+      const lockoutStatus = LoginRateLimiter.checkLockout(email);
+      if (lockoutStatus.locked) {
+        return { data: null, error: new Error(lockoutStatus.message || 'Account temporarily locked') };
+      }
       
       logger.debug('🔐 AuthServiceV2: Signing in user:', email);
 
@@ -169,10 +177,19 @@ export class AuthServiceV2 {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
         const errorMessage = this.getAuthErrorMessage(response.status, errorData);
+        
+        // 🔒 SECURITY: Record failed attempt (only for auth failures, not network errors)
+        if (response.status === 400 || response.status === 401) {
+          LoginRateLimiter.recordFailedAttempt(email);
+        }
+        
         throw new Error(errorMessage);
       }
 
       const data: SignInResponse = await response.json();
+      
+      // 🔒 SECURITY: Clear failed attempts on successful login
+      LoginRateLimiter.clearAttempts(email);
       
       // Store tokens in localStorage for session persistence
       if (typeof window !== 'undefined') {
