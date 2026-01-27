@@ -1,6 +1,8 @@
 /**
  * Admin Coach Analytics API Route
  * Uses service role to bypass RLS for admin dashboard
+ * 
+ * SECURITY: Requires authenticated admin user (verified via getUser)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,11 +19,39 @@ function getSupabaseAdmin() {
 export async function GET(request: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    // Verify admin token exists (basic auth check)
+    
+    // =========================================================================
+    // SECURITY: Verify Bearer token and admin role
+    // =========================================================================
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+
+    const accessToken = authHeader.replace('Bearer ', '');
+    
+    // Verify token is valid and get user
+    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
+    
+    if (authError || !authUser) {
+      console.error('❌ Admin auth verification failed:', authError?.message);
+      return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
+    }
+
+    // Verify user has admin role
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('id', authUser.id)
+      .single();
+    
+    if (profileError || !userProfile || userProfile.role !== 'admin') {
+      console.error('❌ Admin access denied for user:', authUser.id, 'role:', userProfile?.role);
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    console.log('✅ Admin verified:', authUser.id);
+    // =========================================================================
 
     // Fetch ALL coach games (bypasses RLS with service role)
     const { data: games, error: gamesError } = await supabaseAdmin

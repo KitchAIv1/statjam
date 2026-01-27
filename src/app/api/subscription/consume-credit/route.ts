@@ -3,6 +3,8 @@
  * 
  * Uses service_role to bypass RLS and update video_credits.
  * Called from client after successful video upload.
+ * 
+ * SECURITY: Requires authenticated user - prevents consuming other users' credits
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,6 +19,25 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // =========================================================================
+    // SECURITY: Verify Bearer token and user ownership
+    // =========================================================================
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const accessToken = authHeader.replace('Bearer ', '');
+    
+    // Verify token is valid and get user
+    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
+    
+    if (authError || !authUser) {
+      console.error('❌ Auth verification failed:', authError?.message);
+      return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
+    }
+    // =========================================================================
+
     const { userId, role } = await request.json();
     
     if (!userId || !role) {
@@ -24,6 +45,15 @@ export async function POST(request: NextRequest) {
         { error: 'Missing userId or role' },
         { status: 400 }
       );
+    }
+
+    // SECURITY: Verify the userId matches the authenticated user
+    if (userId !== authUser.id) {
+      console.error('❌ User ID mismatch - attempt to consume other user credits:', {
+        requestedUserId: userId,
+        authenticatedUserId: authUser.id,
+      });
+      return NextResponse.json({ error: 'User verification failed' }, { status: 403 });
     }
     
     // Get current credits

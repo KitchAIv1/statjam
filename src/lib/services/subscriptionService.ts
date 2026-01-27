@@ -288,14 +288,29 @@ export async function getVideoCredits(userId: string, role: UserRole): Promise<n
  * Consume one video credit (for video upload)
  * Uses server-side API to bypass RLS restrictions
  * Returns true if successful, false if no credits available
+ * 
+ * SECURITY: Requires authenticated user (Bearer token verification on server)
  */
 export async function consumeVideoCredit(userId: string, role: UserRole): Promise<boolean> {
   try {
     console.log(`💳 Calling consume-credit API for user ${userId}, role ${role}`);
     
+    // Get access token for authentication
+    const accessToken = typeof window !== 'undefined' 
+      ? localStorage.getItem('sb-access-token') 
+      : null;
+    
+    if (!accessToken) {
+      console.error('❌ No access token available for credit consumption');
+      return false;
+    }
+    
     const response = await fetch('/api/subscription/consume-credit', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
       body: JSON.stringify({ userId, role }),
     });
     
