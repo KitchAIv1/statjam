@@ -12,7 +12,7 @@ export function initializeComposer(): VideoComposer {
   const composer = new VideoComposer({
     width: 1920,
     height: 1080,
-    frameRate: 30,
+    frameRate: 60, // 60fps for smooth sports action
   });
   
   composer.initialize().catch(err => {

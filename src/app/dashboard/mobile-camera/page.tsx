@@ -194,14 +194,14 @@ function MobileCameraPageContent() {
                 width: { ideal: 1920 },
                 height: { ideal: 1080 },
                 aspectRatio: { ideal: 16/9 },
-                frameRate: { ideal: 30 },
+                frameRate: { ideal: 60 }, // 60fps for smooth basketball action
               }
             : {
                 facingMode: 'environment', // Don't use exact - some devices don't support it
                 width: { ideal: 1920 },
                 height: { ideal: 1080 },
                 aspectRatio: { ideal: 16/9 },
-                frameRate: { ideal: 30 },
+                frameRate: { ideal: 60 }, // 60fps for smooth basketball action
               },
           audio: false,
         };
