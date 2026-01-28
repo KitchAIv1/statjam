@@ -79,7 +79,7 @@ export function useTeamRunAndMilestones(
       shownMilestonesRef.current.add(milestoneKey);
       
       const displayName = await fetchPlayerDisplayName(unseenMilestone.playerId);
-      setMilestoneItem(createMilestoneInfoBarItem(unseenMilestone.milestone, displayName));
+      setMilestoneItem(createMilestoneInfoBarItem(unseenMilestone.milestone, displayName, unseenMilestone.teamId));
     }
   }, [gameId, teamAId, teamBId, teamNames]);
 

@@ -281,8 +281,8 @@ export class NBAOverlayDrawer {
   
   /**
    * Draw info bar below main scoreboard
-   * Displays active info bar item (managed by infoBarManager)
-   * Falls back to tournament name if no active item
+   * Supports split layout for simultaneous team_run + milestone (NBA style)
+   * Uses team colors for dynamic styling
    */
   private drawInfoBar(
     data: GameOverlayData,
@@ -297,17 +297,42 @@ export class NBAOverlayDrawer {
     this.drawRoundedRect(startX, y, barWidth, this.INFO_BAR_HEIGHT, 5, true);
     
     const textY = y + this.INFO_BAR_HEIGHT / 2;
+    const hasSecondary = data.infoBarSecondaryLabel && data.infoBarSecondaryType;
     
-    // Determine what to display: infoBarLabel (from manager) or fallback to branding
-    const displayText = data.infoBarLabel || 'Powered By STATJAM';
-    const infoBarType = data.infoBarType || 'tournament_name';
-    
-    if (displayText) {
-      // Style based on info bar type
-      const { color, font } = this.getInfoBarStyle(infoBarType);
+    if (hasSecondary) {
+      // SPLIT LAYOUT: Primary left, Secondary right
+      const halfWidth = barWidth / 2;
+      const leftX = startX + halfWidth / 2;
+      const rightX = startX + halfWidth + halfWidth / 2;
+      
+      // Draw divider line
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      this.ctx.lineWidth = 1;
+      this.ctx.beginPath();
+      this.ctx.moveTo(centerX, y + 8);
+      this.ctx.lineTo(centerX, y + this.INFO_BAR_HEIGHT - 8);
+      this.ctx.stroke();
+      
+      // Primary (left)
+      const primaryColor = this.getInfoBarColor(data.infoBarType, data.infoBarTeamId, data);
+      this.ctx.fillStyle = primaryColor;
+      this.ctx.font = 'italic 700 28px Impact, "Arial Narrow", sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText((data.infoBarLabel || '').toUpperCase(), leftX, textY);
+      
+      // Secondary (right)
+      const secondaryColor = this.getInfoBarColor(data.infoBarSecondaryType, data.infoBarSecondaryTeamId, data);
+      this.ctx.fillStyle = secondaryColor;
+      this.ctx.fillText((data.infoBarSecondaryLabel || '').toUpperCase(), rightX, textY);
+    } else {
+      // SINGLE LAYOUT: Centered
+      const displayText = data.infoBarLabel || 'Powered By STATJAM';
+      const infoBarType = data.infoBarType || 'tournament_name';
+      const color = this.getInfoBarColor(infoBarType, data.infoBarTeamId, data);
       
       this.ctx.fillStyle = color;
-      this.ctx.font = font;
+      this.ctx.font = 'italic 700 34px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText(displayText.toUpperCase(), centerX, textY);
@@ -315,39 +340,37 @@ export class NBAOverlayDrawer {
   }
   
   /**
-   * Get style for info bar based on item type
+   * Get color for info bar item - uses team colors when available
    */
-  private getInfoBarStyle(type: string): { color: string; font: string } {
-    const baseFont = 'italic 700 34px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
+  private getInfoBarColor(
+    type: string | undefined,
+    teamId: string | undefined,
+    data: GameOverlayData
+  ): string {
+    // Use team color for team_run and milestone when teamId is provided
+    if (teamId && (type === 'team_run' || type === 'milestone')) {
+      if (teamId === data.teamAId && data.teamAPrimaryColor) {
+        return data.teamAPrimaryColor;
+      }
+      if (teamId === data.teamBId && data.teamBPrimaryColor) {
+        return data.teamBPrimaryColor;
+      }
+    }
     
+    // Fallback to type-based colors
     switch (type) {
       case 'team_run':
-        return { 
-          color: '#FBBF24', // Amber/yellow for emphasis
-          font: baseFont,
-        };
+        return '#FBBF24'; // Amber fallback
       case 'timeout':
-        return { 
-          color: '#EF4444', // Red for urgency
-          font: baseFont,
-        };
+        return '#EF4444'; // Red for urgency
       case 'milestone':
-        return { 
-          color: '#10B981', // Green for achievement
-          font: baseFont,
-        };
+        return '#10B981'; // Green fallback
       case 'halftime':
       case 'overtime':
-        return { 
-          color: '#60A5FA', // Blue for game state
-          font: baseFont,
-        };
+        return '#60A5FA'; // Blue for game state
       case 'tournament_name':
       default:
-        return { 
-          color: '#FFFFFF', // White default
-          font: baseFont,
-        };
+        return '#FFFFFF'; // White default
     }
   }
   

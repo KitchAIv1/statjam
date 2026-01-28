@@ -19,6 +19,7 @@ import type { InfoBarItem } from '@/lib/services/canvas-overlay/infoBarManager';
 interface GameStat {
   player_id: string | null;
   custom_player_id?: string | null;
+  team_id: string;
   stat_type: string;
   stat_value: number;
   modifier?: string;
@@ -29,6 +30,7 @@ interface PlayerStats {
   points: number;
   rebounds: number;
   assists: number;
+  teamId: string;
 }
 
 type MilestoneType = 'PTS_30' | 'REB_15' | 'AST_10' | 'DOUBLE_DOUBLE' | 'TRIPLE_DOUBLE';
@@ -64,7 +66,7 @@ function aggregatePlayerStats(stats: GameStat[]): Map<string, PlayerStats> {
     if (!playerId) continue;
 
     if (!playerMap.has(playerId)) {
-      playerMap.set(playerId, { points: 0, rebounds: 0, assists: 0 });
+      playerMap.set(playerId, { points: 0, rebounds: 0, assists: 0, teamId: stat.team_id });
     }
 
     const player = playerMap.get(playerId)!;
@@ -121,24 +123,25 @@ function checkSingleMilestone(stats: PlayerStats): MilestoneType | null {
  */
 export function detectAllMilestonesFromStats(stats: GameStat[]): Array<{
   playerId: string;
+  teamId: string;
   milestone: MilestoneType;
   priority: number;
 }> {
   const playerStats = aggregatePlayerStats(stats);
-  const milestones: Array<{ playerId: string; milestone: MilestoneType; priority: number }> = [];
+  const milestones: Array<{ playerId: string; teamId: string; milestone: MilestoneType; priority: number }> = [];
 
   for (const [playerId, pStats] of playerStats) {
     // Check combo first (higher priority)
     const combo = checkComboMilestone(pStats);
     if (combo) {
-      milestones.push({ playerId, milestone: combo, priority: MILESTONE_PRIORITY[combo] });
+      milestones.push({ playerId, teamId: pStats.teamId, milestone: combo, priority: MILESTONE_PRIORITY[combo] });
     }
 
     // Check single-stat milestones (only if no combo - avoid double counting)
     if (!combo) {
       const single = checkSingleMilestone(pStats);
       if (single) {
-        milestones.push({ playerId, milestone: single, priority: MILESTONE_PRIORITY[single] });
+        milestones.push({ playerId, teamId: pStats.teamId, milestone: single, priority: MILESTONE_PRIORITY[single] });
       }
     }
   }
@@ -152,12 +155,14 @@ export function detectAllMilestonesFromStats(stats: GameStat[]): Array<{
  */
 export function createMilestoneInfoBarItem(
   milestone: MilestoneType,
-  playerName: string
+  playerName: string,
+  teamId?: string
 ): InfoBarItem {
   return {
     type: 'milestone',
     label: `⭐ ${playerName.toUpperCase()} - ${MILESTONE_LABELS[milestone]}`,
     priority: MILESTONE_PRIORITY[milestone],
     expiresAt: Date.now() + 8000, // 8 seconds
+    teamId,
   };
 }

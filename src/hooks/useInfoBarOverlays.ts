@@ -39,6 +39,7 @@ interface GameState {
 
 interface UseInfoBarOverlaysResult {
   activeItem: InfoBarItem | null;
+  secondaryItem: InfoBarItem | null;  // For split display (NBA style)
   toggles: InfoBarToggles;
   setToggles: (toggles: InfoBarToggles) => void;
   items: InfoBarItem[];
@@ -105,13 +106,38 @@ export function useInfoBarOverlays(
     return result;
   }, [gameState, timeoutItem, teamRunItem, milestoneItem]);
 
-  // Get active item based on priority and toggles
-  const activeItem = useMemo(() => {
-    return getActiveInfoBarItem(items, toggles);
+  // Get active items based on priority and toggles (primary + secondary for split)
+  const { activeItem, secondaryItem } = useMemo(() => {
+    const primary = getActiveInfoBarItem(items, toggles);
+    
+    // Get secondary item (different type than primary, for split display)
+    let secondary: InfoBarItem | null = null;
+    if (primary) {
+      const otherItems = items.filter(item => {
+        if (item.type === primary.type) return false;
+        // Only team_run and milestone can be split
+        if (!['team_run', 'milestone'].includes(item.type)) return false;
+        if (!['team_run', 'milestone'].includes(primary.type)) return false;
+        // Check toggle
+        const toggleKey = item.type === 'team_run' ? 'teamRun' : 'milestone';
+        if (!toggles[toggleKey]) return false;
+        // Check expiry
+        if (item.expiresAt && item.expiresAt < Date.now()) return false;
+        return true;
+      });
+      
+      if (otherItems.length > 0) {
+        otherItems.sort((a, b) => b.priority - a.priority);
+        secondary = otherItems[0];
+      }
+    }
+    
+    return { activeItem: primary, secondaryItem: secondary };
   }, [items, toggles]);
 
   return {
     activeItem,
+    secondaryItem,
     toggles,
     setToggles,
     items,

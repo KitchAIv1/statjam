@@ -66,7 +66,7 @@ export default function VideoCompositionTestPage() {
   }, [overlayData, selectedTournament?.name]);
   
   // Info bar overlays (team run, timeout, halftime, etc.)
-  const { activeItem: infoBarActiveItem, toggles: infoBarToggles, setToggles: setInfoBarToggles } = useInfoBarOverlays(selectedGameId, gameState);
+  const { activeItem: infoBarActiveItem, secondaryItem: infoBarSecondaryItem, toggles: infoBarToggles, setToggles: setInfoBarToggles } = useInfoBarOverlays(selectedGameId, gameState);
   
   const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();
   
@@ -118,8 +118,13 @@ export default function VideoCompositionTestPage() {
       // Info bar overlays (team run, timeout, halftime, etc.)
       infoBarLabel: infoBarActiveItem?.label,
       infoBarType: infoBarActiveItem?.type,
+      infoBarTeamId: infoBarActiveItem?.teamId,
+      // Secondary item (for split NBA-style display)
+      infoBarSecondaryLabel: infoBarSecondaryItem?.label,
+      infoBarSecondaryType: infoBarSecondaryItem?.type,
+      infoBarSecondaryTeamId: infoBarSecondaryItem?.teamId,
     };
-  }, [overlayData, activePlayerStats, selectedTournament, infoBarActiveItem]);
+  }, [overlayData, activePlayerStats, selectedTournament, infoBarActiveItem, infoBarSecondaryItem]);
   
   const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition, setVariant } = useVideoComposition({
     videoStream: activeVideoStream,
