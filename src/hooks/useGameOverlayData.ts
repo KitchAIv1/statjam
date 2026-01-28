@@ -108,7 +108,7 @@ export function useGameOverlayData(gameId: string | null) {
     }
 
     try {
-      // Fetch game data
+      // Fetch game data (tournament fetched separately to avoid join failures)
       const { data: game, error: gameError } = await supabase
         .from('games')
         .select('*')
@@ -117,6 +117,19 @@ export function useGameOverlayData(gameId: string | null) {
 
       if (gameError || !game) {
         throw new Error('Game not found');
+      }
+      
+      // Fetch tournament info separately (optional - won't fail if no tournament)
+      // Note: Tournament name is now passed directly from studio's tournament selector
+      // This is kept as fallback for cases where tournament selector isn't used
+      let tournament: { id: string; name: string; logo_url?: string } | null = null;
+      if (game.tournament_id) {
+        const { data: tournamentData } = await supabase
+          .from('tournaments')
+          .select('id, name, logo_url')
+          .eq('id', game.tournament_id)
+          .single();
+        tournament = tournamentData;
       }
 
       // Fetch team data
@@ -150,7 +163,7 @@ export function useGameOverlayData(gameId: string | null) {
       );
 
       if (!mountedRef.current) return;
-
+      
       setOverlayData({
         teamAName: teamA?.name || 'Team A',
         teamBName: teamB?.name || 'Team B',
@@ -178,6 +191,9 @@ export function useGameOverlayData(gameId: string | null) {
         currentPossessionTeamId: game.current_possession_team_id,
         jumpBallArrowTeamId: game.jump_ball_arrow_team_id,
         venue: game.venue,
+        // ✅ Tournament info from joined query
+        tournamentName: tournament?.name,
+        tournamentLogo: tournament?.logo_url,
       });
     } catch (err) {
       if (mountedRef.current) {

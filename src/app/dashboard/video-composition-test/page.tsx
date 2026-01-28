@@ -9,62 +9,64 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { BroadcastControls } from '@/components/live-streaming/BroadcastControls';
+import { BroadcastTimer } from '@/components/live-streaming/BroadcastTimer';
 import { OverlayControlPanel } from '@/components/live-streaming/OverlayControlPanel';
 import { BroadcastReadinessIndicator } from '@/components/live-streaming/BroadcastReadinessIndicator';
 import { StudioHeader } from '@/components/live-streaming/StudioHeader';
+import { TournamentGameSelector } from '@/components/live-streaming/TournamentGameSelector';
+import { OnboardingBanner } from '@/components/live-streaming/OnboardingBanner';
 import { VideoSourceSelector } from '@/components/video-sources';
 import { useWebRTCStream } from '@/hooks/useWebRTCStream';
 import { useVideoComposition } from '@/hooks/useVideoComposition';
 import { useBroadcast } from '@/hooks/useBroadcast';
 import { useVideoSourceSelector } from '@/hooks/useVideoSourceSelector';
 import { BroadcastPlatform, QualityPreset } from '@/lib/services/broadcast/types';
-import { OverlayVariant } from '@/lib/services/canvas-overlay';
+import { OverlayVariant, InfoBarToggles } from '@/lib/services/canvas-overlay';
 import { ConnectionStatus } from '@/lib/services/video-sources/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Video, Mic, MicOff } from 'lucide-react';
 import { useMicrophone } from '@/hooks/useMicrophone';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useTournaments } from '@/lib/hooks/useTournaments';
-import { GameService } from '@/lib/services/gameService';
-import { supabase } from '@/lib/supabase';
 import { useGameOverlayData } from '@/hooks/useGameOverlayData';
 import { useGamePlayers } from '@/hooks/useGamePlayers';
 import { usePlayerStatsOverlay } from '@/hooks/usePlayerStatsOverlay';
 import { useBroadcastReadiness } from '@/hooks/useBroadcastReadiness';
+import { useInfoBarOverlays } from '@/hooks/useInfoBarOverlays';
 import { notify } from '@/lib/services/notificationService';
-
-interface LiveGame {
-  id: string;
-  team_a_id: string;
-  team_b_id: string;
-  team_a_name: string;
-  team_b_name: string;
-  home_score: number;
-  away_score: number;
-  quarter: number;
-  status: string;
-  game_clock_minutes: number;
-  game_clock_seconds: number;
-}
+import type { Tournament } from '@/lib/types/tournament';
 
 export default function VideoCompositionTestPage() {
   const { user } = useAuthContext();
-  const [games, setGames] = useState<LiveGame[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [loadingGames, setLoadingGames] = useState(true);
+  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [autoTriggerEnabled, setAutoTriggerEnabled] = useState(true);
   const [broadcastStartTime, setBroadcastStartTime] = useState<number | null>(null);
   const [overlayVariant, setOverlayVariant] = useState<OverlayVariant>('classic');
   const videoRef = useRef<HTMLVideoElement>(null);
   
-  const { tournaments, loading: tournamentsLoading } = useTournaments(user);
-  const tournamentIds = useMemo(() => tournaments.map(t => t.id).join(','), [tournaments]);
   const { overlayData } = useGameOverlayData(selectedGameId);
   const { teamAPlayers, teamBPlayers, teamAName, teamBName, loading: playersLoading } = useGamePlayers(selectedGameId);
   const { activePlayerStats, triggerOverlay, hideOverlay } = usePlayerStatsOverlay(selectedGameId, autoTriggerEnabled);
+  
+  // Build gameState for info bar overlay detection
+  const gameState = useMemo(() => {
+    if (!overlayData) return null;
+    return {
+      quarter: overlayData.quarter,
+      clockMinutes: overlayData.gameClockMinutes,
+      clockSeconds: overlayData.gameClockSeconds,
+      teamAId: overlayData.teamAId,
+      teamBId: overlayData.teamBId,
+      teamAName: overlayData.teamAName,
+      teamBName: overlayData.teamBName,
+      tournamentName: selectedTournament?.name,
+    };
+  }, [overlayData, selectedTournament?.name]);
+  
+  // Info bar overlays (team run, timeout, halftime, etc.)
+  const { activeItem: infoBarActiveItem, toggles: infoBarToggles, setToggles: setInfoBarToggles } = useInfoBarOverlays(selectedGameId, gameState);
   
   const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();
   
@@ -96,10 +98,28 @@ export default function VideoCompositionTestPage() {
   
   const activeVideoStream = videoSourceState.stream;
   
+  // Callbacks for TournamentGameSelector
+  const handleGameSelect = useCallback((gameId: string | null) => {
+    setSelectedGameId(gameId);
+  }, []);
+  
+  const handleTournamentSelect = useCallback((tournament: Tournament | null) => {
+    setSelectedTournament(tournament);
+  }, []);
+  
   const fullOverlayData = useMemo(() => {
     if (!overlayData) return null;
-    return { ...overlayData, activePlayerStats: activePlayerStats ?? undefined };
-  }, [overlayData, activePlayerStats]);
+    return { 
+      ...overlayData, 
+      activePlayerStats: activePlayerStats ?? undefined,
+      // Pass tournament name directly from selected tournament (no DB query needed)
+      tournamentName: selectedTournament?.name,
+      tournamentLogo: selectedTournament?.logo,
+      // Info bar overlays (team run, timeout, halftime, etc.)
+      infoBarLabel: infoBarActiveItem?.label,
+      infoBarType: infoBarActiveItem?.type,
+    };
+  }, [overlayData, activePlayerStats, selectedTournament, infoBarActiveItem]);
   
   const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition, setVariant } = useVideoComposition({
     videoStream: activeVideoStream,
@@ -127,28 +147,6 @@ export default function VideoCompositionTestPage() {
       videoRef.current.srcObject = null;
     }
   }, [composedStream]);
-  
-  // Fetch games
-  useEffect(() => {
-    async function fetchGames() {
-      if (!user?.id || !tournamentIds) { setLoadingGames(false); return; }
-      try {
-        setLoadingGames(true);
-        const ids = tournamentIds.split(',').filter(Boolean);
-        const tournamentGamesPromises = ids.map(id => GameService.getGamesByTournament(id).then(g => g.filter((x: any) => ['live', 'in_progress'].includes(String(x.status || '').toLowerCase()))).catch(() => []));
-        const allGames = (await Promise.all(tournamentGamesPromises)).flat();
-        const teamIds = [...new Set(allGames.flatMap((g: any) => [g.team_a_id, g.team_b_id]).filter(Boolean))];
-        let teamsMap = new Map<string, any>();
-        if (teamIds.length > 0 && supabase) {
-          const { data } = await supabase.from('teams').select('id, name').in('id', teamIds);
-          teamsMap = new Map((data || []).map(t => [t.id, t]));
-        }
-        setGames(allGames.map((g: any) => ({ id: g.id, team_a_id: g.team_a_id, team_b_id: g.team_b_id, team_a_name: teamsMap.get(g.team_a_id)?.name || 'Team A', team_b_name: teamsMap.get(g.team_b_id)?.name || 'Team B', home_score: g.home_score || 0, away_score: g.away_score || 0, quarter: g.quarter || 1, status: g.status, game_clock_minutes: g.game_clock_minutes || 10, game_clock_seconds: g.game_clock_seconds || 0 })));
-      } catch (err) { console.error('Error loading games:', err); } finally { setLoadingGames(false); }
-    }
-    if (!tournamentsLoading && tournamentIds) fetchGames();
-    else if (!tournamentsLoading) setLoadingGames(false);
-  }, [user?.id, tournamentIds, tournamentsLoading]);
   
   const handleToggleComposition = async () => {
     if (state.isComposing) {
@@ -190,42 +188,13 @@ export default function VideoCompositionTestPage() {
     notify.info('Broadcast stopped');
   }, [stopBroadcast]);
 
-  // Format broadcast duration
-  const formatDuration = useCallback((seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    if (hours > 0) {
-      return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-    return `${minutes}:${String(secs).padStart(2, '0')}`;
-  }, []);
-
-  const [broadcastDuration, setBroadcastDuration] = useState(0);
-
-  // Update broadcast duration timer
-  useEffect(() => {
-    if (!broadcastState.isBroadcasting || !broadcastStartTime) {
-      setBroadcastDuration(0);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setBroadcastDuration(Math.floor((Date.now() - broadcastStartTime) / 1000));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [broadcastState.isBroadcasting, broadcastStartTime]);
-
-  // Reset timer when broadcast stops
+  // Reset broadcast start time when broadcast stops
   useEffect(() => {
     if (!broadcastState.isBroadcasting) {
       setBroadcastStartTime(null);
-      setBroadcastDuration(0);
     }
   }, [broadcastState.isBroadcasting]);
 
-  const selectedGame = games.find(g => g.id === selectedGameId);
   const isComposing = !!(state.isComposing && composedStream);
   
   const broadcastReadiness = useBroadcastReadiness(selectedGameId, activeVideoStream, isComposing);
@@ -237,7 +206,12 @@ export default function VideoCompositionTestPage() {
         hasVideoStream={!!activeVideoStream}
         isComposing={state.isComposing}
         isBroadcasting={broadcastState.isBroadcasting}
-        broadcastDuration={formatDuration(broadcastDuration)}
+        broadcastDuration={
+          <BroadcastTimer 
+            startTime={broadcastStartTime} 
+            isBroadcasting={broadcastState.isBroadcasting} 
+          />
+        }
       />
 
       {/* Main Content - Grid Layout */}
@@ -245,51 +219,17 @@ export default function VideoCompositionTestPage() {
         <div className="h-full grid grid-cols-12 gap-3">
           {/* Left Sidebar - Compact (3 columns) */}
           <div className="col-span-3 flex flex-col gap-2 overflow-y-auto">
-            {/* Game Selection - Compact */}
-            <Card className="p-3 flex-shrink-0">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Game</h3>
-                  {selectedGame && overlayData && (
-                    <span className="text-xs px-1.5 py-0.5 bg-green-500/10 text-green-600 rounded">LIVE</span>
-                  )}
-                </div>
-                {loadingGames || tournamentsLoading ? (
-                  <div className="space-y-2 py-2 animate-in fade-in-0">
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-6 w-3/4" />
-                  </div>
-                ) : games.length === 0 ? (
-                  <div className="py-3 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">No live games</p>
-                    <p className="text-[10px] text-muted-foreground">Start a game in your tournament to begin streaming</p>
-                  </div>
-                ) : (
-                  <select
-                    value={selectedGameId || ''}
-                    onChange={(e) => setSelectedGameId(e.target.value || null)}
-                    className="w-full text-xs px-2 py-1.5 bg-background border rounded transition-all duration-200 animate-in fade-in-0"
-                  >
-                    <option value="">-- Select --</option>
-                    {games.map(g => (
-                      <option key={g.id} value={g.id}>
-                        {g.team_b_name} vs {g.team_a_name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {selectedGame && overlayData && (
-                  <div className="text-xs space-y-0.5 pt-1 border-t animate-in fade-in-0 slide-in-from-top-1 duration-200">
-                    <p className="font-medium">
-                      {overlayData.teamBName} {overlayData.awayScore} - {overlayData.homeScore} {overlayData.teamAName}
-                    </p>
-                    <p className="text-muted-foreground">
-                      Q{overlayData.quarter} | {overlayData.gameClockMinutes}:{String(overlayData.gameClockSeconds).padStart(2, '0')}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </Card>
+            {/* First-time onboarding (dismissible) */}
+            <OnboardingBanner />
+            
+            {/* Tournament & Game Selection (extracted component) */}
+            <TournamentGameSelector
+              user={user}
+              selectedGameId={selectedGameId}
+              onGameSelect={handleGameSelect}
+              onTournamentSelect={handleTournamentSelect}
+              overlayData={overlayData}
+            />
             
             {/* Video Source Selector (OBS-like) */}
             <VideoSourceSelector
@@ -531,6 +471,10 @@ export default function VideoCompositionTestPage() {
                 onTriggerPlayer={(player) => triggerOverlay(player.id, player.teamId, player.isCustomPlayer)}
                 onHideOverlay={hideOverlay}
                 onToggleAutoTrigger={setAutoTriggerEnabled}
+                // Info Bar (NBA mode only)
+                showInfoBarTab={overlayVariant === 'nba'}
+                infoBarToggles={infoBarToggles}
+                onInfoBarToggleChange={setInfoBarToggles}
               />
             )}
           </div>

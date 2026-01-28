@@ -58,6 +58,10 @@ export function TeamCreationModal({
   const [selectedPlayers, setSelectedPlayers] = useState<GenericPlayer[]>([]);
   const [createdTeamId, setCreatedTeamId] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string>('');
+  
+  // Team branding colors
+  const [primaryColor, setPrimaryColor] = useState('#111827');
+  const [secondaryColor, setSecondaryColor] = useState('#999999');
 
   // Fetch tournament to check if divisions are enabled
   useEffect(() => {
@@ -117,13 +121,16 @@ export function TeamCreationModal({
       // Import TeamService dynamically
       const { TeamService } = await import('@/lib/services/tournamentService');
       
-      // Create team with logo and division
+      // Create team with logo, division, and colors
       const newTeam = await TeamService.createTeam({
         name: teamName.trim(),
         coach: coachName.trim() || undefined,
         logo: logoUrl || undefined, // Include logo URL if uploaded
         tournamentId: tournamentId,
         division: selectedDivision || undefined, // Include division if selected
+        // Team branding colors
+        primaryColor: primaryColor,
+        secondaryColor: secondaryColor,
       });
 
       setCreatedTeamId(newTeam.id);
@@ -168,6 +175,13 @@ export function TeamCreationModal({
             tournament={tournament}
             selectedDivision={selectedDivision}
             onDivisionChange={setSelectedDivision}
+            // Team branding colors
+            primaryColor={primaryColor}
+            secondaryColor={secondaryColor}
+            onColorChange={(field, value) => {
+              if (field === 'primary_color') setPrimaryColor(value);
+              if (field === 'secondary_color') setSecondaryColor(value);
+            }}
           />
         );
 

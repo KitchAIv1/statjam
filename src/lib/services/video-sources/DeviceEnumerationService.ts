@@ -87,16 +87,26 @@ export async function getDeviceStream(
   deviceId: string,
   constraints?: MediaTrackConstraints
 ): Promise<MediaStream> {
-  return navigator.mediaDevices.getUserMedia({
-    video: {
-      deviceId: { exact: deviceId },
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
-      frameRate: { ideal: 30 },
-      ...constraints,
-    },
-    audio: false,
-  });
+  try {
+    // First try with ideal constraints (flexible)
+    return await navigator.mediaDevices.getUserMedia({
+      video: {
+        deviceId: { ideal: deviceId },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30 },
+        ...constraints,
+      },
+      audio: false,
+    });
+  } catch (firstError) {
+    console.warn('⚠️ Ideal constraints failed, trying minimal:', firstError);
+    // Fallback: minimal constraints if ideal fails
+    return navigator.mediaDevices.getUserMedia({
+      video: { deviceId: deviceId },
+      audio: false,
+    });
+  }
 }
 
 /** Get screen capture stream */

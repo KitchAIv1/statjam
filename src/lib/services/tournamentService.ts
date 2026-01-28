@@ -590,7 +590,7 @@ export class TournamentService {
 
 // Team Service
 export class TeamService {
-  static async createTeam(data: { name: string; coach?: string; logo?: string; tournamentId: string; division?: string }): Promise<Team> {
+  static async createTeam(data: { name: string; coach?: string; logo?: string; tournamentId: string; division?: string; primaryColor?: string; secondaryColor?: string; accentColor?: string }): Promise<Team> {
     try {
       // Only include fields that exist in the database schema
       // Organizer-created teams are auto-approved (no join request needed)
@@ -599,6 +599,10 @@ export class TeamService {
         tournament_id: data.tournamentId,
         logo_url: data.logo || null, // Map logo to logo_url database column
         approval_status: 'approved' as const,
+        // Team branding colors
+        primary_color: data.primaryColor || '#111827',
+        secondary_color: data.secondaryColor || '#999999',
+        accent_color: data.accentColor || '#F5D36C',
       };
 
       // Add division if provided
@@ -609,7 +613,7 @@ export class TeamService {
       const { data: team, error } = await supabase
         .from('teams')
         .insert([teamData])
-        .select('id, name, logo_url, tournament_id, approval_status, division')
+        .select('id, name, logo_url, tournament_id, approval_status, division, primary_color, secondary_color, accent_color')
         .single();
 
       if (error) {
@@ -641,6 +645,10 @@ export class TeamService {
         tournamentId: team.tournament_id,
         division: team.division || undefined, // Include division
         approval_status: team.approval_status || 'approved', // Include approval status
+        // Team branding colors
+        primaryColor: team.primary_color,
+        secondaryColor: team.secondary_color,
+        accentColor: team.accent_color,
         createdAt: new Date().toISOString(), // Default since created_at doesn't exist in teams table
       };
     } catch (error) {

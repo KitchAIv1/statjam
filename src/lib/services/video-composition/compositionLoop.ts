@@ -26,6 +26,10 @@ export class CompositionLoop {
   private currentOverlayData: GameOverlayData | null = null;
   private callbacks: CompositionLoopCallbacks = {};
   
+  // Phase 2: Dirty flag optimization - only re-render overlay when data changes
+  private cachedOverlayCanvas: HTMLCanvasElement | null = null;
+  private lastOverlayDataHash: string | null = null;
+  
   constructor(
     ctx: CanvasRenderingContext2D,
     overlayRenderer: CanvasOverlayRenderer,
@@ -81,10 +85,30 @@ export class CompositionLoop {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
+    
+    // Clear overlay cache
+    this.cachedOverlayCanvas = null;
+    this.lastOverlayDataHash = null;
   }
   
   getFrameCount(): number {
     return this.frameCount;
+  }
+  
+  /**
+   * Invalidate overlay cache - call when variant or other render settings change
+   */
+  invalidateCache(): void {
+    this.cachedOverlayCanvas = null;
+    this.lastOverlayDataHash = null;
+  }
+  
+  /**
+   * Create lightweight hash of overlay data for dirty checking.
+   * Only includes fields that affect visual rendering.
+   */
+  private getOverlayDataHash(data: GameOverlayData): string {
+    return `${data.homeScore}-${data.awayScore}-${data.quarter}-${data.gameClockMinutes}:${data.gameClockSeconds}-${data.teamAFouls}-${data.teamBFouls}-${data.activePlayerStats?.playerId || 'none'}-${data.activePlayerStats?.isVisible || false}-${data.tournamentName || ''}-${data.infoBarLabel || ''}`;
   }
   
   /**
@@ -168,10 +192,20 @@ export class CompositionLoop {
         this.ctx.fillRect(0, 0, this.width, this.height);
       }
       
-      // Render overlay on top
+      // Render overlay on top (with dirty flag optimization)
       try {
-        const overlayCanvas = await this.overlayRenderer.render(dataToRender);
-        this.ctx.drawImage(overlayCanvas, 0, 0);
+        const currentHash = this.getOverlayDataHash(dataToRender);
+        
+        // Only re-render overlay if data changed or no cache exists
+        if (currentHash !== this.lastOverlayDataHash || !this.cachedOverlayCanvas) {
+          this.cachedOverlayCanvas = await this.overlayRenderer.render(dataToRender);
+          this.lastOverlayDataHash = currentHash;
+        }
+        
+        // Always draw cached overlay
+        if (this.cachedOverlayCanvas) {
+          this.ctx.drawImage(this.cachedOverlayCanvas, 0, 0);
+        }
       } catch (overlayError) {
         console.warn('Overlay render error (non-fatal):', overlayError);
         // Continue without overlay if render fails

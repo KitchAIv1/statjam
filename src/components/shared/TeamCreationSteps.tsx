@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { IPlayerManagementService, GenericPlayer } from '@/lib/types/playerManagement';
 import { PlayerSelectionList } from './PlayerSelectionList';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { TeamColorPicker } from '@/components/ui/TeamColorPicker';
 import { UsePhotoUploadReturn } from '@/hooks/usePhotoUpload';
 import { Tournament } from '@/lib/types/tournament';
 
@@ -72,6 +73,10 @@ interface TeamInfoStepProps {
   tournament?: Tournament | null; // Tournament data to check for divisions
   selectedDivision?: string;
   onDivisionChange?: (value: string) => void;
+  // Team branding colors
+  primaryColor?: string;
+  secondaryColor?: string;
+  onColorChange?: (field: 'primary_color' | 'secondary_color' | 'accent_color', value: string) => void;
 }
 
 export function TeamInfoStep({
@@ -82,7 +87,10 @@ export function TeamInfoStep({
   logoUpload,
   tournament,
   selectedDivision,
-  onDivisionChange
+  onDivisionChange,
+  primaryColor,
+  secondaryColor,
+  onColorChange
 }: TeamInfoStepProps) {
   // Generate division options based on tournament settings
   const divisionOptions = React.useMemo(() => {
@@ -167,6 +175,17 @@ export function TeamInfoStep({
           onChange={(e) => onCoachNameChange(e.target.value)}
         />
       </div>
+
+      {/* Team Colors */}
+      {onColorChange && (
+        <div className="border-t pt-4">
+          <TeamColorPicker
+            primaryColor={primaryColor || '#111827'}
+            secondaryColor={secondaryColor || '#999999'}
+            onChange={onColorChange}
+          />
+        </div>
+      )}
     </div>
   );
 }

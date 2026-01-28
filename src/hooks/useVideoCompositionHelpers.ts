@@ -12,7 +12,7 @@ export function initializeComposer(): VideoComposer {
   const composer = new VideoComposer({
     width: 1920,
     height: 1080,
-    frameRate: 60, // 60fps for smooth sports action
+    frameRate: 30, // 30fps output - sufficient for scoreboard overlay, reduces CPU load
   });
   
   composer.initialize().catch(err => {

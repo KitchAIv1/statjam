@@ -10,3 +10,21 @@ export { LogoCache, hexToRgba, getTailwindColor, measureText } from './utils';
 export { PlayerStatsDrawer } from './playerStatsDrawer';
 export { NBAOverlayDrawer } from './nbaDrawing';
 
+// Info Bar Manager exports
+export {
+  type InfoBarItem,
+  type InfoBarItemType,
+  type InfoBarToggles,
+  type InfoBarState,
+  DEFAULT_TOGGLES,
+  createTournamentNameItem,
+  createHalftimeItem,
+  createOvertimeItem,
+  createTimeoutItem,
+  createTeamRunItem,
+  createMilestoneItem,
+  getActiveInfoBarItem,
+  isHalftime,
+  isOvertime,
+  getOvertimePeriod,
+} from './infoBarManager';

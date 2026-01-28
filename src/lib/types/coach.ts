@@ -36,6 +36,12 @@ export interface CoachTeam {
     region?: string;
     city?: string;
   };
+  
+  // Team branding colors (for overlay & cards)
+  primary_color?: string;   // Default: '#111827'
+  secondary_color?: string; // Default: '#999999'
+  accent_color?: string;    // Default: '#F5D36C'
+  
   created_at: string;
   updated_at: string;
   
@@ -146,6 +152,12 @@ export interface CreateCoachTeamRequest {
   };
   visibility: 'private' | 'public';
   is_official_team?: boolean; // NEW: Default false (practice team)
+  
+  // Team branding colors (for overlay & cards)
+  primary_color?: string;   // Default: '#111827'
+  secondary_color?: string; // Default: '#999999'
+  accent_color?: string;    // Default: '#F5D36C'
+  
   initial_players?: Omit<CoachTeamPlayer, 'id' | 'coach_team_id' | 'created_at'>[];
 }
 
@@ -160,6 +172,11 @@ export interface UpdateCoachTeamRequest {
   };
   visibility?: 'private' | 'public';
   is_official_team?: boolean; // NEW: Allows toggling between official/practice
+  
+  // Team branding colors (for overlay & cards)
+  primary_color?: string;
+  secondary_color?: string;
+  accent_color?: string;
 }
 
 export interface CreateCoachGameRequest {

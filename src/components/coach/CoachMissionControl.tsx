@@ -20,6 +20,7 @@ import { ProfileCard, ProfileCardSkeleton } from '@/components/profile/ProfileCa
 import { ProfileService } from '@/lib/services/profileService';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { TeamColorPicker } from '@/components/ui/TeamColorPicker';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -108,7 +109,14 @@ export function CoachMissionControl({
   const [selectedSeasonForEdit, setSelectedSeasonForEdit] = useState<Season | null>(null);
   
   // Edit team form state
-  const [editFormData, setEditFormData] = useState({ name: '', is_official_team: false, logo: '' });
+  const [editFormData, setEditFormData] = useState({ 
+    name: '', 
+    is_official_team: false, 
+    logo: '',
+    // Team branding colors
+    primary_color: '#111827',
+    secondary_color: '#999999',
+  });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   
@@ -190,7 +198,10 @@ export function CoachMissionControl({
     setEditFormData({
       name: team.name,
       is_official_team: team.is_official_team || false,
-      logo: team.logo || ''
+      logo: team.logo || '',
+      // Team branding colors
+      primary_color: team.primary_color || '#111827',
+      secondary_color: team.secondary_color || '#999999',
     });
     setEditError(null);
     setShowEditTeam(true);
@@ -211,7 +222,10 @@ export function CoachMissionControl({
       await CoachTeamService.updateTeam(selectedTeam.id, {
         name: editFormData.name,
         is_official_team: editFormData.is_official_team,
-        logo: editFormData.logo || undefined
+        logo: editFormData.logo || undefined,
+        // Team branding colors
+        primary_color: editFormData.primary_color,
+        secondary_color: editFormData.secondary_color,
       });
 
       setShowEditTeam(false);
@@ -543,6 +557,15 @@ export function CoachMissionControl({
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Team Colors */}
+              <div className="border-t pt-4">
+                <TeamColorPicker
+                  primaryColor={editFormData.primary_color || '#111827'}
+                  secondaryColor={editFormData.secondary_color || '#999999'}
+                  onChange={(field, value) => setEditFormData(prev => ({ ...prev, [field]: value }))}
+                />
               </div>
 
               {/* Warning when changing from official to practice */}

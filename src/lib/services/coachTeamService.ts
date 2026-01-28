@@ -44,6 +44,9 @@ export class CoachTeamService {
           approval_status,
           visibility,
           is_official_team,
+          primary_color,
+          secondary_color,
+          accent_color,
           created_at,
           updated_at
         `)
@@ -77,6 +80,10 @@ export class CoachTeamService {
             approval_status: team.approval_status,
             visibility: team.visibility,
             is_official_team: team.is_official_team,
+            // Team branding colors
+            primary_color: team.primary_color,
+            secondary_color: team.secondary_color,
+            accent_color: team.accent_color,
             created_at: team.created_at,
             updated_at: team.updated_at,
             player_count: playerCount,
@@ -108,6 +115,9 @@ export class CoachTeamService {
           approval_status,
           visibility,
           is_official_team,
+          primary_color,
+          secondary_color,
+          accent_color,
           created_at,
           updated_at
         `)
@@ -130,6 +140,10 @@ export class CoachTeamService {
         approval_status: team.approval_status,
         visibility: team.visibility,
         is_official_team: team.is_official_team,
+        // Team branding colors
+        primary_color: team.primary_color,
+        secondary_color: team.secondary_color,
+        accent_color: team.accent_color,
         created_at: team.created_at,
         updated_at: team.updated_at,
         player_count: playerCount,
@@ -176,7 +190,10 @@ export class CoachTeamService {
           tournament_id: null, // Coach teams can exist without tournaments
           visibility: request.visibility,
           is_official_team: request.is_official_team || false, // Default to practice team
-          // Store location and level in metadata if needed
+          // Team branding colors for overlay & cards
+          primary_color: request.primary_color || '#111827',
+          secondary_color: request.secondary_color || '#999999',
+          accent_color: request.accent_color || '#F5D36C',
         })
         .select()
         .single();
@@ -192,6 +209,10 @@ export class CoachTeamService {
         coach_id: data.coach_id,
         visibility: data.visibility,
         is_official_team: data.is_official_team,
+        // Team branding colors
+        primary_color: data.primary_color,
+        secondary_color: data.secondary_color,
+        accent_color: data.accent_color,
         created_at: data.created_at,
         updated_at: data.updated_at,
         player_count: 0,
@@ -214,6 +235,10 @@ export class CoachTeamService {
       if (updates.logo !== undefined) updateData.logo_url = updates.logo || null;
       if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
       if (updates.is_official_team !== undefined) updateData.is_official_team = updates.is_official_team;
+      // Team branding colors
+      if (updates.primary_color !== undefined) updateData.primary_color = updates.primary_color;
+      if (updates.secondary_color !== undefined) updateData.secondary_color = updates.secondary_color;
+      if (updates.accent_color !== undefined) updateData.accent_color = updates.accent_color;
       
       const { error } = await supabase
         .from('teams')

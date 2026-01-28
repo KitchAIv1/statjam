@@ -70,6 +70,10 @@ export class VideoComposer {
    */
   setOverlayVariant(variant: OverlayVariant): void {
     this.overlayRenderer.setVariant(variant);
+    // Invalidate composition cache so new variant renders immediately
+    if (this.compositionLoop) {
+      this.compositionLoop.invalidateCache();
+    }
   }
   
   /**

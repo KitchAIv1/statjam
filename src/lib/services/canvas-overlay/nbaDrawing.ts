@@ -12,6 +12,7 @@ export class NBAOverlayDrawer {
   private readonly MAX_WIDTH = 850;  // Compressed more for tighter layout
   private readonly BAR_HEIGHT = 92;  // +15% from 80
   private readonly HEADER_HEIGHT = 37;  // +15% from 32
+  private readonly INFO_BAR_HEIGHT = 46;  // Half of main bar height
   
   constructor(
     private ctx: CanvasRenderingContext2D,
@@ -31,17 +32,17 @@ export class NBAOverlayDrawer {
     const centerX = this.width / 2;
     const barY = 20; // Top margin
     
-    // Draw organizer header (if available)
-    if (data.tournamentName || tournamentLogo) {
-      this.drawOrganizerHeader(data, tournamentLogo, centerX, barY);
-    }
+    // Draw organizer header (always show branding)
+    this.drawOrganizerHeader(data, tournamentLogo, centerX, barY);
     
-    // Main scoreboard bar
-    const mainBarY = (data.tournamentName || tournamentLogo) 
-      ? barY + this.HEADER_HEIGHT + 4 
-      : barY;
+    // Main scoreboard bar (flush with header - no gap)
+    const mainBarY = barY + this.HEADER_HEIGHT;
     
     this.drawMainBar(data, teamALogo, teamBLogo, centerX, mainBarY);
+    
+    // Info bar below main bar (no gap)
+    const infoBarY = mainBarY + this.BAR_HEIGHT;
+    this.drawInfoBar(data, centerX, infoBarY);
   }
   
   /**
@@ -70,13 +71,13 @@ export class NBAOverlayDrawer {
       this.ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
     }
     
-    // Tournament name
+    // Branding text
     this.ctx.fillStyle = '#FFFFFF';
     this.ctx.font = '700 16px Arial, sans-serif';  // +15% from 14px
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
     this.ctx.fillText(
-      data.tournamentName || '',
+      'Powered By STATJAM',
       textX,
       y + this.HEADER_HEIGHT / 2
     );
@@ -230,12 +231,12 @@ export class NBAOverlayDrawer {
     fouls: number,
     align: 'left' | 'right'
   ): void {
-    const nameY = y + 32;  // +15% from 28
-    const foulY = y + 62;  // +15% from 54
+    const nameY = y + 38;  // Pushed down (+6px)
+    const foulY = y + 68;  // Pushed down (+6px)
     
-    // Team name (full name, truncate if needed)
+    // Team name (full name, truncate if needed) - larger font
     this.ctx.fillStyle = '#FFFFFF';
-    this.ctx.font = '800 23px Arial, sans-serif';  // +15% from 20px
+    this.ctx.font = '800 28px Arial, sans-serif';  // Increased from 23px
     this.ctx.textAlign = align;
     this.ctx.textBaseline = 'middle';
     
@@ -252,7 +253,7 @@ export class NBAOverlayDrawer {
     this.ctx.fillText(displayName, textX, nameY);
     
     // Foul indicator: "BONUS" if >= 5, otherwise "X FOULS"
-    this.ctx.font = '600 16px Arial, sans-serif';  // +15% from 14px
+    this.ctx.font = '600 18px Arial, sans-serif';  // Slightly larger (16px → 18px)
     this.ctx.fillStyle = fouls >= 5 ? '#FBBF24' : 'rgba(255, 255, 255, 0.8)';
     const foulText = fouls >= 5 ? 'BONUS' : `${fouls} FOULS`;
     this.ctx.fillText(foulText, textX, foulY);
@@ -269,12 +270,85 @@ export class NBAOverlayDrawer {
     align: 'left' | 'right'
   ): void {
     this.ctx.fillStyle = '#FFFFFF';
-    this.ctx.font = '900 55px "Arial Black", Arial, sans-serif';  // +15% from 48px
+    // Larger, narrower font for score - Impact is condensed/narrow
+    this.ctx.font = '900 72px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
     this.ctx.textAlign = align === 'left' ? 'left' : 'right';
     this.ctx.textBaseline = 'middle';
     
     const textX = align === 'left' ? x : x + width;
     this.ctx.fillText(score.toString(), textX, y + this.BAR_HEIGHT / 2);
+  }
+  
+  /**
+   * Draw info bar below main scoreboard
+   * Displays active info bar item (managed by infoBarManager)
+   * Falls back to tournament name if no active item
+   */
+  private drawInfoBar(
+    data: GameOverlayData,
+    centerX: number,
+    y: number
+  ): void {
+    const barWidth = this.MAX_WIDTH;
+    const startX = centerX - barWidth / 2;
+    
+    // Dark gray background
+    this.ctx.fillStyle = 'rgba(30, 30, 30, 0.92)';
+    this.drawRoundedRect(startX, y, barWidth, this.INFO_BAR_HEIGHT, 5, true);
+    
+    const textY = y + this.INFO_BAR_HEIGHT / 2;
+    
+    // Determine what to display: infoBarLabel (from manager) or fallback to branding
+    const displayText = data.infoBarLabel || 'Powered By STATJAM';
+    const infoBarType = data.infoBarType || 'tournament_name';
+    
+    if (displayText) {
+      // Style based on info bar type
+      const { color, font } = this.getInfoBarStyle(infoBarType);
+      
+      this.ctx.fillStyle = color;
+      this.ctx.font = font;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText(displayText.toUpperCase(), centerX, textY);
+    }
+  }
+  
+  /**
+   * Get style for info bar based on item type
+   */
+  private getInfoBarStyle(type: string): { color: string; font: string } {
+    const baseFont = 'italic 700 34px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
+    
+    switch (type) {
+      case 'team_run':
+        return { 
+          color: '#FBBF24', // Amber/yellow for emphasis
+          font: baseFont,
+        };
+      case 'timeout':
+        return { 
+          color: '#EF4444', // Red for urgency
+          font: baseFont,
+        };
+      case 'milestone':
+        return { 
+          color: '#10B981', // Green for achievement
+          font: baseFont,
+        };
+      case 'halftime':
+      case 'overtime':
+        return { 
+          color: '#60A5FA', // Blue for game state
+          font: baseFont,
+        };
+      case 'tournament_name':
+      default:
+        return { 
+          color: '#FFFFFF', // White default
+          font: baseFont,
+        };
+    }
   }
   
   /**

@@ -81,6 +81,11 @@ export interface Team {
   division?: string; // Division name (e.g., "A", "B", "East", "West")
   createdAt: string;
   approval_status?: 'pending' | 'approved' | 'rejected'; // Team join approval status
+  
+  // Team branding colors (for overlay & cards)
+  primaryColor?: string;   // Default: '#111827'
+  secondaryColor?: string; // Default: '#999999'
+  accentColor?: string;    // Default: '#F5D36C'
 }
 
 export interface TeamCreateRequest {
@@ -89,6 +94,11 @@ export interface TeamCreateRequest {
   coach?: string;
   tournamentId: string;
   division?: string; // Division name (e.g., "A", "B", "East", "West")
+  
+  // Team branding colors (for overlay & cards)
+  primaryColor?: string;   // Default: '#111827'
+  secondaryColor?: string; // Default: '#999999'
+  accentColor?: string;    // Default: '#F5D36C'
 }
 
 export interface Game {

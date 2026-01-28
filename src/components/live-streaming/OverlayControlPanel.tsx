@@ -17,9 +17,9 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Calendar, BarChart3, Trophy, Zap, X } from 'lucide-react';
+import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2 } from 'lucide-react';
 import { GamePlayer } from '@/hooks/useGamePlayers';
-import { PlayerStatsOverlayData } from '@/lib/services/canvas-overlay';
+import { PlayerStatsOverlayData, InfoBarToggles } from '@/lib/services/canvas-overlay';
 
 interface OverlayControlPanelProps {
   teamAPlayers: GamePlayer[];
@@ -34,6 +34,10 @@ interface OverlayControlPanelProps {
   onTriggerPlayer: (player: GamePlayer) => void;
   onHideOverlay: () => void;
   onToggleAutoTrigger: (enabled: boolean) => void;
+  // Info Bar (NBA mode only)
+  showInfoBarTab?: boolean;
+  infoBarToggles?: InfoBarToggles;
+  onInfoBarToggleChange?: (toggles: InfoBarToggles) => void;
 }
 
 export function OverlayControlPanel({
@@ -49,6 +53,9 @@ export function OverlayControlPanel({
   onTriggerPlayer,
   onHideOverlay,
   onToggleAutoTrigger,
+  showInfoBarTab = false,
+  infoBarToggles,
+  onInfoBarToggleChange,
 }: OverlayControlPanelProps) {
   return (
     <Card className="p-3">
@@ -63,7 +70,7 @@ export function OverlayControlPanel({
       </div>
       
       <Tabs defaultValue="player-stats" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-7 mb-2">
+        <TabsList className={`grid w-full ${showInfoBarTab ? 'grid-cols-5' : 'grid-cols-4'} h-7 mb-2`}>
           <Tooltip>
             <TooltipTrigger asChild>
               <TabsTrigger value="player-stats" className="text-[10px] px-1">
@@ -75,6 +82,19 @@ export function OverlayControlPanel({
               <p className="text-[10px] opacity-80">NBA-style player overlay</p>
             </TooltipContent>
           </Tooltip>
+          {showInfoBarTab && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="info-bar" className="text-[10px] px-1">
+                  <Tv2 className="h-3 w-3" />
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Info Bar</p>
+                <p className="text-[10px] opacity-80">Scoreboard notifications</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <TabsTrigger value="events" className="text-[10px] px-1" disabled>
@@ -200,6 +220,19 @@ export function OverlayControlPanel({
           )}
         </TabsContent>
 
+        {/* Info Bar Tab (NBA mode) */}
+        {showInfoBarTab && infoBarToggles && onInfoBarToggleChange && (
+          <TabsContent value="info-bar" className="mt-2 space-y-2">
+            <p className="text-[10px] text-muted-foreground">
+              Toggle which notifications appear in the scoreboard bar.
+            </p>
+            <InfoBarToggleList
+              toggles={infoBarToggles}
+              onChange={onInfoBarToggleChange}
+            />
+          </TabsContent>
+        )}
+
         {/* Placeholder Tabs */}
         <TabsContent value="events" className="mt-2">
           <PlaceholderContent
@@ -295,6 +328,52 @@ function PlaceholderContent({
       <p className="text-xs font-medium">{title}</p>
       <p className="text-[10px] text-center">{description}</p>
       <span className="mt-1 text-[10px] bg-muted px-2 py-0.5 rounded">Coming Soon</span>
+    </div>
+  );
+}
+
+/** Compact info bar toggle list for tabs */
+interface InfoBarToggleListProps {
+  toggles: InfoBarToggles;
+  onChange: (toggles: InfoBarToggles) => void;
+}
+
+const INFO_BAR_ITEMS: Array<{ key: keyof InfoBarToggles; label: string; hint: string }> = [
+  { key: 'tournamentName', label: 'Tournament', hint: 'Default display' },
+  { key: 'halftime', label: 'Halftime', hint: 'End of 2nd quarter' },
+  { key: 'overtime', label: 'Overtime', hint: 'OT periods' },
+  { key: 'timeout', label: 'Timeout', hint: 'When timeout called' },
+  { key: 'teamRun', label: 'Team Run', hint: '8+ unanswered pts' },
+  { key: 'milestone', label: 'Milestones', hint: '30+ pts, double-double' },
+];
+
+function InfoBarToggleList({ toggles, onChange }: InfoBarToggleListProps) {
+  const handleToggle = (key: keyof InfoBarToggles, checked: boolean) => {
+    onChange({ ...toggles, [key]: checked });
+  };
+
+  return (
+    <div className="space-y-1">
+      {INFO_BAR_ITEMS.map((item) => (
+        <div
+          key={item.key}
+          className="flex items-center justify-between py-1.5 px-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors"
+        >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[11px] font-medium cursor-help">{item.label}</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{item.hint}</p>
+            </TooltipContent>
+          </Tooltip>
+          <Switch
+            checked={toggles[item.key]}
+            onCheckedChange={(checked) => handleToggle(item.key, checked)}
+            className="scale-75"
+          />
+        </div>
+      ))}
     </div>
   );
 }

@@ -58,6 +58,10 @@ export interface GameOverlayData {
   
   // NBA-style player stats overlay (shows during free throws)
   activePlayerStats?: PlayerStatsOverlayData;
+  
+  // Info bar overlay item (managed by infoBarManager)
+  infoBarLabel?: string;          // Active info bar display text
+  infoBarType?: string;           // Item type for styling (team_run, timeout, etc.)
 }
 
 /**

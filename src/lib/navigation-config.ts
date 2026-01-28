@@ -1,4 +1,4 @@
-import { User, Trophy, BarChart3, Users, PlayCircle, Calendar, Settings, Home, Palette, Video } from 'lucide-react';
+import { User, Trophy, BarChart3, Users, PlayCircle, Calendar, Settings, Home, Palette, Video, Radio } from 'lucide-react';
 
 export interface NavigationItem {
   label: string;
@@ -113,8 +113,13 @@ export const navigationConfig: Record<string, NavigationConfig> = {
         href: '/dashboard?section=video-tracking',
         icon: Video,
         description: 'Upload videos for AI stat tracking'
+      },
+      {
+        label: 'Live Stream',
+        href: '/dashboard/video-composition-test',
+        icon: Radio,
+        description: 'Stream games with live overlay'
       }
-      // Live Stream removed - Cloudflare integration pending
     ],
     secondary: [
       {

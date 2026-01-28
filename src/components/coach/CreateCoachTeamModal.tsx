@@ -13,6 +13,7 @@ import { CreateCoachTeamRequest, CoachPlayer } from '@/lib/types/coach';
 import { CoachPlayerSelectionList } from './CoachPlayerSelectionList';
 import { CreateCustomPlayerForm } from './CreateCustomPlayerForm';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
+import { TeamColorPicker } from '@/components/ui/TeamColorPicker';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 
 interface CreateCoachTeamModalProps {
@@ -69,7 +70,11 @@ export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateC
       city: ''
     },
     visibility: 'private',
-    is_official_team: false // Default to practice team
+    is_official_team: false, // Default to practice team
+    // Team branding colors (DB defaults)
+    primary_color: '#111827',
+    secondary_color: '#999999',
+    accent_color: '#F5D36C',
   });
 
   // Handle form updates
@@ -265,6 +270,15 @@ export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateC
                     ? 'Organizers can find and import this team' 
                     : 'Only you and assigned stat admins can see this team'}
                 </p>
+              </div>
+
+              {/* Team Colors */}
+              <div className="border-t pt-4">
+                <TeamColorPicker
+                  primaryColor={formData.primary_color || '#111827'}
+                  secondaryColor={formData.secondary_color || '#999999'}
+                  onChange={(field, value) => updateFormData({ [field]: value })}
+                />
               </div>
 
               {/* Team Type - Official vs Practice */}

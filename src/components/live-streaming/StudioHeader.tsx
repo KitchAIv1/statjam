@@ -14,7 +14,7 @@ interface StudioHeaderProps {
   hasVideoStream: boolean;
   isComposing: boolean;
   isBroadcasting: boolean;
-  broadcastDuration: string;
+  broadcastDuration: React.ReactNode;
 }
 
 export function StudioHeader({
