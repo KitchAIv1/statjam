@@ -288,6 +288,7 @@ const PRICE_TO_TIER_MAP: Record<string, string> = {
   // Organizer
   'price_organizer_pro_monthly': 'pro',
   'price_organizer_seasonal': 'seasonal_pass',
+  'price_organizer_annual': 'annual',
   // Coach
   'price_coach_pro_monthly': 'pro',
   'price_coach_seasonal': 'seasonal_pass',

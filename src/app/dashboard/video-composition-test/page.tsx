@@ -34,7 +34,9 @@ import { useGamePlayers } from '@/hooks/useGamePlayers';
 import { usePlayerStatsOverlay } from '@/hooks/usePlayerStatsOverlay';
 import { useBroadcastReadiness } from '@/hooks/useBroadcastReadiness';
 import { useInfoBarOverlays } from '@/hooks/useInfoBarOverlays';
+import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { notify } from '@/lib/services/notificationService';
+import { UpgradeModal } from '@/components/subscription';
 import type { Tournament } from '@/lib/types/tournament';
 
 export default function VideoCompositionTestPage() {
@@ -44,7 +46,11 @@ export default function VideoCompositionTestPage() {
   const [autoTriggerEnabled, setAutoTriggerEnabled] = useState(true);
   const [broadcastStartTime, setBroadcastStartTime] = useState<number | null>(null);
   const [overlayVariant, setOverlayVariant] = useState<OverlayVariant>('classic');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // Feature gate for premium overlays
+  const { allowed: overlaysAllowed, upgradeMessage } = useFeatureGate('live_stream_overlays', 'organizer');
   
   const { overlayData } = useGameOverlayData(selectedGameId);
   const { teamAPlayers, teamBPlayers, teamAName, teamBName, loading: playersLoading } = useGamePlayers(selectedGameId);
@@ -480,11 +486,23 @@ export default function VideoCompositionTestPage() {
                 showInfoBarTab={overlayVariant === 'nba'}
                 infoBarToggles={infoBarToggles}
                 onInfoBarToggleChange={setInfoBarToggles}
+                // Premium feature gating
+                overlaysLocked={!overlaysAllowed}
+                onUpgrade={() => setShowUpgradeModal(true)}
               />
             )}
           </div>
         </div>
       </div>
+      
+      {/* Subscription Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role="organizer"
+        currentTier="free"
+        triggerReason={upgradeMessage || 'Upgrade to unlock automatic stream overlays'}
+      />
     </div>
   );
 }

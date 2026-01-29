@@ -78,6 +78,7 @@ export interface TierLimits {
   hasExportStats: boolean;
   hasHistoricalTrends: boolean;
   hasPrioritySupport: boolean;
+  hasLiveStreamOverlays: boolean;  // Premium: auto overlays (team run, milestone, timeout)
   isVerified: boolean;
 }
 
@@ -114,7 +115,8 @@ export type GatedFeature =
   | 'verified_badge'
   | 'unlimited_teams'
   | 'unlimited_games'
-  | 'unlimited_seasons';
+  | 'unlimited_seasons'
+  | 'live_stream_overlays';
 
 export interface FeatureGateResult {
   allowed: boolean;

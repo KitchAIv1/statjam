@@ -24,6 +24,7 @@ const FEATURE_TO_LIMIT_MAP: Record<GatedFeature, string> = {
   unlimited_teams: 'teams',
   unlimited_games: 'games',
   unlimited_seasons: 'seasons',
+  live_stream_overlays: 'hasLiveStreamOverlays',
 };
 
 const UPGRADE_MESSAGES: Record<GatedFeature, string> = {
@@ -39,6 +40,7 @@ const UPGRADE_MESSAGES: Record<GatedFeature, string> = {
   unlimited_teams: 'Upgrade for unlimited teams',
   unlimited_games: 'Upgrade for unlimited games',
   unlimited_seasons: 'Upgrade for unlimited seasons',
+  live_stream_overlays: 'Upgrade to unlock automatic stream overlays',
 };
 
 export function useFeatureGate(

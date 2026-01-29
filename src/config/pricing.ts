@@ -30,6 +30,7 @@ const FREE_ORGANIZER_LIMITS: TierLimits = {
   hasExportStats: false,
   hasHistoricalTrends: false,
   hasPrioritySupport: false,
+  hasLiveStreamOverlays: false,  // Free: no auto overlays
   isVerified: false,
 };
 
@@ -45,6 +46,7 @@ const PRO_ORGANIZER_LIMITS: TierLimits = {
   hasExportStats: true,
   hasHistoricalTrends: true,
   hasPrioritySupport: false,
+  hasLiveStreamOverlays: true,  // Pro: auto overlays enabled
   isVerified: true,
 };
 
@@ -60,6 +62,7 @@ const FREE_COACH_LIMITS: TierLimits = {
   hasExportStats: false,
   hasHistoricalTrends: false,
   hasPrioritySupport: false,
+  hasLiveStreamOverlays: false,
   isVerified: false,
 };
 
@@ -75,6 +78,7 @@ const PAID_COACH_LIMITS: TierLimits = {
   hasExportStats: true,
   hasHistoricalTrends: true,
   hasPrioritySupport: false,
+  hasLiveStreamOverlays: false,  // Coaches don't have live stream access yet
   isVerified: true,
 };
 
@@ -90,6 +94,7 @@ const FREE_PLAYER_LIMITS: TierLimits = {
   hasExportStats: false,
   hasHistoricalTrends: false,
   hasPrioritySupport: false,
+  hasLiveStreamOverlays: false,
   isVerified: false,
 };
 
@@ -105,6 +110,7 @@ const PAID_PLAYER_LIMITS: TierLimits = {
   hasExportStats: true,
   hasHistoricalTrends: true,
   hasPrioritySupport: false,
+  hasLiveStreamOverlays: false,
   isVerified: true,
 };
 
@@ -126,6 +132,7 @@ export const ORGANIZER_TIERS: PricingTier[] = [
       'Manual stat tracking (STATADMIN)',
       'Basic box scores',
       'Public season/team pages',
+      'Live stream studio (basic)',
     ],
     bestFor: 'Testing StatJam or small grassroots leagues',
   },
@@ -143,6 +150,9 @@ export const ORGANIZER_TIERS: PricingTier[] = [
       'Real-time play-by-play',
       'Team & player analytics',
       'StatJam Verified badge',
+      'Live stream + auto overlays',
+      'Sponsor overlay support',
+      '20 free clips per game',
       'Video Tracking access (add-on)',
     ],
     bestFor: 'Serious leagues and circuits',
@@ -154,16 +164,37 @@ export const ORGANIZER_TIERS: PricingTier[] = [
     name: 'Seasonal Pass',
     price: 150,
     billingPeriod: 'seasonal',
-    durationMonths: 4,
+    durationMonths: 3,
     limits: { ...PRO_ORGANIZER_LIMITS },
     features: [
       'Everything in Pro',
       'One full season coverage',
+      'Live stream + auto overlays',
+      'Sponsor overlay support',
+      '20 free clips per game',
       '3 video-tracked games included',
       'Discounted video rates',
     ],
     bestFor: 'Leagues running a defined season',
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ORGANIZER_SEASONAL,
+  },
+  {
+    id: 'annual',
+    name: 'Annual Pass',
+    price: 350,
+    billingPeriod: 'annual',
+    durationMonths: 12,
+    limits: { ...PRO_ORGANIZER_LIMITS },
+    features: [
+      'Everything in Pro',
+      'Full year coverage',
+      'Live stream + auto overlays',
+      'Sponsor overlay support',
+      '20 free clips per game',
+      'Best value for year-round leagues',
+    ],
+    bestFor: 'Year-round leagues and organizations',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ORGANIZER_ANNUAL,
   },
 ];
 

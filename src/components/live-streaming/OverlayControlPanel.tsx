@@ -17,7 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2 } from 'lucide-react';
+import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2, Lock, Crown } from 'lucide-react';
 import { GamePlayer } from '@/hooks/useGamePlayers';
 import { PlayerStatsOverlayData, InfoBarToggles } from '@/lib/services/canvas-overlay';
 
@@ -38,6 +38,9 @@ interface OverlayControlPanelProps {
   showInfoBarTab?: boolean;
   infoBarToggles?: InfoBarToggles;
   onInfoBarToggleChange?: (toggles: InfoBarToggles) => void;
+  // Premium feature gating
+  overlaysLocked?: boolean;
+  onUpgrade?: () => void;
 }
 
 export function OverlayControlPanel({
@@ -56,6 +59,8 @@ export function OverlayControlPanel({
   showInfoBarTab = false,
   infoBarToggles,
   onInfoBarToggleChange,
+  overlaysLocked = false,
+  onUpgrade,
 }: OverlayControlPanelProps) {
   return (
     <Card className="p-3">
@@ -221,15 +226,21 @@ export function OverlayControlPanel({
         </TabsContent>
 
         {/* Info Bar Tab (NBA mode) */}
-        {showInfoBarTab && infoBarToggles && onInfoBarToggleChange && (
+        {showInfoBarTab && (
           <TabsContent value="info-bar" className="mt-2 space-y-2">
-            <p className="text-[10px] text-muted-foreground">
-              Toggle which notifications appear in the scoreboard bar.
-            </p>
-            <InfoBarToggleList
-              toggles={infoBarToggles}
-              onChange={onInfoBarToggleChange}
-            />
+            {overlaysLocked ? (
+              <LockedOverlayContent onUpgrade={onUpgrade} />
+            ) : infoBarToggles && onInfoBarToggleChange ? (
+              <>
+                <p className="text-[10px] text-muted-foreground">
+                  Toggle which notifications appear in the scoreboard bar.
+                </p>
+                <InfoBarToggleList
+                  toggles={infoBarToggles}
+                  onChange={onInfoBarToggleChange}
+                />
+              </>
+            ) : null}
           </TabsContent>
         )}
 
@@ -374,6 +385,33 @@ function InfoBarToggleList({ toggles, onChange }: InfoBarToggleListProps) {
           />
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Premium locked state for Info Bar overlays */
+function LockedOverlayContent({ onUpgrade }: { onUpgrade?: () => void }) {
+  return (
+    <div className="py-4 px-2 text-center space-y-3">
+      <div className="mx-auto w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+        <Lock className="w-5 h-5 text-orange-500" />
+      </div>
+      <div>
+        <p className="text-xs font-semibold text-foreground">Premium Feature</p>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Automatic overlays (Team Run, Milestones, Timeout) are available for Pro organizers.
+        </p>
+      </div>
+      {onUpgrade && (
+        <Button
+          onClick={onUpgrade}
+          size="sm"
+          className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-xs h-8"
+        >
+          <Crown className="w-3 h-3 mr-1.5" />
+          Upgrade to Pro
+        </Button>
+      )}
     </div>
   );
 }
