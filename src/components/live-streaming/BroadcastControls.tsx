@@ -22,7 +22,7 @@ interface BroadcastControlsProps {
   isConnecting: boolean;
   connectionStatus: string;
   error: string | null;
-  onStart: (platform: BroadcastPlatform, streamKey: string, quality: QualityPreset) => void;
+  onStart: (platform: BroadcastPlatform, streamKey: string, quality: QualityPreset, publicStreamUrl?: string) => void;
   onStop: () => void;
 }
 
@@ -36,6 +36,7 @@ export function BroadcastControls({
 }: BroadcastControlsProps) {
   const [platform, setPlatform] = useState<BroadcastPlatform>('youtube');
   const [streamKey, setStreamKey] = useState('');
+  const [publicStreamUrl, setPublicStreamUrl] = useState('');
   const [quality, setQuality] = useState<QualityPreset>('720p');
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -43,7 +44,7 @@ export function BroadcastControls({
     if (!streamKey.trim()) {
       return;
     }
-    onStart(platform, streamKey.trim(), quality);
+    onStart(platform, streamKey.trim(), quality, publicStreamUrl.trim() || undefined);
   };
 
   return (
@@ -139,6 +140,21 @@ export function BroadcastControls({
                   onChange={(e) => setStreamKey(e.target.value)}
                   className="h-7 text-xs"
                 />
+              </div>
+
+              {/* Public Stream URL - for embedding on tournament page */}
+              <div className="space-y-1">
+                <Label className="text-xs">Public Watch URL (optional)</Label>
+                <Input
+                  type="url"
+                  placeholder={platform === 'youtube' ? 'youtube.com/watch?v=...' : 'twitch.tv/channel'}
+                  value={publicStreamUrl}
+                  onChange={(e) => setPublicStreamUrl(e.target.value)}
+                  className="h-7 text-xs"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Viewers will see this stream on the tournament page
+                </p>
               </div>
             </div>
           )}

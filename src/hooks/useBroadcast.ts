@@ -37,6 +37,9 @@ export function useBroadcast(options: UseBroadcastOptions = {}): UseBroadcastRet
   const start = useCallback(async (stream: MediaStream, config: BroadcastConfig) => {
     if (!serviceRef.current) return;
 
+    // Clear previous error before starting new broadcast attempt
+    setState(prev => ({ ...prev, error: null }));
+
     try {
       await serviceRef.current.startBroadcast(stream, config, {
         onStateChange: setState,

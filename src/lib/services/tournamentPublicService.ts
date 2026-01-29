@@ -16,6 +16,10 @@ export interface TournamentPageData {
     organizerId: string | null;
     logo?: string | null;
     branding?: Record<string, unknown> | null;
+    // Live streaming fields
+    isStreaming?: boolean;
+    liveStreamUrl?: string | null;
+    streamPlatform?: 'youtube' | 'twitch' | null;
   };
   summary: {
     teamCount: number;
@@ -41,6 +45,10 @@ interface RawTournament {
   country?: string | null;
   organizer_id?: string | null;
   logo?: string | null;
+  // Live streaming fields
+  is_streaming?: boolean;
+  live_stream_url?: string | null;
+  stream_platform?: string | null;
 }
 
 export async function getTournamentPageData(slug: string): Promise<TournamentPageData | null> {
@@ -53,7 +61,7 @@ export async function getTournamentPageData(slug: string): Promise<TournamentPag
   try {
     tournaments = await hybridSupabaseService.query<RawTournament>(
       'tournaments',
-      'id, name, status, start_date, end_date, venue, country, organizer_id, logo',
+      'id, name, status, start_date, end_date, venue, country, organizer_id, logo, is_streaming, live_stream_url, stream_platform',
       { id: `eq.${slug}` }
     );
   } catch (error: any) {
@@ -119,7 +127,11 @@ async function buildTournamentPageData(tournament: RawTournament): Promise<Tourn
       country: tournament.country || null,
       organizerId: tournament.organizer_id || null,
       logo: tournament.logo || null,
-      branding: null
+      branding: null,
+      // Live streaming fields
+      isStreaming: tournament.is_streaming ?? false,
+      liveStreamUrl: tournament.live_stream_url ?? null,
+      streamPlatform: tournament.stream_platform as 'youtube' | 'twitch' | null,
     },
     summary: {
       teamCount: teamCount ?? 0,

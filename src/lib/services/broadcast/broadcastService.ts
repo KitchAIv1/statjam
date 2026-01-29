@@ -83,6 +83,8 @@ export class BroadcastService {
   private async connectToRelay(stream: MediaStream, config: BroadcastConfig): Promise<void> {
     const quality = QUALITY_PRESETS[config.quality || '1080p'];
     
+    console.log('🔌 Connecting to relay server:', this.relayServerUrl);
+    
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(this.relayServerUrl);
 
@@ -118,7 +120,8 @@ export class BroadcastService {
         }
       };
 
-      ws.onerror = () => {
+      ws.onerror = (event) => {
+        console.error('❌ WebSocket connection failed to relay server:', this.relayServerUrl, event);
         reject(new Error('WebSocket connection failed'));
       };
 

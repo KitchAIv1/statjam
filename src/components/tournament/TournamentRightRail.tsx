@@ -12,6 +12,7 @@ import { Shield, Calendar, Video, Clock } from 'lucide-react';
 import { TournamentOrganizerCard } from './TournamentOrganizerCard';
 import { PhaseBadge } from './PhaseBadge';
 import { LiveStreamPlayer } from '@/components/live-streaming/LiveStreamPlayer';
+import { TournamentLiveStreamEmbed } from '@/components/live-streaming/TournamentLiveStreamEmbed';
 
 interface TournamentRightRailProps {
   data: TournamentPageData;
@@ -167,12 +168,21 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
           <Video className="h-4 w-4 text-[#FF3B30]" />
           <span className="text-sm font-semibold text-white">Live Streaming</span>
         </header>
-        <LiveStreamPlayer
-          tournamentId={data.tournament.id}
-          size="compact"
-          showControls={true}
-          className="w-full"
-        />
+        {/* Auto-detect: Show embedded stream if tournament is broadcasting, otherwise show raw feed player */}
+        {data.tournament.isStreaming && data.tournament.liveStreamUrl && data.tournament.streamPlatform ? (
+          <TournamentLiveStreamEmbed
+            streamUrl={data.tournament.liveStreamUrl}
+            platform={data.tournament.streamPlatform}
+            className="w-full"
+          />
+        ) : (
+          <LiveStreamPlayer
+            tournamentId={data.tournament.id}
+            size="compact"
+            showControls={true}
+            className="w-full"
+          />
+        )}
       </section>
 
       {/* Section 3: Upcoming Schedule */}

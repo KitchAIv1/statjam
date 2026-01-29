@@ -182,22 +182,41 @@ export default function VideoCompositionTestPage() {
     }
   };
   
-  const handleStartBroadcast = useCallback(async (platform: BroadcastPlatform, streamKey: string, quality?: QualityPreset) => {
+  const handleStartBroadcast = useCallback(async (platform: BroadcastPlatform, streamKey: string, quality?: QualityPreset, publicStreamUrl?: string) => {
     if (!composedStream) return;
     const rtmpUrl = platform === 'youtube' ? 'rtmp://a.rtmp.youtube.com/live2' : 'rtmp://live.twitch.tv/app';
     const broadcastStream = new MediaStream();
     composedStream.getVideoTracks().forEach(track => broadcastStream.addTrack(track));
     if (micEnabled && micStream) micStream.getAudioTracks().forEach(track => broadcastStream.addTrack(track));
     setBroadcastStartTime(Date.now());
+    
+    // Start broadcast first (critical path - no delays)
     await startBroadcast(broadcastStream, { platform, streamKey, rtmpUrl, quality });
     notify.success('Broadcast started', `Streaming to ${platform === 'youtube' ? 'YouTube' : 'Twitch'}`);
-  }, [composedStream, micEnabled, micStream, startBroadcast]);
+    
+    // Update tournament streaming status in background (non-blocking)
+    if (selectedTournament?.id && publicStreamUrl) {
+      import('@/lib/services/tournamentStreamingService')
+        .then(({ tournamentStreamingService }) => 
+          tournamentStreamingService.startStreaming(selectedTournament.id, platform, publicStreamUrl))
+        .catch(error => console.warn('Failed to update tournament streaming status:', error));
+    }
+  }, [composedStream, micEnabled, micStream, startBroadcast, selectedTournament?.id]);
 
   const handleStopBroadcast = useCallback(() => {
+    // Stop broadcast immediately (critical path)
     stopBroadcast();
     setBroadcastStartTime(null);
     notify.info('Broadcast stopped');
-  }, [stopBroadcast]);
+    
+    // Clear tournament streaming status in background (non-blocking)
+    if (selectedTournament?.id) {
+      import('@/lib/services/tournamentStreamingService')
+        .then(({ tournamentStreamingService }) => 
+          tournamentStreamingService.stopStreaming(selectedTournament.id))
+        .catch(error => console.warn('Failed to clear tournament streaming status:', error));
+    }
+  }, [stopBroadcast, selectedTournament?.id]);
 
   // Reset broadcast start time when broadcast stops
   useEffect(() => {
@@ -211,7 +230,7 @@ export default function VideoCompositionTestPage() {
   const broadcastReadiness = useBroadcastReadiness(selectedGameId, activeVideoStream, isComposing);
   
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-background">
+    <div className="h-screen flex flex-col bg-background">
       <StudioHeader
         hasGameSelected={!!selectedGameId}
         hasVideoStream={!!activeVideoStream}
@@ -226,10 +245,10 @@ export default function VideoCompositionTestPage() {
       />
 
       {/* Main Content - Grid Layout */}
-      <div className="flex-1 overflow-hidden p-3">
+      <div className="flex-1 min-h-0 p-3 overflow-auto">
         <div className="h-full grid grid-cols-12 gap-3">
           {/* Left Sidebar - Compact (3 columns) */}
-          <div className="col-span-3 flex flex-col gap-2 overflow-y-auto">
+          <div className="col-span-3 flex flex-col gap-2 overflow-y-auto pb-4">
             {/* First-time onboarding (dismissible) */}
             <OnboardingBanner />
             
