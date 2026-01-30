@@ -384,7 +384,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         let game = initialGameData;
         if (!game) {
           // Fallback to fetch if not provided (backward compatible)
+          console.log('🔄 useTracker: No initialGameData, fetching from API...');
           game = await GameServiceV3.getGame(gameId);
+        } else {
+          console.log('✅ useTracker: Using initialGameData, clock values:', {
+            game_clock_minutes: game.game_clock_minutes,
+            game_clock_seconds: game.game_clock_seconds,
+            quarter: game.quarter
+          });
         }
         
         const gameError = !game;
@@ -520,6 +527,17 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               console.log(`✅ Original quarter length set and locked: ${quarterLen} min`);
             } else {
               console.log(`🔒 Original quarter length already locked, skipping update (current: ${quarterLen} min)`);
+            }
+          } else {
+            // ✅ FIX: Fallback when DB clock values are null - use quarter length
+            console.log('⚠️ Clock values null in DB, falling back to quarter length:', quarterLen);
+            setClock({
+              secondsRemaining: quarterLen * 60,
+              isRunning: false
+            });
+            if (!quarterLengthLockedRef.current) {
+              setOriginalQuarterLength(quarterLen);
+              quarterLengthLockedRef.current = true;
             }
             
             // ✅ Mark game data as loaded - prevents saving hardcoded 12 min during mount
@@ -672,11 +690,15 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       }
     };
     
-    if (gameId && gameId !== 'unknown') {
+    // ✅ FIX: Only initialize when we have BOTH valid gameId AND valid team IDs
+    // This prevents race condition where scores are set with empty string keys
+    if (gameId && gameId !== 'unknown' && teamAId && teamBId) {
       initializeGameState();
-    } else {
+    } else if (!gameId || gameId === 'unknown') {
+      // Only set loading false if gameId is truly invalid (not just waiting for team IDs)
       setIsLoading(false);
     }
+    // Note: If gameId is valid but teamAId/teamBId are empty, keep isLoading=true
   }, [gameId, teamAId, teamBId, isCoachMode, initialGameData, calculateScoresFromStats]);
 
   // ✅ Real-time subscription to sync timeout state, fouls, and scores from database

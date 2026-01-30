@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Shield } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useTracker } from '@/hooks/useTracker';
+import { useGameDataLoader } from '@/hooks/useGameDataLoader';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { Button } from '@/components/ui/Button';
@@ -101,15 +102,43 @@ function StatTrackerV3Content() {
   const coachTeamIdParam = params.get('coachTeamId') || '';
   const opponentNameParamFallback = params.get('opponentName') || 'Opponent';
   
-  // Game State
-  const [gameData, setGameData] = useState<GameData | null>(null);
+  // ✅ FIX: Single source of truth for game data loading
+  // This hook ensures ALL data is loaded BEFORE useTracker initializes
+  // Eliminates race condition where useTracker was called with placeholder IDs
+  const {
+    gameData,
+    teamAPlayers: initialTeamAPlayers,
+    teamBPlayers: initialTeamBPlayers,
+    isLoading: dataLoading,
+    error: dataError,
+    isReady: dataIsReady
+  } = useGameDataLoader({
+    gameId: gameIdParam,
+    coachMode,
+    coachTeamId: coachTeamIdParam,
+    userId: user?.id,
+    isAuthLoading: loading
+  });
   
   // ✅ REFINEMENT: Use opponent_name from database (coach input) instead of URL param
   const opponentName = coachMode ? (gameData?.opponent_name || opponentNameParamFallback) : '';
+  
+  // ✅ Local player state - initialized from hook, can be updated during game (subs, photo updates)
   const [teamAPlayers, setTeamAPlayers] = useState<Player[]>([]);
   const [teamBPlayers, setTeamBPlayers] = useState<Player[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // ✅ Sync local player state from hook when data loads
+  useEffect(() => {
+    if (dataIsReady && initialTeamAPlayers.length > 0) {
+      setTeamAPlayers(initialTeamAPlayers);
+    }
+  }, [dataIsReady, initialTeamAPlayers]);
+  
+  useEffect(() => {
+    if (dataIsReady && initialTeamBPlayers.length > 0) {
+      setTeamBPlayers(initialTeamBPlayers);
+    }
+  }, [dataIsReady, initialTeamBPlayers]);
   
   // UI State
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
@@ -160,13 +189,14 @@ function StatTrackerV3Content() {
   const [currentRosterB, setCurrentRosterB] = useState<Player[]>([]);
   const [currentBenchB, setCurrentBenchB] = useState<Player[]>([]);
 
-  // Initialize tracker with game data (only when we have valid team IDs)
+  // ✅ FIX: Pass gameId always (so useTracker can initialize), but use real team IDs from gameData
+  // The key fix: use gameData's team IDs when available, otherwise useTracker will fetch them
   const tracker = useTracker({
-    initialGameId: gameIdParam || 'unknown',
-    teamAId: gameData?.team_a_id || 'teamA',
-    teamBId: gameData?.team_b_id || 'teamB',
-    isCoachMode: coachMode, // ✅ Pass coach mode flag for automation
-    initialGameData: gameData // ✅ PHASE 3: Pass game data to skip duplicate fetch
+    initialGameId: gameIdParam || '',
+    teamAId: gameData?.team_a_id || '',
+    teamBId: gameData?.team_b_id || '',
+    isCoachMode: coachMode,
+    initialGameData: gameData || undefined
   });
 
   // ✅ Shot Clock Violation Detection
@@ -219,99 +249,15 @@ function StatTrackerV3Content() {
     }
   }, [teamAPlayers, teamBPlayers]);
 
-  // Load Game Data Effect - RESTORED LIVE TOURNAMENT FUNCTIONALITY
+  // ✅ Auto-select first player when team data loads
   useEffect(() => {
-    const loadGameData = async () => {
-      if (!gameIdParam) {
-        setError('No game ID provided');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-
-        // Import V3 services (raw HTTP - reliable)
-        const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
-        const { TeamServiceV3 } = await import('@/lib/services/teamServiceV3');
-
-        // Load game data
-        const game = await GameServiceV3.getGame(gameIdParam);
-        if (!game) {
-          setError('Game not found');
-          setIsLoading(false);
-          return;
-        }
-
-        setGameData(game);
-
-        // Validate team IDs
-        if (!game.team_a_id || !game.team_b_id) {
-          setError('Game missing team information');
-          setIsLoading(false);
-          return;
-        }
-        
-        // ✅ PERFORMANCE: Load both teams in parallel (20% faster)
-        const [teamAPlayersData, teamBPlayersData] = await Promise.all([
-          // Team A
-          (async () => {
-            try {
-              if (coachMode && coachTeamIdParam) {
-                // ✅ FIX: Coach mode now uses same logic as stat admin
-                // Uses TeamServiceV3.getTeamPlayersWithSubstitutions() to apply substitution state
-                // This ensures roster persists correctly on internet disruption/reconnection
-                return await TeamServiceV3.getTeamPlayersWithSubstitutions(coachTeamIdParam, game.id);
-              } else {
-                // Tournament mode: Load tournament team players
-                return await TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_a_id, game.id);
-              }
-            } catch (teamAError) {
-              console.error('❌ Failed to load Team A players:', teamAError);
-              return [];
-            }
-          })(),
-          
-          // Team B
-          (async () => {
-            try {
-              // ✅ FIX: In coach mode, don't load team B (it's a dummy opponent team with no players)
-              if (!coachMode) {
-                return await TeamServiceV3.getTeamPlayersWithSubstitutions(game.team_b_id, game.id);
-              }
-              return [];
-            } catch (teamBError) {
-              console.error('❌ Failed to load Team B players:', teamBError);
-              return [];
-            }
-          })()
-        ]);
-
-        setTeamAPlayers(teamAPlayersData);
-        setTeamBPlayers(teamBPlayersData);
-
-        // Auto-select first available player from loaded data
-        const allPlayers = [...teamAPlayersData, ...teamBPlayersData];
-        if (allPlayers.length > 0 && (!selectedPlayer || !allPlayers.find(p => p.id === selectedPlayer))) {
-          setSelectedPlayer(allPlayers[0].id);
-        } else if (allPlayers.length === 0) {
-          // Clear selected player if no team data loaded
-          setSelectedPlayer(null);
-        }
-
-      } catch (error) {
-        console.error('❌ Error loading game data:', error);
-        setError('Failed to load game data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Only load game data after auth is ready and user is available
-    if (gameIdParam && !loading && user) {
-      loadGameData();
+    if (!dataIsReady) return;
+    
+    const allPlayers = [...teamAPlayers, ...teamBPlayers];
+    if (allPlayers.length > 0 && !selectedPlayer) {
+      setSelectedPlayer(allPlayers[0].id);
     }
-  }, [gameIdParam, user, loading]);
+  }, [dataIsReady, teamAPlayers, teamBPlayers, selectedPlayer]);
 
   // ✅ UNIFIED CLOCK TICK: Single interval for both game clock and shot clock
   // This ensures they tick at the EXACT same moment (synchronized)
@@ -1286,27 +1232,27 @@ function StatTrackerV3Content() {
     );
   }
 
-  // ✅ FIX: Combined loading check - wait for BOTH game data AND tracker scores
-  // This prevents the 0-0 score flash caused by tracker initializing with placeholder team IDs
-  if (isLoading || tracker.isLoading) {
+  // ✅ FIX: Combined loading check - wait for BOTH game data AND tracker initialization
+  // This prevents the 0-0 score flash by ensuring both data sources are ready
+  if (dataLoading || !dataIsReady || tracker.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--dashboard-bg)' }}>
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4 mx-auto"></div>
           <p style={{ color: 'var(--dashboard-text-primary)' }}>
-            {isLoading ? 'Loading game data...' : 'Initializing scores...'}
+            {dataLoading ? 'Loading game data...' : 'Initializing scores...'}
           </p>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (dataError) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--dashboard-bg)' }}>
         <Card className="w-full max-w-md" style={{ background: 'var(--dashboard-card)', borderColor: 'var(--dashboard-border)' }}>
           <CardContent className="p-6 text-center">
-            <p className="text-red-500 mb-4">{error}</p>
+            <p className="text-red-500 mb-4">{dataError}</p>
             <Button onClick={async () => {
               // ✅ CRITICAL: Save clock state before navigating (if tracker is available)
               if (tracker?.saveClockBeforeExit) {
