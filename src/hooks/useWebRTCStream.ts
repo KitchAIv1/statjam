@@ -73,6 +73,8 @@ export function useWebRTCStream({
   const isInitializedRef = useRef(false);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
+  const connectionIdRef = useRef<number>(0); // Track connection session to ignore stale signals
+  const pendingCandidatesRef = useRef<string[]>([]); // Queue ICE candidates until peer ready
 
   // Update parent component when status changes
   useEffect(() => {
@@ -86,6 +88,8 @@ export function useWebRTCStream({
 
   // Cleanup peer only (keep signaling channel open)
   const cleanupPeerOnly = useCallback(() => {
+    connectionIdRef.current++; // Invalidate all pending signals from previous session
+    pendingCandidatesRef.current = []; // Clear queued candidates
     if (peerRef.current) {
       try { peerRef.current.destroy(); } catch (e) { console.warn('⚠️ Error destroying peer:', e); }
       peerRef.current = null;
@@ -199,16 +203,37 @@ export function useWebRTCStream({
       await signaling.joinRoom(gameId);
       if (!signalingRef.current) throw new Error('Signaling cleared during join');
 
+      const currentConnectionId = connectionIdRef.current;
       const peer = createPeer(signaling);
       const isInitiator = role === 'mobile';
 
-      // Helper to safely signal peer (guards against destroyed peer)
-      const safeSignal = (data: string, type: string) => {
+      // Helper to safely signal peer (guards against destroyed peer and stale signals)
+      const safeSignal = (data: string, type: string, connId: number) => {
+        // Ignore signals from previous connection sessions
+        if (connId !== connectionIdRef.current) {
+          console.log(`⏸️ [WebRTC Hook] Ignoring stale ${type} from old session`);
+          return;
+        }
+        
         const currentPeer = peerRef.current;
         if (!currentPeer || currentPeer.destroyed) {
           console.log(`⏸️ [WebRTC Hook] Ignoring ${type} - peer not ready or destroyed`);
           return;
         }
+
+        // For ICE candidates, queue if peer isn't ready yet
+        if (type === 'candidate') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const pc = (currentPeer as any)._pc as RTCPeerConnection | undefined;
+          const state = pc?.signalingState;
+          // Only apply candidates when we have both local and remote descriptions
+          if (state && state !== 'stable' && state !== 'have-local-pranswer' && state !== 'have-remote-pranswer') {
+            console.log(`⏸️ [WebRTC Hook] Queueing ICE candidate (state: ${state})`);
+            pendingCandidatesRef.current.push(data);
+            return;
+          }
+        }
+
         try {
           currentPeer.signal(JSON.parse(data));
         } catch (e) {
@@ -216,23 +241,43 @@ export function useWebRTCStream({
         }
       };
 
+      // Helper to flush queued candidates once peer is ready
+      const flushPendingCandidates = (connId: number) => {
+        if (connId !== connectionIdRef.current) return;
+        const currentPeer = peerRef.current;
+        if (!currentPeer || currentPeer.destroyed) return;
+        
+        const pending = pendingCandidatesRef.current;
+        if (pending.length > 0) {
+          console.log(`📤 [WebRTC Hook] Flushing ${pending.length} queued ICE candidates`);
+          pendingCandidatesRef.current = [];
+          pending.forEach(data => {
+            try { currentPeer.signal(JSON.parse(data)); } catch (e) { /* ignore */ }
+          });
+        }
+      };
+
       // Set up signaling listeners (use peerRef.current via safeSignal for reconnect support)
       if (isInitiator) {
         signaling.onAnswer((answerSdp) => {
           console.log('📥 [WebRTC Hook] Received answer');
-          safeSignal(answerSdp, 'answer');
+          safeSignal(answerSdp, 'answer', currentConnectionId);
+          // Flush candidates after answer is set
+          setTimeout(() => flushPendingCandidates(currentConnectionId), 100);
         });
       } else {
         signaling.onOffer((offerSdp) => {
           console.log('📥 [WebRTC Hook] Received offer');
-          safeSignal(offerSdp, 'offer');
+          safeSignal(offerSdp, 'offer', currentConnectionId);
+          // Flush candidates after we generate our answer
+          setTimeout(() => flushPendingCandidates(currentConnectionId), 100);
         });
       }
 
       // ICE candidates listener
       signaling.onCandidate((candidateData) => {
         console.log('📥 [WebRTC Hook] Received ICE candidate');
-        safeSignal(candidateData, 'candidate');
+        safeSignal(candidateData, 'candidate', currentConnectionId);
       });
 
       // CRITICAL: Listen for reconnect requests from the other peer
