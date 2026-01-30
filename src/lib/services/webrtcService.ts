@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
-export type SignalType = 'offer' | 'answer' | 'candidate' | 'reconnect' | 'ready';
+export type SignalType = 'offer' | 'answer' | 'candidate' | 'reconnect' | 'ready' | 'disconnect';
 export type PeerRole = 'mobile' | 'dashboard';
 
 export interface SignalData {
@@ -252,6 +252,45 @@ export class WebRTCSignalingService {
       if (data && data.from !== this.role) {
         console.log('📥 [WebRTC] Received reconnect request from', data.from);
         callback();
+      }
+    });
+  }
+
+  /**
+   * Send disconnect notification to the other peer (studio cleared source)
+   */
+  async sendDisconnect(): Promise<void> {
+    if (!this.channel || !this.gameId) return; // Silent fail - may already be disconnected
+
+    console.log('🔌 [WebRTC] Sending disconnect notification...');
+    
+    await this.channel.send({
+      type: 'broadcast',
+      event: 'disconnect',
+      payload: {
+        from: this.role,
+        timestamp: Date.now(),
+      },
+    });
+
+    console.log('✅ [WebRTC] Disconnect notification sent');
+  }
+
+  /**
+   * Listen for disconnect notifications from the other peer
+   */
+  onDisconnect(callback: (fromRole: PeerRole) => void): void {
+    if (!this.channel) {
+      throw new Error('Not connected to a room');
+    }
+
+    console.log('👂 [WebRTC] Listening for disconnect notifications...');
+    
+    this.channel.on('broadcast', { event: 'disconnect' }, (payload) => {
+      const data = payload.payload;
+      if (data && data.from !== this.role) {
+        console.log('📥 [WebRTC] Peer disconnected:', data.from);
+        callback(data.from as PeerRole);
       }
     });
   }

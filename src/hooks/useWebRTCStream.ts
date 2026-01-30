@@ -7,7 +7,8 @@ export type ConnectionStatus =
   | 'connecting' 
   | 'connected' 
   | 'disconnected' 
-  | 'error';
+  | 'error'
+  | 'peer_disconnected'; // Explicit: other peer intentionally disconnected
 
 interface UseWebRTCStreamOptions {
   gameId: string | null;
@@ -293,6 +294,14 @@ export function useWebRTCStream({
         }
       });
 
+      // Listen for intentional disconnect from the other peer (e.g., studio cleared source)
+      signaling.onDisconnect((fromRole) => {
+        console.log(`🔌 [WebRTC Hook] ${fromRole} disconnected intentionally`);
+        cleanupPeerOnly();
+        setRemoteStream(null);
+        updateStatus('peer_disconnected');
+      });
+
       console.log('✅ [WebRTC Hook] Connection initialized');
     } catch (err) {
       console.error('❌ [WebRTC Hook] Init error:', err);
@@ -322,9 +331,13 @@ export function useWebRTCStream({
     setTimeout(() => initializeConnection(), 500);
   }, [cleanup, initializeConnection]);
 
-  // Disconnect
+  // Disconnect (notifies peer before cleanup)
   const disconnect = useCallback(() => {
     console.log('🔌 [WebRTC Hook] Disconnect');
+    // Notify peer of intentional disconnect before cleanup
+    if (signalingRef.current) {
+      signalingRef.current.sendDisconnect().catch(() => {});
+    }
     cleanup();
     updateStatus('idle');
   }, [cleanup, updateStatus]);
