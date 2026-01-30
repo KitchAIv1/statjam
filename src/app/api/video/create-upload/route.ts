@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { UPLOAD_CONFIG } from '@/lib/config/videoConfig';
+import * as Sentry from '@sentry/nextjs';
 
 const BUNNY_STREAM_API_KEY = process.env.BUNNY_STREAM_API_KEY || '';
 const BUNNY_LIBRARY_ID = process.env.NEXT_PUBLIC_BUNNY_LIBRARY_ID || '';
@@ -289,6 +290,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Create upload error:', error);
+    Sentry.captureException(error, { tags: { route: 'video-create-upload', action: 'create_upload_session' } });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

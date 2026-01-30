@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { computeTeamStats, computeOpponentStats } from '@/lib/services/publicGameStatsService';
+import * as Sentry from '@sentry/nextjs';
 
 // Lazy initialization to avoid build-time errors
 function getSupabaseAdmin() {
@@ -145,6 +146,7 @@ export async function GET(
 
   } catch (error: any) {
     console.error('❌ Game viewer API error:', error);
+    Sentry.captureException(error, { tags: { route: 'game-viewer', action: 'fetch_game_data' } });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

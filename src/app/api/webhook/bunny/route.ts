@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import * as Sentry from '@sentry/nextjs';
 
 const BUNNY_STREAM_API_KEY = process.env.BUNNY_STREAM_API_KEY || '';
 const BUNNY_LIBRARY_ID = process.env.NEXT_PUBLIC_BUNNY_LIBRARY_ID || '';
@@ -199,6 +200,7 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('❌ Bunny webhook error:', error);
+    Sentry.captureException(error, { tags: { route: 'bunny-webhook', action: 'process_video_webhook' } });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

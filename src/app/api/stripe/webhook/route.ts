@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
+import * as Sentry from '@sentry/nextjs';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error('Error processing webhook:', error);
+    Sentry.captureException(error, { tags: { route: 'stripe-webhook', eventType: 'webhook_processing' } });
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }

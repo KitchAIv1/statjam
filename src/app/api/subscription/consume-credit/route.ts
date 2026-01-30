@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import * as Sentry from '@sentry/nextjs';
 
 // Create admin client with service_role key (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Error in consume-credit API:', error);
+    Sentry.captureException(error, { tags: { route: 'consume-credit', action: 'consume_video_credit' } });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

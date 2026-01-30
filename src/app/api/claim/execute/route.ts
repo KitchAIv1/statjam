@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import * as Sentry from '@sentry/nextjs';
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -329,6 +330,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ClaimResp
 
   } catch (error) {
     console.error('❌ ClaimAPI: Unexpected error:', error);
+    Sentry.captureException(error, { tags: { route: 'claim-execute', action: 'claim_profile' } });
     return NextResponse.json(
       { success: false, error: 'An unexpected error occurred' },
       { status: 500 }

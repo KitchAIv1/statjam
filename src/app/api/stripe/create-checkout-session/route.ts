@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
+import * as Sentry from '@sentry/nextjs';
 
 // Validate environment variables
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -163,6 +164,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating checkout session:', error);
+    Sentry.captureException(error, { tags: { route: 'stripe-checkout', action: 'create_session' } });
     
     // Return detailed error for debugging (remove in production)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

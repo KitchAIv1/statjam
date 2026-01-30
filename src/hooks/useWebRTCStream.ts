@@ -25,13 +25,31 @@ interface UseWebRTCStreamReturn {
   disconnect: () => void;
 }
 
-// ICE servers configuration
-const ICE_SERVERS = [
+// Fallback STUN servers (used while fetching Cloudflare credentials)
+const FALLBACK_ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
 ];
+
+/**
+ * Fetch TURN credentials from our API (generates temp Cloudflare creds)
+ */
+async function fetchTurnCredentials(): Promise<RTCIceServer[]> {
+  try {
+    const response = await fetch('/api/turn-credentials');
+    if (!response.ok) {
+      console.warn('⚠️ Failed to fetch TURN credentials, using STUN only');
+      return FALLBACK_ICE_SERVERS;
+    }
+    const data = await response.json();
+    console.log('✅ Fetched Cloudflare TURN credentials');
+    return data.iceServers || FALLBACK_ICE_SERVERS;
+  } catch (error) {
+    console.warn('⚠️ Error fetching TURN credentials:', error);
+    return FALLBACK_ICE_SERVERS;
+  }
+}
 
 /**
  * Custom hook for managing WebRTC peer connections using Simple-Peer
@@ -51,6 +69,7 @@ export function useWebRTCStream({
 
   const peerRef = useRef<SimplePeer.Instance | null>(null);
   const signalingRef = useRef<WebRTCSignalingService | null>(null);
+  const iceServersRef = useRef<RTCIceServer[]>(FALLBACK_ICE_SERVERS);
   const isInitializedRef = useRef(false);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
@@ -88,12 +107,13 @@ export function useWebRTCStream({
   const createPeer = useCallback((signaling: WebRTCSignalingService) => {
     const isInitiator = role === 'mobile';
     console.log(`🔧 [WebRTC Hook] Creating SimplePeer (initiator: ${isInitiator})`);
+    console.log(`🌐 [WebRTC Hook] Using ${iceServersRef.current.length} ICE servers`);
 
     const peer = new SimplePeer({
       initiator: isInitiator,
       stream: localStream || undefined,
       trickle: true,
-      config: { iceServers: ICE_SERVERS, sdpSemantics: 'unified-plan', iceTransportPolicy: 'all' },
+      config: { iceServers: iceServersRef.current, sdpSemantics: 'unified-plan', iceTransportPolicy: 'all' },
     });
 
     peerRef.current = peer;
@@ -168,6 +188,10 @@ export function useWebRTCStream({
       updateStatus('connecting');
       setError(null);
       isInitializedRef.current = true;
+
+      // Fetch Cloudflare TURN credentials (async, non-blocking fallback)
+      console.log('🔑 [WebRTC Hook] Fetching TURN credentials...');
+      iceServersRef.current = await fetchTurnCredentials();
 
       const signaling = new WebRTCSignalingService(role);
       signalingRef.current = signaling;

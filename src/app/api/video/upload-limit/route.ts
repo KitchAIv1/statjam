@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import * as Sentry from '@sentry/nextjs';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -85,6 +86,7 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error('Upload limit check error:', error);
+    Sentry.captureException(error, { tags: { route: 'video-upload-limit', action: 'check_limit' } });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
