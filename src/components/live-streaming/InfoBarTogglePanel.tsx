@@ -18,7 +18,8 @@ import {
   Timer, 
   Flame, 
   Award,
-  Tv2
+  Tv2,
+  Target
 } from 'lucide-react';
 import { InfoBarToggles, DEFAULT_TOGGLES } from '@/lib/services/canvas-overlay/infoBarManager';
 
@@ -71,6 +72,12 @@ const TOGGLE_ITEMS: ToggleItemConfig[] = [
     label: 'Player Milestones',
     description: '30+ pts, double-double, etc.',
     icon: <Award className="w-4 h-4 text-yellow-500" />,
+  },
+  {
+    key: 'shotMade',
+    label: 'Made Shots',
+    description: 'Shows player & points on every bucket',
+    icon: <Target className="w-4 h-4 text-green-500" />,
   },
 ];
 

@@ -22,9 +22,11 @@ import {
   isHalftime,
   isOvertime,
   getOvertimePeriod,
+  ShotMadeData,
 } from '@/lib/services/canvas-overlay/infoBarManager';
 import { useTimeoutOverlay } from './useTimeoutOverlay';
 import { useTeamRunAndMilestones } from './useTeamRunAndMilestones';
+import { useShotMadeOverlay } from './useShotMadeOverlay';
 
 interface GameState {
   quarter: number;
@@ -43,6 +45,8 @@ interface UseInfoBarOverlaysResult {
   toggles: InfoBarToggles;
   setToggles: (toggles: InfoBarToggles) => void;
   items: InfoBarItem[];
+  // Shot made animation data (for 3PT shake effect)
+  shotMadeData: ShotMadeData | null;
 }
 
 export function useInfoBarOverlays(
@@ -68,6 +72,11 @@ export function useInfoBarOverlays(
     gameState?.teamBId ?? null,
     teamNames
   );
+  const shotMadeItem = useShotMadeOverlay({
+    gameId,
+    teamAId: gameState?.teamAId ?? null,
+    teamBId: gameState?.teamBId ?? null,
+  });
 
   // Build items array
   const items = useMemo(() => {
@@ -103,8 +112,13 @@ export function useInfoBarOverlays(
       result.push(milestoneItem);
     }
 
+    // Shot made (if active and not expired)
+    if (shotMadeItem && (!shotMadeItem.expiresAt || shotMadeItem.expiresAt > Date.now())) {
+      result.push(shotMadeItem);
+    }
+
     return result;
-  }, [gameState, timeoutItem, teamRunItem, milestoneItem]);
+  }, [gameState, timeoutItem, teamRunItem, milestoneItem, shotMadeItem]);
 
   // Get active items based on priority and toggles (primary + secondary for split)
   const { activeItem, secondaryItem } = useMemo(() => {
@@ -135,11 +149,20 @@ export function useInfoBarOverlays(
     return { activeItem: primary, secondaryItem: secondary };
   }, [items, toggles]);
 
+  // Extract shot made data if active item is shot_made
+  const shotMadeData = useMemo(() => {
+    if (activeItem?.type === 'shot_made' && activeItem.data) {
+      return activeItem.data as ShotMadeData;
+    }
+    return null;
+  }, [activeItem]);
+
   return {
     activeItem,
     secondaryItem,
     toggles,
     setToggles,
     items,
+    shotMadeData,
   };
 }

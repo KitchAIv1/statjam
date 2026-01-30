@@ -23,7 +23,8 @@ export type InfoBarItemType =
   | 'overtime'
   | 'timeout'
   | 'team_run'
-  | 'milestone';
+  | 'milestone'
+  | 'shot_made';
 
 export interface InfoBarItem {
   type: InfoBarItemType;
@@ -41,6 +42,7 @@ export interface InfoBarToggles {
   timeout: boolean;
   teamRun: boolean;
   milestone: boolean;
+  shotMade: boolean;
 }
 
 export interface InfoBarState {
@@ -57,12 +59,14 @@ export const DEFAULT_TOGGLES: InfoBarToggles = {
   timeout: true,
   teamRun: true,
   milestone: true,
+  shotMade: true,
 };
 
 // Auto-hide durations (milliseconds)
 const AUTO_HIDE_DURATIONS: Partial<Record<InfoBarItemType, number>> = {
   team_run: 10000,    // 10 seconds
   milestone: 8000,    // 8 seconds
+  shot_made: 5000,    // 5 seconds
 };
 
 /**
@@ -153,6 +157,32 @@ export function createMilestoneItem(
 }
 
 /**
+ * Create a shot made info bar item
+ */
+export interface ShotMadeData {
+  playerId: string;
+  playerName: string;      // "#23 J. SMITH"
+  points: number;          // 2 or 3
+  is3Pointer: boolean;
+  animationStart: number;  // Timestamp for shake animation
+}
+
+export function createShotMadeItem(
+  data: ShotMadeData,
+  teamId: string
+): InfoBarItem {
+  const pointsText = data.is3Pointer ? '+3' : `+${data.points}`;
+  return {
+    type: 'shot_made',
+    label: `${data.playerName} ${pointsText}`,
+    priority: 50, // Below team run/milestone, above tournament name
+    expiresAt: Date.now() + (AUTO_HIDE_DURATIONS.shot_made || 5000),
+    teamId,
+    data,
+  };
+}
+
+/**
  * Determine active info bar item based on priority and toggles
  */
 export function getActiveInfoBarItem(
@@ -191,6 +221,7 @@ function getToggleKey(type: InfoBarItemType): keyof InfoBarToggles {
     timeout: 'timeout',
     team_run: 'teamRun',
     milestone: 'milestone',
+    shot_made: 'shotMade',
   };
   return mapping[type];
 }

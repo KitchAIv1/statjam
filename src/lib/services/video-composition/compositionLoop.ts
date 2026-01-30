@@ -196,8 +196,13 @@ export class CompositionLoop {
       try {
         const currentHash = this.getOverlayDataHash(dataToRender);
         
-        // Only re-render overlay if data changed or no cache exists
-        if (currentHash !== this.lastOverlayDataHash || !this.cachedOverlayCanvas) {
+        // Check if 3PT animation is active (needs per-frame rendering for shake effect)
+        const is3PTAnimating = dataToRender.shotMadeIs3Pointer && 
+          dataToRender.shotMadeAnimationStart && 
+          (Date.now() - dataToRender.shotMadeAnimationStart) < 1000; // 1 second shake duration
+        
+        // Only re-render overlay if data changed, no cache exists, or animating
+        if (currentHash !== this.lastOverlayDataHash || !this.cachedOverlayCanvas || is3PTAnimating) {
           this.cachedOverlayCanvas = await this.overlayRenderer.render(dataToRender);
           this.lastOverlayDataHash = currentHash;
         }

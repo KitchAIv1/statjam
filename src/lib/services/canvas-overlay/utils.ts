@@ -68,6 +68,10 @@ export interface GameOverlayData {
   infoBarSecondaryLabel?: string;
   infoBarSecondaryType?: string;
   infoBarSecondaryTeamId?: string;
+  
+  // Shot made overlay animation (for 3PT shake effect)
+  shotMadeAnimationStart?: number;  // Timestamp when animation started
+  shotMadeIs3Pointer?: boolean;     // True if 3PT (triggers shake animation)
 }
 
 /**

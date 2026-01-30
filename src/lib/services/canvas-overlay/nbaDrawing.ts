@@ -291,9 +291,33 @@ export class NBAOverlayDrawer {
   ): void {
     const barWidth = this.MAX_WIDTH;
     const startX = centerX - barWidth / 2;
+    const isShotMade = data.infoBarType === 'shot_made';
     
-    // Dark gray background
-    this.ctx.fillStyle = 'rgba(30, 30, 30, 0.92)';
+    // Background: Gradient for shot_made (fades toward opposite team), dark gray otherwise
+    if (isShotMade && data.infoBarTeamId) {
+      const teamColor = this.getTeamPrimaryColor(data, data.infoBarTeamId);
+      if (teamColor) {
+        const isTeamA = data.infoBarTeamId === data.teamAId; // Left side team
+        const gradient = this.ctx.createLinearGradient(startX, y, startX + barWidth, y);
+        
+        if (isTeamA) {
+          // Team A (left): color on left, fade to dark on right
+          gradient.addColorStop(0, teamColor);
+          gradient.addColorStop(0.6, hexToRgba(teamColor, 0.4));
+          gradient.addColorStop(1, 'rgba(30, 30, 30, 0.92)');
+        } else {
+          // Team B (right): dark on left, fade to color on right
+          gradient.addColorStop(0, 'rgba(30, 30, 30, 0.92)');
+          gradient.addColorStop(0.4, hexToRgba(teamColor, 0.4));
+          gradient.addColorStop(1, teamColor);
+        }
+        this.ctx.fillStyle = gradient;
+      } else {
+        this.ctx.fillStyle = 'rgba(30, 30, 30, 0.92)';
+      }
+    } else {
+      this.ctx.fillStyle = 'rgba(30, 30, 30, 0.92)';
+    }
     this.drawRoundedRect(startX, y, barWidth, this.INFO_BAR_HEIGHT, 5, true);
     
     const textY = y + this.INFO_BAR_HEIGHT / 2;
@@ -325,6 +349,9 @@ export class NBAOverlayDrawer {
       const secondaryColor = this.getInfoBarColor(data.infoBarSecondaryType, data.infoBarSecondaryTeamId, data);
       this.ctx.fillStyle = secondaryColor;
       this.ctx.fillText((data.infoBarSecondaryLabel || '').toUpperCase(), rightX, textY);
+    } else if (isShotMade) {
+      // SHOT MADE: White text + animated +3 for 3-pointers
+      this.drawShotMadeText(data, centerX, textY);
     } else {
       // SINGLE LAYOUT: Centered
       const displayText = data.infoBarLabel || 'Powered By STATJAM';
@@ -337,6 +364,88 @@ export class NBAOverlayDrawer {
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText(displayText.toUpperCase(), centerX, textY);
     }
+  }
+  
+  /**
+   * Draw shot made text with shake animation for 3-pointers
+   */
+  private drawShotMadeText(
+    data: GameOverlayData,
+    centerX: number,
+    textY: number
+  ): void {
+    const label = data.infoBarLabel || '';
+    const is3PT = data.shotMadeIs3Pointer;
+    const animStart = data.shotMadeAnimationStart || 0;
+    
+    // Parse label: "#23 J. SMITH +3" or "#23 J. SMITH +2"
+    const match = label.match(/^(.+?)\s*(\+\d)$/);
+    const playerText = match ? match[1] : label;
+    const pointsText = match ? match[2] : '';
+    
+    // Base font for player name
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.font = 'italic 700 34px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    
+    if (is3PT && pointsText) {
+      // Draw player name slightly left of center
+      const playerWidth = this.ctx.measureText(playerText.toUpperCase()).width;
+      this.ctx.textAlign = 'right';
+      this.ctx.fillText(playerText.toUpperCase(), centerX - 10, textY);
+      
+      // Draw +3 with shake animation (larger font, exceeds bar)
+      this.draw3PTWithShake(centerX + 10, textY, animStart);
+    } else {
+      // Regular shot: just centered text
+      this.ctx.fillText(label.toUpperCase(), centerX, textY);
+    }
+  }
+  
+  /**
+   * Draw +3 with shake animation - oversized font for emphasis
+   */
+  private draw3PTWithShake(
+    x: number,
+    y: number,
+    animStart: number
+  ): void {
+    const elapsed = Date.now() - animStart;
+    const shakeDuration = 1000; // 1 second of shaking
+    
+    // Calculate shake offset (6 oscillations, damped)
+    let shakeX = 0;
+    if (elapsed < shakeDuration) {
+      const progress = elapsed / shakeDuration;
+      const amplitude = 8 * (1 - progress); // Decays from 8px to 0
+      shakeX = amplitude * Math.sin(progress * 6 * Math.PI * 2);
+    }
+    
+    // Large font that exceeds the bar height
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.font = 'italic 900 56px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'middle';
+    
+    // Glow effect for emphasis
+    this.ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
+    this.ctx.shadowBlur = 8;
+    
+    this.ctx.fillText('+3', x + shakeX, y);
+    
+    // Reset shadow
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+  }
+  
+  /**
+   * Get team primary color by team ID
+   */
+  private getTeamPrimaryColor(data: GameOverlayData, teamId: string): string | null {
+    if (teamId === data.teamAId) return data.teamAPrimaryColor || null;
+    if (teamId === data.teamBId) return data.teamBPrimaryColor || null;
+    return null;
   }
   
   /**

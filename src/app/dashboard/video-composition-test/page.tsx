@@ -71,8 +71,8 @@ export default function VideoCompositionTestPage() {
     };
   }, [overlayData, selectedTournament?.name]);
   
-  // Info bar overlays (team run, timeout, halftime, etc.)
-  const { activeItem: infoBarActiveItem, secondaryItem: infoBarSecondaryItem, toggles: infoBarToggles, setToggles: setInfoBarToggles } = useInfoBarOverlays(selectedGameId, gameState);
+  // Info bar overlays (team run, timeout, halftime, shot made, etc.)
+  const { activeItem: infoBarActiveItem, secondaryItem: infoBarSecondaryItem, toggles: infoBarToggles, setToggles: setInfoBarToggles, shotMadeData } = useInfoBarOverlays(selectedGameId, gameState);
   
   const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();
   
@@ -121,7 +121,7 @@ export default function VideoCompositionTestPage() {
       // Pass tournament name directly from selected tournament (no DB query needed)
       tournamentName: selectedTournament?.name,
       tournamentLogo: selectedTournament?.logo,
-      // Info bar overlays (team run, timeout, halftime, etc.)
+      // Info bar overlays (team run, timeout, halftime, shot made, etc.)
       infoBarLabel: infoBarActiveItem?.label,
       infoBarType: infoBarActiveItem?.type,
       infoBarTeamId: infoBarActiveItem?.teamId,
@@ -129,8 +129,11 @@ export default function VideoCompositionTestPage() {
       infoBarSecondaryLabel: infoBarSecondaryItem?.label,
       infoBarSecondaryType: infoBarSecondaryItem?.type,
       infoBarSecondaryTeamId: infoBarSecondaryItem?.teamId,
+      // Shot made animation data (for 3PT shake effect)
+      shotMadeAnimationStart: shotMadeData?.animationStart,
+      shotMadeIs3Pointer: shotMadeData?.is3Pointer,
     };
-  }, [overlayData, activePlayerStats, selectedTournament, infoBarActiveItem, infoBarSecondaryItem]);
+  }, [overlayData, activePlayerStats, selectedTournament, infoBarActiveItem, infoBarSecondaryItem, shotMadeData]);
   
   const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition, setVariant } = useVideoComposition({
     videoStream: activeVideoStream,
