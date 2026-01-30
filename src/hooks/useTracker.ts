@@ -674,13 +674,23 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         if (calculatedScores) {
           // Initialize scores with calculated totals
           setScores(calculatedScores);
+        } else {
+          // ✅ FIX: Only set 0-0 if this is truly a fresh game with no existing scores
+          // Never overwrite existing scores (prevents 0-0 flash on reconnect/weak connection)
+          const currentScores = scoresRef.current;
+          const hasExistingScores = isCoachMode 
+            ? (currentScores[teamAId] > 0 || (currentScores.opponent || 0) > 0)
+            : (currentScores[teamAId] > 0 || currentScores[teamBId] > 0);
+          
+          if (!hasExistingScores) {
+            // Fresh game with no stats - safe to set 0-0
+            setScores({
+              [teamAId]: 0,
+              [teamBId]: 0
+            });
           } else {
-          // Only default to 0-0 if stats fetch completed but returned empty (not if it failed)
-          // This prevents race condition where initialization completes before stats load
-          setScores({
-            [teamAId]: 0,
-            [teamBId]: 0
-          });
+            console.log('⚠️ Keeping existing scores (no new data to update):', currentScores);
+          }
         }
         
       } catch (error) {
@@ -874,7 +884,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     } catch (error) {
       console.error('Error syncing clock reset to database:', error);
     }
-  }, [gameId, quarter, originalQuarterLength]);
+  }, [gameId, quarter, originalQuarterLength, periodsPerGame]);
 
   // NEW: Set custom time (for manual editing)
   const setCustomTime = useCallback(async (minutes: number, seconds: number) => {

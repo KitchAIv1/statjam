@@ -1716,7 +1716,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
           teamBName={isCoachGame ? opponentName : (gameData.team_b?.name || 'Team B')}
           isCoachMode={isCoachGame}
           currentQuarter={gameClock?.quarter || 1}
-          currentMinutes={gameClock?.minutesRemaining || 10}
+          currentMinutes={gameClock?.minutesRemaining ?? 0}
           currentSeconds={gameClock?.secondsRemaining || 0}
         />
       )}

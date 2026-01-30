@@ -172,8 +172,9 @@ export function useGameOverlayData(gameId: string | null) {
         homeScore: calculatedScores.homeScore,
         awayScore: calculatedScores.awayScore,
         quarter: game.quarter || 1,
-        gameClockMinutes: game.game_clock_minutes || 10,
-        gameClockSeconds: game.game_clock_seconds || 0,
+        // ✅ FIX: Use ?? instead of || to allow 0 as valid value (under 1 minute remaining)
+        gameClockMinutes: game.game_clock_minutes ?? 0,
+        gameClockSeconds: game.game_clock_seconds ?? 0,
         shotClockSeconds: game.shot_clock_seconds,
         teamALogo: teamA?.logo_url,
         teamBLogo: teamB?.logo_url,

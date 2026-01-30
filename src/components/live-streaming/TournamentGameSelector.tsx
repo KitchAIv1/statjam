@@ -112,7 +112,7 @@ export function TournamentGameSelector({
           away_score: g.away_score || 0, 
           quarter: g.quarter || 1, 
           status: g.status, 
-          game_clock_minutes: g.game_clock_minutes || 10, 
+          game_clock_minutes: g.game_clock_minutes ?? 0, 
           game_clock_seconds: g.game_clock_seconds || 0,
           tournament_id: g.tournament_id,
         })));

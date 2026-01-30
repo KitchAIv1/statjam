@@ -34,7 +34,7 @@ function mapGameToLiveGame(game: any, teamsMap: Map<string, any>): LiveGame {
     away_score: game.away_score || 0,
     quarter: game.quarter || 1,
     status: game.status,
-    game_clock_minutes: game.game_clock_minutes || 10,
+    game_clock_minutes: game.game_clock_minutes ?? 0,
     game_clock_seconds: game.game_clock_seconds || 0,
     team_a_logo: teamA?.logo_url,
     team_b_logo: teamB?.logo_url,
