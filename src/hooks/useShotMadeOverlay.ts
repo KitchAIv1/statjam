@@ -7,13 +7,16 @@ import { fetchPlayerDisplayName } from '@/lib/services/playerLookupService';
 const SHOT_DISPLAY_MS = 5000;
 
 interface Options { gameId: string | null; teamAId: string | null; teamBId: string | null; }
+export interface ScoreDelta { statId: string; teamId: string; points: number; }
+interface ShotMadeResult { item: InfoBarItem | null; scoreDelta: ScoreDelta | null; }
 
-export function useShotMadeOverlay({ gameId, teamAId, teamBId }: Options): InfoBarItem | null {
+export function useShotMadeOverlay({ gameId, teamAId, teamBId }: Options): ShotMadeResult {
   const [shotItem, setShotItem] = useState<InfoBarItem | null>(null);
+  const [scoreDelta, setScoreDelta] = useState<ScoreDelta | null>(null);
   const lastShotIdRef = useRef<string | null>(null);
   const clearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const clearShot = useCallback(() => { setShotItem(null); lastShotIdRef.current = null; }, []);
+  const clearShot = useCallback(() => { setShotItem(null); setScoreDelta(null); lastShotIdRef.current = null; }, []);
 
   useEffect(() => {
     if (!gameId || !teamAId || !teamBId || !supabase) return;
@@ -39,11 +42,13 @@ export function useShotMadeOverlay({ gameId, teamAId, teamBId }: Options): InfoB
           const playerName = await fetchPlayerDisplayName(playerId);
           const is3Pointer = stat.stat_type === 'three_pointer';
 
+          const points = is3Pointer ? 3 : stat.stat_value;
           const shotData: ShotMadeData = {
-            playerId, playerName, points: is3Pointer ? 3 : stat.stat_value, is3Pointer, animationStart: Date.now(),
+            playerId, playerName, points, is3Pointer, animationStart: Date.now(),
           };
 
           setShotItem(createShotMadeItem(shotData, stat.team_id));
+          setScoreDelta({ statId: stat.id, teamId: stat.team_id, points }); // Optimistic score update
           if (clearTimeoutRef.current) clearTimeout(clearTimeoutRef.current);
           clearTimeoutRef.current = setTimeout(clearShot, SHOT_DISPLAY_MS);
         }
@@ -55,5 +60,5 @@ export function useShotMadeOverlay({ gameId, teamAId, teamBId }: Options): InfoB
     };
   }, [gameId, teamAId, teamBId, clearShot]);
 
-  return shotItem;
+  return { item: shotItem, scoreDelta };
 }

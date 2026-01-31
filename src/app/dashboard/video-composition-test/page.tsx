@@ -34,6 +34,7 @@ import { useGamePlayers } from '@/hooks/useGamePlayers';
 import { usePlayerStatsOverlay } from '@/hooks/usePlayerStatsOverlay';
 import { useBroadcastReadiness } from '@/hooks/useBroadcastReadiness';
 import { useInfoBarOverlays } from '@/hooks/useInfoBarOverlays';
+import { useOptimisticScores } from '@/hooks/useOptimisticScores';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { notify } from '@/lib/services/notificationService';
 import { UpgradeModal } from '@/components/subscription';
@@ -72,7 +73,16 @@ export default function VideoCompositionTestPage() {
   }, [overlayData, selectedTournament?.name]);
   
   // Info bar overlays (team run, timeout, halftime, shot made, etc.)
-  const { activeItem: infoBarActiveItem, secondaryItem: infoBarSecondaryItem, toggles: infoBarToggles, setToggles: setInfoBarToggles, shotMadeData } = useInfoBarOverlays(selectedGameId, gameState);
+  const { activeItem: infoBarActiveItem, secondaryItem: infoBarSecondaryItem, toggles: infoBarToggles, setToggles: setInfoBarToggles, shotMadeData, scoreDelta } = useInfoBarOverlays(selectedGameId, gameState);
+  
+  // Per-team optimistic scores (freeze on shot, prevents double-counting from DB sync)
+  const optimisticScores = useOptimisticScores({
+    dbHomeScore: overlayData?.homeScore ?? 0,
+    dbAwayScore: overlayData?.awayScore ?? 0,
+    teamAId: overlayData?.teamAId ?? null,
+    teamBId: overlayData?.teamBId ?? null,
+    scoreDelta,
+  });
   
   const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();
   
@@ -115,8 +125,12 @@ export default function VideoCompositionTestPage() {
   
   const fullOverlayData = useMemo(() => {
     if (!overlayData) return null;
+    
     return { 
       ...overlayData, 
+      // Use optimistic scores (per-team freeze prevents double-counting)
+      homeScore: optimisticScores.homeScore,
+      awayScore: optimisticScores.awayScore,
       activePlayerStats: activePlayerStats ?? undefined,
       // Pass tournament name directly from selected tournament (no DB query needed)
       tournamentName: selectedTournament?.name,
@@ -133,7 +147,7 @@ export default function VideoCompositionTestPage() {
       shotMadeAnimationStart: shotMadeData?.animationStart,
       shotMadeIs3Pointer: shotMadeData?.is3Pointer,
     };
-  }, [overlayData, activePlayerStats, selectedTournament, infoBarActiveItem, infoBarSecondaryItem, shotMadeData]);
+  }, [overlayData, optimisticScores, activePlayerStats, selectedTournament, infoBarActiveItem, infoBarSecondaryItem, shotMadeData]);
   
   const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition, setVariant } = useVideoComposition({
     videoStream: activeVideoStream,

@@ -95,6 +95,11 @@ export function useGameOverlayData(gameId: string | null) {
   const mountedRef = useRef(true);
   const fetchingRef = useRef(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // ✅ P0 FIX: Track previous scores to preserve on query failure
+  const prevScoresRef = useRef<{ homeScore: number; awayScore: number; teamAFouls: number; teamBFouls: number }>({
+    homeScore: 0, awayScore: 0, teamAFouls: 0, teamBFouls: 0
+  });
 
   // Stable fetch function
   const fetchGameData = useCallback(async (isInitialLoad: boolean = false) => {
@@ -122,11 +127,11 @@ export function useGameOverlayData(gameId: string | null) {
       // Fetch tournament info separately (optional - won't fail if no tournament)
       // Note: Tournament name is now passed directly from studio's tournament selector
       // This is kept as fallback for cases where tournament selector isn't used
-      let tournament: { id: string; name: string; logo_url?: string } | null = null;
+      let tournament: { id: string; name: string; logo?: string } | null = null;
       if (game.tournament_id) {
         const { data: tournamentData } = await supabase
           .from('tournaments')
-          .select('id, name, logo_url')
+          .select('id, name, logo')
           .eq('id', game.tournament_id)
           .single();
         tournament = tournamentData;
@@ -144,23 +149,33 @@ export function useGameOverlayData(gameId: string | null) {
       const teamB = teamsMap.get(game.team_b_id);
 
       // Fetch game stats for score calculation
-      const { data: stats } = await supabase
+      const { data: stats, error: statsError } = await supabase
         .from('game_stats')
         .select('id, game_id, player_id, team_id, stat_type, stat_value, modifier, is_opponent_stat')
         .eq('game_id', gameId);
 
-      // Calculate scores and fouls from game_stats (source of truth)
-      const calculatedScores = calculateScoresFromStats(
-        stats || [],
-        game.team_a_id,
-        game.team_b_id
-      );
+      // ✅ P0 FIX: If stats query fails, preserve previous scores instead of resetting to 0-0
+      let calculatedScores: { homeScore: number; awayScore: number };
+      let calculatedFouls: { teamAFouls: number; teamBFouls: number };
       
-      const calculatedFouls = calculateFoulsFromStats(
-        stats || [],
-        game.team_a_id,
-        game.team_b_id
-      );
+      if (statsError || !stats) {
+        // Preserve previous scores on error - don't reset to 0-0
+        calculatedScores = {
+          homeScore: prevScoresRef.current.homeScore,
+          awayScore: prevScoresRef.current.awayScore,
+        };
+        calculatedFouls = {
+          teamAFouls: prevScoresRef.current.teamAFouls,
+          teamBFouls: prevScoresRef.current.teamBFouls,
+        };
+        console.warn('⚠️ Stats query failed, preserving previous scores:', statsError?.message);
+      } else {
+        // Calculate scores and fouls from game_stats (source of truth)
+        calculatedScores = calculateScoresFromStats(stats, game.team_a_id, game.team_b_id);
+        calculatedFouls = calculateFoulsFromStats(stats, game.team_a_id, game.team_b_id);
+        // Update ref with successful values
+        prevScoresRef.current = { ...calculatedScores, ...calculatedFouls };
+      }
 
       if (!mountedRef.current) return;
       
@@ -194,7 +209,7 @@ export function useGameOverlayData(gameId: string | null) {
         venue: game.venue,
         // ✅ Tournament info from joined query
         tournamentName: tournament?.name,
-        tournamentLogo: tournament?.logo_url,
+        tournamentLogo: tournament?.logo,
       });
     } catch (err) {
       if (mountedRef.current) {

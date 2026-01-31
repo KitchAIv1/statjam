@@ -26,7 +26,7 @@ import {
 } from '@/lib/services/canvas-overlay/infoBarManager';
 import { useTimeoutOverlay } from './useTimeoutOverlay';
 import { useTeamRunAndMilestones } from './useTeamRunAndMilestones';
-import { useShotMadeOverlay } from './useShotMadeOverlay';
+import { useShotMadeOverlay, ScoreDelta } from './useShotMadeOverlay';
 
 interface GameState {
   quarter: number;
@@ -47,6 +47,8 @@ interface UseInfoBarOverlaysResult {
   items: InfoBarItem[];
   // Shot made animation data (for 3PT shake effect)
   shotMadeData: ShotMadeData | null;
+  // Optimistic score delta (for instant score update)
+  scoreDelta: ScoreDelta | null;
 }
 
 export function useInfoBarOverlays(
@@ -72,7 +74,7 @@ export function useInfoBarOverlays(
     gameState?.teamBId ?? null,
     teamNames
   );
-  const shotMadeItem = useShotMadeOverlay({
+  const { item: shotMadeItem, scoreDelta } = useShotMadeOverlay({
     gameId,
     teamAId: gameState?.teamAId ?? null,
     teamBId: gameState?.teamBId ?? null,
@@ -125,15 +127,18 @@ export function useInfoBarOverlays(
     const primary = getActiveInfoBarItem(items, toggles);
     
     // Get secondary item (different type than primary, for split display)
+    // Split-eligible types: team_run, milestone, shot_made (NBA style dual display)
+    const SPLIT_ELIGIBLE = ['team_run', 'milestone', 'shot_made'];
     let secondary: InfoBarItem | null = null;
     if (primary) {
       const otherItems = items.filter(item => {
         if (item.type === primary.type) return false;
-        // Only team_run and milestone can be split
-        if (!['team_run', 'milestone'].includes(item.type)) return false;
-        if (!['team_run', 'milestone'].includes(primary.type)) return false;
+        // Only split-eligible types can be shown together
+        if (!SPLIT_ELIGIBLE.includes(item.type)) return false;
+        if (!SPLIT_ELIGIBLE.includes(primary.type)) return false;
         // Check toggle
-        const toggleKey = item.type === 'team_run' ? 'teamRun' : 'milestone';
+        const toggleKey = item.type === 'team_run' ? 'teamRun' 
+          : item.type === 'shot_made' ? 'shotMade' : 'milestone';
         if (!toggles[toggleKey]) return false;
         // Check expiry
         if (item.expiresAt && item.expiresAt < Date.now()) return false;
@@ -164,5 +169,6 @@ export function useInfoBarOverlays(
     setToggles,
     items,
     shotMadeData,
+    scoreDelta,
   };
 }

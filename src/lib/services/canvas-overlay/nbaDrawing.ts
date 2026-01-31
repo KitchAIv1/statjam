@@ -142,7 +142,8 @@ export class NBAOverlayDrawer {
       ? (data.teamBPrimaryColor || '#1E40AF')
       : (data.teamAPrimaryColor || '#B91C1C');
     const teamName = isHome ? data.teamBName : data.teamAName;
-    const score = isHome ? data.homeScore : data.awayScore;
+    // FIX: Team A stats → homeScore, Team B stats → awayScore (match useGameOverlayData)
+    const score = isHome ? data.awayScore : data.homeScore;
     const fouls = isHome ? data.teamBFouls : data.teamAFouls;
     
     // Team colored background
@@ -291,13 +292,17 @@ export class NBAOverlayDrawer {
   ): void {
     const barWidth = this.MAX_WIDTH;
     const startX = centerX - barWidth / 2;
-    const isShotMade = data.infoBarType === 'shot_made';
+    const isShotMadePrimary = data.infoBarType === 'shot_made';
+    const isShotMadeSecondary = data.infoBarSecondaryType === 'shot_made';
+    const hasShotMade = isShotMadePrimary || isShotMadeSecondary;
     
     // Background: Gradient for shot_made (fades toward opposite team), dark gray otherwise
-    if (isShotMade && data.infoBarTeamId) {
-      const teamColor = this.getTeamPrimaryColor(data, data.infoBarTeamId);
+    // Works for both single and split layouts - gradient points to scoring team's side
+    if (hasShotMade) {
+      const shotTeamId = isShotMadePrimary ? data.infoBarTeamId : data.infoBarSecondaryTeamId;
+      const teamColor = shotTeamId ? this.getTeamPrimaryColor(data, shotTeamId) : null;
       if (teamColor) {
-        const isTeamA = data.infoBarTeamId === data.teamAId; // Left side team
+        const isTeamA = shotTeamId === data.teamAId; // Left side team
         const gradient = this.ctx.createLinearGradient(startX, y, startX + barWidth, y);
         
         if (isTeamA) {
@@ -330,26 +335,27 @@ export class NBAOverlayDrawer {
       const rightX = startX + halfWidth + halfWidth / 2;
       
       // Draw divider line
-      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
       this.ctx.moveTo(centerX, y + 8);
       this.ctx.lineTo(centerX, y + this.INFO_BAR_HEIGHT - 8);
       this.ctx.stroke();
       
-      // Primary (left)
-      const primaryColor = this.getInfoBarColor(data.infoBarType, data.infoBarTeamId, data);
-      this.ctx.fillStyle = primaryColor;
       this.ctx.font = 'italic 700 28px Impact, "Arial Narrow", sans-serif';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
+      
+      // Primary (left) - white if gradient bg (shot_made involved), else colored
+      const primaryColor = hasShotMade ? '#FFFFFF' : this.getInfoBarColor(data.infoBarType, data.infoBarTeamId, data);
+      this.ctx.fillStyle = primaryColor;
       this.ctx.fillText((data.infoBarLabel || '').toUpperCase(), leftX, textY);
       
-      // Secondary (right)
-      const secondaryColor = this.getInfoBarColor(data.infoBarSecondaryType, data.infoBarSecondaryTeamId, data);
+      // Secondary (right) - white if gradient bg (shot_made involved), else colored
+      const secondaryColor = hasShotMade ? '#FFFFFF' : this.getInfoBarColor(data.infoBarSecondaryType, data.infoBarSecondaryTeamId, data);
       this.ctx.fillStyle = secondaryColor;
       this.ctx.fillText((data.infoBarSecondaryLabel || '').toUpperCase(), rightX, textY);
-    } else if (isShotMade) {
+    } else if (isShotMadePrimary) {
       // SHOT MADE: White text + animated +3 for 3-pointers
       this.drawShotMadeText(data, centerX, textY);
     } else {
