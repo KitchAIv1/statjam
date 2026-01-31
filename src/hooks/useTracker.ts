@@ -855,11 +855,24 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     // Use provided quarter or current quarter
     const targetQuarter = forQuarter || quarter;
     
+    // ✅ FIX: Read quarter length from localStorage as AUTHORITATIVE source
+    // This prevents stale closure issues where originalQuarterLength state hasn't updated
+    let clockMinutesFromConfig = originalQuarterLength;
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`quarterLength_${gameId}`);
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if ([5, 6, 8, 10, 12, 18, 20].includes(parsed)) {
+          clockMinutesFromConfig = parsed;
+        }
+      }
+    }
+    
     // Determine clock duration based on quarter
     // Regular periods: Use original quarter/half length from pre-flight
     // Overtime periods: 5 minutes
     const isOT = isOvertimePeriod(targetQuarter, periodsPerGame);
-    const clockMinutes = isOT ? 5 : originalQuarterLength;
+    const clockMinutes = isOT ? 5 : clockMinutesFromConfig;
     const newSeconds = clockMinutes * 60;
     
     console.log(`🕐 Resetting clock for ${getPeriodLabel(targetQuarter, periodsPerGame)}: ${clockMinutes} minutes (${newSeconds} seconds)`);
@@ -1047,10 +1060,23 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       console.log('⚠️ Quarter change warning:', validation.warning);
     }
     
-    // ✅ FIX #2: Calculate new clock time BEFORE resetting (prevents race condition)
+    // ✅ FIX: Read quarter length from localStorage as AUTHORITATIVE source
+    // This prevents stale closure issues where originalQuarterLength state hasn't updated
+    let clockMinutesForQuarter = originalQuarterLength;
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`quarterLength_${gameId}`);
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if ([5, 6, 8, 10, 12, 18, 20].includes(parsed)) {
+          clockMinutesForQuarter = parsed;
+          console.log(`🔍 setQuarter: Using localStorage quarter length: ${parsed} min`);
+        }
+      }
+    }
+    
     // ✅ DYNAMIC PERIODS: Use periodsPerGame for overtime detection
     const isOvertime = newQuarter > periodsPerGame;
-    const newClockMinutes = isOvertime ? 5 : originalQuarterLength;
+    const newClockMinutes = isOvertime ? 5 : clockMinutesForQuarter;
     const newClockSeconds = 0;
     
     // ✅ Update quarter state
