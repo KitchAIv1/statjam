@@ -36,8 +36,10 @@ import { useBroadcastReadiness } from '@/hooks/useBroadcastReadiness';
 import { useInfoBarOverlays } from '@/hooks/useInfoBarOverlays';
 import { useOptimisticScores } from '@/hooks/useOptimisticScores';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
+import { useBoxScoreOverlay } from '@/hooks/useBoxScoreOverlay';
 import { notify } from '@/lib/services/notificationService';
 import { UpgradeModal } from '@/components/subscription';
+import { BoxScoreOverlayPanel } from '@/components/overlay/BoxScoreOverlayPanel';
 import type { Tournament } from '@/lib/types/tournament';
 
 export default function VideoCompositionTestPage() {
@@ -83,6 +85,21 @@ export default function VideoCompositionTestPage() {
     teamAId: overlayData?.teamAId ?? null,
     teamBId: overlayData?.teamBId ?? null,
     scoreDelta,
+  });
+  
+  // Box Score overlay (manual trigger)
+  const boxScore = useBoxScoreOverlay({
+    gameId: selectedGameId,
+    teamAId: overlayData?.teamAId ?? null,
+    teamBId: overlayData?.teamBId ?? null,
+    teamAName: overlayData?.teamAName ?? 'Team A',
+    teamBName: overlayData?.teamBName ?? 'Team B',
+    teamAScore: optimisticScores.homeScore,
+    teamBScore: optimisticScores.awayScore,
+    teamAPrimaryColor: overlayData?.teamAPrimaryColor,
+    teamBPrimaryColor: overlayData?.teamBPrimaryColor,
+    teamALogoUrl: overlayData?.teamALogo,
+    teamBLogoUrl: overlayData?.teamBLogo,
   });
   
   const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();
@@ -373,6 +390,12 @@ export default function VideoCompositionTestPage() {
                         </div>
                       </div>
                     )}
+                    {/* Box Score Overlay */}
+                    <BoxScoreOverlayPanel
+                      isVisible={boxScore.isVisible}
+                      isLoading={boxScore.isLoading}
+                      data={boxScore.boxScoreData}
+                    />
                   </>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center px-4">
@@ -526,6 +549,9 @@ export default function VideoCompositionTestPage() {
                 // Premium feature gating
                 overlaysLocked={!overlaysAllowed}
                 onUpgrade={() => setShowUpgradeModal(true)}
+                // Manual overlays
+                boxScoreVisible={boxScore.isVisible}
+                onBoxScoreToggle={boxScore.toggle}
               />
             )}
           </div>
