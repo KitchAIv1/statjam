@@ -24,7 +24,8 @@ export type InfoBarItemType =
   | 'timeout'
   | 'team_run'
   | 'milestone'
-  | 'shot_made';
+  | 'shot_made'
+  | 'foul';
 
 export interface InfoBarItem {
   type: InfoBarItemType;
@@ -43,6 +44,7 @@ export interface InfoBarToggles {
   teamRun: boolean;
   milestone: boolean;
   shotMade: boolean;
+  foul: boolean;
 }
 
 export interface InfoBarState {
@@ -60,6 +62,7 @@ export const DEFAULT_TOGGLES: InfoBarToggles = {
   teamRun: true,
   milestone: true,
   shotMade: true,
+  foul: true,
 };
 
 // Auto-hide durations (milliseconds)
@@ -67,6 +70,7 @@ const AUTO_HIDE_DURATIONS: Partial<Record<InfoBarItemType, number>> = {
   team_run: 10000,    // 10 seconds
   milestone: 8000,    // 8 seconds
   shot_made: 5000,    // 5 seconds
+  foul: 5000,         // 5 seconds
 };
 
 /**
@@ -183,6 +187,36 @@ export function createShotMadeItem(
 }
 
 /**
+ * Create a foul info bar item
+ */
+export interface FoulData {
+  playerId: string;
+  playerName: string;      // "#23 J. SMITH"
+  foulType: 'personal' | 'shooting' | 'offensive' | 'technical' | 'flagrant';
+  foulCount: number;       // Player's total fouls in game
+}
+
+export function createFoulItem(
+  data: FoulData,
+  teamId: string
+): InfoBarItem {
+  const foulLabel = data.foulType === 'personal' ? 'FOUL' 
+    : data.foulType === 'shooting' ? 'SHOOTING FOUL'
+    : data.foulType === 'offensive' ? 'OFFENSIVE FOUL'
+    : data.foulType === 'technical' ? 'TECH FOUL'
+    : 'FLAGRANT FOUL';
+  
+  return {
+    type: 'foul',
+    label: `${foulLabel} - ${data.playerName}`,
+    priority: 55, // Above shot_made (50), below halftime (60)
+    expiresAt: Date.now() + (AUTO_HIDE_DURATIONS.foul || 5000),
+    teamId,
+    data,
+  };
+}
+
+/**
  * Determine active info bar item based on priority and toggles
  */
 export function getActiveInfoBarItem(
@@ -222,6 +256,7 @@ function getToggleKey(type: InfoBarItemType): keyof InfoBarToggles {
     team_run: 'teamRun',
     milestone: 'milestone',
     shot_made: 'shotMade',
+    foul: 'foul',
   };
   return mapping[type];
 }

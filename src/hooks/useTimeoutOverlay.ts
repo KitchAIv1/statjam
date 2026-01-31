@@ -51,7 +51,11 @@ export function useTimeoutOverlay(
     } else {
       clearTimeoutDisplay();
     }
-  }, [clearTimeoutDisplay]); // ✅ Removed teamNames dependency
+  }, [clearTimeoutDisplay]);
+
+  // ✅ Ref to keep subscription stable (no recreation on callback changes)
+  const handleTimeoutRef = useRef(handleTimeout);
+  handleTimeoutRef.current = handleTimeout;
 
   // ✅ Track if initial check has run for this gameId
   const checkedGameIdRef = useRef<string | null>(null);
@@ -65,7 +69,7 @@ export function useTimeoutOverlay(
       if (checkedGameIdRef.current === gameId) return;
       checkedGameIdRef.current = gameId;
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('game_timeouts')
         .select('id, team_id, created_at, duration_seconds')
         .eq('game_id', gameId)
@@ -76,7 +80,7 @@ export function useTimeoutOverlay(
       // ✅ Handle 406/error gracefully - table might not exist
       if (error || !data) return;
       
-      handleTimeout(data);
+      handleTimeoutRef.current(data);
     };
 
     checkInitial();
@@ -94,16 +98,16 @@ export function useTimeoutOverlay(
         },
         (payload) => {
           const data = payload.new as { team_id: string; created_at: string; duration_seconds?: number };
-          handleTimeout(data);
+          handleTimeoutRef.current(data);
         }
       )
       .subscribe();
 
     return () => {
       if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
-      supabase.removeChannel(channel);
+      supabase?.removeChannel(channel);
     };
-  }, [gameId, handleTimeout]);
+  }, [gameId]); // ✅ Stable deps - subscription never recreated unnecessarily
 
   return timeoutItem;
 }

@@ -32,6 +32,8 @@ export interface GameOverlayData {
   gameClockMinutes: number;
   gameClockSeconds: number;
   shotClockSeconds?: number;
+  isClockRunning?: boolean;
+  gameStatus?: string;
   
   // Team branding (optional)
   teamALogo?: string;

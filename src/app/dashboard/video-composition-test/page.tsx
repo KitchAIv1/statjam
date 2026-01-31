@@ -35,6 +35,7 @@ import { usePlayerStatsOverlay } from '@/hooks/usePlayerStatsOverlay';
 import { useBroadcastReadiness } from '@/hooks/useBroadcastReadiness';
 import { useInfoBarOverlays } from '@/hooks/useInfoBarOverlays';
 import { useOptimisticScores } from '@/hooks/useOptimisticScores';
+import { useAutoGameEnd } from '@/hooks/useAutoGameEnd';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { notify } from '@/lib/services/notificationService';
 import { UpgradeModal } from '@/components/subscription';
@@ -64,6 +65,7 @@ export default function VideoCompositionTestPage() {
       quarter: overlayData.quarter,
       clockMinutes: overlayData.gameClockMinutes,
       clockSeconds: overlayData.gameClockSeconds,
+      isClockRunning: overlayData.isClockRunning ?? false,
       teamAId: overlayData.teamAId,
       teamBId: overlayData.teamBId,
       teamAName: overlayData.teamAName,
@@ -72,7 +74,7 @@ export default function VideoCompositionTestPage() {
     };
   }, [overlayData, selectedTournament?.name]);
   
-  // Info bar overlays (team run, timeout, halftime, shot made, etc.)
+  // Info bar overlays (team run, timeout, halftime, shot made, foul, etc.)
   const { activeItem: infoBarActiveItem, secondaryItem: infoBarSecondaryItem, toggles: infoBarToggles, setToggles: setInfoBarToggles, shotMadeData, scoreDelta } = useInfoBarOverlays(selectedGameId, gameState);
   
   // Per-team optimistic scores (freeze on shot, prevents double-counting from DB sync)
@@ -82,6 +84,18 @@ export default function VideoCompositionTestPage() {
     teamAId: overlayData?.teamAId ?? null,
     teamBId: overlayData?.teamBId ?? null,
     scoreDelta,
+  });
+  
+  // Auto-close game when Q4 ends with no tie (no overlay, just side effect)
+  useAutoGameEnd({
+    gameId: selectedGameId,
+    quarter: overlayData?.quarter ?? 1,
+    clockMinutes: overlayData?.gameClockMinutes ?? 12,
+    clockSeconds: overlayData?.gameClockSeconds ?? 0,
+    isClockRunning: overlayData?.isClockRunning ?? false,
+    homeScore: optimisticScores.homeScore,
+    awayScore: optimisticScores.awayScore,
+    gameStatus: overlayData?.gameStatus ?? 'scheduled',
   });
   
   const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();

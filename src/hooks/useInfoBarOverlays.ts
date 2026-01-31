@@ -16,10 +16,8 @@ import {
   InfoBarToggles,
   DEFAULT_TOGGLES,
   createTournamentNameItem,
-  createHalftimeItem,
   createOvertimeItem,
   getActiveInfoBarItem,
-  isHalftime,
   isOvertime,
   getOvertimePeriod,
   ShotMadeData,
@@ -27,11 +25,14 @@ import {
 import { useTimeoutOverlay } from './useTimeoutOverlay';
 import { useTeamRunAndMilestones } from './useTeamRunAndMilestones';
 import { useShotMadeOverlay, ScoreDelta } from './useShotMadeOverlay';
+import { useFoulOverlay } from './useFoulOverlay';
+import { useHalftimeOverlay } from './useHalftimeOverlay';
 
 interface GameState {
   quarter: number;
   clockMinutes: number;
   clockSeconds: number;
+  isClockRunning: boolean;
   teamAId: string;
   teamBId: string;
   teamAName: string;
@@ -79,6 +80,15 @@ export function useInfoBarOverlays(
     teamAId: gameState?.teamAId ?? null,
     teamBId: gameState?.teamBId ?? null,
   });
+  const foulItem = useFoulOverlay({
+    gameId,
+    teamAId: gameState?.teamAId ?? null,
+    teamBId: gameState?.teamBId ?? null,
+  });
+  const halftimeItem = useHalftimeOverlay({
+    quarter: gameState?.quarter ?? 1,
+    isClockRunning: gameState?.isClockRunning ?? false,
+  });
 
   // Build items array
   const items = useMemo(() => {
@@ -89,9 +99,9 @@ export function useInfoBarOverlays(
       result.push(createTournamentNameItem(gameState.tournamentName));
     }
 
-    // Halftime check
-    if (gameState && isHalftime(gameState.quarter, gameState.clockMinutes, gameState.clockSeconds)) {
-      result.push(createHalftimeItem());
+    // Halftime (from hook - auto-detects Q2 end)
+    if (halftimeItem) {
+      result.push(halftimeItem);
     }
 
     // Overtime check
@@ -119,16 +129,21 @@ export function useInfoBarOverlays(
       result.push(shotMadeItem);
     }
 
+    // Foul (if active and not expired)
+    if (foulItem && (!foulItem.expiresAt || foulItem.expiresAt > Date.now())) {
+      result.push(foulItem);
+    }
+
     return result;
-  }, [gameState, timeoutItem, teamRunItem, milestoneItem, shotMadeItem]);
+  }, [gameState, halftimeItem, timeoutItem, teamRunItem, milestoneItem, shotMadeItem, foulItem]);
 
   // Get active items based on priority and toggles (primary + secondary for split)
   const { activeItem, secondaryItem } = useMemo(() => {
     const primary = getActiveInfoBarItem(items, toggles);
     
     // Get secondary item (different type than primary, for split display)
-    // Split-eligible types: team_run, milestone, shot_made (NBA style dual display)
-    const SPLIT_ELIGIBLE = ['team_run', 'milestone', 'shot_made'];
+    // Split-eligible types: team_run, milestone, shot_made, foul (NBA style dual display)
+    const SPLIT_ELIGIBLE = ['team_run', 'milestone', 'shot_made', 'foul'];
     let secondary: InfoBarItem | null = null;
     if (primary) {
       const otherItems = items.filter(item => {
@@ -138,7 +153,8 @@ export function useInfoBarOverlays(
         if (!SPLIT_ELIGIBLE.includes(primary.type)) return false;
         // Check toggle
         const toggleKey = item.type === 'team_run' ? 'teamRun' 
-          : item.type === 'shot_made' ? 'shotMade' : 'milestone';
+          : item.type === 'shot_made' ? 'shotMade' 
+          : item.type === 'foul' ? 'foul' : 'milestone';
         if (!toggles[toggleKey]) return false;
         // Check expiry
         if (item.expiresAt && item.expiresAt < Date.now()) return false;

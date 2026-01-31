@@ -56,35 +56,6 @@ function calculateScoresFromStats(
   return { homeScore, awayScore };
 }
 
-/**
- * Calculate fouls from game_stats
- * Counts all foul stats per team for accurate overlay display
- */
-function calculateFoulsFromStats(
-  stats: GameStat[],
-  teamAId: string,
-  teamBId: string
-): { teamAFouls: number; teamBFouls: number } {
-  let teamAFouls = 0;
-  let teamBFouls = 0;
-
-  for (const stat of stats) {
-    // Only count foul stat types
-    if (stat.stat_type !== 'foul') continue;
-    
-    // ✅ Handle is_opponent_stat flag (COACH mode)
-    if (stat.is_opponent_stat) {
-      // Opponent fouls go to away team (Team B)
-      teamBFouls++;
-    } else if (stat.team_id === teamAId) {
-      teamAFouls++;
-    } else if (stat.team_id === teamBId) {
-      teamBFouls++;
-    }
-  }
-
-  return { teamAFouls, teamBFouls };
-}
 
 export function useGameOverlayData(gameId: string | null) {
   const [overlayData, setOverlayData] = useState<GameOverlayData | null>(null);
@@ -97,8 +68,8 @@ export function useGameOverlayData(gameId: string | null) {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // ✅ P0 FIX: Track previous scores to preserve on query failure
-  const prevScoresRef = useRef<{ homeScore: number; awayScore: number; teamAFouls: number; teamBFouls: number }>({
-    homeScore: 0, awayScore: 0, teamAFouls: 0, teamBFouls: 0
+  const prevScoresRef = useRef<{ homeScore: number; awayScore: number }>({
+    homeScore: 0, awayScore: 0
   });
 
   // Stable fetch function
@@ -156,7 +127,6 @@ export function useGameOverlayData(gameId: string | null) {
 
       // ✅ P0 FIX: If stats query fails, preserve previous scores instead of resetting to 0-0
       let calculatedScores: { homeScore: number; awayScore: number };
-      let calculatedFouls: { teamAFouls: number; teamBFouls: number };
       
       if (statsError || !stats) {
         // Preserve previous scores on error - don't reset to 0-0
@@ -164,17 +134,12 @@ export function useGameOverlayData(gameId: string | null) {
           homeScore: prevScoresRef.current.homeScore,
           awayScore: prevScoresRef.current.awayScore,
         };
-        calculatedFouls = {
-          teamAFouls: prevScoresRef.current.teamAFouls,
-          teamBFouls: prevScoresRef.current.teamBFouls,
-        };
         console.warn('⚠️ Stats query failed, preserving previous scores:', statsError?.message);
       } else {
-        // Calculate scores and fouls from game_stats (source of truth)
+        // Calculate scores from game_stats (source of truth for points)
         calculatedScores = calculateScoresFromStats(stats, game.team_a_id, game.team_b_id);
-        calculatedFouls = calculateFoulsFromStats(stats, game.team_a_id, game.team_b_id);
         // Update ref with successful values
-        prevScoresRef.current = { ...calculatedScores, ...calculatedFouls };
+        prevScoresRef.current = calculatedScores;
       }
 
       if (!mountedRef.current) return;
@@ -191,6 +156,8 @@ export function useGameOverlayData(gameId: string | null) {
         gameClockMinutes: game.game_clock_minutes ?? 0,
         gameClockSeconds: game.game_clock_seconds ?? 0,
         shotClockSeconds: game.shot_clock_seconds,
+        isClockRunning: game.is_clock_running ?? false,
+        gameStatus: game.status ?? 'scheduled',
         teamALogo: teamA?.logo_url,
         teamBLogo: teamB?.logo_url,
         teamAPrimaryColor: teamA?.primary_color,
@@ -199,9 +166,9 @@ export function useGameOverlayData(gameId: string | null) {
         teamBSecondaryColor: teamB?.secondary_color,
         teamAAccentColor: teamA?.accent_color,
         teamBAccentColor: teamB?.accent_color,
-        // ✅ Calculate fouls from stats (not games table) for accurate display
-        teamAFouls: calculatedFouls.teamAFouls,
-        teamBFouls: calculatedFouls.teamBFouls,
+        // ✅ FIX: Read fouls from games table (source of truth - resets each quarter)
+        teamAFouls: game.team_a_fouls ?? 0,
+        teamBFouls: game.team_b_fouls ?? 0,
         teamATimeouts: game.team_a_timeouts_remaining ?? 5,
         teamBTimeouts: game.team_b_timeouts_remaining ?? 5,
         currentPossessionTeamId: game.current_possession_team_id,
@@ -279,8 +246,8 @@ export function useGameOverlayData(gameId: string | null) {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
-      supabase.removeChannel(statsChannel);
-      supabase.removeChannel(gamesChannel);
+      supabase?.removeChannel(statsChannel);
+      supabase?.removeChannel(gamesChannel);
     };
   }, [gameId, fetchGameData, debouncedRefetch]);
 

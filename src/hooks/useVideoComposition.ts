@@ -31,6 +31,7 @@ export function useVideoComposition({
   enabled = true,
 }: UseVideoCompositionOptions): UseVideoCompositionReturn {
   const composerRef = useRef<ReturnType<typeof initializeComposer> | null>(null);
+  const videoSourcePromiseRef = useRef<Promise<void> | null>(null);
   const [composedStream, setComposedStream] = useState<MediaStream | null>(null);
   const [state, setState] = useState<VideoCompositionState>({
     isComposing: false,
@@ -50,15 +51,15 @@ export function useVideoComposition({
     };
   }, []);
   
-  // Update video source
+  // Update video source (track promise for start() to await)
   useEffect(() => {
     if (composerRef.current && videoStream) {
-      composerRef.current.setVideoSource(videoStream).catch(err => {
+      videoSourcePromiseRef.current = composerRef.current.setVideoSource(videoStream).catch(err => {
         console.error('Failed to set video source:', err);
         setError(err.message);
       });
     } else if (composerRef.current && !videoStream) {
-      composerRef.current.setVideoSource(null);
+      videoSourcePromiseRef.current = composerRef.current.setVideoSource(null);
     }
   }, [videoStream]);
   
@@ -74,6 +75,11 @@ export function useVideoComposition({
     if (!composerRef.current || !overlayData) {
       setError('Video source or overlay data missing');
       return;
+    }
+    
+    // Wait for video source to be set (async operation from useEffect)
+    if (videoSourcePromiseRef.current) {
+      await videoSourcePromiseRef.current;
     }
     
     const stream = await startCompositionHelper(
