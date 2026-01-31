@@ -86,6 +86,8 @@ export function useTimeoutOverlay(
     checkInitial();
 
     // Subscribe to INSERT events only (new timeouts)
+    console.log(`⏱️ [Timeout Overlay] Subscribing to game: ${gameId}`);
+    
     const channel = supabase
       .channel(`timeout_overlay:${gameId}`)
       .on(
@@ -97,11 +99,14 @@ export function useTimeoutOverlay(
           filter: `game_id=eq.${gameId}`,
         },
         (payload) => {
+          console.log('⏱️ [Timeout Overlay] INSERT received:', payload.new);
           const data = payload.new as { team_id: string; created_at: string; duration_seconds?: number };
           handleTimeoutRef.current(data);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`⏱️ [Timeout Overlay] Subscription status: ${status}`);
+      });
 
     return () => {
       if (clearTimerRef.current) clearTimeout(clearTimerRef.current);

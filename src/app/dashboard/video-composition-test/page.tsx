@@ -35,7 +35,6 @@ import { usePlayerStatsOverlay } from '@/hooks/usePlayerStatsOverlay';
 import { useBroadcastReadiness } from '@/hooks/useBroadcastReadiness';
 import { useInfoBarOverlays } from '@/hooks/useInfoBarOverlays';
 import { useOptimisticScores } from '@/hooks/useOptimisticScores';
-import { useAutoGameEnd } from '@/hooks/useAutoGameEnd';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { notify } from '@/lib/services/notificationService';
 import { UpgradeModal } from '@/components/subscription';
@@ -84,18 +83,6 @@ export default function VideoCompositionTestPage() {
     teamAId: overlayData?.teamAId ?? null,
     teamBId: overlayData?.teamBId ?? null,
     scoreDelta,
-  });
-  
-  // Auto-close game when Q4 ends with no tie (no overlay, just side effect)
-  useAutoGameEnd({
-    gameId: selectedGameId,
-    quarter: overlayData?.quarter ?? 1,
-    clockMinutes: overlayData?.gameClockMinutes ?? 12,
-    clockSeconds: overlayData?.gameClockSeconds ?? 0,
-    isClockRunning: overlayData?.isClockRunning ?? false,
-    homeScore: optimisticScores.homeScore,
-    awayScore: optimisticScores.awayScore,
-    gameStatus: overlayData?.gameStatus ?? 'scheduled',
   });
   
   const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();

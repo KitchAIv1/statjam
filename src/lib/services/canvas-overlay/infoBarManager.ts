@@ -25,7 +25,8 @@ export type InfoBarItemType =
   | 'team_run'
   | 'milestone'
   | 'shot_made'
-  | 'foul';
+  | 'foul'
+  | 'game_end';
 
 export interface InfoBarItem {
   type: InfoBarItemType;
@@ -45,6 +46,7 @@ export interface InfoBarToggles {
   milestone: boolean;
   shotMade: boolean;
   foul: boolean;
+  gameEnd: boolean;
 }
 
 export interface InfoBarState {
@@ -63,6 +65,7 @@ export const DEFAULT_TOGGLES: InfoBarToggles = {
   milestone: true,
   shotMade: true,
   foul: true,
+  gameEnd: true,
 };
 
 // Auto-hide durations (milliseconds)
@@ -217,6 +220,18 @@ export function createFoulItem(
 }
 
 /**
+ * Create a game end (FINAL) info bar item
+ */
+export function createGameEndItem(): InfoBarItem {
+  return {
+    type: 'game_end',
+    label: 'FINAL',
+    priority: 95, // High priority - just below timeout (100)
+    // No expiry - stays until dismissed or page closed
+  };
+}
+
+/**
  * Determine active info bar item based on priority and toggles
  */
 export function getActiveInfoBarItem(
@@ -257,6 +272,7 @@ function getToggleKey(type: InfoBarItemType): keyof InfoBarToggles {
     milestone: 'milestone',
     shot_made: 'shotMade',
     foul: 'foul',
+    game_end: 'gameEnd',
   };
   return mapping[type];
 }

@@ -27,6 +27,7 @@ import { useTeamRunAndMilestones } from './useTeamRunAndMilestones';
 import { useShotMadeOverlay, ScoreDelta } from './useShotMadeOverlay';
 import { useFoulOverlay } from './useFoulOverlay';
 import { useHalftimeOverlay } from './useHalftimeOverlay';
+import { useGameEndOverlay } from './useGameEndOverlay';
 
 interface GameState {
   quarter: number;
@@ -38,6 +39,7 @@ interface GameState {
   teamAName: string;
   teamBName: string;
   tournamentName?: string;
+  gameStatus?: string; // 'scheduled' | 'in_progress' | 'completed'
 }
 
 interface UseInfoBarOverlaysResult {
@@ -89,6 +91,9 @@ export function useInfoBarOverlays(
     quarter: gameState?.quarter ?? 1,
     isClockRunning: gameState?.isClockRunning ?? false,
   });
+  const gameEndItem = useGameEndOverlay({
+    gameStatus: gameState?.gameStatus ?? 'scheduled',
+  });
 
   // Build items array
   const items = useMemo(() => {
@@ -97,6 +102,11 @@ export function useInfoBarOverlays(
     // Tournament name (always available as fallback)
     if (gameState?.tournamentName) {
       result.push(createTournamentNameItem(gameState.tournamentName));
+    }
+
+    // Game end (FINAL) - highest priority after timeout
+    if (gameEndItem) {
+      result.push(gameEndItem);
     }
 
     // Halftime (from hook - auto-detects Q2 end)
@@ -135,7 +145,7 @@ export function useInfoBarOverlays(
     }
 
     return result;
-  }, [gameState, halftimeItem, timeoutItem, teamRunItem, milestoneItem, shotMadeItem, foulItem]);
+  }, [gameState, gameEndItem, halftimeItem, timeoutItem, teamRunItem, milestoneItem, shotMadeItem, foulItem]);
 
   // Get active items based on priority and toggles (primary + secondary for split)
   const { activeItem, secondaryItem } = useMemo(() => {
