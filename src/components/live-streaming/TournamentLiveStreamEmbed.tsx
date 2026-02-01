@@ -110,7 +110,16 @@ export function TournamentLiveStreamEmbed({
     }
   }, []);
 
-  const onPlayerError = useCallback(() => {
+  const onPlayerError = useCallback((event: any) => {
+    // YouTube error codes: 2=invalid video ID, 5=HTML5 error, 100=not found, 101/150=embedding disabled
+    const errorCode = event?.data;
+    console.error('❌ [TournamentLiveStreamEmbed] YouTube player error:', errorCode, {
+      2: 'Invalid video ID',
+      5: 'HTML5 player error',
+      100: 'Video not found or private',
+      101: 'Embedding disabled by owner',
+      150: 'Embedding disabled by owner',
+    }[errorCode] || 'Unknown error');
     setPlayerState('error');
   }, []);
 

@@ -155,6 +155,11 @@ export function BroadcastControls({
                 <p className="text-[10px] text-muted-foreground">
                   Viewers will see this stream on the tournament page
                 </p>
+                {platform === 'youtube' && (
+                  <div className="mt-1.5 p-2 bg-black/60 border border-[#FF3B30]/40 rounded text-[10px] text-white">
+                    <span className="text-[#FF3B30] font-semibold">⚠️ Important:</span> Enable embedding in YouTube Studio → Go Live → Stream Settings → <span className="font-semibold">Allow embedding = ON</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

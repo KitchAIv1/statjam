@@ -3,7 +3,7 @@
  * 
  * Single responsibility: Display live stream embed when active.
  * Uses useTournamentStreamStatus for real-time stream URL/status updates.
- * Hides stream container when ended/error to avoid dead embed remnants.
+ * Shows contextual states: loading, live, ended, error.
  * 
  * @module LiveTabContent
  */
@@ -13,6 +13,7 @@
 import { useState, useCallback } from 'react';
 import { TournamentLiveStreamEmbed, PlayerState } from '@/components/live-streaming/TournamentLiveStreamEmbed';
 import { useTournamentStreamStatus } from '@/hooks/useTournamentStreamStatus';
+import { Tv, Video, ExternalLink } from 'lucide-react';
 
 interface LiveTabContentProps {
   tournamentId: string;
@@ -44,28 +45,68 @@ export function LiveTabContent({
     setPlayerState(state);
   }, []);
 
-  // Hide stream container when ended or error (no dead embed remnants)
   const streamActive = isStreaming && liveStreamUrl && streamPlatform;
-  const showStreamEmbed = streamActive && playerState !== 'ended' && playerState !== 'error';
 
+  // No stream configured
+  if (!streamActive) {
+    return (
+      <div className="rounded-xl border border-white/10 bg-[#121212] p-8 text-center">
+        <Tv className="h-12 w-12 text-white/20 mx-auto mb-4" />
+        <p className="text-sm text-white/60">No active live stream</p>
+        <p className="text-xs text-white/40 mt-1">Check back when a game is being broadcast</p>
+      </div>
+    );
+  }
+
+  // Stream ended
+  if (playerState === 'ended') {
+    return (
+      <div className="rounded-xl border border-white/10 bg-[#121212] p-8 text-center">
+        <Tv className="h-12 w-12 text-white/20 mx-auto mb-4" />
+        <p className="text-sm font-semibold text-white mb-1">Stream Ended</p>
+        <p className="text-xs text-white/50 mb-4">This broadcast has concluded</p>
+        <a
+          href={liveStreamUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm text-[#FF3B30] hover:text-[#FF3B30]/80 transition"
+        >
+          Watch on {streamPlatform === 'youtube' ? 'YouTube' : 'Twitch'}
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      </div>
+    );
+  }
+
+  // Error loading stream
+  if (playerState === 'error') {
+    return (
+      <div className="rounded-xl border border-white/10 bg-[#121212] p-8 text-center">
+        <Video className="h-12 w-12 text-white/20 mx-auto mb-4" />
+        <p className="text-sm font-semibold text-white mb-1">Unable to Load Stream</p>
+        <p className="text-xs text-white/50 mb-4">Watch directly on the platform</p>
+        <a
+          href={liveStreamUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm text-[#FF3B30] hover:text-[#FF3B30]/80 transition"
+        >
+          Open in {streamPlatform === 'youtube' ? 'YouTube' : 'Twitch'}
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      </div>
+    );
+  }
+
+  // Stream active (loading, playing, buffering, paused, unstarted)
   return (
-    <div>
-      {/* Live Stream Embed - Hidden when ended/error */}
-      {showStreamEmbed ? (
-        <section className="rounded-xl border border-white/10 bg-[#121212] overflow-hidden">
-          <TournamentLiveStreamEmbed
-            streamUrl={liveStreamUrl}
-            platform={streamPlatform}
-            className="w-full"
-            onStateChange={handleStateChange}
-          />
-        </section>
-      ) : (
-        <div className="rounded-xl border border-white/10 bg-[#121212] p-8 text-center">
-          <p className="text-sm text-white/60">No active live stream</p>
-          <p className="text-xs text-white/40 mt-1">Check back when a game is being broadcast</p>
-        </div>
-      )}
-    </div>
+    <section className="rounded-xl border border-white/10 bg-[#121212] overflow-hidden">
+      <TournamentLiveStreamEmbed
+        streamUrl={liveStreamUrl}
+        platform={streamPlatform}
+        className="w-full"
+        onStateChange={handleStateChange}
+      />
+    </section>
   );
 }

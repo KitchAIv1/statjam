@@ -8,7 +8,7 @@ import { useTournamentStreamStatus } from '@/hooks/useTournamentStreamStatus';
 import { TeamService } from '@/lib/services/tournamentService';
 import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Shield, Calendar, Video, Clock, Tv } from 'lucide-react';
+import { Shield, Calendar, Video, Clock, Tv, ExternalLink } from 'lucide-react';
 import { TournamentOrganizerCard } from './TournamentOrganizerCard';
 import { PhaseBadge } from './PhaseBadge';
 import { TournamentLiveStreamEmbed, PlayerState } from '@/components/live-streaming/TournamentLiveStreamEmbed';
@@ -118,58 +118,16 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
             <Video className="h-4 w-4 text-[#FF3B30]" />
             <span className="text-sm font-semibold text-white">Live Stream</span>
           </header>
-          {/* Show stream if actively streaming AND not ended/error */}
-          {isStreaming && liveStreamUrl && streamPlatform && 
-           streamPlayerState !== 'ended' && streamPlayerState !== 'error' ? (
-            <div>
-              <div className="p-4 pt-3">
-                <TournamentLiveStreamEmbed
-                  streamUrl={liveStreamUrl}
-                  platform={streamPlatform}
-                  className="w-full rounded-lg"
-                  onStateChange={handleStreamStateChange}
-                />
-              </div>
-              {/* Game details below stream */}
-              {currentLiveGame && (
-                <div className="border-t border-white/10 px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-5 w-5 border border-white/10">
-                        {currentLiveGame.teamALogo ? (
-                          <AvatarImage src={currentLiveGame.teamALogo} alt="" className="object-cover" />
-                        ) : null}
-                        <AvatarFallback className="bg-[#FF3B30]/10">
-                          <Shield className="h-2.5 w-2.5 text-[#FF3B30]" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs text-white font-medium">{currentLiveGame.team_a_name}</span>
-                      <span className="text-sm font-bold text-white">{currentLiveGame.home_score ?? 0}</span>
-                    </div>
-                    <span className="text-[10px] text-[#FF3B30] font-semibold px-2 py-0.5 bg-[#FF3B30]/10 rounded">
-                      {formatClock(currentLiveGame.quarter, currentLiveGame.game_clock_minutes, currentLiveGame.game_clock_seconds)}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-white">{currentLiveGame.away_score ?? 0}</span>
-                      <span className="text-xs text-white font-medium">{currentLiveGame.team_b_name}</span>
-                      <Avatar className="h-5 w-5 border border-white/10">
-                        {currentLiveGame.teamBLogo ? (
-                          <AvatarImage src={currentLiveGame.teamBLogo} alt="" className="object-cover" />
-                        ) : null}
-                        <AvatarFallback className="bg-[#FF3B30]/10">
-                          <Shield className="h-2.5 w-2.5 text-[#FF3B30]" />
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="p-4 pt-3">
-              <NextStreamPlaceholder nextGame={upcomingGames[0]} />
-            </div>
-          )}
+          {/* Stream content based on state */}
+          <StreamContent
+            isStreaming={isStreaming}
+            liveStreamUrl={liveStreamUrl}
+            streamPlatform={streamPlatform}
+            streamPlayerState={streamPlayerState}
+            onStateChange={handleStreamStateChange}
+            currentLiveGame={currentLiveGame}
+            nextGame={upcomingGames[0]}
+          />
         </section>
       )}
 
@@ -369,6 +327,128 @@ function formatClock(quarter?: number, minutes?: number, seconds?: number) {
   const mm = String(minutes ?? 0).padStart(2, '0');
   const ss = String(seconds ?? 0).padStart(2, '0');
   return `${q} ${mm}:${ss}`;
+}
+
+/** Stream content with contextual states - handles loading, live, ended, error */
+function StreamContent({
+  isStreaming,
+  liveStreamUrl,
+  streamPlatform,
+  streamPlayerState,
+  onStateChange,
+  currentLiveGame,
+  nextGame,
+}: {
+  isStreaming?: boolean;
+  liveStreamUrl?: string | null;
+  streamPlatform?: 'youtube' | 'twitch' | null;
+  streamPlayerState: PlayerState;
+  onStateChange: (state: PlayerState) => void;
+  currentLiveGame?: GameWithLogos;
+  nextGame?: { teamA: { name: string }; teamB: { name: string }; gameDate?: string };
+}) {
+  const streamActive = isStreaming && liveStreamUrl && streamPlatform;
+  
+  // No stream configured - show placeholder
+  if (!streamActive) {
+    return (
+      <div className="p-4 pt-3">
+        <NextStreamPlaceholder nextGame={nextGame} />
+      </div>
+    );
+  }
+
+  // Stream ended - show message with link to platform
+  if (streamPlayerState === 'ended') {
+    return (
+      <div className="p-4 pt-3">
+        <div className="flex flex-col items-center justify-center py-8 text-center" style={{ aspectRatio: '16/9' }}>
+          <Tv className="h-10 w-10 text-white/30 mb-3" />
+          <p className="text-sm font-semibold text-white mb-1">Stream Ended</p>
+          <p className="text-xs text-white/50 mb-3">This broadcast has concluded</p>
+          <a
+            href={liveStreamUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs text-[#FF3B30] hover:text-[#FF3B30]/80 transition"
+          >
+            Watch on {streamPlatform === 'youtube' ? 'YouTube' : 'Twitch'}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Error loading stream - show fallback with external link
+  if (streamPlayerState === 'error') {
+    return (
+      <div className="p-4 pt-3">
+        <div className="flex flex-col items-center justify-center py-8 text-center" style={{ aspectRatio: '16/9' }}>
+          <Video className="h-10 w-10 text-white/30 mb-3" />
+          <p className="text-sm font-semibold text-white mb-1">Unable to Load Stream</p>
+          <p className="text-xs text-white/50 mb-3">Watch directly on the platform</p>
+          <a
+            href={liveStreamUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs text-[#FF3B30] hover:text-[#FF3B30]/80 transition"
+          >
+            Open in {streamPlatform === 'youtube' ? 'YouTube' : 'Twitch'}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Stream active (loading, playing, buffering, paused, unstarted) - show embed
+  return (
+    <div>
+      <div className="p-4 pt-3">
+        <TournamentLiveStreamEmbed
+          streamUrl={liveStreamUrl}
+          platform={streamPlatform}
+          className="w-full rounded-lg"
+          onStateChange={onStateChange}
+        />
+      </div>
+      {/* Game details below stream */}
+      {currentLiveGame && (
+        <div className="border-t border-white/10 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Avatar className="h-5 w-5 border border-white/10">
+                {currentLiveGame.teamALogo ? (
+                  <AvatarImage src={currentLiveGame.teamALogo} alt="" className="object-cover" />
+                ) : null}
+                <AvatarFallback className="bg-[#FF3B30]/10">
+                  <Shield className="h-2.5 w-2.5 text-[#FF3B30]" />
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-xs text-white font-medium">{currentLiveGame.team_a_name}</span>
+              <span className="text-sm font-bold text-white">{currentLiveGame.home_score ?? 0}</span>
+            </div>
+            <span className="text-[10px] text-[#FF3B30] font-semibold px-2 py-0.5 bg-[#FF3B30]/10 rounded">
+              {formatClock(currentLiveGame.quarter, currentLiveGame.game_clock_minutes, currentLiveGame.game_clock_seconds)}
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">{currentLiveGame.away_score ?? 0}</span>
+              <span className="text-xs text-white font-medium">{currentLiveGame.team_b_name}</span>
+              <Avatar className="h-5 w-5 border border-white/10">
+                {currentLiveGame.teamBLogo ? (
+                  <AvatarImage src={currentLiveGame.teamBLogo} alt="" className="object-cover" />
+                ) : null}
+                <AvatarFallback className="bg-[#FF3B30]/10">
+                  <Shield className="h-2.5 w-2.5 text-[#FF3B30]" />
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** Placeholder when no active stream - shows next upcoming game or generic message */

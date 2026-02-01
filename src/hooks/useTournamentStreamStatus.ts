@@ -58,15 +58,17 @@ export function useTournamentStreamStatus(
 
       if (error) {
         console.error('❌ [useTournamentStreamStatus] Fetch error:', error.message);
+        // On error, keep initial values instead of clearing them
         setStatus(prev => ({ ...prev, loading: false }));
         return;
       }
 
       if (data) {
+        // Prefer fetched data, fallback to SSR initial values if fetch returned null
         setStatus({
-          isStreaming: data.is_streaming ?? false,
-          liveStreamUrl: data.live_stream_url ?? null,
-          streamPlatform: data.stream_platform as 'youtube' | 'twitch' | null,
+          isStreaming: data.is_streaming ?? options?.initialIsStreaming ?? false,
+          liveStreamUrl: data.live_stream_url ?? options?.initialLiveStreamUrl ?? null,
+          streamPlatform: (data.stream_platform ?? options?.initialStreamPlatform) as 'youtube' | 'twitch' | null,
           loading: false,
         });
       }
