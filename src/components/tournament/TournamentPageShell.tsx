@@ -16,7 +16,7 @@ import { StandingsTab } from './tabs/StandingsTab';
 import { LeadersTab } from './tabs/LeadersTab';
 import { TeamsTab } from './tabs/TeamsTab';
 import { PlayersTab } from './tabs/PlayersTab';
-import { LiveGamesTab } from './tabs/LiveGamesTab';
+import { LiveTabContent } from './tabs/LiveTabContent';
 import { MediaTab } from './tabs/MediaTab';
 import { InfoTab } from './tabs/InfoTab';
 import { TournamentLeadersService } from '@/lib/services/tournamentLeadersService';
@@ -387,7 +387,12 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
               <PlayersTab tournamentId={data.tournament.id} />
             </TabsContent>
             <TabsContent value="live" className="mt-0">
-              <LiveGamesTab tournamentId={data.tournament.id} />
+              <LiveTabContent
+                tournamentId={data.tournament.id}
+                isStreaming={data.tournament.isStreaming}
+                liveStreamUrl={data.tournament.liveStreamUrl}
+                streamPlatform={data.tournament.streamPlatform}
+              />
             </TabsContent>
             <TabsContent value="media" className="mt-0">
               <MediaTab tournamentId={data.tournament.id} />
@@ -399,7 +404,7 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
         </div>
 
         <aside className="hidden w-full shrink-0 lg:block lg:w-[350px] xl:w-[380px]">
-          <TournamentRightRail data={data} />
+          <TournamentRightRail data={data} activeTab={activeTab} />
         </aside>
       </main>
 

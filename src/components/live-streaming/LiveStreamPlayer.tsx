@@ -55,6 +55,17 @@ export function LiveStreamPlayer({
     role: 'dashboard',
   });
 
+  // 🔍 DEBUG: Log connection state for troubleshooting
+  useEffect(() => {
+    console.log('🎥 [LiveStreamPlayer] State:', {
+      selectedGameId,
+      connectionStatus,
+      hasRemoteStream: !!remoteStream,
+      error,
+      gamesCount: games.length,
+    });
+  }, [selectedGameId, connectionStatus, remoteStream, error, games.length]);
+
   // Connection timeout - show "no streamer" message after 15 seconds
   useEffect(() => {
     if (connectionStatus === 'connecting' && selectedGameId) {
@@ -72,6 +83,10 @@ export function LiveStreamPlayer({
 
   useEffect(() => {
     if (videoRef.current && remoteStream) {
+      console.log('🎥 [LiveStreamPlayer] Setting video srcObject:', {
+        streamId: remoteStream.id,
+        tracks: remoteStream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState })),
+      });
       videoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
@@ -111,6 +126,7 @@ export function LiveStreamPlayer({
               srcObject={remoteStream}
               autoPlay
               playsInline
+              muted
               className="w-full h-full object-contain"
             />
             {selectedGame && (

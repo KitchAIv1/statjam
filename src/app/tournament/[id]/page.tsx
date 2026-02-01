@@ -3,6 +3,9 @@ import { notFound } from 'next/navigation';
 import { getTournamentPageData } from '@/lib/services/tournamentPublicService';
 import { TournamentPageShell } from '@/components/tournament/TournamentPageShell';
 
+// Force dynamic rendering for live streaming - ensures fresh stream URL on each request
+export const dynamic = 'force-dynamic';
+
 interface TournamentPageProps {
   params: Promise<{ id: string }>;
 }

@@ -1,21 +1,22 @@
 "use client";
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { useLiveGamesHybrid } from '@/hooks/useLiveGamesHybrid';
 import { useTournamentMatchups } from '@/hooks/useTournamentMatchups';
+import { useTournamentStreamStatus } from '@/hooks/useTournamentStreamStatus';
 import { TeamService } from '@/lib/services/tournamentService';
-import LiveGameCard from '@/components/LiveGameCard';
 import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Shield, Calendar, Video, Clock } from 'lucide-react';
+import { Shield, Calendar, Video, Clock, Tv } from 'lucide-react';
 import { TournamentOrganizerCard } from './TournamentOrganizerCard';
 import { PhaseBadge } from './PhaseBadge';
-import { LiveStreamPlayer } from '@/components/live-streaming/LiveStreamPlayer';
-import { TournamentLiveStreamEmbed } from '@/components/live-streaming/TournamentLiveStreamEmbed';
+import { TournamentLiveStreamEmbed, PlayerState } from '@/components/live-streaming/TournamentLiveStreamEmbed';
 
 interface TournamentRightRailProps {
   data: TournamentPageData;
+  /** Active tab - used to hide redundant stream when on Live tab */
+  activeTab?: string;
 }
 
 interface GameWithLogos {
@@ -33,9 +34,24 @@ interface GameWithLogos {
   teamBLogo?: string;
 }
 
-export function TournamentRightRail({ data }: TournamentRightRailProps) {
+export function TournamentRightRail({ data, activeTab }: TournamentRightRailProps) {
   const { games, loading } = useLiveGamesHybrid();
   const [gamesWithLogos, setGamesWithLogos] = useState<GameWithLogos[]>([]);
+  const [streamPlayerState, setStreamPlayerState] = useState<PlayerState>('loading');
+  
+  // ✅ Real-time subscription to streaming status - auto-updates on URL/toggle changes
+  const { isStreaming, liveStreamUrl, streamPlatform } = useTournamentStreamStatus(
+    data.tournament.id,
+    {
+      initialIsStreaming: data.tournament.isStreaming,
+      initialLiveStreamUrl: data.tournament.liveStreamUrl,
+      initialStreamPlatform: data.tournament.streamPlatform,
+    }
+  );
+
+  const handleStreamStateChange = useCallback((state: PlayerState) => {
+    setStreamPlayerState(state);
+  }, []);
   
   // ✅ Fetch upcoming scheduled games for this tournament
   const { matchups: upcomingGames, loading: upcomingLoading } = useTournamentMatchups(data.tournament.id, {
@@ -90,19 +106,86 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
     };
   }, [filteredGameIds]); // ✅ FIX: Use stable game IDs instead of filteredGames array
 
+  // Get current live game for stream details
+  const currentLiveGame = gamesWithLogos[0];
+
   return (
     <div className="space-y-6">
-      {/* Section 1: Live Now */}
+      {/* Section 1: Live Stream Video - Hidden when on Live tab to avoid redundant embeds */}
+      {activeTab !== 'live' && (
+        <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+          <header className="flex items-center gap-2 p-4 pb-0">
+            <Video className="h-4 w-4 text-[#FF3B30]" />
+            <span className="text-sm font-semibold text-white">Live Stream</span>
+          </header>
+          {/* Show stream if actively streaming AND not ended/error */}
+          {isStreaming && liveStreamUrl && streamPlatform && 
+           streamPlayerState !== 'ended' && streamPlayerState !== 'error' ? (
+            <div>
+              <div className="p-4 pt-3">
+                <TournamentLiveStreamEmbed
+                  streamUrl={liveStreamUrl}
+                  platform={streamPlatform}
+                  className="w-full rounded-lg"
+                  onStateChange={handleStreamStateChange}
+                />
+              </div>
+              {/* Game details below stream */}
+              {currentLiveGame && (
+                <div className="border-t border-white/10 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5 border border-white/10">
+                        {currentLiveGame.teamALogo ? (
+                          <AvatarImage src={currentLiveGame.teamALogo} alt="" className="object-cover" />
+                        ) : null}
+                        <AvatarFallback className="bg-[#FF3B30]/10">
+                          <Shield className="h-2.5 w-2.5 text-[#FF3B30]" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-white font-medium">{currentLiveGame.team_a_name}</span>
+                      <span className="text-sm font-bold text-white">{currentLiveGame.home_score ?? 0}</span>
+                    </div>
+                    <span className="text-[10px] text-[#FF3B30] font-semibold px-2 py-0.5 bg-[#FF3B30]/10 rounded">
+                      {formatClock(currentLiveGame.quarter, currentLiveGame.game_clock_minutes, currentLiveGame.game_clock_seconds)}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white">{currentLiveGame.away_score ?? 0}</span>
+                      <span className="text-xs text-white font-medium">{currentLiveGame.team_b_name}</span>
+                      <Avatar className="h-5 w-5 border border-white/10">
+                        {currentLiveGame.teamBLogo ? (
+                          <AvatarImage src={currentLiveGame.teamBLogo} alt="" className="object-cover" />
+                        ) : null}
+                        <AvatarFallback className="bg-[#FF3B30]/10">
+                          <Shield className="h-2.5 w-2.5 text-[#FF3B30]" />
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-4 pt-3">
+              <NextStreamPlaceholder nextGame={upcomingGames[0]} />
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Section 2: Play-by-Play Feed - Links to detailed game viewer */}
       <section className="rounded-2xl border border-white/10 bg-[#121212] p-5">
         <header className="mb-4 flex items-center justify-between">
-          <span className="text-sm font-semibold text-white">Live Now</span>
-          <span className="text-xs text-[#B3B3B3]">Realtime</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-white">Play-by-Play Feed</span>
+          </div>
+          <span className="text-[10px] text-[#B3B3B3] uppercase tracking-wide">Live Stats</span>
         </header>
         <div className="space-y-3">
           {loading && (
             <div className="animate-pulse space-y-3">
               {[1, 2, 3].map((item) => (
-                <div key={item} className="h-20 rounded-xl bg-white/5" />
+                <div key={item} className="h-16 rounded-xl bg-white/5" />
               ))}
             </div>
           )}
@@ -118,71 +201,41 @@ export function TournamentRightRail({ data }: TournamentRightRailProps) {
                 className="cursor-pointer rounded-xl border border-white/10 bg-white/5 p-3 transition hover:border-[#FF3B30]/30 hover:bg-white/10"
                 onClick={() => window.open(`/game-viewer/${game.id}`, '_blank')}
               >
-                <div className="mb-2 flex items-center justify-center gap-2">
-                  <Avatar className="h-6 w-6 shrink-0 border border-white/10">
-                    {game.teamALogo ? (
-                      <AvatarImage
-                        src={game.teamALogo}
-                        alt={`${game.team_a_name || 'Team A'} logo`}
-                        className="object-cover"
-                        loading="lazy"
-                      />
-                    ) : null}
-                    <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10">
-                      <Shield className="h-3 w-3 text-[#FF3B30]" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-[#B3B3B3]">vs</span>
-                  <Avatar className="h-6 w-6 shrink-0 border border-white/10">
-                    {game.teamBLogo ? (
-                      <AvatarImage
-                        src={game.teamBLogo}
-                        alt={`${game.team_b_name || 'Team B'} logo`}
-                        className="object-cover"
-                        loading="lazy"
-                      />
-                    ) : null}
-                    <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10">
-                      <Shield className="h-3 w-3 text-[#FF3B30]" />
-                    </AvatarFallback>
-                  </Avatar>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-5 w-5 shrink-0 border border-white/10">
+                      {game.teamALogo ? (
+                        <AvatarImage src={game.teamALogo} alt="" className="object-cover" loading="lazy" />
+                      ) : null}
+                      <AvatarFallback className="bg-[#FF3B30]/10">
+                        <Shield className="h-2.5 w-2.5 text-[#FF3B30]" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs text-white">{game.team_a_name || 'Team A'}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-white">{game.home_score || 0}</span>
+                    <span className="text-[10px] text-[#FF3B30] font-semibold">
+                      {formatClock(game.quarter, game.game_clock_minutes, game.game_clock_seconds)}
+                    </span>
+                    <span className="text-sm font-bold text-white">{game.away_score || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white">{game.team_b_name || 'Team B'}</span>
+                    <Avatar className="h-5 w-5 shrink-0 border border-white/10">
+                      {game.teamBLogo ? (
+                        <AvatarImage src={game.teamBLogo} alt="" className="object-cover" loading="lazy" />
+                      ) : null}
+                      <AvatarFallback className="bg-[#FF3B30]/10">
+                        <Shield className="h-2.5 w-2.5 text-[#FF3B30]" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
                 </div>
-                <LiveGameCard
-                  gameId={game.id}
-                  teamLeftName={game.team_a_name || 'Team A'}
-                  teamRightName={game.team_b_name || 'Team B'}
-                  leftScore={game.home_score || 0}
-                  rightScore={game.away_score || 0}
-                  timeLabel={formatClock(game.quarter, game.game_clock_minutes, game.game_clock_seconds)}
-                  onClick={() => window.open(`/game-viewer/${game.id}`, '_blank')}
-                  isLive={true}
-                />
+                <p className="text-[10px] text-[#B3B3B3] text-center mt-2">Tap for detailed play-by-play →</p>
               </div>
             ))}
         </div>
-      </section>
-
-      {/* Section 2: Live Streaming */}
-      <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212] p-4">
-        <header className="mb-3 flex items-center gap-2">
-          <Video className="h-4 w-4 text-[#FF3B30]" />
-          <span className="text-sm font-semibold text-white">Live Streaming</span>
-        </header>
-        {/* Auto-detect: Show embedded stream if tournament is broadcasting, otherwise show raw feed player */}
-        {data.tournament.isStreaming && data.tournament.liveStreamUrl && data.tournament.streamPlatform ? (
-          <TournamentLiveStreamEmbed
-            streamUrl={data.tournament.liveStreamUrl}
-            platform={data.tournament.streamPlatform}
-            className="w-full"
-          />
-        ) : (
-          <LiveStreamPlayer
-            tournamentId={data.tournament.id}
-            size="compact"
-            showControls={true}
-            className="w-full"
-          />
-        )}
       </section>
 
       {/* Section 3: Upcoming Schedule */}
@@ -316,4 +369,43 @@ function formatClock(quarter?: number, minutes?: number, seconds?: number) {
   const mm = String(minutes ?? 0).padStart(2, '0');
   const ss = String(seconds ?? 0).padStart(2, '0');
   return `${q} ${mm}:${ss}`;
+}
+
+/** Placeholder when no active stream - shows next upcoming game or generic message */
+function NextStreamPlaceholder({ nextGame }: { nextGame?: { teamA: { name: string }; teamB: { name: string }; gameDate?: string } }) {
+  const formatGameDate = (dateString?: string): string => {
+    if (!dateString) return 'Soon';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'short',
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Soon';
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center py-8 text-center" style={{ aspectRatio: '16/9' }}>
+      <Tv className="h-10 w-10 text-[#FF3B30]/40 mb-3" />
+      {nextGame ? (
+        <>
+          <p className="text-sm font-semibold text-white mb-1">Next Game Coming!</p>
+          <p className="text-xs text-white/70 mb-2">
+            {nextGame.teamA.name} vs {nextGame.teamB.name}
+          </p>
+          <p className="text-[10px] text-white/50">{formatGameDate(nextGame.gameDate)}</p>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-semibold text-white mb-1">Stay Tuned!</p>
+          <p className="text-xs text-white/50">Check the schedule for upcoming games</p>
+        </>
+      )}
+    </div>
+  );
 }
