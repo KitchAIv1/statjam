@@ -114,6 +114,27 @@ export class BroadcastService {
             resolve();
           } else if (message.type === 'error') {
             reject(new Error(message.error));
+          } else if (message.type === 'rtmp_reconnecting') {
+            console.log(`🔄 RTMP reconnecting (${message.attempt}/${message.maxRetries})...`);
+            this.updateState({ 
+              connectionStatus: 'reconnecting',
+              reconnectAttempt: message.attempt,
+              maxReconnectAttempts: message.maxRetries,
+            });
+          } else if (message.type === 'rtmp_reconnected') {
+            console.log('✅ RTMP reconnected successfully');
+            this.updateState({ 
+              connectionStatus: 'connected',
+              reconnectAttempt: undefined,
+              maxReconnectAttempts: undefined,
+            });
+          } else if (message.type === 'rtmp_failed') {
+            console.error(`❌ RTMP reconnection failed after ${message.retries} attempts`);
+            this.updateState({ 
+              connectionStatus: 'error',
+              error: `Stream connection lost after ${message.retries} reconnect attempts`,
+              isBroadcasting: false,
+            });
           }
         } catch (err) {
           // Non-JSON message, ignore

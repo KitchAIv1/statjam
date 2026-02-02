@@ -8,6 +8,7 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { spawn, ChildProcess } from 'child_process';
+import { RtmpReconnector } from './rtmpReconnector';
 
 const PORT = process.env.PORT || 8080;
 
@@ -15,6 +16,9 @@ interface StreamSession {
   ffmpeg: ChildProcess | null;
   rtmpUrl: string;
   isActive: boolean;
+  reconnector: RtmpReconnector;
+  hasAudio: boolean;
+  quality: QualityParams;
 }
 
 const sessions = new Map<WebSocket, StreamSession>();
@@ -181,34 +185,17 @@ function handleConfig(ws: WebSocket, config: {
     : buildArgsWithSilentAudio(fullRtmpUrl, quality);
 
   const ffmpeg = spawn('ffmpeg', ffmpegArgs, { stdio: ['pipe', 'pipe', 'pipe'] });
-
-  ffmpeg.stderr?.on('data', (chunk: Buffer) => {
-    let msg = chunk.toString();
-    // Mask stream key in logs for security
-    msg = msg.replace(/live2\/[^\s'"]+/g, 'live2/***');
-    msg = msg.replace(/app\/[^\s'"]+/g, 'app/***');
-    console.log('📺 FFmpeg:', msg.slice(0, 300));
-  });
-
-  ffmpeg.on('error', (err) => {
-    console.error('❌ FFmpeg process error:', err.message);
-    sendError(ws, 'FFmpeg failed to start');
-  });
-
-  ffmpeg.on('close', (code) => {
-    console.log(`🏁 FFmpeg exited (code: ${code})`);
-    const session = sessions.get(ws);
-    if (session) session.isActive = false;
-  });
-
-  // Handle stdin errors to prevent crashes
-  ffmpeg.stdin?.on('error', (err: NodeJS.ErrnoException) => {
-    if (err.code !== 'EPIPE') {
-      console.error('❌ FFmpeg stdin error:', err.message);
-    }
-  });
-
-  sessions.set(ws, { ffmpeg, rtmpUrl: fullRtmpUrl, isActive: true });
+  const reconnector = new RtmpReconnector();
+  const session: StreamSession = { 
+    ffmpeg, 
+    rtmpUrl: fullRtmpUrl, 
+    isActive: true, 
+    reconnector, 
+    hasAudio, 
+    quality 
+  };
+  sessions.set(ws, session);
+  setupFfmpegHandlers(ws, ffmpeg, session);
   
   ws.send(JSON.stringify({ type: 'ready' }));
   console.log(`✅ FFmpeg ready, waiting for video data...`);
@@ -243,6 +230,51 @@ function handleVideoData(ws: WebSocket, videoData: Buffer): void {
   } catch (err) {
     // Ignore write errors (stream may have closed)
   }
+}
+
+/**
+ * Setup FFmpeg event handlers (used for initial and reconnected instances)
+ */
+function setupFfmpegHandlers(ws: WebSocket, ffmpeg: ChildProcess, session: StreamSession): void {
+  ffmpeg.stderr?.on('data', (chunk: Buffer) => {
+    let msg = chunk.toString();
+    msg = msg.replace(/live2\/[^\s'"]+/g, 'live2/***');
+    msg = msg.replace(/app\/[^\s'"]+/g, 'app/***');
+    console.log('📺 FFmpeg:', msg.slice(0, 300));
+  });
+
+  ffmpeg.on('error', (err) => {
+    console.error('❌ FFmpeg process error:', err.message);
+    sendError(ws, 'FFmpeg failed');
+  });
+
+  ffmpeg.on('close', (code) => {
+    console.log(`🏁 FFmpeg exited (code: ${code})`);
+    if (session) {
+      session.isActive = false;
+      if (code !== 0 && code !== null) {
+        session.reconnector.attemptReconnect(ws, code, {
+          buildFfmpegArgs: () => session.hasAudio 
+            ? buildArgsWithAudio(session.rtmpUrl, session.quality)
+            : buildArgsWithSilentAudio(session.rtmpUrl, session.quality),
+          onFfmpegReady: (newFfmpeg) => {
+            session.ffmpeg = newFfmpeg;
+            session.isActive = true;
+            setupFfmpegHandlers(ws, newFfmpeg, session);
+          },
+          onReconnectFailed: () => {
+            session.isActive = false;
+          },
+        });
+      }
+    }
+  });
+
+  ffmpeg.stdin?.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code !== 'EPIPE') {
+      console.error('❌ FFmpeg stdin error:', err.message);
+    }
+  });
 }
 
 /**

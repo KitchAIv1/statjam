@@ -56,8 +56,10 @@ export interface BroadcastState {
   isBroadcasting: boolean;
   isConnecting: boolean;
   error: string | null;
-  connectionStatus: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
+  connectionStatus: 'idle' | 'connecting' | 'connected' | 'disconnected' | 'reconnecting' | 'error';
   relayServerUrl?: string;
+  reconnectAttempt?: number;
+  maxReconnectAttempts?: number;
 }
 
 export interface BroadcastCallbacks {
