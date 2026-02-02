@@ -63,12 +63,13 @@ export class CoachTeamService {
         !team.name.endsWith('(System)')
       );
 
-      // Get accurate counts for each team in parallel
+      // Get accurate counts and tournaments for each team in parallel
       const teamsWithCounts = await Promise.all(
         realTeams.map(async (team) => {
-          const [playerCount, gamesCount] = await Promise.all([
+          const [playerCount, gamesCount, tournaments] = await Promise.all([
             CoachPlayerService.getTeamPlayerCount(team.id),
-            this.getTeamGamesCount(team.id)
+            this.getTeamGamesCount(team.id),
+            this.getTeamTournaments(team.id)
           ]);
           
           return {
@@ -87,7 +88,9 @@ export class CoachTeamService {
             created_at: team.created_at,
             updated_at: team.updated_at,
             player_count: playerCount,
-            games_count: gamesCount
+            games_count: gamesCount,
+            // Multi-tournament support
+            tournaments: tournaments
           };
         })
       );
@@ -126,9 +129,10 @@ export class CoachTeamService {
 
       if (error || !team) return null;
 
-      const [playerCount, gamesCount] = await Promise.all([
+      const [playerCount, gamesCount, tournaments] = await Promise.all([
         CoachPlayerService.getTeamPlayerCount(team.id),
-        this.getTeamGamesCount(team.id)
+        this.getTeamGamesCount(team.id),
+        this.getTeamTournaments(team.id)
       ]);
 
       return {
@@ -147,7 +151,9 @@ export class CoachTeamService {
         created_at: team.created_at,
         updated_at: team.updated_at,
         player_count: playerCount,
-        games_count: gamesCount
+        games_count: gamesCount,
+        // Multi-tournament support
+        tournaments: tournaments
       };
     } catch (error) {
       console.error('❌ Error fetching team:', error);

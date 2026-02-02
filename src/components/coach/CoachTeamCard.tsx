@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Users, PlayCircle, Trophy, Settings, Share2, Eye, EyeOff, 
   MapPin, Calendar, MoreVertical, Edit, Trash2, UserPlus, AlertCircle, BarChart3,
-  Clock, CheckCircle, ChevronDown, ChevronUp, Info, AlertTriangle, Dumbbell, Video
+  Clock, CheckCircle, ChevronDown, ChevronUp, Info, AlertTriangle, Dumbbell, Video, Plus
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
@@ -593,10 +593,83 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
         </CardHeader>
 
         <CardContent className="pt-0">
-          {/* Tournament Status Section */}
-          {!team.tournament_id ? (
-            // No tournament attached - Show CTA
-            <div className="pt-4">
+          {/* Tournament Status Section - Multi-Tournament Support */}
+          <div className="pt-4">
+            {/* Show joined tournaments list if any exist */}
+            {team.tournaments && team.tournaments.length > 0 ? (
+              <div className="space-y-3">
+                {/* Tournaments List */}
+                <div className="bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-slate-900 font-semibold text-sm flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-orange-600" />
+                      Tournaments ({team.tournaments.length})
+                    </h3>
+                    <Button
+                      onClick={() => setShowTournamentSearch(true)}
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 text-xs h-7 border-orange-300 text-orange-600 hover:bg-orange-50"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Join Another
+                    </Button>
+                  </div>
+                  
+                  {/* Tournament Items */}
+                  <div className="space-y-2">
+                    {team.tournaments.map((tournament) => (
+                      <div
+                        key={tournament.id}
+                        className={`flex items-center justify-between p-2.5 rounded-md border ${
+                          tournament.approval_status === 'approved'
+                            ? 'bg-green-50 border-green-200'
+                            : tournament.approval_status === 'pending'
+                            ? 'bg-amber-50 border-amber-200'
+                            : 'bg-red-50 border-red-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {tournament.is_primary && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-slate-200 shrink-0">
+                              Primary
+                            </Badge>
+                          )}
+                          <span className="text-sm font-medium text-slate-900 truncate">
+                            {tournament.tournament_name}
+                          </span>
+                        </div>
+                        <Badge
+                          variant={
+                            tournament.approval_status === 'approved'
+                              ? 'default'
+                              : tournament.approval_status === 'pending'
+                              ? 'secondary'
+                              : 'destructive'
+                          }
+                          className={`text-xs shrink-0 ${
+                            tournament.approval_status === 'approved'
+                              ? 'bg-green-600'
+                              : tournament.approval_status === 'pending'
+                              ? 'bg-amber-500 text-white'
+                              : ''
+                          }`}
+                        >
+                          {tournament.approval_status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
+                          {tournament.approval_status === 'pending' && <Clock className="w-3 h-3 mr-1" />}
+                          {tournament.approval_status === 'approved'
+                            ? 'Approved'
+                            : tournament.approval_status === 'pending'
+                            ? 'Pending'
+                            : 'Rejected'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // No tournaments - Show initial CTA
               <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
                 <div className="flex flex-col gap-3">
                   {/* Icon + Text Content */}
@@ -621,23 +694,8 @@ export function CoachTeamCard({ team, onUpdate }: CoachTeamCardProps) {
                   </Button>
                 </div>
               </div>
-            </div>
-          ) : team.approval_status === 'pending' ? (
-            // Tournament attached but pending approval
-            <div className="pt-4">
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <Clock className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-amber-900 font-semibold text-base">Awaiting Approval</h3>
-                    <p className="text-amber-700 text-sm leading-relaxed mt-0.5">
-                      Your tournament join request is pending organizer approval. You'll be notified once approved.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
+            )}
+          </div>
 
           {/* Game History Section */}
           <div className="border-t pt-4 mt-4">

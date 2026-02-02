@@ -222,10 +222,14 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
   });
 
   const handleApproveTeam = async (teamId: string) => {
+    console.log('🎯 handleApproveTeam called:', { teamId, tournamentId });
     try {
-      await TeamService.approveTeam(teamId);
+      // Pass tournamentId to approve for THIS specific tournament (multi-tournament support)
+      await TeamService.approveTeam(teamId, tournamentId);
+      console.log('🎯 approveTeam completed, refreshing...');
       // Refresh teams list
       const teamsData = await TeamService.getTeamsByTournament(tournamentId);
+      console.log('🎯 Teams refreshed:', teamsData.length);
       setTeams(teamsData);
     } catch (error) {
       console.error('❌ Error approving team:', error);
@@ -234,7 +238,8 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
 
   const handleRejectTeam = async (teamId: string) => {
     try {
-      await TeamService.rejectTeam(teamId);
+      // Pass tournamentId to reject for THIS specific tournament (multi-tournament support)
+      await TeamService.rejectTeam(teamId, tournamentId);
       // Refresh teams list
       const teamsData = await TeamService.getTeamsByTournament(tournamentId);
       setTeams(teamsData);
@@ -480,17 +485,25 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 relative z-10">
                     <button
-                      onClick={() => handleApproveTeam(team.id)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleApproveTeam(team.id);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors cursor-pointer"
                     >
                       <Shield className="w-4 h-4" />
                       Accept
                     </button>
                     <button
-                      onClick={() => handleRejectTeam(team.id)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRejectTeam(team.id);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                       Deny
@@ -539,7 +552,7 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                             ) : (
                               <div className={`w-full h-full flex items-center justify-center ${
                                 isCoachOwned 
-                                  ? 'bg-gradient-to-br from-blue-500 to-purple-500' 
+                                  ? 'bg-gradient-to-br from-amber-500 to-orange-600' 
                                   : 'bg-gradient-to-br from-orange-500 to-red-500'
                               }`}>
                                 <Shield className="w-6 h-6 text-white" />
@@ -549,7 +562,7 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                         ) : (
                           <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center shrink-0 ${
                             isCoachOwned 
-                              ? 'bg-gradient-to-br from-blue-500 to-purple-500' 
+                              ? 'bg-gradient-to-br from-amber-500 to-orange-600' 
                               : 'bg-gradient-to-br from-orange-500 to-red-500'
                           }`}>
                             <Shield className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
@@ -559,7 +572,7 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-lg sm:text-xl font-bold text-foreground truncate">{team.name}</h3>
                             {isCoachOwned && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-xs">
                                 Coach-Managed
                               </Badge>
                             )}
@@ -581,7 +594,7 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                           }}
                           className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm cursor-pointer ${
                             isCoachOwned
-                              ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                              ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
                               : 'bg-orange-50 text-orange-600 hover:bg-orange-100'
                           }`}
                           title={isCoachOwned ? 'View coach-managed team roster' : 'Manage team players'}
@@ -653,32 +666,32 @@ const TeamManagementPage = ({ params }: TeamManagementPageProps) => {
                   {isSelected && (
                     <div className="border-t border-border bg-gradient-to-br from-orange-50/30 to-red-50/30 p-4 sm:p-6">
                       {isCoachOwned ? (
-                        /* Coach-Owned Team: View Only */
-                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-                          <Shield className="w-12 h-12 mx-auto mb-4 text-blue-600" />
-                          <h4 className="text-lg font-semibold text-blue-900 mb-2">
+                        /* Coach-Owned Team: View Only - On-Brand Amber/Orange */
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
+                          <Shield className="w-12 h-12 mx-auto mb-4 text-amber-600" />
+                          <h4 className="text-lg font-semibold text-amber-900 mb-2">
                             Coach-Managed Team
                           </h4>
-                          <p className="text-sm text-blue-700 mb-4 max-w-md mx-auto">
+                          <p className="text-sm text-amber-700 mb-4 max-w-md mx-auto">
                             This team is managed by the coach and cannot be edited by tournament organizers. 
                             The coach has full control over their team roster.
                           </p>
-                          <div className="bg-white rounded-lg p-4 border border-blue-200">
+                          <div className="bg-white rounded-lg p-4 border border-amber-200">
                             <div className="flex items-center justify-between mb-3">
                               <h5 className="font-semibold text-gray-900 flex items-center gap-2">
-                                <Users className="w-5 h-5 text-blue-600" />
+                                <Users className="w-5 h-5 text-amber-600" />
                                 Current Roster (View Only)
                               </h5>
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
                                 {currentPlayers.length} player{currentPlayers.length !== 1 ? 's' : ''}
                               </Badge>
                             </div>
                             {currentPlayers.length > 0 ? (
                               <div className="space-y-2">
                                 {currentPlayers.map((player) => (
-                                  <div key={player.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                      <Users className="w-4 h-4 text-blue-600" />
+                                  <div key={player.id} className="flex items-center gap-3 p-2 bg-amber-50/50 rounded-lg">
+                                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                                      <Users className="w-4 h-4 text-amber-700" />
                                     </div>
                                     <span className="text-sm font-medium text-gray-900">{player.name}</span>
                                   </div>

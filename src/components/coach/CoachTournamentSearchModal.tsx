@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X, Search, Trophy, MapPin, Calendar, Plus, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Search, Trophy, MapPin, Calendar, Plus, ArrowRight, CheckCircle } from 'lucide-react';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { CoachTeam, Tournament, TournamentAttachmentRequest } from '@/lib/types/coach';
 
 interface CoachTournamentSearchModalProps {
@@ -38,6 +39,11 @@ export function CoachTournamentSearchModal({ team, onClose, onTournamentAttached
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [attachmentType, setAttachmentType] = useState<'existing' | 'stub'>('existing');
 
+  // Get IDs of tournaments team is already in
+  const joinedTournamentIds = useMemo(() => {
+    return new Set(team.tournaments?.map(t => t.tournament_id) || []);
+  }, [team.tournaments]);
+
   // Search tournaments
   const searchTournaments = async () => {
     try {
@@ -59,6 +65,16 @@ export function CoachTournamentSearchModal({ team, onClose, onTournamentAttached
       setLoading(false);
     }
   };
+
+  // Filter available tournaments (exclude already joined)
+  const availableTournaments = useMemo(() => {
+    return tournaments.filter(t => !joinedTournamentIds.has(t.id));
+  }, [tournaments, joinedTournamentIds]);
+
+  // Already joined tournaments from search results (for display)
+  const alreadyJoinedTournaments = useMemo(() => {
+    return tournaments.filter(t => joinedTournamentIds.has(t.id));
+  }, [tournaments, joinedTournamentIds]);
 
   // Handle tournament attachment
   const handleAttachTournament = async () => {
@@ -250,6 +266,11 @@ export function CoachTournamentSearchModal({ team, onClose, onTournamentAttached
         <div style={styles.resultsSection}>
           <h3 style={{ color: '#ffffff', marginBottom: '16px', fontSize: '1.125rem' }}>
             Search Results
+            {availableTournaments.length > 0 && (
+              <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: '#a1a1aa', marginLeft: '8px' }}>
+                ({availableTournaments.length} available)
+              </span>
+            )}
           </h3>
           
           {error && <div style={styles.error}>{error}</div>}
@@ -267,9 +288,9 @@ export function CoachTournamentSearchModal({ team, onClose, onTournamentAttached
               }} />
               <p>Searching tournaments...</p>
             </div>
-          ) : tournaments.length > 0 ? (
+          ) : availableTournaments.length > 0 ? (
             <div>
-              {tournaments.map((tournament) => (
+              {availableTournaments.map((tournament) => (
                 <div
                   key={tournament.id}
                   style={{
@@ -299,6 +320,15 @@ export function CoachTournamentSearchModal({ team, onClose, onTournamentAttached
                 </div>
               ))}
             </div>
+          ) : tournaments.length > 0 && alreadyJoinedTournaments.length > 0 ? (
+            // All results are already joined
+            <div style={styles.emptyState}>
+              <CheckCircle style={{ width: '48px', height: '48px', margin: '0 auto 16px', color: '#22c55e' }} />
+              <p>You've already joined all matching tournaments</p>
+              <p style={{ fontSize: '0.875rem', marginTop: '8px' }}>
+                Try a different search or create a tournament stub
+              </p>
+            </div>
           ) : (
             <div style={styles.emptyState}>
               <Trophy style={{ width: '48px', height: '48px', margin: '0 auto 16px', color: '#6b7280' }} />
@@ -308,10 +338,45 @@ export function CoachTournamentSearchModal({ team, onClose, onTournamentAttached
               </p>
             </div>
           )}
+
+          {/* Show already joined tournaments (greyed out) */}
+          {!loading && alreadyJoinedTournaments.length > 0 && availableTournaments.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ color: '#6b7280', fontSize: '0.75rem', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Already Joined
+              </p>
+              {alreadyJoinedTournaments.map((tournament) => (
+                <div
+                  key={tournament.id}
+                  style={{
+                    ...styles.tournamentCard,
+                    opacity: 0.5,
+                    cursor: 'not-allowed',
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    borderColor: 'rgba(34, 197, 94, 0.3)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={styles.tournamentName}>{tournament.name}</div>
+                    <Badge style={{ background: '#22c55e', color: 'white', fontSize: '0.7rem' }}>
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Joined
+                    </Badge>
+                  </div>
+                  <div style={styles.tournamentMeta}>
+                    <div style={styles.metaItem}>
+                      <MapPin className="w-4 h-4" />
+                      <span>{tournament.venue}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Create Stub Option */}
-        {tournaments.length === 0 && !loading && (
+        {availableTournaments.length === 0 && !loading && (
           <div style={{
             background: 'rgba(249, 115, 22, 0.1)',
             border: '1px solid rgba(249, 115, 22, 0.3)',

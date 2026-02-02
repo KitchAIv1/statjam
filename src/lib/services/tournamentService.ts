@@ -847,17 +847,61 @@ export class TeamService {
   }
 
   /**
-   * Approve a team's join request
+   * Approve a team's join request for a specific tournament
+   * Updates team_tournaments junction table (source of truth for multi-tournament)
+   * Also updates teams.approval_status for backward compatibility (primary tournament only)
    */
-  static async approveTeam(teamId: string): Promise<void> {
+  static async approveTeam(teamId: string, tournamentId?: string): Promise<void> {
+    console.log('🔧 approveTeam called with:', { teamId, tournamentId });
+    
     try {
-      const { error } = await supabase
+      // Get the team's primary tournament_id for backward compat
+      const { data: team, error: fetchError } = await supabase
         .from('teams')
-        .update({ approval_status: 'approved' })
-        .eq('id', teamId);
+        .select('tournament_id')
+        .eq('id', teamId)
+        .single();
 
-      if (error) throw error;
-      logger.debug('✅ Team approved successfully');
+      console.log('🔧 Team data:', { team, fetchError });
+
+      if (fetchError) throw fetchError;
+
+      // Determine which tournament to approve for
+      const targetTournamentId = tournamentId || team?.tournament_id;
+      console.log('🔧 Target tournament ID:', targetTournamentId);
+
+      // Update team_tournaments junction table (primary source of truth)
+      if (targetTournamentId) {
+        console.log('🔧 Updating team_tournaments WHERE team_id=', teamId, 'AND tournament_id=', targetTournamentId);
+        
+        const { data: updateResult, error: junctionError } = await supabase
+          .from('team_tournaments')
+          .update({ approval_status: 'approved' })
+          .eq('team_id', teamId)
+          .eq('tournament_id', targetTournamentId)
+          .select();
+
+        console.log('🔧 Junction update result:', { updateResult, junctionError });
+
+        if (junctionError) {
+          logger.error('❌ Failed to update team_tournaments junction:', junctionError);
+          throw junctionError;
+        }
+      }
+
+      // Update teams table for backward compatibility (only if this is the primary tournament)
+      if (team?.tournament_id === targetTournamentId) {
+        const { error } = await supabase
+          .from('teams')
+          .update({ approval_status: 'approved' })
+          .eq('id', teamId);
+
+        if (error) {
+          logger.warn('⚠️ Failed to update teams.approval_status:', error);
+        }
+      }
+
+      logger.debug('✅ Team approved successfully for tournament:', targetTournamentId);
     } catch (error) {
       logger.error('❌ Error approving team:', error);
       throw error;
@@ -865,19 +909,52 @@ export class TeamService {
   }
 
   /**
-   * Reject a team's join request
+   * Reject a team's join request for a specific tournament
+   * Updates team_tournaments junction table (source of truth for multi-tournament)
+   * Also updates teams.approval_status for backward compatibility (primary tournament only)
    */
-  static async rejectTeam(teamId: string): Promise<void> {
+  static async rejectTeam(teamId: string, tournamentId?: string): Promise<void> {
     try {
-      // Only update approval_status, don't modify tournament_id
-      // Coach-owned teams have RLS that prevents organizers from modifying tournament_id
-      const { error } = await supabase
+      // Get the team's primary tournament_id for backward compat
+      const { data: team, error: fetchError } = await supabase
         .from('teams')
-        .update({ approval_status: 'rejected' })
-        .eq('id', teamId);
+        .select('tournament_id')
+        .eq('id', teamId)
+        .single();
 
-      if (error) throw error;
-      logger.debug('✅ Team rejected successfully');
+      if (fetchError) throw fetchError;
+
+      // Determine which tournament to reject for
+      const targetTournamentId = tournamentId || team?.tournament_id;
+
+      // Update team_tournaments junction table (primary source of truth)
+      if (targetTournamentId) {
+        const { error: junctionError } = await supabase
+          .from('team_tournaments')
+          .update({ approval_status: 'rejected' })
+          .eq('team_id', teamId)
+          .eq('tournament_id', targetTournamentId);
+
+        if (junctionError) {
+          logger.error('❌ Failed to update team_tournaments junction:', junctionError);
+          throw junctionError;
+        }
+      }
+
+      // Update teams table for backward compatibility (only if this is the primary tournament)
+      if (team?.tournament_id === targetTournamentId) {
+        const { error } = await supabase
+          .from('teams')
+          .update({ approval_status: 'rejected' })
+          .eq('id', teamId);
+
+        if (error) {
+          logger.warn('⚠️ Failed to update teams.approval_status:', error);
+          // Don't throw - teams table is secondary
+        }
+      }
+
+      logger.debug('✅ Team rejected successfully for tournament:', targetTournamentId);
     } catch (error) {
       logger.error('❌ Error rejecting team:', error);
       throw error;
@@ -911,7 +988,51 @@ export class TeamService {
     try {
       logger.debug('🔍 TeamService: Fetching teams for tournament:', tournamentId);
       
-      // Query with name column if it exists - includes both regular and custom players
+      // Step 1: Get all team IDs linked to this tournament via junction table
+      // This supports multi-tournament: finds teams even if this isn't their primary tournament
+      const { data: teamLinks, error: linksError } = await supabase
+        .from('team_tournaments')
+        .select('team_id, approval_status')
+        .eq('tournament_id', tournamentId);
+
+      if (linksError) {
+        logger.error('❌ Error fetching team_tournaments links:', linksError);
+        throw new Error(`Failed to get team links: ${linksError.message}`);
+      }
+
+      // Create map of team_id -> approval_status from junction table
+      const junctionApprovalMap = new Map<string, string>();
+      const teamIds: string[] = [];
+      (teamLinks || []).forEach(link => {
+        teamIds.push(link.team_id);
+        junctionApprovalMap.set(link.team_id, link.approval_status || 'pending');
+      });
+
+      logger.debug('🔍 TeamService: Found team links in junction table:', teamIds.length);
+
+      // Also get teams directly linked via teams.tournament_id (backward compatibility)
+      // This catches any teams that might not be in junction table yet
+      const { data: directTeams, error: directError } = await supabase
+        .from('teams')
+        .select('id, approval_status')
+        .eq('tournament_id', tournamentId);
+
+      if (!directError && directTeams) {
+        directTeams.forEach(team => {
+          if (!teamIds.includes(team.id)) {
+            teamIds.push(team.id);
+            // Use teams.approval_status for backward compat teams
+            junctionApprovalMap.set(team.id, team.approval_status || 'approved');
+          }
+        });
+      }
+
+      if (teamIds.length === 0) {
+        logger.debug('⚠️ No teams found for tournament:', tournamentId);
+        return [];
+      }
+
+      // Step 2: Query teams by IDs with full player data
       const { data: teams, error } = await supabase
         .from('teams')
         .select(`
@@ -944,7 +1065,7 @@ export class TeamService {
             )
           )
         `)
-        .eq('tournament_id', tournamentId);
+        .in('id', teamIds);
 
       if (error) {
         logger.error('❌ Supabase error getting teams:', error);
@@ -960,8 +1081,14 @@ export class TeamService {
         return [];
       }
 
+      // Step 3: Override approval_status with junction table value (source of truth for multi-tournament)
+      const teamsWithCorrectStatus = teams.map(team => ({
+        ...team,
+        approval_status: junctionApprovalMap.get(team.id) || team.approval_status || 'approved'
+      }));
+
       // Map database fields to our Team interface (single pass, no N+1 queries)
-      const mappedTeams = teams.map((team) => {
+      const mappedTeams = teamsWithCorrectStatus.map((team) => {
         let teamPlayers: Player[] = [];
         let captain: Player = {
           id: '',
