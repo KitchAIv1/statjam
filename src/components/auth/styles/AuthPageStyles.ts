@@ -348,32 +348,43 @@ export const authPageCSSStyles = `
     background: linear-gradient(135deg, #b91c1c 0%, #991b1b 50%, #7f1d1d 100%) !important;
   }
   
-  /* Lighter Role Selection Shadows */
+  /* Role Selection - Glassmorphism Style */
   .role-button-selected {
-    background: #dc2626 !important; /* Solid red background */
-    border: 2px solid #dc2626 !important;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.5) !important;
     color: white !important;
     font-weight: 700 !important;
-    text-shadow: none !important; /* Remove text shadow */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important; /* Lighter shadow */
-    transform: none; /* No scaling */
+    text-shadow: none !important;
+    box-shadow: 
+      0 4px 12px rgba(220, 38, 38, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   }
   
   .role-button-unselected {
-    background: white !important; /* Clean white background */
-    border: 2px solid #e5e7eb !important; /* Light gray border */
-    color: #374151 !important; /* Dark text */
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 100%) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.7) !important;
+    color: #111827 !important;
     font-weight: 600 !important;
-    text-shadow: none !important; /* Remove text shadow */
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important; /* Lighter shadow */
+    text-shadow: none !important;
+    box-shadow: 
+      0 4px 6px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
   }
   
   .role-button-unselected:hover {
-    background: #f9fafb !important; /* Very light gray on hover */
-    border: 2px solid #dc2626 !important; /* Red border on hover */
-    color: #dc2626 !important; /* Red text on hover */
-    transform: none; /* No transform animations */
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.3) 100%) !important;
+    border: 1px solid rgba(234, 88, 12, 0.6) !important;
+    border-top: 1px solid rgba(234, 88, 12, 0.7) !important;
+    color: #dc2626 !important;
+    text-shadow: none !important;
+    box-shadow: 
+      0 0 0 2px rgba(234, 88, 12, 0.2),
+      0 4px 8px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
   }
 
   /* Responsive Background Positioning */
