@@ -1,4 +1,4 @@
-import { User, Trophy, BarChart3, Users, PlayCircle, Calendar, Settings, Home, Palette, Video, Radio } from 'lucide-react';
+import { User, Trophy, BarChart3, Users, PlayCircle, Calendar, Settings, Home, Palette, Video, Radio, Activity } from 'lucide-react';
 
 export interface NavigationItem {
   label: string;
@@ -21,6 +21,12 @@ export const navigationConfig: Record<string, NavigationConfig> = {
         href: '/admin/dashboard',
         icon: Home,
         description: 'Admin dashboard'
+      },
+      {
+        label: 'Activity',
+        href: '/admin/activity',
+        icon: Activity,
+        description: 'Monitor platform activity'
       },
       {
         label: 'Templates',
