@@ -19,7 +19,7 @@ export interface TournamentPageData {
     // Live streaming fields
     isStreaming?: boolean;
     liveStreamUrl?: string | null;
-    streamPlatform?: 'youtube' | 'twitch' | null;
+    streamPlatform?: 'youtube' | 'twitch' | 'facebook' | null;
   };
   summary: {
     teamCount: number;
@@ -131,7 +131,7 @@ async function buildTournamentPageData(tournament: RawTournament): Promise<Tourn
       // Live streaming fields
       isStreaming: tournament.is_streaming ?? false,
       liveStreamUrl: tournament.live_stream_url ?? null,
-      streamPlatform: tournament.stream_platform as 'youtube' | 'twitch' | null,
+      streamPlatform: tournament.stream_platform as 'youtube' | 'twitch' | 'facebook' | null,
     },
     summary: {
       teamCount: teamCount ?? 0,

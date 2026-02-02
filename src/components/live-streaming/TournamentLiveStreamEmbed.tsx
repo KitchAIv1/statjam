@@ -17,7 +17,7 @@ export type PlayerState = 'loading' | 'unstarted' | 'playing' | 'paused' | 'buff
 
 interface TournamentLiveStreamEmbedProps {
   streamUrl: string;
-  platform: 'youtube' | 'twitch';
+  platform: 'youtube' | 'twitch' | 'facebook';
   className?: string;
   /** Callback when player state changes - allows parent to react (e.g., hide container when ended) */
   onStateChange?: (state: PlayerState) => void;
@@ -40,6 +40,19 @@ function extractYouTubeVideoId(url: string): string | null {
 function extractTwitchChannel(url: string): string | null {
   const match = url.match(/twitch\.tv\/([a-zA-Z0-9_]+)/);
   return match?.[1] ?? null;
+}
+
+/** Extract Facebook video URL for embedding */
+function extractFacebookVideoUrl(url: string): string | null {
+  // Facebook URLs can be in various formats:
+  // - facebook.com/watch/live/?v=123456789
+  // - facebook.com/video.php?v=123456789
+  // - facebook.com/username/videos/123456789
+  // - fb.watch/abc123/
+  if (url.includes('facebook.com') || url.includes('fb.watch')) {
+    return url;
+  }
+  return null;
 }
 
 /** Load YouTube IFrame API script (singleton) */
@@ -94,6 +107,10 @@ export function TournamentLiveStreamEmbed({
 
   const twitchChannel = useMemo(() => 
     platform === 'twitch' ? extractTwitchChannel(streamUrl) : null
+  , [streamUrl, platform]);
+
+  const facebookVideoUrl = useMemo(() => 
+    platform === 'facebook' ? extractFacebookVideoUrl(streamUrl) : null
   , [streamUrl, platform]);
 
   // YouTube Player state change handler
@@ -167,7 +184,8 @@ export function TournamentLiveStreamEmbed({
   }, [mounted, videoId, platform, playerId, onPlayerStateChange, onPlayerError]);
 
   // Fallback UI for invalid URLs
-  if ((platform === 'youtube' && !videoId) || (platform === 'twitch' && !twitchChannel)) {
+  if ((platform === 'youtube' && !videoId) || (platform === 'twitch' && !twitchChannel) || (platform === 'facebook' && !facebookVideoUrl)) {
+    const platformName = platform === 'youtube' ? 'YouTube' : platform === 'twitch' ? 'Twitch' : 'Facebook';
     return (
       <div className={`relative bg-black rounded-lg overflow-hidden ${className}`} style={{ aspectRatio: '16/9' }}>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
@@ -175,7 +193,7 @@ export function TournamentLiveStreamEmbed({
           <p className="text-sm text-white/60 mb-2">Unable to embed stream</p>
           <a href={streamUrl} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-[#FF3B30] hover:underline">
-            Watch on {platform === 'youtube' ? 'YouTube' : 'Twitch'}
+            Watch on {platformName}
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
@@ -192,6 +210,25 @@ export function TournamentLiveStreamEmbed({
       <div className={`relative bg-black rounded-lg overflow-hidden ${className}`} style={{ aspectRatio: '16/9' }}>
         <iframe src={twitchUrl} title="Twitch live stream" className="absolute inset-0 w-full h-full"
           allow="autoplay; fullscreen" allowFullScreen />
+        <LiveBadge />
+      </div>
+    );
+  }
+
+  // Facebook: Standard iframe with Facebook Video plugin
+  if (platform === 'facebook' && facebookVideoUrl) {
+    const encodedUrl = encodeURIComponent(facebookVideoUrl);
+    const fbEmbedUrl = `https://www.facebook.com/plugins/video.php?href=${encodedUrl}&show_text=false&autoplay=true&muted=true`;
+    
+    return (
+      <div className={`relative bg-black rounded-lg overflow-hidden ${className}`} style={{ aspectRatio: '16/9' }}>
+        <iframe 
+          src={fbEmbedUrl} 
+          title="Facebook live stream" 
+          className="absolute inset-0 w-full h-full"
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" 
+          allowFullScreen 
+        />
         <LiveBadge />
       </div>
     );

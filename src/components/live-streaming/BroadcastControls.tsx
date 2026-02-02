@@ -14,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ChevronDown, ChevronUp, Youtube, Twitch } from 'lucide-react';
+import { ChevronDown, ChevronUp, Youtube, Twitch, Facebook } from 'lucide-react';
 import { BroadcastPlatform, QualityPreset, QUALITY_PRESETS } from '@/lib/services/broadcast/types';
 
 interface BroadcastControlsProps {
@@ -109,6 +109,23 @@ export function BroadcastControls({
                 <p className="text-[10px] opacity-80">Get stream key from Twitch Dashboard</p>
               </TooltipContent>
             </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setPlatform('facebook')}
+                  className={`flex-1 p-1.5 text-xs rounded transition-colors ${
+                    platform === 'facebook' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                  }`}
+                >
+                  <Facebook className="h-3.5 w-3.5 mx-auto mb-0.5" />
+                  Facebook
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Stream to Facebook Live</p>
+                <p className="text-[10px] opacity-80">Get stream key from Facebook Live Producer</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Advanced Settings - Collapsible */}
@@ -147,7 +164,11 @@ export function BroadcastControls({
                 <Label className="text-xs">Public Watch URL (optional)</Label>
                 <Input
                   type="url"
-                  placeholder={platform === 'youtube' ? 'youtube.com/watch?v=...' : 'twitch.tv/channel'}
+                  placeholder={
+                    platform === 'youtube' ? 'youtube.com/watch?v=...' : 
+                    platform === 'twitch' ? 'twitch.tv/channel' : 
+                    'facebook.com/video/...'
+                  }
                   value={publicStreamUrl}
                   onChange={(e) => setPublicStreamUrl(e.target.value)}
                   className="h-7 text-xs"
@@ -158,6 +179,11 @@ export function BroadcastControls({
                 {platform === 'youtube' && (
                   <div className="mt-1.5 p-2 bg-black/60 border border-[#FF3B30]/40 rounded text-[10px] text-white">
                     <span className="text-[#FF3B30] font-semibold">⚠️ Important:</span> Enable embedding in YouTube Studio → Go Live → Stream Settings → <span className="font-semibold">Allow embedding = ON</span>
+                  </div>
+                )}
+                {platform === 'facebook' && (
+                  <div className="mt-1.5 p-2 bg-black/60 border border-[#1877F2]/40 rounded text-[10px] text-white">
+                    <span className="text-[#1877F2] font-semibold">ℹ️ Note:</span> Get stream key from Facebook Live Producer. Keys expire after each stream.
                   </div>
                 )}
               </div>

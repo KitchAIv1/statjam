@@ -20,7 +20,7 @@ interface LiveTabContentProps {
   /** Initial values from SSR - hook will take over for real-time updates */
   isStreaming?: boolean;
   liveStreamUrl?: string | null;
-  streamPlatform?: 'youtube' | 'twitch' | null;
+  streamPlatform?: 'youtube' | 'twitch' | 'facebook' | null;
 }
 
 export function LiveTabContent({
@@ -71,7 +71,7 @@ export function LiveTabContent({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-sm text-[#FF3B30] hover:text-[#FF3B30]/80 transition"
         >
-          Watch on {streamPlatform === 'youtube' ? 'YouTube' : 'Twitch'}
+          Watch on {streamPlatform === 'youtube' ? 'YouTube' : streamPlatform === 'twitch' ? 'Twitch' : 'Facebook'}
           <ExternalLink className="h-4 w-4" />
         </a>
       </div>
@@ -91,7 +91,7 @@ export function LiveTabContent({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-sm text-[#FF3B30] hover:text-[#FF3B30]/80 transition"
         >
-          Open in {streamPlatform === 'youtube' ? 'YouTube' : 'Twitch'}
+          Open in {streamPlatform === 'youtube' ? 'YouTube' : streamPlatform === 'twitch' ? 'Twitch' : 'Facebook'}
           <ExternalLink className="h-4 w-4" />
         </a>
       </div>

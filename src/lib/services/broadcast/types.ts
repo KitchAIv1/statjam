@@ -4,7 +4,7 @@
  * Types for YouTube/Twitch broadcasting via relay server.
  */
 
-export type BroadcastPlatform = 'youtube' | 'twitch';
+export type BroadcastPlatform = 'youtube' | 'twitch' | 'facebook';
 
 export type QualityPreset = '720p' | '1080p' | '1080p-sports';
 

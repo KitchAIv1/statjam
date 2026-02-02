@@ -16,7 +16,7 @@ import { supabase } from '@/lib/supabase';
 export interface TournamentStreamStatus {
   isStreaming: boolean;
   liveStreamUrl: string | null;
-  streamPlatform: 'youtube' | 'twitch' | null;
+  streamPlatform: 'youtube' | 'twitch' | 'facebook' | null;
   loading: boolean;
 }
 
@@ -24,7 +24,7 @@ interface UseTournamentStreamStatusOptions {
   /** Initial values from SSR to avoid flash */
   initialIsStreaming?: boolean;
   initialLiveStreamUrl?: string | null;
-  initialStreamPlatform?: 'youtube' | 'twitch' | null;
+  initialStreamPlatform?: 'youtube' | 'twitch' | 'facebook' | null;
 }
 
 /**
@@ -68,7 +68,7 @@ export function useTournamentStreamStatus(
         setStatus({
           isStreaming: data.is_streaming ?? options?.initialIsStreaming ?? false,
           liveStreamUrl: data.live_stream_url ?? options?.initialLiveStreamUrl ?? null,
-          streamPlatform: (data.stream_platform ?? options?.initialStreamPlatform) as 'youtube' | 'twitch' | null,
+          streamPlatform: (data.stream_platform ?? options?.initialStreamPlatform) as 'youtube' | 'twitch' | 'facebook' | null,
           loading: false,
         });
       }
@@ -103,7 +103,7 @@ export function useTournamentStreamStatus(
           setStatus({
             isStreaming: newData.is_streaming ?? false,
             liveStreamUrl: newData.live_stream_url ?? null,
-            streamPlatform: newData.stream_platform as 'youtube' | 'twitch' | null,
+            streamPlatform: newData.stream_platform as 'youtube' | 'twitch' | 'facebook' | null,
             loading: false,
           });
         }

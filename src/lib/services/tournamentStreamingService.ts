@@ -7,7 +7,7 @@
 
 import { supabase } from '@/lib/supabase';
 
-export type StreamPlatform = 'youtube' | 'twitch';
+export type StreamPlatform = 'youtube' | 'twitch' | 'facebook';
 
 interface StreamingStatus {
   isStreaming: boolean;

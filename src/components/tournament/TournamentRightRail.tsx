@@ -341,7 +341,7 @@ function StreamContent({
 }: {
   isStreaming?: boolean;
   liveStreamUrl?: string | null;
-  streamPlatform?: 'youtube' | 'twitch' | null;
+  streamPlatform?: 'youtube' | 'twitch' | 'facebook' | null;
   streamPlayerState: PlayerState;
   onStateChange: (state: PlayerState) => void;
   currentLiveGame?: GameWithLogos;
@@ -372,7 +372,7 @@ function StreamContent({
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-xs text-[#FF3B30] hover:text-[#FF3B30]/80 transition"
           >
-            Watch on {streamPlatform === 'youtube' ? 'YouTube' : 'Twitch'}
+            Watch on {streamPlatform === 'youtube' ? 'YouTube' : streamPlatform === 'twitch' ? 'Twitch' : 'Facebook'}
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
@@ -394,7 +394,7 @@ function StreamContent({
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-xs text-[#FF3B30] hover:text-[#FF3B30]/80 transition"
           >
-            Open in {streamPlatform === 'youtube' ? 'YouTube' : 'Twitch'}
+            Open in {streamPlatform === 'youtube' ? 'YouTube' : streamPlatform === 'twitch' ? 'Twitch' : 'Facebook'}
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>

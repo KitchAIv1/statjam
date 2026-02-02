@@ -219,7 +219,11 @@ export default function VideoCompositionTestPage() {
   
   const handleStartBroadcast = useCallback(async (platform: BroadcastPlatform, streamKey: string, quality?: QualityPreset, publicStreamUrl?: string) => {
     if (!composedStream) return;
-    const rtmpUrl = platform === 'youtube' ? 'rtmp://a.rtmp.youtube.com/live2' : 'rtmp://live.twitch.tv/app';
+    const rtmpUrl = platform === 'youtube' 
+      ? 'rtmp://a.rtmp.youtube.com/live2' 
+      : platform === 'twitch' 
+      ? 'rtmp://live.twitch.tv/app'
+      : 'rtmps://live-api-s.facebook.com:443/rtmp/';
     const broadcastStream = new MediaStream();
     composedStream.getVideoTracks().forEach(track => broadcastStream.addTrack(track));
     if (micEnabled && micStream) micStream.getAudioTracks().forEach(track => broadcastStream.addTrack(track));
@@ -227,7 +231,7 @@ export default function VideoCompositionTestPage() {
     
     // Start broadcast first (critical path - no delays)
     await startBroadcast(broadcastStream, { platform, streamKey, rtmpUrl, quality });
-    notify.success('Broadcast started', `Streaming to ${platform === 'youtube' ? 'YouTube' : 'Twitch'}`);
+    notify.success('Broadcast started', `Streaming to ${platform === 'youtube' ? 'YouTube' : platform === 'twitch' ? 'Twitch' : 'Facebook Live'}`);
     
     // Update tournament streaming status in background (non-blocking)
     if (selectedTournament?.id && publicStreamUrl) {

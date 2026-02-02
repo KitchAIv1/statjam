@@ -30,7 +30,7 @@ export interface Tournament {
   // Live streaming fields
   liveStreamUrl?: string | null; // Public YouTube/Twitch watch URL for embedding
   isStreaming?: boolean; // Whether tournament is currently being streamed
-  streamPlatform?: 'youtube' | 'twitch' | null; // Platform being used for streaming
+  streamPlatform?: 'youtube' | 'twitch' | 'facebook' | null; // Platform being used for streaming
 }
 
 export interface TournamentCreateRequest {
