@@ -9,6 +9,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Video, Film } from 'lucide-react';
 import { useGameReplays } from '@/hooks/useGameReplays';
@@ -20,6 +21,9 @@ interface MediaTabProps {
 
 export function MediaTab({ tournamentId }: MediaTabProps) {
   const { replays, loading, hasReplays } = useGameReplays(tournamentId, { limit: 6 });
+  
+  // ✅ YouTube-like behavior: Only one video can play at a time
+  const [activeReplayId, setActiveReplayId] = useState<string | null>(null);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -42,7 +46,13 @@ export function MediaTab({ tournamentId }: MediaTabProps) {
         ) : hasReplays ? (
           <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {replays.map((replay) => (
-              <GameReplayCard key={replay.id} replay={replay} />
+              <GameReplayCard
+                key={replay.id}
+                replay={replay}
+                isPlaying={activeReplayId === replay.id}
+                onPlay={(id) => setActiveReplayId(id)}
+                onClose={() => setActiveReplayId(null)}
+              />
             ))}
           </div>
         ) : (

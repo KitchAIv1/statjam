@@ -18,11 +18,33 @@ import { TournamentLiveStreamEmbed } from '@/components/live-streaming/Tournamen
 
 interface GameReplayCardProps {
   replay: GameReplay;
+  /** ✅ YouTube-like: controlled by parent - only one video plays at a time */
+  isPlaying?: boolean;
+  onPlay?: (id: string) => void;
+  onClose?: () => void;
 }
 
-export function GameReplayCard({ replay }: GameReplayCardProps) {
-  const [showPlayer, setShowPlayer] = useState(false);
+export function GameReplayCard({ replay, isPlaying, onPlay, onClose }: GameReplayCardProps) {
+  // ✅ Fallback to local state for standalone usage (backward compatible)
+  const [localShowPlayer, setLocalShowPlayer] = useState(false);
   const [thumbnailError, setThumbnailError] = useState(false);
+  
+  // ✅ Use controlled props if provided, otherwise fall back to local state
+  const showPlayer = isPlaying !== undefined ? isPlaying : localShowPlayer;
+  const handlePlay = () => {
+    if (onPlay) {
+      onPlay(replay.id);
+    } else {
+      setLocalShowPlayer(true);
+    }
+  };
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      setLocalShowPlayer(false);
+    }
+  };
 
   const thumbnailUrl = `https://img.youtube.com/vi/${replay.streamVideoId}/mqdefault.jpg`;
   const youtubeUrl = `https://www.youtube.com/watch?v=${replay.streamVideoId}`;
@@ -57,7 +79,7 @@ export function GameReplayCard({ replay }: GameReplayCardProps) {
             <span>{replay.teamBName}</span>
           </div>
           <button
-            onClick={() => setShowPlayer(false)}
+            onClick={handleClose}
             className="text-[10px] text-white/50 hover:text-white"
           >
             Close
@@ -70,7 +92,7 @@ export function GameReplayCard({ replay }: GameReplayCardProps) {
   return (
     <div
       className="group cursor-pointer space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3 transition hover:border-[#FF3B30]/30 hover:bg-black/50"
-      onClick={() => setShowPlayer(true)}
+      onClick={handlePlay}
     >
       {/* Thumbnail */}
       <div className="relative aspect-video rounded-xl overflow-hidden bg-white/5">
