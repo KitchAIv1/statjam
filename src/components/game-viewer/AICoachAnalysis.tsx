@@ -8,8 +8,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Brain, Sparkles, Target, TrendingUp, AlertTriangle, CheckCircle, Trophy, Shield, Zap, RefreshCw } from 'lucide-react';
+import { Brain, Sparkles, Target, TrendingUp, AlertTriangle, CheckCircle, Trophy, Shield, Zap, RefreshCw, HelpCircle } from 'lucide-react';
 import { AIAnalysisService, type AIAnalysisData } from '@/lib/services/aiAnalysisService';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface AICoachAnalysisProps {
   gameId: string;
@@ -183,6 +184,74 @@ function WinningFactorsSection({ factors }: { factors: AIAnalysisData['winningFa
   );
 }
 
+function PlayerImpactExplainer() {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button 
+          className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+          aria-label="How is Player Impact calculated?"
+        >
+          <HelpCircle className="w-4 h-4 text-gray-400 hover:text-orange-500" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent 
+        className="w-80 bg-white border border-gray-200 shadow-lg p-0 rounded-lg"
+        align="start"
+        sideOffset={8}
+      >
+        <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-4 py-3 rounded-t-lg">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <Target className="w-4 h-4 text-orange-400" />
+            How Impact Score Works
+          </h3>
+        </div>
+        <div className="p-4 space-y-3">
+          <p className="text-sm text-gray-600">
+            Impact Score measures a player&apos;s <span className="font-semibold text-gray-900">total contribution</span> — not just points.
+          </p>
+          
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">The Formula</p>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Points</span>
+                <span className="font-mono text-gray-900">× 1.0</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Rebounds</span>
+                <span className="font-mono text-gray-900">× 0.8</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Assists</span>
+                <span className="font-mono text-gray-900">× 0.7</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-orange-600 font-medium">Steals</span>
+                <span className="font-mono text-orange-600 font-medium">× 1.2</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-orange-600 font-medium">Blocks</span>
+                <span className="font-mono text-orange-600 font-medium">× 1.1</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-red-600">Turnovers</span>
+                <span className="font-mono text-red-600">− 1.0</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-orange-50 border-l-3 border-orange-400 p-2.5 rounded-r">
+            <p className="text-xs text-gray-700">
+              <span className="font-semibold">Why it matters:</span> Steals and blocks are weighted higher because they create fast-break opportunities. Turnovers hurt because they give away possessions.
+            </p>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function KeyPlayersSection({ players }: { players: AIAnalysisData['keyPlayers'] }) {
   if (!players || players.length === 0) {
     return null;
@@ -194,6 +263,7 @@ function KeyPlayersSection({ players }: { players: AIAnalysisData['keyPlayers'] 
         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
           <Trophy className="w-5 h-5 text-orange-500" />
           Key Player Impact
+          <PlayerImpactExplainer />
         </h2>
         <div className="grid md:grid-cols-2 gap-4">
           {players.map((player, idx) => (
