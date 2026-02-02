@@ -221,6 +221,129 @@ async function updateTeamPlayersReference(
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ADDITIONAL MIGRATION STEPS (Previously Missing)
+// ═══════════════════════════════════════════════════════════════
+
+async function transferGameSubstitutions(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  customPlayerId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  // Transfer player_in substitutions
+  const { error: inError } = await db
+    .from('game_substitutions')
+    .update({ player_in_id: userId, custom_player_in_id: null })
+    .eq('custom_player_in_id', customPlayerId);
+
+  if (inError) {
+    console.error('❌ ClaimAPI: Failed to transfer substitutions (player_in):', inError);
+    return { success: false, error: 'Failed to transfer substitutions' };
+  }
+
+  // Transfer player_out substitutions
+  const { error: outError } = await db
+    .from('game_substitutions')
+    .update({ player_out_id: userId, custom_player_out_id: null })
+    .eq('custom_player_out_id', customPlayerId);
+
+  if (outError) {
+    console.error('❌ ClaimAPI: Failed to transfer substitutions (player_out):', outError);
+    return { success: false, error: 'Failed to transfer substitutions' };
+  }
+
+  console.log('✅ ClaimAPI: Game substitutions transferred');
+  return { success: true };
+}
+
+async function transferGameAwards(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  customPlayerId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  // Transfer Player of the Game awards
+  const { error: potgError } = await db
+    .from('games')
+    .update({ player_of_the_game_id: userId, custom_player_of_the_game_id: null })
+    .eq('custom_player_of_the_game_id', customPlayerId);
+
+  if (potgError) {
+    console.error('❌ ClaimAPI: Failed to transfer POTG awards:', potgError);
+    return { success: false, error: 'Failed to transfer awards' };
+  }
+
+  // Transfer Hustle Player awards
+  const { error: hustleError } = await db
+    .from('games')
+    .update({ hustle_player_of_the_game_id: userId, custom_hustle_player_of_the_game_id: null })
+    .eq('custom_hustle_player_of_the_game_id', customPlayerId);
+
+  if (hustleError) {
+    console.error('❌ ClaimAPI: Failed to transfer Hustle awards:', hustleError);
+    return { success: false, error: 'Failed to transfer awards' };
+  }
+
+  console.log('✅ ClaimAPI: Game awards transferred');
+  return { success: true };
+}
+
+async function transferGeneratedClips(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  customPlayerId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await db
+    .from('generated_clips')
+    .update({ player_id: userId, custom_player_id: null })
+    .eq('custom_player_id', customPlayerId);
+
+  if (error) {
+    console.error('❌ ClaimAPI: Failed to transfer clips:', error);
+    return { success: false, error: 'Failed to transfer clips' };
+  }
+
+  console.log('✅ ClaimAPI: Generated clips transferred');
+  return { success: true };
+}
+
+async function transferClipPurchases(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  customPlayerId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await db
+    .from('clip_purchases')
+    .update({ player_id: userId, custom_player_id: null })
+    .eq('custom_player_id', customPlayerId);
+
+  if (error) {
+    console.error('❌ ClaimAPI: Failed to transfer clip purchases:', error);
+    return { success: false, error: 'Failed to transfer clip purchases' };
+  }
+
+  console.log('✅ ClaimAPI: Clip purchases transferred');
+  return { success: true };
+}
+
+async function transferStatsAggregation(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  customPlayerId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await db
+    .from('stats')
+    .update({ player_id: userId, custom_player_id: null })
+    .eq('custom_player_id', customPlayerId);
+
+  if (error) {
+    console.error('❌ ClaimAPI: Failed to transfer stats aggregation:', error);
+    return { success: false, error: 'Failed to transfer stats aggregation' };
+  }
+
+  console.log('✅ ClaimAPI: Stats aggregation transferred');
+  return { success: true };
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN HANDLER
 // ═══════════════════════════════════════════════════════════════
 
@@ -321,10 +444,45 @@ export async function POST(request: NextRequest): Promise<NextResponse<ClaimResp
       console.warn('⚠️ ClaimAPI: Team reference update failed, but continuing...');
     }
 
+    // Step 6: Transfer game substitutions
+    const subsResult = await transferGameSubstitutions(db, customPlayerId, userId);
+    if (!subsResult.success) {
+      console.warn('⚠️ ClaimAPI: Substitutions transfer failed, but continuing...');
+    }
+
+    // Step 7: Transfer game awards (POTG, Hustle Player)
+    const awardsResult = await transferGameAwards(db, customPlayerId, userId);
+    if (!awardsResult.success) {
+      console.warn('⚠️ ClaimAPI: Awards transfer failed, but continuing...');
+    }
+
+    // Step 8: Transfer generated clips
+    const clipsResult = await transferGeneratedClips(db, customPlayerId, userId);
+    if (!clipsResult.success) {
+      console.warn('⚠️ ClaimAPI: Clips transfer failed, but continuing...');
+    }
+
+    // Step 9: Transfer clip purchases
+    const purchasesResult = await transferClipPurchases(db, customPlayerId, userId);
+    if (!purchasesResult.success) {
+      console.warn('⚠️ ClaimAPI: Clip purchases transfer failed, but continuing...');
+    }
+
+    // Step 10: Transfer stats aggregation table
+    const statsAggResult = await transferStatsAggregation(db, customPlayerId, userId);
+    if (!statsAggResult.success) {
+      console.warn('⚠️ ClaimAPI: Stats aggregation transfer failed, but continuing...');
+    }
+
     console.log('🎉 ClaimAPI: Claim completed successfully!');
     console.log('   - Profile: Copied');
     console.log('   - Stats transferred:', statsResult.transferredCount);
     console.log('   - Team reference: Updated');
+    console.log('   - Substitutions: Transferred');
+    console.log('   - Awards: Transferred');
+    console.log('   - Clips: Transferred');
+    console.log('   - Clip Purchases: Transferred');
+    console.log('   - Stats Aggregation: Transferred');
 
     return NextResponse.json({ success: true });
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useState, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { use, useState, useMemo, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { usePublicPlayerProfile } from '@/hooks/usePublicPlayerProfile';
 import { PlayerProfileHero } from '@/components/player-profile/PlayerProfileHero';
 import { PlayerProfileStats } from '@/components/player-profile/PlayerProfileStats';
@@ -29,7 +29,22 @@ interface PageProps {
 export default function PlayerProfilePage({ params }: PageProps) {
   const { id: playerId } = use(params);
   const searchParams = useSearchParams();
-  const { profile, loading, error, notFound } = usePublicPlayerProfile(playerId);
+  const router = useRouter();
+  const { profile, loading, error, notFound, redirectTo } = usePublicPlayerProfile(playerId);
+  
+  // ═══════════════════════════════════════════════════════════════
+  // CLAIMED PROFILE REDIRECT
+  // If this is a claimed custom player, redirect to the new user ID
+  // ═══════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (redirectTo) {
+      console.log('🔄 PlayerProfilePage: Redirecting claimed profile to:', redirectTo);
+      // Preserve any query params (like tournament filter)
+      const queryString = searchParams.toString();
+      const targetUrl = queryString ? `/player/${redirectTo}?${queryString}` : `/player/${redirectTo}`;
+      router.replace(targetUrl);
+    }
+  }, [redirectTo, router, searchParams]);
   
   // Tournament context from URL (?tournament=TournamentName)
   const tournamentFromUrl = searchParams.get('tournament');
@@ -43,7 +58,8 @@ export default function PlayerProfilePage({ params }: PageProps) {
     return profile.allGames.filter(g => g.tournamentName === activeTournament);
   }, [profile?.allGames, selectedTournament, tournamentFromUrl]);
 
-  if (loading) {
+  // Show loading while redirecting to claimed profile
+  if (redirectTo || loading) {
     return (
       <div className="min-h-screen bg-gray-100">
         <NavigationHeader minimal />

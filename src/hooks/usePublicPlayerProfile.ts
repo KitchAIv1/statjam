@@ -14,20 +14,49 @@ import { ALLOW_UNCLAIMED_PROFILES_TOURNAMENTS } from '@/lib/constants/publicProf
 
 export type { PublicPlayerProfile, PublicPlayerIdentity, TournamentStat, PlayerAward };
 
-interface ProfileState { profile: PublicPlayerProfile | null; loading: boolean; error: string | null; notFound: boolean; }
+interface ProfileState { 
+  profile: PublicPlayerProfile | null; 
+  loading: boolean; 
+  error: string | null; 
+  notFound: boolean;
+  /** If set, the page should redirect to this user ID (claimed profile) */
+  redirectTo: string | null;
+}
 
 export function usePublicPlayerProfile(playerId: string) {
-  const [state, setState] = useState<ProfileState>({ profile: null, loading: true, error: null, notFound: false });
+  const [state, setState] = useState<ProfileState>({ 
+    profile: null, loading: true, error: null, notFound: false, redirectTo: null 
+  });
 
   const fetchProfile = useCallback(async (skipCache = false) => {
-    if (!playerId) { setState({ profile: null, loading: false, error: null, notFound: false }); return; }
+    if (!playerId) { 
+      setState({ profile: null, loading: false, error: null, notFound: false, redirectTo: null }); 
+      return; 
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CLAIMED PROFILE REDIRECT CHECK
+    // If this playerId is a claimed custom_player, redirect to new user ID
+    // ═══════════════════════════════════════════════════════════════
+    const { data: claimedPlayer } = await supabase
+      .from('custom_players')
+      .select('claimed_by_user_id')
+      .eq('id', playerId)
+      .not('claimed_by_user_id', 'is', null)
+      .single();
+
+    if (claimedPlayer?.claimed_by_user_id) {
+      console.log('🔄 usePublicPlayerProfile: Detected claimed profile, redirecting to:', claimedPlayer.claimed_by_user_id);
+      setState({ profile: null, loading: false, error: null, notFound: false, redirectTo: claimedPlayer.claimed_by_user_id });
+      return;
+    }
 
     const cacheKey = CacheKeys.publicPlayerProfile(playerId);
     if (!skipCache) {
       const cached = cache.get<PublicPlayerProfile>(cacheKey);
-      if (cached) { setState({ profile: cached, loading: false, error: null, notFound: false }); return; }
+      if (cached) { setState({ profile: cached, loading: false, error: null, notFound: false, redirectTo: null }); return; }
     }
-    setState(prev => ({ ...prev, loading: true, error: null, notFound: false }));
+    setState(prev => ({ ...prev, loading: true, error: null, notFound: false, redirectTo: null }));
 
     try {
       // First, try regular player path
@@ -58,7 +87,7 @@ export function usePublicPlayerProfile(playerId: string) {
 
         // Still not found after whitelist check
         if (!identity?.name) {
-          setState({ profile: null, loading: false, error: null, notFound: true });
+          setState({ profile: null, loading: false, error: null, notFound: true, redirectTo: null });
           return;
         }
       }
@@ -104,10 +133,10 @@ export function usePublicPlayerProfile(playerId: string) {
       };
 
       cache.set(cacheKey, profileData, CacheTTL.playerGameStats);
-      setState({ profile: profileData, loading: false, error: null, notFound: false });
+      setState({ profile: profileData, loading: false, error: null, notFound: false, redirectTo: null });
     } catch (err) {
       console.error('❌ usePublicPlayerProfile:', err);
-      setState({ profile: null, loading: false, error: 'Failed to load profile', notFound: false });
+      setState({ profile: null, loading: false, error: 'Failed to load profile', notFound: false, redirectTo: null });
     }
   }, [playerId]);
 
