@@ -65,7 +65,7 @@ const nextConfig: NextConfig = {
   
   // Image optimization
   images: {
-    domains: ['xhunnsczqjwfrwgjetff.supabase.co'], // Supabase storage domain
+    domains: ['xhunnsczqjwfrwgjetff.supabase.co', 'img.youtube.com'], // Supabase storage + YouTube thumbnails
     formats: ['image/webp', 'image/avif'],
   },
   

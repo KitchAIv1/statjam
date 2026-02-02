@@ -118,6 +118,25 @@ class TournamentStreamingService {
     }
     return null;
   }
+
+  /**
+   * Mark stream as ended for Media Tab display
+   * Called when YouTube player detects stream has ended
+   */
+  async markStreamEnded(videoId: string): Promise<void> {
+    if (!videoId) return;
+
+    const { error } = await supabase
+      .from('games')
+      .update({ stream_ended: true })
+      .eq('stream_video_id', videoId);
+
+    if (error) {
+      console.error('Failed to mark stream ended:', error);
+    } else {
+      console.log('✅ Marked stream ended for video:', videoId);
+    }
+  }
 }
 
 export const tournamentStreamingService = new TournamentStreamingService();

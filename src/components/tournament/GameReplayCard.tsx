@@ -46,6 +46,7 @@ export function GameReplayCard({ replay }: GameReplayCardProps) {
           streamUrl={youtubeUrl}
           platform="youtube"
           className="w-full"
+          isLive={false}
         />
         <div className="px-3 pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-white">

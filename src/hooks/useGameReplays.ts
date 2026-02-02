@@ -1,7 +1,14 @@
 /**
- * useGameReplays - Fetch completed games with video replays
+ * useGameReplays - Fetch games with video replays
  * 
- * Fetches games where stream_video_id is set (auto-captured from live stream).
+ * Fetches games where stream_video_id is set AND either:
+ * - status = 'completed' (game finished via stat tracker)
+ * - stream_ended = true (live stream ended, ready for replay)
+ * 
+ * ✅ SCORES CALCULATED FROM game_stats (source of truth)
+ * - DB columns home_score/away_score are often 0 or stale
+ * - Matches calculation logic in useGameViewerV2, useLiveGamesHybrid, etc.
+ * 
  * Used in Media tab to display game replay thumbnails.
  * 
  * @module useGameReplays
@@ -29,6 +36,43 @@ interface UseGameReplaysOptions {
   limit?: number;
 }
 
+/**
+ * Calculate scores from game_stats - matches logic in useGameViewerV2
+ */
+function calculateScoresFromStats(
+  stats: { stat_type: string; modifier: string; team_id: string; is_opponent_stat?: boolean }[],
+  teamAId: string,
+  teamBId: string
+): { homeScore: number; awayScore: number } {
+  let homeScore = 0;
+  let awayScore = 0;
+
+  for (const stat of stats) {
+    if (stat.modifier !== 'made') continue;
+
+    let points = 0;
+    if (stat.stat_type === 'three_pointer' || stat.stat_type === '3_pointer') {
+      points = 3;
+    } else if (stat.stat_type === 'free_throw') {
+      points = 1;
+    } else if (stat.stat_type === 'field_goal' || stat.stat_type === 'two_pointer') {
+      points = 2;
+    }
+
+    if (points > 0) {
+      if (stat.is_opponent_stat) {
+        awayScore += points;
+      } else if (stat.team_id === teamAId) {
+        homeScore += points;
+      } else if (stat.team_id === teamBId) {
+        awayScore += points;
+      }
+    }
+  }
+
+  return { homeScore, awayScore };
+}
+
 export function useGameReplays(tournamentId: string, options?: UseGameReplaysOptions) {
   const [replays, setReplays] = useState<GameReplay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,22 +91,24 @@ export function useGameReplays(tournamentId: string, options?: UseGameReplaysOpt
       setError(null);
 
       try {
-        const { data, error: queryError } = await supabase
+        // Step 1: Fetch games with video replays
+        const { data: gamesData, error: queryError } = await supabase
           .from('games')
           .select(`
             id,
             stream_video_id,
-            home_score,
-            away_score,
-            game_date,
+            start_time,
             status,
-            team_a:teams!games_team_a_id_fkey(name, logo),
-            team_b:teams!games_team_b_id_fkey(name, logo)
+            stream_ended,
+            team_a_id,
+            team_b_id,
+            team_a:teams!games_team_a_id_fkey(name, logo_url),
+            team_b:teams!games_team_b_id_fkey(name, logo_url)
           `)
           .eq('tournament_id', tournamentId)
-          .eq('status', 'completed')
           .not('stream_video_id', 'is', null)
-          .order('game_date', { ascending: false })
+          .or('status.eq.completed,stream_ended.eq.true')
+          .order('start_time', { ascending: false })
           .limit(limit);
 
         if (queryError) {
@@ -72,18 +118,43 @@ export function useGameReplays(tournamentId: string, options?: UseGameReplaysOpt
           return;
         }
 
-        const mappedReplays: GameReplay[] = (data || []).map((game: any) => ({
-          id: game.id,
-          streamVideoId: game.stream_video_id,
-          teamAName: game.team_a?.name || 'Team A',
-          teamBName: game.team_b?.name || 'Team B',
-          teamALogo: game.team_a?.logo || null,
-          teamBLogo: game.team_b?.logo || null,
-          homeScore: game.home_score ?? 0,
-          awayScore: game.away_score ?? 0,
-          gameDate: game.game_date,
-          status: game.status,
-        }));
+        if (!gamesData || gamesData.length === 0) {
+          setReplays([]);
+          return;
+        }
+
+        // Step 2: Batch fetch game_stats for all games (source of truth for scores)
+        const gameIds = gamesData.map(g => g.id);
+        const { data: allStats } = await supabase
+          .from('game_stats')
+          .select('game_id, team_id, stat_type, modifier, is_opponent_stat')
+          .in('game_id', gameIds)
+          .eq('modifier', 'made');
+
+        // Step 3: Calculate scores from game_stats
+        const scoresByGameId = new Map<string, { homeScore: number; awayScore: number }>();
+        for (const game of gamesData) {
+          const gameStats = (allStats || []).filter(s => s.game_id === game.id);
+          const scores = calculateScoresFromStats(gameStats, game.team_a_id, game.team_b_id);
+          scoresByGameId.set(game.id, scores);
+        }
+
+        // Step 4: Map to GameReplay with calculated scores
+        const mappedReplays: GameReplay[] = gamesData.map((game: any) => {
+          const scores = scoresByGameId.get(game.id) || { homeScore: 0, awayScore: 0 };
+          return {
+            id: game.id,
+            streamVideoId: game.stream_video_id,
+            teamAName: game.team_a?.name || 'Team A',
+            teamBName: game.team_b?.name || 'Team B',
+            teamALogo: game.team_a?.logo_url || null,
+            teamBLogo: game.team_b?.logo_url || null,
+            homeScore: scores.homeScore,
+            awayScore: scores.awayScore,
+            gameDate: game.start_time,
+            status: game.status,
+          };
+        });
 
         setReplays(mappedReplays);
       } catch (err: any) {

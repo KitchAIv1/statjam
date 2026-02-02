@@ -21,6 +21,8 @@ interface TournamentLiveStreamEmbedProps {
   className?: string;
   /** Callback when player state changes - allows parent to react (e.g., hide container when ended) */
   onStateChange?: (state: PlayerState) => void;
+  /** Whether this is a live stream (shows LIVE badge) or replay (no badge). Default: true */
+  isLive?: boolean;
 }
 
 /** Extract YouTube video ID from various URL formats */
@@ -83,6 +85,7 @@ export function TournamentLiveStreamEmbed({
   platform,
   className = '',
   onStateChange,
+  isLive = true,
 }: TournamentLiveStreamEmbedProps) {
   const [playerState, setPlayerState] = useState<PlayerState>('loading');
   const [mounted, setMounted] = useState(false);
@@ -210,7 +213,7 @@ export function TournamentLiveStreamEmbed({
       <div className={`relative bg-black rounded-lg overflow-hidden ${className}`} style={{ aspectRatio: '16/9' }}>
         <iframe src={twitchUrl} title="Twitch live stream" className="absolute inset-0 w-full h-full"
           allow="autoplay; fullscreen" allowFullScreen />
-        <LiveBadge />
+        {isLive && <LiveBadge />}
       </div>
     );
   }
@@ -229,7 +232,7 @@ export function TournamentLiveStreamEmbed({
           allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" 
           allowFullScreen 
         />
-        <LiveBadge />
+        {isLive && <LiveBadge />}
       </div>
     );
   }
@@ -242,7 +245,7 @@ export function TournamentLiveStreamEmbed({
       
       {/* State-aware overlay */}
       {playerState === 'loading' && <LoadingOverlay />}
-      {playerState === 'playing' && <LiveBadge />}
+      {isLive && playerState === 'playing' && <LiveBadge />}
       {playerState === 'buffering' && <BufferingBadge />}
       {playerState === 'ended' && <EndedOverlay streamUrl={streamUrl} />}
       {playerState === 'error' && <ErrorOverlay streamUrl={streamUrl} />}

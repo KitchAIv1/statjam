@@ -43,7 +43,22 @@ export function LiveTabContent({
 
   const handleStateChange = useCallback((state: PlayerState) => {
     setPlayerState(state);
-  }, []);
+    
+    // When stream ends, mark game for Media Tab AND clear tournament streaming status
+    if (state === 'ended' && liveStreamUrl && streamPlatform === 'youtube') {
+      import('@/lib/services/tournamentStreamingService')
+        .then(({ tournamentStreamingService }) => {
+          const videoIdMatch = liveStreamUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/);
+          const videoId = videoIdMatch?.[1];
+          if (videoId) {
+            tournamentStreamingService.markStreamEnded(videoId);
+          }
+          // ✅ Clear tournament streaming status so container shows placeholder
+          tournamentStreamingService.stopStreaming(tournamentId);
+        })
+        .catch(error => console.warn('Failed to mark stream ended:', error));
+    }
+  }, [liveStreamUrl, streamPlatform, tournamentId]);
 
   const streamActive = isStreaming && liveStreamUrl && streamPlatform;
 
@@ -58,22 +73,13 @@ export function LiveTabContent({
     );
   }
 
-  // Stream ended
+  // Stream ended - show placeholder (replay available in Media Tab)
   if (playerState === 'ended') {
     return (
       <div className="rounded-xl border border-white/10 bg-[#121212] p-8 text-center">
         <Tv className="h-12 w-12 text-white/20 mx-auto mb-4" />
-        <p className="text-sm font-semibold text-white mb-1">Stream Ended</p>
-        <p className="text-xs text-white/50 mb-4">This broadcast has concluded</p>
-        <a
-          href={liveStreamUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm text-[#FF3B30] hover:text-[#FF3B30]/80 transition"
-        >
-          Watch on {streamPlatform === 'youtube' ? 'YouTube' : streamPlatform === 'twitch' ? 'Twitch' : 'Facebook'}
-          <ExternalLink className="h-4 w-4" />
-        </a>
+        <p className="text-sm text-white/60">No active live stream</p>
+        <p className="text-xs text-white/40 mt-1">Check the Media tab for game replays</p>
       </div>
     );
   }

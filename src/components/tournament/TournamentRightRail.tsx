@@ -51,7 +51,23 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
 
   const handleStreamStateChange = useCallback((state: PlayerState) => {
     setStreamPlayerState(state);
-  }, []);
+    
+    // When stream ends, mark game for Media Tab AND clear tournament streaming status
+    if (state === 'ended' && liveStreamUrl && streamPlatform === 'youtube') {
+      import('@/lib/services/tournamentStreamingService')
+        .then(({ tournamentStreamingService }) => {
+          // Extract video ID from URL
+          const videoIdMatch = liveStreamUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/);
+          const videoId = videoIdMatch?.[1];
+          if (videoId) {
+            tournamentStreamingService.markStreamEnded(videoId);
+          }
+          // ✅ Clear tournament streaming status so container shows placeholder
+          tournamentStreamingService.stopStreaming(data.tournament.id);
+        })
+        .catch(error => console.warn('Failed to mark stream ended:', error));
+    }
+  }, [liveStreamUrl, streamPlatform, data.tournament.id]);
   
   // ✅ Fetch upcoming scheduled games for this tournament
   const { matchups: upcomingGames, loading: upcomingLoading } = useTournamentMatchups(data.tournament.id, {
@@ -358,24 +374,11 @@ function StreamContent({
     );
   }
 
-  // Stream ended - show message with link to platform
+  // Stream ended - show placeholder (replay available in Media Tab)
   if (streamPlayerState === 'ended') {
     return (
       <div className="p-4 pt-3">
-        <div className="flex flex-col items-center justify-center py-8 text-center" style={{ aspectRatio: '16/9' }}>
-          <Tv className="h-10 w-10 text-white/30 mb-3" />
-          <p className="text-sm font-semibold text-white mb-1">Stream Ended</p>
-          <p className="text-xs text-white/50 mb-3">This broadcast has concluded</p>
-          <a
-            href={liveStreamUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-[#FF3B30] hover:text-[#FF3B30]/80 transition"
-          >
-            Watch on {streamPlatform === 'youtube' ? 'YouTube' : streamPlatform === 'twitch' ? 'Twitch' : 'Facebook'}
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
+        <NextStreamPlaceholder nextGame={nextGame} />
       </div>
     );
   }
