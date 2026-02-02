@@ -39,18 +39,24 @@ export function useShotMadeOverlay({ gameId, teamAId, teamBId }: Options): ShotM
           const playerId = stat.player_id || stat.custom_player_id;
           if (!playerId) return;
 
-          const playerName = await fetchPlayerDisplayName(playerId);
+          // ✅ FIX: Calculate points BEFORE async call to prevent race condition
           const is3Pointer = stat.stat_type === 'three_pointer';
-
           const points = is3Pointer ? 3 : stat.stat_value;
+          
+          // ✅ FIX: Set scoreDelta IMMEDIATELY (before async player name fetch)
+          // This ensures score freeze starts before DB sync can update dbHomeScore
+          setScoreDelta({ statId: stat.id, teamId: stat.team_id, points });
+          if (clearTimeoutRef.current) clearTimeout(clearTimeoutRef.current);
+          clearTimeoutRef.current = setTimeout(clearShot, SHOT_DISPLAY_MS);
+
+          // Async: Fetch player name for overlay (score already frozen above)
+          const playerName = await fetchPlayerDisplayName(playerId);
+          
           const shotData: ShotMadeData = {
             playerId, playerName, points, is3Pointer, animationStart: Date.now(),
           };
 
           setShotItem(createShotMadeItem(shotData, stat.team_id));
-          setScoreDelta({ statId: stat.id, teamId: stat.team_id, points }); // Optimistic score update
-          if (clearTimeoutRef.current) clearTimeout(clearTimeoutRef.current);
-          clearTimeoutRef.current = setTimeout(clearShot, SHOT_DISPLAY_MS);
         }
       ).subscribe();
 
