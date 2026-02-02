@@ -51,13 +51,22 @@ export function CompactStatButtons({
     if (now - (lastClickTimeRef.current[statId] || 0) < DEBOUNCE_DELAY) return;
     
     lastClickTimeRef.current[statId] = now;
+    
+    // ✅ INSTANT UI: Show recording state briefly, then reset immediately
     setIsRecording(statId);
     
-    try {
-      await onStatRecord(statType, modifier);
-    } finally {
-      setTimeout(() => setIsRecording(null), DEBOUNCE_DELAY);
-    }
+    // ✅ Fire-and-forget: Don't block UI on async DB operation
+    onStatRecord(statType, modifier).catch((err) => {
+      console.error('❌ Stat record failed:', err);
+    });
+    
+    // ✅ Reset button visual state immediately (50ms flash for feedback)
+    setTimeout(() => setIsRecording(null), 50);
+    
+    // ✅ Double-tap prevention: Clear debounce lock after delay
+    setTimeout(() => {
+      delete lastClickTimeRef.current[statId];
+    }, DEBOUNCE_DELAY);
   };
 
   const handleFoulClick = async (foulType: 'personal' | 'technical') => {
@@ -68,13 +77,22 @@ export function CompactStatButtons({
     if (now - (lastClickTimeRef.current[foulId] || 0) < DEBOUNCE_DELAY) return;
     
     lastClickTimeRef.current[foulId] = now;
+    
+    // ✅ INSTANT UI: Show recording state briefly, then reset immediately
     setIsRecording(foulId);
     
-    try {
-      await onFoulRecord(foulType);
-    } finally {
-      setTimeout(() => setIsRecording(null), DEBOUNCE_DELAY);
-    }
+    // ✅ Fire-and-forget: Don't block UI on async DB operation
+    onFoulRecord(foulType).catch((err) => {
+      console.error('❌ Foul record failed:', err);
+    });
+    
+    // ✅ Reset button visual state immediately (50ms flash for feedback)
+    setTimeout(() => setIsRecording(null), 50);
+    
+    // ✅ Double-tap prevention: Clear debounce lock after delay
+    setTimeout(() => {
+      delete lastClickTimeRef.current[foulId];
+    }, DEBOUNCE_DELAY);
   };
 
   const isDisabled = !selectedPlayer || !isClockRunning;

@@ -119,20 +119,23 @@ export function MobileStatGridV3({
     // Update last click time
     lastClickTimeRef.current[statId] = now;
     
+    // ✅ INSTANT UI: Show recording state briefly, then reset immediately
     setIsRecording(statId);
     
-    try {
-      await onStatRecord(statType, modifier);
-    } finally {
-      // ✅ Keep button disabled for debounce period to prevent rapid clicks
-      setTimeout(() => {
-        setIsRecording(null);
-        // Clear last click time after debounce to allow next click
-        setTimeout(() => {
-          delete lastClickTimeRef.current[statId];
-        }, DEBOUNCE_DELAY);
-      }, DEBOUNCE_DELAY);
-    }
+    // ✅ Fire-and-forget: Don't block UI on async DB operation
+    onStatRecord(statType, modifier).catch((err) => {
+      console.error('❌ Stat record failed:', err);
+    });
+    
+    // ✅ Reset button visual state immediately (50ms flash for feedback)
+    setTimeout(() => {
+      setIsRecording(null);
+    }, 50);
+    
+    // ✅ Double-tap prevention: Clear debounce lock after delay (separate from visual)
+    setTimeout(() => {
+      delete lastClickTimeRef.current[statId];
+    }, DEBOUNCE_DELAY);
   };
 
   const handleFoulClick = async (foulType: 'personal' | 'technical') => {
@@ -157,17 +160,23 @@ export function MobileStatGridV3({
     
     lastClickTimeRef.current[foulId] = now;
 
+    // ✅ INSTANT UI: Show recording state briefly, then reset immediately
     setIsRecording(foulId);
-    try {
-      await onFoulRecord(foulType);
-    } finally {
-      setTimeout(() => {
-        setIsRecording(null);
-        setTimeout(() => {
-          delete lastClickTimeRef.current[foulId];
-        }, DEBOUNCE_DELAY);
-      }, DEBOUNCE_DELAY);
-    }
+    
+    // ✅ Fire-and-forget: Don't block UI on async DB operation
+    onFoulRecord(foulType).catch((err) => {
+      console.error('❌ Foul record failed:', err);
+    });
+    
+    // ✅ Reset button visual state immediately (50ms flash for feedback)
+    setTimeout(() => {
+      setIsRecording(null);
+    }, 50);
+    
+    // ✅ Double-tap prevention: Clear debounce lock after delay
+    setTimeout(() => {
+      delete lastClickTimeRef.current[foulId];
+    }, DEBOUNCE_DELAY);
   };
 
   const isDisabled = !selectedPlayer || !isClockRunning;
