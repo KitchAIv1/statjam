@@ -240,7 +240,15 @@ export default function VideoCompositionTestPage() {
           tournamentStreamingService.startStreaming(selectedTournament.id, platform, publicStreamUrl))
         .catch(error => console.warn('Failed to update tournament streaming status:', error));
     }
-  }, [composedStream, micEnabled, micStream, startBroadcast, selectedTournament?.id]);
+    
+    // Save stream video ID to game for Media tab replays (non-blocking)
+    if (selectedGameId && publicStreamUrl && platform === 'youtube') {
+      import('@/lib/services/tournamentStreamingService')
+        .then(({ tournamentStreamingService }) => 
+          tournamentStreamingService.saveGameStreamVideoId(selectedGameId, publicStreamUrl))
+        .catch(error => console.warn('Failed to save game stream video ID:', error));
+    }
+  }, [composedStream, micEnabled, micStream, startBroadcast, selectedTournament?.id, selectedGameId]);
 
   const handleStopBroadcast = useCallback(() => {
     // Stop broadcast immediately (critical path)

@@ -79,6 +79,45 @@ class TournamentStreamingService {
       streamPlatform: data?.stream_platform as StreamPlatform | null,
     };
   }
+
+  /**
+   * Save stream video ID to game for Media tab replays
+   * Extracts YouTube video ID from URL and saves to games.stream_video_id
+   */
+  async saveGameStreamVideoId(gameId: string, publicStreamUrl: string): Promise<void> {
+    const videoId = this.extractYouTubeVideoId(publicStreamUrl);
+    if (!videoId) {
+      console.warn('Could not extract YouTube video ID from URL:', publicStreamUrl);
+      return;
+    }
+
+    const { error } = await supabase
+      .from('games')
+      .update({ stream_video_id: videoId })
+      .eq('id', gameId);
+
+    if (error) {
+      console.error('Failed to save game stream video ID:', error);
+    } else {
+      console.log('✅ Saved stream video ID to game:', { gameId, videoId });
+    }
+  }
+
+  /**
+   * Extract YouTube video ID from various URL formats
+   */
+  private extractYouTubeVideoId(url: string): string | null {
+    if (!url) return null;
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match?.[1]) return match[1];
+    }
+    return null;
+  }
 }
 
 export const tournamentStreamingService = new TournamentStreamingService();
