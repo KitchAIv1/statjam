@@ -1,8 +1,8 @@
 # StatJam Product Requirements Document (PRD) - Current Version
 
-**Version**: 2.2  
-**Date**: November 21, 2025  
-**Status**: Production Ready (v0.16.1)  
+**Version**: 2.3  
+**Date**: February 2026  
+**Status**: Production Ready (v0.16.1+)  
 **Previous Version**: [LEGACY_PRD_ORIGINAL.md](../08-archive/LEGACY_PRD_ORIGINAL.md)
 
 ---
@@ -261,6 +261,30 @@ StatJam is a professional-grade sports tournament management platform built for 
 - Game clock and quarter
 - Team fouls and timeouts remaining
 - Live game status indicators
+
+---
+
+### ✅ **Media Tab & Replay System**
+
+#### **Game Replays**
+- YouTube video replay integration
+- Automatic replay availability when stream ends
+- Stream end detection independent of game completion status
+- Immediate replay access after live stream concludes
+- Score calculation from game_stats (source of truth)
+- Responsive grid layout (2-3 columns based on screen size)
+- YouTube-like single-video playback (only one video plays at a time)
+
+#### **Stream End Tracking**
+- `stream_ended` flag tracks when live stream has ended
+- Enables Media Tab to display replays without requiring `status = 'completed'`
+- Automatic detection via YouTube player state monitoring
+- Seamless transition from live stream to replay availability
+- Performance-optimized with partial database index
+
+#### **Highlights Section**
+- Placeholder for future highlights and clips
+- Auto-generated clips coming soon
 
 ---
 
@@ -619,11 +643,11 @@ StatJam is a professional-grade sports tournament management platform built for 
 
 ---
 
-**StatJam v2.2 PRD** - Complete, current, and production-ready. This PRD reflects the actual implemented features as of November 21, 2025, representing a mature, enterprise-grade sports tournament management platform with bracket visualization, custom player photos, and performance optimizations.
+**StatJam v2.3 PRD** - Complete, current, and production-ready. This PRD reflects the actual implemented features as of February 2026, representing a mature, enterprise-grade sports tournament management platform with bracket visualization, custom player photos, stream end detection for immediate replay availability, and performance optimizations.
 
 ---
 
-**Last Updated**: November 21, 2025  
+**Last Updated**: February 2026  
 **Maintained By**: Development Team  
-**Status**: ✅ Production Ready (v0.16.1)  
-**Next Review**: Q1 2026
+**Status**: ✅ Production Ready (v0.16.1+)  
+**Next Review**: Q2 2026

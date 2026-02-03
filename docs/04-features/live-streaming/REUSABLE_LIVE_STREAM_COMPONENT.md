@@ -211,6 +211,7 @@ LiveStreamPlayer
 - **Responsive**: Overlay scales proportionally using CSS `clamp()` and variables
 - **Reusable**: Works for both public (tournament) and private (organizer) contexts
 - **Type-safe**: All interfaces in shared `types/liveStream.ts`
+- **Stream End Detection**: Automatically marks `stream_ended = true` when YouTube stream ends, enabling immediate Media Tab replay availability
 
 ---
 

@@ -141,6 +141,8 @@ CREATE TABLE IF NOT EXISTS games (
   is_clock_running BOOLEAN DEFAULT false,
   home_score INTEGER DEFAULT 0,
   away_score INTEGER DEFAULT 0,
+  stream_video_id TEXT,
+  stream_ended BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -155,6 +157,8 @@ CREATE TRIGGER update_games_updated_at
 - Quarter-based game progression
 - Score tracking for both teams
 - Stat admin assignment
+- Stream video tracking: `stream_video_id` stores YouTube video ID for replays
+- Stream end detection: `stream_ended` flag indicates when live stream has ended (enables Media Tab to show replays without requiring game completion)
 
 ### Stats Table
 **Purpose**: Tracks individual game statistics.

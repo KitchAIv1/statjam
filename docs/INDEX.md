@@ -12,7 +12,7 @@
 - **Component Map**: [Stat Tracker Component Map](01-project/STAT_TRACKER_COMPONENT_MAP.md)
 
 ### **For Product Managers**
-- **Current PRD**: [PRD Current v2.1](01-project/PRD_CURRENT.md)
+- **Current PRD**: [PRD Current v2.3](01-project/PRD_CURRENT.md) ✨ UPDATED
 - **Feature Status**: [Features Complete](01-project/FEATURES_COMPLETE.md)
 - **Project Status**: [Project Status](01-project/PROJECT_STATUS.md)
 
@@ -26,7 +26,7 @@
 ## 📚 **Documentation Categories**
 
 ### **1. Project Overview** (`01-project/`)
-- **PRD_CURRENT.md** - Current Product Requirements Document (v2.0)
+- **PRD_CURRENT.md** - Current Product Requirements Document (v2.3) ✨ UPDATED
 - **PROJECT_STATUS.md** - Current project status (updated Jan 2025)
 - **JANUARY_2025_UPDATES.md** - Complete summary of January 2025 updates
 - **STAT_ADMIN_TRACKER_COMPLETE_MAP.md** - Complete architecture documentation
@@ -41,6 +41,7 @@
 - **TEAM_FOULS_TIMEOUTS_ANALYSIS.md** - Team fouls and timeouts analysis
 
 ### **2. Development Guides** (`02-development/`)
+- **STREAM_ENDED_FEATURE_AUDIT.md** - Comprehensive audit of stream_ended feature implementation (✅ February 2026) ✨ NEW
 - **TOURNAMENT_LEADERS_PHASE_FILTER_OPTIMIZATION.md** - Tournament leaders game phase filter & prefetch optimization (✅ COMPLETED v0.17.2)
 - **LEADERS_GAME_PHASE_FILTER_IMPROVEMENT.md** - Leaders tab game phase filter improvement plan (✅ COMPLETED v0.17.2)
 - **TOURNAMENTS_LIST_PERFORMANCE_OPTIMIZATION.md** - Tournament list page performance optimization (✅ COMPLETED)
@@ -78,6 +79,8 @@
 - **coach-dashboard/COACH_DASHBOARD_V0_17.md** - Coach dashboard UI/UX enhancements (v0.17.0)
 - **coach-team-card/COACH_TEAM_CARD_IMPLEMENTATION.md** - Coach team management UI & services
 - **stat-tracker/AUTOMATION_PRESETS_GUIDE.md** - Automation presets comparison + demo workflow
+- **live-streaming/REUSABLE_LIVE_STREAM_COMPONENT.md** - Reusable live stream component (updated with stream end detection) ✨ UPDATED
+- **tournament-dedicated-page/MEDIA_TAB_FEATURE.md** - Media Tab feature documentation with stream_ended support (✅ February 2026) ✨ NEW
 - **Authentication** - Auth system documentation
 - **Dashboards** - Dashboard documentation (Player, Organizer; Coach dashboard covered in coach-team-card and coach-dashboard)
 - **Live-viewer** - Live viewer documentation
@@ -100,6 +103,7 @@
 
 ### **6. Database** (`05-database/`)
 - **Migrations** - Database migration files
+  - **035_STREAM_ENDED_MIGRATION.md** - Migration 035: Add stream_ended column documentation (✅ February 2026) ✨ NEW
 - **RLS_COMPLETE_DESIGN.md** - Row-level security design
 - **RLS_FINAL_EXECUTION_PLAN.md** - RLS execution plan
 - **RLS_POLICIES.md** - RLS policies documentation
@@ -198,11 +202,17 @@
 
 ---
 
-**Last Updated**: December 2025  
+**Last Updated**: February 2026  
 **Maintained By**: Development Team  
 **Status**: ✅ Complete and Current
 
-### **Recent Updates (December 2025)**
+### **Recent Updates (February 2026)**
+- ✅ **Stream Ended Feature**: Added `stream_ended` column for immediate Media Tab replay availability
+- ✅ **Migration 035**: Database migration for stream end detection
+- ✅ **Media Tab Enhancement**: Replays now available immediately after stream ends
+- ✅ **PRD v2.3**: Updated PRD with stream_ended feature documentation
+
+### **Previous Updates (December 2025)**
 - ✅ **v0.17.4**: Coach mode critical fixes + performance optimizations + game summary analytics SQL
 - ✅ **v0.17.3**: Next.js security update + coach games public viewing
 - ✅ **v0.17.2**: Leaders tab game phase filter + comprehensive prefetch optimization
