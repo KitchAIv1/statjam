@@ -61,27 +61,27 @@ export class ActivityMonitorService {
       return [];
     }
 
-    // Get organizer emails in a separate query
+    // Get organizer info including role
     const organizerIds = [...new Set((data || []).map(t => t.organizer_id).filter(Boolean))];
-    let organizerMap = new Map<string, string>();
+    let organizerMap = new Map<string, { email: string; role: string }>();
     
     if (organizerIds.length > 0) {
       const { data: users } = await supabase
         .from('users')
-        .select('id, email')
+        .select('id, email, role')
         .in('id', organizerIds);
       
       if (users) {
-        organizerMap = new Map(users.map(u => [u.id, u.email]));
+        organizerMap = new Map(users.map(u => [u.id, { email: u.email, role: u.role }]));
       }
     }
 
     return (data || []).map((t: any) => ({
       id: `tournament-${t.id}`,
       type: 'tournament_created' as const,
-      userEmail: organizerMap.get(t.organizer_id) || 'Unknown',
+      userEmail: organizerMap.get(t.organizer_id)?.email || 'Unknown',
       userId: t.organizer_id,
-      userRole: 'organizer',
+      userRole: organizerMap.get(t.organizer_id)?.role || 'organizer',
       entityName: t.name,
       entityId: t.id,
       createdAt: t.created_at,
@@ -111,18 +111,18 @@ export class ActivityMonitorService {
       return [];
     }
 
-    // Get organizer emails
+    // Get organizer info including role
     const organizerIds = [...new Set((data || []).map((g: any) => g.tournaments?.organizer_id).filter(Boolean))];
-    let organizerMap = new Map<string, string>();
+    let organizerMap = new Map<string, { email: string; role: string }>();
     
     if (organizerIds.length > 0) {
       const { data: users } = await supabase
         .from('users')
-        .select('id, email')
+        .select('id, email, role')
         .in('id', organizerIds);
       
       if (users) {
-        organizerMap = new Map(users.map(u => [u.id, u.email]));
+        organizerMap = new Map(users.map(u => [u.id, { email: u.email, role: u.role }]));
       }
     }
 
@@ -139,9 +139,9 @@ export class ActivityMonitorService {
       .map((g: any) => ({
         id: `game-${g.id}`,
         type: 'game_scheduled' as const,
-        userEmail: organizerMap.get(g.tournaments?.organizer_id) || 'Unknown',
+        userEmail: organizerMap.get(g.tournaments?.organizer_id)?.email || 'Unknown',
         userId: g.tournaments?.organizer_id || '',
-        userRole: 'organizer',
+        userRole: organizerMap.get(g.tournaments?.organizer_id)?.role || 'organizer',
         entityName: `${g.team_a?.name || 'TBD'} vs ${g.team_b?.name || 'TBD'}`,
         entityId: g.id,
         parentEntityName: g.tournaments?.name,
@@ -160,7 +160,7 @@ export class ActivityMonitorService {
     let query = supabase
       .from('teams')
       .select(`
-        id, name, created_at, tournament_id,
+        id, name, created_at, tournament_id, coach_id,
         tournaments:tournament_id(id, name, organizer_id)
       `)
       .gte('created_at', cutoff)
@@ -176,33 +176,43 @@ export class ActivityMonitorService {
       return [];
     }
 
-    // Get organizer emails
-    const organizerIds = [...new Set((data || []).map((t: any) => t.tournaments?.organizer_id).filter(Boolean))];
-    let organizerMap = new Map<string, string>();
+    // Collect all user IDs (organizers from tournaments + coaches)
+    const organizerIds = (data || []).map((t: any) => t.tournaments?.organizer_id).filter(Boolean);
+    const coachIds = (data || []).map((t: any) => t.coach_id).filter(Boolean);
+    const allUserIds = [...new Set([...organizerIds, ...coachIds])];
     
-    if (organizerIds.length > 0) {
+    let userMap = new Map<string, { email: string; role: string }>();
+    
+    if (allUserIds.length > 0) {
       const { data: users } = await supabase
         .from('users')
-        .select('id, email')
-        .in('id', organizerIds);
+        .select('id, email, role')
+        .in('id', allUserIds);
       
       if (users) {
-        organizerMap = new Map(users.map(u => [u.id, u.email]));
+        userMap = new Map(users.map(u => [u.id, { email: u.email, role: u.role }]));
       }
     }
 
-    return (data || []).map((t: any) => ({
-      id: `team-${t.id}`,
-      type: 'team_created' as const,
-      userEmail: organizerMap.get(t.tournaments?.organizer_id) || 'Unknown',
-      userId: t.tournaments?.organizer_id || '',
-      userRole: 'organizer',
-      entityName: t.name,
-      entityId: t.id,
-      parentEntityName: t.tournaments?.name,
-      parentEntityId: t.tournaments?.id,
-      createdAt: t.created_at,
-    }));
+    return (data || []).map((t: any) => {
+      // Determine creator: organizer (via tournament) or coach (direct)
+      const creatorId = t.tournaments?.organizer_id || t.coach_id;
+      const creatorInfo = userMap.get(creatorId);
+      const defaultRole = t.tournaments?.organizer_id ? 'organizer' : 'coach';
+      
+      return {
+        id: `team-${t.id}`,
+        type: 'team_created' as const,
+        userEmail: creatorInfo?.email || 'Unknown',
+        userId: creatorId || '',
+        userRole: creatorInfo?.role || defaultRole,
+        entityName: t.name,
+        entityId: t.id,
+        parentEntityName: t.tournaments?.name,
+        parentEntityId: t.tournaments?.id,
+        createdAt: t.created_at,
+      };
+    });
   }
 
   /**
@@ -220,10 +230,10 @@ export class ActivityMonitorService {
     }
 
     const organizerIds = [...new Set((data || []).map(t => t.organizer_id).filter(Boolean))];
-    let organizerMap = new Map<string, string>();
+    let organizerMap = new Map<string, { email: string; role: string }>();
     if (organizerIds.length > 0) {
-      const { data: users } = await supabase.from('users').select('id, email').in('id', organizerIds);
-      if (users) organizerMap = new Map(users.map(u => [u.id, u.email]));
+      const { data: users } = await supabase.from('users').select('id, email, role').in('id', organizerIds);
+      if (users) organizerMap = new Map(users.map(u => [u.id, { email: u.email, role: u.role }]));
     }
 
     return (data || [])
@@ -231,9 +241,9 @@ export class ActivityMonitorService {
       .map((t: any) => ({
         id: `stream-${t.id}`,
         type: 'live_stream_started' as const,
-        userEmail: organizerMap.get(t.organizer_id) || 'Unknown',
+        userEmail: organizerMap.get(t.organizer_id)?.email || 'Unknown',
         userId: t.organizer_id,
-        userRole: 'organizer',
+        userRole: organizerMap.get(t.organizer_id)?.role || 'organizer',
         entityName: t.name,
         entityId: t.id,
         createdAt: t.updated_at || new Date().toISOString(),
@@ -260,10 +270,10 @@ export class ActivityMonitorService {
     }
 
     const statAdminIds = [...new Set((data || []).map((g: any) => g.stat_admin_id).filter(Boolean))];
-    let adminMap = new Map<string, string>();
+    let adminMap = new Map<string, { email: string; role: string }>();
     if (statAdminIds.length > 0) {
-      const { data: users } = await supabase.from('users').select('id, email').in('id', statAdminIds);
-      if (users) adminMap = new Map(users.map(u => [u.id, u.email]));
+      const { data: users } = await supabase.from('users').select('id, email, role').in('id', statAdminIds);
+      if (users) adminMap = new Map(users.map(u => [u.id, { email: u.email, role: u.role }]));
     }
 
     return (data || [])
@@ -277,15 +287,87 @@ export class ActivityMonitorService {
       .map((g: any) => ({
         id: `tracking-${g.id}`,
         type: 'manual_tracking_started' as const,
-        userEmail: adminMap.get(g.stat_admin_id) || 'Unknown',
+        userEmail: adminMap.get(g.stat_admin_id)?.email || 'Unknown',
         userId: g.stat_admin_id || '',
-        userRole: 'stat_admin',
+        userRole: adminMap.get(g.stat_admin_id)?.role || 'stat_admin',
         entityName: `${g.team_a?.name || 'TBD'} vs ${g.team_b?.name || 'TBD'}`,
         entityId: g.id,
         parentEntityName: g.tournaments?.name,
         parentEntityId: g.tournaments?.id,
         createdAt: g.updated_at || new Date().toISOString(),
       }));
+  }
+
+  /**
+   * Fetch video tracking requests within time range
+   */
+  private static async fetchVideoActivities(
+    cutoff: string,
+    search?: string
+  ): Promise<ActivityItem[]> {
+    const { data, error } = await supabase
+      .from('game_videos')
+      .select(`
+        id, status, created_at, uploaded_by, game_id,
+        games:game_id(
+          id,
+          team_a:teams!team_a_id(name),
+          team_b:teams!team_b_id(name),
+          tournaments:tournament_id(id, name)
+        )
+      `)
+      .gte('created_at', cutoff)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching video activities:', error.message || error);
+      return [];
+    }
+
+    // Get uploader info
+    const uploaderIds = [...new Set((data || []).map((v: any) => v.uploaded_by).filter(Boolean))];
+    let userMap = new Map<string, { email: string; role: string }>();
+    
+    if (uploaderIds.length > 0) {
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, email, role')
+        .in('id', uploaderIds);
+      
+      if (users) {
+        userMap = new Map(users.map(u => [u.id, { email: u.email, role: u.role }]));
+      }
+    }
+
+    return (data || [])
+      .filter((v: any) => {
+        if (!search) return true;
+        const term = search.toLowerCase();
+        const game = v.games;
+        return game?.team_a?.name?.toLowerCase().includes(term) ||
+               game?.team_b?.name?.toLowerCase().includes(term) ||
+               game?.tournaments?.name?.toLowerCase().includes(term);
+      })
+      .map((v: any) => {
+        const uploaderInfo = userMap.get(v.uploaded_by);
+        const game = v.games;
+        const gameName = game 
+          ? `${game.team_a?.name || 'TBD'} vs ${game.team_b?.name || 'TBD'}`
+          : 'Unknown Game';
+        
+        return {
+          id: `video-${v.id}`,
+          type: 'video_uploaded' as const,
+          userEmail: uploaderInfo?.email || 'Unknown',
+          userId: v.uploaded_by || '',
+          userRole: uploaderInfo?.role || 'coach',
+          entityName: gameName,
+          entityId: v.game_id,
+          parentEntityName: game?.tournaments?.name,
+          parentEntityId: game?.tournaments?.id,
+          createdAt: v.created_at,
+        };
+      });
   }
 
   /**
@@ -354,6 +436,9 @@ export class ActivityMonitorService {
     if (filters.activityType === 'all' || filters.activityType === 'tracking') {
       activities.push(...await this.fetchTrackingActivities(search));
     }
+    if (filters.activityType === 'all' || filters.activityType === 'videos') {
+      activities.push(...await this.fetchVideoActivities(cutoff, search));
+    }
 
     // Filter by user type
     let filtered = activities;
@@ -391,7 +476,7 @@ export class ActivityMonitorService {
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
 
-    const [tournaments, streams, users] = await Promise.all([
+    const [tournaments, streams, users, videos] = await Promise.all([
       supabase
         .from('tournaments')
         .select('id', { count: 'exact', head: true })
@@ -404,12 +489,16 @@ export class ActivityMonitorService {
         .from('users')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', todayISO),
+      supabase
+        .from('game_videos')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['pending', 'processing', 'ready']),
     ]);
 
     return {
       newTournaments: tournaments.count || 0,
       liveStreams: streams.count || 0,
-      videosPending: 0, // TODO: Add when video_tracking_jobs table is available
+      videosPending: videos.count || 0,
       newUsers: users.count || 0,
     };
   }
