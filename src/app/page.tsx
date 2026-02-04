@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { HeroSection } from '@/components/HeroSection';
@@ -20,7 +21,24 @@ const TournamentViewer = dynamic(() => import('@/components/TournamentViewer').t
 const TournamentPage = dynamic(() => import('@/components/TournamentPage').then(mod => ({ default: mod.TournamentPage })), { ssr: false });
 
 export default function HomePage() {
+  const router = useRouter();
   const [currentView, setCurrentView] = useState<'landing' | 'tournament' | 'tournamentPage'>('landing');
+
+  // Detect password recovery tokens and redirect to reset page
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const hash = window.location.hash.substring(1);
+    if (!hash) return;
+    
+    const params = new URLSearchParams(hash);
+    const tokenType = params.get('type');
+    
+    // If this is a recovery token, redirect to reset password page with the hash
+    if (tokenType === 'recovery') {
+      router.replace(`/auth/reset-password#${hash}`);
+    }
+  }, [router]);
 
   const navigateToTournament = () => {
     setCurrentView('tournament');

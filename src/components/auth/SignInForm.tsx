@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import Link from 'next/link';
 import { AuthInput } from './AuthInput';
 import { authPageStyles } from './styles/AuthPageStyles';
 
@@ -56,8 +57,27 @@ export const SignInForm: React.FC<SignInFormProps> = ({
         disabled={disabled || loading}
       />
       
-      <div style={{ marginBottom: '8px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)' }}>
-        Password must be at least 6 characters long
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '16px', 
+        fontSize: '12px', 
+      }}>
+        <span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+          Password must be at least 6 characters
+        </span>
+        <Link 
+          href="/auth/reset-password"
+          style={{ 
+            color: '#ffffff',
+            textDecoration: 'underline',
+            fontWeight: '600',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+          }}
+        >
+          Forgot password?
+        </Link>
       </div>
 
       <button
