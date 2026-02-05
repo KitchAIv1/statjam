@@ -13,6 +13,7 @@ import { NavigationHeader } from '@/components/NavigationHeader';
 import { Button } from '@/components/ui/Button';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCheckoutReturn } from '@/hooks/useCheckoutReturn';
 import { useTournaments } from '@/lib/hooks/useTournaments';
 import { GameService } from '@/lib/services/gameService';
 import { cache, CacheTTL } from '@/lib/utils/cache';
@@ -43,6 +44,9 @@ function VideoSelectContent() {
   
   const hasVideoAccess = limits.hasVideoAccess || videoCredits > 0;
   
+  // Handle checkout return (toast + subscription refresh + redirect to saved URL)
+  useCheckoutReturn({ role: 'organizer' });
+  
   const [loading, setLoading] = useState(false);
   const [games, setGames] = useState<GameWithVideo[]>([]);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -54,14 +58,6 @@ function VideoSelectContent() {
       setShowUpgradeModal(true);
     }
   }, [authLoading, subLoading, hasVideoAccess]);
-  
-  // Handle checkout success
-  useEffect(() => {
-    if (searchParams.get('checkout') === 'video_success') {
-      refetchSubscription();
-      window.history.replaceState({}, '', '/dashboard/organizer-video/select');
-    }
-  }, [searchParams, refetchSubscription]);
   
   // Load completed games - OPTIMIZED: Single JOIN query with caching
   useEffect(() => {

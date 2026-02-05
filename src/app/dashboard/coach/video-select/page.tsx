@@ -14,6 +14,7 @@ import { NavigationHeader } from '@/components/NavigationHeader';
 import { Button } from '@/components/ui/Button';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCheckoutReturn } from '@/hooks/useCheckoutReturn';
 import { CoachGameService } from '@/lib/services/coachGameService';
 import { CoachTeamService } from '@/lib/services/coachTeamService';
 import { VideoStatService } from '@/lib/services/videoStatService';
@@ -50,6 +51,9 @@ function VideoSelectContent() {
   
   // User has video access if subscribed OR has video credits
   const hasVideoAccess = limits.hasVideoAccess || videoCredits > 0;
+  
+  // Handle checkout return (toast + subscription refresh + redirect to saved URL)
+  useCheckoutReturn({ role: 'coach' });
   
   // Use URL teamId if provided, otherwise default to first team
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(urlTeamId);

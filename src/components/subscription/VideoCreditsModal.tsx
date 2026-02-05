@@ -15,6 +15,7 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/Button';
 import { VIDEO_CREDIT_PACKAGES } from '@/config/pricing';
 import { StripeService } from '@/lib/services/stripeService';
+import { saveCheckoutReturnUrl } from '@/lib/utils/checkoutSession';
 import { useAuthV2 } from '@/hooks/useAuthV2';
 import type { VideoCreditPackage } from '@/lib/types/subscription';
 import type { UserRole } from '@/lib/types/subscription';
@@ -53,6 +54,9 @@ export function VideoCreditsModal({
       setIsLoading(true);
       setSelectedPackage(pkg);
       setError(null);
+
+      // Save current URL for return after checkout
+      saveCheckoutReturnUrl(window.location.pathname + window.location.search);
 
       await StripeService.redirectToCheckout({
         priceId: pkg.stripePriceId,
