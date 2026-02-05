@@ -8,6 +8,7 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
+import { useAuthV2 } from './useAuthV2';
 import { useSubscription } from './useSubscription';
 import type { UserRole } from '@/lib/types/subscription';
 
@@ -21,10 +22,14 @@ interface UseCheckoutReturnOptions {
  */
 export function useCheckoutReturn({ role }: UseCheckoutReturnOptions): void {
   const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuthV2();
   const { refetch } = useSubscription(role);
   const hasHandledRef = useRef(false);
 
   useEffect(() => {
+    // Wait for auth to be ready and user to be loaded
+    if (authLoading || !user) return;
+    
     // Prevent double-handling (React 18 strict mode)
     if (hasHandledRef.current) return;
     
@@ -33,35 +38,42 @@ export function useCheckoutReturn({ role }: UseCheckoutReturnOptions): void {
 
     hasHandledRef.current = true;
 
-    // Handle success
+    // Handle success - use custom toast with StatJam orange branding
     if (checkoutStatus === 'success' || checkoutStatus === 'video_success') {
       const isVideoCredits = checkoutStatus === 'video_success';
       
-      toast.success(
-        isVideoCredits ? '🎬 Video credits added!' : '🎉 Welcome to Pro!',
-        {
-          description: isVideoCredits 
-            ? 'Your video tracking credits are now available.'
-            : 'Your subscription is now active. Enjoy all premium features!',
-          duration: 5000,
-        }
-      );
+      toast(isVideoCredits ? '🎬 Video credits added!' : '🎉 Welcome to Pro!', {
+        description: isVideoCredits 
+          ? 'Your video tracking credits are now available.'
+          : 'Your subscription is now active. Enjoy all premium features!',
+        duration: 5000,
+        style: {
+          background: 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)',
+          color: 'white',
+          border: 'none',
+        },
+      });
       
       // Refresh subscription data
       refetch();
     }
 
-    // Handle cancellation
+    // Handle cancellation - use neutral styling
     if (checkoutStatus === 'cancelled') {
-      toast.info('Checkout cancelled', {
+      toast('Checkout cancelled', {
         description: 'No worries — you can upgrade anytime.',
         duration: 3000,
+        style: {
+          background: '#374151',
+          color: 'white',
+          border: 'none',
+        },
       });
     }
 
     // Clean URL (remove checkout param)
     cleanCheckoutParam();
-  }, [searchParams, refetch]);
+  }, [searchParams, refetch, authLoading, user]);
 }
 
 /**
