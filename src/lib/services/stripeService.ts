@@ -7,6 +7,7 @@
 
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import type { UserRole, PricingTier } from '@/lib/types/subscription';
+import { saveCheckoutReturnUrl } from '@/lib/utils/checkoutSession';
 
 // Lazy-load Stripe.js
 let stripePromise: Promise<Stripe | null> | null = null;
@@ -74,6 +75,9 @@ export async function redirectToCheckout(options: CheckoutOptions): Promise<void
   }
 
   const { url, sessionId } = await response.json();
+
+  // Save current URL for return navigation
+  saveCheckoutReturnUrl();
 
   // Redirect to Stripe Checkout
   if (url) {

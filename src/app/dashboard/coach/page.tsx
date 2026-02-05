@@ -17,6 +17,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useCheckoutReturn } from '@/hooks/useCheckoutReturn';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WelcomeChecklist } from '@/components/onboarding/WelcomeChecklist';
@@ -40,6 +41,9 @@ const CoachDashboardContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userRole = user?.role;
+
+  // Handle checkout return (success/cancel toast + subscription refresh)
+  useCheckoutReturn({ role: 'coach' });
   
   // URL section parameter - only used for legacy team management view
   const section = searchParams.get('section');

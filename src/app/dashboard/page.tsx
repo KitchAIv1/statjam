@@ -3,6 +3,7 @@
 import React, { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useCheckoutReturn } from '@/hooks/useCheckoutReturn';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { OrganizerDashboard } from '@/components/OrganizerDashboard';
 import { OrganizerGuidePanel } from '@/components/guide';
@@ -19,6 +20,9 @@ const OrganizerDashboardContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userRole = user?.role;
+
+  // Handle checkout return (success/cancel toast + subscription refresh)
+  useCheckoutReturn({ role: 'organizer' });
 
   // Handle auth and role redirects
   useEffect(() => {
