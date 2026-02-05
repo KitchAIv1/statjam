@@ -8,8 +8,6 @@ import { useOrganizerDashboardData } from "@/hooks/useOrganizerDashboardData";
 import { useRouter } from "next/navigation";
 import { OrganizerGuideCallout } from "@/components/guide";
 import { useOrganizerGuide } from "@/contexts/OrganizerGuideContext";
-import { useSubscription } from "@/hooks/useSubscription";
-import { Video, ShoppingCart } from "lucide-react";
 
 // Enhanced status styling function for overview cards
 function getOverviewStatusClasses(status: string) {
@@ -30,52 +28,6 @@ function getOverviewStatusClasses(status: string) {
 
 interface OrganizerDashboardOverviewProps {
   user: { id: string } | null;
-}
-
-// Inline Video Credits Card - replaces deleted widget
-function VideoCreditsQuickCard() {
-  const { videoCredits, loading } = useSubscription('organizer');
-  const router = useRouter();
-  
-  if (loading) {
-    return (
-      <Card className="animate-pulse">
-        <CardContent className="p-4">
-          <div className="h-6 bg-muted rounded w-2/3 mb-2" />
-          <div className="h-4 bg-muted rounded w-1/3" />
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  return (
-    <Card className="hover:shadow-lg transition-all duration-300 border-orange-200">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-              <Video className="w-5 h-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Video Credits</p>
-              <p className="text-sm text-muted-foreground">
-                {videoCredits > 0 ? `${videoCredits} credits available` : 'No credits'}
-              </p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => router.push('/dashboard/organizer-video/select')}
-            className="gap-2 border-orange-300 text-orange-600 hover:bg-orange-50"
-          >
-            <ShoppingCart className="w-4 h-4" />
-            {videoCredits > 0 ? 'Upload Video' : 'Buy Credits'}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewProps) {
@@ -212,9 +164,6 @@ export function OrganizerDashboardOverview({ user }: OrganizerDashboardOverviewP
           </Card>
         ))}
       </div>
-
-      {/* Video Tracking Credits - Quick Access */}
-      <VideoCreditsQuickCard />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Enhanced Tournament Cards */}
