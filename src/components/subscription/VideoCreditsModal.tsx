@@ -58,6 +58,9 @@ export function VideoCreditsModal({
       // Save current URL for return after checkout
       saveCheckoutReturnUrl(window.location.pathname + window.location.search);
 
+      // Organizer dashboard is at /dashboard, others at /dashboard/{role}
+      const dashboardPath = role === 'organizer' ? '/dashboard' : `/dashboard/${role}`;
+
       await StripeService.redirectToCheckout({
         priceId: pkg.stripePriceId,
         userId: user.id,
@@ -65,8 +68,8 @@ export function VideoCreditsModal({
         role: role,
         tierId: `video_${pkg.id}`,
         mode: 'payment', // One-time payment for video credits
-        successUrl: `${window.location.origin}/dashboard/${role}?checkout=video_success`,
-        cancelUrl: `${window.location.origin}/dashboard/${role}?checkout=cancelled`,
+        successUrl: `${window.location.origin}${dashboardPath}?checkout=video_success`,
+        cancelUrl: `${window.location.origin}${dashboardPath}?checkout=cancelled`,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process purchase');
