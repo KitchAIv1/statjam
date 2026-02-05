@@ -6,10 +6,11 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuthV2 } from './useAuthV2';
 import { useSubscription } from './useSubscription';
+import { getAndClearCheckoutReturnUrl } from '@/lib/utils/checkoutSession';
 import type { UserRole } from '@/lib/types/subscription';
 
 interface UseCheckoutReturnOptions {
@@ -22,6 +23,7 @@ interface UseCheckoutReturnOptions {
  */
 export function useCheckoutReturn({ role }: UseCheckoutReturnOptions): void {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { user, loading: authLoading } = useAuthV2();
   const { refetch } = useSubscription(role);
   const hasHandledRef = useRef(false);
@@ -37,6 +39,9 @@ export function useCheckoutReturn({ role }: UseCheckoutReturnOptions): void {
     if (!checkoutStatus) return;
 
     hasHandledRef.current = true;
+
+    // Get saved return URL (where user was before checkout)
+    const savedReturnUrl = getAndClearCheckoutReturnUrl();
 
     // Handle success - use custom toast with StatJam orange branding
     if (checkoutStatus === 'success' || checkoutStatus === 'video_success') {
@@ -71,9 +76,16 @@ export function useCheckoutReturn({ role }: UseCheckoutReturnOptions): void {
       });
     }
 
-    // Clean URL (remove checkout param)
-    cleanCheckoutParam();
-  }, [searchParams, refetch, authLoading, user]);
+    // Redirect to saved return URL if exists, otherwise just clean the param
+    if (savedReturnUrl && savedReturnUrl !== window.location.pathname) {
+      // Small delay to ensure toast is visible before navigation
+      setTimeout(() => {
+        router.replace(savedReturnUrl);
+      }, 100);
+    } else {
+      cleanCheckoutParam();
+    }
+  }, [searchParams, refetch, authLoading, user, router]);
 }
 
 /**

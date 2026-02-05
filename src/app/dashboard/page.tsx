@@ -49,8 +49,13 @@ const OrganizerDashboardContent = () => {
     }
 
     // ✅ Default to overview section if no section specified
+    // Preserve checkout param if present (for useCheckoutReturn to handle)
     if (!loading && user && userRole === 'organizer' && !searchParams.get('section')) {
-      router.replace('/dashboard?section=overview');
+      const checkoutParam = searchParams.get('checkout');
+      const redirectUrl = checkoutParam 
+        ? `/dashboard?section=overview&checkout=${checkoutParam}`
+        : '/dashboard?section=overview';
+      router.replace(redirectUrl);
     }
   }, [loading, user, userRole, router, searchParams]);
 
