@@ -74,6 +74,15 @@ export class RtmpReconnector {
     await this.sleep(delay);
 
     try {
+      // CRITICAL: Request client to restart MediaRecorder BEFORE spawning new FFmpeg
+      // MediaRecorder only sends init segment once at start - new FFmpeg needs it
+      console.log('📤 Requesting client to restart MediaRecorder...');
+      this.sendMessage(ws, { type: 'rtmp_needs_restart' });
+      
+      // Wait for client to restart MediaRecorder and send fresh init segment
+      await this.sleep(1500);
+      
+      // NOW spawn FFmpeg - it will receive fresh init segment from restarted MediaRecorder
       const ffmpegArgs = callbacks.buildFfmpegArgs();
       const ffmpeg = spawn('ffmpeg', ffmpegArgs, { stdio: ['pipe', 'pipe', 'pipe'] });
 

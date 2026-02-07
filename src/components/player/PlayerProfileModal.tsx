@@ -538,8 +538,8 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                   </div>
                 </div>
 
-                {/* Game Stats (from Award) or Season Averages */}
-                {gameStats ? (
+                {/* Game Stats (if available) */}
+                {gameStats && (
                   <div>
                     <p className={`mb-2 sm:mb-4 text-xs sm:text-sm font-medium uppercase tracking-wider ${
                       isAwardView ? 'text-yellow-50' : 'text-orange-100'
@@ -671,9 +671,11 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                       </>
                     )}
                   </div>
-                ) : (
-                  <div>
-                    <p className="text-orange-100 mb-2 sm:mb-4 text-xs sm:text-sm font-medium uppercase tracking-wider">Season Averages</p>
+                )}
+
+                {/* Season Averages - Always show */}
+                <div>
+                  <p className="text-orange-100 mb-2 sm:mb-4 text-xs sm:text-sm font-medium uppercase tracking-wider">Season Averages</p>
                     <div className="flex flex-nowrap gap-4 sm:gap-6 lg:gap-8 mb-4 sm:mb-6">
                       <div className="flex-shrink-0">
                         <div className="text-2xl sm:text-2xl lg:text-3xl font-bold text-white">
@@ -727,7 +729,6 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
                       </div>
                     </div>
                   </div>
-                )}
 
                 {/* Career Highs - 2 rows x 3 columns grid for compact layout */}
                 {!isAwardView && (

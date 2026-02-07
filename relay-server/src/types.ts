@@ -8,7 +8,7 @@ export interface StreamConfig {
 }
 
 export interface ServerMessage {
-  type: 'ready' | 'error' | 'rtmp_reconnecting' | 'rtmp_reconnected' | 'rtmp_failed';
+  type: 'ready' | 'error' | 'rtmp_reconnecting' | 'rtmp_reconnected' | 'rtmp_failed' | 'rtmp_needs_restart';
   error?: string;
   attempt?: number;
   maxRetries?: number;

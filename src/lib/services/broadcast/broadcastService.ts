@@ -20,6 +20,10 @@ export class BroadcastService {
     error: null,
     connectionStatus: 'idle',
   };
+  
+  // Store stream and quality for MediaRecorder restart during reconnection
+  private currentStream: MediaStream | null = null;
+  private currentQuality: typeof QUALITY_PRESETS['720p'] | null = null;
 
   constructor(relayServerUrl: string = 'ws://localhost:8080') {
     this.relayServerUrl = relayServerUrl;
@@ -68,6 +72,10 @@ export class BroadcastService {
       this.ws.close();
       this.ws = null;
     }
+    
+    // Clear stored stream and quality
+    this.currentStream = null;
+    this.currentQuality = null;
 
     this.updateState({
       isBroadcasting: false,
@@ -82,6 +90,10 @@ export class BroadcastService {
    */
   private async connectToRelay(stream: MediaStream, config: BroadcastConfig): Promise<void> {
     const quality = QUALITY_PRESETS[config.quality || '1080p'];
+    
+    // Store for potential MediaRecorder restart during reconnection
+    this.currentStream = stream;
+    this.currentQuality = quality;
     
     console.log('🔌 Connecting to relay server:', this.relayServerUrl);
     
@@ -121,6 +133,10 @@ export class BroadcastService {
               reconnectAttempt: message.attempt,
               maxReconnectAttempts: message.maxRetries,
             });
+          } else if (message.type === 'rtmp_needs_restart') {
+            // CRITICAL: Relay server needs us to restart MediaRecorder for fresh init segment
+            console.log('🔄 Restarting MediaRecorder for RTMP reconnection...');
+            this.restartMediaRecorder();
           } else if (message.type === 'rtmp_reconnected') {
             console.log('✅ RTMP reconnected successfully');
             this.updateState({ 
@@ -154,6 +170,27 @@ export class BroadcastService {
 
       this.ws = ws;
     });
+  }
+  
+  /**
+   * Restart MediaRecorder to send fresh init segment for RTMP reconnection
+   * MediaRecorder only sends WebM init segment at start - new FFmpeg needs it
+   */
+  private restartMediaRecorder(): void {
+    if (!this.ws || !this.currentStream || !this.currentQuality) {
+      console.error('❌ Cannot restart MediaRecorder - missing stream or quality');
+      return;
+    }
+    
+    // Stop current MediaRecorder
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      console.log('🛑 Stopping current MediaRecorder...');
+      this.mediaRecorder.stop();
+    }
+    
+    // Start fresh MediaRecorder - this sends new init segment
+    console.log('🎬 Starting fresh MediaRecorder with new init segment...');
+    this.startMediaRecorder(this.currentStream, this.ws, this.currentQuality);
   }
 
   /**

@@ -93,12 +93,22 @@ export async function GET(
     const allCustomPlayerIds = [...new Set([...teamCustomPlayerIds, ...statsCustomPlayerIds, ...subCustomPlayerInIds, ...subCustomPlayerOutIds])];
 
     // Fetch users for player_id values
-    const { data: allUsers } = allPlayerIds.length > 0 
-      ? await supabaseAdmin.from('users').select('id, name, email, avatar_url, profile_photo_url').in('id', allPlayerIds)
-      : { data: [] };
+    let allUsers: any[] = [];
+    if (allPlayerIds.length > 0) {
+      const { data, error } = await supabaseAdmin
+        .from('users')
+        .select('id, name, email, profile_photo_url')
+        .in('id', allPlayerIds);
+      
+      if (error) {
+        console.error('❌ Game viewer API: users query error:', error);
+      } else {
+        allUsers = data || [];
+      }
+    }
     
     // Find player_ids NOT found in users (might be custom players)
-    const foundUserIds = new Set((allUsers || []).map(u => u.id));
+    const foundUserIds = new Set(allUsers.map(u => u.id));
     const missingPlayerIds = allPlayerIds.filter(id => !foundUserIds.has(id));
     const allPossibleCustomPlayerIds = [...new Set([...allCustomPlayerIds, ...missingPlayerIds])];
 
@@ -122,8 +132,8 @@ export async function GET(
     let computedTeamBStats = null;
     
     if (game.is_coach_game && stats && stats.length > 0) {
-      const usersMap = new Map((allUsers || []).map(u => [u.id, u]));
-      const customPlayersMap = new Map((allCustomPlayers || []).map(cp => [cp.id, cp]));
+      const usersMap = new Map(allUsers.map(u => [u.id, u]));
+      const customPlayersMap = new Map(allCustomPlayers.map(cp => [cp.id, cp]));
       
       computedTeamAStats = computeTeamStats(stats, game.team_a_id, true, usersMap, customPlayersMap);
       computedTeamBStats = computeOpponentStats(stats);
@@ -135,8 +145,8 @@ export async function GET(
       game,
       teams: teams || [],
       teamPlayers: teamPlayers || [],
-      users: allUsers || [],
-      customPlayers: allCustomPlayers || [],
+      users: allUsers,
+      customPlayers: allCustomPlayers,
       stats: stats || [],
       substitutions: substitutions || [],
       timeouts: timeouts || [],

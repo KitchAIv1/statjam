@@ -197,8 +197,9 @@ function handleConfig(ws: WebSocket, config: {
   sessions.set(ws, session);
   setupFfmpegHandlers(ws, ffmpeg, session);
   
+  // Send ready immediately - client needs to start sending data for FFmpeg to process
   ws.send(JSON.stringify({ type: 'ready' }));
-  console.log(`✅ FFmpeg ready, waiting for video data...`);
+  console.log(`✅ FFmpeg spawned, ready for video data...`);
 }
 
 // Track bytes for logging
