@@ -300,8 +300,10 @@ export function useLiveGamesHybrid() {
       }
     );
     
-    // ✅ CRITICAL FIX: Subscribe to game_stats updates to recalculate scores
-    // Debounce to batch rapid stat updates
+    // ❌ DISABLED: Was causing 95% database load by subscribing to ALL game_stats
+    // Scores will update via games table subscription + backup polling (5-10 sec delay is acceptable for scoreboard)
+    // See Sentry analysis: realtime.list_changes was consuming 95% of DB time
+    /*
     const unsubscribeStats = hybridSupabaseService.subscribe(
       'game_stats',
       '*', // Subscribe to all game_stats (we'll filter by game_id in fetchLiveGames)
@@ -328,10 +330,11 @@ export function useLiveGamesHybrid() {
         maxReconnectAttempts: 5
       }
     );
+    */
     
     const unsubscribe = () => {
       unsubscribeGames();
-      unsubscribeStats();
+      // unsubscribeStats(); // Disabled - see above
       if (statsUpdateTimeoutRef.current) {
         clearTimeout(statsUpdateTimeoutRef.current);
         statsUpdateTimeoutRef.current = null;
