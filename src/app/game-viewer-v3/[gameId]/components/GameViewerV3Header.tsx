@@ -94,7 +94,7 @@ export function GameViewerV3Header() {
       )}
 
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between max-w-3xl mx-auto">
           {/* Team A */}
           <TeamDisplay
             name={teamA?.name || 'Team A'}
