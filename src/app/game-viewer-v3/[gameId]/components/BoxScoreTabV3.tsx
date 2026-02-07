@@ -77,24 +77,24 @@ function TeamBoxScoreTable({ teamBoxScore, onPlayerClick, isDark = true }: TeamB
         <span className="text-2xl font-bold text-orange-400">{totalPoints}</span>
       </div>
 
-      {/* Stats Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px]">
+      {/* Stats Table - Mobile scrollable */}
+      <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+        <table className="w-full min-w-[700px]">
           <thead>
-            <tr className={`text-xs uppercase ${isDark ? 'bg-gray-700/30 text-gray-400' : 'bg-orange-50/30 text-gray-600'}`}>
-              <th className="py-2 px-2 text-left">Player</th>
-              <th className="py-2 px-2 text-center">MIN</th>
-              <th className="py-2 px-2 text-center">PTS</th>
-              <th className="py-2 px-2 text-center">FG</th>
-              <th className="py-2 px-2 text-center">3PT</th>
-              <th className="py-2 px-2 text-center">FT</th>
-              <th className="py-2 px-2 text-center">REB</th>
-              <th className="py-2 px-2 text-center">AST</th>
-              <th className="py-2 px-2 text-center">STL</th>
-              <th className="py-2 px-2 text-center">BLK</th>
-              <th className="py-2 px-2 text-center">TO</th>
-              <th className="py-2 px-2 text-center">PF</th>
-              <th className="py-2 px-2 text-center">+/-</th>
+            <tr className={`text-[10px] sm:text-xs uppercase ${isDark ? 'bg-gray-700/30 text-gray-400' : 'bg-orange-50/30 text-gray-600'}`}>
+              <th className="py-2 px-1 sm:px-2 text-left whitespace-nowrap">Player</th>
+              <th className="py-2 px-1 sm:px-2 text-center">MIN</th>
+              <th className="py-2 px-1 sm:px-2 text-center">PTS</th>
+              <th className="py-2 px-1 sm:px-2 text-center">FG</th>
+              <th className="py-2 px-1 sm:px-2 text-center">3PT</th>
+              <th className="py-2 px-1 sm:px-2 text-center">FT</th>
+              <th className="py-2 px-1 sm:px-2 text-center">REB</th>
+              <th className="py-2 px-1 sm:px-2 text-center">AST</th>
+              <th className="py-2 px-1 sm:px-2 text-center">STL</th>
+              <th className="py-2 px-1 sm:px-2 text-center">BLK</th>
+              <th className="py-2 px-1 sm:px-2 text-center">TO</th>
+              <th className="py-2 px-1 sm:px-2 text-center">PF</th>
+              <th className="py-2 px-1 sm:px-2 text-center">+/-</th>
             </tr>
           </thead>
           <tbody>
@@ -153,20 +153,20 @@ function TeamTotalsRow({ players, isDark = true }: TeamTotalsRowProps) {
   );
 
   return (
-    <tr className={`font-semibold ${isDark ? 'bg-gray-700/20 text-gray-200' : 'bg-orange-50/50 text-gray-700'}`}>
-      <td className="py-3 px-2">TOTALS</td>
-      <td className="py-3 px-2 text-center">{totals.minutes}</td>
-      <td className="py-3 px-2 text-center text-orange-400">{totals.points}</td>
-      <td className="py-3 px-2 text-center">{totals.fgm}/{totals.fga}</td>
-      <td className="py-3 px-2 text-center">{totals.tpm}/{totals.tpa}</td>
-      <td className="py-3 px-2 text-center">{totals.ftm}/{totals.fta}</td>
-      <td className="py-3 px-2 text-center">{totals.reb}</td>
-      <td className="py-3 px-2 text-center">{totals.ast}</td>
-      <td className="py-3 px-2 text-center">{totals.stl}</td>
-      <td className="py-3 px-2 text-center">{totals.blk}</td>
-      <td className="py-3 px-2 text-center">{totals.to}</td>
-      <td className="py-3 px-2 text-center">{totals.pf}</td>
-      <td className="py-3 px-2 text-center">-</td>
+    <tr className={`font-semibold text-xs sm:text-sm ${isDark ? 'bg-gray-700/20 text-gray-200' : 'bg-orange-50/50 text-gray-700'}`}>
+      <td className="py-2 sm:py-3 px-1 sm:px-2">TOTALS</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">{totals.minutes}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center text-orange-400">{totals.points}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">{totals.fgm}/{totals.fga}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">{totals.tpm}/{totals.tpa}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">{totals.ftm}/{totals.fta}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">{totals.reb}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">{totals.ast}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">{totals.stl}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">{totals.blk}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">{totals.to}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">{totals.pf}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">-</td>
     </tr>
   );
 }

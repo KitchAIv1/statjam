@@ -47,9 +47,9 @@ export function PlayerRowV3({ playerStats, isExpanded = false, onClick, isDark =
       onClick={onClick}
     >
       {/* Player Info */}
-      <td className="py-3 px-2">
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-orange-100'}`}>
+      <td className="py-2 sm:py-3 px-1 sm:px-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-orange-100'}`}>
             {profilePhotoUrl ? (
               <Image
                 src={profilePhotoUrl}
@@ -59,59 +59,59 @@ export function PlayerRowV3({ playerStats, isExpanded = false, onClick, isDark =
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className={`w-full h-full flex items-center justify-center text-xs ${mutedColor}`}>
+              <div className={`w-full h-full flex items-center justify-center text-[10px] sm:text-xs ${mutedColor}`}>
                 {jerseyNumber ?? '-'}
               </div>
             )}
           </div>
-          <span className={`text-sm truncate max-w-[100px] ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>{playerName}</span>
+          <span className={`text-xs sm:text-sm truncate max-w-[80px] sm:max-w-[100px] ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>{playerName}</span>
         </div>
       </td>
 
       {/* Minutes */}
-      <td className={`py-3 px-2 text-center ${textColor}`}>{minutes}</td>
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center text-xs sm:text-sm ${textColor}`}>{minutes}</td>
 
       {/* Points */}
-      <td className="py-3 px-2 text-center font-bold text-orange-400">{points}</td>
+      <td className="py-2 sm:py-3 px-1 sm:px-2 text-center font-bold text-orange-400 text-xs sm:text-sm">{points}</td>
 
       {/* Field Goals */}
-      <td className={`py-3 px-2 text-center text-sm ${textColor}`}>
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center text-xs sm:text-sm ${textColor}`}>
         {fieldGoalsMade}/{fieldGoalsAttempted}
         {isExpanded && <span className={`ml-1 ${mutedColor}`}>({fgPct}%)</span>}
       </td>
 
       {/* 3-Pointers */}
-      <td className={`py-3 px-2 text-center text-sm ${textColor}`}>
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center text-xs sm:text-sm ${textColor}`}>
         {threePointersMade}/{threePointersAttempted}
         {isExpanded && <span className={`ml-1 ${mutedColor}`}>({tpPct}%)</span>}
       </td>
 
       {/* Free Throws */}
-      <td className={`py-3 px-2 text-center text-sm ${textColor}`}>
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center text-xs sm:text-sm ${textColor}`}>
         {freeThrowsMade}/{freeThrowsAttempted}
         {isExpanded && <span className={`ml-1 ${mutedColor}`}>({ftPct}%)</span>}
       </td>
 
       {/* Rebounds */}
-      <td className={`py-3 px-2 text-center ${textColor}`}>{rebounds}</td>
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center text-xs sm:text-sm ${textColor}`}>{rebounds}</td>
 
       {/* Assists */}
-      <td className={`py-3 px-2 text-center ${textColor}`}>{assists}</td>
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center text-xs sm:text-sm ${textColor}`}>{assists}</td>
 
       {/* Steals */}
-      <td className={`py-3 px-2 text-center ${textColor}`}>{steals}</td>
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center text-xs sm:text-sm ${textColor}`}>{steals}</td>
 
       {/* Blocks */}
-      <td className={`py-3 px-2 text-center ${textColor}`}>{blocks}</td>
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center text-xs sm:text-sm ${textColor}`}>{blocks}</td>
 
       {/* Turnovers */}
-      <td className={`py-3 px-2 text-center ${textColor}`}>{turnovers}</td>
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center text-xs sm:text-sm ${textColor}`}>{turnovers}</td>
 
       {/* Fouls */}
-      <td className={`py-3 px-2 text-center ${textColor}`}>{fouls}</td>
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center text-xs sm:text-sm ${textColor}`}>{fouls}</td>
 
       {/* Plus/Minus */}
-      <td className={`py-3 px-2 text-center font-medium ${
+      <td className={`py-2 sm:py-3 px-1 sm:px-2 text-center font-medium text-xs sm:text-sm ${
         plusMinus > 0 ? 'text-green-500' : plusMinus < 0 ? 'text-red-500' : mutedColor
       }`}>
         {plusMinus > 0 ? `+${plusMinus}` : plusMinus}

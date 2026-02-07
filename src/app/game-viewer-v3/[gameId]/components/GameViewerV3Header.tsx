@@ -62,9 +62,9 @@ export function GameViewerV3Header() {
     <header className={isDark ? 'bg-gray-800 border-b border-gray-700' : 'bg-white border-b border-orange-200 shadow-sm'}>
       {/* Finals Banner */}
       {isFinals && (
-        <div className="relative w-full overflow-hidden bg-gradient-to-r from-amber-600 via-yellow-400 to-amber-600 py-2 px-4 border-b border-amber-700">
+        <div className="relative w-full overflow-hidden bg-gradient-to-r from-amber-600 via-yellow-400 to-amber-600 py-2 border-b border-amber-700">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
-          <div className="relative z-10 flex items-center justify-center gap-2">
+          <div className="relative z-10 max-w-6xl mx-auto px-4 flex items-center justify-center gap-2">
             <Trophy className="w-4 h-4 text-amber-900" />
             <span className="text-sm font-black text-amber-900 uppercase tracking-[0.15em]">
               Championship Game
@@ -84,8 +84,8 @@ export function GameViewerV3Header() {
 
       {/* Playoffs Badge */}
       {isPlayoffs && !isFinals && (
-        <div className="bg-purple-600/20 border-b border-purple-500/30 py-1.5 px-4">
-          <div className="flex items-center justify-center gap-2">
+        <div className="bg-purple-600/20 border-b border-purple-500/30 py-1.5">
+          <div className="max-w-6xl mx-auto px-4 flex items-center justify-center gap-2">
             <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">
               🏆 Playoffs
             </span>
