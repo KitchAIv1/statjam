@@ -156,7 +156,7 @@ export function LiveGamesTab({ tournamentId }: LiveGamesTabProps) {
             leftScore={game.home_score || 0}
             rightScore={game.away_score || 0}
             timeLabel={formatClock(game.quarter, game.game_clock_minutes, game.game_clock_seconds)}
-            onClick={() => window.open(`/game-viewer/${game.id}`, '_blank')}
+            onClick={() => window.open(`/game-viewer-v3/${game.id}`, '_blank')}
             isLive
           />
         </div>

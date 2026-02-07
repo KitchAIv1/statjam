@@ -142,7 +142,7 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
                       rightScore={g.away_score || 0}
                       timeLabel={timeLabel}
                       isLive
-                      onClick={() => { router.push(`/game-viewer/${g.id}`); }}
+                      onClick={() => { router.push(`/game-viewer-v3/${g.id}`); }}
                     />
                   );
                 })}
@@ -163,7 +163,7 @@ export function LiveTournamentSection({ onWatchLive, onViewTournament }: LiveTou
                       rightScore={g.away_score || 0}
                       timeLabel={timeLabel}
                       isLive={false}
-                      onClick={() => { router.push(`/game-viewer/${g.id}`); }}
+                      onClick={() => { router.push(`/game-viewer-v3/${g.id}`); }}
                     />
                   );
                 })}

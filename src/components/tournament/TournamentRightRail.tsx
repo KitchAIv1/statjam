@@ -173,7 +173,7 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
               <div
                 key={game.id}
                 className="cursor-pointer rounded-xl border border-white/10 bg-white/5 p-3 transition hover:border-[#FF3B30]/30 hover:bg-white/10"
-                onClick={() => window.open(`/game-viewer/${game.id}`, '_blank')}
+                onClick={() => window.open(`/game-viewer-v3/${game.id}`, '_blank')}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -297,7 +297,7 @@ function UpcomingGameItem({ gameId, teamA, teamB, gameDate, gamePhase }: { gameI
   return (
     <div 
       className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-xs cursor-pointer hover:border-white/10 hover:bg-white/10 transition"
-      onClick={() => window.open(`/game-viewer/${gameId}`, '_blank')}
+      onClick={() => window.open(`/game-viewer-v3/${gameId}`, '_blank')}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">

@@ -369,7 +369,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                     gameStatus={matchup.status}
                     gameDate={matchup.gameDate}
                     gamePhase={matchup.gamePhase}
-                    onClick={() => window.open(`/game-viewer/${matchup.gameId}`, '_blank')}
+                    onClick={() => window.open(`/game-viewer-v3/${matchup.gameId}`, '_blank')}
                   />
                 </div>
               ))}
@@ -558,7 +558,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
               <div
                 key={game.gameId}
                 className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 px-3 py-2 cursor-pointer hover:bg-white/10 transition"
-                onClick={() => window.open(`/game-viewer/${game.gameId}`, '_blank')}
+                onClick={() => window.open(`/game-viewer-v3/${game.gameId}`, '_blank')}
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-white truncate">

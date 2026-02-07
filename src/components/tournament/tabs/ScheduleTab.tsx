@@ -147,7 +147,7 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                     <button
                       onClick={() => {
                         if (canView) {
-                          window.open(`/game-viewer/${game.id}`, '_blank');
+                          window.open(`/game-viewer-v3/${game.id}`, '_blank');
                         }
                       }}
                       disabled={!canView}
