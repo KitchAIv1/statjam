@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { BroadcastService } from '@/lib/services/broadcast';
 import { BroadcastConfig, BroadcastState } from '@/lib/services/broadcast/types';
 
@@ -48,6 +49,7 @@ export function useBroadcast(options: UseBroadcastOptions = {}): UseBroadcastRet
         },
       });
     } catch (err) {
+      Sentry.captureException(err, { tags: { feature: 'live-broadcast', source: 'useBroadcast' } });
       const error = err instanceof Error ? err.message : 'Failed to start broadcast';
       setState(prev => ({ ...prev, error, connectionStatus: 'error' }));
     }

@@ -212,6 +212,8 @@ export class BroadcastService {
           captureBroadcastError(err, 'ws_close_before_ready', { relay: this.getRelayHost() });
           settle(() => reject(err));
         } else if (this.state.isBroadcasting) {
+          const err = new Error('Stream connection lost (WebSocket closed mid-broadcast)');
+          captureBroadcastError(err, 'ws_disconnected_mid_stream', { relay: this.getRelayHost() });
           broadcastBreadcrumb('disconnected');
           this.updateState({ connectionStatus: 'disconnected', isBroadcasting: false });
         }

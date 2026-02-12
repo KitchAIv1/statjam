@@ -32,6 +32,7 @@ npm start
 ## Environment Variables
 
 - `PORT` - WebSocket server port (default: 8080)
+- `SENTRY_DSN` - (optional) Sentry DSN for error tracking; when set, relay errors (FFmpeg, RTMP, WebSocket) are reported. Omit for no Sentry.
 
 ## Architecture
 

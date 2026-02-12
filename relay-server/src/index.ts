@@ -5,6 +5,10 @@
  * Supports multiple simultaneous users.
  */
 
+import { initSentry, captureRelayError } from './sentry';
+
+initSentry();
+
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { spawn, ChildProcess } from 'child_process';
@@ -137,6 +141,7 @@ wss.on('connection', (ws: WebSocket) => {
       }
     } catch (err) {
       console.error('❌ Message error:', err);
+      captureRelayError(err instanceof Error ? err : new Error(String(err)), 'invalid_message');
       sendError(ws, 'Invalid message format');
     }
   });
@@ -148,6 +153,7 @@ wss.on('connection', (ws: WebSocket) => {
 
   ws.on('error', (err) => {
     console.error('❌ WebSocket error:', err.message);
+    captureRelayError(err, 'ws_error');
     cleanupSession(ws);
   });
 });
@@ -165,6 +171,7 @@ function handleConfig(ws: WebSocket, config: {
   const { rtmpUrl, streamKey, hasAudio = false, ffmpegBitrate, ffmpegMaxrate } = config;
   
   if (!rtmpUrl || !streamKey) {
+    captureRelayError(new Error('Missing rtmpUrl or streamKey'), 'config_invalid');
     sendError(ws, 'Missing rtmpUrl or streamKey');
     return;
   }
@@ -229,7 +236,10 @@ function handleVideoData(ws: WebSocket, videoData: Buffer): void {
       }
     }
   } catch (err) {
-    // Ignore write errors (stream may have closed)
+    const e = err as NodeJS.ErrnoException;
+    if (e?.code !== 'EPIPE') {
+      captureRelayError(err instanceof Error ? err : new Error(String(err)), 'ffmpeg_stdin_error');
+    }
   }
 }
 
@@ -246,6 +256,7 @@ function setupFfmpegHandlers(ws: WebSocket, ffmpeg: ChildProcess, session: Strea
 
   ffmpeg.on('error', (err) => {
     console.error('❌ FFmpeg process error:', err.message);
+    captureRelayError(err, 'ffmpeg_error');
     sendError(ws, 'FFmpeg failed');
   });
 
@@ -274,6 +285,7 @@ function setupFfmpegHandlers(ws: WebSocket, ffmpeg: ChildProcess, session: Strea
   ffmpeg.stdin?.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code !== 'EPIPE') {
       console.error('❌ FFmpeg stdin error:', err.message);
+      captureRelayError(err, 'ffmpeg_stdin_error');
     }
   });
 }

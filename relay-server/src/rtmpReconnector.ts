@@ -9,6 +9,7 @@
 
 import { ChildProcess, spawn } from 'child_process';
 import { WebSocket } from 'ws';
+import { captureRelayError } from './sentry';
 
 export interface ReconnectorConfig {
   maxRetries: number;
@@ -55,6 +56,11 @@ export class RtmpReconnector {
 
     if (this.retryCount >= this.config.maxRetries) {
       console.log(`❌ Max reconnect attempts (${this.config.maxRetries}) reached`);
+      captureRelayError(
+        new Error(`RTMP reconnect exhausted after ${this.retryCount} attempts`),
+        'rtmp_reconnect_exhausted',
+        { retries: this.retryCount }
+      );
       this.sendMessage(ws, { type: 'rtmp_failed', retries: this.retryCount });
       callbacks.onReconnectFailed();
       return false;
@@ -88,6 +94,7 @@ export class RtmpReconnector {
 
       ffmpeg.on('error', (err) => {
         console.error('❌ FFmpeg respawn error:', err.message);
+        captureRelayError(err, 'ffmpeg_respawn_error');
         this.isReconnecting = false;
       });
 
@@ -98,6 +105,7 @@ export class RtmpReconnector {
       return true;
     } catch (err) {
       console.error('❌ FFmpeg respawn failed:', err);
+      captureRelayError(err instanceof Error ? err : new Error(String(err)), 'ffmpeg_respawn_exception');
       this.isReconnecting = false;
       return this.attemptReconnect(ws, 1, callbacks); // Retry
     }
