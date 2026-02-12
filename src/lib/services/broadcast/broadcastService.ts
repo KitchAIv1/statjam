@@ -4,10 +4,24 @@
  * Uses MediaRecorder to encode stream and send to relay server.
  * Relay server pipes to FFmpeg for RTMP output.
  * 
- * Limits: < 200 lines
+ * Limits: < 250 lines
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { BroadcastConfig, BroadcastState, BroadcastCallbacks, QUALITY_PRESETS } from './types';
+
+const LIVE_STREAM_TAGS = { feature: 'live-broadcast' } as const;
+
+function captureBroadcastError(error: Error, failureType: string, extra?: Record<string, unknown>) {
+  Sentry.captureException(error, {
+    tags: { ...LIVE_STREAM_TAGS, failure_type: failureType },
+    extra,
+  });
+}
+
+function broadcastBreadcrumb(message: string, data?: Record<string, unknown>) {
+  Sentry.addBreadcrumb({ category: 'live-broadcast', message, data });
+}
 
 export class BroadcastService {
   private ws: WebSocket | null = null;
@@ -85,6 +99,9 @@ export class BroadcastService {
     });
   }
 
+  /** Connection timeout (ms) - fail fast if relay unreachable or slow */
+  private static readonly CONNECT_TIMEOUT_MS = 30000;
+
   /**
    * Connect to relay server and start MediaRecorder
    */
@@ -96,9 +113,24 @@ export class BroadcastService {
     this.currentQuality = quality;
     
     console.log('🔌 Connecting to relay server:', this.relayServerUrl);
-    
+    broadcastBreadcrumb('connecting', { relay: this.getRelayHost() });
+
     return new Promise((resolve, reject) => {
+      let settled = false;
+      const settle = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        fn();
+      };
+
       const ws = new WebSocket(this.relayServerUrl);
+      const timeoutId = setTimeout(() => {
+        const err = new Error('Connection timed out. Check your network or try again.');
+        captureBroadcastError(err, 'timeout', { relay: this.getRelayHost() });
+        settle(() => reject(err));
+        ws.close();
+      }, BroadcastService.CONNECT_TIMEOUT_MS);
 
       ws.onopen = () => {
         console.log('📡 Connected to relay server');
@@ -122,12 +154,16 @@ export class BroadcastService {
           
           if (message.type === 'ready') {
             console.log('✅ Relay ready, starting MediaRecorder');
+            broadcastBreadcrumb('connected');
             this.startMediaRecorder(stream, ws, quality);
-            resolve();
+            settle(() => resolve());
           } else if (message.type === 'error') {
-            reject(new Error(message.error));
+            const err = new Error(message.error);
+            captureBroadcastError(err, 'relay_error', { relay: this.getRelayHost(), message: message.error });
+            settle(() => reject(err));
           } else if (message.type === 'rtmp_reconnecting') {
             console.log(`🔄 RTMP reconnecting (${message.attempt}/${message.maxRetries})...`);
+            broadcastBreadcrumb('reconnecting', { attempt: message.attempt, maxRetries: message.maxRetries });
             this.updateState({ 
               connectionStatus: 'reconnecting',
               reconnectAttempt: message.attempt,
@@ -139,6 +175,7 @@ export class BroadcastService {
             this.restartMediaRecorder();
           } else if (message.type === 'rtmp_reconnected') {
             console.log('✅ RTMP reconnected successfully');
+            broadcastBreadcrumb('reconnected');
             this.updateState({ 
               connectionStatus: 'connected',
               reconnectAttempt: undefined,
@@ -146,9 +183,14 @@ export class BroadcastService {
             });
           } else if (message.type === 'rtmp_failed') {
             console.error(`❌ RTMP reconnection failed after ${message.retries} attempts`);
+            const err = new Error(`Stream connection lost after ${message.retries} reconnect attempts`);
+            captureBroadcastError(err, 'rtmp_failed', {
+              relay: this.getRelayHost(),
+              retries: message.retries,
+            });
             this.updateState({ 
               connectionStatus: 'error',
-              error: `Stream connection lost after ${message.retries} reconnect attempts`,
+              error: err.message,
               isBroadcasting: false,
             });
           }
@@ -159,11 +201,18 @@ export class BroadcastService {
 
       ws.onerror = (event) => {
         console.error('❌ WebSocket connection failed to relay server:', this.relayServerUrl, event);
-        reject(new Error('WebSocket connection failed'));
+        const err = new Error('WebSocket connection failed');
+        captureBroadcastError(err, 'ws_error', { relay: this.getRelayHost() });
+        settle(() => reject(err));
       };
 
       ws.onclose = () => {
-        if (this.state.isBroadcasting) {
+        if (!settled) {
+          const err = new Error('Connection closed before stream could start');
+          captureBroadcastError(err, 'ws_close_before_ready', { relay: this.getRelayHost() });
+          settle(() => reject(err));
+        } else if (this.state.isBroadcasting) {
+          broadcastBreadcrumb('disconnected');
           this.updateState({ connectionStatus: 'disconnected', isBroadcasting: false });
         }
       };
@@ -179,6 +228,11 @@ export class BroadcastService {
   private restartMediaRecorder(): void {
     if (!this.ws || !this.currentStream || !this.currentQuality) {
       console.error('❌ Cannot restart MediaRecorder - missing stream or quality');
+      captureBroadcastError(
+        new Error('Cannot restart MediaRecorder - missing stream or quality'),
+        'restart_failed',
+        { relay: this.getRelayHost() }
+      );
       return;
     }
     
@@ -217,6 +271,8 @@ export class BroadcastService {
 
     this.mediaRecorder.onerror = (event) => {
       console.error('❌ MediaRecorder error:', event);
+      const err = new Error('Recording failed');
+      captureBroadcastError(err, 'mediarecorder_error', { relay: this.getRelayHost() });
       this.updateState({ error: 'Recording failed', connectionStatus: 'error' });
     };
 
@@ -264,5 +320,14 @@ export class BroadcastService {
    */
   getState(): BroadcastState {
     return { ...this.state };
+  }
+
+  /** Sanitized relay host for logging (no credentials) */
+  private getRelayHost(): string {
+    try {
+      return new URL(this.relayServerUrl.replace(/^ws/, 'http')).hostname;
+    } catch {
+      return 'unknown';
+    }
   }
 }

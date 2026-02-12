@@ -45,6 +45,10 @@ interface RawTournament {
   country?: string | null;
   organizer_id?: string | null;
   logo?: string | null;
+  // Division fields (columns on tournaments table)
+  has_divisions?: boolean;
+  division_count?: number | null;
+  division_names?: string[] | null;
   // Live streaming fields
   is_streaming?: boolean;
   live_stream_url?: string | null;
@@ -61,7 +65,7 @@ export async function getTournamentPageData(slug: string): Promise<TournamentPag
   try {
     tournaments = await hybridSupabaseService.query<RawTournament>(
       'tournaments',
-      'id, name, status, start_date, end_date, venue, country, organizer_id, logo, is_streaming, live_stream_url, stream_platform',
+      'id, name, status, start_date, end_date, venue, country, organizer_id, logo, has_divisions, division_count, division_names, is_streaming, live_stream_url, stream_platform',
       { id: `eq.${slug}` }
     );
   } catch (error: any) {
@@ -102,17 +106,22 @@ async function safeQuery<T>(table: string, select: string, filters: Record<strin
 async function buildTournamentPageData(tournament: RawTournament): Promise<TournamentPageData> {
   const tournamentId = tournament.id;
 
-  const [teamCount, games, venues, divisions, sponsors] = await Promise.all([
+  // Only query actual tables (teams count + games) — venues & divisions are columns, not tables
+  const [teamCount, games, sponsors] = await Promise.all([
     TeamService.getTeamCountByTournament(tournamentId).catch(() => 0),
     GameService.getGamesByTournament(tournamentId).catch(() => []),
-    safeQuery<{ id: string }>('venues', 'id', { tournament_id: `eq.${tournamentId}` }),
-    safeQuery<{ id: string }>('divisions', 'id', { tournament_id: `eq.${tournamentId}` }),
     safeQuery<{ id: string; slot?: string | null; image_url?: string | null; link_url?: string | null }>(
       'sponsors',
       'id, slot, image_url, link_url',
       { tournament_id: `eq.${tournamentId}` }
     )
   ]);
+
+  // Venue is a column on tournaments table — count = 1 if venue exists, 0 otherwise
+  const venueCount = tournament.venue ? 1 : 0;
+
+  // Divisions are columns on tournaments table (has_divisions, division_count, division_names)
+  const divisionCount = tournament.division_count ?? (tournament.division_names?.length ?? 0);
 
   return {
     tournament: {
@@ -136,8 +145,8 @@ async function buildTournamentPageData(tournament: RawTournament): Promise<Tourn
     summary: {
       teamCount: teamCount ?? 0,
       gameCount: games?.length ?? 0,
-      venueCount: venues?.length ?? 0,
-      divisionCount: divisions?.length ?? 0
+      venueCount,
+      divisionCount,
     },
     sponsors: sponsors.map((sponsor) => ({
       id: sponsor.id,
