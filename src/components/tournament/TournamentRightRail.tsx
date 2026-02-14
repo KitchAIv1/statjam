@@ -2,6 +2,7 @@
 
 import { useMemo, useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useLiveGamesHybrid } from '@/hooks/useLiveGamesHybrid';
 import { useTournamentMatchups } from '@/hooks/useTournamentMatchups';
 import { useTournamentStreamStatus } from '@/hooks/useTournamentStreamStatus';
@@ -136,6 +137,7 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
           </header>
           {/* Stream content based on state */}
           <StreamContent
+            tournamentId={data.tournament.id}
             isStreaming={isStreaming}
             liveStreamUrl={liveStreamUrl}
             streamPlatform={streamPlatform}
@@ -185,7 +187,13 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
                         <Shield className="h-2.5 w-2.5 text-[#FF3B30]" />
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs text-white">{game.team_a_name || 'Team A'}</span>
+                    {game.team_a_id ? (
+                      <Link href={`/t/${data.tournament.id}/team/${game.team_a_id}`} className="text-xs text-white hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>
+                        {game.team_a_name || 'Team A'}
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-white">{game.team_a_name || 'Team A'}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-bold text-white">{game.home_score || 0}</span>
@@ -195,7 +203,13 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
                     <span className="text-sm font-bold text-white">{game.away_score || 0}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-white">{game.team_b_name || 'Team B'}</span>
+                    {game.team_b_id ? (
+                      <Link href={`/t/${data.tournament.id}/team/${game.team_b_id}`} className="text-xs text-white hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>
+                        {game.team_b_name || 'Team B'}
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-white">{game.team_b_name || 'Team B'}</span>
+                    )}
                     <Avatar className="h-5 w-5 shrink-0 border border-white/10">
                       {game.teamBLogo ? (
                         <AvatarImage src={game.teamBLogo} alt="" className="object-cover" loading="lazy" />
@@ -235,8 +249,9 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
             <UpcomingGameItem
               key={game.gameId}
               gameId={game.gameId}
-              teamA={game.teamA.name}
-              teamB={game.teamB.name}
+              tournamentId={data.tournament.id}
+              teamA={{ id: game.teamA.id, name: game.teamA.name }}
+              teamB={{ id: game.teamB.id, name: game.teamB.name }}
               gameDate={game.gameDate}
               gamePhase={game.gamePhase}
             />
@@ -277,7 +292,7 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
   );
 }
 
-function UpcomingGameItem({ gameId, teamA, teamB, gameDate, gamePhase }: { gameId: string; teamA: string; teamB: string; gameDate?: string; gamePhase?: 'regular' | 'playoffs' | 'finals' }) {
+function UpcomingGameItem({ gameId, tournamentId, teamA, teamB, gameDate, gamePhase }: { gameId: string; tournamentId?: string; teamA: { id?: string; name: string }; teamB: { id?: string; name: string }; gameDate?: string; gamePhase?: 'regular' | 'playoffs' | 'finals' }) {
   const formatGameDate = (dateString?: string): string => {
     if (!dateString) return 'TBD';
     try {
@@ -300,8 +315,18 @@ function UpcomingGameItem({ gameId, teamA, teamB, gameDate, gamePhase }: { gameI
       onClick={() => window.open(`/game-viewer-v3/${gameId}`, '_blank')}
     >
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <div className="text-white font-medium truncate">{teamA} vs {teamB}</div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {tournamentId && teamA.id ? (
+            <Link href={`/t/${tournamentId}/team/${teamA.id}`} className="text-white font-medium truncate hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>{teamA.name}</Link>
+          ) : (
+            <span className="text-white font-medium truncate">{teamA.name}</span>
+          )}
+          <span className="text-white/60">vs</span>
+          {tournamentId && teamB.id ? (
+            <Link href={`/t/${tournamentId}/team/${teamB.id}`} className="text-white font-medium truncate hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>{teamB.name}</Link>
+          ) : (
+            <span className="text-white font-medium truncate">{teamB.name}</span>
+          )}
           <PhaseBadge phase={gamePhase} size="sm" showIcon={false} />
         </div>
         <div className="flex items-center gap-1 text-[#B3B3B3] mt-0.5">
@@ -347,6 +372,7 @@ function formatClock(quarter?: number, minutes?: number, seconds?: number) {
 
 /** Stream content with contextual states - handles loading, live, ended, error */
 function StreamContent({
+  tournamentId,
   isStreaming,
   liveStreamUrl,
   streamPlatform,
@@ -355,13 +381,14 @@ function StreamContent({
   currentLiveGame,
   nextGame,
 }: {
+  tournamentId: string;
   isStreaming?: boolean;
   liveStreamUrl?: string | null;
   streamPlatform?: 'youtube' | 'twitch' | 'facebook' | null;
   streamPlayerState: PlayerState;
   onStateChange: (state: PlayerState) => void;
   currentLiveGame?: GameWithLogos;
-  nextGame?: { teamA: { name: string }; teamB: { name: string }; gameDate?: string };
+  nextGame?: { teamA: { id?: string; name: string }; teamB: { id?: string; name: string }; gameDate?: string };
 }) {
   const streamActive = isStreaming && liveStreamUrl && streamPlatform;
   
@@ -369,7 +396,7 @@ function StreamContent({
   if (!streamActive) {
     return (
       <div className="p-4 pt-3">
-        <NextStreamPlaceholder nextGame={nextGame} />
+        <NextStreamPlaceholder tournamentId={tournamentId} nextGame={nextGame} />
       </div>
     );
   }
@@ -378,7 +405,7 @@ function StreamContent({
   if (streamPlayerState === 'ended') {
     return (
       <div className="p-4 pt-3">
-        <NextStreamPlaceholder nextGame={nextGame} />
+        <NextStreamPlaceholder tournamentId={tournamentId} nextGame={nextGame} />
       </div>
     );
   }
@@ -429,7 +456,11 @@ function StreamContent({
                   <Shield className="h-2.5 w-2.5 text-[#FF3B30]" />
                 </AvatarFallback>
               </Avatar>
-              <span className="text-xs text-white font-medium">{currentLiveGame.team_a_name}</span>
+              {currentLiveGame.team_a_id ? (
+                <Link href={`/t/${tournamentId}/team/${currentLiveGame.team_a_id}`} className="text-xs text-white font-medium hover:text-[#FF3B30] transition-colors">{currentLiveGame.team_a_name}</Link>
+              ) : (
+                <span className="text-xs text-white font-medium">{currentLiveGame.team_a_name}</span>
+              )}
               <span className="text-sm font-bold text-white">{currentLiveGame.home_score ?? 0}</span>
             </div>
             <span className="text-[10px] text-[#FF3B30] font-semibold px-2 py-0.5 bg-[#FF3B30]/10 rounded">
@@ -437,7 +468,11 @@ function StreamContent({
             </span>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-white">{currentLiveGame.away_score ?? 0}</span>
-              <span className="text-xs text-white font-medium">{currentLiveGame.team_b_name}</span>
+              {currentLiveGame.team_b_id ? (
+                <Link href={`/t/${tournamentId}/team/${currentLiveGame.team_b_id}`} className="text-xs text-white font-medium hover:text-[#FF3B30] transition-colors">{currentLiveGame.team_b_name}</Link>
+              ) : (
+                <span className="text-xs text-white font-medium">{currentLiveGame.team_b_name}</span>
+              )}
               <Avatar className="h-5 w-5 border border-white/10">
                 {currentLiveGame.teamBLogo ? (
                   <AvatarImage src={currentLiveGame.teamBLogo} alt="" className="object-cover" />
@@ -455,7 +490,7 @@ function StreamContent({
 }
 
 /** Placeholder when no active stream - shows next upcoming game or generic message */
-function NextStreamPlaceholder({ nextGame }: { nextGame?: { teamA: { name: string }; teamB: { name: string }; gameDate?: string } }) {
+function NextStreamPlaceholder({ tournamentId, nextGame }: { tournamentId: string; nextGame?: { teamA: { id?: string; name: string }; teamB: { id?: string; name: string }; gameDate?: string } }) {
   const formatGameDate = (dateString?: string): string => {
     if (!dateString) return 'Soon';
     try {
@@ -479,7 +514,17 @@ function NextStreamPlaceholder({ nextGame }: { nextGame?: { teamA: { name: strin
         <>
           <p className="text-sm font-semibold text-white mb-1">Next Game Coming!</p>
           <p className="text-xs text-white/70 mb-2">
-            {nextGame.teamA.name} vs {nextGame.teamB.name}
+            {tournamentId && nextGame.teamA.id ? (
+              <Link href={`/t/${tournamentId}/team/${nextGame.teamA.id}`} className="hover:text-[#FF3B30] transition-colors">{nextGame.teamA.name}</Link>
+            ) : (
+              <span>{nextGame.teamA.name}</span>
+            )}
+            {' vs '}
+            {tournamentId && nextGame.teamB.id ? (
+              <Link href={`/t/${tournamentId}/team/${nextGame.teamB.id}`} className="hover:text-[#FF3B30] transition-colors">{nextGame.teamB.name}</Link>
+            ) : (
+              <span>{nextGame.teamB.name}</span>
+            )}
           </p>
           <p className="text-[10px] text-white/50">{formatGameDate(nextGame.gameDate)}</p>
         </>

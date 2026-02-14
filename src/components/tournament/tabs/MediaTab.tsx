@@ -49,6 +49,7 @@ export function MediaTab({ tournamentId }: MediaTabProps) {
               <GameReplayCard
                 key={replay.id}
                 replay={replay}
+                tournamentId={tournamentId}
                 isPlaying={activeReplayId === replay.id}
                 onPlay={(id) => setActiveReplayId(id)}
                 onClose={() => setActiveReplayId(null)}

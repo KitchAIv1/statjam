@@ -22,6 +22,8 @@ import { supabase } from '@/lib/supabase';
 export interface GameReplay {
   id: string;
   streamVideoId: string;
+  teamAId?: string;
+  teamBId?: string;
   teamAName: string;
   teamBName: string;
   teamALogo: string | null;
@@ -145,6 +147,8 @@ export function useGameReplays(tournamentId: string, options?: UseGameReplaysOpt
           return {
             id: game.id,
             streamVideoId: game.stream_video_id,
+            teamAId: game.team_a_id,
+            teamBId: game.team_b_id,
             teamAName: game.team_a?.name || 'Team A',
             teamBName: game.team_b?.name || 'Team B',
             teamALogo: game.team_a?.logo_url || null,

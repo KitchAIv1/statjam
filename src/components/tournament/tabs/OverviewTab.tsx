@@ -355,7 +355,9 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                 <div key={matchup.gameId} data-matchup-card>
                   <TeamMatchupCard
                     gameId={matchup.gameId}
+                    tournamentId={data.tournament.id}
                     teamA={{
+                      id: matchup.teamA.id,
                       name: matchup.teamA.name,
                       logo: matchup.teamA.logo,
                       score: matchup.teamA.score,
@@ -363,6 +365,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                       textColor: '#FFFFFF'
                     }}
                     teamB={{
+                      id: matchup.teamB.id,
                       name: matchup.teamB.name,
                       logo: matchup.teamB.logo,
                       score: matchup.teamB.score,

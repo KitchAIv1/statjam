@@ -1,12 +1,17 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { figmaColors, figmaTypography, figmaSpacing, figmaRadius, figmaShadows } from '@/lib/design/figmaTokens';
 
 interface LiveGameCardProps {
   gameId: string;
-  teamLeftName: string;
-  teamRightName: string;
+  /** Team names - use teamLeft/teamRight for optional links when ids + tournamentId provided */
+  teamLeftName?: string;
+  teamRightName?: string;
+  teamLeft?: { id?: string; name: string };
+  teamRight?: { id?: string; name: string };
+  tournamentId?: string;
   leftScore: number;
   rightScore: number;
   timeLabel: string; // e.g., Q2 05:32 or OT1 02:11
@@ -15,11 +20,16 @@ interface LiveGameCardProps {
 }
 
 // Lightweight, tokenized Figma-style live card
-export const LiveGameCard: React.FC<LiveGameCardProps> = React.memo(({ gameId, teamLeftName, teamRightName, leftScore, rightScore, timeLabel, onClick, isLive = true }) => {
+export const LiveGameCard: React.FC<LiveGameCardProps> = React.memo(({ gameId, teamLeftName, teamRightName, teamLeft, teamRight, tournamentId, leftScore, rightScore, timeLabel, onClick, isLive = true }) => {
+  const leftName = teamLeft?.name ?? teamLeftName ?? 'Team A';
+  const rightName = teamRight?.name ?? teamRightName ?? 'Team B';
   return (
-    <button
-      aria-label={`Open live game ${teamLeftName} vs ${teamRightName}`}
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Open live game ${leftName} vs ${rightName}`}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
       style={styles.card}
     >
       {/* Header: LIVE pill + time */}
@@ -44,10 +54,18 @@ export const LiveGameCard: React.FC<LiveGameCardProps> = React.memo(({ gameId, t
 
       {/* Teams */}
       <div style={styles.teamsRow}>
-        <div style={styles.teamName} className="sj-team-left">{teamLeftName}</div>
-        <div style={styles.teamName} className="sj-team-right">{teamRightName}</div>
+        {tournamentId && teamLeft?.id ? (
+          <Link href={`/t/${tournamentId}/team/${teamLeft.id}`} style={styles.teamName} className="sj-team-left" onClick={(e) => e.stopPropagation()}>{leftName}</Link>
+        ) : (
+          <div style={styles.teamName} className="sj-team-left">{leftName}</div>
+        )}
+        {tournamentId && teamRight?.id ? (
+          <Link href={`/t/${tournamentId}/team/${teamRight.id}`} style={styles.teamName} className="sj-team-right" onClick={(e) => e.stopPropagation()}>{rightName}</Link>
+        ) : (
+          <div style={styles.teamName} className="sj-team-right">{rightName}</div>
+        )}
       </div>
-    </button>
+    </div>
   );
 });
 

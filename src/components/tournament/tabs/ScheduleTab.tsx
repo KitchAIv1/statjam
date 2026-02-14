@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/Button';
@@ -128,7 +129,13 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                               <Shield className="h-[15px] w-[15px] text-[#FF3B30] sm:h-5 sm:w-5 md:h-[25px] md:w-[25px]" />
                             </AvatarFallback>
                           </Avatar>
-                          <span className="truncate text-xs font-semibold text-white sm:text-sm md:text-base">{teamAName}</span>
+                          {game.team_a_id ? (
+                            <Link href={`/t/${tournamentId}/team/${game.team_a_id}`} className="truncate text-xs font-semibold text-white sm:text-sm md:text-base hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>
+                              {teamAName}
+                            </Link>
+                          ) : (
+                            <span className="truncate text-xs font-semibold text-white sm:text-sm md:text-base">{teamAName}</span>
+                          )}
                         </div>
                         <span className="shrink-0 text-white/40 text-xs sm:text-sm" aria-hidden>vs</span>
                         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
@@ -140,7 +147,13 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                               <Shield className="h-[15px] w-[15px] text-[#FF3B30] sm:h-5 sm:w-5 md:h-[25px] md:w-[25px]" />
                             </AvatarFallback>
                           </Avatar>
-                          <span className="truncate text-xs font-semibold text-white sm:text-sm md:text-base">{teamBName}</span>
+                          {game.team_b_id ? (
+                            <Link href={`/t/${tournamentId}/team/${game.team_b_id}`} className="truncate text-xs font-semibold text-white sm:text-sm md:text-base hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>
+                              {teamBName}
+                            </Link>
+                          ) : (
+                            <span className="truncate text-xs font-semibold text-white sm:text-sm md:text-base">{teamBName}</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 md:gap-3">

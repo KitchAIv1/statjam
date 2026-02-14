@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useLiveGamesHybrid } from '@/hooks/useLiveGamesHybrid';
 import { TeamService } from '@/lib/services/tournamentService';
 import LiveGameCard from '@/components/LiveGameCard';
@@ -151,8 +152,9 @@ export function LiveGamesTab({ tournamentId }: LiveGamesTabProps) {
           )}
           <LiveGameCard
             gameId={game.id}
-            teamLeftName={game.team_a_name || 'Team A'}
-            teamRightName={game.team_b_name || 'Team B'}
+            tournamentId={tournamentId}
+            teamLeft={{ id: game.team_a_id, name: game.team_a_name || 'Team A' }}
+            teamRight={{ id: game.team_b_id, name: game.team_b_name || 'Team B' }}
             leftScore={game.home_score || 0}
             rightScore={game.away_score || 0}
             timeLabel={formatClock(game.quarter, game.game_clock_minutes, game.game_clock_seconds)}

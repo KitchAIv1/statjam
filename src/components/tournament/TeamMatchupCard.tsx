@@ -12,12 +12,14 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Trophy, Clock } from 'lucide-react';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
 import { PhaseRibbon } from './PhaseRibbon';
 
 export interface TeamMatchupCardProps {
   teamA: {
+    id?: string;
     name: string;
     logo?: string;
     score?: number;
@@ -25,12 +27,15 @@ export interface TeamMatchupCardProps {
     textColor?: string;
   };
   teamB: {
+    id?: string;
     name: string;
     logo?: string;
     score?: number;
     bgColor?: string;
     textColor?: string;
   };
+  /** When provided with team ids, team sections become clickable links */
+  tournamentId?: string;
   gameId: string;
   gameStatus: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   gameDate?: string;
@@ -41,6 +46,7 @@ export interface TeamMatchupCardProps {
 export function TeamMatchupCard({
   teamA,
   teamB,
+  tournamentId,
   gameStatus,
   gameDate,
   gamePhase,
@@ -102,28 +108,53 @@ export function TeamMatchupCard({
       <PhaseRibbon phase={gamePhase} position="top-left" />
       
       {/* Team A Section (Left) - Side by side with Team B */}
-      <div
-        className="relative flex flex-1 items-center justify-center overflow-hidden"
-        style={{ backgroundColor: teamABg, color: teamAText }}
-      >
-        {/* Team Logo - Edge to Edge */}
-        {teamA.logo ? (
-          <ImageWithFallback
-            src={teamA.logo}
-            alt={teamA.name}
-            className="h-full w-full object-cover"
-            fallback={
-              <div className="flex h-full w-full items-center justify-center bg-white/10 text-4xl font-bold">
-                {teamA.name.substring(0, 2).toUpperCase()}
-              </div>
-            }
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-white/10 text-4xl font-bold">
-            {teamA.name.substring(0, 2).toUpperCase()}
-          </div>
-        )}
-      </div>
+      {tournamentId && teamA.id ? (
+        <Link
+          href={`/t/${tournamentId}/team/${teamA.id}`}
+          className="relative flex flex-1 items-center justify-center overflow-hidden hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: teamABg, color: teamAText }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {teamA.logo ? (
+            <ImageWithFallback
+              src={teamA.logo}
+              alt={teamA.name}
+              className="h-full w-full object-cover"
+              fallback={
+                <div className="flex h-full w-full items-center justify-center bg-white/10 text-4xl font-bold">
+                  {teamA.name.substring(0, 2).toUpperCase()}
+                </div>
+              }
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-white/10 text-4xl font-bold">
+              {teamA.name.substring(0, 2).toUpperCase()}
+            </div>
+          )}
+        </Link>
+      ) : (
+        <div
+          className="relative flex flex-1 items-center justify-center overflow-hidden"
+          style={{ backgroundColor: teamABg, color: teamAText }}
+        >
+          {teamA.logo ? (
+            <ImageWithFallback
+              src={teamA.logo}
+              alt={teamA.name}
+              className="h-full w-full object-cover"
+              fallback={
+                <div className="flex h-full w-full items-center justify-center bg-white/10 text-4xl font-bold">
+                  {teamA.name.substring(0, 2).toUpperCase()}
+                </div>
+              }
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-white/10 text-4xl font-bold">
+              {teamA.name.substring(0, 2).toUpperCase()}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Score Badge (Floating) - Compact rectangle */}
       {!isScheduled && !isCancelled && (
@@ -171,28 +202,53 @@ export function TeamMatchupCard({
       )}
 
       {/* Team B Section (Right) */}
-      <div
-        className="relative flex flex-1 items-center justify-center overflow-hidden"
-        style={{ backgroundColor: teamBBg, color: teamBText }}
-      >
-        {/* Team Logo - Edge to Edge */}
-        {teamB.logo ? (
-          <ImageWithFallback
-            src={teamB.logo}
-            alt={teamB.name}
-            className="h-full w-full object-cover"
-            fallback={
-              <div className="flex h-full w-full items-center justify-center bg-black/10 text-4xl font-bold">
-                {teamB.name.substring(0, 2).toUpperCase()}
-              </div>
-            }
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-black/10 text-4xl font-bold">
-            {teamB.name.substring(0, 2).toUpperCase()}
-          </div>
-        )}
-      </div>
+      {tournamentId && teamB.id ? (
+        <Link
+          href={`/t/${tournamentId}/team/${teamB.id}`}
+          className="relative flex flex-1 items-center justify-center overflow-hidden hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: teamBBg, color: teamBText }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {teamB.logo ? (
+            <ImageWithFallback
+              src={teamB.logo}
+              alt={teamB.name}
+              className="h-full w-full object-cover"
+              fallback={
+                <div className="flex h-full w-full items-center justify-center bg-black/10 text-4xl font-bold">
+                  {teamB.name.substring(0, 2).toUpperCase()}
+                </div>
+              }
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-black/10 text-4xl font-bold">
+              {teamB.name.substring(0, 2).toUpperCase()}
+            </div>
+          )}
+        </Link>
+      ) : (
+        <div
+          className="relative flex flex-1 items-center justify-center overflow-hidden"
+          style={{ backgroundColor: teamBBg, color: teamBText }}
+        >
+          {teamB.logo ? (
+            <ImageWithFallback
+              src={teamB.logo}
+              alt={teamB.name}
+              className="h-full w-full object-cover"
+              fallback={
+                <div className="flex h-full w-full items-center justify-center bg-black/10 text-4xl font-bold">
+                  {teamB.name.substring(0, 2).toUpperCase()}
+                </div>
+              }
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-black/10 text-4xl font-bold">
+              {teamB.name.substring(0, 2).toUpperCase()}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

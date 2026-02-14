@@ -11,6 +11,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Play, ExternalLink } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { GameReplay } from '@/hooks/useGameReplays';
@@ -18,13 +19,22 @@ import { TournamentLiveStreamEmbed } from '@/components/live-streaming/Tournamen
 
 interface GameReplayCardProps {
   replay: GameReplay;
+  /** When provided with team ids in replay, team names become clickable links */
+  tournamentId?: string;
   /** ✅ YouTube-like: controlled by parent - only one video plays at a time */
   isPlaying?: boolean;
   onPlay?: (id: string) => void;
   onClose?: () => void;
 }
 
-export function GameReplayCard({ replay, isPlaying, onPlay, onClose }: GameReplayCardProps) {
+function TeamName({ name, id, tournamentId }: { name: string; id?: string; tournamentId?: string }) {
+  if (tournamentId && id) {
+    return <Link href={`/t/${tournamentId}/team/${id}`} className="hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>{name}</Link>;
+  }
+  return <span>{name}</span>;
+}
+
+export function GameReplayCard({ replay, tournamentId, isPlaying, onPlay, onClose }: GameReplayCardProps) {
   // ✅ Fallback to local state for standalone usage (backward compatible)
   const [localShowPlayer, setLocalShowPlayer] = useState(false);
   const [thumbnailError, setThumbnailError] = useState(false);
@@ -72,11 +82,11 @@ export function GameReplayCard({ replay, isPlaying, onPlay, onClose }: GameRepla
         />
         <div className="px-3 pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-white">
-            <span>{replay.teamAName}</span>
+            <TeamName name={replay.teamAName} id={replay.teamAId} tournamentId={tournamentId} />
             <span className="font-bold">{replay.homeScore}</span>
             <span className="text-white/50">-</span>
             <span className="font-bold">{replay.awayScore}</span>
-            <span>{replay.teamBName}</span>
+            <TeamName name={replay.teamBName} id={replay.teamBId} tournamentId={tournamentId} />
           </div>
           <button
             onClick={handleClose}
@@ -147,7 +157,7 @@ export function GameReplayCard({ replay, isPlaying, onPlay, onClose }: GameRepla
       {/* Info */}
       <div className="flex items-center justify-between text-xs">
         <span className="text-white font-medium truncate">
-          {replay.teamAName} vs {replay.teamBName}
+          <TeamName name={replay.teamAName} id={replay.teamAId} tournamentId={tournamentId} /> vs <TeamName name={replay.teamBName} id={replay.teamBId} tournamentId={tournamentId} />
         </span>
         <a
           href={youtubeUrl}
