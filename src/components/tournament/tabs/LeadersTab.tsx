@@ -7,6 +7,8 @@ import { PlayerProfileModal } from '@/components/player/PlayerProfileModal';
 import { usePlayerProfileModal } from '@/hooks/usePlayerProfileModal';
 import { useTournamentLeaders } from '@/hooks/useTournamentLeaders';
 import { LeaderboardTable, SortColumn, GamePhase } from '@/components/leaderboard';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface LeadersTabProps {
   tournamentId: string;
@@ -30,6 +32,7 @@ const SORT_TO_CATEGORY: Record<SortColumn, LeaderCategory> = {
  * Follows .cursorrules: <200 lines, single responsibility
  */
 export function LeadersTab({ tournamentId }: LeadersTabProps) {
+  const { theme } = useTournamentTheme();
   const [selectedCategory, setSelectedCategory] = useState<LeaderCategory>('points');
   const [minGames, setMinGames] = useState(1);
   const [gamePhase, setGamePhase] = useState<GamePhase>('all');
@@ -60,18 +63,18 @@ export function LeadersTab({ tournamentId }: LeadersTabProps) {
   }, [openModal]);
 
   return (
-    <Card className="rounded-xl border border-white/10 bg-white/5 p-3 text-white/80 backdrop-blur sm:rounded-2xl sm:p-4 md:rounded-3xl md:p-6">
+    <Card className={`rounded-xl border p-3 backdrop-blur sm:rounded-2xl sm:p-4 md:rounded-3xl md:p-6 ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)} ${getTournamentThemeClass('cardTextMuted', theme)}`}>
       <div className="flex flex-col gap-2 sm:gap-3 md:gap-4 md:flex-row md:items-center md:justify-between mb-4">
         <div>
-          <h2 className="text-base font-semibold text-white sm:text-lg md:text-xl">Leaders</h2>
-          <p className="text-[10px] text-white/50 sm:text-xs md:text-sm">Advanced stats refresh in real-time</p>
+          <h2 className={`text-base font-semibold sm:text-lg md:text-xl ${getTournamentThemeClass('cardText', theme)}`}>Leaders</h2>
+          <p className={`text-[10px] sm:text-xs md:text-sm ${getTournamentThemeClass('cardTextDim', theme)}`}>Advanced stats refresh in real-time</p>
         </div>
       </div>
 
       <Tabs defaultValue="players">
-        <TabsList className="grid w-full grid-cols-2 bg-white/5 mb-4">
-          <TabsTrigger value="players" className="text-[10px] sm:text-xs md:text-sm">Players</TabsTrigger>
-          <TabsTrigger value="teams" disabled className="text-[10px] sm:text-xs md:text-sm">Teams (Coming Soon)</TabsTrigger>
+        <TabsList className={`grid w-full grid-cols-2 mb-4 ${getTournamentThemeClass('cardBgSubtle', theme)}`}>
+          <TabsTrigger value="players" className={`text-[10px] sm:text-xs md:text-sm ${getTournamentThemeClass('cardText', theme)}`}>Players</TabsTrigger>
+          <TabsTrigger value="teams" disabled className={`text-[10px] sm:text-xs md:text-sm ${getTournamentThemeClass('cardTextDim', theme)}`}>Teams (Coming Soon)</TabsTrigger>
         </TabsList>
 
         <TabsContent value="players" className="mt-0">
@@ -89,7 +92,7 @@ export function LeadersTab({ tournamentId }: LeadersTabProps) {
         </TabsContent>
 
         <TabsContent value="teams" className="mt-0">
-          <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center text-white/60">
+          <div className={`rounded-2xl border p-8 text-center ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBg', theme)} ${getTournamentThemeClass('cardTextMuted', theme)}`}>
             Team leaders coming soon
           </div>
         </TabsContent>

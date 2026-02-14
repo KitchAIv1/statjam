@@ -14,6 +14,8 @@ import { useState, useCallback } from 'react';
 import { TournamentLiveStreamEmbed, PlayerState } from '@/components/live-streaming/TournamentLiveStreamEmbed';
 import { useTournamentStreamStatus } from '@/hooks/useTournamentStreamStatus';
 import { Tv, Video, ExternalLink } from 'lucide-react';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface LiveTabContentProps {
   tournamentId: string;
@@ -29,6 +31,7 @@ export function LiveTabContent({
   liveStreamUrl: initialLiveStreamUrl,
   streamPlatform: initialStreamPlatform,
 }: LiveTabContentProps) {
+  const { theme } = useTournamentTheme();
   const [playerState, setPlayerState] = useState<PlayerState>('loading');
   
   // Real-time subscription to streaming status - auto-updates on URL/toggle changes
@@ -62,13 +65,18 @@ export function LiveTabContent({
 
   const streamActive = isStreaming && liveStreamUrl && streamPlatform;
 
+  const placeholderClass = `rounded-xl border p-8 text-center ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('railSectionBg', theme)}`;
+  const iconClass = getTournamentThemeClass('emptyIcon', theme);
+  const textClass = getTournamentThemeClass('cardTextMuted', theme);
+  const subTextClass = getTournamentThemeClass('emptyText', theme);
+
   // No stream configured
   if (!streamActive) {
     return (
-      <div className="rounded-xl border border-white/10 bg-[#121212] p-8 text-center">
-        <Tv className="h-12 w-12 text-white/20 mx-auto mb-4" />
-        <p className="text-sm text-white/60">No active live stream</p>
-        <p className="text-xs text-white/40 mt-1">Check back when a game is being broadcast</p>
+      <div className={placeholderClass}>
+        <Tv className={`h-12 w-12 mx-auto mb-4 ${iconClass}`} />
+        <p className={`text-sm ${textClass}`}>No active live stream</p>
+        <p className={`text-xs mt-1 ${subTextClass}`}>Check back when a game is being broadcast</p>
       </div>
     );
   }
@@ -76,10 +84,10 @@ export function LiveTabContent({
   // Stream ended - show placeholder (replay available in Media Tab)
   if (playerState === 'ended') {
     return (
-      <div className="rounded-xl border border-white/10 bg-[#121212] p-8 text-center">
-        <Tv className="h-12 w-12 text-white/20 mx-auto mb-4" />
-        <p className="text-sm text-white/60">No active live stream</p>
-        <p className="text-xs text-white/40 mt-1">Check the Media tab for game replays</p>
+      <div className={placeholderClass}>
+        <Tv className={`h-12 w-12 mx-auto mb-4 ${iconClass}`} />
+        <p className={`text-sm ${textClass}`}>No active live stream</p>
+        <p className={`text-xs mt-1 ${subTextClass}`}>Check the Media tab for game replays</p>
       </div>
     );
   }
@@ -87,10 +95,10 @@ export function LiveTabContent({
   // Error loading stream
   if (playerState === 'error') {
     return (
-      <div className="rounded-xl border border-white/10 bg-[#121212] p-8 text-center">
-        <Video className="h-12 w-12 text-white/20 mx-auto mb-4" />
-        <p className="text-sm font-semibold text-white mb-1">Unable to Load Stream</p>
-        <p className="text-xs text-white/50 mb-4">Watch directly on the platform</p>
+      <div className={placeholderClass}>
+        <Video className={`h-12 w-12 mx-auto mb-4 ${iconClass}`} />
+        <p className={`text-sm font-semibold mb-1 ${getTournamentThemeClass('cardText', theme)}`}>Unable to Load Stream</p>
+        <p className={`text-xs mb-4 ${textClass}`}>Watch directly on the platform</p>
         <a
           href={liveStreamUrl}
           target="_blank"
@@ -106,7 +114,7 @@ export function LiveTabContent({
 
   // Stream active (loading, playing, buffering, paused, unstarted)
   return (
-    <section className="rounded-xl border border-white/10 bg-[#121212] overflow-hidden">
+    <section className={`rounded-xl border overflow-hidden ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('railSectionBg', theme)}`}>
       <TournamentLiveStreamEmbed
         streamUrl={liveStreamUrl}
         platform={streamPlatform}

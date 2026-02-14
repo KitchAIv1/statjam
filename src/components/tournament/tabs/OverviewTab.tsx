@@ -16,6 +16,8 @@ import { useTournamentAwards } from '@/hooks/useTournamentAwards';
 import { AwardDisplayCard } from '@/components/tournament/AwardDisplayCard';
 import { TeamMatchupCard } from '@/components/tournament/TeamMatchupCard';
 import { useTournamentMatchups } from '@/hooks/useTournamentMatchups';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface OverviewTabProps {
   data: TournamentPageData;
@@ -24,6 +26,7 @@ interface OverviewTabProps {
 
 
 export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
+  const { theme } = useTournamentTheme();
   const router = useRouter();
   const [topScorers, setTopScorers] = useState<PlayerLeader[]>([]);
   const [loadingLeaders, setLoadingLeaders] = useState(true);
@@ -258,42 +261,29 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
   return (
     <div className="space-y-3 sm:space-y-4 md:space-y-6">
       {/* Team Matchups Section */}
-      <Card className="space-y-3 overflow-hidden rounded-xl border border-white/10 bg-[#121212] p-3 sm:space-y-4 sm:rounded-2xl sm:p-4 md:space-y-6 md:p-6">
+      <Card className={`space-y-2 overflow-hidden rounded-xl border p-3 sm:space-y-2.5 sm:rounded-2xl sm:p-4 md:space-y-3 md:p-6 ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('railSectionBg', theme)}`}>
         <header className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-base font-semibold text-white sm:text-lg md:text-xl">Recent Matchups</h2>
-            <p className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">Completed games and upcoming schedule</p>
+            <h2 className={`text-base font-semibold sm:text-lg md:text-xl ${getTournamentThemeClass('cardText', theme)}`}>Recent Matchups</h2>
+            <p className={`text-[10px] sm:text-xs md:text-sm ${getTournamentThemeClass('cardTextMuted', theme)}`}>Completed games and upcoming schedule</p>
           </div>
           
-          {/* Filter Tabs - Compact rectangle style */}
-          <div className="flex gap-1 rounded border border-white/10 bg-black/40 p-0.5">
+          <div className={`flex gap-1 rounded border p-0.5 ${getTournamentThemeClass('filterPillBg', theme)}`}>
             <button
               onClick={() => setMatchupFilter('all')}
-              className={`rounded px-2.5 py-1 text-[10px] font-medium transition-colors sm:text-xs ${
-                matchupFilter === 'all'
-                  ? 'bg-[#FF3B30] text-white'
-                  : 'text-[#B3B3B3] hover:text-white'
-              }`}
+              className={`rounded px-2.5 py-1 text-[10px] font-medium transition-colors sm:text-xs ${matchupFilter === 'all' ? 'bg-[#FF3B30] text-white' : getTournamentThemeClass('filterPillInactive', theme)}`}
             >
               All
             </button>
             <button
               onClick={() => setMatchupFilter('completed')}
-              className={`rounded px-2.5 py-1 text-[10px] font-medium transition-colors sm:text-xs ${
-                matchupFilter === 'completed'
-                  ? 'bg-[#FF3B30] text-white'
-                  : 'text-[#B3B3B3] hover:text-white'
-              }`}
+              className={`rounded px-2.5 py-1 text-[10px] font-medium transition-colors sm:text-xs ${matchupFilter === 'completed' ? 'bg-[#FF3B30] text-white' : getTournamentThemeClass('filterPillInactive', theme)}`}
             >
               Completed
             </button>
             <button
               onClick={() => setMatchupFilter('scheduled')}
-              className={`rounded px-2.5 py-1 text-[10px] font-medium transition-colors sm:text-xs ${
-                matchupFilter === 'scheduled'
-                  ? 'bg-[#FF3B30] text-white'
-                  : 'text-[#B3B3B3] hover:text-white'
-              }`}
+              className={`rounded px-2.5 py-1 text-[10px] font-medium transition-colors sm:text-xs ${matchupFilter === 'scheduled' ? 'bg-[#FF3B30] text-white' : getTournamentThemeClass('filterPillInactive', theme)}`}
             >
               Upcoming
             </button>
@@ -309,9 +299,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                 onClick={scrollLeft}
                 disabled={!canScrollLeft}
                 aria-label="Scroll left"
-                className={`absolute left-0 top-1/2 z-10 -translate-y-1/2 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#FF3B30] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 ${
-                  !canScrollLeft ? 'hidden' : ''
-                }`}
+                className={`absolute left-0 top-1/2 z-10 -translate-y-1/2 p-2 rounded-full backdrop-blur-sm transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#FF3B30] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 ${getTournamentThemeClass('carouselArrow', theme)} ${!canScrollLeft ? 'hidden' : ''}`}
               >
                 <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
@@ -319,9 +307,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                 onClick={scrollRight}
                 disabled={!canScrollRight}
                 aria-label="Scroll right"
-                className={`absolute right-0 top-1/2 z-10 -translate-y-1/2 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#FF3B30] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 ${
-                  !canScrollRight ? 'hidden' : ''
-                }`}
+                className={`absolute right-0 top-1/2 z-10 -translate-y-1/2 p-2 rounded-full backdrop-blur-sm transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#FF3B30] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 ${getTournamentThemeClass('carouselArrow', theme)} ${!canScrollRight ? 'hidden' : ''}`}
               >
                 <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
@@ -339,7 +325,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
               }}
             >
               {[1, 2, 3].map((item) => (
-                <div key={item} className="h-48 w-80 flex-shrink-0 animate-pulse rounded-xl border border-white/10 bg-white/5" />
+                <div key={item} className={`h-48 w-80 flex-shrink-0 animate-pulse rounded-none border shadow-md ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)}`} />
               ))}
             </div>
           ) : displayedMatchups.length > 0 ? (
@@ -383,7 +369,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
           ) : (
             <div className="flex items-center justify-center py-12 px-4">
               <div className="text-center">
-                <p className="text-sm text-[#B3B3B3] sm:text-base">
+                <p className={`text-sm sm:text-base ${getTournamentThemeClass('cardTextMuted', theme)}`}>
                   {matchupFilter === 'scheduled' 
                     ? 'No upcoming games scheduled'
                     : matchupFilter === 'completed'
@@ -397,25 +383,18 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
       </Card>
 
       {/* Leaderboard Highlights */}
-      <Card className="relative overflow-hidden rounded-xl border border-white/10 bg-[#121212] sm:rounded-2xl">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-60 pointer-events-none"
-          style={{ backgroundImage: 'url(/images/leadersection.webp)' }}
-        />
-        {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-black/40 pointer-events-none" />
-        
-        {/* Content */}
+      <Card className={`relative overflow-hidden rounded-xl border sm:rounded-2xl ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('railSectionBg', theme)}`}>
+        <div className="absolute inset-0 bg-cover bg-center opacity-60 pointer-events-none" style={{ backgroundImage: 'url(/images/leadersection.webp)' }} />
+        <div className={`absolute inset-0 pointer-events-none ${theme === 'dark' ? 'bg-black/40' : 'bg-white/30'}`} />
         <div className="relative z-10 space-y-3 p-3 sm:space-y-4 sm:p-4 md:space-y-6 md:p-6">
         <header className="flex items-start justify-between gap-2 sm:items-center sm:gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-white sm:text-lg md:text-xl">Leaderboard Highlights</h2>
-            <p className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">Top performers updated every possession</p>
+            <h2 className={`text-base font-semibold sm:text-lg md:text-xl ${getTournamentThemeClass('cardText', theme)}`}>Leaderboard Highlights</h2>
+            <p className={`text-[10px] sm:text-xs md:text-sm ${getTournamentThemeClass('cardTextMuted', theme)}`}>Top performers updated every possession</p>
           </div>
           <Button
             variant="outline"
-            className="shrink-0 rounded-full border-white/10 bg-[#121212]/80 px-3 py-1.5 text-[10px] text-white/70 hover:border-white/30 hover:text-white sm:px-4 sm:py-2 sm:text-xs md:text-sm"
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[10px] sm:px-4 sm:py-2 sm:text-xs md:text-sm ${getTournamentThemeClass('btnOutlineBg', theme)} ${getTournamentThemeClass('btnOutlineHoverBg', theme)} ${getTournamentThemeClass('btnOutlineBorder', theme)} ${getTournamentThemeClass('btnOutlineText', theme)}`}
             onClick={() => onNavigateToTab?.('leaders')}
           >
             View Leaders
@@ -424,11 +403,11 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
         {loadingLeaders ? (
           <div className="grid gap-2 sm:gap-3 md:gap-4 sm:grid-cols-2 md:grid-cols-3">
             {[1, 2, 3].map((item) => (
-              <div key={item} className="h-16 animate-pulse rounded-lg border border-white/10 bg-white/5 sm:h-20 sm:rounded-xl" />
+              <div key={item} className={`h-16 animate-pulse rounded-lg border sm:h-20 sm:rounded-xl ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)}`} />
             ))}
           </div>
         ) : topScorers.length === 0 ? (
-          <div className="rounded-lg border border-white/10 bg-black/40 p-4 text-center text-[10px] text-[#B3B3B3] sm:rounded-xl sm:p-6 sm:text-xs md:text-sm">
+          <div className={`rounded-lg border p-4 text-center text-[10px] sm:rounded-xl sm:p-6 sm:text-xs md:text-sm ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('emptyStateOverlay', theme)} ${getTournamentThemeClass('cardTextMuted', theme)}`}>
             No player stats available yet. Leaders will appear as games are tracked.
           </div>
         ) : (
@@ -439,9 +418,9 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                 <div 
                   key={leader.playerId}
                   onClick={() => openModal(leader.playerId, { isCustomPlayer: leader.isCustomPlayer || false })}
-                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-3 py-3 transition hover:border-white/20 hover:bg-black/50 sm:gap-3 sm:px-3 sm:py-2.5 md:gap-4 md:px-4 md:py-3"
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 transition sm:gap-3 sm:px-3 sm:py-2.5 md:gap-4 md:px-4 md:py-3 ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBg', theme)} ${getTournamentThemeClass('rowHover', theme)}`}
                 >
-                  <Avatar className="h-14 w-14 border-2 border-white/10 sm:h-14 sm:w-14 md:h-[72px] md:w-[72px]">
+                  <Avatar className={`h-14 w-14 border-2 sm:h-14 sm:w-14 md:h-[72px] md:w-[72px] ${getTournamentThemeClass('cardBorder', theme)}`}>
                     {leader.profilePhotoUrl ? (
                       <AvatarImage src={leader.profilePhotoUrl} alt={leader.playerName} />
                     ) : null}
@@ -450,8 +429,8 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-white truncate sm:text-xs md:text-sm">{leader.playerName}</div>
-                    <div className="text-[10px] text-[#B3B3B3] truncate sm:text-[10px] md:text-xs">{leader.teamName}</div>
+                    <div className={`text-xs font-semibold truncate sm:text-xs md:text-sm ${getTournamentThemeClass('cardText', theme)}`}>{leader.playerName}</div>
+                    <div className={`text-[10px] truncate sm:text-[10px] md:text-xs ${getTournamentThemeClass('cardTextMuted', theme)}`}>{leader.teamName}</div>
                     <div className="text-[10px] font-semibold text-[#FF3B30] mt-0.5 sm:text-[10px] sm:mt-1 md:text-xs">
                       {leader.pointsPerGame.toFixed(1)} PPG
                     </div>
@@ -479,17 +458,17 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
 
       {/* Game Awards */}
       {tournamentAwards.length > 0 && (
-        <Card className="space-y-3 rounded-xl border border-white/10 bg-[#121212] p-3 sm:space-y-4 sm:rounded-2xl sm:p-4 md:space-y-6 md:p-6">
+        <Card className={`space-y-3 rounded-xl border p-3 sm:space-y-4 sm:rounded-2xl sm:p-4 md:space-y-6 md:p-6 ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('railSectionBg', theme)}`}>
           <header className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-white sm:text-lg md:text-xl">Recent Game Awards</h2>
-              <p className="text-[10px] text-[#B3B3B3] sm:text-xs md:text-sm">Player of the Game and Hustle Player highlights</p>
+              <h2 className={`text-base font-semibold sm:text-lg md:text-xl ${getTournamentThemeClass('cardText', theme)}`}>Recent Game Awards</h2>
+              <p className={`text-[10px] sm:text-xs md:text-sm ${getTournamentThemeClass('cardTextMuted', theme)}`}>Player of the Game and Hustle Player highlights</p>
             </div>
             {hasMoreAwards && (
               <Button
                 variant="outline"
                 onClick={() => setAwardsExpanded(!awardsExpanded)}
-                className="w-full rounded-full border-white/10 bg-[#121212] text-[10px] text-white/70 hover:border-white/30 hover:text-white sm:w-auto sm:text-xs md:text-sm"
+                className={`w-full rounded-full text-[10px] sm:w-auto sm:text-xs md:text-sm ${getTournamentThemeClass('btnOutlineBorder', theme)} ${getTournamentThemeClass('btnOutlineText', theme)}`}
               >
                 {awardsExpanded ? (
                   <>Show Less <ChevronUp className="ml-1 h-3 w-3 sm:h-4 sm:w-4" /></>
@@ -502,14 +481,14 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
           <div className="space-y-4">
             {visibleAwards.map((award, index) => (
               <div key={`${award.gameId}-${index}`}>
-                {/* Game Context Header */}
-                <div className="text-[10px] text-[#B3B3B3] mb-2 sm:text-xs">
+                <div className={`text-[10px] mb-2 sm:text-xs ${getTournamentThemeClass('cardTextMuted', theme)}`}>
                   {new Date(award.gameDate).toLocaleDateString()} • {award.teamAName} vs {award.teamBName} ({award.teamAScore}-{award.teamBScore})
                 </div>
                 {/* Award Cards */}
                 <div className="grid gap-2 sm:gap-3 sm:grid-cols-2">
                   {award.playerOfTheGame && (
                     <AwardDisplayCard
+                      isDark={theme === 'dark'}
                       playerId={award.playerOfTheGame.id}
                       playerName={award.playerOfTheGame.name}
                       profilePhotoUrl={award.playerOfTheGame.profilePhotoUrl}
@@ -525,6 +504,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                   )}
                   {award.hustlePlayer && (
                     <AwardDisplayCard
+                      isDark={theme === 'dark'}
                       playerId={award.hustlePlayer.id}
                       playerName={award.hustlePlayer.name}
                       profilePhotoUrl={award.hustlePlayer.profilePhotoUrl}
@@ -548,29 +528,29 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
       {/* Mobile Only: Upcoming Schedule & Streaming Teaser (hidden on lg+ where right rail shows) */}
       <div className="space-y-3 sm:space-y-4 lg:hidden">
         {/* Upcoming Games - Mobile */}
-        <Card className="rounded-xl border border-white/10 bg-[#121212] p-3 sm:rounded-2xl sm:p-4">
+        <Card className={`rounded-xl border p-3 sm:rounded-2xl sm:p-4 ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('railSectionBg', theme)}`}>
           <header className="mb-3 flex items-center gap-2">
             <Calendar className="h-4 w-4 text-[#FF3B30]" />
-            <span className="text-sm font-semibold text-white">Upcoming Games</span>
+            <span className={`text-sm font-semibold ${getTournamentThemeClass('cardText', theme)}`}>Upcoming Games</span>
           </header>
           <div className="space-y-2">
             {upcomingLoading && (
-              <div className="animate-pulse h-12 rounded-lg bg-white/5" />
+              <div className={`animate-pulse h-12 rounded-lg ${getTournamentThemeClass('cardBgSubtle', theme)}`} />
             )}
             {!upcomingLoading && upcomingGames.length === 0 && (
-              <p className="text-xs text-[#B3B3B3]">No upcoming games scheduled</p>
+              <p className={`text-xs ${getTournamentThemeClass('cardTextMuted', theme)}`}>No upcoming games scheduled</p>
             )}
             {!upcomingLoading && upcomingGames.map((game) => (
               <div
                 key={game.gameId}
-                className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 px-3 py-2 cursor-pointer hover:bg-white/10 transition"
+                className={`flex items-center justify-between rounded-lg border px-3 py-2 cursor-pointer transition ${getTournamentThemeClass('borderLight', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)} ${getTournamentThemeClass('rowHover', theme)}`}
                 onClick={() => window.open(`/game-viewer-v3/${game.gameId}`, '_blank')}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-white truncate">
+                  <div className={`text-xs font-medium truncate ${getTournamentThemeClass('cardText', theme)}`}>
                     {game.teamA.name} vs {game.teamB.name}
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] text-[#B3B3B3]">
+                  <div className={`flex items-center gap-1 text-[10px] ${getTournamentThemeClass('cardTextMuted', theme)}`}>
                     <Clock className="h-3 w-3" />
                     <span>{game.gameDate ? new Date(game.gameDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'TBD'}</span>
                   </div>
@@ -581,11 +561,11 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
         </Card>
 
         {/* Live Streaming Coming Soon - Mobile */}
-        <Card className="overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] sm:rounded-2xl">
+        <Card className={`overflow-hidden rounded-xl border sm:rounded-2xl ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBg', theme)}`}>
           <div className="flex items-center gap-4 p-4">
             <Video className="h-8 w-8 text-[#FF3B30]/60 shrink-0" />
             <div className="flex-1">
-              <div className="text-sm font-semibold text-white mb-0.5">Live Streaming</div>
+              <div className={`text-sm font-semibold mb-0.5 ${getTournamentThemeClass('cardText', theme)}`}>Live Streaming</div>
               <div className="rounded bg-[#FF3B30]/20 px-2 py-0.5 text-[10px] font-medium text-[#FF3B30] inline-block">
                 COMING SOON
               </div>
@@ -595,14 +575,14 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
       </div>
 
       {/* Bracket Preview - Coming Soon */}
-      <Card className="overflow-hidden rounded-xl border border-white/10 bg-[#121212] sm:rounded-2xl">
+      <Card className={`overflow-hidden rounded-xl border sm:rounded-2xl ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('railSectionBg', theme)}`}>
         <div className="flex flex-col items-center justify-center py-8 px-4 sm:py-12 text-center">
           <Zap className="h-10 w-10 text-[#FF3B30]/60 mb-3 sm:h-12 sm:w-12" />
-          <h2 className="text-base font-semibold text-white mb-1 sm:text-lg">Tournament Bracket</h2>
+          <h2 className={`text-base font-semibold mb-1 sm:text-lg ${getTournamentThemeClass('cardText', theme)}`}>Tournament Bracket</h2>
           <div className="rounded bg-[#FF3B30]/20 px-2.5 py-0.5 text-[10px] font-medium text-[#FF3B30] mb-2 sm:text-xs">
             COMING SOON
           </div>
-          <p className="text-[10px] text-white/40 max-w-[280px] sm:text-xs sm:max-w-[320px]">
+          <p className={`text-[10px] max-w-[280px] sm:text-xs sm:max-w-[320px] ${getTournamentThemeClass('emptyText', theme)}`}>
             Interactive bracket view with live updates, automatic seeding, and elimination tracking
           </p>
         </div>

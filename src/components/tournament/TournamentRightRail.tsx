@@ -13,6 +13,8 @@ import { Shield, Calendar, Video, Clock, Tv, ExternalLink } from 'lucide-react';
 import { TournamentOrganizerCard } from './TournamentOrganizerCard';
 import { PhaseBadge } from './PhaseBadge';
 import { TournamentLiveStreamEmbed, PlayerState } from '@/components/live-streaming/TournamentLiveStreamEmbed';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface TournamentRightRailProps {
   data: TournamentPageData;
@@ -125,19 +127,21 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
 
   // Get current live game for stream details
   const currentLiveGame = gamesWithLogos[0];
+  const { theme } = useTournamentTheme();
 
   return (
     <div className="space-y-6">
       {/* Section 1: Live Stream Video - Hidden when on Live tab to avoid redundant embeds */}
       {activeTab !== 'live' && (
-        <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+        <section className={`overflow-hidden rounded-2xl border ${getTournamentThemeClass('railSectionBg', theme)} ${getTournamentThemeClass('cardBorder', theme)}`}>
           <header className="flex items-center gap-2 p-4 pb-0">
             <Video className="h-4 w-4 text-[#FF3B30]" />
-            <span className="text-sm font-semibold text-white">Live Stream</span>
+            <span className={`text-sm font-semibold ${getTournamentThemeClass('cardText', theme)}`}>Live Stream</span>
           </header>
           {/* Stream content based on state */}
           <StreamContent
             tournamentId={data.tournament.id}
+            theme={theme}
             isStreaming={isStreaming}
             liveStreamUrl={liveStreamUrl}
             streamPlatform={streamPlatform}
@@ -150,23 +154,23 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
       )}
 
       {/* Section 2: Play-by-Play Feed - Links to detailed game viewer */}
-      <section className="rounded-2xl border border-white/10 bg-[#121212] p-5">
+      <section className={`rounded-2xl border p-5 ${getTournamentThemeClass('railSectionBg', theme)} ${getTournamentThemeClass('cardBorder', theme)}`}>
         <header className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-white">Play-by-Play Feed</span>
+            <span className={`text-sm font-semibold ${getTournamentThemeClass('cardText', theme)}`}>Play-by-Play Feed</span>
           </div>
-          <span className="text-[10px] text-[#B3B3B3] uppercase tracking-wide">Live Stats</span>
+          <span className={`text-[10px] uppercase tracking-wide ${getTournamentThemeClass('cardTextMuted', theme)}`}>Live Stats</span>
         </header>
         <div className="space-y-3">
           {loading && (
             <div className="animate-pulse space-y-3">
               {[1, 2, 3].map((item) => (
-                <div key={item} className="h-16 rounded-xl bg-white/5" />
+                <div key={item} className={`h-16 rounded-xl ${getTournamentThemeClass('cardBgSubtle', theme)}`} />
               ))}
             </div>
           )}
           {!loading && filteredGames.length === 0 && (
-            <p className="rounded-xl bg-white/5 p-4 text-sm text-[#B3B3B3]">
+            <p className={`rounded-xl p-4 text-sm ${getTournamentThemeClass('cardBgSubtle', theme)} ${getTournamentThemeClass('cardTextMuted', theme)}`}>
               No live games at the moment.
             </p>
           )}
@@ -174,12 +178,12 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
             gamesWithLogos.map((game) => (
               <div
                 key={game.id}
-                className="cursor-pointer rounded-xl border border-white/10 bg-white/5 p-3 transition hover:border-[#FF3B30]/30 hover:bg-white/10"
+                className={`cursor-pointer rounded-xl border p-3 transition hover:border-[#FF3B30]/30 ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)} ${theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}
                 onClick={() => window.open(`/game-viewer-v3/${game.id}`, '_blank')}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-5 w-5 shrink-0 border border-white/10">
+                    <Avatar className={`h-5 w-5 shrink-0 border ${getTournamentThemeClass('cardBorder', theme)}`}>
                       {game.teamALogo ? (
                         <AvatarImage src={game.teamALogo} alt="" className="object-cover" loading="lazy" />
                       ) : null}
@@ -188,29 +192,29 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
                       </AvatarFallback>
                     </Avatar>
                     {game.team_a_id ? (
-                      <Link href={`/t/${data.tournament.id}/team/${game.team_a_id}`} className="text-xs text-white hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>
+                      <Link href={`/t/${data.tournament.id}/team/${game.team_a_id}`} className={`text-xs hover:text-[#FF3B30] transition-colors ${getTournamentThemeClass('cardText', theme)}`} onClick={(e) => e.stopPropagation()}>
                         {game.team_a_name || 'Team A'}
                       </Link>
                     ) : (
-                      <span className="text-xs text-white">{game.team_a_name || 'Team A'}</span>
+                      <span className={`text-xs ${getTournamentThemeClass('cardText', theme)}`}>{game.team_a_name || 'Team A'}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-white">{game.home_score || 0}</span>
+                    <span className={`text-sm font-bold ${getTournamentThemeClass('cardText', theme)}`}>{game.home_score || 0}</span>
                     <span className="text-[10px] text-[#FF3B30] font-semibold">
                       {formatClock(game.quarter, game.game_clock_minutes, game.game_clock_seconds)}
                     </span>
-                    <span className="text-sm font-bold text-white">{game.away_score || 0}</span>
+                    <span className={`text-sm font-bold ${getTournamentThemeClass('cardText', theme)}`}>{game.away_score || 0}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {game.team_b_id ? (
-                      <Link href={`/t/${data.tournament.id}/team/${game.team_b_id}`} className="text-xs text-white hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>
+                      <Link href={`/t/${data.tournament.id}/team/${game.team_b_id}`} className={`text-xs hover:text-[#FF3B30] transition-colors ${getTournamentThemeClass('cardText', theme)}`} onClick={(e) => e.stopPropagation()}>
                         {game.team_b_name || 'Team B'}
                       </Link>
                     ) : (
-                      <span className="text-xs text-white">{game.team_b_name || 'Team B'}</span>
+                      <span className={`text-xs ${getTournamentThemeClass('cardText', theme)}`}>{game.team_b_name || 'Team B'}</span>
                     )}
-                    <Avatar className="h-5 w-5 shrink-0 border border-white/10">
+                    <Avatar className={`h-5 w-5 shrink-0 border ${getTournamentThemeClass('cardBorder', theme)}`}>
                       {game.teamBLogo ? (
                         <AvatarImage src={game.teamBLogo} alt="" className="object-cover" loading="lazy" />
                       ) : null}
@@ -220,28 +224,28 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
                     </Avatar>
                   </div>
                 </div>
-                <p className="text-[10px] text-[#B3B3B3] text-center mt-2">Tap for detailed play-by-play →</p>
+                <p className={`text-[10px] text-center mt-2 ${getTournamentThemeClass('cardTextMuted', theme)}`}>Tap for detailed play-by-play →</p>
               </div>
             ))}
         </div>
       </section>
 
       {/* Section 3: Upcoming Schedule */}
-      <section className="rounded-2xl border border-white/10 bg-[#121212] p-5">
+      <section className={`rounded-2xl border p-5 ${getTournamentThemeClass('railSectionBg', theme)} ${getTournamentThemeClass('cardBorder', theme)}`}>
         <header className="mb-3 flex items-center gap-2">
           <Calendar className="h-4 w-4 text-[#FF3B30]" />
-          <span className="text-sm font-semibold text-white">Upcoming Games</span>
+          <span className={`text-sm font-semibold ${getTournamentThemeClass('cardText', theme)}`}>Upcoming Games</span>
         </header>
         <div className="space-y-2.5 max-h-64 overflow-y-auto">
           {upcomingLoading && (
             <div className="animate-pulse space-y-2">
               {[1, 2, 3].map((item) => (
-                <div key={item} className="h-12 rounded-lg bg-white/5" />
+                <div key={item} className={`h-12 rounded-lg ${getTournamentThemeClass('cardBgSubtle', theme)}`} />
               ))}
             </div>
           )}
           {!upcomingLoading && upcomingGames.length === 0 && (
-            <p className="text-xs text-[#B3B3B3] py-2">
+            <p className={`text-xs py-2 ${getTournamentThemeClass('cardTextMuted', theme)}`}>
               No upcoming games scheduled
             </p>
           )}
@@ -249,6 +253,7 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
             <UpcomingGameItem
               key={game.gameId}
               gameId={game.gameId}
+              theme={theme}
               tournamentId={data.tournament.id}
               teamA={{ id: game.teamA.id, name: game.teamA.name }}
               teamB={{ id: game.teamB.id, name: game.teamB.name }}
@@ -261,14 +266,14 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
 
       {/* Section 4: Sponsor Carousel */}
       <section>
-        <header className="mb-3 text-sm font-semibold text-white">Sponsors</header>
+        <header className={`mb-3 text-sm font-semibold ${getTournamentThemeClass('cardText', theme)}`}>Sponsors</header>
         <div className="grid grid-cols-2 gap-3">
           {data.sponsors.length === 0
             ? DEFAULT_SPONSORS.map((sponsor) => (
-                <SponsorCard key={sponsor} label={sponsor} />
+                <SponsorCard key={sponsor} label={sponsor} theme={theme} />
               ))
             : data.sponsors.map((sponsor) => (
-                <SponsorCard key={sponsor.id} label={sponsor.slot || 'Partner'} imageUrl={sponsor.imageUrl ?? undefined} linkUrl={sponsor.linkUrl ?? undefined} />
+                <SponsorCard key={sponsor.id} label={sponsor.slot || 'Partner'} theme={theme} imageUrl={sponsor.imageUrl ?? undefined} linkUrl={sponsor.linkUrl ?? undefined} />
               ))}
         </div>
       </section>
@@ -292,7 +297,7 @@ export function TournamentRightRail({ data, activeTab }: TournamentRightRailProp
   );
 }
 
-function UpcomingGameItem({ gameId, tournamentId, teamA, teamB, gameDate, gamePhase }: { gameId: string; tournamentId?: string; teamA: { id?: string; name: string }; teamB: { id?: string; name: string }; gameDate?: string; gamePhase?: 'regular' | 'playoffs' | 'finals' }) {
+function UpcomingGameItem({ gameId, tournamentId, teamA, teamB, gameDate, gamePhase, theme }: { gameId: string; tournamentId?: string; teamA: { id?: string; name: string }; teamB: { id?: string; name: string }; gameDate?: string; gamePhase?: 'regular' | 'playoffs' | 'finals'; theme: 'light' | 'dark' }) {
   const formatGameDate = (dateString?: string): string => {
     if (!dateString) return 'TBD';
     try {
@@ -311,25 +316,25 @@ function UpcomingGameItem({ gameId, tournamentId, teamA, teamB, gameDate, gamePh
 
   return (
     <div 
-      className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-xs cursor-pointer hover:border-white/10 hover:bg-white/10 transition"
+      className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs cursor-pointer transition ${getTournamentThemeClass('borderLight', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)} ${theme === 'dark' ? 'hover:border-white/10 hover:bg-white/10' : 'hover:border-gray-300 hover:bg-gray-100'}`}
       onClick={() => window.open(`/game-viewer-v3/${gameId}`, '_blank')}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           {tournamentId && teamA.id ? (
-            <Link href={`/t/${tournamentId}/team/${teamA.id}`} className="text-white font-medium truncate hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>{teamA.name}</Link>
+            <Link href={`/t/${tournamentId}/team/${teamA.id}`} className={`font-medium truncate hover:text-[#FF3B30] transition-colors ${getTournamentThemeClass('cardText', theme)}`} onClick={(e) => e.stopPropagation()}>{teamA.name}</Link>
           ) : (
-            <span className="text-white font-medium truncate">{teamA.name}</span>
+            <span className={`font-medium truncate ${getTournamentThemeClass('cardText', theme)}`}>{teamA.name}</span>
           )}
-          <span className="text-white/60">vs</span>
+          <span className={getTournamentThemeClass('cardTextMuted', theme)}>vs</span>
           {tournamentId && teamB.id ? (
-            <Link href={`/t/${tournamentId}/team/${teamB.id}`} className="text-white font-medium truncate hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>{teamB.name}</Link>
+            <Link href={`/t/${tournamentId}/team/${teamB.id}`} className={`font-medium truncate hover:text-[#FF3B30] transition-colors ${getTournamentThemeClass('cardText', theme)}`} onClick={(e) => e.stopPropagation()}>{teamB.name}</Link>
           ) : (
-            <span className="text-white font-medium truncate">{teamB.name}</span>
+            <span className={`font-medium truncate ${getTournamentThemeClass('cardText', theme)}`}>{teamB.name}</span>
           )}
           <PhaseBadge phase={gamePhase} size="sm" showIcon={false} />
         </div>
-        <div className="flex items-center gap-1 text-[#B3B3B3] mt-0.5">
+        <div className={`flex items-center gap-1 mt-0.5 ${getTournamentThemeClass('cardTextMuted', theme)}`}>
           <Clock className="h-3 w-3" />
           <span className="text-[10px]">{formatGameDate(gameDate)}</span>
         </div>
@@ -338,9 +343,9 @@ function UpcomingGameItem({ gameId, tournamentId, teamA, teamB, gameDate, gamePh
   );
 }
 
-function SponsorCard({ label, imageUrl, linkUrl }: { label: string; imageUrl?: string; linkUrl?: string }) {
+function SponsorCard({ label, imageUrl, linkUrl, theme }: { label: string; imageUrl?: string; linkUrl?: string; theme: 'light' | 'dark' }) {
   const content = (
-    <div className="flex h-20 items-center justify-center rounded-xl border border-white/10 bg-[#121212] text-sm font-semibold text-[#B3B3B3] transition hover:border-[#FF3B30]/30 hover:text-white">
+    <div className={`flex h-20 items-center justify-center rounded-xl border text-sm font-semibold transition hover:border-[#FF3B30]/30 ${getTournamentThemeClass('railSectionBg', theme)} ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardTextMuted', theme)} ${theme === 'dark' ? 'hover:text-white' : 'hover:text-gray-900'}`}>
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageUrl} alt={label} className="h-12 w-32 object-contain" />
@@ -373,6 +378,7 @@ function formatClock(quarter?: number, minutes?: number, seconds?: number) {
 /** Stream content with contextual states - handles loading, live, ended, error */
 function StreamContent({
   tournamentId,
+  theme,
   isStreaming,
   liveStreamUrl,
   streamPlatform,
@@ -382,6 +388,7 @@ function StreamContent({
   nextGame,
 }: {
   tournamentId: string;
+  theme: 'light' | 'dark';
   isStreaming?: boolean;
   liveStreamUrl?: string | null;
   streamPlatform?: 'youtube' | 'twitch' | 'facebook' | null;
@@ -396,7 +403,7 @@ function StreamContent({
   if (!streamActive) {
     return (
       <div className="p-4 pt-3">
-        <NextStreamPlaceholder tournamentId={tournamentId} nextGame={nextGame} />
+        <NextStreamPlaceholder tournamentId={tournamentId} nextGame={nextGame} theme={theme} />
       </div>
     );
   }
@@ -405,7 +412,7 @@ function StreamContent({
   if (streamPlayerState === 'ended') {
     return (
       <div className="p-4 pt-3">
-        <NextStreamPlaceholder tournamentId={tournamentId} nextGame={nextGame} />
+        <NextStreamPlaceholder tournamentId={tournamentId} nextGame={nextGame} theme={theme} />
       </div>
     );
   }
@@ -415,9 +422,9 @@ function StreamContent({
     return (
       <div className="p-4 pt-3">
         <div className="flex flex-col items-center justify-center py-8 text-center" style={{ aspectRatio: '16/9' }}>
-          <Video className="h-10 w-10 text-white/30 mb-3" />
-          <p className="text-sm font-semibold text-white mb-1">Unable to Load Stream</p>
-          <p className="text-xs text-white/50 mb-3">Watch directly on the platform</p>
+          <Video className={`h-10 w-10 mb-3 ${getTournamentThemeClass('emptyIcon', theme)}`} />
+          <p className={`text-sm font-semibold mb-1 ${getTournamentThemeClass('emptyTitle', theme)}`}>Unable to Load Stream</p>
+          <p className={`text-xs mb-3 ${getTournamentThemeClass('emptyText', theme)}`}>Watch directly on the platform</p>
           <a
             href={liveStreamUrl}
             target="_blank"
@@ -445,10 +452,10 @@ function StreamContent({
       </div>
       {/* Game details below stream */}
       {currentLiveGame && (
-        <div className="border-t border-white/10 px-4 py-3">
+        <div className={`border-t px-4 py-3 ${getTournamentThemeClass('cardBorder', theme)}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Avatar className="h-5 w-5 border border-white/10">
+              <Avatar className={`h-5 w-5 border ${getTournamentThemeClass('cardBorder', theme)}`}>
                 {currentLiveGame.teamALogo ? (
                   <AvatarImage src={currentLiveGame.teamALogo} alt="" className="object-cover" />
                 ) : null}
@@ -457,23 +464,23 @@ function StreamContent({
                 </AvatarFallback>
               </Avatar>
               {currentLiveGame.team_a_id ? (
-                <Link href={`/t/${tournamentId}/team/${currentLiveGame.team_a_id}`} className="text-xs text-white font-medium hover:text-[#FF3B30] transition-colors">{currentLiveGame.team_a_name}</Link>
+                <Link href={`/t/${tournamentId}/team/${currentLiveGame.team_a_id}`} className={`text-xs font-medium hover:text-[#FF3B30] transition-colors ${getTournamentThemeClass('cardText', theme)}`}>{currentLiveGame.team_a_name}</Link>
               ) : (
-                <span className="text-xs text-white font-medium">{currentLiveGame.team_a_name}</span>
+                <span className={`text-xs font-medium ${getTournamentThemeClass('cardText', theme)}`}>{currentLiveGame.team_a_name}</span>
               )}
-              <span className="text-sm font-bold text-white">{currentLiveGame.home_score ?? 0}</span>
+              <span className={`text-sm font-bold ${getTournamentThemeClass('cardText', theme)}`}>{currentLiveGame.home_score ?? 0}</span>
             </div>
             <span className="text-[10px] text-[#FF3B30] font-semibold px-2 py-0.5 bg-[#FF3B30]/10 rounded">
               {formatClock(currentLiveGame.quarter, currentLiveGame.game_clock_minutes, currentLiveGame.game_clock_seconds)}
             </span>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white">{currentLiveGame.away_score ?? 0}</span>
+              <span className={`text-sm font-bold ${getTournamentThemeClass('cardText', theme)}`}>{currentLiveGame.away_score ?? 0}</span>
               {currentLiveGame.team_b_id ? (
-                <Link href={`/t/${tournamentId}/team/${currentLiveGame.team_b_id}`} className="text-xs text-white font-medium hover:text-[#FF3B30] transition-colors">{currentLiveGame.team_b_name}</Link>
+                <Link href={`/t/${tournamentId}/team/${currentLiveGame.team_b_id}`} className={`text-xs font-medium hover:text-[#FF3B30] transition-colors ${getTournamentThemeClass('cardText', theme)}`}>{currentLiveGame.team_b_name}</Link>
               ) : (
-                <span className="text-xs text-white font-medium">{currentLiveGame.team_b_name}</span>
+                <span className={`text-xs font-medium ${getTournamentThemeClass('cardText', theme)}`}>{currentLiveGame.team_b_name}</span>
               )}
-              <Avatar className="h-5 w-5 border border-white/10">
+              <Avatar className={`h-5 w-5 border ${getTournamentThemeClass('cardBorder', theme)}`}>
                 {currentLiveGame.teamBLogo ? (
                   <AvatarImage src={currentLiveGame.teamBLogo} alt="" className="object-cover" />
                 ) : null}
@@ -490,7 +497,7 @@ function StreamContent({
 }
 
 /** Placeholder when no active stream - shows next upcoming game or generic message */
-function NextStreamPlaceholder({ tournamentId, nextGame }: { tournamentId: string; nextGame?: { teamA: { id?: string; name: string }; teamB: { id?: string; name: string }; gameDate?: string } }) {
+function NextStreamPlaceholder({ tournamentId, nextGame, theme }: { tournamentId: string; nextGame?: { teamA: { id?: string; name: string }; teamB: { id?: string; name: string }; gameDate?: string }; theme: 'light' | 'dark' }) {
   const formatGameDate = (dateString?: string): string => {
     if (!dateString) return 'Soon';
     try {
@@ -512,8 +519,8 @@ function NextStreamPlaceholder({ tournamentId, nextGame }: { tournamentId: strin
       <Tv className="h-10 w-10 text-[#FF3B30]/40 mb-3" />
       {nextGame ? (
         <>
-          <p className="text-sm font-semibold text-white mb-1">Next Game Coming!</p>
-          <p className="text-xs text-white/70 mb-2">
+          <p className={`text-sm font-semibold mb-1 ${getTournamentThemeClass('emptyTitle', theme)}`}>Next Game Coming!</p>
+          <p className={`text-xs mb-2 ${getTournamentThemeClass('emptyText', theme)}`}>
             {tournamentId && nextGame.teamA.id ? (
               <Link href={`/t/${tournamentId}/team/${nextGame.teamA.id}`} className="hover:text-[#FF3B30] transition-colors">{nextGame.teamA.name}</Link>
             ) : (
@@ -526,12 +533,12 @@ function NextStreamPlaceholder({ tournamentId, nextGame }: { tournamentId: strin
               <span>{nextGame.teamB.name}</span>
             )}
           </p>
-          <p className="text-[10px] text-white/50">{formatGameDate(nextGame.gameDate)}</p>
+          <p className={`text-[10px] ${getTournamentThemeClass('emptyText', theme)}`}>{formatGameDate(nextGame.gameDate)}</p>
         </>
       ) : (
         <>
-          <p className="text-sm font-semibold text-white mb-1">Stay Tuned!</p>
-          <p className="text-xs text-white/50">Check the schedule for upcoming games</p>
+          <p className={`text-sm font-semibold mb-1 ${getTournamentThemeClass('emptyTitle', theme)}`}>Stay Tuned!</p>
+          <p className={`text-xs ${getTournamentThemeClass('emptyText', theme)}`}>Check the schedule for upcoming games</p>
         </>
       )}
     </div>

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { TournamentTab } from './TournamentPageShell';
 import { logger } from '@/lib/utils/logger';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface TournamentPrimaryNavProps {
   activeTab: TournamentTab;
@@ -27,9 +29,10 @@ const SECONDARY_MENU = ['Rules', 'Sponsors', 'Tickets', 'Merch'] as const;
 
 export function TournamentPrimaryNav({ activeTab, onTabChange }: TournamentPrimaryNavProps) {
   const [showSecondaryMenu, setShowSecondaryMenu] = useState(false);
+  const { theme } = useTournamentTheme();
 
   return (
-    <nav className="sticky top-[52px] z-30 hidden border-b border-white/10 bg-[#121212]/95 backdrop-blur-lg sm:top-[60px] lg:block">
+    <nav className={`sticky top-[52px] z-30 hidden border-b sm:top-[60px] md:top-[64px] lg:block ${getTournamentThemeClass('navBorder', theme)} ${getTournamentThemeClass('navBg', theme)}`}>
       <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-0.5 overflow-x-auto sm:gap-1 scrollbar-hide [&>*]:cursor-pointer [&>*]:select-none">
           {PRIMARY_TABS.map(({ tab, label }) => {
@@ -44,9 +47,7 @@ export function TournamentPrimaryNav({ activeTab, onTabChange }: TournamentPrima
                   onTabChange(tab);
                 }}
                 className={`relative shrink-0 px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30]/40 sm:px-4 sm:text-sm ${
-                  isActive
-                    ? 'text-white'
-                    : 'text-[#B3B3B3] hover:text-white'
+                  isActive ? getTournamentThemeClass('navTextActive', theme) : getTournamentThemeClass('navText', theme)
                 }`}
                 type="button"
               >
@@ -61,17 +62,17 @@ export function TournamentPrimaryNav({ activeTab, onTabChange }: TournamentPrima
         <div className="relative hidden items-center gap-2 xl:flex">
           <button
             onClick={() => setShowSecondaryMenu(!showSecondaryMenu)}
-            className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs uppercase tracking-wide text-[#B3B3B3] transition hover:text-white"
+            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs uppercase tracking-wide transition ${getTournamentThemeClass('navMoreBtn', theme)}`}
           >
             More
             <ChevronDown className={`h-3 w-3 transition-transform ${showSecondaryMenu ? 'rotate-180' : ''}`} />
           </button>
           {showSecondaryMenu && (
-            <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl border border-white/10 bg-[#121212] p-2 shadow-xl">
+            <div className={`absolute right-0 top-full mt-2 w-48 rounded-2xl border p-2 shadow-xl ${getTournamentThemeClass('navDropdownBg', theme)}`}>
               {SECONDARY_MENU.map((item) => (
                 <button
                   key={item}
-                  className="w-full rounded-lg px-3 py-2 text-left text-sm text-[#B3B3B3] transition hover:bg-white/5 hover:text-white"
+                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${getTournamentThemeClass('navDropdownItem', theme)}`}
                   onClick={() => setShowSecondaryMenu(false)}
                 >
                   {item}

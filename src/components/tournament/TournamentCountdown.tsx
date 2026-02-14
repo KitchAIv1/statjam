@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface TournamentCountdownProps {
   targetDate: string | null;
@@ -14,6 +16,7 @@ interface TournamentCountdownProps {
  * Shows "X days", "Tomorrow", "Today", or "Live" when past.
  */
 export function TournamentCountdown({ targetDate, fallbackDate, className = '' }: TournamentCountdownProps) {
+  const { theme } = useTournamentTheme();
   const dateToUse = targetDate || fallbackDate;
   const [label, setLabel] = useState<string>('');
 
@@ -51,7 +54,7 @@ export function TournamentCountdown({ targetDate, fallbackDate, className = '' }
   if (!label) return null;
 
   return (
-    <div className={`flex items-center gap-1.5 text-[10px] text-white/70 sm:text-xs ${className}`}>
+    <div className={`flex items-center gap-1.5 text-[10px] sm:text-xs ${getTournamentThemeClass('heroCountdown', theme)} ${className}`}>
       <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
       <span className="font-medium">{label}</span>
     </div>

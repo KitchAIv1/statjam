@@ -24,6 +24,9 @@ import { TeamService } from '@/lib/services/tournamentService';
 import { GameService } from '@/lib/services/gameService';
 import { TournamentStandingsService } from '@/lib/services/tournamentStandingsService';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
+import { TournamentThemeProvider, useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
+import { TournamentThemeToggle } from './TournamentThemeToggle';
 
 const TABS = [
   'overview',
@@ -284,8 +287,50 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A0A0A]/95 backdrop-blur-lg">
+    <TournamentThemeProvider>
+      <TournamentPageShellContent
+        data={data}
+        activeTab={activeTab}
+        activePhase={activePhase}
+        onPhaseChange={handlePhaseChange}
+        onTabChange={handleTabChange}
+        onSignIn={handleSignIn}
+        onStartTournament={handleStartTournament}
+        tabOptions={tabOptions}
+        tabsListRef={tabsListRef}
+      />
+    </TournamentThemeProvider>
+  );
+}
+
+interface TournamentPageShellContentProps {
+  data: TournamentPageData;
+  activeTab: TournamentTab;
+  activePhase: 'upcoming' | 'live' | 'finals';
+  onPhaseChange: (phase: 'upcoming' | 'live' | 'finals') => void;
+  onTabChange: (tab: TournamentTab) => void;
+  onSignIn: () => void;
+  onStartTournament: () => void;
+  tabOptions: readonly TournamentTab[];
+  tabsListRef: React.RefObject<HTMLDivElement | null>;
+}
+
+function TournamentPageShellContent({
+  data,
+  activeTab,
+  activePhase,
+  onPhaseChange,
+  onTabChange,
+  onSignIn,
+  onStartTournament,
+  tabOptions,
+  tabsListRef,
+}: TournamentPageShellContentProps) {
+  const { theme } = useTournamentTheme();
+
+  return (
+    <div className={`min-h-screen ${getTournamentThemeClass('pageBg', theme)} ${getTournamentThemeClass('pageText', theme)}`}>
+      <header className={`sticky top-0 z-40 flex min-h-[52px] items-center border-b sm:min-h-[60px] md:min-h-[64px] ${getTournamentThemeClass('headerBorder', theme)} ${getTournamentThemeClass('headerBg', theme)}`}>
         <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-4 sm:py-2.5 md:px-6 md:py-3">
           {/* Left: StatJam Logo */}
           <a href="/" className="flex shrink-0 items-center gap-1.5 transition-opacity hover:opacity-80 sm:gap-2">
@@ -300,10 +345,10 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
               <input
                 type="search"
                 placeholder="Search Teams, Tournaments, Players..."
-                className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-2 pl-10 text-sm text-white placeholder:text-white/40 focus:border-[#FF3B30]/50 focus:outline-none focus:ring-1 focus:ring-[#FF3B30]/30"
+                className={`w-full rounded-full border px-4 py-2 pl-10 text-sm focus:border-[#FF3B30]/50 focus:outline-none focus:ring-1 focus:ring-[#FF3B30]/30 ${getTournamentThemeClass('inputBorder', theme)} ${getTournamentThemeClass('inputBg', theme)} ${getTournamentThemeClass('inputText', theme)} ${getTournamentThemeClass('inputPlaceholder', theme)}`}
               />
               <svg
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40"
+                className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${getTournamentThemeClass('inputIcon', theme)}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -313,17 +358,18 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
             </div>
           </div>
 
-          {/* Right: Log In + Start Tournament */}
+          {/* Right: Theme Toggle + Log In + Start Tournament */}
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
-            <button 
-              onClick={handleSignIn}
-              className="hidden rounded-full border border-white/10 bg-transparent px-2.5 py-1 text-[10px] text-white/70 transition hover:border-white/30 hover:text-white sm:block sm:px-3 sm:py-1.5 sm:text-xs md:px-4 md:py-2 md:text-sm"
+            <TournamentThemeToggle />
+            <button
+              onClick={onSignIn}
+              className={`hidden rounded-full border px-2.5 py-1 text-[10px] transition sm:block sm:px-3 sm:py-1.5 sm:text-xs md:px-4 md:py-2 md:text-sm ${getTournamentThemeClass('btnOutlineBorder', theme)} ${getTournamentThemeClass('btnOutlineText', theme)}`}
             >
               Log In
             </button>
-            <button 
-              onClick={handleStartTournament}
-              className="rounded-full bg-[#FF3B30] px-2.5 py-1 text-[10px] font-semibold text-white shadow-lg shadow-[#FF3B30]/30 transition hover:brightness-110 sm:px-3 sm:py-1.5 sm:text-xs md:px-4 md:py-2 md:text-sm"
+            <button
+              onClick={onStartTournament}
+              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-lg shadow-[#FF3B30]/30 transition hover:brightness-110 sm:px-3 sm:py-1.5 sm:text-xs md:px-4 md:py-2 md:text-sm ${getTournamentThemeClass('btnPrimary', theme)}`}
             >
               <span className="hidden sm:inline">Start Tournament</span>
               <span className="sm:hidden">Start</span>
@@ -335,13 +381,13 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
       <TournamentHero 
         data={data} 
         activePhase={activePhase}
-        onPhaseChange={handlePhaseChange}
+        onPhaseChange={onPhaseChange}
       />
-      <TournamentPrimaryNav activeTab={activeTab} onTabChange={handleTabChange} />
+      <TournamentPrimaryNav activeTab={activeTab} onTabChange={onTabChange} />
 
       <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-3 px-3 pb-8 pt-4 sm:gap-4 sm:px-4 sm:pb-12 sm:pt-6 md:gap-6 md:px-6 md:pb-16 md:pt-10 lg:flex-row">
         <div className="flex-1 space-y-3 sm:space-y-4 md:space-y-6">
-          <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as TournamentTab)}>
+          <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as TournamentTab)}>
             {/* Mobile: Horizontal scrollable tabs - Works with mouse drag on desktop too */}
             <div 
               ref={tabsListRef}
@@ -352,12 +398,12 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
                 overscrollBehaviorX: 'contain'
               }}
             >
-              <TabsList className="inline-flex w-max min-w-full gap-1.5 bg-transparent p-0 px-3 text-white sm:gap-2 sm:px-4 [&>*]:cursor-pointer [&>*]:select-none [&>*]:touch-none">
+              <TabsList className={`inline-flex w-max min-w-full gap-1.5 bg-transparent p-0 px-3 sm:gap-2 sm:px-4 [&>*]:cursor-pointer [&>*]:select-none [&>*]:touch-none ${getTournamentThemeClass('pageText', theme)}`}>
                 {tabOptions.map((tab) => (
                   <TabsTrigger
                     key={tab}
                     value={tab}
-                    className="shrink-0 rounded-full border border-white/10 bg-[#121212] px-2.5 py-1.5 text-[10px] uppercase tracking-wide text-white/70 transition hover:border-white/30 hover:text-white data-[state=active]:border-[#FF3B30]/80 data-[state=active]:bg-[#FF3B30]/20 data-[state=active]:text-white sm:px-3 sm:py-2 sm:text-xs"
+                    className={`shrink-0 rounded-full border px-2.5 py-1.5 text-[10px] uppercase tracking-wide transition sm:px-3 sm:py-2 sm:text-xs ${getTournamentThemeClass('tabTriggerBg', theme)} ${getTournamentThemeClass('tabTriggerText', theme)} ${getTournamentThemeClass('tabTriggerActive', theme)}`}
                   >
                     {labelForTab(tab)}
                   </TabsTrigger>
@@ -366,7 +412,7 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
             </div>
 
             <TabsContent value="overview" className="mt-0">
-              <OverviewTab data={data} onNavigateToTab={handleTabChange} />
+              <OverviewTab data={data} onNavigateToTab={onTabChange} />
             </TabsContent>
             <TabsContent value="schedule" className="mt-0">
               <ScheduleTab tournamentId={data.tournament.id} />

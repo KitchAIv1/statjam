@@ -16,6 +16,8 @@ import Link from 'next/link';
 import { Trophy, Clock } from 'lucide-react';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
 import { PhaseRibbon } from './PhaseRibbon';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 export interface TeamMatchupCardProps {
   teamA: {
@@ -52,6 +54,7 @@ export function TeamMatchupCard({
   gamePhase,
   onClick
 }: TeamMatchupCardProps) {
+  const { theme } = useTournamentTheme();
   const isCompleted = gameStatus === 'completed';
   const isScheduled = gameStatus === 'scheduled';
   const isInProgress = gameStatus === 'in_progress';
@@ -90,16 +93,17 @@ export function TeamMatchupCard({
   const isFinals = gamePhase === 'finals';
   const isPlayoffs = gamePhase === 'playoffs';
   
+  const defaultBorderClass = `border-2 ${getTournamentThemeClass('cardBorder', theme)}`;
   const borderClass = isFinals 
     ? 'border-amber-400 border-[3px] animate-championship-glow' 
     : isPlayoffs 
       ? 'border-orange-500 border-2 animate-playoffs-intensity'
-      : 'border-2 border-white/20';
+      : defaultBorderClass;
 
   return (
     <div
       onClick={onClick}
-      className={`relative flex h-48 w-80 flex-shrink-0 overflow-hidden rounded-xl transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl ${
+      className={`relative flex h-48 w-80 flex-shrink-0 overflow-hidden rounded-none shadow-md transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl ${
         onClick ? 'cursor-pointer' : ''
       } ${isCancelled ? 'opacity-60' : ''} ${borderClass}`}
       style={{ aspectRatio: '16/9' }}
@@ -188,7 +192,7 @@ export function TeamMatchupCard({
 
       {/* Date/Time Badge - Top Center (for all statuses) - Compact rectangle */}
       {gameDate && (
-        <div className="absolute top-2 left-1/2 z-10 -translate-x-1/2 flex items-center gap-1 rounded bg-black/70 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-white shadow-lg">
+        <div className={`absolute top-2 left-1/2 z-10 -translate-x-1/2 flex items-center gap-1 rounded backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium shadow-lg ${theme === 'dark' ? 'bg-black/70 text-white' : 'bg-gray-900/80 text-white'}`}>
           <Clock className="h-3 w-3 flex-shrink-0" />
           <span>{formatGameDateTime(gameDate)}</span>
         </div>

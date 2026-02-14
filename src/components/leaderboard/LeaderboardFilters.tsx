@@ -8,6 +8,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SortColumn, PerMode, GamePhase } from './LeaderboardRow';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface LeaderboardFiltersProps {
   sortColumn: SortColumn;
@@ -59,57 +61,48 @@ export function LeaderboardFilters({
   gamePhase = 'all',
   onGamePhaseChange,
 }: LeaderboardFiltersProps) {
+  const { theme } = useTournamentTheme();
+  const triggerClass = `w-28 sm:w-32 h-8 sm:h-9 text-[10px] sm:text-xs ${getTournamentThemeClass('inputBg', theme)} ${getTournamentThemeClass('inputBorder', theme)} ${getTournamentThemeClass('inputText', theme)}`;
+  const contentClass = getTournamentThemeClass('navDropdownBg', theme);
+  const itemClass = `text-xs ${getTournamentThemeClass('navDropdownItem', theme)}`;
+  const triggerModeClass = `w-24 sm:w-28 h-8 sm:h-9 text-[10px] sm:text-xs ${getTournamentThemeClass('inputBg', theme)} ${getTournamentThemeClass('inputBorder', theme)} ${getTournamentThemeClass('inputText', theme)}`;
+
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-      {/* Stat Category Dropdown */}
       <Select value={sortColumn} onValueChange={(v) => onSortColumnChange(v as SortColumn)}>
-        <SelectTrigger className="w-28 sm:w-32 h-8 sm:h-9 bg-white/5 border-white/10 text-white text-[10px] sm:text-xs">
+        <SelectTrigger className={triggerClass}>
           <SelectValue placeholder="Stat" />
         </SelectTrigger>
-        <SelectContent className="bg-[#1a1a1a] border-white/10">
+        <SelectContent className={contentClass}>
           {STAT_OPTIONS.map((option) => (
-            <SelectItem
-              key={option.value}
-              value={option.value}
-              className="text-white text-xs hover:bg-white/10 focus:bg-white/10 focus:text-white"
-            >
+            <SelectItem key={option.value} value={option.value} className={itemClass}>
               {option.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      {/* Per Mode Dropdown */}
       <Select value={perMode} onValueChange={(v) => onPerModeChange(v as PerMode)}>
-        <SelectTrigger className="w-24 sm:w-28 h-8 sm:h-9 bg-white/5 border-white/10 text-white text-[10px] sm:text-xs">
+        <SelectTrigger className={triggerModeClass}>
           <SelectValue placeholder="Mode" />
         </SelectTrigger>
-        <SelectContent className="bg-[#1a1a1a] border-white/10">
+        <SelectContent className={contentClass}>
           {PER_MODE_OPTIONS.map((option) => (
-            <SelectItem
-              key={option.value}
-              value={option.value}
-              className="text-white text-xs hover:bg-white/10 focus:bg-white/10 focus:text-white"
-            >
+            <SelectItem key={option.value} value={option.value} className={itemClass}>
               {option.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      {/* Game Phase Dropdown - Optional, only shown if handler provided */}
       {onGamePhaseChange && (
         <Select value={gamePhase} onValueChange={(v) => onGamePhaseChange(v as GamePhase)}>
-          <SelectTrigger className="w-28 sm:w-32 h-8 sm:h-9 bg-white/5 border-white/10 text-white text-[10px] sm:text-xs">
+          <SelectTrigger className={triggerClass}>
             <SelectValue placeholder="Game Type" />
           </SelectTrigger>
-          <SelectContent className="bg-[#1a1a1a] border-white/10">
+          <SelectContent className={contentClass}>
             {GAME_PHASE_OPTIONS.map((option) => (
-              <SelectItem
-                key={option.value}
-                value={option.value}
-                className="text-white text-xs hover:bg-white/10 focus:bg-white/10 focus:text-white"
-              >
+              <SelectItem key={option.value} value={option.value} className={itemClass}>
                 {option.label}
               </SelectItem>
             ))}

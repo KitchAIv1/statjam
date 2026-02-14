@@ -12,6 +12,8 @@ import { TournamentCountdown } from './TournamentCountdown';
 import { useFirstGameDate } from '@/hooks/useFirstGameDate';
 import { notify } from '@/lib/services/notificationService';
 import { getCountry } from '@/data/countries';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface TournamentHeroProps {
   data: TournamentPageData;
@@ -21,6 +23,7 @@ interface TournamentHeroProps {
 
 export function TournamentHero({ data, onPhaseChange, activePhase }: TournamentHeroProps) {
   const { tournament } = data;
+  const { theme } = useTournamentTheme();
   const pathname = usePathname();
   const [organizerProfile, setOrganizerProfile] = useState<{ name: string; profilePhotoUrl?: string } | null>(null);
   
@@ -68,16 +71,16 @@ export function TournamentHero({ data, onPhaseChange, activePhase }: TournamentH
   const firstGameDate = useFirstGameDate(tournament.id);
 
   return (
-    <section className="relative overflow-hidden border-b border-white/10 bg-gradient-to-b from-[#121212] to-black">
+    <section className={`relative overflow-hidden border-b ${getTournamentThemeClass('heroBorder', theme)} ${getTournamentThemeClass('heroBg', theme)}`}>
       {/* Arena background image */}
       <div
-        className="absolute inset-0 bg-no-repeat bg-cover opacity-60 pointer-events-none"
+        className={`absolute inset-0 bg-no-repeat bg-cover pointer-events-none ${getTournamentThemeClass('heroBgOverlay', theme)}`}
         style={{ backgroundImage: 'url(/images/BG.png)', backgroundPosition: 'center 40%' }}
       />
-      <div className="relative z-10 mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-3 py-4 sm:gap-5 sm:px-4 sm:py-5 md:flex-row md:items-center md:gap-6 md:px-6 md:py-8">
+      <div className={`relative z-10 mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-3 py-4 sm:gap-5 sm:px-4 sm:py-5 md:flex-row md:items-center md:gap-6 md:px-6 md:py-8 ${getTournamentThemeClass('heroContentScrim', theme)}`}>
         {/* Left Column: Tournament Logo + Name + Location/Date */}
         <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-4 md:gap-6">
-          <Avatar className="h-12 w-12 shrink-0 border border-white/10 bg-[#121212] sm:h-16 sm:w-16 md:h-20 md:w-20">
+          <Avatar className={`h-12 w-12 shrink-0 border sm:h-16 sm:w-16 md:h-20 md:w-20 ${getTournamentThemeClass('heroAvatarBorder', theme)}`}>
             {tournament.logo ? (
               <AvatarImage
                 src={tournament.logo}
@@ -91,17 +94,17 @@ export function TournamentHero({ data, onPhaseChange, activePhase }: TournamentH
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl md:text-3xl lg:text-4xl">
+            <h1 className={`text-xl font-bold tracking-tight sm:text-2xl md:text-3xl lg:text-4xl ${getTournamentThemeClass('heroTitle', theme)}`}>
               {tournament.name}
             </h1>
-            <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-[#B3B3B3] sm:gap-1.5 sm:text-sm md:gap-2 md:text-base">
+            <p className={`mt-1 flex flex-wrap items-center gap-1 text-xs sm:gap-1.5 sm:text-sm md:gap-2 md:text-base ${getTournamentThemeClass('heroSubtext', theme)}`}>
               {countryData && (
                 <>
                   <span className="text-sm shrink-0 sm:text-base md:text-lg" title={countryData.name}>{countryData.flag}</span>
-                  <span className="shrink-0">·</span>
+                  <span className={`shrink-0 ${getTournamentThemeClass('heroStatsDot', theme)}`}>·</span>
                 </>
               )}
-              <MapPin className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+              <MapPin className={`h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 ${getTournamentThemeClass('heroLocationIcon', theme)}`} />
               <span className="truncate">{location}</span>
               <span className="shrink-0">·</span>
               <span className="shrink-0">{dateRange}</span>
@@ -130,6 +133,7 @@ export function TournamentHero({ data, onPhaseChange, activePhase }: TournamentH
                 value={p.value}
                 isActive={currentPhase === p.value}
                 isCompleted={progress > p.progress}
+                theme={theme}
                 onClick={() => {
                   if (onPhaseChange) {
                     onPhaseChange(p.value);
@@ -139,7 +143,7 @@ export function TournamentHero({ data, onPhaseChange, activePhase }: TournamentH
             ))}
           </div>
           <div className="w-full max-w-xs">
-            <div className="h-1 w-full overflow-hidden rounded-full bg-white/10 sm:h-1.5">
+            <div className={`h-1 w-full overflow-hidden rounded-full sm:h-1.5 ${getTournamentThemeClass('progressBarTrack', theme)}`}>
               <div
                 className="h-full rounded-full bg-[#FF3B30] transition-all duration-500"
                 style={{ width: `${progress}%` }}
@@ -154,7 +158,7 @@ export function TournamentHero({ data, onPhaseChange, activePhase }: TournamentH
             <Button
               variant="outline"
               size="sm"
-              className="h-7 rounded-full border-white/10 bg-[#121212] px-2.5 text-[10px] text-white/70 hover:border-white/30 hover:text-white sm:h-8 sm:px-3 sm:text-xs md:h-9 md:px-4 md:text-sm"
+              className={`h-7 rounded-full px-2.5 text-[10px] sm:h-8 sm:px-3 sm:text-xs md:h-9 md:px-4 md:text-sm ${getTournamentThemeClass('heroShareBtn', theme)}`}
               onClick={async () => {
                 // Get the full URL - construct from origin + pathname for reliability
                 const currentUrl = typeof window !== 'undefined' 
@@ -211,24 +215,24 @@ export function TournamentHero({ data, onPhaseChange, activePhase }: TournamentH
               variant="outline"
               size="sm"
               disabled
-              className="h-7 rounded-full border-white/10 bg-[#121212] px-2.5 text-[10px] text-white/40 opacity-60 cursor-not-allowed sm:h-8 sm:px-3 sm:text-xs md:h-9 md:px-4 md:text-sm"
+              className={`h-7 rounded-full px-2.5 text-[10px] cursor-not-allowed sm:h-8 sm:px-3 sm:text-xs md:h-9 md:px-4 md:text-sm ${getTournamentThemeClass('heroFollowBtn', theme)}`}
             >
               <Bell className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5 md:mr-2 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Follow</span>
             </Button>
           </div>
-          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-[#121212] px-2 py-0.5 sm:gap-1.5 sm:px-2.5 sm:py-1 md:gap-2 md:px-3 md:py-1.5">
+          <div className={`flex items-center gap-1 rounded-full border px-2 py-0.5 sm:gap-1.5 sm:px-2.5 sm:py-1 md:gap-2 md:px-3 md:py-1.5 ${getTournamentThemeClass('heroOrganizerBadge', theme)}`}>
             {organizerProfile?.profilePhotoUrl ? (
-              <Avatar className="h-4 w-4 border border-white/10 sm:h-5 sm:w-5 md:h-6 md:w-6">
+              <Avatar className={`h-4 w-4 border sm:h-5 sm:w-5 md:h-6 md:w-6 ${getTournamentThemeClass('heroAvatarBorder', theme)}`}>
                 <AvatarImage src={organizerProfile.profilePhotoUrl} alt={organizerName} />
-                <AvatarFallback className="bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-[10px] text-white sm:text-xs">
+                <AvatarFallback className={`bg-gradient-to-br from-[#FF3B30]/20 to-[#FF3B30]/10 text-[10px] sm:text-xs ${getTournamentThemeClass('heroOrganizerFallbackText', theme)}`}>
                   {organizerInitials}
                 </AvatarFallback>
               </Avatar>
             ) : null}
-            <span className="text-[9px] font-medium text-white/90 sm:text-[10px] md:text-xs">{organizerName}</span>
+            <span className={`text-[9px] font-medium sm:text-[10px] md:text-xs ${getTournamentThemeClass('heroOrganizerText', theme)}`}>{organizerName}</span>
             <CheckCircle2 className="h-2.5 w-2.5 text-blue-500 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5" />
-            <span className="hidden text-xs text-white/40 md:inline">Verified</span>
+            <span className={`hidden text-xs md:inline ${getTournamentThemeClass('heroOrganizerDim', theme)}`}>Verified</span>
           </div>
         </div>
       </div>
@@ -242,30 +246,31 @@ const PHASES = [
   { label: 'Finals', value: 'finals', progress: 100 },
 ] as const;
 
-function PhaseChip({ 
-  label, 
-  value, 
-  isActive, 
-  isCompleted, 
-  onClick 
-}: { 
-  label: string; 
+function PhaseChip({
+  label,
+  value,
+  isActive,
+  isCompleted,
+  theme,
+  onClick,
+}: {
+  label: string;
   value: 'upcoming' | 'live' | 'finals';
-  isActive: boolean; 
+  isActive: boolean;
   isCompleted: boolean;
+  theme: 'light' | 'dark';
   onClick?: () => void;
 }) {
+  const themeClass = isActive
+    ? getTournamentThemeClass('phaseChipActive', theme)
+    : isCompleted
+      ? getTournamentThemeClass('phaseChipCompleted', theme)
+      : getTournamentThemeClass('phaseChipInactive', theme);
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide transition-all hover:scale-105 sm:px-2.5 sm:py-1 sm:text-[10px] md:px-4 md:py-1.5 md:text-xs ${
-        isActive
-          ? 'bg-[#FF3B30] text-white shadow-lg shadow-[#FF3B30]/30 cursor-default'
-          : isCompleted
-            ? 'bg-white/10 text-white/70 hover:bg-white/15 cursor-pointer'
-            : 'bg-white/5 text-white/40 hover:bg-white/10 cursor-pointer'
-      }`}
+      className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide transition-all hover:scale-105 sm:px-2.5 sm:py-1 sm:text-[10px] md:px-4 md:py-1.5 md:text-xs ${themeClass} ${isActive ? 'shadow-lg shadow-[#FF3B30]/30 cursor-default' : 'cursor-pointer'}`}
     >
       {label}
     </button>

@@ -1,8 +1,10 @@
 "use client";
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User, Shield } from 'lucide-react';
+import { User } from 'lucide-react';
 import { useOrganizerProfile } from '@/hooks/useOrganizerProfile';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface TournamentOrganizerCardProps {
   organizerId: string | null;
@@ -16,6 +18,7 @@ interface TournamentOrganizerCardProps {
  */
 export function TournamentOrganizerCard({ organizerId }: TournamentOrganizerCardProps) {
   const { organizer, loading } = useOrganizerProfile(organizerId);
+  const { theme } = useTournamentTheme();
 
   if (!organizerId) {
     return null;
@@ -23,14 +26,14 @@ export function TournamentOrganizerCard({ organizerId }: TournamentOrganizerCard
 
   if (loading) {
     return (
-      <section className="rounded-2xl border border-white/10 bg-[#121212] p-5">
-        <header className="mb-3 text-sm font-semibold text-white">Organizer</header>
+      <section className={`rounded-2xl border p-5 ${getTournamentThemeClass('railSectionBg', theme)} ${getTournamentThemeClass('cardBorder', theme)}`}>
+        <header className={`mb-3 text-sm font-semibold ${getTournamentThemeClass('cardText', theme)}`}>Organizer</header>
         <div className="animate-pulse space-y-3">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-white/10" />
+            <div className={`h-12 w-12 rounded-full ${getTournamentThemeClass('cardBgSubtle', theme)}`} />
             <div className="flex-1 space-y-2">
-              <div className="h-4 w-24 rounded bg-white/10" />
-              <div className="h-3 w-32 rounded bg-white/5" />
+              <div className={`h-4 w-24 rounded ${getTournamentThemeClass('cardBgSubtle', theme)}`} />
+              <div className={`h-3 w-32 rounded ${getTournamentThemeClass('cardBgSubtle', theme)}`} />
             </div>
           </div>
         </div>
@@ -43,10 +46,10 @@ export function TournamentOrganizerCard({ organizerId }: TournamentOrganizerCard
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[#121212] p-5">
-      <header className="mb-3 text-sm font-semibold text-white">Organizer</header>
+    <section className={`rounded-2xl border p-5 ${getTournamentThemeClass('railSectionBg', theme)} ${getTournamentThemeClass('cardBorder', theme)}`}>
+      <header className={`mb-3 text-sm font-semibold ${getTournamentThemeClass('cardText', theme)}`}>Organizer</header>
       <div className="flex items-center gap-3">
-        <Avatar className="h-12 w-12 shrink-0 border border-white/10">
+        <Avatar className={`h-12 w-12 shrink-0 border ${getTournamentThemeClass('cardBorder', theme)}`}>
           {organizer.profilePhotoUrl ? (
             <AvatarImage
               src={organizer.profilePhotoUrl}
@@ -59,9 +62,9 @@ export function TournamentOrganizerCard({ organizerId }: TournamentOrganizerCard
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-white truncate">{organizer.name}</div>
+          <div className={`text-sm font-semibold truncate ${getTournamentThemeClass('cardText', theme)}`}>{organizer.name}</div>
           {organizer.bio && (
-            <div className="text-xs text-[#B3B3B3] line-clamp-2 mt-0.5">{organizer.bio}</div>
+            <div className={`text-xs line-clamp-2 mt-0.5 ${getTournamentThemeClass('cardTextMuted', theme)}`}>{organizer.bio}</div>
           )}
         </div>
       </div>

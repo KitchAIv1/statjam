@@ -10,6 +10,8 @@ import { CalendarDays, Clock, MapPin, Play, Shield, Lock, CheckCircle, ChevronDo
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { Game } from '@/lib/types/game';
 import { PhaseBadge } from '@/components/tournament/PhaseBadge';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 // Max games to show initially (covers multiple months: Feb, Mar, Apr, May...)
 const INITIAL_DISPLAY_LIMIT = 24;
@@ -28,6 +30,7 @@ interface ScheduleTabProps {
 }
 
 export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
+  const { theme } = useTournamentTheme();
   // ✅ OPTIMIZED: Use custom hook with batching and caching
   const { games, loading } = useScheduleData(tournamentId);
   const [showAll, setShowAll] = useState(false);
@@ -59,8 +62,8 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur sm:rounded-3xl sm:p-6">
-        <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-white/50 sm:gap-4 sm:text-xs">
+      <div className={`rounded-2xl border p-4 backdrop-blur sm:rounded-3xl sm:p-6 ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)}`}>
+        <div className={`flex flex-wrap gap-2 text-[10px] uppercase tracking-wide sm:gap-4 sm:text-xs ${getTournamentThemeClass('cardTextDim', theme)}`}>
           <span className="flex items-center gap-1.5 sm:gap-2"><CalendarDays className="h-3 w-3 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Filter by Date</span><span className="sm:hidden">Date</span> <span className="hidden sm:inline">(coming soon)</span></span>
           <span className="flex items-center gap-1.5 sm:gap-2"><MapPin className="h-3 w-3 sm:h-4 sm:w-4" /> Court</span>
           <span className="flex items-center gap-1.5 sm:gap-2"><Clock className="h-3 w-3 sm:h-4 sm:w-4" /> Status</span>
@@ -70,11 +73,11 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
       {loading ? (
         <div className="space-y-3 sm:space-y-4">
           {[1, 2, 3].map((item) => (
-            <div key={item} className="h-24 animate-pulse rounded-2xl border border-white/10 bg-white/5 sm:h-28 sm:rounded-3xl" />
+            <div key={item} className={`h-24 animate-pulse rounded-2xl border sm:h-28 sm:rounded-3xl ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)}`} />
           ))}
         </div>
       ) : sortedGames.length === 0 ? (
-        <Card className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-sm text-white/60 sm:rounded-3xl sm:p-8">
+        <Card className={`rounded-2xl border p-6 text-center text-sm sm:rounded-3xl sm:p-8 ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)} ${getTournamentThemeClass('cardTextMuted', theme)}`}>
           No games scheduled yet. Check back soon for live matchups.
         </Card>
       ) : (
@@ -82,18 +85,18 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
           {rounds.map(({ roundIndex, games: roundGames }) => (
             <Card
               key={`round-${roundIndex}`}
-              className="rounded-xl border border-white/10 bg-white/5 overflow-hidden backdrop-blur sm:rounded-2xl md:rounded-3xl"
+              className={`rounded-xl border overflow-hidden backdrop-blur sm:rounded-2xl md:rounded-3xl ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)}`}
             >
-              <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2 sm:px-4 sm:py-2.5">
-                <span className="text-[10px] font-medium uppercase tracking-wide text-white/50 sm:text-xs">
+              <div className={`flex flex-wrap items-center gap-2 border-b px-3 py-2 sm:px-4 sm:py-2.5 ${getTournamentThemeClass('cardBorder', theme)}`}>
+                <span className={`text-[10px] font-medium uppercase tracking-wide sm:text-xs ${getTournamentThemeClass('cardTextDim', theme)}`}>
                   Round {roundIndex}
                 </span>
-                <span className="text-white/30">•</span>
-                <span className="text-[10px] text-white/60 sm:text-xs">
+                <span className={getTournamentThemeClass('cardTextDim', theme)}>•</span>
+                <span className={`text-[10px] sm:text-xs ${getTournamentThemeClass('cardTextMuted', theme)}`}>
                   {formatRoundDate(roundGames[0]?.start_time)}
                 </span>
               </div>
-              <div className="divide-y divide-white/10">
+              <div className={getTournamentThemeClass('divide', theme)}>
                 {roundGames.map((game) => {
                   const teamAName = game.teamAName || 'Team A';
                   const teamBName = game.teamBName || 'Team B';
@@ -107,25 +110,25 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                   const canView = isLive || isCompleted || (isScheduled && (hasStarted || hasStatsAdminStarted));
                   const getButtonContent = () => {
                     if (isLive) return { icon: Play, text: 'Watch Live', className: 'border-[#FF3B30]/50 text-[#FF3B30] hover:border-[#FF3B30] hover:bg-[#FF3B30]/10' };
-                    if (isCompleted) return { icon: CheckCircle, text: 'View Final', className: 'border-white/20 text-white/60 hover:border-white/30 hover:text-white/80' };
-                    if (isCancelled) return { icon: Lock, text: 'Cancelled', className: 'border-white/10 text-white/30 cursor-not-allowed opacity-50' };
+                    if (isCompleted) return { icon: CheckCircle, text: 'View Final', className: getTournamentThemeClass('scheduleBtnCompleted', theme) };
+                    if (isCancelled) return { icon: Lock, text: 'Cancelled', className: getTournamentThemeClass('scheduleBtnDisabled', theme) };
                     if (isScheduled && (hasStarted || hasStatsAdminStarted)) {
                       if (hasStatsAdminStarted) return { icon: Play, text: 'Watch Live', className: 'border-[#FF3B30]/50 text-[#FF3B30] hover:border-[#FF3B30] hover:bg-[#FF3B30]/10' };
                       return { icon: Clock, text: 'Starting Soon', className: 'border-orange-500/50 text-orange-500 hover:border-orange-500 hover:bg-orange-500/10' };
                     }
-                    return { icon: Lock, text: 'Not Started', className: 'border-white/10 text-white/30 cursor-not-allowed opacity-50' };
+                    return { icon: Lock, text: 'Not Started', className: getTournamentThemeClass('scheduleBtnDisabled', theme) };
                   };
                   const buttonContent = getButtonContent();
                   const ButtonIcon = buttonContent.icon;
                   return (
                     <div
                       key={game.id}
-                      className="flex flex-col gap-2 px-3 py-3 transition-colors hover:bg-white/5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4 sm:py-3 md:px-5"
+                      className={`flex flex-col gap-2 px-3 py-3 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4 sm:py-3 md:px-5 ${getTournamentThemeClass('rowHover', theme)}`}
                     >
                       {/* Matchup: Team A — [equal gap] — VS — [equal gap] — Team B */}
                       <div className="flex min-w-0 items-center gap-3 sm:gap-4 md:gap-5">
                         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-                          <Avatar className="h-[30px] w-[30px] shrink-0 border border-white/10 sm:h-10 sm:w-10 md:h-[50px] md:w-[50px]">
+                          <Avatar className={`h-[30px] w-[30px] shrink-0 border sm:h-10 sm:w-10 md:h-[50px] md:w-[50px] ${getTournamentThemeClass('cardBorder', theme)}`}>
                             {game.teamALogo ? (
                               <AvatarImage src={game.teamALogo} alt={`${teamAName} logo`} className="object-cover" loading="lazy" />
                             ) : null}
@@ -134,16 +137,16 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                             </AvatarFallback>
                           </Avatar>
                           {game.team_a_id ? (
-                            <Link href={`/t/${tournamentId}/team/${game.team_a_id}`} className="truncate text-xs font-semibold text-white sm:text-sm md:text-base hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>
+                            <Link href={`/t/${tournamentId}/team/${game.team_a_id}`} className={`truncate text-xs font-semibold sm:text-sm md:text-base hover:text-[#FF3B30] transition-colors ${getTournamentThemeClass('cardText', theme)}`} onClick={(e) => e.stopPropagation()}>
                               {teamAName}
                             </Link>
                           ) : (
-                            <span className="truncate text-xs font-semibold text-white sm:text-sm md:text-base">{teamAName}</span>
+                            <span className={`truncate text-xs font-semibold sm:text-sm md:text-base ${getTournamentThemeClass('cardText', theme)}`}>{teamAName}</span>
                           )}
                         </div>
-                        <span className="shrink-0 text-white/40 text-xs sm:text-sm" aria-hidden>vs</span>
+                        <span className={`shrink-0 text-xs sm:text-sm ${getTournamentThemeClass('cardTextDim', theme)}`} aria-hidden>vs</span>
                         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-                          <Avatar className="h-[30px] w-[30px] shrink-0 border border-white/10 sm:h-10 sm:w-10 md:h-[50px] md:w-[50px]">
+                          <Avatar className={`h-[30px] w-[30px] shrink-0 border sm:h-10 sm:w-10 md:h-[50px] md:w-[50px] ${getTournamentThemeClass('cardBorder', theme)}`}>
                             {game.teamBLogo ? (
                               <AvatarImage src={game.teamBLogo} alt={`${teamBName} logo`} className="object-cover" loading="lazy" />
                             ) : null}
@@ -152,17 +155,17 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                             </AvatarFallback>
                           </Avatar>
                           {game.team_b_id ? (
-                            <Link href={`/t/${tournamentId}/team/${game.team_b_id}`} className="truncate text-xs font-semibold text-white sm:text-sm md:text-base hover:text-[#FF3B30] transition-colors" onClick={(e) => e.stopPropagation()}>
+                            <Link href={`/t/${tournamentId}/team/${game.team_b_id}`} className={`truncate text-xs font-semibold sm:text-sm md:text-base hover:text-[#FF3B30] transition-colors ${getTournamentThemeClass('cardText', theme)}`} onClick={(e) => e.stopPropagation()}>
                               {teamBName}
                             </Link>
                           ) : (
-                            <span className="truncate text-xs font-semibold text-white sm:text-sm md:text-base">{teamBName}</span>
+                            <span className={`truncate text-xs font-semibold sm:text-sm md:text-base ${getTournamentThemeClass('cardText', theme)}`}>{teamBName}</span>
                           )}
                         </div>
                       </div>
                       <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 md:gap-3">
-                        <div className="text-[9px] uppercase tracking-wide text-white/40 sm:text-[10px] md:text-xs">{formatGameTime(game.start_time)}</div>
-                        <Badge className={`w-fit text-[9px] sm:text-[10px] md:text-xs ${badgeClassForStatus(game.status)}`}>{statusLabel(game.status)}</Badge>
+                        <div className={`text-[9px] uppercase tracking-wide sm:text-[10px] md:text-xs ${getTournamentThemeClass('cardTextDim', theme)}`}>{formatGameTime(game.start_time)}</div>
+                        <Badge className={`w-fit text-[9px] sm:text-[10px] md:text-xs ${badgeClassForStatus(game.status, theme)}`}>{statusLabel(game.status)}</Badge>
                         <PhaseBadge phase={game.game_phase} size="sm" />
                         <button
                           onClick={() => canView && window.open(`/game-viewer-v3/${game.id}`, '_blank')}
@@ -185,7 +188,7 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
             <Button
               variant="ghost"
               onClick={() => setShowAll(!showAll)}
-              className="w-full mt-2 text-white/60 hover:text-white hover:bg-white/10 border border-white/10"
+              className={`w-full mt-2 ${getTournamentThemeClass('btnOutlineBorder', theme)} ${getTournamentThemeClass('btnOutlineText', theme)}`}
             >
               {showAll ? (
                 <>
@@ -206,15 +209,15 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
   );
 }
 
-function badgeClassForStatus(status: Game['status']) {
+function badgeClassForStatus(status: Game['status'], theme: 'light' | 'dark') {
   switch (status) {
     case 'in_progress':
     case 'live':
       return 'bg-[#FF3B30] text-white';
     case 'completed':
-      return 'bg-white/10 text-white/60';
+      return getTournamentThemeClass('badgeCompleted', theme);
     default:
-      return 'bg-[#1f2937] text-white/60';
+      return getTournamentThemeClass('badgeScheduled', theme);
   }
 }
 

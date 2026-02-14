@@ -16,6 +16,8 @@ import { Play, ExternalLink } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { GameReplay } from '@/hooks/useGameReplays';
 import { TournamentLiveStreamEmbed } from '@/components/live-streaming/TournamentLiveStreamEmbed';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface GameReplayCardProps {
   replay: GameReplay;
@@ -35,7 +37,7 @@ function TeamName({ name, id, tournamentId }: { name: string; id?: string; tourn
 }
 
 export function GameReplayCard({ replay, tournamentId, isPlaying, onPlay, onClose }: GameReplayCardProps) {
-  // ✅ Fallback to local state for standalone usage (backward compatible)
+  const { theme } = useTournamentTheme();
   const [localShowPlayer, setLocalShowPlayer] = useState(false);
   const [thumbnailError, setThumbnailError] = useState(false);
   
@@ -73,7 +75,7 @@ export function GameReplayCard({ replay, tournamentId, isPlaying, onPlay, onClos
 
   if (showPlayer) {
     return (
-      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/30 overflow-hidden">
+      <div className={`space-y-2 rounded-2xl border overflow-hidden ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBg', theme)}`}>
         <TournamentLiveStreamEmbed
           streamUrl={youtubeUrl}
           platform="youtube"
@@ -81,16 +83,16 @@ export function GameReplayCard({ replay, tournamentId, isPlaying, onPlay, onClos
           isLive={false}
         />
         <div className="px-3 pb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-white">
+          <div className={`flex items-center gap-2 text-xs ${getTournamentThemeClass('cardText', theme)}`}>
             <TeamName name={replay.teamAName} id={replay.teamAId} tournamentId={tournamentId} />
             <span className="font-bold">{replay.homeScore}</span>
-            <span className="text-white/50">-</span>
+            <span className={getTournamentThemeClass('cardTextDim', theme)}>-</span>
             <span className="font-bold">{replay.awayScore}</span>
             <TeamName name={replay.teamBName} id={replay.teamBId} tournamentId={tournamentId} />
           </div>
           <button
             onClick={handleClose}
-            className="text-[10px] text-white/50 hover:text-white"
+            className={`text-[10px] ${getTournamentThemeClass('cardTextDim', theme)} hover:opacity-100`}
           >
             Close
           </button>
@@ -101,11 +103,10 @@ export function GameReplayCard({ replay, tournamentId, isPlaying, onPlay, onClos
 
   return (
     <div
-      className="group cursor-pointer space-y-2 rounded-2xl border border-white/10 bg-black/30 p-3 transition hover:border-[#FF3B30]/30 hover:bg-black/50"
+      className={`group cursor-pointer space-y-2 rounded-2xl border p-3 transition hover:border-[#FF3B30]/30 ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBg', theme)} ${theme === 'dark' ? 'hover:bg-black/50' : 'hover:bg-gray-100'}`}
       onClick={handlePlay}
     >
-      {/* Thumbnail */}
-      <div className="relative aspect-video rounded-xl overflow-hidden bg-white/5">
+      <div className={`relative aspect-video rounded-xl overflow-hidden ${getTournamentThemeClass('cardBgSubtle', theme)}`}>
         {!thumbnailError ? (
           <Image
             src={thumbnailUrl}
@@ -129,34 +130,33 @@ export function GameReplayCard({ replay, tournamentId, isPlaying, onPlay, onClos
 
         {/* Score overlay */}
         <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm rounded-full px-2 py-1">
-            <Avatar className="h-4 w-4 border border-white/20">
+          <div className={`flex items-center gap-1.5 backdrop-blur-sm rounded-full px-2 py-1 text-white ${theme === 'dark' ? 'bg-black/70' : 'bg-gray-900/80'}`}>
+            <Avatar className={`h-4 w-4 border border-white/20`}>
               {replay.teamALogo && <AvatarImage src={replay.teamALogo} />}
-              <AvatarFallback className="bg-white/10 text-[8px]">
+              <AvatarFallback className="bg-white/10 text-[8px] text-white">
                 {replay.teamAName.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <span className="text-[10px] font-bold text-white">{replay.homeScore}</span>
-            <span className="text-[10px] text-white/50">-</span>
-            <span className="text-[10px] font-bold text-white">{replay.awayScore}</span>
+            <span className="text-[10px] font-bold">{replay.homeScore}</span>
+            <span className="text-[10px] text-white/70">-</span>
+            <span className="text-[10px] font-bold">{replay.awayScore}</span>
             <Avatar className="h-4 w-4 border border-white/20">
               {replay.teamBLogo && <AvatarImage src={replay.teamBLogo} />}
-              <AvatarFallback className="bg-white/10 text-[8px]">
+              <AvatarFallback className="bg-white/10 text-[8px] text-white">
                 {replay.teamBName.charAt(0)}
               </AvatarFallback>
             </Avatar>
           </div>
           {replay.gameDate && (
-            <span className="text-[10px] text-white/70 bg-black/70 backdrop-blur-sm rounded-full px-2 py-1">
+            <span className={`text-[10px] text-white/90 backdrop-blur-sm rounded-full px-2 py-1 ${theme === 'dark' ? 'bg-black/70' : 'bg-gray-900/80'}`}>
               {formatDate(replay.gameDate)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Info */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-white font-medium truncate">
+      <div className={`flex items-center justify-between text-xs ${getTournamentThemeClass('cardText', theme)}`}>
+        <span className="font-medium truncate">
           <TeamName name={replay.teamAName} id={replay.teamAId} tournamentId={tournamentId} /> vs <TeamName name={replay.teamBName} id={replay.teamBId} tournamentId={tournamentId} />
         </span>
         <a

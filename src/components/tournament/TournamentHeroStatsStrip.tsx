@@ -1,6 +1,8 @@
 "use client";
 
 import { Users, Trophy, MapPin, Layers } from 'lucide-react';
+import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
+import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 
 interface TournamentHeroStatsStripProps {
   teamCount: number;
@@ -19,6 +21,7 @@ export function TournamentHeroStatsStrip({
   venueCount = 0,
   divisionCount = 0,
 }: TournamentHeroStatsStripProps) {
+  const { theme } = useTournamentTheme();
   const parts: { icon: React.ReactNode; label: string }[] = [
     { icon: <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" />, label: `${teamCount} Team${teamCount !== 1 ? 's' : ''}` },
     { icon: <Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5" />, label: `${gameCount} Game${gameCount !== 1 ? 's' : ''}` },
@@ -31,10 +34,10 @@ export function TournamentHeroStatsStrip({
   }
 
   return (
-    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-white/60 sm:gap-2 sm:text-xs">
+    <div className={`mt-1 flex flex-wrap items-center gap-1.5 text-[10px] sm:gap-2 sm:text-xs ${getTournamentThemeClass('heroStatsText', theme)}`}>
       {parts.map((part, i) => (
         <span key={i} className="flex items-center gap-1">
-          {i > 0 && <span className="text-white/30">·</span>}
+          {i > 0 && <span className={getTournamentThemeClass('heroStatsDot', theme)}>·</span>}
           <span className="flex items-center gap-1">{part.icon}{part.label}</span>
         </span>
       ))}
