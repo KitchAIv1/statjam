@@ -9,6 +9,8 @@ export interface TeamProfileHeroProps {
   team: PublicTeamProfile | null;
   loading: boolean;
   upcomingCount?: number;
+  /** Pre-normalized display color (e.g. dark fallback when primary is white). Falls back to team.primaryColor when absent. */
+  displayPrimaryColor?: string;
 }
 
 function InfoRow({
@@ -29,11 +31,17 @@ function InfoRow({
   );
 }
 
-export function TeamProfileHero({ team, loading, upcomingCount }: TeamProfileHeroProps) {
-  const primaryColor = team?.primaryColor || '#FF3B30';
-  const heroBg = team?.primaryColor
-    ? `linear-gradient(135deg, ${team.primaryColor}40 0%, ${team.primaryColor}18 45%, transparent 75%)`
-    : 'linear-gradient(135deg, rgba(255,59,48,0.18) 0%, transparent 75%)';
+export function TeamProfileHero({
+  team,
+  loading,
+  upcomingCount,
+  displayPrimaryColor,
+}: TeamProfileHeroProps) {
+  const primaryColor = displayPrimaryColor ?? team?.primaryColor ?? '#FF3B30';
+  const heroBg =
+    displayPrimaryColor ?? team?.primaryColor
+      ? `linear-gradient(135deg, ${primaryColor}40 0%, ${primaryColor}18 45%, transparent 75%)`
+      : 'linear-gradient(135deg, rgba(255,59,48,0.18) 0%, transparent 75%)';
 
   const handleShare = async () => {
     if (navigator.share) {

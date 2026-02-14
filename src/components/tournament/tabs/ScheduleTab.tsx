@@ -84,9 +84,13 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
               key={`round-${roundIndex}`}
               className="rounded-xl border border-white/10 bg-white/5 overflow-hidden backdrop-blur sm:rounded-2xl md:rounded-3xl"
             >
-              <div className="border-b border-white/10 px-3 py-2 sm:px-4 sm:py-2.5">
+              <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2 sm:px-4 sm:py-2.5">
                 <span className="text-[10px] font-medium uppercase tracking-wide text-white/50 sm:text-xs">
                   Round {roundIndex}
+                </span>
+                <span className="text-white/30">•</span>
+                <span className="text-[10px] text-white/60 sm:text-xs">
+                  {formatRoundDate(roundGames[0]?.start_time)}
                 </span>
               </div>
               <div className="divide-y divide-white/10">
@@ -157,7 +161,7 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                         </div>
                       </div>
                       <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 md:gap-3">
-                        <div className="text-[9px] uppercase tracking-wide text-white/40 sm:text-[10px] md:text-xs">{formatDate(game.start_time)}</div>
+                        <div className="text-[9px] uppercase tracking-wide text-white/40 sm:text-[10px] md:text-xs">{formatGameTime(game.start_time)}</div>
                         <Badge className={`w-fit text-[9px] sm:text-[10px] md:text-xs ${badgeClassForStatus(game.status)}`}>{statusLabel(game.status)}</Badge>
                         <PhaseBadge phase={game.game_phase} size="sm" />
                         <button
@@ -227,12 +231,30 @@ function statusLabel(status: Game['status']) {
   }
 }
 
-function formatDate(date?: string) {
+function formatRoundDate(date?: string) {
   if (!date) return 'TBD';
   try {
-    return new Date(date).toLocaleString();
+    return new Date(date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   } catch (error) {
-    console.error('Failed to format game date', error);
+    console.error('Failed to format round date', error);
+    return 'TBD';
+  }
+}
+
+function formatGameTime(date?: string) {
+  if (!date) return 'TBD';
+  try {
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch (error) {
+    console.error('Failed to format game time', error);
     return 'TBD';
   }
 }

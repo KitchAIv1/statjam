@@ -8,6 +8,7 @@ import { TeamPageMatchupCarousel } from './TeamPageMatchupCarousel';
 import { TeamRosterGrid } from './TeamRosterGrid';
 import { usePublicTeamPage } from '@/hooks/usePublicTeamPage';
 import { useTeamMatchups } from '@/hooks/useTeamMatchups';
+import { getTeamDisplayColor } from '@/lib/utils/teamColor';
 
 export interface PublicTeamPageShellProps {
   tournamentId: string;
@@ -27,6 +28,9 @@ export function PublicTeamPageShell({
   });
 
   const backHref = `/t/${tournamentSlug}`;
+  const teamDisplayColor = team?.primaryColor
+    ? getTeamDisplayColor(team.primaryColor)
+    : undefined;
 
   if (teamError || (!teamLoading && !team)) {
     return (
@@ -54,14 +58,15 @@ export function PublicTeamPageShell({
           team={team}
           loading={teamLoading}
           upcomingCount={matchups?.length}
+          displayPrimaryColor={teamDisplayColor}
         />
 
         <div
           className="w-full px-4 py-3"
           style={
-            team?.primaryColor
+            teamDisplayColor
               ? {
-                  background: `linear-gradient(180deg, ${team.primaryColor}08 0%, transparent 100%)`,
+                  background: `linear-gradient(180deg, ${teamDisplayColor}08 0%, transparent 100%)`,
                 }
               : { background: 'transparent' }
           }
@@ -73,14 +78,14 @@ export function PublicTeamPageShell({
             subtitle="Click a game to view"
             emptyMessage="No upcoming games scheduled"
             titlePosition="below"
-            teamPrimaryColor={team?.primaryColor}
+            teamPrimaryColor={teamDisplayColor}
           />
         </div>
 
         <div className="container mx-auto max-w-5xl space-y-6 px-4 mt-6 border-t border-gray-200 pt-6">
           <TeamRosterGrid
             players={team?.players ?? []}
-            teamPrimaryColor={team?.primaryColor}
+            teamPrimaryColor={teamDisplayColor}
           />
         </div>
       </main>

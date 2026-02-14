@@ -111,6 +111,7 @@ export const CacheKeys = {
   coachTeams: (coachId: string) => `coach_teams:${coachId}`,
   coachDashboard: (coachId: string) => `coach_dashboard:${coachId}`,
   tournamentSchedule: (tournamentId: string) => `tournament_schedule:${tournamentId}`,
+  firstGameDate: (tournamentId: string) => `first_game_date:${tournamentId}`,
   tournamentLeaders: (tournamentId: string, category: string, minGames: number) => `tournament_leaders:${tournamentId}:${category}:${minGames}`,
   tournamentStandings: (tournamentId: string) => `tournament_standings:${tournamentId}`,
   tournamentTeams: (tournamentId: string) => `tournament_teams:${tournamentId}`,
@@ -142,6 +143,7 @@ export const CacheTTL = {
   coachDashboard: 2, // 2 minutes TTL for coach dashboard data (video queue, live/recent games)
   coachGames: 3, // 3 minutes TTL for coach games with video status
   tournamentSchedule: 5,
+  firstGameDate: 5,
   tournamentLeaders: 2,
   tournamentStandings: 3,
   tournamentTeams: 10,
