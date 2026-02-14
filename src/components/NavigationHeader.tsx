@@ -6,16 +6,19 @@ import { UserDropdownMenu } from "@/components/ui/UserDropdownMenu";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { getNavigationForRole } from "@/lib/navigation-config";
-import { Menu, X } from "lucide-react";
+import Link from "next/link";
+import { Menu, X, ArrowLeft } from "lucide-react";
 import { OrganizerGuideButton } from "@/components/guide";
 import { useSubscription } from "@/hooks/useSubscription";
 import { VerifiedBadge } from "@/components/shared/VerifiedBadge";
 
 interface NavigationHeaderContentProps {
   minimal?: boolean;
+  backHref?: string;
+  backLabel?: string;
 }
 
-function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentProps) {
+function NavigationHeaderContent({ minimal = false, backHref, backLabel = 'Back' }: NavigationHeaderContentProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -115,12 +118,22 @@ function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentPro
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo + Verified Badge - Fixed layout to prevent shift */}
-          <div 
-            onClick={handleHome}
-            className="cursor-pointer flex items-center gap-2"
-          >
+        <div className="flex items-center justify-between h-16 gap-4">
+          {/* Back link (optional) + Logo */}
+          <div className="flex items-center gap-3 min-w-0">
+            {backHref && (
+              <Link
+                href={backHref}
+                className="shrink-0 inline-flex items-center gap-1.5 text-sm text-white/80 hover:text-white transition py-1"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">{backLabel}</span>
+              </Link>
+            )}
+            <div 
+              onClick={handleHome}
+              className="cursor-pointer flex items-center gap-2 min-w-0"
+            >
             <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent whitespace-nowrap">
               StatJam
             </h1>
@@ -128,6 +141,7 @@ function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentPro
             {isAuthenticated && showVerified && (
               <VerifiedBadge variant="pill" />
             )}
+            </div>
           </div>
 
           {/* Desktop Navigation - Hidden in minimal mode */}
@@ -271,9 +285,11 @@ function NavigationHeaderContent({ minimal = false }: NavigationHeaderContentPro
 
 interface NavigationHeaderProps {
   minimal?: boolean;
+  backHref?: string;
+  backLabel?: string;
 }
 
-export function NavigationHeader({ minimal = false }: NavigationHeaderProps) {
+export function NavigationHeader({ minimal = false, backHref, backLabel }: NavigationHeaderProps) {
   return (
     <Suspense fallback={
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10">
@@ -288,7 +304,7 @@ export function NavigationHeader({ minimal = false }: NavigationHeaderProps) {
         </div>
       </header>
     }>
-      <NavigationHeaderContent minimal={minimal} />
+      <NavigationHeaderContent minimal={minimal} backHref={backHref} backLabel={backLabel} />
     </Suspense>
   );
 }

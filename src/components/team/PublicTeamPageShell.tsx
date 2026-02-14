@@ -47,12 +47,25 @@ export function PublicTeamPageShell({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <NavigationHeader minimal />
+      <NavigationHeader minimal backHref={backHref} backLabel="Back to Tournament" />
 
-      <main className="pb-16 pt-20">
-        <TeamProfileHero team={team} loading={teamLoading} />
+      <main className="pb-16 pt-16">
+        <TeamProfileHero
+          team={team}
+          loading={teamLoading}
+          upcomingCount={matchups?.length}
+        />
 
-        <div className="mt-4 px-4">
+        <div
+          className="w-full px-4 py-3"
+          style={
+            team?.primaryColor
+              ? {
+                  background: `linear-gradient(180deg, ${team.primaryColor}08 0%, transparent 100%)`,
+                }
+              : { background: 'transparent' }
+          }
+        >
           <TeamPageMatchupCarousel
             matchups={matchups}
             loading={matchupsLoading}
@@ -60,10 +73,11 @@ export function PublicTeamPageShell({
             subtitle="Click a game to view"
             emptyMessage="No upcoming games scheduled"
             titlePosition="below"
+            teamPrimaryColor={team?.primaryColor}
           />
         </div>
 
-        <div className="container mx-auto max-w-5xl space-y-6 px-4 mt-6">
+        <div className="container mx-auto max-w-5xl space-y-6 px-4 mt-6 border-t border-gray-200 pt-6">
           <TeamRosterGrid
             players={team?.players ?? []}
             teamPrimaryColor={team?.primaryColor}

@@ -93,7 +93,7 @@ export function TeamMatchupCard({
   return (
     <div
       onClick={onClick}
-      className={`relative flex h-48 w-80 flex-shrink-0 overflow-hidden rounded-xl transition-all hover:scale-105 hover:shadow-xl ${
+      className={`relative flex h-48 w-80 flex-shrink-0 overflow-hidden rounded-xl transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl ${
         onClick ? 'cursor-pointer' : ''
       } ${isCancelled ? 'opacity-60' : ''} ${borderClass}`}
       style={{ aspectRatio: '16/9' }}
