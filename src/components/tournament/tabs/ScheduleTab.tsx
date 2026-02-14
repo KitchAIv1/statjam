@@ -13,7 +13,7 @@ import { PhaseBadge } from '@/components/tournament/PhaseBadge';
 // Max games to show initially (covers multiple months: Feb, Mar, Apr, May...)
 const INITIAL_DISPLAY_LIMIT = 24;
 // Option B: rounds derived from order (chunk by N games)
-const GAMES_PER_ROUND = 4;
+const GAMES_PER_ROUND = 6;
 
 type ScheduleGame = ReturnType<typeof useScheduleData>['games'][number];
 
