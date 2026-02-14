@@ -117,12 +117,12 @@ export default function PlayerProfilePage({ params }: PageProps) {
             </section>
           )}
 
-          {/* Tournament Stats - Contained Card */}
+          {/* Tournament Stats - Light Card */}
           {profile.tournamentStats && profile.tournamentStats.length > 0 && (
-            <section className="bg-[#1A1A1A] rounded-xl p-5 sm:p-6">
+            <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
               <PlayerProfileStats
                 tournamentStats={profile.tournamentStats}
-                variant="dark"
+                variant="light"
                 initialTournament={tournamentFromUrl || undefined}
                 onTournamentChange={setSelectedTournament}
               />
@@ -163,12 +163,13 @@ export default function PlayerProfilePage({ params }: PageProps) {
             );
           })()}
 
-          {/* Recruitment Section - Dark Card */}
+          {/* Recruitment Section - Light Card */}
           {profile.identity.isRecruitable && (
-            <section className="bg-[#1A1A1A] rounded-xl p-5 sm:p-6 mt-2">
+            <section className="mt-2 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
               <PlayerProfileRecruitment
                 recruitmentNote={profile.identity.recruitmentNote}
                 contactEmail={profile.identity.contactEmail}
+                variant="light"
               />
             </section>
           )}

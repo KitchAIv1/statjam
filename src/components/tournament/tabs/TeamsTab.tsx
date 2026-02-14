@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Shield } from 'lucide-react';
@@ -43,7 +44,12 @@ export function TeamsTab({ tournamentId }: TeamsTabProps) {
             const logoUrl = (team as any).logo_url || (team as any).logo;
 
             return (
-              <Card key={team.id} className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-white/80 backdrop-blur sm:gap-3 sm:rounded-2xl sm:p-4 md:gap-4 md:rounded-3xl md:p-6">
+              <Link
+                key={team.id}
+                href={`/t/${tournamentId}/team/${team.id}`}
+                className="block transition hover:opacity-95"
+              >
+              <Card className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-white/80 backdrop-blur sm:gap-3 sm:rounded-2xl sm:p-4 md:gap-4 md:rounded-3xl md:p-6">
                 <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
                   <Avatar className="h-10 w-10 shrink-0 border border-white/10 sm:h-12 sm:w-12 md:h-14 md:w-14">
                     {logoUrl ? (
@@ -73,6 +79,7 @@ export function TeamsTab({ tournamentId }: TeamsTabProps) {
                   </div>
                 )}
               </Card>
+              </Link>
             );
           })}
         </div>

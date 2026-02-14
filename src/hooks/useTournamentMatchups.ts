@@ -114,10 +114,11 @@ export function useTournamentMatchups(
       setLoading(true);
 
       // Build filters object with database-level sorting/limiting
+      // ✅ Order asc = earliest first, so we fetch from tournament start (all months: Feb, Mar, Apr, May...)
       const filters: Record<string, string> = {
         'tournament_id': `eq.${tournamentId}`,
-        'order': 'start_time.desc', // ✅ Database-level sorting
-        'limit': limit.toString() // ✅ Database-level limiting
+        'order': 'start_time.asc',
+        'limit': limit.toString()
       };
 
       if (status === 'completed') {

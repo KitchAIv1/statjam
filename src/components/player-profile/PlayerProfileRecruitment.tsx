@@ -6,19 +6,18 @@ import { Mail, FileText, CheckCircle } from 'lucide-react';
 interface PlayerProfileRecruitmentProps {
   recruitmentNote?: string;
   contactEmail?: string;
+  variant?: 'light' | 'dark';
 }
 
 /**
  * PlayerProfileRecruitment - Recruitment CTA section
- * 
- * Dark section with white text
  * Shows when player is open to opportunities
- * 
  * Follows .cursorrules: <200 lines, single responsibility
  */
-export function PlayerProfileRecruitment({ 
-  recruitmentNote, 
-  contactEmail 
+export function PlayerProfileRecruitment({
+  recruitmentNote,
+  contactEmail,
+  variant = 'dark',
 }: PlayerProfileRecruitmentProps) {
   const handleContact = () => {
     if (contactEmail) {
@@ -27,44 +26,39 @@ export function PlayerProfileRecruitment({
   };
 
   const handleDownloadStats = () => {
-    // TODO: Implement PDF download
     alert('Stats PDF download coming soon!');
   };
 
+  const isLight = variant === 'light';
+  const badgeClass = isLight ? 'text-green-600' : 'text-green-400';
+  const noteClass = isLight ? 'text-gray-600' : 'text-gray-300';
+  const outlineClass = isLight
+    ? 'border-gray-300 text-gray-700 hover:bg-gray-100'
+    : 'border-white/30 text-white hover:bg-white/10';
+
   return (
     <div className="text-center sm:text-left">
-      {/* Status Badge */}
-      <div className="inline-flex items-center gap-2 text-green-400 mb-4">
-        <CheckCircle className="w-5 h-5" />
-        <span className="font-semibold uppercase tracking-wide text-sm">
+      <div className={`inline-flex items-center gap-2 ${badgeClass} mb-4`}>
+        <CheckCircle className="h-5 w-5" />
+        <span className="text-sm font-semibold uppercase tracking-wide">
           Open to Opportunities
         </span>
       </div>
-
-      {/* Note */}
       {recruitmentNote && (
-        <p className="text-gray-300 italic mb-6 max-w-lg">
-          &ldquo;{recruitmentNote}&rdquo;
-        </p>
+        <p className={`mb-6 max-w-lg italic ${noteClass}`}>&ldquo;{recruitmentNote}&rdquo;</p>
       )}
-
-      {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         {contactEmail && (
           <Button
             onClick={handleContact}
-            className="bg-[#FF3B30] hover:bg-[#FF3B30]/90 text-white"
+            className="bg-[#FF3B30] text-white hover:bg-[#FF3B30]/90"
           >
-            <Mail className="w-4 h-4 mr-2" />
+            <Mail className="mr-2 h-4 w-4" />
             Contact Player
           </Button>
         )}
-        <Button
-          onClick={handleDownloadStats}
-          variant="outline"
-          className="border-white/30 text-white hover:bg-white/10"
-        >
-          <FileText className="w-4 h-4 mr-2" />
+        <Button onClick={handleDownloadStats} variant="outline" className={outlineClass}>
+          <FileText className="mr-2 h-4 w-4" />
           Download Stats
         </Button>
       </div>

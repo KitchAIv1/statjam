@@ -40,11 +40,14 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
   const { awards: tournamentAwards, loading: awardsLoading } = useTournamentAwards(data.tournament.id, 10);
   const [awardsExpanded, setAwardsExpanded] = useState(false);
 
-  // ✅ Fetch tournament matchups (completed + scheduled)
+  // ✅ Fetch tournament matchups (completed + scheduled) - limit 100 for full date range (all months)
   const { matchups, loading: matchupsLoading } = useTournamentMatchups(data.tournament.id, {
     status: matchupFilter === 'all' ? undefined : matchupFilter,
-    limit: 20
+    limit: 100
   });
+
+  // API returns earliest first; use directly for carousel (no reverse needed)
+  const displayedMatchups = matchups;
 
   // ✅ Fetch upcoming games for mobile section (no WebSocket, just HTTP)
   const { matchups: upcomingGames, loading: upcomingLoading } = useTournamentMatchups(data.tournament.id, {
@@ -218,7 +221,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
       scrollContainer.removeEventListener('scroll', updateScrollButtons);
       window.removeEventListener('resize', updateScrollButtons);
     };
-  }, [matchups]);
+  }, [displayedMatchups]);
 
   // ✅ Scroll functions for navigation arrows
   const scrollLeft = () => {
@@ -300,7 +303,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
         {/* Horizontal Scroll Container with Navigation Arrows */}
         <div className="relative">
           {/* Navigation Arrows - Only show when there are matchups */}
-          {matchups.length > 3 && (
+          {displayedMatchups.length > 3 && (
             <>
               <button
                 onClick={scrollLeft}
@@ -339,7 +342,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                 <div key={item} className="h-48 w-80 flex-shrink-0 animate-pulse rounded-xl border border-white/10 bg-white/5" />
               ))}
             </div>
-          ) : matchups.length > 0 ? (
+          ) : displayedMatchups.length > 0 ? (
             <div 
               ref={matchupScrollRef}
               className="matchup-scroll-container flex gap-4 overflow-x-auto pb-2"
@@ -348,7 +351,7 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
                 WebkitOverflowScrolling: 'touch'
               }}
             >
-              {matchups.map((matchup) => (
+              {displayedMatchups.map((matchup) => (
                 <div key={matchup.gameId} data-matchup-card>
                   <TeamMatchupCard
                     gameId={matchup.gameId}
