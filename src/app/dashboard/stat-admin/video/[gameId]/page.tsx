@@ -65,6 +65,7 @@ import { GameAwardsService } from '@/lib/services/gameAwardsService';
 import { StatAdminDashboardService } from '@/lib/services/statAdminDashboardService';
 import { updateAssignmentStatus } from '@/lib/services/videoAssignmentService';
 import { AIAnalysisService } from '@/lib/services/aiAnalysisService';
+import { errorLoggingService } from '@/lib/services/errorLoggingService';
 
 interface VideoStatTrackerPageProps {
   params: Promise<{ gameId: string }>;
@@ -828,6 +829,7 @@ export default function VideoStatTrackerPage({ params }: VideoStatTrackerPagePro
       );
     } catch (err) {
       console.error('Error creating video record:', err);
+      errorLoggingService.logError(err instanceof Error ? err : new Error(String(err)), { gameId, action: 'post_upload_create_video_stat_admin', userId: user?.id });
     }
     
     // Refresh video data

@@ -28,6 +28,7 @@ import { VideoStatService } from '@/lib/services/videoStatService';
 import { CoachGameService } from '@/lib/services/coachGameService';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
+import { errorLoggingService } from '@/lib/services/errorLoggingService';
 import { isBunnyConfigured } from '@/lib/config/videoConfig';
 import { UpgradeModal, VideoCreditsModal } from '@/components/subscription';
 import type { GameVideo } from '@/lib/types/video';
@@ -184,6 +185,7 @@ export default function CoachVideoPage({ params }: CoachVideoPageProps) {
       }
     } catch (err) {
       console.error('❌ Error in handleUploadComplete:', err);
+      errorLoggingService.logError(err instanceof Error ? err : new Error(String(err)), { gameId, action: 'post_upload_create_video_coach', userId: user?.id });
     }
     
     const video = await VideoStatService.getGameVideo(gameId);

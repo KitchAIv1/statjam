@@ -8,6 +8,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { errorLoggingService } from '@/lib/services/errorLoggingService';
 import type { 
   GameVideo, 
   ClockSyncConfig, 
@@ -81,6 +82,7 @@ export async function createGameVideo(
   
   if (error) {
     console.error('Error creating/updating game video:', error);
+    errorLoggingService.logError(new Error('Failed to create game video record'), { gameId, action: 'create_game_video', metadata: { bunnyVideoId } });
     throw new Error('Failed to create game video record');
   }
   
@@ -333,6 +335,7 @@ export async function recordVideoStat(params: RecordVideoStatParams): Promise<st
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Error recording video stat:', response.status, errorText);
+    errorLoggingService.logError(new Error(`Failed to record stat: ${response.status}`), { gameId, action: 'record_video_stat', metadata: { statType, quarter } });
     throw new Error(`Failed to record stat: ${response.status}`);
   }
   

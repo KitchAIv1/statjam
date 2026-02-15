@@ -200,7 +200,10 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('❌ Bunny webhook error:', error);
-    Sentry.captureException(error, { tags: { route: 'bunny-webhook', action: 'process_video_webhook' } });
+    Sentry.captureException(error, {
+      tags: { route: 'bunny-webhook', action: 'process_video_webhook' },
+      extra: { videoId: body?.VideoGuid, status: body?.Status },
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -15,6 +15,7 @@ import { Upload, X, CheckCircle, AlertCircle, Loader2, Film, RefreshCw, Clock, A
 import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/progress';
 import { BunnyUploadService, validateVideoFile, getUploadErrorMessage } from '@/lib/services/bunnyUploadService';
+import { errorLoggingService } from '@/lib/services/errorLoggingService';
 import { UPLOAD_CONFIG } from '@/lib/config/videoConfig';
 import type { VideoUploadProgress } from '@/lib/types/video';
 import { useVideoUpload } from '@/contexts/VideoUploadContext';
@@ -145,6 +146,7 @@ export function VideoUploader({
     } else {
       const rawError = result.error || 'Upload failed';
       const friendlyError = getUploadErrorMessage(rawError);
+      errorLoggingService.logError(new Error(rawError), { gameId, action: 'video_upload_failed', userId });
       setError(friendlyError);
       setCanRetry(true); // Enable retry button
       uploadContext.cancelUpload();

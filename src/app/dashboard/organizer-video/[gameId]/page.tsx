@@ -27,6 +27,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { VideoStatService } from '@/lib/services/videoStatService';
 import { GameService } from '@/lib/services/gameService';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
+import { errorLoggingService } from '@/lib/services/errorLoggingService';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { isBunnyConfigured } from '@/lib/config/videoConfig';
 import { UpgradeModal, VideoCreditsModal } from '@/components/subscription';
@@ -208,6 +209,7 @@ export default function OrganizerVideoPage({ params }: OrganizerVideoPageProps) 
       }
     } catch (err) {
       console.error('Error in handleUploadComplete:', err);
+      errorLoggingService.logError(err instanceof Error ? err : new Error(String(err)), { gameId, action: 'post_upload_create_video_organizer', userId: user?.id });
     }
     
     const video = await VideoStatService.getGameVideo(gameId);

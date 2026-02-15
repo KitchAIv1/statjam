@@ -9,6 +9,7 @@
 
 import { UPLOAD_CONFIG, getBunnyConfig } from '@/lib/config/videoConfig';
 import type { VideoUploadProgress } from '@/lib/types/video';
+import { errorLoggingService } from '@/lib/services/errorLoggingService';
 
 // =============================================================================
 // TYPES
@@ -168,6 +169,7 @@ export async function uploadVideo(options: UploadOptions): Promise<UploadResult>
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+    errorLoggingService.logError(error instanceof Error ? error : new Error(errorMessage), { gameId, action: 'video_upload_tus' });
     onProgress?.({
       bytesUploaded: 0,
       totalBytes: file.size,

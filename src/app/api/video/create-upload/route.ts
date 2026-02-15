@@ -290,7 +290,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Create upload error:', error);
-    Sentry.captureException(error, { tags: { route: 'video-create-upload', action: 'create_upload_session' } });
+    Sentry.captureException(error, {
+      tags: { route: 'video-create-upload', action: 'create_upload_session' },
+      extra: { gameId: body?.gameId, userId: body?.userId },
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

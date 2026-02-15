@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { errorLoggingService } from '@/lib/services/errorLoggingService';
 
 interface VideoStatus {
   status: string;
@@ -94,6 +95,7 @@ export function useVideoProcessingStatus({
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('Status check error:', errorMsg);
+      errorLoggingService.logError(err instanceof Error ? err : new Error(errorMsg), { action: 'video_status_poll', metadata: { videoId } });
       consecutiveErrorsRef.current++;
       // Don't stop polling on network errors - keep trying with backoff
       if (consecutiveErrorsRef.current > 10) {
@@ -143,6 +145,7 @@ export function useVideoProcessingStatus({
     timeoutRef.current = setTimeout(() => {
       stopPolling();
       const errorMsg = 'Video processing timed out';
+      errorLoggingService.logWarning(errorMsg, { action: 'video_status_timeout', metadata: { videoId, timeoutMs } });
       setError(errorMsg);
       onError?.(errorMsg);
     }, timeoutMs);
