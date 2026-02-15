@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/Button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { CalendarDays, Clock, MapPin, Play, Shield, Lock, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, Play, Shield, Lock, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { Game } from '@/lib/types/game';
 import { PhaseBadge } from '@/components/tournament/PhaseBadge';
@@ -34,6 +34,15 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
   // ✅ OPTIMIZED: Use custom hook with batching and caching
   const { games, loading } = useScheduleData(tournamentId);
   const [showAll, setShowAll] = useState(false);
+  const [openRounds, setOpenRounds] = useState<Set<number>>(() => new Set());
+  const toggleRound = (roundIndex: number) => {
+    setOpenRounds((prev) => {
+      const next = new Set(prev);
+      if (next.has(roundIndex)) next.delete(roundIndex);
+      else next.add(roundIndex);
+      return next;
+    });
+  };
 
   // Sort games: earliest first (chronological)
   const sortedGames = useMemo(() => {
@@ -60,16 +69,18 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
     return result;
   }, [displayedGames]);
 
+  // Stable key to avoid infinite loop: rounds array is recreated every render
+  // (displayedGames.slice creates new refs), but round indices only change when
+  // games or showAll changes.
+  const roundIndicesKey = rounds.length > 0 ? rounds.map((r) => r.roundIndex).join(',') : '';
+  useEffect(() => {
+    if (roundIndicesKey) {
+      setOpenRounds(new Set(roundIndicesKey.split(',').map(Number)));
+    }
+  }, [roundIndicesKey]);
+
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className={`rounded-2xl border p-4 backdrop-blur sm:rounded-3xl sm:p-6 ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)}`}>
-        <div className={`flex flex-wrap gap-2 text-[10px] uppercase tracking-wide sm:gap-4 sm:text-xs ${getTournamentThemeClass('cardTextDim', theme)}`}>
-          <span className="flex items-center gap-1.5 sm:gap-2"><CalendarDays className="h-3 w-3 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Filter by Date</span><span className="sm:hidden">Date</span> <span className="hidden sm:inline">(coming soon)</span></span>
-          <span className="flex items-center gap-1.5 sm:gap-2"><MapPin className="h-3 w-3 sm:h-4 sm:w-4" /> Court</span>
-          <span className="flex items-center gap-1.5 sm:gap-2"><Clock className="h-3 w-3 sm:h-4 sm:w-4" /> Status</span>
-        </div>
-      </div>
-
       {loading ? (
         <div className="space-y-3 sm:space-y-4">
           {[1, 2, 3].map((item) => (
@@ -81,22 +92,31 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
           No games scheduled yet. Check back soon for live matchups.
         </Card>
       ) : (
-        <div className="space-y-4 sm:space-y-6">
-          {rounds.map(({ roundIndex, games: roundGames }) => (
-            <Card
-              key={`round-${roundIndex}`}
-              className={`rounded-xl border overflow-hidden backdrop-blur sm:rounded-2xl md:rounded-3xl ${getTournamentThemeClass('cardBorder', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)}`}
-            >
-              <div className={`flex flex-wrap items-center gap-2 border-b px-3 py-2 sm:px-4 sm:py-2.5 ${getTournamentThemeClass('cardBorder', theme)}`}>
-                <span className={`text-[10px] font-medium uppercase tracking-wide sm:text-xs ${getTournamentThemeClass('cardTextDim', theme)}`}>
-                  Round {roundIndex}
-                </span>
-                <span className={getTournamentThemeClass('cardTextDim', theme)}>•</span>
-                <span className={`text-[10px] sm:text-xs ${getTournamentThemeClass('cardTextMuted', theme)}`}>
-                  {formatRoundDate(roundGames[0]?.start_time)}
-                </span>
-              </div>
-              <div className={getTournamentThemeClass('divide', theme)}>
+        <div className={`overflow-hidden rounded-none border ${getTournamentThemeClass('cardBorder', theme)}`}>
+          {rounds.map(({ roundIndex, games: roundGames }) => {
+            const isOpen = openRounds.has(roundIndex);
+            return (
+              <div key={`round-${roundIndex}`} className={`border-b last:border-b-0 ${getTournamentThemeClass('cardBorder', theme)}`}>
+                <button
+                  type="button"
+                  onClick={() => toggleRound(roundIndex)}
+                  aria-expanded={isOpen}
+                  aria-controls={`round-${roundIndex}-content`}
+                  className={`flex w-full flex-wrap items-center justify-between gap-2 px-3 py-2 text-left sm:px-4 sm:py-2.5 ${getTournamentThemeClass('scheduleRoundHeaderBg', theme)} ${getTournamentThemeClass('scheduleRoundHeaderText', theme)}`}
+                >
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-medium uppercase tracking-wide sm:text-xs">
+                      Round {roundIndex}
+                    </span>
+                    <span>•</span>
+                    <span className="text-[10px] sm:text-xs">
+                      {formatRoundDate(roundGames[0]?.start_time)}
+                    </span>
+                  </span>
+                  {isOpen ? <ChevronUp className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
+                </button>
+                {isOpen && (
+                  <div id={`round-${roundIndex}-content`} className={`${getTournamentThemeClass('divide', theme)} ${getTournamentThemeClass('cardBgSubtle', theme)}`} role="region" aria-label={`Round ${roundIndex} games`}>
                 {roundGames.map((game) => {
                   const teamAName = game.teamAName || 'Team A';
                   const teamBName = game.teamBName || 'Team B';
@@ -180,9 +200,11 @@ export function ScheduleTab({ tournamentId }: ScheduleTabProps) {
                     </div>
                   );
                 })}
+                  </div>
+                )}
               </div>
-            </Card>
-          ))}
+            );
+          })}
 
           {hasMoreGames && (
             <Button

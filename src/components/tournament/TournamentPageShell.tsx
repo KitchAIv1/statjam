@@ -3,22 +3,12 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TournamentPageData } from '@/lib/services/tournamentPublicService';
 import { TournamentHero } from './TournamentHero';
 import { TournamentPrimaryNav } from './TournamentPrimaryNav';
 import { TournamentRightRail } from './TournamentRightRail';
 import { TournamentSocialFooter } from '@/components/shared/TournamentSocialFooter';
-import { OverviewTab } from './tabs/OverviewTab';
-import { ScheduleTab } from './tabs/ScheduleTab';
-import { BracketTab } from './tabs/BracketTab';
-import { StandingsTab } from './tabs/StandingsTab';
-import { LeadersTab } from './tabs/LeadersTab';
-import { TeamsTab } from './tabs/TeamsTab';
-import { PlayersTab } from './tabs/PlayersTab';
-import { LiveTabContent } from './tabs/LiveTabContent';
-import { MediaTab } from './tabs/MediaTab';
-import { InfoTab } from './tabs/InfoTab';
+import { TournamentTabsSection } from './TournamentTabsSection';
 import { TournamentLeadersService } from '@/lib/services/tournamentLeadersService';
 import { TeamService } from '@/lib/services/tournamentService';
 import { GameService } from '@/lib/services/gameService';
@@ -62,6 +52,7 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
   
   const [activePhase, setActivePhase] = useState<'upcoming' | 'live' | 'finals'>(getInitialPhase());
   const tabsListRef = useRef<HTMLDivElement>(null);
+  const [tabsMounted, setTabsMounted] = useState(false);
 
   const tabOptions = useMemo(() => TABS, []);
 
@@ -150,7 +141,7 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
       tabsList.removeEventListener('mouseup', handleMouseUp);
       tabsList.removeEventListener('mousemove', handleMouseMove);
     };
-  }, []);
+  }, [tabsMounted]);
 
   // ✅ FIX: Auto-scroll active tab into view when tab changes
   useEffect(() => {
@@ -177,7 +168,7 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
       left: Math.max(0, Math.min(targetScroll, tabsList.scrollWidth - containerWidth)),
       behavior: 'smooth'
     });
-  }, [activeTab]);
+  }, [activeTab, tabsMounted]);
 
   // ✅ Prefetch Leaders data in background for instant tab load
   // Prefetch ALL game phases AND categories in parallel so ALL filter switches are instant
@@ -298,6 +289,7 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
         onStartTournament={handleStartTournament}
         tabOptions={tabOptions}
         tabsListRef={tabsListRef}
+        onTabsMounted={() => setTabsMounted(true)}
       />
     </TournamentThemeProvider>
   );
@@ -313,6 +305,7 @@ interface TournamentPageShellContentProps {
   onStartTournament: () => void;
   tabOptions: readonly TournamentTab[];
   tabsListRef: React.RefObject<HTMLDivElement | null>;
+  onTabsMounted: () => void;
 }
 
 function TournamentPageShellContent({
@@ -325,6 +318,7 @@ function TournamentPageShellContent({
   onStartTournament,
   tabOptions,
   tabsListRef,
+  onTabsMounted,
 }: TournamentPageShellContentProps) {
   const { theme } = useTournamentTheme();
 
@@ -387,66 +381,14 @@ function TournamentPageShellContent({
 
       <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-3 px-3 pb-8 pt-4 sm:gap-4 sm:px-4 sm:pb-12 sm:pt-6 md:gap-6 md:px-6 md:pb-16 md:pt-10 lg:flex-row">
         <div className="flex-1 space-y-3 sm:space-y-4 md:space-y-6">
-          <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as TournamentTab)}>
-            {/* Mobile: Horizontal scrollable tabs - Works with mouse drag on desktop too */}
-            <div 
-              ref={tabsListRef}
-              className="mb-3 overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing sm:mb-4 lg:hidden"
-              style={{ 
-                scrollBehavior: 'smooth',
-                WebkitOverflowScrolling: 'touch',
-                overscrollBehaviorX: 'contain'
-              }}
-            >
-              <TabsList className={`inline-flex w-max min-w-full gap-1.5 bg-transparent p-0 px-3 sm:gap-2 sm:px-4 [&>*]:cursor-pointer [&>*]:select-none [&>*]:touch-none ${getTournamentThemeClass('pageText', theme)}`}>
-                {tabOptions.map((tab) => (
-                  <TabsTrigger
-                    key={tab}
-                    value={tab}
-                    className={`shrink-0 rounded-full border px-2.5 py-1.5 text-[10px] uppercase tracking-wide transition sm:px-3 sm:py-2 sm:text-xs ${getTournamentThemeClass('tabTriggerBg', theme)} ${getTournamentThemeClass('tabTriggerText', theme)} ${getTournamentThemeClass('tabTriggerActive', theme)}`}
-                  >
-                    {labelForTab(tab)}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-
-            <TabsContent value="overview" className="mt-0">
-              <OverviewTab data={data} onNavigateToTab={onTabChange} />
-            </TabsContent>
-            <TabsContent value="schedule" className="mt-0">
-              <ScheduleTab tournamentId={data.tournament.id} />
-            </TabsContent>
-            <TabsContent value="bracket" className="mt-0">
-              <BracketTab tournamentId={data.tournament.id} />
-            </TabsContent>
-            <TabsContent value="standings" className="mt-0">
-              <StandingsTab tournamentId={data.tournament.id} />
-            </TabsContent>
-            <TabsContent value="leaders" className="mt-0">
-              <LeadersTab tournamentId={data.tournament.id} />
-            </TabsContent>
-            <TabsContent value="teams" className="mt-0">
-              <TeamsTab tournamentId={data.tournament.id} />
-            </TabsContent>
-            <TabsContent value="players" className="mt-0">
-              <PlayersTab tournamentId={data.tournament.id} />
-            </TabsContent>
-            <TabsContent value="live" className="mt-0">
-              <LiveTabContent
-                tournamentId={data.tournament.id}
-                isStreaming={data.tournament.isStreaming}
-                liveStreamUrl={data.tournament.liveStreamUrl}
-                streamPlatform={data.tournament.streamPlatform}
-              />
-            </TabsContent>
-            <TabsContent value="media" className="mt-0">
-              <MediaTab tournamentId={data.tournament.id} />
-            </TabsContent>
-            <TabsContent value="info" className="mt-0">
-              <InfoTab data={data} />
-            </TabsContent>
-          </Tabs>
+          <TournamentTabsSection
+            data={data}
+            activeTab={activeTab}
+            onTabChange={onTabChange}
+            tabOptions={tabOptions}
+            tabsListRef={tabsListRef}
+            onTabsMounted={onTabsMounted}
+          />
         </div>
 
         <aside className="hidden w-full shrink-0 lg:block lg:w-[350px] xl:w-[380px]">
@@ -459,29 +401,3 @@ function TournamentPageShellContent({
   );
 }
 
-function labelForTab(tab: TournamentTab): string {
-  switch (tab) {
-    case 'overview':
-      return 'Overview';
-    case 'schedule':
-      return 'Schedule';
-    case 'bracket':
-      return 'Bracket';
-    case 'standings':
-      return 'Standings';
-    case 'leaders':
-      return 'Leaders';
-    case 'teams':
-      return 'Teams';
-    case 'players':
-      return 'Players';
-    case 'live':
-      return 'Live Games';
-    case 'media':
-      return 'Media';
-    case 'info':
-      return 'Info';
-    default:
-      return tab;
-  }
-}

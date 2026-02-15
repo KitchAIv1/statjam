@@ -130,6 +130,16 @@ export const tournamentThemeClasses = {
   filterPillBg: { dark: 'border border-white/10 bg-black/40', light: 'border border-gray-300 bg-gray-100' },
   filterPillInactive: { dark: 'text-[#B3B3B3] hover:text-white', light: 'text-gray-600 hover:text-[#FF3B30]' },
 
+  // Schedule tab round header (solid StatJam bar)
+  scheduleRoundHeaderBg: {
+    dark: 'bg-[#FF3B30]/25',
+    light: 'bg-[#FF3B30]',
+  },
+  scheduleRoundHeaderText: {
+    dark: 'text-white',
+    light: 'text-white',
+  },
+
   // Schedule tab action buttons & badges
   scheduleBtnCompleted: {
     dark: 'border border-white/20 text-white/60 hover:border-white/30 hover:text-white/80',
