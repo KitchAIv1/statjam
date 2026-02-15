@@ -68,6 +68,8 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error generating TURN credentials:', error);
+    const { captureException } = await import('@sentry/nextjs');
+    captureException(error, { tags: { route: 'turn-credentials', action: 'generate' } });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

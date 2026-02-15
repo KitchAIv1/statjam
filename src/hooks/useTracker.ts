@@ -653,6 +653,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             }
           } catch (rulesetError) {
             console.error('❌ Phase 1: Error loading ruleset:', rulesetError);
+            const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+            errorLoggingService.logError(rulesetError instanceof Error ? rulesetError : new Error(String(rulesetError)), { gameId, action: 'load_ruleset' });
             // Fallback to NBA ruleset
             setRuleset(RulesetService.getRuleset('NBA'));
             
@@ -695,6 +697,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         
       } catch (error) {
         console.error('❌ Error initializing game state:', error);
+        const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+        errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'init_game_state' });
       } finally {
         setIsLoading(false);
       }
@@ -798,6 +802,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             }
           } catch (error) {
             console.error('❌ Error recalculating scores from game_stats update:', error);
+            const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+            errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'recalc_scores' });
             // Don't update scores on error (keep current state)
           } finally {
             scoreRecalculationTimeoutRef.current = null;
@@ -831,6 +837,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       });
     } catch (error) {
       console.error('Error syncing clock start to database:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'clock_sync_start' });
     }
   }, [gameId, clock.secondsRemaining]);
 
@@ -848,6 +856,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       });
     } catch (error) {
       console.error('Error syncing clock stop to database:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'clock_sync_stop' });
     }
   }, [gameId, clock.secondsRemaining]);
 
@@ -896,6 +906,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       });
     } catch (error) {
       console.error('Error syncing clock reset to database:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'clock_sync_reset' });
     }
   }, [gameId, quarter, originalQuarterLength, periodsPerGame]);
 
@@ -928,6 +940,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       console.log('✅ Custom clock time synced to database');
     } catch (error) {
       console.error('❌ Error syncing custom clock time to database:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'clock_sync_custom' });
     }
   }, [gameId, quarter, originalQuarterLength]);
 
@@ -1004,6 +1018,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
               isRunning: true
             }).catch((error) => {
               console.error('❌ Error syncing clock tick to database:', error);
+              import('@/lib/services/errorLoggingService').then(({ errorLoggingService }) =>
+                errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'clock_sync_tick' })
+              );
             });
           });
         }
@@ -1113,6 +1130,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       console.log('✅ Quarter synced to database:', newQuarter, '(fouls reset)');
     } catch (error) {
       console.error('❌ Error syncing quarter to database:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'sync_quarter' });
       const { notify } = await import('@/lib/services/notificationService');
       notify.error('Sync Failed', 'Failed to sync quarter change to database');
     }
@@ -1340,6 +1359,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             console.log(`✅ Team fouls persisted to DB: Team ${isTeamA ? 'A' : 'B'} = ${newFoulCount}`);
           } catch (error) {
             console.error('❌ Failed to persist team fouls:', error);
+            const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+            errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'persist_team_fouls' });
           } finally {
             // ✅ Clear guard after DB update completes (with small delay to handle race conditions)
             setTimeout(() => {
@@ -1845,12 +1866,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       }
     } catch (error) {
       console.error('❌ Error with substitution:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'substitution' });
       const { notify } = await import('@/lib/services/notificationService');
       notify.error('Substitution Error', error instanceof Error ? error.message : 'An unexpected error occurred');
       setLastAction('Error recording substitution');
       return false;
     }
-  }, [teamAId, teamBId, setRosterA, setRosterB, gameStatus]);
+  }, [teamAId, teamBId, setRosterA, setRosterB, gameStatus, gameId]);
 
   // Enhanced Timeout Management
   const startTimeout = useCallback(async (teamId: string, type: 'full' | '30_second'): Promise<boolean> => {
@@ -1913,6 +1936,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       
     } catch (error) {
       console.error('❌ Error starting timeout:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'start_timeout' });
       const { notify } = await import('@/lib/services/notificationService');
       notify.error('Timeout error', 'An error occurred while starting the timeout.');
       setTimeoutActive(false);
@@ -2016,6 +2041,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           console.log(`✅ Foul undo persisted to DB: Team ${isTeamA ? 'A' : 'B'} = ${newFoulCount}`);
         } catch (error) {
           console.error('❌ Failed to persist foul undo:', error);
+          const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+          errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'persist_foul_undo' });
         }
       }
       
@@ -2029,6 +2056,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       
     } catch (error) {
       console.error('❌ useTracker: Failed to undo stat:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'undo_stat' });
       const { notify } = await import('@/lib/services/notificationService');
       notify.error('Undo Failed', 'Could not undo the last action. Please try again.');
     }
@@ -2058,6 +2087,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       setShowAwardsModal(true);
     } catch (error) {
       console.error('❌ Error closing game:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'close_game' });
       setLastAction('Error closing game');
     }
   }, [gameId, scores, teamAId, teamBId, gameStatus, isCoachMode, stopShotClock]);
@@ -2087,6 +2118,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       }
     } catch (error) {
       console.error('❌ Error cancelling game:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'cancel_game' });
       const { notify } = await import('@/lib/services/notificationService');
       notify.error('Cancel Failed', 'Could not cancel the game. Please try again.');
       setLastAction('Error cancelling game');
@@ -2143,6 +2176,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       }
     } catch (error) {
       console.error('❌ Error completing game with awards:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'complete_game_awards' });
       setLastAction('Error completing game');
       throw error;
     }
@@ -2167,6 +2202,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         console.log('✅ Manual possession persisted to database');
       } catch (error) {
         console.error('❌ Failed to persist manual possession:', error);
+        const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+        errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'manual_possession' });
       }
     }
     
@@ -2213,6 +2250,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         console.log(`✅ Clock state auto-saved: ${Math.floor(currentClock.secondsRemaining / 60)}:${(currentClock.secondsRemaining % 60).toString().padStart(2, '0')} (${finalIsRunning ? 'RUNNING' : 'STOPPED'})`);
       } catch (error) {
         console.error('❌ Error auto-saving clock state:', error);
+        const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+        errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'autosave_clock' });
       }
     };
 
@@ -2366,6 +2405,8 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       console.log(`✅ Clock state saved before exit: ${Math.floor(finalClock.secondsRemaining / 60)}:${(finalClock.secondsRemaining % 60).toString().padStart(2, '0')} (STOPPED)`);
     } catch (error) {
       console.error('❌ Error saving clock state before exit:', error);
+      const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+      errorLoggingService.logError(error instanceof Error ? error : new Error(String(error)), { gameId, action: 'save_clock_before_exit' });
       // Don't throw - allow navigation even if save fails
     }
   }, [gameId]);

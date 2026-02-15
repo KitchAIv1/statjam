@@ -219,5 +219,25 @@ For security-related questions or incident response:
 
 ---
 
-**Last Updated**: November 28, 2025  
-**Next Review**: December 28, 2025
+---
+
+## ✅ **DEPENDENCY SECURITY & MONITORING (February 2026)**
+
+### 5. **📦 npm audit fix – qs & webpack**
+- **Action**: Ran `npm audit fix` to resolve 2 low-severity vulnerabilities.
+- **Resolved**:
+  - **qs** (6.7.0–6.14.1): arrayLimit bypass in comma parsing → DoS ([GHSA-w7fw-mjwx-w883](https://github.com/advisories/GHSA-w7fw-mjwx-w883)).
+  - **webpack** (5.49.0–5.104.0): buildHttp allowedUris bypass and redirect SSRF ([GHSA-8fgc-7cc6-rx7x](https://github.com/advisories/GHSA-8fgc-7cc6-rx7x), [GHSA-38r7-794h-5758](https://github.com/advisories/GHSA-38r7-794h-5758)).
+- **Result**: `npm audit` reports **0 vulnerabilities**.
+- **File**: `package-lock.json` (updated).
+
+### 6. **📡 Sentry – Stat Tracker error monitoring**
+- **Action**: Comprehensive Sentry error logging for the stat-tracking platform (same pattern as live-streaming).
+- **Scope**: All critical catch blocks in `useTracker.ts` (init, clock syncs, record stat, substitution, timeout, undo, close/cancel/complete game, possession, autosave), `useGameDataLoader.ts`, and API `turn-credentials` route.
+- **Implementation**: Uses existing `errorLoggingService.logError()` (async, fire-and-forget); no added latency. Events tagged with `action` and `gameId` for filtering in Sentry.
+- **Result**: Stat tracker failures (DB sync, clock, recording, game lifecycle) are reported to Sentry in production for faster diagnosis and response.
+
+---
+
+**Last Updated**: February 2026  
+**Next Review**: March 2026

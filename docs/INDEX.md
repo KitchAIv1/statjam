@@ -2,6 +2,8 @@
 
 **Complete documentation index for the StatJam platform**
 
+**Recent updates (February 2026)**: Tournament public page UI (hydration, player/team cards, schedule fix) · Sentry stat-tracker error logging · Dependency security (npm audit 0 vulns). See [DOCUMENTATION_UPDATE_SUMMARY_FEB_2026](01-project/DOCUMENTATION_UPDATE_SUMMARY_FEB_2026.md).
+
 ---
 
 ## 🚀 **Quick Start**
@@ -27,7 +29,8 @@
 
 ### **1. Project Overview** (`01-project/`)
 - **PRD_CURRENT.md** - Current Product Requirements Document (v2.3) ✨ UPDATED
-- **PROJECT_STATUS.md** - Current project status (updated Jan 2025)
+- **PROJECT_STATUS.md** - Current project status (updated Feb 2026)
+- **DOCUMENTATION_UPDATE_SUMMARY_FEB_2026.md** - February 2026 updates: tournament public page (hydration, player/team cards, schedule fix), Sentry stat-tracker logging, npm audit security ✨ NEW
 - **JANUARY_2025_UPDATES.md** - Complete summary of January 2025 updates
 - **STAT_ADMIN_TRACKER_COMPLETE_MAP.md** - Complete architecture documentation
 - **STAT_TRACKER_QUICK_REFERENCE.md** - Developer quick reference guide

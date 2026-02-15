@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-02-XX
+
+### 🏟️ **TOURNAMENT UI, SENTRY STAT TRACKER & SECURITY (February 2026)**
+
+#### Tournament Public Page – Hydration & UI
+- **FIXED**: Radix Tabs hydration mismatch (React 19 / Next.js 15.5+ `useId` server vs client). Client-only `TournamentTabsSection` with static placeholder until mount; no behavior change.
+- **CHANGED**: Player cards (Players tab) – rectangular cards, full-height photo snapped left; no rounded corners.
+- **CHANGED**: Team cards (Teams tab) – rectangular cards, full-height logo left, “View team profile →” + chevron, shadow; subtitle clarifies link to public team page.
+- **FIXED**: Schedule tab “Maximum update depth exceeded” – stable `roundIndicesKey` dependency so effect runs only when round indices change.
+- **Files**: `TournamentPageShell.tsx`, `TournamentTabsSection.tsx` (new), `PlayersTab.tsx`, `TeamsTab.tsx`, `ScheduleTab.tsx`, `tournamentThemeClasses.ts`.
+
+#### Sentry – Stat Tracker Error Logging
+- **ADDED**: Comprehensive Sentry coverage for stat-tracking platform (aligned with live-streaming pattern). All reporting in catch blocks only; uses existing `errorLoggingService` (async, no added latency).
+- **Coverage**: useTracker (load_ruleset, init_game_state, clock syncs, sync_quarter, recalc_scores, persist_team_fouls, record_stat, substitution, start_timeout, persist_foul_undo, undo_stat, close_game, cancel_game, complete_game_awards, manual_possession, autosave_clock, save_clock_before_exit), useGameDataLoader (load_game_data), API turn-credentials (generate).
+- **Files**: `useTracker.ts`, `useGameDataLoader.ts`, `api/turn-credentials/route.ts`.
+
+#### Security – Dependencies
+- **FIXED**: npm audit – 2 low-severity issues resolved (qs DoS, webpack buildHttp SSRF). `npm audit` now reports 0 vulnerabilities.
+- **File**: `package-lock.json`.
+
+#### Documentation
+- **ADDED**: [DOCUMENTATION_UPDATE_SUMMARY_FEB_2026.md](DOCUMENTATION_UPDATE_SUMMARY_FEB_2026.md) – tournament UI, Sentry, security.
+- **UPDATED**: SECURITY_FIXES_COMPLETED.md, SECURITY.md (repo root), INDEX.md, README.md, PROJECT_STATUS.md.
+
+---
+
 ## [Unreleased] - 2025-01-XX
 
 ### 🎯 **VIDEO TRACKING ENHANCEMENTS & CRITICAL FIXES (v0.17.11)**

@@ -115,6 +115,8 @@ export function useGameDataLoader({
 
       } catch (err) {
         console.error('❌ useGameDataLoader: Error loading data:', err);
+        const { errorLoggingService } = await import('@/lib/services/errorLoggingService');
+        errorLoggingService.logError(err instanceof Error ? err : new Error(String(err)), { gameId, action: 'load_game_data' });
         setError('Failed to load game data');
         setIsLoading(false);
       }
