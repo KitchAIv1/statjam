@@ -106,7 +106,7 @@ export class BroadcastService {
    * Connect to relay server and start MediaRecorder
    */
   private async connectToRelay(stream: MediaStream, config: BroadcastConfig): Promise<void> {
-    const quality = QUALITY_PRESETS[config.quality || '1080p'];
+    const quality = QUALITY_PRESETS[config.quality || '720p'];
     
     // Store for potential MediaRecorder restart during reconnection
     this.currentStream = stream;
@@ -136,7 +136,7 @@ export class BroadcastService {
         console.log('📡 Connected to relay server');
         const hasAudio = stream.getAudioTracks().length > 0;
         console.log(`🎤 Audio tracks: ${hasAudio ? 'Yes' : 'No (silent)'}`);
-        console.log(`📊 Quality preset: ${config.quality || '1080p'} (${quality.label})`);
+        console.log(`📊 Quality preset: ${config.quality || '720p'} (${quality.label})`);
         
         // Send config with quality settings for relay server
         ws.send(JSON.stringify({

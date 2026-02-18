@@ -6,7 +6,7 @@
 
 export type BroadcastPlatform = 'youtube' | 'twitch' | 'facebook';
 
-export type QualityPreset = '720p' | '1080p' | '1080p-sports';
+export type QualityPreset = '720p' | '720p-hq' | '1080p' | '1080p-sports';
 
 export interface QualitySettings {
   label: string;
@@ -21,6 +21,14 @@ export interface QualitySettings {
 export const QUALITY_PRESETS: Record<QualityPreset, QualitySettings> = {
   '720p': {
     label: '720p HD',
+    description: 'Stable quality for all connections (3 Mbps)',
+    videoBitrate: 3000,
+    audioBitrate: 128,
+    ffmpegBitrate: 3000,
+    ffmpegMaxrate: 4000,
+  },
+  '720p-hq': {
+    label: '720p HQ',
     description: 'YouTube optimized (6.5 Mbps)',
     videoBitrate: 6500,
     audioBitrate: 128,
