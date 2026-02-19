@@ -20,7 +20,7 @@ import { useWebRTCStream } from '@/hooks/useWebRTCStream';
 import { useVideoComposition } from '@/hooks/useVideoComposition';
 import { useBroadcast } from '@/hooks/useBroadcast';
 import { useVideoSourceSelector } from '@/hooks/useVideoSourceSelector';
-import { BroadcastPlatform, QualityPreset } from '@/lib/services/broadcast/types';
+import { BroadcastPlatform, QualityPreset, RelayRegion } from '@/lib/services/broadcast/types';
 import { OverlayVariant, InfoBarToggles } from '@/lib/services/canvas-overlay';
 import { ConnectionStatus } from '@/lib/services/video-sources/types';
 import { Card } from '@/components/ui/card';
@@ -217,7 +217,7 @@ export default function VideoCompositionTestPage() {
     }
   };
   
-  const handleStartBroadcast = useCallback(async (platform: BroadcastPlatform, streamKey: string, quality?: QualityPreset, publicStreamUrl?: string) => {
+  const handleStartBroadcast = useCallback(async (platform: BroadcastPlatform, streamKey: string, quality?: QualityPreset, publicStreamUrl?: string, relayRegion?: RelayRegion) => {
     if (!composedStream) return;
     const rtmpUrl = platform === 'youtube' 
       ? 'rtmp://a.rtmp.youtube.com/live2' 
@@ -230,7 +230,7 @@ export default function VideoCompositionTestPage() {
     setBroadcastStartTime(Date.now());
     
     // Start broadcast first (critical path - no delays)
-    await startBroadcast(broadcastStream, { platform, streamKey, rtmpUrl, quality });
+    await startBroadcast(broadcastStream, { platform, streamKey, rtmpUrl, quality, region: relayRegion ?? 'us' });
     notify.success('Broadcast started', `Streaming to ${platform === 'youtube' ? 'YouTube' : platform === 'twitch' ? 'Twitch' : 'Facebook Live'}`);
     
     // Update tournament streaming status in background (non-blocking)

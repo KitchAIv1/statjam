@@ -8,6 +8,13 @@ export type BroadcastPlatform = 'youtube' | 'twitch' | 'facebook';
 
 export type QualityPreset = '720p' | '720p-hq' | '1080p' | '1080p-sports';
 
+export type RelayRegion = 'us' | 'au';
+
+export const RELAY_REGION_URLS: Record<RelayRegion, string> = {
+  us: 'wss://stunning-ambition-production.up.railway.app',
+  au: 'wss://statjam-relay-syd.fly.dev',
+};
+
 export interface QualitySettings {
   label: string;
   description: string;
@@ -58,6 +65,7 @@ export interface BroadcastConfig {
   streamKey: string;
   rtmpUrl: string;
   quality?: QualityPreset;
+  region?: RelayRegion;
 }
 
 export interface BroadcastState {

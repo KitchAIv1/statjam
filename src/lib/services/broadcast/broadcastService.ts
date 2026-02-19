@@ -8,7 +8,7 @@
  */
 
 import * as Sentry from '@sentry/nextjs';
-import { BroadcastConfig, BroadcastState, BroadcastCallbacks, QUALITY_PRESETS } from './types';
+import { BroadcastConfig, BroadcastState, BroadcastCallbacks, QUALITY_PRESETS, RELAY_REGION_URLS } from './types';
 
 const LIVE_STREAM_TAGS = { feature: 'live-broadcast' } as const;
 
@@ -55,6 +55,7 @@ export class BroadcastService {
       throw new Error('Broadcast already in progress');
     }
 
+    this.relayServerUrl = RELAY_REGION_URLS[config.region ?? 'us'];
     this.callbacks = callbacks || {};
     this.updateState({ isConnecting: true, connectionStatus: 'connecting' });
 

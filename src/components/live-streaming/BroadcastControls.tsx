@@ -15,14 +15,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChevronDown, ChevronUp, Youtube, Twitch, Facebook } from 'lucide-react';
-import { BroadcastPlatform, QualityPreset, QUALITY_PRESETS } from '@/lib/services/broadcast/types';
+import { BroadcastPlatform, QualityPreset, RelayRegion, QUALITY_PRESETS } from '@/lib/services/broadcast/types';
 
 interface BroadcastControlsProps {
   isBroadcasting: boolean;
   isConnecting: boolean;
   connectionStatus: string;
   error: string | null;
-  onStart: (platform: BroadcastPlatform, streamKey: string, quality: QualityPreset, publicStreamUrl?: string) => void;
+  onStart: (platform: BroadcastPlatform, streamKey: string, quality: QualityPreset, publicStreamUrl?: string, relayRegion?: RelayRegion) => void;
   onStop: () => void;
 }
 
@@ -38,13 +38,14 @@ export function BroadcastControls({
   const [streamKey, setStreamKey] = useState('');
   const [publicStreamUrl, setPublicStreamUrl] = useState('');
   const [quality, setQuality] = useState<QualityPreset>('720p');
+  const [relayRegion, setRelayRegion] = useState<RelayRegion>('us');
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleStart = () => {
     if (!streamKey.trim()) {
       return;
     }
-    onStart(platform, streamKey.trim(), quality, publicStreamUrl.trim() || undefined);
+    onStart(platform, streamKey.trim(), quality, publicStreamUrl.trim() || undefined, relayRegion);
   };
 
   return (
@@ -131,6 +132,19 @@ export function BroadcastControls({
           {/* Advanced Settings - Collapsible */}
           {isExpanded && (
             <div className="space-y-2 pt-2 border-t">
+              {/* Streaming region */}
+              <div className="space-y-1">
+                <Label className="text-xs">Streaming Region</Label>
+                <select
+                  value={relayRegion}
+                  onChange={(e) => setRelayRegion(e.target.value as RelayRegion)}
+                  className="w-full text-xs px-2 py-1 bg-background border rounded"
+                >
+                  <option value="us">US (Default)</option>
+                  <option value="au">Australia</option>
+                </select>
+              </div>
+
               {/* Quality selection - compact */}
               <div className="space-y-1">
                 <Label className="text-xs">Quality</Label>
