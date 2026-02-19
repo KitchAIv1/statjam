@@ -12,9 +12,16 @@ initSentry();
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { spawn, ChildProcess } from 'child_process';
-import { RtmpReconnector } from './rtmpReconnector';
+import { RtmpReconnector, ReconnectorCallbacks } from './rtmpReconnector';
 
 const PORT = process.env.PORT || 8080;
+
+/** WebM/EBML header magic - relay must see this before piping to a respawned FFmpeg */
+const EBML_HEADER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
+
+type ReconnectState =
+  | { phase: 'waiting_ebml'; signalSuccess: () => void }
+  | { phase: 'verification'; signalSuccess: () => void; verificationTimeoutId: NodeJS.Timeout };
 
 interface StreamSession {
   ffmpeg: ChildProcess | null;
@@ -23,6 +30,10 @@ interface StreamSession {
   reconnector: RtmpReconnector;
   hasAudio: boolean;
   quality: QualityParams;
+  /** Set on first reconnect attempt so respawned FFmpeg exit can retry */
+  reconnectCallbacks: ReconnectorCallbacks | null;
+  /** EBML gating + 5s verification; null when not reconnecting */
+  reconnectState: ReconnectState | null;
 }
 
 const sessions = new Map<WebSocket, StreamSession>();
@@ -199,7 +210,9 @@ function handleConfig(ws: WebSocket, config: {
     isActive: true, 
     reconnector, 
     hasAudio, 
-    quality 
+    quality,
+    reconnectCallbacks: null,
+    reconnectState: null,
   };
   sessions.set(ws, session);
   setupFfmpegHandlers(ws, ffmpeg, session);
@@ -214,21 +227,44 @@ let totalBytesReceived = 0;
 let lastLogTime = Date.now();
 
 /**
- * Handle binary video data - pipe to FFmpeg
+ * EBML-gated piping during reconnection. Returns true if chunk was handled.
+ */
+function tryPipeReconnectChunk(session: StreamSession, videoData: Buffer): boolean {
+  if (session.reconnectState?.phase !== 'waiting_ebml') return false;
+  const idx = videoData.indexOf(EBML_HEADER);
+  if (idx === -1) return true; // Discard chunk
+  const from = videoData.subarray(idx);
+  try {
+    if (!session.ffmpeg!.stdin!.destroyed) session.ffmpeg!.stdin!.write(from);
+  } catch (err) {
+    const e = err as NodeJS.ErrnoException;
+    if (e?.code !== 'EPIPE') captureRelayError(err instanceof Error ? err : new Error(String(err)), 'ffmpeg_stdin_error');
+    return true;
+  }
+  const signalSuccess = session.reconnectState.signalSuccess;
+  const verificationTimeoutId = setTimeout(() => {
+    if (session.reconnectState?.phase === 'verification' && session.ffmpeg) {
+      signalSuccess();
+      session.reconnectState = null;
+    }
+  }, 5000);
+  session.reconnectState = { phase: 'verification', signalSuccess, verificationTimeoutId };
+  totalBytesReceived += from.length;
+  return true;
+}
+
+/**
+ * Handle binary video data - pipe to FFmpeg (with EBML gating during reconnection)
  */
 function handleVideoData(ws: WebSocket, videoData: Buffer): void {
   const session = sessions.get(ws);
-  
-  if (!session?.ffmpeg?.stdin || !session.isActive) {
-    return; // Silently ignore if no active session
-  }
+  if (!session?.ffmpeg?.stdin || !session.isActive) return;
+  if (tryPipeReconnectChunk(session, videoData)) return;
 
   try {
     if (!session.ffmpeg.stdin.destroyed) {
       session.ffmpeg.stdin.write(videoData);
       totalBytesReceived += videoData.length;
-      
-      // Log every 5 seconds
       const now = Date.now();
       if (now - lastLogTime > 5000) {
         console.log(`📊 Received ${(totalBytesReceived / 1024 / 1024).toFixed(2)} MB total`);
@@ -265,19 +301,29 @@ function setupFfmpegHandlers(ws: WebSocket, ffmpeg: ChildProcess, session: Strea
     if (session) {
       session.isActive = false;
       if (code !== 0 && code !== null) {
-        session.reconnector.attemptReconnect(ws, code, {
-          buildFfmpegArgs: () => session.hasAudio 
+        if (session.reconnectState?.phase === 'verification' && session.reconnectState.verificationTimeoutId) {
+          clearTimeout(session.reconnectState.verificationTimeoutId);
+        }
+        session.reconnectState = null;
+
+        const callbacks: ReconnectorCallbacks = {
+          buildFfmpegArgs: () => session.hasAudio
             ? buildArgsWithAudio(session.rtmpUrl, session.quality)
             : buildArgsWithSilentAudio(session.rtmpUrl, session.quality),
-          onFfmpegReady: (newFfmpeg) => {
+          onFfmpegReady: (newFfmpeg, signalReconnectSuccess) => {
             session.ffmpeg = newFfmpeg;
             session.isActive = true;
+            if (signalReconnectSuccess) {
+              session.reconnectState = { phase: 'waiting_ebml', signalSuccess: signalReconnectSuccess };
+            }
             setupFfmpegHandlers(ws, newFfmpeg, session);
           },
           onReconnectFailed: () => {
             session.isActive = false;
           },
-        });
+        };
+        if (!session.reconnectCallbacks) session.reconnectCallbacks = callbacks;
+        session.reconnector.attemptReconnect(ws, code, session.reconnectCallbacks);
       }
     }
   });

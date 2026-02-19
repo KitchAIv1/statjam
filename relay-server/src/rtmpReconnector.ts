@@ -19,12 +19,12 @@ export interface ReconnectorConfig {
 
 export interface ReconnectorCallbacks {
   buildFfmpegArgs: () => string[];
-  onFfmpegReady: (ffmpeg: ChildProcess) => void;
+  onFfmpegReady: (ffmpeg: ChildProcess, signalReconnectSuccess?: () => void) => void;
   onReconnectFailed: () => void;
 }
 
 const DEFAULT_CONFIG: ReconnectorConfig = {
-  maxRetries: 3,
+  maxRetries: 5,
   baseDelayMs: 1000,
   maxDelayMs: 8000,
 };
@@ -99,9 +99,11 @@ export class RtmpReconnector {
       });
 
       console.log(`✅ FFmpeg respawned successfully`);
-      this.sendMessage(ws, { type: 'rtmp_reconnected' });
-      this.isReconnecting = false;
-      callbacks.onFfmpegReady(ffmpeg);
+      const signalReconnectSuccess = () => {
+        this.sendMessage(ws, { type: 'rtmp_reconnected' });
+        this.isReconnecting = false;
+      };
+      callbacks.onFfmpegReady(ffmpeg, signalReconnectSuccess);
       return true;
     } catch (err) {
       console.error('❌ FFmpeg respawn failed:', err);
