@@ -72,6 +72,8 @@ export function useGameOverlayData(gameId: string | null) {
     homeScore: 0, awayScore: 0
   });
 
+  const lastBroadcastAtRef = useRef<number>(0); // timestamp of last broadcast received
+
   // Stable fetch function
   const fetchGameData = useCallback(async (isInitialLoad: boolean = false) => {
     if (!gameId || !supabase || fetchingRef.current) return;
@@ -144,7 +146,9 @@ export function useGameOverlayData(gameId: string | null) {
 
       if (!mountedRef.current) return;
       
-      setOverlayData({
+      // Only overwrite clock from DB if no recent broadcast (within 5 seconds)
+      const broadcastIsActive = Date.now() - lastBroadcastAtRef.current < 5000;
+      setOverlayData((prev) => ({
         teamAName: teamA?.name || 'Team A',
         teamBName: teamB?.name || 'Team B',
         teamAId: game.team_a_id,
@@ -152,11 +156,10 @@ export function useGameOverlayData(gameId: string | null) {
         homeScore: calculatedScores.homeScore,
         awayScore: calculatedScores.awayScore,
         quarter: game.quarter || 1,
-        // ✅ FIX: Use ?? instead of || to allow 0 as valid value (under 1 minute remaining)
-        gameClockMinutes: game.game_clock_minutes ?? 0,
-        gameClockSeconds: game.game_clock_seconds ?? 0,
+        gameClockMinutes: broadcastIsActive ? (prev?.gameClockMinutes ?? game.game_clock_minutes ?? 0) : (game.game_clock_minutes ?? 0),
+        gameClockSeconds: broadcastIsActive ? (prev?.gameClockSeconds ?? game.game_clock_seconds ?? 0) : (game.game_clock_seconds ?? 0),
         shotClockSeconds: game.shot_clock_seconds,
-        isClockRunning: game.is_clock_running ?? false,
+        isClockRunning: broadcastIsActive ? (prev?.isClockRunning ?? game.is_clock_running ?? false) : (game.is_clock_running ?? false),
         gameStatus: game.status ?? 'scheduled',
         teamALogo: teamA?.logo_url,
         teamBLogo: teamB?.logo_url,
@@ -177,7 +180,7 @@ export function useGameOverlayData(gameId: string | null) {
         // ✅ Tournament info from joined query
         tournamentName: tournament?.name,
         tournamentLogo: tournament?.logo,
-      });
+      }));
     } catch (err) {
       if (mountedRef.current) {
         setError(err instanceof Error ? err.message : 'Failed to load game data');
@@ -211,6 +214,24 @@ export function useGameOverlayData(gameId: string | null) {
 
     // Initial fetch
     fetchGameData(true);
+
+    // Subscribe to clock broadcast from tracker
+    const clockChannel = supabase
+      .channel(`clock:${gameId}`)
+      .on('broadcast', { event: 'clock_tick' }, ({ payload }) => {
+        // Ignore stale broadcasts (e.g. from previous tracker session)
+        if (payload.sentAt && Date.now() - payload.sentAt > 3000) return;
+        console.log('🕐 Clock broadcast received:', payload.secondsRemaining, payload.isRunning);
+        if (!mountedRef.current) return;
+        lastBroadcastAtRef.current = Date.now();
+        setOverlayData(prev => prev ? {
+          ...prev,
+          gameClockMinutes: Math.floor(payload.secondsRemaining / 60),
+          gameClockSeconds: payload.secondsRemaining % 60,
+          isClockRunning: payload.isRunning
+        } : null);
+      })
+      .subscribe();
 
     // Subscribe to real-time updates (debounced)
     const statsChannel = supabase
@@ -265,6 +286,7 @@ export function useGameOverlayData(gameId: string | null) {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
+      if (clockChannel) supabase?.removeChannel(clockChannel);
       supabase?.removeChannel(statsChannel);
       supabase?.removeChannel(gamesChannel);
     };

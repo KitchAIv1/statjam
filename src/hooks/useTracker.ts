@@ -7,6 +7,7 @@ import { gameSubscriptionManager } from '@/lib/subscriptionManager';
 import { validateQuarter } from '@/lib/validation/statValidation';
 import { cache } from '@/lib/utils/cache';
 import { getPeriodLabel, isOvertimePeriod } from '@/lib/utils/periodUtils';
+import { supabase } from '@/lib/supabase';
 
 interface UseTrackerProps {
   initialGameId: string;
@@ -195,6 +196,9 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   
   // ✅ FIX: Guard to prevent saving initial hardcoded clock (12 min) before DB data loads
   const gameDataLoadedRef = useRef<boolean>(false);
+
+  // ✅ Clock broadcast channel (subscribed once on mount, reused for tick/startClock/stopClock)
+  const clockChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
   // NEW: Shot Clock State
   // ✅ Load visibility preference from localStorage on initialization
@@ -812,11 +816,22 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       }
     });
 
+    // Subscribe sender to clock broadcast channel (required before .send() works)
+    const clockBroadcastChannel = supabase?.channel(`clock:${gameId}`, {
+      config: { broadcast: { self: false } }
+    });
+    clockBroadcastChannel?.subscribe();
+    clockChannelRef.current = clockBroadcastChannel ?? null;
+
     return () => {
       // Cleanup: Clear debounce timer on unmount
       if (scoreRecalculationTimeoutRef.current) {
         clearTimeout(scoreRecalculationTimeoutRef.current);
         scoreRecalculationTimeoutRef.current = null;
+      }
+      if (clockChannelRef.current) {
+        supabase?.removeChannel(clockChannelRef.current);
+        clockChannelRef.current = null;
       }
       unsubscribe();
     };
@@ -826,7 +841,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   const startClock = useCallback(async () => {
     setClock(prev => ({ ...prev, isRunning: true }));
     setLastAction('Clock started');
-    
+    clockChannelRef.current?.send({
+      type: 'broadcast',
+      event: 'clock_tick',
+      payload: { secondsRemaining: clock.secondsRemaining, isRunning: true, sentAt: Date.now() }
+    });
     // Sync clock state to database
     try {
       const { GameService } = await import('@/lib/services/gameService');
@@ -845,7 +864,11 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
   const stopClock = useCallback(async () => {
     setClock(prev => ({ ...prev, isRunning: false }));
     setLastAction('Clock stopped');
-    
+    clockChannelRef.current?.send({
+      type: 'broadcast',
+      event: 'clock_tick',
+      payload: { secondsRemaining: clock.secondsRemaining, isRunning: false, sentAt: Date.now() }
+    });
     // Sync clock state to database
     try {
       const { GameService } = await import('@/lib/services/gameService');
@@ -1026,6 +1049,14 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         }
       }
       
+      // Broadcast correct value from inside setClock (avoids stale closure)
+      console.log('📡 Broadcasting clock tick:', newSecondsRemaining);
+      clockChannelRef.current?.send({
+        type: 'broadcast',
+        event: 'clock_tick',
+        payload: { secondsRemaining: newSecondsRemaining, isRunning: true, sentAt: Date.now() }
+      });
+
       return newClock;
     });
   }, [gameId]);
