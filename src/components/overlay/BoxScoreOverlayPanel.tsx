@@ -12,6 +12,7 @@
 import React from 'react';
 import { BoxScoreData, BoxScoreTeamData } from '@/hooks/useBoxScoreOverlay';
 import { PlayerStats } from '@/lib/services/teamStatsService';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface BoxScoreOverlayPanelProps {
   isVisible: boolean;
@@ -21,14 +22,15 @@ interface BoxScoreOverlayPanelProps {
 
 export function BoxScoreOverlayPanel({
   isVisible,
+  isLoading,
   data,
 }: BoxScoreOverlayPanelProps) {
   if (!isVisible) return null;
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center transition-opacity duration-500 ease-out animate-in fade-in-0">
-      {/* Backdrop - semi-transparent gradient with smooth fade */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/85 to-black/90 transition-opacity duration-500" />
+      {/* Backdrop - higher transparency (lower opacity) for see-through video */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/55 to-black/65 transition-opacity duration-500" />
       
       {/* Content - Compact sizing with staggered animation */}
       <div className="relative w-full max-w-2xl mx-4 animate-in slide-in-from-bottom-4 duration-500 ease-out">
@@ -44,12 +46,45 @@ export function BoxScoreOverlayPanel({
               <TeamColumn team={data.teamB} side="right" />
             </div>
           </div>
+        ) : isLoading ? (
+          <BoxScoreSkeleton />
         ) : (
           <div className="text-center text-white/60 py-12 animate-in fade-in-0 duration-300">
             Loading stats...
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function BoxScoreSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {[1, 2].map((i) => (
+        <div key={i} className="relative overflow-hidden rounded-lg">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 p-2">
+            <div className="flex items-center gap-2 p-2 border-b border-white/10">
+              <Skeleton className="h-8 w-8 rounded bg-white/20" />
+              <Skeleton className="h-4 flex-1 max-w-[100px] bg-white/20" />
+              <Skeleton className="h-7 w-10 rounded bg-white/20" />
+            </div>
+            <div className="divide-y divide-white/5 pt-1">
+              {[1, 2, 3, 4, 5].map((j) => (
+                <div key={j} className="flex items-center gap-2 px-2 py-1.5">
+                  <Skeleton className="h-5 w-5 rounded-full bg-white/20" />
+                  <Skeleton className="h-3 flex-1 max-w-[80px] bg-white/20" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-4 w-7 bg-white/20" />
+                    <Skeleton className="h-4 w-7 bg-white/20" />
+                    <Skeleton className="h-4 w-7 bg-white/20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

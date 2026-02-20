@@ -45,17 +45,17 @@ export function useBoxScoreOverlay(options: UseBoxScoreOverlayOptions) {
   const [isVisible, setIsVisible] = useState(false);
 
   // ✅ REUSE existing useTeamStats hook for each team
-  // Only fetch when overlay is visible (enabled: isVisible)
+  // Prefetch when game selected so data is ready when overlay toggled
   const teamAStats = useTeamStats(
     options.gameId ?? '',
     options.teamAId ?? '',
-    { enabled: isVisible && !!options.gameId && !!options.teamAId }
+    { enabled: !!options.gameId && !!options.teamAId }
   );
 
   const teamBStats = useTeamStats(
     options.gameId ?? '',
     options.teamBId ?? '',
-    { enabled: isVisible && !!options.gameId && !!options.teamBId }
+    { enabled: !!options.gameId && !!options.teamBId }
   );
 
   // Combine all players and sort by points for top scorers
