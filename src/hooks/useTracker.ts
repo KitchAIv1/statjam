@@ -721,6 +721,17 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
 
   // ✅ Real-time subscription to sync timeout state, fouls, and scores from database
   useEffect(() => {
+    // Pre-warm dynamic imports to eliminate first-stat delay after inactivity
+    Promise.all([
+      import('@/lib/services/gameServiceV3'),
+      import('@/lib/validation/statValidation'),
+      import('@/lib/services/notificationService'),
+      import('@/lib/services/statWriteQueueService'),
+      import('@/lib/services/idempotencyService'),
+    ]).catch(() => {
+      // Silently ignore — this is just warming the module cache
+    });
+
     if (!gameId || gameId === 'unknown' || !teamAId || !teamBId) return;
 
     console.log('🔌 useTracker: Setting up real-time subscription for game:', gameId);
