@@ -237,7 +237,26 @@ export function useGameOverlayData(gameId: string | null) {
           table: 'games',
           filter: `id=eq.${gameId}`,
         },
-        debouncedRefetch
+        (payload) => {
+          const scoringKeys = [
+            'home_score', 'away_score',
+            'team_a_fouls', 'team_b_fouls',
+            'quarter', 'status',
+            'team_a_timeouts_remaining', 'team_b_timeouts_remaining'
+          ] as const;
+          const oldRow = payload?.old as Record<string, unknown> | undefined;
+          const newRow = payload?.new as Record<string, unknown> | undefined;
+          if (!newRow) return;
+          if (!oldRow || Object.keys(oldRow).length <= 1) {
+            // payload.old only has id — REPLICA IDENTITY FULL not active yet, safe fallback
+            debouncedRefetch();
+            return;
+          }
+          const scoringChanged = scoringKeys.some(
+            (key) => oldRow[key] !== newRow[key]
+          );
+          if (scoringChanged) debouncedRefetch();
+        }
       )
       .subscribe();
 

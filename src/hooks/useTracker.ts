@@ -188,7 +188,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
 
   // ✅ Throttled DB sync: Track last sync time for clock updates
   const lastClockSyncRef = useRef<number>(0);
-  const CLOCK_SYNC_INTERVAL = 5000; // 5 seconds
+  const CLOCK_SYNC_INTERVAL = 30000; // 30 seconds
   
   // ✅ FIX: Guard to prevent subscription from overwriting foul updates during recording
   const foulUpdateInProgressRef = useRef<boolean>(false);
