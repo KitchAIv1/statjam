@@ -148,7 +148,11 @@ export function useGameOverlayData(gameId: string | null) {
       
       // Only overwrite clock from DB if no recent broadcast (within 5 seconds)
       const broadcastIsActive = Date.now() - lastBroadcastAtRef.current < 5000;
-      setOverlayData((prev) => ({
+      setOverlayData((prev) => {
+        // Quarter changed: use DB clock so halftime overlay sees correct isClockRunning (false) and stays until Q3 starts
+        const quarterChanged = prev != null && prev.quarter !== (game.quarter || 1);
+        const useDbClock = !broadcastIsActive || quarterChanged;
+        return {
         teamAName: teamA?.name || 'Team A',
         teamBName: teamB?.name || 'Team B',
         teamAId: game.team_a_id,
@@ -156,10 +160,10 @@ export function useGameOverlayData(gameId: string | null) {
         homeScore: calculatedScores.homeScore,
         awayScore: calculatedScores.awayScore,
         quarter: game.quarter || 1,
-        gameClockMinutes: broadcastIsActive ? (prev?.gameClockMinutes ?? game.game_clock_minutes ?? 0) : (game.game_clock_minutes ?? 0),
-        gameClockSeconds: broadcastIsActive ? (prev?.gameClockSeconds ?? game.game_clock_seconds ?? 0) : (game.game_clock_seconds ?? 0),
+        gameClockMinutes: useDbClock ? (game.game_clock_minutes ?? 0) : (prev?.gameClockMinutes ?? game.game_clock_minutes ?? 0),
+        gameClockSeconds: useDbClock ? (game.game_clock_seconds ?? 0) : (prev?.gameClockSeconds ?? game.game_clock_seconds ?? 0),
         shotClockSeconds: game.shot_clock_seconds,
-        isClockRunning: broadcastIsActive ? (prev?.isClockRunning ?? game.is_clock_running ?? false) : (game.is_clock_running ?? false),
+        isClockRunning: useDbClock ? (game.is_clock_running ?? false) : (prev?.isClockRunning ?? game.is_clock_running ?? false),
         gameStatus: game.status ?? 'scheduled',
         teamALogo: teamA?.logo_url,
         teamBLogo: teamB?.logo_url,
@@ -180,7 +184,8 @@ export function useGameOverlayData(gameId: string | null) {
         // ✅ Tournament info from joined query
         tournamentName: tournament?.name,
         tournamentLogo: tournament?.logo,
-      }));
+      };
+      });
     } catch (err) {
       if (mountedRef.current) {
         setError(err instanceof Error ? err.message : 'Failed to load game data');
