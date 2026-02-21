@@ -424,7 +424,13 @@ export default function VideoCompositionTestPage() {
             
             {/* Broadcast Settings - Collapsible when not composing */}
             {isComposing && (
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 space-y-2">
+                {/* Audio notice - bottom (near broadcast start) */}
+                <div className="rounded-md border border-amber-500/60 bg-amber-500/10 px-3 py-2 text-center">
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                    Enable microphone before starting broadcast to include audio. Audio cannot be added once the stream has started.
+                  </p>
+                </div>
                 <BroadcastControls
                   isBroadcasting={broadcastState.isBroadcasting}
                   isConnecting={broadcastState.isConnecting}
@@ -440,12 +446,17 @@ export default function VideoCompositionTestPage() {
           {/* Center - Preview (6 columns) */}
           <div className="col-span-6 flex flex-col gap-2">
             <Card className="flex-1 flex flex-col overflow-hidden p-3 min-h-0">
-              <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                <h3 className="text-sm font-semibold">Preview</h3>
+              <div className="flex items-center gap-2 mb-2 flex-shrink-0 flex-wrap">
+                <h3 className="text-sm font-semibold shrink-0">Preview</h3>
+                <div className="rounded-md border border-amber-500/60 bg-amber-500/10 px-2 py-1 text-center min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                    Enable microphone before starting broadcast to include audio. Audio cannot be added once the stream has started.
+                  </p>
+                </div>
                 {!isComposing ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span>
+                      <span className="shrink-0">
                         <Button 
                           onClick={handleToggleComposition} 
                           size="sm" 
@@ -468,7 +479,7 @@ export default function VideoCompositionTestPage() {
                 ) : (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button onClick={handleToggleComposition} variant="destructive" size="sm" className="h-7 text-xs">
+                      <Button onClick={handleToggleComposition} variant="destructive" size="sm" className="h-7 text-xs shrink-0">
                         Stop
                       </Button>
                     </TooltipTrigger>
@@ -546,7 +557,7 @@ export default function VideoCompositionTestPage() {
                       {!micEnabled ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button onClick={startMic} disabled={micLoading || broadcastState.isBroadcasting} size="sm" variant="outline" className="h-6 text-xs px-2">
+                            <Button onClick={startMic} disabled={micLoading} size="sm" variant="outline" className="h-6 text-xs px-2">
                               Enable
                             </Button>
                           </TooltipTrigger>
@@ -599,6 +610,11 @@ export default function VideoCompositionTestPage() {
                     </div>
                   </div>
                   {micError && <p className="text-xs text-destructive mt-1">{micError}</p>}
+                  {broadcastState.isBroadcasting && !micEnabled && (
+                    <p className="text-[11px] text-yellow-400/70 text-center mt-1">
+                      Enable mic before next broadcast for audio
+                    </p>
+                  )}
                 </Card>
                 
                 {/* Quick Stats */}
