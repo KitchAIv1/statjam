@@ -17,12 +17,14 @@ interface ScheduleOverlayPanelProps {
   isVisible: boolean;
   isLoading: boolean;
   payload: ScheduleOverlayPayload | null;
+  tournamentName?: string | null;
 }
 
 export function ScheduleOverlayPanel({
   isVisible,
   isLoading,
   payload,
+  tournamentName,
 }: ScheduleOverlayPanelProps) {
   if (!isVisible) return null;
 
@@ -46,9 +48,11 @@ export function ScheduleOverlayPanel({
                     <span className="text-[8.5px] font-bold tracking-[0.18em] uppercase text-white/28">
                       Day Schedule
                     </span>
-                    <span className="text-[8px] font-extrabold tracking-[0.2em] uppercase text-[rgba(255,185,0,0.5)]">
-                      StatJam
-                    </span>
+                    {tournamentName ? (
+                      <span className="text-[10px] font-bold text-white/90 truncate max-w-[200px]">
+                        {tournamentName}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="text-[15px] font-bold text-white tracking-tight leading-tight">
                     {payload.displayDate}
@@ -82,12 +86,21 @@ export function ScheduleOverlayPanel({
                   ) : null}
                 </div>
               </div>
-              <div className="px-[15px] py-[6px] border-t border-white/[0.07] flex items-center justify-center gap-[5px]">
-                <div className="w-[3px] h-[3px] rounded-full bg-[rgba(255,185,0,0.4)]" />
-                <span className="text-[7.5px] font-bold tracking-[0.2em] uppercase text-white/16">
-                  Powered by StatJam
-                </span>
-                <div className="w-[3px] h-[3px] rounded-full bg-[rgba(255,185,0,0.4)]" />
+              <div className="px-[15px] py-[8px] border-t border-white/[0.07] flex-shrink-0">
+                {payload.games.length > 4 ? (
+                  <div className="flex items-center justify-center">
+                    <StatJamLogo />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 min-w-0">
+                    <StatJamLogo />
+                    {tournamentName ? (
+                      <span className="text-[10px] font-bold text-white/90 truncate max-w-[220px]">
+                        {tournamentName}
+                      </span>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -96,6 +109,14 @@ export function ScheduleOverlayPanel({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function StatJamLogo() {
+  return (
+    <span className="text-[10px] font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent tracking-[0.12em]">
+      StatJam
+    </span>
   );
 }
 

@@ -17,7 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2, Lock, Crown, LayoutGrid, List } from 'lucide-react';
+import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2, Lock, Crown, LayoutGrid, List, Users2 } from 'lucide-react';
 import { GamePlayer } from '@/hooks/useGamePlayers';
 import { PlayerStatsOverlayData, InfoBarToggles } from '@/lib/services/canvas-overlay';
 import { toScheduleDateString, parseScheduleDateString } from '@/lib/utils/scheduleOverlayUtils';
@@ -50,6 +50,8 @@ interface OverlayControlPanelProps {
   scheduleAvailableDates?: Date[];
   selectedScheduleDate?: Date | null;
   onScheduleDateSelect?: (date: Date | null) => void;
+  startingLineupVisible?: boolean;
+  onStartingLineupToggle?: () => void;
 }
 
 export function OverlayControlPanel({
@@ -77,6 +79,8 @@ export function OverlayControlPanel({
   scheduleAvailableDates = [],
   selectedScheduleDate = null,
   onScheduleDateSelect,
+  startingLineupVisible = false,
+  onStartingLineupToggle,
 }: OverlayControlPanelProps) {
   return (
     <Card className="p-3">
@@ -287,7 +291,7 @@ export function OverlayControlPanel({
       </Tabs>
 
       {/* MANUAL Overlays Section */}
-      {(onBoxScoreToggle || onScheduleToggle) && (
+      {(onBoxScoreToggle || onScheduleToggle || onStartingLineupToggle) && (
         <div className="mt-3 pt-3 border-t border-border">
           <div className="flex items-center gap-1.5 mb-2">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Manual</span>
@@ -361,6 +365,25 @@ export function OverlayControlPanel({
                   </TooltipContent>
                 </Tooltip>
               </>
+            )}
+            {onStartingLineupToggle && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={onStartingLineupToggle}
+                    size="sm"
+                    variant={startingLineupVisible ? 'default' : 'outline'}
+                    className="w-full h-7 text-xs"
+                  >
+                    <Users2 className="h-3 w-3 mr-1.5" />
+                    Starting Lineup
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Show Starting Lineup overlay</p>
+                  <p className="text-[10px] opacity-80">Display 5v5 starters for both teams</p>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </div>

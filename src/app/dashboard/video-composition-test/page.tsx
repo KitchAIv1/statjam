@@ -38,11 +38,13 @@ import { useOptimisticScores } from '@/hooks/useOptimisticScores';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { useBoxScoreOverlay } from '@/hooks/useBoxScoreOverlay';
 import { useScheduleOverlay } from '@/hooks/useScheduleOverlay';
+import { useStartingLineupOverlay } from '@/hooks/useStartingLineupOverlay';
 import { toScheduleDateString } from '@/lib/utils/scheduleOverlayUtils';
 import { notify } from '@/lib/services/notificationService';
 import { UpgradeModal } from '@/components/subscription';
 import { BoxScoreOverlayPanel } from '@/components/overlay/BoxScoreOverlayPanel';
 import { ScheduleOverlayPanel } from '@/components/overlay/ScheduleOverlayPanel';
+import { StartingLineupOverlayPanel } from '@/components/overlay/StartingLineupOverlayPanel';
 import type { Tournament } from '@/lib/types/tournament';
 
 export default function VideoCompositionTestPage() {
@@ -111,6 +113,22 @@ export default function VideoCompositionTestPage() {
     tournamentId: selectedTournament?.id ?? null,
     country: selectedTournament?.country ?? '',
     selectedDate: selectedScheduleDate,
+  });
+
+  // Starting Lineup overlay (manual trigger; first 5 per team)
+  // Starting Lineup overlay — team colors from overlayData (same source as Box Score / scoring overlay)
+  const startingLineup = useStartingLineupOverlay({
+    gameId: selectedGameId,
+    teamAId: overlayData?.teamAId ?? null,
+    teamBId: overlayData?.teamBId ?? null,
+    teamAName: overlayData?.teamAName ?? 'Team A',
+    teamBName: overlayData?.teamBName ?? 'Team B',
+    teamALogo: overlayData?.teamALogo,
+    teamBLogo: overlayData?.teamBLogo,
+    teamAPrimaryColor: overlayData?.teamAPrimaryColor,
+    teamBPrimaryColor: overlayData?.teamBPrimaryColor,
+    tournamentName: selectedTournament?.name ?? '',
+    tournamentLogo: selectedTournament?.logo,
   });
 
   // Clear selected date when tournament changes
@@ -190,10 +208,10 @@ export default function VideoCompositionTestPage() {
       // Shot made animation data (for 3PT shake effect)
       shotMadeAnimationStart: shotMadeData?.animationStart,
       shotMadeIs3Pointer: shotMadeData?.is3Pointer,
-      // Hide canvas scoreboard when Day Schedule overlay is active
-      hideScoreBar: scheduleOverlay.isVisible,
+      // Hide canvas scoreboard when Day Schedule or Starting Lineup overlay is active
+      hideScoreBar: scheduleOverlay.isVisible || startingLineup.isVisible,
     };
-  }, [overlayData, optimisticScores, activePlayerStats, selectedTournament, infoBarActiveItem, infoBarSecondaryItem, shotMadeData, scheduleOverlay.isVisible]);
+  }, [overlayData, optimisticScores, activePlayerStats, selectedTournament, infoBarActiveItem, infoBarSecondaryItem, shotMadeData, scheduleOverlay.isVisible, startingLineup.isVisible]);
   
   const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition, setVariant } = useVideoComposition({
     videoStream: activeVideoStream,
@@ -442,6 +460,12 @@ export default function VideoCompositionTestPage() {
                           isVisible={scheduleOverlay.isVisible}
                           isLoading={scheduleOverlay.isLoading}
                           payload={scheduleOverlay.schedulePayload}
+                          tournamentName={selectedTournament?.name}
+                        />
+                        <StartingLineupOverlayPanel
+                          isVisible={startingLineup.isVisible}
+                          isLoading={startingLineup.isLoading}
+                          payload={startingLineup.payload}
                         />
                       </div>
                     </div>
@@ -606,6 +630,8 @@ export default function VideoCompositionTestPage() {
                 scheduleAvailableDates={scheduleOverlay.availableDates}
                 selectedScheduleDate={selectedScheduleDate}
                 onScheduleDateSelect={setSelectedScheduleDate}
+                startingLineupVisible={startingLineup.isVisible}
+                onStartingLineupToggle={startingLineup.toggle}
               />
             )}
           </div>
