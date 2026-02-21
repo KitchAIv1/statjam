@@ -177,7 +177,7 @@ export class CanvasOverlayRenderer {
   }
 
   /**
-   * Draw schedule overlay card (right side of frame)
+   * Draw schedule overlay (wide centered card, 2-col grid for 8+ games)
    */
   private async drawScheduleOverlay(
     payload: NonNullable<GameOverlayData['scheduleOverlayPayload']>
@@ -185,98 +185,131 @@ export class CanvasOverlayRenderer {
     const W = this.width;
     const H = this.height;
 
-    const cardW = 560;
-    const rowH = 88;
-    const cardH = Math.min(payload.games.length * rowH + 100, H - 80);
-    const cardX = W - cardW - 40;
+    const cardW = 1400;
+    const cardH = Math.min(payload.games.length <= 4 ? 480 : 680, H - 60);
+    const cardX = (W - cardW) / 2;
     const cardY = (H - cardH) / 2;
-    const radius = 16;
+    const radius = 20;
 
     this.ctx.save();
 
     this.ctx.globalAlpha = 0.88;
-    this.ctx.fillStyle = 'rgba(8, 8, 12, 0.95)';
+    this.ctx.fillStyle = 'rgba(8,8,12,0.92)';
     this.drawRoundedRectPath(cardX, cardY, cardW, cardH, radius);
     this.ctx.fill();
     this.ctx.globalAlpha = 1;
 
-    this.ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    this.ctx.strokeStyle = 'rgba(255,255,255,0.1)';
     this.ctx.lineWidth = 1;
     this.drawRoundedRectPath(cardX, cardY, cardW, cardH, radius);
     this.ctx.stroke();
 
-    const headerH = 64;
-    this.ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    const headerH = 80;
+    this.ctx.fillStyle = 'rgba(255,255,255,0.05)';
     this.ctx.fillRect(cardX, cardY, cardW, headerH);
 
     this.ctx.fillStyle = 'rgba(255,185,0,0.65)';
-    this.ctx.font = '700 14px Arial, sans-serif';
+    this.ctx.font = '700 16px Arial, sans-serif';
     this.ctx.textAlign = 'left';
     this.ctx.textBaseline = 'middle';
-    this.ctx.fillText('DAY SCHEDULE', cardX + 20, cardY + 20);
+    this.ctx.fillText('DAY SCHEDULE', cardX + 32, cardY + 26);
 
     this.ctx.fillStyle = 'rgba(255,185,0,0.45)';
-    this.ctx.font = '700 12px Arial, sans-serif';
+    this.ctx.font = '700 14px Arial, sans-serif';
     this.ctx.textAlign = 'right';
-    this.ctx.fillText('STATJAM', cardX + cardW - 20, cardY + 20);
+    this.ctx.fillText('STATJAM', cardX + cardW - 32, cardY + 26);
+
+    const tournamentName =
+      (payload as { tournamentName?: string }).tournamentName ?? '';
+    this.ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    this.ctx.font = '700 16px Arial, sans-serif';
+    this.ctx.textAlign = 'right';
+    this.ctx.fillText(tournamentName.toUpperCase(), cardX + cardW - 32, cardY + 56);
 
     this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = '800 32px Arial, sans-serif';
+    this.ctx.font = '800 42px Arial, sans-serif';
     this.ctx.textAlign = 'left';
-    this.ctx.fillText(payload.date, cardX + 20, cardY + 46);
+    this.ctx.fillText(payload.date, cardX + 32, cardY + 58);
 
-    this.ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    this.ctx.strokeStyle = 'rgba(255,255,255,0.07)';
     this.ctx.lineWidth = 1;
     this.ctx.beginPath();
     this.ctx.moveTo(cardX, cardY + headerH);
     this.ctx.lineTo(cardX + cardW, cardY + headerH);
     this.ctx.stroke();
 
-    const logoSize = 32;
+    const games = payload.games;
+    const useGrid = games.length > 4;
+    const cols = useGrid ? 2 : 1;
+    const colW = cardW / cols;
+    const rowH = useGrid
+      ? (cardH - headerH - 40) / Math.ceil(games.length / 2)
+      : (cardH - headerH - 40) / games.length;
+    const logoSize = 54;
+    const logoGap = 38;
 
-    for (let i = 0; i < payload.games.length; i++) {
-      const game = payload.games[i];
-      const rowY = cardY + headerH + i * rowH;
-      const rowCenterY = rowY + rowH / 2;
+    if (useGrid) {
+      this.ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      this.ctx.lineWidth = 1;
+      this.ctx.beginPath();
+      this.ctx.moveTo(cardX + colW, cardY + headerH + 10);
+      this.ctx.lineTo(cardX + colW, cardY + cardH - 10);
+      this.ctx.stroke();
+    }
 
-      if (i % 2 === 0) {
-        this.ctx.fillStyle = 'rgba(255,255,255,0.02)';
-        this.ctx.fillRect(cardX, rowY, cardW, rowH);
-      }
+    for (let i = 0; i < games.length; i++) {
+      const game = games[i];
+      const col = useGrid ? i % 2 : 0;
+      const row = useGrid ? Math.floor(i / 2) : i;
+      const cellX = cardX + col * colW;
+      const cellY = cardY + headerH + row * rowH;
+      const cellCenterY = cellY + rowH / 2;
+      const cellCenterX = cellX + colW / 2;
 
-      if (i > 0) {
+      if (row > 0 && col === 0) {
         this.ctx.strokeStyle = 'rgba(255,255,255,0.05)';
         this.ctx.lineWidth = 1;
         this.ctx.beginPath();
-        this.ctx.moveTo(cardX + 16, rowY);
-        this.ctx.lineTo(cardX + cardW - 16, rowY);
+        this.ctx.moveTo(cardX + 20, cellY);
+        this.ctx.lineTo(cardX + cardW - 20, cellY);
         this.ctx.stroke();
       }
-
-      const centerX = cardX + cardW / 2;
 
       this.ctx.fillStyle = '#ffffff';
       this.ctx.font = '800 26px Arial, sans-serif';
       this.ctx.textAlign = 'right';
       this.ctx.textBaseline = 'middle';
-      const awayMaxW = 140;
       let awayName = game.awayTeamName;
-      while (this.ctx.measureText(awayName).width > awayMaxW && awayName.length > 1) {
+      const awayMaxW = colW / 2 - logoSize - logoGap - 70;
+      while (
+        this.ctx.measureText(awayName).width > awayMaxW &&
+        awayName.length > 1
+      ) {
         awayName = awayName.slice(0, -1);
       }
-      this.ctx.fillText(awayName, centerX - logoSize - 20, rowCenterY - 8);
+      this.ctx.fillText(
+        awayName,
+        cellCenterX - logoSize - logoGap - 24,
+        cellCenterY - 10
+      );
 
       if (game.awayTeamLogo) {
         const logo = await this.logoCache.load(game.awayTeamLogo);
         if (logo) {
           this.ctx.save();
           this.ctx.beginPath();
-          this.ctx.arc(centerX - logoSize / 2 - 8, rowCenterY - 8, logoSize / 2, 0, Math.PI * 2);
+          this.ctx.arc(
+            cellCenterX - logoSize / 2 - logoGap,
+            cellCenterY - 10,
+            logoSize / 2,
+            0,
+            Math.PI * 2
+          );
           this.ctx.clip();
           this.ctx.drawImage(
             logo,
-            centerX - logoSize - 8,
-            rowCenterY - 8 - logoSize / 2,
+            cellCenterX - logoSize - logoGap,
+            cellCenterY - 10 - logoSize / 2,
             logoSize,
             logoSize
           );
@@ -284,26 +317,48 @@ export class CanvasOverlayRenderer {
         }
       }
 
-      this.ctx.fillStyle = 'rgba(255,255,255,0.04)';
-      this.ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      this.ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      this.ctx.strokeStyle = 'rgba(255,255,255,0.15)';
       this.ctx.lineWidth = 1;
-      const vsW = 36;
-      const vsH = 20;
-      this.ctx.fillRect(centerX - vsW / 2, rowCenterY - vsH / 2 - 8, vsW, vsH);
-      this.ctx.strokeRect(centerX - vsW / 2, rowCenterY - vsH / 2 - 8, vsW, vsH);
-      this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
-      this.ctx.font = '800 11px Arial, sans-serif';
+      const vsW = 44;
+      const vsH = 24;
+      this.ctx.fillRect(
+        cellCenterX - vsW / 2,
+        cellCenterY - vsH / 2 - 10,
+        vsW,
+        vsH
+      );
+      this.ctx.strokeRect(
+        cellCenterX - vsW / 2,
+        cellCenterY - vsH / 2 - 10,
+        vsW,
+        vsH
+      );
+      this.ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      this.ctx.font = '800 13px Arial, sans-serif';
       this.ctx.textAlign = 'center';
-      this.ctx.fillText('VS', centerX, rowCenterY - 8);
+      this.ctx.fillText('VS', cellCenterX, cellCenterY - 10);
 
       if (game.homeTeamLogo) {
         const logo = await this.logoCache.load(game.homeTeamLogo);
         if (logo) {
           this.ctx.save();
           this.ctx.beginPath();
-          this.ctx.arc(centerX + logoSize / 2 + 8, rowCenterY - 8, logoSize / 2, 0, Math.PI * 2);
+          this.ctx.arc(
+            cellCenterX + logoSize / 2 + logoGap,
+            cellCenterY - 10,
+            logoSize / 2,
+            0,
+            Math.PI * 2
+          );
           this.ctx.clip();
-          this.ctx.drawImage(logo, centerX + 8, rowCenterY - 8 - logoSize / 2, logoSize, logoSize);
+          this.ctx.drawImage(
+            logo,
+            cellCenterX + logoGap,
+            cellCenterY - 10 - logoSize / 2,
+            logoSize,
+            logoSize
+          );
           this.ctx.restore();
         }
       }
@@ -312,29 +367,30 @@ export class CanvasOverlayRenderer {
       this.ctx.font = '800 26px Arial, sans-serif';
       this.ctx.textAlign = 'left';
       let homeName = game.homeTeamName;
-      while (this.ctx.measureText(homeName).width > awayMaxW && homeName.length > 1) {
+      while (
+        this.ctx.measureText(homeName).width > awayMaxW &&
+        homeName.length > 1
+      ) {
         homeName = homeName.slice(0, -1);
       }
-      this.ctx.fillText(homeName, centerX + logoSize + 20, rowCenterY - 8);
+      this.ctx.fillText(
+        homeName,
+        cellCenterX + logoSize + logoGap + 24,
+        cellCenterY - 10
+      );
 
-      this.ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      this.ctx.font = '600 13px Arial, sans-serif';
+      this.ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      this.ctx.font = '700 18px Arial, sans-serif';
       this.ctx.textAlign = 'center';
       const metaText = [game.time, game.status || 'TBD'].filter(Boolean).join('  ·  ');
-      this.ctx.fillText(metaText, centerX, rowCenterY + 16);
+      this.ctx.fillText(metaText, cellCenterX, cellCenterY + rowH * 0.38);
     }
 
-    const footerY = cardY + cardH - 28;
-    this.ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    this.ctx.moveTo(cardX, footerY);
-    this.ctx.lineTo(cardX + cardW, footerY);
-    this.ctx.stroke();
     this.ctx.fillStyle = 'rgba(255,255,255,0.14)';
-    this.ctx.font = '700 11px Arial, sans-serif';
+    this.ctx.font = '700 13px Arial, sans-serif';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('POWERED BY STATJAM', cardX + cardW / 2, footerY + 14);
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText('POWERED BY STATJAM', W / 2, cardY + cardH - 16);
 
     this.ctx.restore();
   }
@@ -360,13 +416,13 @@ export class CanvasOverlayRenderer {
       return `rgba(${r},${g},${b},${alpha})`;
     };
 
-    const cardW = 1100;
+    const cardW = 1500;
     const cardX = (W - cardW) / 2;
-    const rowH = 80;
+    const rowH = 110;
     const headerH = 48;
-    const teamBarH = 56;
+    const teamBarH = 88;
     const footerH = 36;
-    const topLabelH = 60;
+    const topLabelH = 64;
     const cardH = topLabelH + teamBarH + headerH + rowH * 5 + footerH;
     const cardY = (H - cardH) / 2;
 
@@ -374,8 +430,8 @@ export class CanvasOverlayRenderer {
 
     const centerX = 960;
 
-    this.ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    this.ctx.font = '700 18px Arial, sans-serif';
+    this.ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    this.ctx.font = '700 20px Arial, sans-serif';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
     this.ctx.fillText(
@@ -384,10 +440,22 @@ export class CanvasOverlayRenderer {
       cardY + 18
     );
 
-    this.ctx.fillStyle = 'rgba(255,185,0,0.8)';
-    this.ctx.font = '900 20px Arial, sans-serif';
+    const labelY = cardY + 42;
+    this.ctx.strokeStyle = 'rgba(255,185,0,0.5)';
+    this.ctx.lineWidth = 2;
+    this.ctx.beginPath();
+    this.ctx.moveTo(centerX - 280, labelY);
+    this.ctx.lineTo(centerX - 160, labelY);
+    this.ctx.stroke();
+    this.ctx.beginPath();
+    this.ctx.moveTo(centerX + 160, labelY);
+    this.ctx.lineTo(centerX + 280, labelY);
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = 'rgba(255,185,0,0.95)';
+    this.ctx.font = '900 28px Arial, sans-serif';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('STARTING LINEUP', centerX, cardY + 44);
+    this.ctx.fillText('STARTING LINEUP', centerX, labelY);
 
     const bandY = cardY + topLabelH;
     const bandH = teamBarH + headerH + rowH * 5;
@@ -431,21 +499,24 @@ export class CanvasOverlayRenderer {
     this.ctx.lineTo(cardX + cardW * 0.9, bandY + bandH);
     this.ctx.stroke();
 
-    this.ctx.fillStyle = colorA;
-    this.ctx.font = '900 28px Arial, sans-serif';
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.font = '900 52px Arial, sans-serif';
     this.ctx.textAlign = 'right';
     this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(payload.teamA.name, centerX - 40, bandY + teamBarH / 2);
+    this.ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    this.ctx.shadowBlur = 4;
+    this.ctx.fillText(payload.teamA.name, centerX - 40, bandY + teamBarH * 0.62);
 
-    this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    this.ctx.font = '700 14px Arial, sans-serif';
+    this.ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    this.ctx.font = '700 18px Arial, sans-serif';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('VS', centerX, bandY + teamBarH / 2);
+    this.ctx.fillText('VS', centerX, bandY + teamBarH * 0.62);
 
-    this.ctx.fillStyle = colorB;
-    this.ctx.font = '900 28px Arial, sans-serif';
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.font = '900 52px Arial, sans-serif';
     this.ctx.textAlign = 'left';
-    this.ctx.fillText(payload.teamB.name, centerX + 40, bandY + teamBarH / 2);
+    this.ctx.fillText(payload.teamB.name, centerX + 40, bandY + teamBarH * 0.62);
+    this.ctx.shadowBlur = 0;
 
     this.ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     this.ctx.lineWidth = 1;
@@ -455,8 +526,8 @@ export class CanvasOverlayRenderer {
     this.ctx.stroke();
 
     const playersY = bandY + teamBarH + headerH;
-    const avatarSize = 52;
-    const avatarRadius = avatarSize / 2;
+    const avatarSize = 88;
+    const avatarRadius = 44;
 
     const capitalizeName = (name: string) =>
       name.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -482,11 +553,11 @@ export class CanvasOverlayRenderer {
         this.ctx.stroke();
       }
 
-      const avatarAX = centerX - 60;
-      const avatarACenterX = avatarAX - avatarRadius;
+      const avatarACenterX = centerX - 80 - avatarRadius;
+      const avatarBCenterX = centerX + 80 + avatarRadius;
 
       if (playerA) {
-        this.ctx.fillStyle = hexToRgba(colorA, 0.25);
+        this.ctx.fillStyle = 'rgba(28, 28, 32, 0.95)';
         this.ctx.beginPath();
         this.ctx.arc(avatarACenterX, rowCenterY, avatarRadius, 0, Math.PI * 2);
         this.ctx.fill();
@@ -502,26 +573,26 @@ export class CanvasOverlayRenderer {
           if (photo) {
             this.ctx.save();
             this.ctx.beginPath();
-            this.ctx.arc(avatarACenterX, rowCenterY, avatarRadius - 1, 0, Math.PI * 2);
+            this.ctx.arc(avatarACenterX, rowCenterY, avatarRadius, 0, Math.PI * 2);
             this.ctx.clip();
             this.ctx.drawImage(
               photo,
-              avatarACenterX - avatarRadius + 1,
-              rowCenterY - avatarRadius + 1,
-              avatarSize - 2,
-              avatarSize - 2
+              avatarACenterX - avatarRadius,
+              rowCenterY - avatarRadius,
+              avatarSize,
+              avatarSize
             );
             this.ctx.restore();
           } else {
             this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = '700 16px Arial, sans-serif';
+            this.ctx.font = '700 28px Arial, sans-serif';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(getInitials(playerA.name), avatarACenterX, rowCenterY);
           }
         } else {
           this.ctx.fillStyle = '#ffffff';
-          this.ctx.font = '700 16px Arial, sans-serif';
+          this.ctx.font = '700 28px Arial, sans-serif';
           this.ctx.textAlign = 'center';
           this.ctx.textBaseline = 'middle';
           this.ctx.fillText(getInitials(playerA.name), avatarACenterX, rowCenterY);
@@ -547,7 +618,7 @@ export class CanvasOverlayRenderer {
         }
 
         this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = '700 20px Arial, sans-serif';
+        this.ctx.font = '700 32px Arial, sans-serif';
         this.ctx.textAlign = 'right';
         this.ctx.textBaseline = 'middle';
         this.ctx.shadowColor = 'rgba(0,0,0,0.8)';
@@ -561,11 +632,8 @@ export class CanvasOverlayRenderer {
         this.ctx.shadowBlur = 0;
       }
 
-      const avatarBX = centerX + 60;
-      const avatarBCenterX = avatarBX + avatarRadius;
-
       if (playerB) {
-        this.ctx.fillStyle = hexToRgba(colorB, 0.25);
+        this.ctx.fillStyle = 'rgba(28, 28, 32, 0.95)';
         this.ctx.beginPath();
         this.ctx.arc(avatarBCenterX, rowCenterY, avatarRadius, 0, Math.PI * 2);
         this.ctx.fill();
@@ -581,26 +649,26 @@ export class CanvasOverlayRenderer {
           if (photo) {
             this.ctx.save();
             this.ctx.beginPath();
-            this.ctx.arc(avatarBCenterX, rowCenterY, avatarRadius - 1, 0, Math.PI * 2);
+            this.ctx.arc(avatarBCenterX, rowCenterY, avatarRadius, 0, Math.PI * 2);
             this.ctx.clip();
             this.ctx.drawImage(
               photo,
-              avatarBCenterX - avatarRadius + 1,
-              rowCenterY - avatarRadius + 1,
-              avatarSize - 2,
-              avatarSize - 2
+              avatarBCenterX - avatarRadius,
+              rowCenterY - avatarRadius,
+              avatarSize,
+              avatarSize
             );
             this.ctx.restore();
           } else {
             this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = '700 16px Arial, sans-serif';
+            this.ctx.font = '700 28px Arial, sans-serif';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(getInitials(playerB.name), avatarBCenterX, rowCenterY);
           }
         } else {
           this.ctx.fillStyle = '#ffffff';
-          this.ctx.font = '700 16px Arial, sans-serif';
+          this.ctx.font = '700 28px Arial, sans-serif';
           this.ctx.textAlign = 'center';
           this.ctx.textBaseline = 'middle';
           this.ctx.fillText(getInitials(playerB.name), avatarBCenterX, rowCenterY);
@@ -626,7 +694,7 @@ export class CanvasOverlayRenderer {
         }
 
         this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = '700 20px Arial, sans-serif';
+        this.ctx.font = '700 32px Arial, sans-serif';
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'middle';
         this.ctx.shadowColor = 'rgba(0,0,0,0.8)';

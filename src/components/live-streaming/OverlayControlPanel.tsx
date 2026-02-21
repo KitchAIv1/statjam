@@ -305,6 +305,7 @@ export function OverlayControlPanel({
                     size="sm"
                     variant={boxScoreVisible ? 'default' : 'outline'}
                     className="w-full h-7 text-xs"
+                    disabled
                   >
                     <LayoutGrid className="h-3 w-3 mr-1.5" />
                     Box Score
@@ -312,7 +313,26 @@ export function OverlayControlPanel({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Show Box Score overlay</p>
-                  <p className="text-[10px] opacity-80">Display top scorers for both teams</p>
+                  <p className="text-[10px] opacity-80">Display top scorers for both teams (disabled for now)</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {onStartingLineupToggle && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={onStartingLineupToggle}
+                    size="sm"
+                    variant={startingLineupVisible ? 'default' : 'outline'}
+                    className="w-full h-7 text-xs"
+                  >
+                    <Users2 className="h-3 w-3 mr-1.5" />
+                    Starting Lineup
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Show Starting Lineup overlay</p>
+                  <p className="text-[10px] opacity-80">Display 5v5 starters for both teams</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -365,25 +385,6 @@ export function OverlayControlPanel({
                   </TooltipContent>
                 </Tooltip>
               </>
-            )}
-            {onStartingLineupToggle && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={onStartingLineupToggle}
-                    size="sm"
-                    variant={startingLineupVisible ? 'default' : 'outline'}
-                    className="w-full h-7 text-xs"
-                  >
-                    <Users2 className="h-3 w-3 mr-1.5" />
-                    Starting Lineup
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Show Starting Lineup overlay</p>
-                  <p className="text-[10px] opacity-80">Display 5v5 starters for both teams</p>
-                </TooltipContent>
-              </Tooltip>
             )}
           </div>
         </div>
