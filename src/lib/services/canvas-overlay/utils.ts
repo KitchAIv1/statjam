@@ -77,6 +77,51 @@ export interface GameOverlayData {
 
   // Hide scoreboard bar when schedule overlay is active (e.g. Day Schedule)
   hideScoreBar?: boolean;
+
+  // Schedule overlay
+  scheduleOverlayVisible?: boolean;
+  scheduleOverlayPayload?: {
+    date: string;
+    games: Array<{
+      id: string;
+      awayTeamName: string;
+      homeTeamName: string;
+      awayTeamLogo?: string | null;
+      homeTeamLogo?: string | null;
+      time: string;
+      venue?: string | null;
+      status?: string | null;
+    }>;
+  } | null;
+
+  // Starting lineup overlay
+  lineupOverlayVisible?: boolean;
+  lineupOverlayPayload?: {
+    tournamentName?: string | null;
+    tournamentLogo?: string | null;
+    teamA: {
+      name: string;
+      logo?: string | null;
+      primaryColor?: string | null;
+      players: Array<{
+        id: string;
+        name: string;
+        jerseyNumber?: string | number | null;
+        photo_url?: string | null;
+      }>;
+    };
+    teamB: {
+      name: string;
+      logo?: string | null;
+      primaryColor?: string | null;
+      players: Array<{
+        id: string;
+        name: string;
+        jerseyNumber?: string | number | null;
+        photo_url?: string | null;
+      }>;
+    };
+  } | null;
 }
 
 /**

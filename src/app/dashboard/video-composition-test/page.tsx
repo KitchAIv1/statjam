@@ -210,8 +210,59 @@ export default function VideoCompositionTestPage() {
       shotMadeIs3Pointer: shotMadeData?.is3Pointer,
       // Hide canvas scoreboard when Day Schedule or Starting Lineup overlay is active
       hideScoreBar: scheduleOverlay.isVisible || startingLineup.isVisible,
+      // Schedule overlay (canvas)
+      scheduleOverlayVisible: scheduleOverlay.isVisible,
+      scheduleOverlayPayload:
+        scheduleOverlay.isVisible && scheduleOverlay.schedulePayload
+          ? {
+              date: scheduleOverlay.schedulePayload.displayDate,
+              games: (scheduleOverlay.schedulePayload.games || []).map((g) => ({
+                id: g.id,
+                awayTeamName: g.teamAName,
+                homeTeamName: g.teamBName,
+                awayTeamLogo: g.teamALogoUrl ?? null,
+                homeTeamLogo: g.teamBLogoUrl ?? null,
+                time: g.timeFormatted,
+                venue: g.venue ?? null,
+                status: null,
+              })),
+            }
+          : null,
+      // Lineup overlay (canvas)
+      lineupOverlayVisible: startingLineup.isVisible,
+      lineupOverlayPayload:
+        startingLineup.isVisible && startingLineup.payload
+          ? {
+              tournamentName: startingLineup.payload.tournamentName,
+              tournamentLogo: startingLineup.payload.tournamentLogo,
+              teamA: {
+                name: startingLineup.payload.teamA.name,
+                logo: startingLineup.payload.teamA.logo,
+                primaryColor: startingLineup.payload.teamA.primaryColor,
+                players: startingLineup.payload.teamA.players,
+              },
+              teamB: {
+                name: startingLineup.payload.teamB.name,
+                logo: startingLineup.payload.teamB.logo,
+                primaryColor: startingLineup.payload.teamB.primaryColor,
+                players: startingLineup.payload.teamB.players,
+              },
+            }
+          : null,
     };
-  }, [overlayData, optimisticScores, activePlayerStats, selectedTournament, infoBarActiveItem, infoBarSecondaryItem, shotMadeData, scheduleOverlay.isVisible, startingLineup.isVisible]);
+  }, [
+    overlayData,
+    optimisticScores,
+    activePlayerStats,
+    selectedTournament,
+    infoBarActiveItem,
+    infoBarSecondaryItem,
+    shotMadeData,
+    scheduleOverlay.isVisible,
+    scheduleOverlay.schedulePayload,
+    startingLineup.isVisible,
+    startingLineup.payload,
+  ]);
   
   const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition, setVariant } = useVideoComposition({
     videoStream: activeVideoStream,

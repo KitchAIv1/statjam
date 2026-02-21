@@ -128,6 +128,20 @@ export class CanvasOverlayRenderer {
       if (overlayData.activePlayerStats) {
         this.playerStatsDrawer.draw(overlayData.activePlayerStats);
       }
+
+      // Draw schedule overlay on canvas
+      if (overlayData.scheduleOverlayVisible && overlayData.scheduleOverlayPayload) {
+        await this.drawScheduleOverlay(overlayData.scheduleOverlayPayload);
+      }
+
+      // Draw lineup overlay on canvas
+      if (overlayData.lineupOverlayVisible && overlayData.lineupOverlayPayload) {
+        await this.drawLineupOverlay(
+          overlayData.lineupOverlayPayload,
+          overlayData.teamAPrimaryColor,
+          overlayData.teamBPrimaryColor
+        );
+      }
       
       // Log performance (only if slow or every 100 frames)
       const renderTime = performance.now() - startTime;
@@ -145,6 +159,494 @@ export class CanvasOverlayRenderer {
     }
   }
   
+  /**
+   * Draw rounded rectangle path (does not fill or stroke)
+   */
+  private drawRoundedRectPath(x: number, y: number, w: number, h: number, r: number): void {
+    this.ctx.beginPath();
+    this.ctx.moveTo(x + r, y);
+    this.ctx.lineTo(x + w - r, y);
+    this.ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    this.ctx.lineTo(x + w, y + h - r);
+    this.ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    this.ctx.lineTo(x + r, y + h);
+    this.ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    this.ctx.lineTo(x, y + r);
+    this.ctx.quadraticCurveTo(x, y, x + r, y);
+    this.ctx.closePath();
+  }
+
+  /**
+   * Draw schedule overlay card (right side of frame)
+   */
+  private async drawScheduleOverlay(
+    payload: NonNullable<GameOverlayData['scheduleOverlayPayload']>
+  ): Promise<void> {
+    const W = this.width;
+    const H = this.height;
+
+    const cardW = 480;
+    const cardH = Math.min(payload.games.length * 80 + 100, H - 80);
+    const cardX = W - cardW - 40;
+    const cardY = (H - cardH) / 2;
+    const radius = 16;
+
+    this.ctx.save();
+
+    this.ctx.globalAlpha = 0.88;
+    this.ctx.fillStyle = 'rgba(5, 5, 8, 0.92)';
+    this.drawRoundedRectPath(cardX, cardY, cardW, cardH, radius);
+    this.ctx.fill();
+    this.ctx.globalAlpha = 1;
+
+    this.ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    this.ctx.lineWidth = 1;
+    this.drawRoundedRectPath(cardX, cardY, cardW, cardH, radius);
+    this.ctx.stroke();
+
+    const headerH = 64;
+    this.ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    this.ctx.fillRect(cardX, cardY, cardW, headerH);
+
+    this.ctx.fillStyle = 'rgba(255,185,0,0.65)';
+    this.ctx.font = '700 14px Arial, sans-serif';
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText('DAY SCHEDULE', cardX + 20, cardY + 20);
+
+    this.ctx.fillStyle = 'rgba(255,185,0,0.45)';
+    this.ctx.font = '700 12px Arial, sans-serif';
+    this.ctx.textAlign = 'right';
+    this.ctx.fillText('STATJAM', cardX + cardW - 20, cardY + 20);
+
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.font = '800 24px Arial, sans-serif';
+    this.ctx.textAlign = 'left';
+    this.ctx.fillText(payload.date, cardX + 20, cardY + 46);
+
+    this.ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    this.ctx.moveTo(cardX, cardY + headerH);
+    this.ctx.lineTo(cardX + cardW, cardY + headerH);
+    this.ctx.stroke();
+
+    const rowH = 72;
+    const logoSize = 32;
+
+    for (let i = 0; i < payload.games.length; i++) {
+      const game = payload.games[i];
+      const rowY = cardY + headerH + i * rowH;
+      const rowCenterY = rowY + rowH / 2;
+
+      if (i % 2 === 0) {
+        this.ctx.fillStyle = 'rgba(255,255,255,0.02)';
+        this.ctx.fillRect(cardX, rowY, cardW, rowH);
+      }
+
+      if (i > 0) {
+        this.ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.moveTo(cardX + 16, rowY);
+        this.ctx.lineTo(cardX + cardW - 16, rowY);
+        this.ctx.stroke();
+      }
+
+      const centerX = cardX + cardW / 2;
+
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.font = '700 18px Arial, sans-serif';
+      this.ctx.textAlign = 'right';
+      this.ctx.textBaseline = 'middle';
+      const awayMaxW = 140;
+      let awayName = game.awayTeamName;
+      while (this.ctx.measureText(awayName).width > awayMaxW && awayName.length > 1) {
+        awayName = awayName.slice(0, -1);
+      }
+      this.ctx.fillText(awayName, centerX - logoSize - 20, rowCenterY - 8);
+
+      if (game.awayTeamLogo) {
+        const logo = await this.logoCache.load(game.awayTeamLogo);
+        if (logo) {
+          this.ctx.save();
+          this.ctx.beginPath();
+          this.ctx.arc(centerX - logoSize / 2 - 8, rowCenterY - 8, logoSize / 2, 0, Math.PI * 2);
+          this.ctx.clip();
+          this.ctx.drawImage(
+            logo,
+            centerX - logoSize - 8,
+            rowCenterY - 8 - logoSize / 2,
+            logoSize,
+            logoSize
+          );
+          this.ctx.restore();
+        }
+      }
+
+      this.ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      this.ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      this.ctx.lineWidth = 1;
+      const vsW = 36;
+      const vsH = 20;
+      this.ctx.fillRect(centerX - vsW / 2, rowCenterY - vsH / 2 - 8, vsW, vsH);
+      this.ctx.strokeRect(centerX - vsW / 2, rowCenterY - vsH / 2 - 8, vsW, vsH);
+      this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      this.ctx.font = '800 11px Arial, sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText('VS', centerX, rowCenterY - 8);
+
+      if (game.homeTeamLogo) {
+        const logo = await this.logoCache.load(game.homeTeamLogo);
+        if (logo) {
+          this.ctx.save();
+          this.ctx.beginPath();
+          this.ctx.arc(centerX + logoSize / 2 + 8, rowCenterY - 8, logoSize / 2, 0, Math.PI * 2);
+          this.ctx.clip();
+          this.ctx.drawImage(logo, centerX + 8, rowCenterY - 8 - logoSize / 2, logoSize, logoSize);
+          this.ctx.restore();
+        }
+      }
+
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.font = '700 18px Arial, sans-serif';
+      this.ctx.textAlign = 'left';
+      let homeName = game.homeTeamName;
+      while (this.ctx.measureText(homeName).width > awayMaxW && homeName.length > 1) {
+        homeName = homeName.slice(0, -1);
+      }
+      this.ctx.fillText(homeName, centerX + logoSize + 20, rowCenterY - 8);
+
+      this.ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      this.ctx.font = '600 13px Arial, sans-serif';
+      this.ctx.textAlign = 'center';
+      const metaText = [game.time, game.status || 'TBD', game.venue].filter(Boolean).join('  ·  ');
+      this.ctx.fillText(metaText, centerX, rowCenterY + 16);
+    }
+
+    const footerY = cardY + cardH - 28;
+    this.ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    this.ctx.moveTo(cardX, footerY);
+    this.ctx.lineTo(cardX + cardW, footerY);
+    this.ctx.stroke();
+    this.ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    this.ctx.font = '700 11px Arial, sans-serif';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('POWERED BY STATJAM', cardX + cardW / 2, footerY + 14);
+
+    this.ctx.restore();
+  }
+
+  /**
+   * Draw lineup overlay (centered card)
+   */
+  private async drawLineupOverlay(
+    payload: NonNullable<GameOverlayData['lineupOverlayPayload']>,
+    teamAPrimaryColor?: string,
+    teamBPrimaryColor?: string
+  ): Promise<void> {
+    const W = this.width;
+    const H = this.height;
+
+    const colorA = teamAPrimaryColor || '#3B82F6';
+    const colorB = teamBPrimaryColor || '#F97316';
+
+    const hexToRgba = (hex: string, alpha: number) => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    };
+
+    const cardW = 1100;
+    const cardX = (W - cardW) / 2;
+    const rowH = 72;
+    const headerH = 48;
+    const teamBarH = 56;
+    const footerH = 36;
+    const topLabelH = 60;
+    const cardH = topLabelH + teamBarH + headerH + rowH * 5 + footerH;
+    const cardY = (H - cardH) / 2;
+
+    this.ctx.save();
+
+    this.ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    this.ctx.font = '700 18px Arial, sans-serif';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(
+      (payload.tournamentName || '').toUpperCase(),
+      W / 2,
+      cardY + 18
+    );
+
+    this.ctx.fillStyle = 'rgba(255,185,0,0.8)';
+    this.ctx.font = '900 20px Arial, sans-serif';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('STARTING LINEUP', W / 2, cardY + 44);
+
+    const bandY = cardY + topLabelH;
+    const bandH = teamBarH + headerH + rowH * 5;
+
+    const gradient = this.ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
+    gradient.addColorStop(0, 'transparent');
+    gradient.addColorStop(0.05, 'transparent');
+    gradient.addColorStop(0.18, hexToRgba(colorA, 0.18));
+    gradient.addColorStop(0.38, hexToRgba(colorA, 0.45));
+    gradient.addColorStop(0.495, hexToRgba(colorA, 0.55));
+    gradient.addColorStop(0.495, 'transparent');
+    gradient.addColorStop(0.505, 'transparent');
+    gradient.addColorStop(0.505, hexToRgba(colorB, 0.55));
+    gradient.addColorStop(0.62, hexToRgba(colorB, 0.45));
+    gradient.addColorStop(0.82, hexToRgba(colorB, 0.18));
+    gradient.addColorStop(0.95, 'transparent');
+    gradient.addColorStop(1, 'transparent');
+
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(cardX, bandY, cardW, bandH);
+
+    this.ctx.strokeStyle = hexToRgba(colorA, 0.4);
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    this.ctx.moveTo(cardX + cardW * 0.1, bandY);
+    this.ctx.lineTo(cardX + cardW * 0.5, bandY);
+    this.ctx.stroke();
+    this.ctx.strokeStyle = hexToRgba(colorB, 0.4);
+    this.ctx.beginPath();
+    this.ctx.moveTo(cardX + cardW * 0.5, bandY);
+    this.ctx.lineTo(cardX + cardW * 0.9, bandY);
+    this.ctx.stroke();
+    this.ctx.strokeStyle = hexToRgba(colorA, 0.4);
+    this.ctx.beginPath();
+    this.ctx.moveTo(cardX + cardW * 0.1, bandY + bandH);
+    this.ctx.lineTo(cardX + cardW * 0.5, bandY + bandH);
+    this.ctx.stroke();
+    this.ctx.strokeStyle = hexToRgba(colorB, 0.4);
+    this.ctx.beginPath();
+    this.ctx.moveTo(cardX + cardW * 0.5, bandY + bandH);
+    this.ctx.lineTo(cardX + cardW * 0.9, bandY + bandH);
+    this.ctx.stroke();
+
+    const centerX = cardX + cardW / 2;
+
+    this.ctx.fillStyle = colorA;
+    this.ctx.font = '900 28px Arial, sans-serif';
+    this.ctx.textAlign = 'right';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(payload.teamA.name, centerX - 40, bandY + teamBarH / 2);
+
+    this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    this.ctx.font = '700 14px Arial, sans-serif';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('VS', centerX, bandY + teamBarH / 2);
+
+    this.ctx.fillStyle = colorB;
+    this.ctx.font = '900 28px Arial, sans-serif';
+    this.ctx.textAlign = 'left';
+    this.ctx.fillText(payload.teamB.name, centerX + 40, bandY + teamBarH / 2);
+
+    this.ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    this.ctx.moveTo(centerX, bandY + teamBarH);
+    this.ctx.lineTo(centerX, bandY + bandH);
+    this.ctx.stroke();
+
+    const playersY = bandY + teamBarH + headerH;
+    const avatarSize = 48;
+    const avatarRadius = avatarSize / 2;
+
+    const getInitials = (name: string) => {
+      const parts = name.trim().split(' ');
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    };
+
+    for (let i = 0; i < 5; i++) {
+      const playerA = payload.teamA.players[i];
+      const playerB = payload.teamB.players[i];
+      const rowY = playersY + i * rowH;
+      const rowCenterY = rowY + rowH / 2;
+
+      if (i > 0) {
+        this.ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.moveTo(cardX + cardW * 0.05, rowY);
+        this.ctx.lineTo(cardX + cardW * 0.95, rowY);
+        this.ctx.stroke();
+      }
+
+      const avatarAX = centerX - 60;
+      const avatarACenterX = avatarAX - avatarRadius;
+
+      if (playerA) {
+        this.ctx.fillStyle = hexToRgba(colorA, 0.25);
+        this.ctx.beginPath();
+        this.ctx.arc(avatarACenterX, rowCenterY, avatarRadius, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.strokeStyle = hexToRgba(colorA, 0.4);
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(avatarACenterX, rowCenterY, avatarRadius, 0, Math.PI * 2);
+        this.ctx.stroke();
+
+        if (playerA.photo_url) {
+          const photo = await this.logoCache.load(playerA.photo_url);
+          if (photo) {
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(avatarACenterX, rowCenterY, avatarRadius - 1, 0, Math.PI * 2);
+            this.ctx.clip();
+            this.ctx.drawImage(
+              photo,
+              avatarACenterX - avatarRadius + 1,
+              rowCenterY - avatarRadius + 1,
+              avatarSize - 2,
+              avatarSize - 2
+            );
+            this.ctx.restore();
+          } else {
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '700 16px Arial, sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(getInitials(playerA.name), avatarACenterX, rowCenterY);
+          }
+        } else {
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.font = '700 16px Arial, sans-serif';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(getInitials(playerA.name), avatarACenterX, rowCenterY);
+        }
+
+        const jNum = playerA.jerseyNumber;
+        if (jNum !== null && jNum !== undefined && String(jNum) !== '0') {
+          const badgeR = 10;
+          const badgeX = avatarACenterX + avatarRadius - badgeR;
+          const badgeY = rowCenterY + avatarRadius - badgeR;
+          this.ctx.fillStyle = 'rgba(0,0,0,0.9)';
+          this.ctx.beginPath();
+          this.ctx.arc(badgeX, badgeY, badgeR, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          this.ctx.lineWidth = 1;
+          this.ctx.stroke();
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.font = '700 9px Arial, sans-serif';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(String(jNum), badgeX, badgeY);
+        }
+
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = '700 20px Arial, sans-serif';
+        this.ctx.textAlign = 'right';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        this.ctx.shadowBlur = 6;
+        let nameA = playerA.name;
+        const maxNameW = 260;
+        while (this.ctx.measureText(nameA).width > maxNameW && nameA.length > 1) {
+          nameA = nameA.slice(0, -1);
+        }
+        this.ctx.fillText(nameA, avatarACenterX - avatarRadius - 12, rowCenterY);
+        this.ctx.shadowBlur = 0;
+      }
+
+      const avatarBX = centerX + 60;
+      const avatarBCenterX = avatarBX + avatarRadius;
+
+      if (playerB) {
+        this.ctx.fillStyle = hexToRgba(colorB, 0.25);
+        this.ctx.beginPath();
+        this.ctx.arc(avatarBCenterX, rowCenterY, avatarRadius, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.strokeStyle = hexToRgba(colorB, 0.4);
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(avatarBCenterX, rowCenterY, avatarRadius, 0, Math.PI * 2);
+        this.ctx.stroke();
+
+        if (playerB.photo_url) {
+          const photo = await this.logoCache.load(playerB.photo_url);
+          if (photo) {
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(avatarBCenterX, rowCenterY, avatarRadius - 1, 0, Math.PI * 2);
+            this.ctx.clip();
+            this.ctx.drawImage(
+              photo,
+              avatarBCenterX - avatarRadius + 1,
+              rowCenterY - avatarRadius + 1,
+              avatarSize - 2,
+              avatarSize - 2
+            );
+            this.ctx.restore();
+          } else {
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '700 16px Arial, sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(getInitials(playerB.name), avatarBCenterX, rowCenterY);
+          }
+        } else {
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.font = '700 16px Arial, sans-serif';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(getInitials(playerB.name), avatarBCenterX, rowCenterY);
+        }
+
+        const jNumB = playerB.jerseyNumber;
+        if (jNumB !== null && jNumB !== undefined && String(jNumB) !== '0') {
+          const badgeR = 10;
+          const badgeX = avatarBCenterX + avatarRadius - badgeR;
+          const badgeY = rowCenterY + avatarRadius - badgeR;
+          this.ctx.fillStyle = 'rgba(0,0,0,0.9)';
+          this.ctx.beginPath();
+          this.ctx.arc(badgeX, badgeY, badgeR, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          this.ctx.lineWidth = 1;
+          this.ctx.stroke();
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.font = '700 9px Arial, sans-serif';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(String(jNumB), badgeX, badgeY);
+        }
+
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = '700 20px Arial, sans-serif';
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        this.ctx.shadowBlur = 6;
+        let nameB = playerB.name;
+        while (this.ctx.measureText(nameB).width > 260 && nameB.length > 1) {
+          nameB = nameB.slice(0, -1);
+        }
+        this.ctx.fillText(nameB, avatarBCenterX + avatarRadius + 12, rowCenterY);
+        this.ctx.shadowBlur = 0;
+      }
+    }
+
+    const footerY = bandY + bandH + 12;
+    this.ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    this.ctx.font = '700 13px Arial, sans-serif';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText('POWERED BY STATJAM', W / 2, footerY);
+
+    this.ctx.restore();
+  }
+
   /**
    * Draw minimal fallback overlay if main render fails
    */
