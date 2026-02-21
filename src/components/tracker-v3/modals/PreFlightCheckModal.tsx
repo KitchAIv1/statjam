@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Settings, CheckCircle2, Info, Zap, Clock } from 'lucide-react';
+import { X, Settings, CheckCircle2, Info, Zap, Clock, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { AutomationFlags } from '@/lib/types/automation';
@@ -204,14 +204,23 @@ export function PreFlightCheckModal({
           </div>
 
           {/* Quarter Length Setting */}
-          <div className={`rounded-xl p-4 border ${canEditQuarterLength ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`rounded-xl p-4 border ${canEditQuarterLength ? 'bg-orange-50 border-orange-200' : 'bg-amber-50/50 border-amber-200'}`}>
             <div className="flex items-center gap-2 mb-3">
-              <Clock className={`w-5 h-5 ${canEditQuarterLength ? 'text-orange-500' : 'text-gray-400'}`} />
+              {canEditQuarterLength ? (
+                <Clock className="w-5 h-5 text-orange-500" />
+              ) : (
+                <Lock className="w-5 h-5 text-amber-600" />
+              )}
               <p className="font-semibold text-gray-900 text-sm">Quarter Length</p>
               {!canEditQuarterLength && (
-                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Locked</span>
+                <span className="text-xs font-medium bg-amber-200 text-amber-900 px-2.5 py-0.5 rounded-full border border-amber-300">Locked</span>
               )}
             </div>
+            {!canEditQuarterLength && (
+              <p className="text-sm font-semibold text-amber-900 mb-3">
+                Game clock: <span className="font-bold">{quarterLengthMinutes} min</span>
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               {QUARTER_LENGTH_OPTIONS.map((option) => (
                 <button
@@ -220,7 +229,9 @@ export function PreFlightCheckModal({
                   disabled={!canEditQuarterLength}
                   className={`px-4 py-2 rounded-lg border-2 transition-all text-sm font-medium ${
                     !canEditQuarterLength
-                      ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                      ? quarterLengthMinutes === option.value
+                        ? 'border-amber-500 bg-amber-100 text-amber-900 cursor-default ring-2 ring-amber-300/50'
+                        : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
                       : quarterLengthMinutes === option.value
                         ? 'border-orange-500 bg-orange-100 text-orange-700'
                         : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'

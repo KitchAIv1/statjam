@@ -374,7 +374,7 @@ const StatAdminDashboard = () => {
             fouls: { enabled: false, bonusFreeThrows: false, foulOutEnforcement: false, technicalEjection: false },
             undo: { enabled: false, maxHistorySize: 50 }
           }}
-          defaultQuarterLength={12} // NBA default, can be overridden in modal
+          defaultQuarterLength={[5, 6, 8, 10, 12, 18, 20].includes(Number(selectedGame.quarter_length_minutes)) ? selectedGame.quarter_length_minutes : undefined}
           userRole="stat_admin"
         />
       )}

@@ -170,11 +170,13 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         console.warn('Failed to load quarter length from localStorage:', error);
       }
     }
-    return 12; // Default fallback (not locked - can be updated from DB)
+    return 0;
   };
   
   // ✅ Original quarter length (loaded from localStorage immediately, updated when game data loads)
   const [originalQuarterLength, setOriginalQuarterLength] = useState(getInitialQuarterLength);
+  /** Always-current quarter length ref — never stale, used by resetClock and setQuarter */
+  const quarterLengthRef = useRef<number>(getInitialQuarterLength());
   
   // ✅ NEW: Periods per game (4 for quarters, 2 for halves) - loaded from game data
   const [periodsPerGame, setPeriodsPerGame] = useState(4);
@@ -188,6 +190,10 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     console.log(`🔍 DEBUG clockRef sync: ${minutes}:${(clock.secondsRemaining % 60).toString().padStart(2, '0')} (${clock.isRunning ? 'RUNNING' : 'STOPPED'})`);
     clockRef.current = clock;
   }, [clock]);
+
+  useEffect(() => {
+    quarterLengthRef.current = originalQuarterLength;
+  }, [originalQuarterLength]);
 
   // ✅ Throttled DB sync: Track last sync time for clock updates
   const lastClockSyncRef = useRef<number>(0);
@@ -879,19 +885,12 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     // Use provided quarter or current quarter
     const targetQuarter = forQuarter || quarter;
     
-    // ✅ FIX: Read quarter length from localStorage as AUTHORITATIVE source
-    // This prevents stale closure issues where originalQuarterLength state hasn't updated
-    let clockMinutesFromConfig = originalQuarterLength;
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(`quarterLength_${gameId}`);
-      if (stored) {
-        const parsed = parseInt(stored, 10);
-        if ([5, 6, 8, 10, 12, 18, 20].includes(parsed)) {
-          clockMinutesFromConfig = parsed;
-        }
-      }
-    }
-    
+    const stored = localStorage.getItem(`quarterLength_${gameId}`);
+    const parsed = stored ? parseInt(stored, 10) : 0;
+    let clockMinutesFromConfig = [5, 6, 8, 10, 12, 18, 20].includes(parsed)
+      ? parsed
+      : originalQuarterLength;
+
     // Determine clock duration based on quarter
     // Regular periods: Use original quarter/half length from pre-flight
     // Overtime periods: 5 minutes
@@ -1099,20 +1098,12 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       console.log('⚠️ Quarter change warning:', validation.warning);
     }
     
-    // ✅ FIX: Read quarter length from localStorage as AUTHORITATIVE source
-    // This prevents stale closure issues where originalQuarterLength state hasn't updated
-    let clockMinutesForQuarter = originalQuarterLength;
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(`quarterLength_${gameId}`);
-      if (stored) {
-        const parsed = parseInt(stored, 10);
-        if ([5, 6, 8, 10, 12, 18, 20].includes(parsed)) {
-          clockMinutesForQuarter = parsed;
-          console.log(`🔍 setQuarter: Using localStorage quarter length: ${parsed} min`);
-        }
-      }
-    }
-    
+    const stored = localStorage.getItem(`quarterLength_${gameId}`);
+    const parsed = stored ? parseInt(stored, 10) : 0;
+    let clockMinutesForQuarter = [5, 6, 8, 10, 12, 18, 20].includes(parsed)
+      ? parsed
+      : originalQuarterLength;
+
     // ✅ DYNAMIC PERIODS: Use periodsPerGame for overtime detection
     const isOvertime = newQuarter > periodsPerGame;
     const newClockMinutes = isOvertime ? 5 : clockMinutesForQuarter;
