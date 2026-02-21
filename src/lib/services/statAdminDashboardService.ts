@@ -157,16 +157,15 @@ export class StatAdminDashboardService {
         };
       });
 
-      // Sort: Demo games first, then by creation date (newest first)
+      // Sort: Demo games first, then by start_time ascending (1st game → last game of season)
       const sortedGames = transformedGames.sort((a: any, b: any) => {
         // Demo games always come first
         if (a.is_demo && !b.is_demo) return -1;
         if (!a.is_demo && b.is_demo) return 1;
-        
-        // Otherwise sort by date
-        const dateA = new Date(a.createdAt || a.scheduledDate);
-        const dateB = new Date(b.createdAt || b.scheduledDate);
-        return dateB.getTime() - dateA.getTime();
+        // Chronological order (earliest first = Game 1 → last)
+        const dateA = new Date(a.scheduledDate || a.createdAt).getTime();
+        const dateB = new Date(b.scheduledDate || b.createdAt).getTime();
+        return dateA - dateB;
       });
 
       // Group by organizer
@@ -187,11 +186,11 @@ export class StatAdminDashboardService {
         return groups;
       }, {} as Record<string, { organizerId: string; organizerName: string; organizerEmail: string; games: any[] }>);
 
-      // Convert to array and sort organizer groups
+      // Convert to array and sort organizer groups by earliest game (1st → last)
       const organizedGames = Object.values(groupedByOrganizer).sort((a: any, b: any) => {
-        const latestA = new Date(a.games[0]?.createdAt || a.games[0]?.scheduledDate || 0);
-        const latestB = new Date(b.games[0]?.createdAt || b.games[0]?.scheduledDate || 0);
-        return latestB.getTime() - latestA.getTime();
+        const earliestA = new Date(a.games[0]?.scheduledDate || a.games[0]?.createdAt || 0).getTime();
+        const earliestB = new Date(b.games[0]?.scheduledDate || b.games[0]?.createdAt || 0).getTime();
+        return earliestA - earliestB;
       });
 
       const totalTime = Math.round(performance.now() - startTime);

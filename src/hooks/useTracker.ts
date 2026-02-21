@@ -97,6 +97,8 @@ interface UseTrackerReturn {
   
   // Team Fouls & Timeouts
   teamFouls: { [teamId: string]: number };
+  /** Per-player foul count (organizer games only). Key = player_id or custom_player_id */
+  playerFoulCounts: Record<string, number>;
   teamTimeouts: { [teamId: string]: number };
   timeoutActive: boolean;
   timeoutTeamId: string | null;
@@ -241,64 +243,62 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     scoresRef.current = scores;
   }, [scores]);
 
-  // ✅ SCORE RECALCULATION: Helper function to calculate scores from game_stats
-  // Reused for initialization and WebSocket updates to ensure consistency
-  const calculateScoresFromStats = useCallback(async (gameId: string, teamAId: string, teamBId: string, isCoachMode: boolean): Promise<ScoreByTeam | null> => {
-    try {
-      const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
-      const stats = await GameServiceV3.getGameStats(gameId);
-      
-      if (!stats || stats.length === 0) {
-        return null; // Return null to indicate no stats found (don't default to 0-0)
-      }
-      
-      let teamAScore = 0;
-      let teamBScore = 0;
-      
-      for (const stat of stats) {
-        // Only count made shots
-        if (stat.modifier !== 'made') continue;
-        
-        // Use stat_value from database (already contains correct points)
-        const points = stat.stat_value || 0;
-        
-        // ✅ CRITICAL: Check is_opponent_stat flag for coach mode (MUST MATCH INITIALIZATION LOGIC)
-        if (stat.is_opponent_stat) {
-          // Opponent stats go to team B score
-          teamBScore += points;
-        } else if (stat.team_id === teamAId) {
-          teamAScore += points;
-        } else if (stat.team_id === teamBId) {
-          teamBScore += points;
+  // ✅ SCORE & PLAYER FOUL RECALCULATION: Single fetch, derived scores + per-player fouls
+  // Reused for initialization and WebSocket updates. Organizer games only: playerFoulCounts.
+  const calculateScoresAndFoulsFromStats = useCallback(
+    async (
+      gameId: string,
+      teamAId: string,
+      teamBId: string,
+      isCoachMode: boolean
+    ): Promise<{
+      scores: ScoreByTeam | null;
+      playerFoulCounts: Record<string, number>;
+    }> => {
+      try {
+        const { GameServiceV3 } = await import('@/lib/services/gameServiceV3');
+        const stats = await GameServiceV3.getGameStats(gameId);
+
+        if (!stats || stats.length === 0) {
+          return { scores: null, playerFoulCounts: {} };
         }
+
+        let teamAScore = 0;
+        let teamBScore = 0;
+        const foulCountByPlayer: Record<string, number> = {};
+
+        for (const stat of stats) {
+          if (stat.modifier === 'made') {
+            const points = stat.stat_value || 0;
+            if (stat.is_opponent_stat) {
+              teamBScore += points;
+            } else if (stat.team_id === teamAId) {
+              teamAScore += points;
+            } else if (stat.team_id === teamBId) {
+              teamBScore += points;
+            }
+          }
+          if (!isCoachMode && stat.stat_type === 'foul') {
+            const pid = stat.player_id || stat.custom_player_id;
+            if (pid) {
+              foulCountByPlayer[pid] = (foulCountByPlayer[pid] || 0) + (stat.stat_value || 1);
+            }
+          }
+        }
+
+        const scores: ScoreByTeam | null = isCoachMode
+          ? { [teamAId]: teamAScore, opponent: teamBScore }
+          : { [teamAId]: teamAScore, [teamBId]: teamBScore };
+
+        return { scores, playerFoulCounts: foulCountByPlayer };
+      } catch (error) {
+        console.error('❌ Error calculating scores from stats:', error);
+        return { scores: null, playerFoulCounts: {} };
       }
-      
-      // 🔍 DEBUG: Log calculated scores
-      console.log('🔍 calculateScoresFromStats DEBUG:', {
-        totalStats: stats.length,
-        madeStats: stats.filter(s => s.modifier === 'made').length,
-        teamAScore,
-        teamBScore,
-        isCoachMode
-      });
-      
-      // ✅ FIX: Use isCoachMode flag instead of comparing team IDs
-      // Coach games may have different team_a_id and team_b_id in some cases
-      if (isCoachMode) {
-        // Coach mode: Store opponent score separately under 'opponent' key
-        return { [teamAId]: teamAScore, opponent: teamBScore };
-      } else {
-        // Tournament/Stat Admin mode: Use both team IDs
-        return {
-          [teamAId]: teamAScore,
-          [teamBId]: teamBScore
-        };
-      }
-    } catch (error) {
-      console.error('❌ Error calculating scores from stats:', error);
-      return null; // Return null on error (don't update scores)
-    }
-  }, []);
+    },
+    []
+  );
+  const [playerFoulCounts, setPlayerFoulCounts] = useState<Record<string, number>>({});
   const [teamFouls, setTeamFouls] = useState({
     [teamAId]: 0,
     [teamBId]: 0
@@ -673,14 +673,17 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
           console.warn('⚠️ Could not load game state from database');
         }
         
-        // ✅ FIXED: Load existing stats to calculate current scores (for refresh persistence)
-        // Use extracted helper function for consistency with WebSocket updates
-        const calculatedScores = await calculateScoresFromStats(gameId, teamAId, teamBId, isCoachMode);
-        
+        // ✅ FIXED: Load existing stats to calculate scores + player fouls (single fetch)
+        const { scores: calculatedScores, playerFoulCounts: foulCounts } =
+          await calculateScoresAndFoulsFromStats(gameId, teamAId, teamBId, isCoachMode);
+
         if (calculatedScores) {
-          // Initialize scores with calculated totals
           setScores(calculatedScores);
-        } else {
+        }
+        if (!isCoachMode) {
+          setPlayerFoulCounts(foulCounts);
+        }
+        if (!calculatedScores) {
           // ✅ FIX: Only set 0-0 if this is truly a fresh game with no existing scores
           // Never overwrite existing scores (prevents 0-0 flash on reconnect/weak connection)
           const currentScores = scoresRef.current;
@@ -717,7 +720,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       setIsLoading(false);
     }
     // Note: If gameId is valid but teamAId/teamBId are empty, keep isLoading=true
-  }, [gameId, teamAId, teamBId, isCoachMode, initialGameData, calculateScoresFromStats]);
+  }, [gameId, teamAId, teamBId, isCoachMode, initialGameData, calculateScoresAndFoulsFromStats]);
 
   // ✅ Real-time subscription to sync timeout state, fouls, and scores from database
   useEffect(() => {
@@ -774,35 +777,23 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
         // Debounce score recalculation to batch rapid updates
         scoreRecalculationTimeoutRef.current = setTimeout(async () => {
           try {
-            const calculatedScores = await calculateScoresFromStats(gameId, teamAId, teamBId, isCoachMode);
-            
+            const { scores: calculatedScores, playerFoulCounts: foulCounts } =
+              await calculateScoresAndFoulsFromStats(gameId, teamAId, teamBId, isCoachMode);
+
             if (calculatedScores) {
-              // ✅ ANTI-FLICKER: Only update if scores actually changed
               const currentScores = scoresRef.current;
-          let hasChanges = false;
-              
-          // ✅ FIX: Use isCoachMode flag instead of comparing team IDs
-          if (isCoachMode) {
-            // Coach mode: compare both team score and opponent score
-                hasChanges = (
-                  currentScores[teamAId] !== calculatedScores[teamAId] ||
-                  currentScores.opponent !== calculatedScores.opponent
-                );
-          } else {
-            // Tournament mode: compare both team scores
-                hasChanges = (
-                  currentScores[teamAId] !== calculatedScores[teamAId] ||
-                  currentScores[teamBId] !== calculatedScores[teamBId]
-                );
-          }
-          
-          if (hasChanges) {
-                console.log('🔄 useTracker: Scores recalculated from game_stats:', {
-                  previous: currentScores,
-                  calculated: calculatedScores
-                });
+              const hasScoreChanges =
+                isCoachMode
+                  ? currentScores[teamAId] !== calculatedScores[teamAId] ||
+                    currentScores.opponent !== calculatedScores.opponent
+                  : currentScores[teamAId] !== calculatedScores[teamAId] ||
+                    currentScores[teamBId] !== calculatedScores[teamBId];
+              if (hasScoreChanges) {
                 setScores(calculatedScores);
               }
+            }
+            if (!isCoachMode) {
+              setPlayerFoulCounts(foulCounts);
             }
           } catch (error) {
             console.error('❌ Error recalculating scores from game_stats update:', error);
@@ -835,7 +826,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
       }
       unsubscribe();
     };
-  }, [gameId, teamAId, teamBId, isCoachMode, calculateScoresFromStats]);
+  }, [gameId, teamAId, teamBId, isCoachMode, calculateScoresAndFoulsFromStats]);
 
   // Clock Controls
   const startClock = useCallback(async () => {
@@ -2502,6 +2493,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     playPrompt, // ✅ PHASE 4: Play sequence prompts
     clearPlayPrompt, // ✅ PHASE 4: Clear play prompt
     setPlayPrompt, // ✅ PHASE 5: Manually set play prompt (for foul flow)
+    playerFoulCounts, // ✅ Per-player foul counts (organizer only)
     setAutomationFlags // ✅ Runtime automation mode toggle
   };
 };

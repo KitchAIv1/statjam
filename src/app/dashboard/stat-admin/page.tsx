@@ -8,9 +8,8 @@ import { StatAdminDashboardService } from '@/lib/services/statAdminDashboardServ
 import { TeamService } from '@/lib/services/tournamentService';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { TrendingUp, Database, BarChart3, Settings, Users, Activity, Play, Clock, Trophy, Zap, Target, Calendar, Eye, Lightbulb, BookOpen, Video } from 'lucide-react';
+import { TrendingUp, Database, BarChart3, Settings, Activity, Play, Clock, Target, Calendar, BookOpen } from 'lucide-react';
 import { PreFlightCheckModal, PreFlightSettings } from '@/components/tracker-v3/modals/PreFlightCheckModal';
 import { AutomationFlags } from '@/lib/types/automation';
 import { ProfileCard, ProfileCardSkeleton } from '@/components/profile/ProfileCard';
@@ -18,6 +17,7 @@ import { ProfileEditModal } from '@/components/profile/ProfileEditModal';
 import { useStatAdminProfile } from '@/hooks/useStatAdminProfile';
 import { ProfileService } from '@/lib/services/profileService';
 import { AssignedVideosSection } from '@/components/stat-admin/AssignedVideosSection';
+import { AssignedGamesList } from '@/components/stat-admin/AssignedGamesList';
 import { DashboardCoreCards } from '@/components/stat-admin/DashboardCoreCards';
 import { getAssignedVideos, VideoQueueItem } from '@/lib/services/videoAssignmentService';
 
@@ -201,196 +201,6 @@ const StatAdminDashboard = () => {
     );
   }
 
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      background: 'var(--dashboard-bg)',
-      paddingTop: '100px',
-      paddingBottom: '60px',
-    },
-    content: {
-      maxWidth: '1400px',
-      margin: '0 auto',
-      padding: '0 24px',
-    },
-    header: {
-      marginBottom: '48px',
-      textAlign: 'center',
-    },
-    title: {
-      fontSize: '48px',
-      fontWeight: '700',
-      background: 'var(--dashboard-gradient)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      backgroundClip: 'text',
-      fontFamily: "'Anton', system-ui, sans-serif",
-      marginBottom: '16px',
-      letterSpacing: '1px',
-    },
-    subtitle: {
-      fontSize: '18px',
-      color: 'var(--dashboard-text-secondary)',
-      fontWeight: '400',
-      maxWidth: '600px',
-      margin: '0 auto',
-      lineHeight: '1.6',
-    },
-    statsGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-      gap: '24px',
-      marginBottom: '48px',
-    },
-    statCard: {
-      background: 'var(--dashboard-card)',
-      borderRadius: '20px',
-      padding: '32px',
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'var(--dashboard-border)',
-      backdropFilter: 'blur(20px)',
-      transition: 'all 0.3s ease',
-      position: 'relative',
-      overflow: 'hidden',
-    },
-    statCardHover: {
-      transform: 'translateY(-4px)',
-      borderColor: 'var(--dashboard-border-hover)',
-      boxShadow: '0 20px 40px rgba(249, 115, 22, 0.1)',
-    },
-    statIcon: {
-      width: '56px',
-      height: '56px',
-      background: 'var(--dashboard-gradient)',
-      borderRadius: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: '24px',
-      boxShadow: '0 8px 24px rgba(249, 115, 22, 0.3)',
-    },
-    statTitle: {
-      fontSize: '14px',
-      fontWeight: '600',
-      color: 'var(--dashboard-text-secondary)',
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      marginBottom: '8px',
-    },
-    statValue: {
-      fontSize: '36px',
-      fontWeight: '700',
-      color: 'var(--dashboard-text-primary)',
-      marginBottom: '8px',
-      fontFamily: "'Anton', system-ui, sans-serif",
-    },
-    statChange: {
-      fontSize: '14px',
-      color: 'var(--dashboard-primary)',
-      fontWeight: '500',
-    },
-    section: {
-      marginBottom: '48px',
-    },
-    sectionTitle: {
-      fontSize: '24px',
-      fontWeight: '600',
-      color: 'var(--dashboard-text-primary)',
-      marginBottom: '24px',
-    },
-    adminTools: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-      gap: '24px',
-      marginBottom: '48px',
-    },
-    toolCard: {
-      background: 'var(--dashboard-card)',
-      borderRadius: '16px',
-      padding: '32px',
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'var(--dashboard-border)',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease',
-    },
-    toolCardHover: {
-      transform: 'translateY(-2px)',
-      borderColor: 'var(--dashboard-border-hover)',
-      boxShadow: '0 12px 24px rgba(249, 115, 22, 0.1)',
-    },
-    toolIcon: {
-      width: '56px',
-      height: '56px',
-      background: 'var(--dashboard-gradient)',
-      borderRadius: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: '24px',
-      boxShadow: '0 8px 24px rgba(249, 115, 22, 0.3)',
-    },
-    toolTitle: {
-      fontSize: '20px',
-      fontWeight: '600',
-      color: 'var(--dashboard-text-primary)',
-      marginBottom: '12px',
-    },
-    toolDescription: {
-      fontSize: '14px',
-      color: 'var(--dashboard-text-secondary)',
-      lineHeight: '1.6',
-      marginBottom: '16px',
-    },
-    toolStatus: {
-      fontSize: '12px',
-      fontWeight: '500',
-      padding: '4px 12px',
-      borderRadius: '20px',
-      display: 'inline-block',
-    },
-    statusActive: {
-      background: 'rgba(34, 197, 94, 0.2)',
-      color: '#22c55e',
-    },
-    statusPending: {
-      background: 'rgba(249, 115, 22, 0.2)',
-      color: 'var(--dashboard-primary)',
-    },
-    comingSoon: {
-      background: 'var(--dashboard-card)',
-      borderRadius: '20px',
-      padding: '48px',
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'var(--dashboard-border)',
-      textAlign: 'center',
-    },
-    comingSoonIcon: {
-      width: '64px',
-      height: '64px',
-      background: 'var(--dashboard-gradient)',
-      borderRadius: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      margin: '0 auto 24px',
-      boxShadow: '0 8px 24px rgba(249, 115, 22, 0.3)',
-    },
-    comingSoonTitle: {
-      fontSize: '24px',
-      fontWeight: '600',
-      color: 'var(--dashboard-text-primary)',
-      marginBottom: '12px',
-    },
-    comingSoonText: {
-      fontSize: '16px',
-      color: 'var(--dashboard-text-secondary)',
-      lineHeight: '1.6',
-    },
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <NavigationHeader />
@@ -453,293 +263,35 @@ const StatAdminDashboard = () => {
               </div>
             )}
 
-            {/* Assigned Games Section */}
-            <Card className="hover:shadow-lg transition-all duration-300">
-              <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent">
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-primary" />
-                  <CardTitle>My Assigned Games</CardTitle>
-                </div>
-                <CardDescription>Track and manage your game assignments</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-6">
-                {gamesLoading ? (
-            <div style={styles.toolCard}>
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <div style={{ color: '#FFD700', fontSize: '16px', marginBottom: '8px' }}>
-                  Loading assigned games...
-                </div>
-                <div style={{ color: '#888', fontSize: '14px' }}>
-                  Fetching your game assignments
-                </div>
-              </div>
-            </div>
-          ) : gamesError ? (
-            <div style={styles.toolCard}>
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <div style={{ color: '#ff4444', fontSize: '16px', marginBottom: '8px' }}>
-                  Error loading games
-                </div>
-                <div style={{ color: '#888', fontSize: '14px', marginBottom: '16px' }}>
-                  {gamesError}
-                </div>
-                <button
-                  onClick={() => {
-                    if (user) {
-                      setGamesLoading(true);
-                      setGamesError(null);
-                      // ✅ OPTIMIZED: Use StatAdminDashboardService with caching
-                      StatAdminDashboardService.getAssignedGamesOptimized(user.id)
-                        .then(setAssignedGames)
-                        .catch((error) => setGamesError(error.message))
-                        .finally(() => setGamesLoading(false));
-                    }
-                  }}
-                  style={{
-                    background: '#FFD700',
-                    color: '#000',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Retry
-                </button>
-              </div>
-            </div>
-          ) : assignedGames.length === 0 ? (
-            <div style={styles.toolCard}>
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <div style={styles.toolIcon}>
-                  <Trophy style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-                </div>
-                <div style={{ color: '#888', fontSize: '16px', marginBottom: '8px' }}>
-                  No games assigned yet
-                </div>
-                <div style={{ color: '#666', fontSize: '14px' }}>
-                  Tournament organizers will assign games to you. Check back later or contact your organizer.
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div style={styles.adminTools}>
-              {(Array.isArray(assignedGames) ? assignedGames : []).map((organizerGroup: any) => (
-                <div key={organizerGroup.organizerId} style={{ marginBottom: '32px' }}>
-                  {/* Organizer Header */}
-                  <div style={{
-                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                    borderRadius: '12px',
-                    padding: '16px 20px',
-                    marginBottom: '16px',
-                    color: '#ffffff'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <Users style={{ width: '20px', height: '20px' }} />
-                      <div>
-                        <div style={{ fontSize: '18px', fontWeight: '600' }}>
-                          {organizerGroup.organizerName}
-                        </div>
-                        <div style={{ fontSize: '14px', opacity: '0.9' }}>
-                          {organizerGroup.games?.length || 0} game{(organizerGroup.games?.length || 0) !== 1 ? 's' : ''} assigned
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Games for this organizer */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '16px' }}>
-                    {(organizerGroup.games || []).map((game: any) => (
-                      <div 
-                        key={game.id} 
-                        style={{
-                          ...styles.toolCard,
-                          ...(game.is_demo ? {
-                            border: '2px solid #f59e0b',
-                            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)',
-                            position: 'relative' as const
-                          } : {})
-                        }}
-                      >
-                        {/* Demo Badge */}
-                        {game.is_demo && (
-                          <div style={{
-                            position: 'absolute' as const,
-                            top: '12px',
-                            right: '12px',
-                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                            color: '#fff',
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
-                            textTransform: 'uppercase' as const,
-                            letterSpacing: '0.5px'
-                          }}>
-                            <Lightbulb style={{ width: '12px', height: '12px' }} />
-                            Demo
-                          </div>
-                        )}
-                        
-                        <div style={styles.toolIcon}>
-                          <Trophy style={{ width: '24px', height: '24px', color: '#1a1a1a' }} />
-                        </div>
-                        <div style={styles.toolTitle}>{game.tournamentName}</div>
-                        <div style={styles.toolDescription}>
-                          <strong>{game.teamA}</strong> vs <strong>{game.teamB}</strong><br />
-                          {new Date(game.scheduledDate).toLocaleDateString()} at {new Date(game.scheduledDate).toLocaleTimeString()}<br />
-                          Venue: {game.venue}
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
-                          <button
-                            onClick={async () => {
-                              // ✅ UX IMPROVEMENT: Skip pre-flight modal for completed games
-                              // Completed games don't need automation settings - go directly to tracker
-                              if (game.status === 'completed') {
-                                setLaunchingTracker(game.id);
-                                router.push(
-                                  `/stat-tracker-v3?gameId=${game.id}&teamAId=${game.teamAId}&teamBId=${game.teamBId}`
-                                );
-                                return;
-                              }
-                              
-                              // ✅ PRE-FLIGHT CHECK: Show modal for active/scheduled games
-                              setSelectedGame(game);
-                              setShowPreFlight(true);
-                            }}
-                            disabled={launchingTracker === game.id}
-                            style={{
-                              background: launchingTracker === game.id ? 'rgba(249, 115, 22, 0.7)' : 'var(--dashboard-gradient)',
-                              color: '#1a1a1a',
-                              border: 'none',
-                              borderRadius: '8px',
-                              padding: '10px 16px',
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              cursor: launchingTracker === game.id ? 'not-allowed' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                              transition: 'all 0.3s ease',
-                              opacity: launchingTracker === game.id ? 0.7 : 1
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateY(-2px)';
-                              e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateY(0px)';
-                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
-                            }}
-                          >
-                            <Zap size={16} />
-                            {launchingTracker === game.id 
-                              ? 'Launching...' 
-                              : game.status === 'completed' 
-                                ? 'Review Game' 
-                                : 'Launch Tracker'}
-                          </button>
-                          
-                          {/* Eye Viewer Button - Only for Demo Games */}
-                          {game.is_demo && (
-                            <button
-                              onClick={() => {
-                                router.push(`/game-viewer/${game.id}`);
-                              }}
-                              style={{
-                                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '8px',
-                                padding: '10px 16px',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-                                transition: 'all 0.3s ease'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0px)';
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
-                              }}
-                            >
-                              <Eye size={16} />
-                              View Demo
-                            </button>
-                          )}
-                          
-                          {/* Video Track Button - For all video-assigned games (not demo) */}
-                          {!game.is_demo && (
-                            <button
-                              onClick={() => {
-                                router.push(`/dashboard/stat-admin/video/${game.id}`);
-                              }}
-                              style={{
-                                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '8px',
-                                padding: '10px 16px',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
-                                transition: 'all 0.3s ease'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 92, 246, 0.4)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0px)';
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)';
-                              }}
-                            >
-                              <Video size={16} />
-                              Video Track
-                            </button>
-                          )}
-                          
-                          <div style={{ 
-                            ...styles.toolStatus, 
-                            ...(game.is_demo ? {
-                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                              color: '#fff',
-                              fontWeight: '700',
-                              textTransform: 'uppercase' as const,
-                              letterSpacing: '0.5px'
-                            } : styles.statusPending),
-                            alignSelf: 'center'
-                          }}>
-                            {game.is_demo ? 'DEMO' : game.status}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Assigned Games Section - List view, 1st→last, paginated */}
+            <AssignedGamesList
+              organizerGroups={assignedGames}
+              loading={gamesLoading}
+              error={gamesError}
+              onRetry={() => {
+                if (user) {
+                  setGamesLoading(true);
+                  setGamesError(null);
+                  StatAdminDashboardService.getAssignedGamesOptimized(user.id)
+                    .then(setAssignedGames)
+                    .catch((err) => setGamesError(err.message))
+                    .finally(() => setGamesLoading(false));
+                }
+              }}
+              launchingTracker={launchingTracker}
+              onLaunchTracker={(game) => {
+                if (game.status === 'completed') {
+                  setLaunchingTracker(game.id);
+                  router.push(
+                    `/stat-tracker-v3?gameId=${game.id}&teamAId=${game.teamAId}&teamBId=${game.teamBId}`
+                  );
+                  return;
+                }
+                setSelectedGame(game);
+                setShowPreFlight(true);
+              }}
+              onViewDemo={(game) => router.push(`/game-viewer/${game.id}`)}
+            />
           </div>
         </main>
       </ErrorBoundary>

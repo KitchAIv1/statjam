@@ -24,6 +24,7 @@ interface DualTeamHorizontalRosterV3Props {
   gameId?: string;
   teamId?: string;
   opponentName?: string;
+  playerFoulCounts?: Record<string, number>;
 }
 
 export function DualTeamHorizontalRosterV3({
@@ -37,7 +38,8 @@ export function DualTeamHorizontalRosterV3({
   isCoachMode = false,
   gameId,
   teamId,
-  opponentName
+  opponentName,
+  playerFoulCounts = {}
 }: DualTeamHorizontalRosterV3Props) {
   
   // Get first 5 players for each team (tournament mode) or all players (coach mode)
@@ -203,6 +205,26 @@ export function DualTeamHorizontalRosterV3({
                       }`}
                     >
                       #{player.jerseyNumber ?? '?'}
+                    </div>
+                  )}
+                  {/* Foul Dots Overlay — sits just above jersey bar, inside 68×68 */}
+                  {!isEmpty && !isCoachMode && (
+                    <div className="absolute bottom-[20px] left-0 right-0 flex justify-center gap-0.5 pointer-events-none">
+                      {[1, 2, 3, 4, 5].map((dot) => {
+                        const foulKey = player.id;
+                        const count = playerFoulCounts[foulKey] ?? 0;
+                        const filled = dot <= count;
+                        return (
+                          <div
+                            key={dot}
+                            className={`w-[5px] h-[5px] rounded-full border ${
+                              filled
+                                ? 'bg-red-500 border-white'
+                                : 'bg-transparent border-white/60'
+                            }`}
+                          />
+                        );
+                      })}
                     </div>
                   )}
                 </div>

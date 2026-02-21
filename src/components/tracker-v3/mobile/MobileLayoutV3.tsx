@@ -90,6 +90,7 @@ interface MobileLayoutV3Props {
   onFoulRecord?: (foulType: 'personal' | 'technical') => Promise<void>; // ✅ USE DESKTOP LOGIC
   // ✅ STICKY BUTTON FIX: Callback to expose clear recording state function
   onClearRecordingStateRef?: (clearFn: () => void) => void;
+  playerFoulCounts?: Record<string, number>;
 }
 
 export function MobileLayoutV3({
@@ -110,7 +111,8 @@ export function MobileLayoutV3({
   gameStatus = 'in_progress', // ✅ Game status
   onStatRecord, // ✅ DESKTOP LOGIC
   onFoulRecord, // ✅ DESKTOP LOGIC
-  onClearRecordingStateRef // ✅ STICKY BUTTON FIX
+  onClearRecordingStateRef, // ✅ STICKY BUTTON FIX
+  playerFoulCounts
 }: MobileLayoutV3Props) {
   const [possessionTeam, setPossessionTeam] = useState<'A' | 'B'>('A');
 
@@ -316,6 +318,7 @@ export function MobileLayoutV3({
           gameId={gameData.id}
           teamId={gameData.team_a_id}
           opponentName={isCoachMode ? (opponentName || 'Opponent') : undefined}
+          playerFoulCounts={playerFoulCounts}
         />
 
         {/* Mobile Stat Grid */}

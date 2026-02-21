@@ -23,6 +23,7 @@ interface TeamRosterV3Props {
   onQuickSubstitution?: (playerOutId: string, playerInId: string) => void; // ✅ NEW: Quick sub handler
   refreshKey?: string | number; // Add refresh key to force re-render
   isCoachMode?: boolean; // Add coach mode flag
+  playerFoulCounts?: Record<string, number>;
 }
 
 export function TeamRosterV3({
@@ -34,7 +35,8 @@ export function TeamRosterV3({
   onSubstitution,
   onQuickSubstitution,
   refreshKey = 0,
-  isCoachMode = false
+  isCoachMode = false,
+  playerFoulCounts = {}
 }: TeamRosterV3Props) {
   // ✅ Quick Sub Modal State
   const [quickSubModalOpen, setQuickSubModalOpen] = useState(false);
@@ -216,6 +218,26 @@ export function TeamRosterV3({
                       {player.name}
                     </span>
                   </div>
+                  {/* Foul Dots — under name, left-aligned */}
+                  {!isCoachMode && (
+                    <div className="flex justify-start gap-1 flex-shrink-0">
+                      {[1, 2, 3, 4, 5].map((dot) => {
+                        const foulKey = player.id;
+                        const count = playerFoulCounts[foulKey] ?? 0;
+                        const filled = dot <= count;
+                        return (
+                          <div
+                            key={dot}
+                            className={`w-[8px] h-[8px] rounded-full border ${
+                              filled
+                                ? 'bg-red-500 border-red-600'
+                                : 'bg-transparent border-gray-300'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* ✅ Quick Sub Button - Desktop Only */}

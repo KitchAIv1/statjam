@@ -312,7 +312,7 @@ export class GameServiceV3 {
       console.log('🚀 GameServiceV3: Fetching game stats via raw HTTP for:', gameId);
 
       const stats = await this.makeRequest<any>('game_stats', {
-        'select': 'team_id,stat_type,stat_value,modifier,is_opponent_stat',
+        'select': 'team_id,stat_type,stat_value,modifier,is_opponent_stat,player_id,custom_player_id',
         'game_id': `eq.${gameId}`,
         'order': 'created_at.asc'
       });

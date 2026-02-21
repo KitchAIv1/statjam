@@ -2047,6 +2047,7 @@ function StatTrackerV3Content() {
           gameStatus={tracker.gameStatus}
           onStatRecord={handleStatRecord} // ✅ USE DESKTOP LOGIC
           onFoulRecord={handleFoulRecord} // ✅ USE DESKTOP LOGIC
+          playerFoulCounts={!coachMode ? tracker.playerFoulCounts : undefined}
           // ✅ STICKY BUTTON FIX: Pass callback to expose clear recording state function
           onClearRecordingStateRef={(clearFn) => {
             clearMobileRecordingStateRef.current = clearFn;
@@ -2171,6 +2172,7 @@ function StatTrackerV3Content() {
                 onQuickSubstitution={handleQuickSubstitution}
                 refreshKey={rosterRefreshKey}
                 isCoachMode={coachMode}
+                playerFoulCounts={!coachMode ? tracker.playerFoulCounts : undefined}
               />
             </div>
           </div>
@@ -2241,6 +2243,7 @@ function StatTrackerV3Content() {
                   onQuickSubstitution={handleQuickSubstitution}
                   refreshKey={rosterRefreshKey}
                   isCoachMode={coachMode}
+                  playerFoulCounts={!coachMode ? tracker.playerFoulCounts : undefined}
                 />
               )}
             </div>
