@@ -185,8 +185,9 @@ export class CanvasOverlayRenderer {
     const W = this.width;
     const H = this.height;
 
-    const cardW = 480;
-    const cardH = Math.min(payload.games.length * 80 + 100, H - 80);
+    const cardW = 560;
+    const rowH = 88;
+    const cardH = Math.min(payload.games.length * rowH + 100, H - 80);
     const cardX = W - cardW - 40;
     const cardY = (H - cardH) / 2;
     const radius = 16;
@@ -194,7 +195,7 @@ export class CanvasOverlayRenderer {
     this.ctx.save();
 
     this.ctx.globalAlpha = 0.88;
-    this.ctx.fillStyle = 'rgba(5, 5, 8, 0.92)';
+    this.ctx.fillStyle = 'rgba(8, 8, 12, 0.95)';
     this.drawRoundedRectPath(cardX, cardY, cardW, cardH, radius);
     this.ctx.fill();
     this.ctx.globalAlpha = 1;
@@ -220,7 +221,7 @@ export class CanvasOverlayRenderer {
     this.ctx.fillText('STATJAM', cardX + cardW - 20, cardY + 20);
 
     this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = '800 24px Arial, sans-serif';
+    this.ctx.font = '800 32px Arial, sans-serif';
     this.ctx.textAlign = 'left';
     this.ctx.fillText(payload.date, cardX + 20, cardY + 46);
 
@@ -231,7 +232,6 @@ export class CanvasOverlayRenderer {
     this.ctx.lineTo(cardX + cardW, cardY + headerH);
     this.ctx.stroke();
 
-    const rowH = 72;
     const logoSize = 32;
 
     for (let i = 0; i < payload.games.length; i++) {
@@ -256,7 +256,7 @@ export class CanvasOverlayRenderer {
       const centerX = cardX + cardW / 2;
 
       this.ctx.fillStyle = '#ffffff';
-      this.ctx.font = '700 18px Arial, sans-serif';
+      this.ctx.font = '800 26px Arial, sans-serif';
       this.ctx.textAlign = 'right';
       this.ctx.textBaseline = 'middle';
       const awayMaxW = 140;
@@ -309,7 +309,7 @@ export class CanvasOverlayRenderer {
       }
 
       this.ctx.fillStyle = '#ffffff';
-      this.ctx.font = '700 18px Arial, sans-serif';
+      this.ctx.font = '800 26px Arial, sans-serif';
       this.ctx.textAlign = 'left';
       let homeName = game.homeTeamName;
       while (this.ctx.measureText(homeName).width > awayMaxW && homeName.length > 1) {
@@ -320,7 +320,7 @@ export class CanvasOverlayRenderer {
       this.ctx.fillStyle = 'rgba(255,255,255,0.4)';
       this.ctx.font = '600 13px Arial, sans-serif';
       this.ctx.textAlign = 'center';
-      const metaText = [game.time, game.status || 'TBD', game.venue].filter(Boolean).join('  ·  ');
+      const metaText = [game.time, game.status || 'TBD'].filter(Boolean).join('  ·  ');
       this.ctx.fillText(metaText, centerX, rowCenterY + 16);
     }
 
@@ -362,7 +362,7 @@ export class CanvasOverlayRenderer {
 
     const cardW = 1100;
     const cardX = (W - cardW) / 2;
-    const rowH = 72;
+    const rowH = 80;
     const headerH = 48;
     const teamBarH = 56;
     const footerH = 36;
@@ -372,20 +372,22 @@ export class CanvasOverlayRenderer {
 
     this.ctx.save();
 
+    const centerX = 960;
+
     this.ctx.fillStyle = 'rgba(255,255,255,0.45)';
     this.ctx.font = '700 18px Arial, sans-serif';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
     this.ctx.fillText(
       (payload.tournamentName || '').toUpperCase(),
-      W / 2,
+      centerX,
       cardY + 18
     );
 
     this.ctx.fillStyle = 'rgba(255,185,0,0.8)';
     this.ctx.font = '900 20px Arial, sans-serif';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('STARTING LINEUP', W / 2, cardY + 44);
+    this.ctx.fillText('STARTING LINEUP', centerX, cardY + 44);
 
     const bandY = cardY + topLabelH;
     const bandH = teamBarH + headerH + rowH * 5;
@@ -394,12 +396,12 @@ export class CanvasOverlayRenderer {
     gradient.addColorStop(0, 'transparent');
     gradient.addColorStop(0.05, 'transparent');
     gradient.addColorStop(0.18, hexToRgba(colorA, 0.18));
-    gradient.addColorStop(0.38, hexToRgba(colorA, 0.45));
-    gradient.addColorStop(0.495, hexToRgba(colorA, 0.55));
+    gradient.addColorStop(0.38, hexToRgba(colorA, 0.30));
+    gradient.addColorStop(0.495, hexToRgba(colorA, 0.40));
     gradient.addColorStop(0.495, 'transparent');
     gradient.addColorStop(0.505, 'transparent');
-    gradient.addColorStop(0.505, hexToRgba(colorB, 0.55));
-    gradient.addColorStop(0.62, hexToRgba(colorB, 0.45));
+    gradient.addColorStop(0.505, hexToRgba(colorB, 0.40));
+    gradient.addColorStop(0.62, hexToRgba(colorB, 0.30));
     gradient.addColorStop(0.82, hexToRgba(colorB, 0.18));
     gradient.addColorStop(0.95, 'transparent');
     gradient.addColorStop(1, 'transparent');
@@ -429,8 +431,6 @@ export class CanvasOverlayRenderer {
     this.ctx.lineTo(cardX + cardW * 0.9, bandY + bandH);
     this.ctx.stroke();
 
-    const centerX = cardX + cardW / 2;
-
     this.ctx.fillStyle = colorA;
     this.ctx.font = '900 28px Arial, sans-serif';
     this.ctx.textAlign = 'right';
@@ -455,8 +455,11 @@ export class CanvasOverlayRenderer {
     this.ctx.stroke();
 
     const playersY = bandY + teamBarH + headerH;
-    const avatarSize = 48;
+    const avatarSize = 52;
     const avatarRadius = avatarSize / 2;
+
+    const capitalizeName = (name: string) =>
+      name.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
     const getInitials = (name: string) => {
       const parts = name.trim().split(' ');
@@ -549,7 +552,7 @@ export class CanvasOverlayRenderer {
         this.ctx.textBaseline = 'middle';
         this.ctx.shadowColor = 'rgba(0,0,0,0.8)';
         this.ctx.shadowBlur = 6;
-        let nameA = playerA.name;
+        let nameA = capitalizeName(playerA.name);
         const maxNameW = 260;
         while (this.ctx.measureText(nameA).width > maxNameW && nameA.length > 1) {
           nameA = nameA.slice(0, -1);
@@ -628,7 +631,7 @@ export class CanvasOverlayRenderer {
         this.ctx.textBaseline = 'middle';
         this.ctx.shadowColor = 'rgba(0,0,0,0.8)';
         this.ctx.shadowBlur = 6;
-        let nameB = playerB.name;
+        let nameB = capitalizeName(playerB.name);
         while (this.ctx.measureText(nameB).width > 260 && nameB.length > 1) {
           nameB = nameB.slice(0, -1);
         }
@@ -642,7 +645,7 @@ export class CanvasOverlayRenderer {
     this.ctx.font = '700 13px Arial, sans-serif';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
-    this.ctx.fillText('POWERED BY STATJAM', W / 2, footerY);
+    this.ctx.fillText('POWERED BY STATJAM', centerX, footerY);
 
     this.ctx.restore();
   }
