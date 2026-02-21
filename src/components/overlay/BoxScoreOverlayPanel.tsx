@@ -28,14 +28,13 @@ export function BoxScoreOverlayPanel({
   if (!isVisible) return null;
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center transition-opacity duration-500 ease-out animate-in fade-in-0">
-      {/* Backdrop - higher transparency (lower opacity) for see-through video */}
+    <div className="absolute inset-0 z-50 flex flex-col overflow-hidden transition-opacity duration-500 ease-out animate-in fade-in-0">
+      {/* Backdrop - extends to top so no gap; covers full frame */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/55 to-black/65 transition-opacity duration-500" />
-      
-      {/* Content - Compact sizing with staggered animation */}
-      <div className="relative w-full max-w-2xl mx-4 animate-in slide-in-from-bottom-4 duration-500 ease-out">
+      {/* Content - pushed down so card sits below score bar, no scroll */}
+      <div className="relative flex-1 flex items-center justify-center overflow-hidden pt-[4.5rem] pb-3 w-full max-w-2xl mx-auto px-3 animate-in slide-in-from-bottom-4 duration-500 ease-out">
         {data ? (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {/* Team A - Staggered */}
             <div className="animate-in fade-in-0 slide-in-from-left-4 duration-500 delay-100">
               <TeamColumn team={data.teamA} side="left" />
@@ -108,17 +107,17 @@ function TeamColumn({ team, side }: TeamColumnProps) {
       {/* Glass background */}
       <div className="bg-white/5 backdrop-blur-sm border border-white/10">
         {/* Header - Compact */}
-        <div className="flex items-center gap-2 p-2 border-b border-white/10">
+        <div className="flex items-center gap-1.5 p-1.5 border-b border-white/10">
           {/* Team logo */}
           {team.logoUrl ? (
             <img 
               src={team.logoUrl} 
               alt={team.name}
-              className="w-8 h-8 rounded object-cover bg-white/10"
+              className="w-6 h-6 rounded object-cover bg-white/10"
             />
           ) : (
             <div 
-              className="w-8 h-8 rounded flex items-center justify-center text-white font-bold text-sm"
+              className="w-6 h-6 rounded flex items-center justify-center text-white font-bold text-xs"
               style={{ backgroundColor: accentColor + '40' }}
             >
               {team.name.charAt(0)}
@@ -126,14 +125,14 @@ function TeamColumn({ team, side }: TeamColumnProps) {
           )}
           
           <div className="flex-1 min-w-0">
-            <div className="text-white font-semibold text-sm truncate">
+            <div className="text-white font-semibold text-xs truncate">
               {team.name}
             </div>
           </div>
           
           {/* Score */}
           <div 
-            className="text-xl font-black text-white px-2 py-1 rounded"
+            className="text-lg font-black text-white px-1.5 py-0.5 rounded"
             style={{ backgroundColor: accentColor + '30' }}
           >
             {team.score}
@@ -170,10 +169,10 @@ interface PlayerRowProps {
 
 function PlayerRow({ player, rank, accentColor }: PlayerRowProps) {
   return (
-    <div className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 transition-colors">
+    <div className="flex items-center gap-1.5 px-1.5 py-1 hover:bg-white/5 transition-colors">
       {/* Rank indicator */}
       <div 
-        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+        className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0"
         style={{ 
           backgroundColor: rank === 1 ? accentColor : 'transparent',
           color: rank === 1 ? 'white' : 'rgba(255,255,255,0.5)',
@@ -185,13 +184,13 @@ function PlayerRow({ player, rank, accentColor }: PlayerRowProps) {
       
       {/* Player name */}
       <div className="flex-1 min-w-0">
-        <div className="text-white text-xs font-medium truncate">
+        <div className="text-white text-[10px] font-medium truncate">
           {player.playerName}
         </div>
       </div>
       
       {/* Stats - Compact */}
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex items-center gap-1 text-[10px]">
         <StatBadge label="PTS" value={player.points} highlight />
         <StatBadge label="REB" value={player.rebounds} />
         <StatBadge label="AST" value={player.assists} />
@@ -208,11 +207,11 @@ interface StatBadgeProps {
 
 function StatBadge({ label, value, highlight }: StatBadgeProps) {
   return (
-    <div className="text-center min-w-[28px]">
-      <div className={`font-bold ${highlight ? 'text-white text-sm' : 'text-white/80 text-xs'}`}>
+    <div className="text-center min-w-[22px]">
+      <div className={`font-bold ${highlight ? 'text-white text-[10px]' : 'text-white/80 text-[9px]'}`}>
         {value}
       </div>
-      <div className="text-white/40 text-[9px] uppercase">{label}</div>
+      <div className="text-white/40 text-[8px] uppercase">{label}</div>
     </div>
   );
 }

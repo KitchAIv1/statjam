@@ -29,17 +29,19 @@ export class NBAOverlayDrawer {
     teamBLogo: HTMLImageElement | null,
     tournamentLogo: HTMLImageElement | null
   ): void {
+    if (data.hideScoreBar) return;
+
     const centerX = this.width / 2;
     const barY = 20; // Top margin
-    
+
     // Draw organizer header (always show branding)
     this.drawOrganizerHeader(data, tournamentLogo, centerX, barY);
-    
+
     // Main scoreboard bar (flush with header - no gap)
     const mainBarY = barY + this.HEADER_HEIGHT;
-    
+
     this.drawMainBar(data, teamALogo, teamBLogo, centerX, mainBarY);
-    
+
     // Info bar below main bar (no gap)
     const infoBarY = mainBarY + this.BAR_HEIGHT;
     this.drawInfoBar(data, centerX, infoBarY);

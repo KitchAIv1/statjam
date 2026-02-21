@@ -17,9 +17,10 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2, Lock, Crown, LayoutGrid } from 'lucide-react';
+import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2, Lock, Crown, LayoutGrid, List } from 'lucide-react';
 import { GamePlayer } from '@/hooks/useGamePlayers';
 import { PlayerStatsOverlayData, InfoBarToggles } from '@/lib/services/canvas-overlay';
+import { toScheduleDateString, parseScheduleDateString } from '@/lib/utils/scheduleOverlayUtils';
 
 interface OverlayControlPanelProps {
   teamAPlayers: GamePlayer[];
@@ -44,6 +45,11 @@ interface OverlayControlPanelProps {
   // Manual overlays
   boxScoreVisible?: boolean;
   onBoxScoreToggle?: () => void;
+  scheduleVisible?: boolean;
+  onScheduleToggle?: () => void;
+  scheduleAvailableDates?: Date[];
+  selectedScheduleDate?: Date | null;
+  onScheduleDateSelect?: (date: Date | null) => void;
 }
 
 export function OverlayControlPanel({
@@ -66,6 +72,11 @@ export function OverlayControlPanel({
   onUpgrade,
   boxScoreVisible = false,
   onBoxScoreToggle,
+  scheduleVisible = false,
+  onScheduleToggle,
+  scheduleAvailableDates = [],
+  selectedScheduleDate = null,
+  onScheduleDateSelect,
 }: OverlayControlPanelProps) {
   return (
     <Card className="p-3">
@@ -276,28 +287,82 @@ export function OverlayControlPanel({
       </Tabs>
 
       {/* MANUAL Overlays Section */}
-      {onBoxScoreToggle && (
+      {(onBoxScoreToggle || onScheduleToggle) && (
         <div className="mt-3 pt-3 border-t border-border">
           <div className="flex items-center gap-1.5 mb-2">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Manual</span>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={onBoxScoreToggle}
-                size="sm"
-                variant={boxScoreVisible ? 'default' : 'outline'}
-                className="w-full h-7 text-xs"
-              >
-                <LayoutGrid className="h-3 w-3 mr-1.5" />
-                Box Score
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Show Box Score overlay</p>
-              <p className="text-[10px] opacity-80">Display top scorers for both teams</p>
-            </TooltipContent>
-          </Tooltip>
+          <div className="flex flex-col gap-1.5">
+            {onBoxScoreToggle && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={onBoxScoreToggle}
+                    size="sm"
+                    variant={boxScoreVisible ? 'default' : 'outline'}
+                    className="w-full h-7 text-xs"
+                  >
+                    <LayoutGrid className="h-3 w-3 mr-1.5" />
+                    Box Score
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Show Box Score overlay</p>
+                  <p className="text-[10px] opacity-80">Display top scorers for both teams</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {onScheduleToggle && (
+              <>
+                {onScheduleDateSelect && scheduleAvailableDates.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-muted-foreground">Day</span>
+                    <select
+                      value={selectedScheduleDate ? toScheduleDateString(selectedScheduleDate) : ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) {
+                          onScheduleDateSelect?.(null);
+                          return;
+                        }
+                        const parsed = parseScheduleDateString(val);
+                        if (parsed) onScheduleDateSelect(parsed);
+                      }}
+                      className="w-full h-7 text-xs px-2 rounded border bg-background"
+                    >
+                      <option value="">Select day</option>
+                      {scheduleAvailableDates.map((d, i) => (
+                        <option key={`${toScheduleDateString(d)}-${i}`} value={toScheduleDateString(d)}>
+                          {d.toLocaleDateString(undefined, {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={onScheduleToggle}
+                      size="sm"
+                      variant={scheduleVisible ? 'default' : 'outline'}
+                      className="w-full h-7 text-xs"
+                    >
+                      <List className="h-3 w-3 mr-1.5" />
+                      Day Schedule
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Show Day Schedule overlay</p>
+                    <p className="text-[10px] opacity-80">Display games for selected day</p>
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
+          </div>
         </div>
       )}
     </Card>

@@ -110,20 +110,18 @@ export class CanvasOverlayRenderer {
         // NBA-style horizontal bar overlay
         this.nbaDrawer.draw(overlayData, teamALogo, teamBLogo, tournamentLogo);
       } else {
-        // Classic floating elements overlay
-        this.drawer.drawBackground();
-        
-        // Tournament header (if data provided)
-        if (overlayData.tournamentName || tournamentLogo || overlayData.venue) {
-          this.drawer.drawTournamentHeader(overlayData, tournamentLogo);
+        // Classic floating elements overlay — skip scoreboard when hideScoreBar (schedule overlay active)
+        if (!overlayData.hideScoreBar) {
+          this.drawer.drawBackground();
+
+          if (overlayData.tournamentName || tournamentLogo || overlayData.venue) {
+            this.drawer.drawTournamentHeader(overlayData, tournamentLogo);
+          }
+
+          this.drawer.drawTeamSection('away', overlayData, teamALogo, !teamALogo);
+          this.drawer.drawTeamSection('home', overlayData, teamBLogo, !teamBLogo);
+          this.drawer.drawCenterSection(overlayData);
         }
-        
-        // Team sections
-        this.drawer.drawTeamSection('away', overlayData, teamALogo, !teamALogo);
-        this.drawer.drawTeamSection('home', overlayData, teamBLogo, !teamBLogo);
-        
-        // Center section (clock, quarter, shot clock)
-        this.drawer.drawCenterSection(overlayData);
       }
       
       // Player stats overlay works with both variants

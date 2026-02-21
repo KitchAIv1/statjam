@@ -74,6 +74,9 @@ export interface GameOverlayData {
   // Shot made overlay animation (for 3PT shake effect)
   shotMadeAnimationStart?: number;  // Timestamp when animation started
   shotMadeIs3Pointer?: boolean;     // True if 3PT (triggers shake animation)
+
+  // Hide scoreboard bar when schedule overlay is active (e.g. Day Schedule)
+  hideScoreBar?: boolean;
 }
 
 /**

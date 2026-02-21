@@ -108,7 +108,7 @@ export class CompositionLoop {
    * Only includes fields that affect visual rendering.
    */
   private getOverlayDataHash(data: GameOverlayData): string {
-    return `${data.homeScore}-${data.awayScore}-${data.quarter}-${data.gameClockMinutes}:${data.gameClockSeconds}-${data.teamAFouls}-${data.teamBFouls}-${data.activePlayerStats?.playerId || 'none'}-${data.activePlayerStats?.isVisible || false}-${data.tournamentName || ''}-${data.infoBarLabel || ''}-${data.infoBarSecondaryLabel || ''}`;
+    return `${data.homeScore}-${data.awayScore}-${data.quarter}-${data.gameClockMinutes}:${data.gameClockSeconds}-${data.teamAFouls}-${data.teamBFouls}-${data.activePlayerStats?.playerId || 'none'}-${data.activePlayerStats?.isVisible || false}-${data.tournamentName || ''}-${data.infoBarLabel || ''}-${data.infoBarSecondaryLabel || ''}-${data.hideScoreBar ? '1' : '0'}`;
   }
   
   /**

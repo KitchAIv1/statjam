@@ -37,15 +37,19 @@ import { useInfoBarOverlays } from '@/hooks/useInfoBarOverlays';
 import { useOptimisticScores } from '@/hooks/useOptimisticScores';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { useBoxScoreOverlay } from '@/hooks/useBoxScoreOverlay';
+import { useScheduleOverlay } from '@/hooks/useScheduleOverlay';
+import { toScheduleDateString } from '@/lib/utils/scheduleOverlayUtils';
 import { notify } from '@/lib/services/notificationService';
 import { UpgradeModal } from '@/components/subscription';
 import { BoxScoreOverlayPanel } from '@/components/overlay/BoxScoreOverlayPanel';
+import { ScheduleOverlayPanel } from '@/components/overlay/ScheduleOverlayPanel';
 import type { Tournament } from '@/lib/types/tournament';
 
 export default function VideoCompositionTestPage() {
   const { user } = useAuthContext();
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState<Date | null>(null);
   const [autoTriggerEnabled, setAutoTriggerEnabled] = useState(true);
   const [broadcastStartTime, setBroadcastStartTime] = useState<number | null>(null);
   const [overlayVariant, setOverlayVariant] = useState<OverlayVariant>('classic');
@@ -101,7 +105,29 @@ export default function VideoCompositionTestPage() {
     teamALogoUrl: overlayData?.teamALogo,
     teamBLogoUrl: overlayData?.teamBLogo,
   });
-  
+
+  // Day Schedule overlay (manual trigger; user picks which day to show)
+  const scheduleOverlay = useScheduleOverlay({
+    tournamentId: selectedTournament?.id ?? null,
+    country: selectedTournament?.country ?? '',
+    selectedDate: selectedScheduleDate,
+  });
+
+  // Clear selected date when tournament changes
+  useEffect(() => {
+    setSelectedScheduleDate(null);
+  }, [selectedTournament?.id]);
+
+  // Clear when selected date is no longer in available list (e.g. schedule refresh)
+  useEffect(() => {
+    if (!selectedScheduleDate || scheduleOverlay.availableDates.length === 0) return;
+    const selectedStr = toScheduleDateString(selectedScheduleDate);
+    const isInList = scheduleOverlay.availableDates.some(
+      (d) => toScheduleDateString(d) === selectedStr
+    );
+    if (!isInList) setSelectedScheduleDate(null);
+  }, [scheduleOverlay.availableDates, selectedScheduleDate]);
+
   const { audioStream: micStream, isEnabled: micEnabled, isMuted: micMuted, error: micError, isLoading: micLoading, start: startMic, stop: stopMic, toggleMute: toggleMicMute } = useMicrophone();
   
   // WebRTC for iPhone streaming
@@ -164,8 +190,10 @@ export default function VideoCompositionTestPage() {
       // Shot made animation data (for 3PT shake effect)
       shotMadeAnimationStart: shotMadeData?.animationStart,
       shotMadeIs3Pointer: shotMadeData?.is3Pointer,
+      // Hide canvas scoreboard when Day Schedule overlay is active
+      hideScoreBar: scheduleOverlay.isVisible,
     };
-  }, [overlayData, optimisticScores, activePlayerStats, selectedTournament, infoBarActiveItem, infoBarSecondaryItem, shotMadeData]);
+  }, [overlayData, optimisticScores, activePlayerStats, selectedTournament, infoBarActiveItem, infoBarSecondaryItem, shotMadeData, scheduleOverlay.isVisible]);
   
   const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition, setVariant } = useVideoComposition({
     videoStream: activeVideoStream,
@@ -384,30 +412,39 @@ export default function VideoCompositionTestPage() {
                   </Tooltip>
                 )}
               </div>
-              <div className="flex-1 relative bg-black rounded overflow-hidden min-h-0">
+              <div className="flex-1 relative bg-black rounded overflow-hidden min-h-0 flex items-center justify-center">
                 {isComposing && composedStream ? (
                   <>
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-contain"
-                    />
-                    {broadcastState.isBroadcasting && (
-                      <div className="absolute top-2 right-2">
-                        <div className="flex items-center gap-1.5 bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold">
-                          <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                          LIVE
+                    {/* Actual video frame: 16:9, matches broadcast output; letterboxing stays outside */}
+                    <div className="relative w-full max-h-full min-w-0 aspect-video">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      {broadcastState.isBroadcasting && (
+                        <div className="absolute top-2 right-2 z-[60]">
+                          <div className="flex items-center gap-1.5 bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold">
+                            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                            LIVE
+                          </div>
                         </div>
+                      )}
+                      <div className="absolute inset-0 overflow-hidden pointer-events-none [&>*]:pointer-events-auto">
+                        <BoxScoreOverlayPanel
+                          isVisible={boxScore.isVisible}
+                          isLoading={boxScore.isLoading}
+                          data={boxScore.boxScoreData}
+                        />
+                        <ScheduleOverlayPanel
+                          isVisible={scheduleOverlay.isVisible}
+                          isLoading={scheduleOverlay.isLoading}
+                          payload={scheduleOverlay.schedulePayload}
+                        />
                       </div>
-                    )}
-                    {/* Box Score Overlay */}
-                    <BoxScoreOverlayPanel
-                      isVisible={boxScore.isVisible}
-                      isLoading={boxScore.isLoading}
-                      data={boxScore.boxScoreData}
-                    />
+                    </div>
                   </>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center px-4">
@@ -564,6 +601,11 @@ export default function VideoCompositionTestPage() {
                 // Manual overlays
                 boxScoreVisible={boxScore.isVisible}
                 onBoxScoreToggle={boxScore.toggle}
+                scheduleVisible={scheduleOverlay.isVisible}
+                onScheduleToggle={scheduleOverlay.toggle}
+                scheduleAvailableDates={scheduleOverlay.availableDates}
+                selectedScheduleDate={selectedScheduleDate}
+                onScheduleDateSelect={setSelectedScheduleDate}
               />
             )}
           </div>
