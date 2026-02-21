@@ -43,8 +43,6 @@ import { toScheduleDateString } from '@/lib/utils/scheduleOverlayUtils';
 import { notify } from '@/lib/services/notificationService';
 import { UpgradeModal } from '@/components/subscription';
 import { BoxScoreOverlayPanel } from '@/components/overlay/BoxScoreOverlayPanel';
-import { ScheduleOverlayPanel } from '@/components/overlay/ScheduleOverlayPanel';
-import { StartingLineupOverlayPanel } from '@/components/overlay/StartingLineupOverlayPanel';
 import type { Tournament } from '@/lib/types/tournament';
 
 export default function VideoCompositionTestPage() {
@@ -506,17 +504,6 @@ export default function VideoCompositionTestPage() {
                           isVisible={boxScore.isVisible}
                           isLoading={boxScore.isLoading}
                           data={boxScore.boxScoreData}
-                        />
-                        <ScheduleOverlayPanel
-                          isVisible={scheduleOverlay.isVisible}
-                          isLoading={scheduleOverlay.isLoading}
-                          payload={scheduleOverlay.schedulePayload}
-                          tournamentName={selectedTournament?.name}
-                        />
-                        <StartingLineupOverlayPanel
-                          isVisible={startingLineup.isVisible}
-                          isLoading={startingLineup.isLoading}
-                          payload={startingLineup.payload}
                         />
                       </div>
                     </div>
