@@ -15,7 +15,7 @@ import { DesktopStatGridV3 } from './DesktopStatGridV3';
 import { ShotTrackerPanel } from './shot-tracker/ShotTrackerPanel';
 import { TrackerModeToggle } from './shot-tracker/TrackerModeToggle';
 import { TrackerInputMode, ShotLocationData } from '@/lib/types/shotTracker';
-import { AutomationFlags } from '@/lib/types/automation';
+import { AutomationFlags, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation';
 
 interface Player {
   id: string;
@@ -163,7 +163,9 @@ export function StatInputWrapper({
                 onClick={() => {
                   onAutomationFlagsChange(prev => ({
                     ...prev,
-                    sequences: { ...prev.sequences, enabled: !prev.sequences.enabled }
+                    sequences: prev.sequences?.enabled === false
+                      ? { ...COACH_AUTOMATION_FLAGS.sequences }
+                      : { ...prev.sequences, enabled: false }
                   }));
                 }}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${

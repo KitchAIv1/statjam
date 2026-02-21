@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Hand, Zap } from 'lucide-react';
+import { COACH_AUTOMATION_FLAGS } from '@/lib/types/automation';
 import { CompactScoreboardV3 } from './CompactScoreboardV3';
 import { DualTeamHorizontalRosterV3 } from './DualTeamHorizontalRosterV3';
 import { MobileStatGridV3 } from './MobileStatGridV3';
@@ -273,10 +274,9 @@ export function MobileLayoutV3({
               onClick={() => {
                 tracker.setAutomationFlags?.((prev: any) => ({
                   ...prev,
-                  sequences: {
-                    ...prev.sequences,
-                    enabled: !prev.sequences.enabled
-                  }
+                  sequences: prev.sequences?.enabled === false
+                    ? { ...COACH_AUTOMATION_FLAGS.sequences }
+                    : { ...prev.sequences, enabled: false }
                 }));
               }}
               className={`
