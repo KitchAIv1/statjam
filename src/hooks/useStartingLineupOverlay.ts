@@ -74,6 +74,7 @@ export function useStartingLineupOverlay(options: UseStartingLineupOverlayOption
       return;
     }
     setCachedPayload(null);
+    const controller = new AbortController();
     let cancelled = false;
 
     const load = async () => {
@@ -93,6 +94,7 @@ export function useStartingLineupOverlay(options: UseStartingLineupOverlayOption
     load();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [
     options.gameId,

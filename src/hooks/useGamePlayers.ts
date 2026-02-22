@@ -37,7 +37,7 @@ export function useGamePlayers(gameId: string | null): UseGamePlayersReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPlayers = useCallback(async () => {
+  const fetchPlayers = useCallback(async (signal?: AbortSignal) => {
     if (!gameId || !supabase) {
       setTeamAPlayers([]);
       setTeamBPlayers([]);
@@ -49,11 +49,12 @@ export function useGamePlayers(gameId: string | null): UseGamePlayersReturn {
 
     try {
       // Fetch game to get team IDs
-      const { data: game, error: gameError } = await supabase
+      let gameQuery = supabase
         .from('games')
         .select('team_a_id, team_b_id')
-        .eq('id', gameId)
-        .single();
+        .eq('id', gameId);
+      if (signal) gameQuery = gameQuery.abortSignal(signal);
+      const { data: game, error: gameError } = await gameQuery.single();
 
       if (gameError || !game) {
         throw new Error('Game not found');
@@ -62,10 +63,12 @@ export function useGamePlayers(gameId: string | null): UseGamePlayersReturn {
       const { team_a_id, team_b_id } = game;
 
       // Fetch team names
-      const { data: teams } = await supabase
+      let teamsQuery = supabase
         .from('teams')
         .select('id, name')
         .in('id', [team_a_id, team_b_id].filter(Boolean));
+      if (signal) teamsQuery = teamsQuery.abortSignal(signal);
+      const { data: teams } = await teamsQuery;
 
       const teamsMap = new Map((teams || []).map(t => [t.id, t.name]));
       const teamANameResolved = teamsMap.get(team_a_id) || 'Team A';
@@ -112,7 +115,9 @@ export function useGamePlayers(gameId: string | null): UseGamePlayersReturn {
   }, [gameId]);
 
   useEffect(() => {
-    fetchPlayers();
+    const controller = new AbortController();
+    fetchPlayers(controller.signal);
+    return () => controller.abort();
   }, [fetchPlayers]);
 
   return {

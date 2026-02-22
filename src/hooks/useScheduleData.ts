@@ -28,11 +28,12 @@ export function useScheduleData(tournamentId: string) {
     error: null,
   });
 
-  const loadSchedule = useCallback(async (skipCache: boolean = false) => {
+  const loadSchedule = useCallback(async (skipCache: boolean = false, signal?: AbortSignal) => {
     if (!tournamentId) {
       setState({ games: [], loading: false, error: null });
       return;
     }
+    if (signal?.aborted) return;
 
     // ✅ Check cache first
     if (!skipCache) {
@@ -52,8 +53,10 @@ export function useScheduleData(tournamentId: string) {
       // ✅ STEP 1: Fetch all games (1 query)
       console.log('🔍 useScheduleData: Fetching games for tournament:', tournamentId);
       const games = await GameService.getGamesByTournament(tournamentId);
+      if (signal?.aborted) return;
 
       if (games.length === 0) {
+        if (signal?.aborted) return;
         setState({ games: [], loading: false, error: null });
         return;
       }
@@ -68,6 +71,7 @@ export function useScheduleData(tournamentId: string) {
       // ✅ STEP 3: Batch fetch all team info (1 query instead of N*2 queries)
       console.log('🔍 useScheduleData: Batch fetching team info for', teamIds.size, 'teams');
       const teamInfoMap = await TeamService.getBatchTeamInfo(Array.from(teamIds));
+      if (signal?.aborted) return;
 
       // ✅ STEP 4: Map team info to games
       const gamesWithTeamInfo: GameWithTeamInfo[] = games.map(game => {
@@ -88,6 +92,7 @@ export function useScheduleData(tournamentId: string) {
       cache.set(cacheKey, gamesWithTeamInfo, CacheTTL.tournamentSchedule);
       console.log('⚡ useScheduleData: Schedule cached for', CacheTTL.tournamentSchedule, 'minutes');
 
+      if (signal?.aborted) return;
       setState({ games: gamesWithTeamInfo, loading: false, error: null });
     } catch (error) {
       console.error('❌ useScheduleData: Error loading schedule:', error);
@@ -100,7 +105,9 @@ export function useScheduleData(tournamentId: string) {
   }, [tournamentId]);
 
   useEffect(() => {
-    loadSchedule();
+    const controller = new AbortController();
+    loadSchedule(false, controller.signal);
+    return () => controller.abort();
   }, [loadSchedule]);
 
   return {

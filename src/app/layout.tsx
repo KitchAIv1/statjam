@@ -17,14 +17,14 @@ export const metadata: Metadata = {
   authors: [{ name: 'StatJam' }],
   creator: 'StatJam',
   publisher: 'StatJam',
-  metadataBase: new URL('https://www.statjam.net'),
+  metadataBase: new URL('https://statjam.net'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://www.statjam.net',
+    url: 'https://statjam.net',
     title: 'StatJam — NBA-Level Stats, Real-Time, Zero Friction',
     description: 'Professional basketball tournament platform with NBA-level automation, real-time stat tracking, and live game streaming. Built for tournaments, teams, and coaches who demand pro-level precision.',
     siteName: 'StatJam',

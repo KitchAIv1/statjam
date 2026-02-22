@@ -4,6 +4,18 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Production-ready configuration
   reactStrictMode: true,
+
+  // www → apex redirect (old shared/bookmarked links still work)
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.statjam.net' }],
+        destination: 'https://statjam.net/:path*',
+        permanent: true,
+      },
+    ];
+  },
   
   // Performance optimizations
   // experimental: {
