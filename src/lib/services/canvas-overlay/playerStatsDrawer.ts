@@ -6,7 +6,7 @@
  * Separated from main drawing.ts to comply with .cursorrules (<500 lines).
  */
 
-import { PlayerStatsOverlayData } from './utils';
+import { LogoCache, PlayerStatsOverlayData } from './utils';
 
 export class PlayerStatsDrawer {
   // Card dimensions (NBA broadcast style - larger for TV visibility)
@@ -15,9 +15,10 @@ export class PlayerStatsDrawer {
   private readonly CARD_RADIUS = 16;
   private readonly PHOTO_SIZE = 120;
   private readonly SAFE_MARGIN = 80; // Safe area from bottom edge
-  
+
   constructor(
     private ctx: CanvasRenderingContext2D,
+    private logoCache: LogoCache,
     private canvasWidth: number,
     private canvasHeight: number
   ) {}
@@ -26,19 +27,19 @@ export class PlayerStatsDrawer {
    * Draw the player stats overlay card at bottom-center
    * Only draws if player data is visible and not expired
    */
-  draw(data: PlayerStatsOverlayData): void {
+  async draw(data: PlayerStatsOverlayData): Promise<void> {
     if (!data.isVisible) return;
-    
+
     // Check if overlay should auto-hide
     if (data.showUntil && Date.now() > data.showUntil) return;
-    
+
     // Position: bottom-center with safe margin
     const x = (this.canvasWidth - this.CARD_WIDTH) / 2;
     const y = this.canvasHeight - this.CARD_HEIGHT - this.SAFE_MARGIN;
-    
+
     this.ctx.save();
     this.drawCardBackground(x, y, data.teamPrimaryColor);
-    this.drawPlayerPhoto(x, y, data.profilePhotoUrl);
+    await this.drawPlayerPhoto(x, y, data.profilePhotoUrl);
     this.drawPlayerInfo(x, y, data);
     this.drawGameStats(x, y, data);
     this.ctx.restore();
@@ -86,31 +87,37 @@ export class PlayerStatsDrawer {
   /**
    * Draw player photo (circular, with fallback)
    */
-  private drawPlayerPhoto(cardX: number, cardY: number, photoUrl?: string): void {
+  private async drawPlayerPhoto(cardX: number, cardY: number, photoUrl?: string): Promise<void> {
     const photoX = cardX + 20;
     const photoY = cardY + (this.CARD_HEIGHT - this.PHOTO_SIZE) / 2;
     const radius = this.PHOTO_SIZE / 2;
-    
-    // Photo container background with subtle gradient
-    const photoGradient = this.ctx.createRadialGradient(
-      photoX + radius, photoY + radius, 0,
-      photoX + radius, photoY + radius, radius
-    );
-    photoGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
-    photoGradient.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
-    
-    this.ctx.fillStyle = photoGradient;
+    const centerX = photoX + radius;
+    const centerY = photoY + radius;
+
+    // Always draw background circle
     this.ctx.beginPath();
-    this.ctx.arc(photoX + radius, photoY + radius, radius, 0, Math.PI * 2);
+    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
     this.ctx.fill();
-    
-    // Border ring
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     this.ctx.lineWidth = 2;
     this.ctx.stroke();
-    
-    // Draw placeholder icon
-    this.drawPhotoPlaceholder(photoX + radius, photoY + radius, radius);
+
+    if (photoUrl) {
+      const photo = await this.logoCache.load(photoUrl);
+      if (photo) {
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        this.ctx.clip();
+        this.ctx.drawImage(photo, photoX, photoY, this.PHOTO_SIZE, this.PHOTO_SIZE);
+        this.ctx.restore();
+        return;
+      }
+    }
+
+    // Fallback — placeholder silhouette
+    this.drawPhotoPlaceholder(centerX, centerY, radius);
   }
   
   /**

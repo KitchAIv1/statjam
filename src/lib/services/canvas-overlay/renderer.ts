@@ -39,7 +39,7 @@ export class CanvasOverlayRenderer {
     this.logoCache = new LogoCache();
     this.drawer = new OverlayDrawer(this.ctx, width, height);
     this.nbaDrawer = new NBAOverlayDrawer(this.ctx, width, height);
-    this.playerStatsDrawer = new PlayerStatsDrawer(this.ctx, width, height);
+    this.playerStatsDrawer = new PlayerStatsDrawer(this.ctx, this.logoCache, width, height);
   }
   
   /**
@@ -126,7 +126,7 @@ export class CanvasOverlayRenderer {
       
       // Player stats overlay works with both variants
       if (overlayData.activePlayerStats) {
-        this.playerStatsDrawer.draw(overlayData.activePlayerStats);
+        await this.playerStatsDrawer.draw(overlayData.activePlayerStats);
       }
 
       // Draw schedule overlay on canvas
