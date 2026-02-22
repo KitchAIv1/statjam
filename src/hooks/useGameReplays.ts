@@ -104,6 +104,8 @@ export function useGameReplays(tournamentId: string, options?: UseGameReplaysOpt
             stream_ended,
             team_a_id,
             team_b_id,
+            home_score,
+            away_score,
             team_a:teams!games_team_a_id_fkey(name, logo_url),
             team_b:teams!games_team_b_id_fkey(name, logo_url)
           `)
@@ -141,9 +143,15 @@ export function useGameReplays(tournamentId: string, options?: UseGameReplaysOpt
           scoresByGameId.set(game.id, scores);
         }
 
-        // Step 4: Map to GameReplay with calculated scores
+        // Step 4: Map to GameReplay with calculated scores (fallback to games table when 0-0)
         const mappedReplays: GameReplay[] = gamesData.map((game: any) => {
           const scores = scoresByGameId.get(game.id) || { homeScore: 0, awayScore: 0 };
+          const finalHomeScore = (scores.homeScore === 0 && scores.awayScore === 0)
+            ? (game.home_score ?? 0)
+            : scores.homeScore;
+          const finalAwayScore = (scores.homeScore === 0 && scores.awayScore === 0)
+            ? (game.away_score ?? 0)
+            : scores.awayScore;
           return {
             id: game.id,
             streamVideoId: game.stream_video_id,
@@ -153,8 +161,8 @@ export function useGameReplays(tournamentId: string, options?: UseGameReplaysOpt
             teamBName: game.team_b?.name || 'Team B',
             teamALogo: game.team_a?.logo_url || null,
             teamBLogo: game.team_b?.logo_url || null,
-            homeScore: scores.homeScore,
-            awayScore: scores.awayScore,
+            homeScore: finalHomeScore,
+            awayScore: finalAwayScore,
             gameDate: game.start_time,
             status: game.status,
           };
