@@ -569,7 +569,10 @@ export class CanvasOverlayRenderer {
         this.ctx.stroke();
 
         if (playerA.photo_url) {
-          const photo = await this.logoCache.load(playerA.photo_url);
+          const photo = await Promise.race([
+            this.logoCache.load(playerA.photo_url),
+            new Promise<HTMLImageElement | null>((resolve) => setTimeout(() => resolve(null), 3000)),
+          ]);
           if (photo) {
             this.ctx.save();
             this.ctx.beginPath();
@@ -645,7 +648,10 @@ export class CanvasOverlayRenderer {
         this.ctx.stroke();
 
         if (playerB.photo_url) {
-          const photo = await this.logoCache.load(playerB.photo_url);
+          const photo = await Promise.race([
+            this.logoCache.load(playerB.photo_url),
+            new Promise<HTMLImageElement | null>((resolve) => setTimeout(() => resolve(null), 3000)),
+          ]);
           if (photo) {
             this.ctx.save();
             this.ctx.beginPath();

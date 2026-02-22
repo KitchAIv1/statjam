@@ -104,7 +104,10 @@ export class PlayerStatsDrawer {
     this.ctx.stroke();
 
     if (photoUrl) {
-      const photo = await this.logoCache.load(photoUrl);
+      const photo = await Promise.race([
+        this.logoCache.load(photoUrl),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+      ]);
       if (photo) {
         this.ctx.save();
         this.ctx.beginPath();
