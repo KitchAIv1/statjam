@@ -6,7 +6,7 @@
  * Follows .cursorrules: under 500 lines, functions under 40 lines.
  */
 
-import { GameOverlayData, getTailwindColor, hexToRgba } from './utils';
+import { GameOverlayData, getContrastSafeBarColor, getTailwindColor, hexToRgba } from './utils';
 
 export class NBAOverlayDrawer {
   private readonly MAX_WIDTH = 850;  // Compressed more for tighter layout
@@ -149,7 +149,7 @@ export class NBAOverlayDrawer {
     const fouls = isHome ? data.teamBFouls : data.teamAFouls;
     
     // Team colored background
-    this.ctx.fillStyle = teamColor;
+    this.ctx.fillStyle = getContrastSafeBarColor(teamColor);
     if (isHome) {
       this.drawRoundedRectRight(x, y, width, this.BAR_HEIGHT, 7);
     } else {
@@ -350,12 +350,12 @@ export class NBAOverlayDrawer {
       
       // Primary (left) - white if gradient bg (shot_made involved), else colored
       const primaryColor = hasShotMade ? '#FFFFFF' : this.getInfoBarColor(data.infoBarType, data.infoBarTeamId, data);
-      this.ctx.fillStyle = primaryColor;
+      this.ctx.fillStyle = this.getContrastSafeTextColor(primaryColor);
       this.ctx.fillText((data.infoBarLabel || '').toUpperCase(), leftX, textY);
       
       // Secondary (right) - white if gradient bg (shot_made involved), else colored
       const secondaryColor = hasShotMade ? '#FFFFFF' : this.getInfoBarColor(data.infoBarSecondaryType, data.infoBarSecondaryTeamId, data);
-      this.ctx.fillStyle = secondaryColor;
+      this.ctx.fillStyle = this.getContrastSafeTextColor(secondaryColor);
       this.ctx.fillText((data.infoBarSecondaryLabel || '').toUpperCase(), rightX, textY);
     } else if (isShotMadePrimary) {
       // SHOT MADE: White text + animated +3 for 3-pointers
@@ -366,7 +366,7 @@ export class NBAOverlayDrawer {
       const infoBarType = data.infoBarType || 'tournament_name';
       const color = this.getInfoBarColor(infoBarType, data.infoBarTeamId, data);
       
-      this.ctx.fillStyle = color;
+      this.ctx.fillStyle = this.getContrastSafeTextColor(color);
       this.ctx.font = 'italic 700 34px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
@@ -447,6 +447,22 @@ export class NBAOverlayDrawer {
     this.ctx.shadowBlur = 0;
   }
   
+  /**
+   * Returns black or white text color for sufficient contrast on team-color backgrounds
+   */
+  private getContrastSafeTextColor(hexColor: string): string {
+    try {
+      const hex = hexColor.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance > 0.7 ? '#111111' : '#ffffff';
+    } catch {
+      return '#ffffff';
+    }
+  }
+
   /**
    * Get team primary color by team ID
    */

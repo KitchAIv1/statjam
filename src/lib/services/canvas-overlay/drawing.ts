@@ -6,7 +6,7 @@
  * Each method stays under 40 lines to comply with .cursorrules
  */
 
-import { GameOverlayData, getTailwindColor, getTailwindRgba, hexToRgba } from './utils';
+import { GameOverlayData, getContrastSafeBarColor, getTailwindColor, getTailwindRgba, hexToRgba } from './utils';
 
 export class OverlayDrawer {
   // Max width constraint (matches React max-w-7xl = 1280px)
@@ -247,13 +247,13 @@ export class OverlayDrawer {
     
     // Badge background - clean with team color accent
     const bgColor = primaryColor 
-      ? hexToRgba(primaryColor, 0.25)
+      ? hexToRgba(getContrastSafeBarColor(primaryColor), 0.25)
       : 'rgba(255, 255, 255, 0.12)';
     this.drawRoundedRect(x, y, badgeWidth, badgeHeight, 8, bgColor);
     
     // Strong border with team color
     const borderColor = primaryColor 
-      ? hexToRgba(primaryColor, 0.8)
+      ? hexToRgba(getContrastSafeBarColor(primaryColor), 0.8)
       : 'rgba(255, 255, 255, 0.4)';
     this.ctx.strokeStyle = borderColor;
     this.ctx.lineWidth = 2;
@@ -302,7 +302,7 @@ export class OverlayDrawer {
     side: 'away' | 'home'
   ): void {
     const isHome = side === 'home';
-    const score = isHome ? data.homeScore : data.awayScore;
+    const score = isHome ? data.awayScore : data.homeScore;
     
     // NBA-style large bold score
     this.ctx.fillStyle = '#FFFFFF';
@@ -586,6 +586,22 @@ export class OverlayDrawer {
   }
   
   /**
+   * Returns black or white text color for sufficient contrast on team-color backgrounds
+   */
+  private getContrastSafeTextColor(hexColor: string): string {
+    try {
+      const hex = hexColor.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance > 0.7 ? '#111111' : '#ffffff';
+    } catch {
+      return '#ffffff';
+    }
+  }
+
+  /**
    * Draw rounded rectangle helper
    */
   private drawRoundedRect(
@@ -658,7 +674,7 @@ export class OverlayDrawer {
     align: 'left' | 'right',
     teamColor: string
   ): void {
-    this.ctx.fillStyle = teamColor;
+    this.ctx.fillStyle = this.getContrastSafeTextColor(teamColor);
     this.ctx.font = '700 12px Arial, sans-serif';
     this.ctx.textAlign = align;
     this.ctx.textBaseline = 'middle';

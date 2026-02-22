@@ -213,6 +213,22 @@ export function hexToRgba(hex: string, alpha: number): string {
 }
 
 /**
+ * For bar/badge backgrounds: darken very light hex colors so white text is readable
+ */
+export function getContrastSafeBarColor(hexColor: string): string {
+  try {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.7 ? '#1a1a2e' : hexColor;
+  } catch {
+    return hexColor;
+  }
+}
+
+/**
  * Map Tailwind color names to hex values
  * Matches colors used in React overlay component
  */

@@ -762,5 +762,21 @@ export class CanvasOverlayRenderer {
   getCanvas(): HTMLCanvasElement {
     return this.canvas;
   }
+
+  /**
+   * Returns black or white text color for sufficient contrast on team-color backgrounds
+   */
+  private getContrastSafeTextColor(hexColor: string): string {
+    try {
+      const hex = hexColor.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance > 0.7 ? '#111111' : '#ffffff';
+    } catch {
+      return '#ffffff';
+    }
+  }
 }
 
