@@ -137,11 +137,14 @@ export function useGameReplays(tournamentId: string, options?: UseGameReplaysOpt
           .in('game_id', gameIds)
           .eq('modifier', 'made');
 
+        console.log('[GameReplays] allStats:', allStats?.length, allStats?.[0]);
+
         // Step 3: Calculate scores from game_stats
         const scoresByGameId = new Map<string, { homeScore: number; awayScore: number }>();
         for (const game of gamesData) {
           const gameStats = (allStats || []).filter(s => s.game_id === game.id);
           const scores = calculateScoresFromStats(gameStats, game.team_a_id, game.team_b_id);
+          console.log(`[GameReplays] game ${game.id}: ${gameStats.length} stats, scores:`, scores);
           scoresByGameId.set(game.id, scores);
         }
 
