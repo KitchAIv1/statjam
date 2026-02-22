@@ -39,10 +39,11 @@ interface UseGameReplaysOptions {
 }
 
 /**
- * Calculate scores from game_stats - matches logic in useGameViewerV2
+ * Calculate scores from game_stats - uses stat_value (matches Overview/Overlay)
+ * stat_type used as fallback when stat_value is 0
  */
 function calculateScoresFromStats(
-  stats: { stat_type: string; modifier: string; team_id: string; is_opponent_stat?: boolean }[],
+  stats: { stat_type: string; stat_value?: number; modifier: string; team_id: string; is_opponent_stat?: boolean }[],
   teamAId: string,
   teamBId: string
 ): { homeScore: number; awayScore: number } {
@@ -52,23 +53,24 @@ function calculateScoresFromStats(
   for (const stat of stats) {
     if (stat.modifier !== 'made') continue;
 
-    let points = 0;
-    if (stat.stat_type === 'three_pointer' || stat.stat_type === '3_pointer') {
-      points = 3;
-    } else if (stat.stat_type === 'free_throw') {
-      points = 1;
-    } else if (stat.stat_type === 'field_goal' || stat.stat_type === 'two_pointer') {
-      points = 2;
-    }
-
-    if (points > 0) {
-      if (stat.is_opponent_stat) {
-        awayScore += points;
-      } else if (stat.team_id === teamAId) {
-        homeScore += points;
-      } else if (stat.team_id === teamBId) {
-        awayScore += points;
+    let points = Number(stat.stat_value) || 0;
+    if (points === 0) {
+      if (stat.stat_type === 'three_pointer' || stat.stat_type === '3_pointer') {
+        points = 3;
+      } else if (stat.stat_type === 'free_throw') {
+        points = 1;
+      } else if (stat.stat_type === 'field_goal' || stat.stat_type === 'two_pointer') {
+        points = 2;
       }
+    }
+    if (points === 0) continue;
+
+    if (stat.is_opponent_stat) {
+      awayScore += points;
+    } else if (stat.team_id === teamAId) {
+      homeScore += points;
+    } else if (stat.team_id === teamBId) {
+      awayScore += points;
     }
   }
 
@@ -131,7 +133,7 @@ export function useGameReplays(tournamentId: string, options?: UseGameReplaysOpt
         const gameIds = gamesData.map(g => g.id);
         const { data: allStats } = await supabase
           .from('game_stats')
-          .select('game_id, team_id, stat_type, modifier, is_opponent_stat')
+          .select('game_id, team_id, stat_type, stat_value, modifier, is_opponent_stat')
           .in('game_id', gameIds)
           .eq('modifier', 'made');
 
