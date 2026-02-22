@@ -131,13 +131,13 @@ export function useGameReplays(tournamentId: string, options?: UseGameReplaysOpt
 
         // Step 2: Batch fetch game_stats for all games (source of truth for scores)
         const gameIds = gamesData.map(g => g.id);
-        const { data: allStats } = await supabase
+        const { data: allStats, error: allStatsError } = await supabase
           .from('game_stats')
           .select('game_id, team_id, stat_type, stat_value, modifier, is_opponent_stat')
           .in('game_id', gameIds)
           .eq('modifier', 'made');
 
-        console.log('[GameReplays] allStats:', allStats?.length, allStats?.[0]);
+        console.log('[GameReplays] allStats raw:', allStats, 'error:', allStatsError);
 
         // Step 3: Calculate scores from game_stats
         const scoresByGameId = new Map<string, { homeScore: number; awayScore: number }>();
