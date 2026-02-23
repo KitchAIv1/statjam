@@ -104,4 +104,18 @@ This document summarizes updates made in February 2026:
 
 ---
 
+## Post–Feb 15 updates (v0.17.12)
+
+All commits after the Feb 15 doc update are audited and mapped in **[COMMITS_AUDIT_SINCE_FEB_2026.md](COMMITS_AUDIT_SINCE_FEB_2026.md)**. Summary:
+
+- **Analytics**: Google Analytics 4 and event tracking; CSP updated for GA4.
+- **Error handling**: Sentry for video upload flow (Phases 1–5); error logging in useGlobalSearch.
+- **Security/SEO**: www→apex redirect; canonical/OG URLs without www.
+- **Streaming/overlay/tracker**: Relay reconnection, region selector, bitrate; schedule/lineup canvas overlays; clock device-switch fix; quarter length source of truth; foul dots; useGameReplays score alignment.
+- **Global search**: useGlobalSearch hook + GlobalSearchBar; portal and focus behavior; error logging.
+
+Version **0.17.12**; see CHANGELOG and SECURITY_FIXES_COMPLETED for hardening details.
+
+---
+
 **Last Updated**: February 2026

@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2026-02-XX
 
+_(Future changes.)_
+
+---
+
+## [0.17.12] - 2026-02-23
+
+### 📊 **POST–DOC UPDATE RELEASE (35 commits since 4a7d587)**
+
+Full audit: [COMMITS_AUDIT_SINCE_FEB_2026.md](COMMITS_AUDIT_SINCE_FEB_2026.md).
+
+#### Analytics & product events
+- **ADDED**: Google Analytics 4 (GA4) and event tracking. `src/lib/analytics.ts`, `trackEvent` helpers, gtag types. Events: player profile view, tournament view, game viewer open, global search, sign up (auth + claim), tournament/team created, live stream started/ended, coach game started, video upload started/completed, video stat tracking assigned.
+- **CHANGED**: CSP in `next.config.ts` for GA4 (googletagmanager.com, google-analytics.com).
+
+#### Error handling & Sentry
+- **ADDED**: Sentry/error logging for video upload flow (Phases 1–5). Aligns with stat-tracker and livestream patterns (catch-block only).
+- **ADDED**: Error logging in `useGlobalSearch` catch; debug logs for search flow.
+
+#### Security & SEO
+- **FIXED**: Remove www from canonical/OG URLs; add www→apex redirect in `next.config.ts`.
+
+#### Live streaming & broadcast
+- **ADDED**: Lower default bitrate preset (720p 3 Mbps). EBML-gated relay reconnection (5s verification, maxRetries 5). Relay region selector for AU livestreaming.
+- **CHANGED**: Streaming audio UX – mic enable anytime, visible pre-broadcast notices.
+
+#### Overlay (canvas, schedule, lineup)
+- **ADDED**: Schedule and lineup overlays on broadcast canvas; OverlayControlPanel layout. Date-conditional schedule layout, VS alignment. Starting lineup: team colors, two-tone gradient, avatar polish.
+- **CHANGED**: Conditional refetch on games channel when scoring fields change. Prefetch box score, loading skeleton, higher transparency. Halftime shows when Q2 ends, clears when Q3 starts.
+- **FIXED**: Contrast-safe bar colors, classic score. Free throw overlay: player avatar via LogoCache. 3s timeout on image loads to prevent composition loop block. playerStatsDrawer: skip load when photoUrl null/empty. Schedule/lineup DOM overlays removed from preview (canvas-only).
+
+#### Tracker & pre-flight
+- **FIXED**: Stale clock broadcasts on device switch (Issue #2). Auto toggle applies full Advanced sequences when MINIMAL pre-flight.
+- **ADDED**: Quarter length source of truth (no 12-min default), locked pre-flight UI. Player foul dots UI (mobile + desktop), subscription fix.
+- **CHANGED**: Reverted pre-warm stat recording imports at mount (perf revert).
+
+#### Game replays & useGameReplays
+- **FIXED**: useGameReplays fallback to home_score/away_score when calculated scores 0–0; use stat_value for score calc (match Overview/Overlay).
+- **CHANGED**: Debug logs added then removed for useGameReplays (RLS/score debugging cleanup).
+
+#### Global search
+- **ADDED**: useGlobalSearch hook + GlobalSearchBar component (players, teams, tournaments, games, coaches). Portal for dropdown clipping; onFocus always open.
+- **ADDED**: Error logging in useGlobalSearch catch.
+
+#### Documentation & versioning
+- **ADDED**: [COMMITS_AUDIT_SINCE_FEB_2026.md](COMMITS_AUDIT_SINCE_FEB_2026.md). Updated SECURITY_FIXES_COMPLETED, PROJECT_STATUS, INDEX.md, DOCUMENTATION_UPDATE_SUMMARY reference; version 0.17.12.
+
+---
+
+## [Unreleased] - 2026-02-XX (legacy)
+
 ### 🏟️ **TOURNAMENT UI, SENTRY STAT TRACKER & SECURITY (February 2026)**
 
 #### Tournament Public Page – Hydration & UI

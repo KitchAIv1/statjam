@@ -2,7 +2,7 @@
 
 **Complete documentation index for the StatJam platform**
 
-**Recent updates (February 2026)**: Tournament public page UI (hydration, player/team cards, schedule fix) · Sentry stat-tracker error logging · Dependency security (npm audit 0 vulns). See [DOCUMENTATION_UPDATE_SUMMARY_FEB_2026](01-project/DOCUMENTATION_UPDATE_SUMMARY_FEB_2026.md).
+**Recent updates (February 2026)**: **v0.17.12** – GA4 & event tracking · Global search · Sentry (video upload, useGlobalSearch) · CSP/GA4 & www redirect · Overlay/broadcast/tracker fixes. Full audit: [COMMITS_AUDIT_SINCE_FEB_2026](01-project/COMMITS_AUDIT_SINCE_FEB_2026.md). See [DOCUMENTATION_UPDATE_SUMMARY_FEB_2026](01-project/DOCUMENTATION_UPDATE_SUMMARY_FEB_2026.md).
 
 ---
 
@@ -30,7 +30,8 @@
 ### **1. Project Overview** (`01-project/`)
 - **PRD_CURRENT.md** - Current Product Requirements Document (v2.3) ✨ UPDATED
 - **PROJECT_STATUS.md** - Current project status (updated Feb 2026)
-- **DOCUMENTATION_UPDATE_SUMMARY_FEB_2026.md** - February 2026 updates: tournament public page (hydration, player/team cards, schedule fix), Sentry stat-tracker logging, npm audit security ✨ NEW
+- **COMMITS_AUDIT_SINCE_FEB_2026.md** - Full audit and mapping of 35 commits since last doc update (Feb 2026); compartmentalized by area ✨ NEW
+- **DOCUMENTATION_UPDATE_SUMMARY_FEB_2026.md** - February 2026 updates: tournament public page (hydration, player/team cards, schedule fix), Sentry stat-tracker logging, npm audit security
 - **JANUARY_2025_UPDATES.md** - Complete summary of January 2025 updates
 - **STAT_ADMIN_TRACKER_COMPLETE_MAP.md** - Complete architecture documentation
 - **STAT_TRACKER_QUICK_REFERENCE.md** - Developer quick reference guide

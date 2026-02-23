@@ -237,6 +237,36 @@ For security-related questions or incident response:
 - **Implementation**: Uses existing `errorLoggingService.logError()` (async, fire-and-forget); no added latency. Events tagged with `action` and `gameId` for filtering in Sentry.
 - **Result**: Stat tracker failures (DB sync, clock, recording, game lifecycle) are reported to Sentry in production for faster diagnosis and response.
 
+### 7. **📤 Sentry – Video upload flow (Phases 1–5)**
+- **Action**: Sentry/error logging for the full video upload flow (Phases 1–5), aligned with stat-tracker and livestream patterns.
+- **Scope**: Catch blocks in video upload API, BunnyUploadService, and VideoUploader/context as applicable. No hot-path instrumentation.
+- **Result**: Upload failures (create-upload, Bunny, status sync) are reported to Sentry for faster diagnosis.
+
+### 8. **🔍 Error logging – Global search (useGlobalSearch)**
+- **Action**: Error logging in `useGlobalSearch` catch block; optional debug logs for search flow.
+- **Result**: Search/RLS failures are no longer silent; improves diagnosability when global search or RLS fails.
+
+### 9. **🌐 CSP – Google Analytics 4**
+- **Action**: GA4 integration required additional CSP allowances in `next.config.ts`.
+- **Added**: script-src/script-src-elem `https://www.googletagmanager.com`; connect-src `https://www.google-analytics.com`, `https://analytics.google.com`, `https://www.googletagmanager.com`.
+- **Result**: GA4 and gtag load correctly without violating CSP.
+
+### 10. **🔗 Canonical URLs and www redirect**
+- **Action**: Remove www from canonical and Open Graph URLs; add www→apex redirect in `next.config.ts`.
+- **Result**: Single canonical host (e.g. statjam.net), avoids duplicate content and enforces consistent hostname.
+
+---
+
+## Error capturing summary (hardening)
+
+| Area            | Sentry / error logging | Notes |
+|-----------------|------------------------|--------|
+| Stat tracker    | ✅ useTracker, useGameDataLoader, turn-credentials | Catch-only; tagged action/gameId |
+| Live streaming  | ✅ (existing)          | useBroadcast, broadcastService |
+| Video upload    | ✅ Phases 1–5          | Catch-only; no hot-path impact |
+| Global search   | ✅ useGlobalSearch     | Catch + optional debug logs |
+| Error boundary  | ✅ stat-tracker-v3 error.tsx | Existing |
+
 ---
 
 **Last Updated**: February 2026  

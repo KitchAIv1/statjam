@@ -48,15 +48,15 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://plausible.io https://www.googletagmanager.com https://*.sentry.io https://js.stripe.com https://www.youtube.com", // ✅ Allow Sentry + Stripe + YouTube API + GA4
-              "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://plausible.io https://www.googletagmanager.com https://*.sentry.io https://js.stripe.com https://www.youtube.com", // ✅ Allow Sentry + Stripe + YouTube API + GA4 scripts
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://www.googletagmanager.com https://*.sentry.io https://js.stripe.com https://www.youtube.com", // ✅ Allow Sentry + Stripe + YouTube API + GA4
+              "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com https://*.sentry.io https://js.stripe.com https://www.youtube.com", // ✅ Allow Sentry + Stripe + YouTube API + GA4 scripts
               "worker-src 'self' blob:", // ✅ Allow web workers for image compression
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
               "media-src 'self' https://*.b-cdn.net https://*.statjam.net blob:", // ✅ Allow Bunny.net video streaming + statjam.net (Bunny redirect)
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://images.unsplash.com https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://cdn.jsdelivr.net https://plausible.io https://*.sentry.io https://api.stripe.com https://video.bunnycdn.com https://*.b-cdn.net https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com ws://localhost:8080 wss://localhost:8080 ws://* wss://*", // ✅ Allow Sentry + Stripe API + Bunny.net + GA4 + Relay Server WebSocket
-              "frame-src 'self' https://plausible.io https://js.stripe.com https://hooks.stripe.com https://iframe.mediadelivery.net https://www.youtube.com https://player.twitch.tv", // ✅ Allow Plausible + Stripe 3DS + Bunny.net iframes + YouTube/Twitch embeds
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://images.unsplash.com https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://cdn.jsdelivr.net https://*.sentry.io https://api.stripe.com https://video.bunnycdn.com https://*.b-cdn.net https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com ws://localhost:8080 wss://localhost:8080 ws://* wss://*", // ✅ Allow Sentry + Stripe API + Bunny.net + GA4 + Relay Server WebSocket
+              "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://iframe.mediadelivery.net https://www.youtube.com https://player.twitch.tv", // ✅ Allow Stripe 3DS + Bunny.net iframes + YouTube/Twitch embeds
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'"

@@ -60,8 +60,6 @@ export const metadata: Metadata = {
   },
 }
 
-import PlausibleRouteTracker from "@/components/analytics/PlausibleRouteTracker";
-
 export default function RootLayout({
   children,
 }: {
@@ -73,8 +71,6 @@ export default function RootLayout({
         {/* Performance optimization hints */}
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
-        <link rel="preconnect" href="https://plausible.io" />
-        <link rel="dns-prefetch" href="https://plausible.io" />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
@@ -82,30 +78,6 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
       <body>
-        {/* Privacy-friendly analytics by Plausible */}
-        <Script
-          src="https://plausible.io/js/pa-NNW082sSo-ye6M6LkIgUu.js"
-          strategy="afterInteractive"
-          async
-        />
-        <Script
-          id="plausible-init"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.plausible = window.plausible || function() { (plausible.q = plausible.q || []).push(arguments) };
-              plausible.init = plausible.init || function(i) { plausible.o = i || {} };
-              plausible.init();
-            `,
-          }}
-        />
-        {/* SPA route-change tracking for Plausible (guarded by env flag) */}
-        {/* Safe: no PII, sends only URL changes */}
-        {process.env.NEXT_PUBLIC_PLAUSIBLE_ENABLED !== "false" ? (
-          // Lazy import is not needed here; component is tiny and runs client-side only
-          // eslint-disable-next-line @next/next/no-sync-scripts
-          <PlausibleRouteTracker />
-        ) : null}
         {/* Google Analytics 4 */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-ZDQY6DNZG6"

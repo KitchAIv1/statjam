@@ -7,8 +7,9 @@ import { NavigationHeader } from '@/components/NavigationHeader';
 import { AdminService, UserStats } from '@/lib/services/adminService';
 import { AdminStatsCards } from '@/components/admin/AdminStatsCards';
 import { AdminUserList } from '@/components/admin/AdminUserList';
+import { GA4AnalyticsWidget } from '@/components/admin/GA4AnalyticsWidget';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, ExternalLink, Users, ArrowRight, Video, Activity } from 'lucide-react';
+import { Users, ArrowRight, Video, Activity } from 'lucide-react';
 import Link from 'next/link';
 
 /**
@@ -171,40 +172,8 @@ const AdminDashboardPage = () => {
         {/* Site Analytics Section */}
         <div className="mb-8">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    Site Analytics
-                  </CardTitle>
-                  <CardDescription>
-                    Real-time visitor analytics powered by Plausible
-                  </CardDescription>
-                </div>
-                <a
-                  href="https://plausible.io/statjam.net"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-sm text-primary hover:underline"
-                >
-                  Open in Plausible
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="w-full bg-muted rounded-lg overflow-hidden" style={{ height: '600px' }}>
-                <iframe
-                  data-plausible-embed="true"
-                  src="https://plausible.io/share/statjam.net?auth=lQaTuDReWelORHMUP23-L&embed=true&theme=light"
-                  scrolling="no"
-                  frameBorder="0"
-                  loading="lazy"
-                  style={{ width: '100%', height: '100%' }}
-                  title="Plausible Analytics"
-                />
-              </div>
+            <CardContent className="pt-6">
+              <GA4AnalyticsWidget />
             </CardContent>
           </Card>
         </div>
