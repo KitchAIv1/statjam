@@ -12,6 +12,7 @@ import { PlayerProfileRecruitment } from '@/components/player-profile/PlayerProf
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { SocialFooter } from '@/components/shared/SocialFooter';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Analytics } from '@/lib/analytics';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -45,7 +46,13 @@ export default function PlayerProfilePage({ params }: PageProps) {
       router.replace(targetUrl);
     }
   }, [redirectTo, router, searchParams]);
-  
+
+  useEffect(() => {
+    if (profile && !loading) {
+      Analytics.playerProfileView(playerId, profile.identity.name || '');
+    }
+  }, [profile, playerId, loading]);
+
   // Tournament context from URL (?tournament=TournamentName)
   const tournamentFromUrl = searchParams.get('tournament');
   const [selectedTournament, setSelectedTournament] = useState<string | null>(null);

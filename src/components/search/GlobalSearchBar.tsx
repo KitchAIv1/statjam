@@ -9,6 +9,7 @@ import { useGlobalSearch } from '@/hooks/useGlobalSearch';
 import { useTournamentTheme } from '@/contexts/TournamentThemeContext';
 import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 import { Search } from 'lucide-react';
+import { Analytics } from '@/lib/analytics';
 
 export function GlobalSearchBar() {
   const router = useRouter();
@@ -20,8 +21,18 @@ export function GlobalSearchBar() {
   const dropdownPortalRef = useRef<HTMLDivElement>(null);
 
   const { results, loading, hasResults } = useGlobalSearch(query);
+  const prevLoadingRef = useRef(loading);
 
   const showDropdown = isOpen && query.trim().length >= 2;
+
+  useEffect(() => {
+    const wasLoading = prevLoadingRef.current;
+    prevLoadingRef.current = loading;
+    if (wasLoading && !loading && query.trim().length >= 2) {
+      const total = results.players.length + results.teams.length + results.tournaments.length + results.games.length + results.coaches.length;
+      Analytics.globalSearch(query, total);
+    }
+  }, [loading, query, results]);
 
   useEffect(() => {
     if (showDropdown && inputRef.current) {

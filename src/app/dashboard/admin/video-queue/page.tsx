@@ -21,6 +21,7 @@ import {
   StatAdminOption,
   VideoQueueResult,
 } from '@/lib/services/videoAssignmentService';
+import { Analytics } from '@/lib/analytics';
 import {
   getAllClipJobs,
   cancelClipJob,
@@ -174,6 +175,7 @@ function AdminVideoQueueContent() {
     try {
       setAssigningVideoId(videoId);
       await assignVideoToStatAdmin(videoId, statAdminId);
+      Analytics.videoStatTrackingOrdered(videoId, 'assigned');
       await loadData();
     } catch (err) {
       console.error('Error assigning video:', err);

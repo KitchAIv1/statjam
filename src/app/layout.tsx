@@ -75,6 +75,8 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://plausible.io" />
         <link rel="dns-prefetch" href="https://plausible.io" />
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
         <meta name="theme-color" content="#f97316" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -104,6 +106,25 @@ export default function RootLayout({
           // eslint-disable-next-line @next/next/no-sync-scripts
           <PlausibleRouteTracker />
         ) : null}
+        {/* Google Analytics 4 */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-ZDQY6DNZG6"
+          strategy="afterInteractive"
+        />
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-ZDQY6DNZG6', {
+                page_path: window.location.pathname,
+              });
+            `,
+          }}
+        />
         <AuthProvider>
           <ErrorBoundary showDetails={true}>
             {children}

@@ -35,6 +35,7 @@ import { invalidateOrganizerDashboard, invalidateOrganizerTournaments } from '@/
 import { getCountryName } from '@/data/countries';
 import { TeamLimitSelector, UpgradeModal } from '@/components/subscription';
 import { useSubscription } from '@/hooks/useSubscription';
+import { Analytics } from '@/lib/analytics';
 
 // Utility function for tournament status variants with enhanced styling
 function getStatusVariant(status: Tournament['status']) {
@@ -446,6 +447,7 @@ export function OrganizerTournamentManager({ user }: OrganizerTournamentManagerP
 
       const result = await createTournament(tournamentData);
       if (result) {
+        Analytics.tournamentCreated(result.id, tournamentData.name);
         setNewTournament({
           name: "",
           format: "",

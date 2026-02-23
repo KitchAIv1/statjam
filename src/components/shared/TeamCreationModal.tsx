@@ -17,6 +17,7 @@ import { IPlayerManagementService, GenericPlayer } from '@/lib/types/playerManag
 import { StepIndicator, TeamInfoStep, AddPlayersStep, ConfirmStep } from './TeamCreationSteps';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { TournamentService } from '@/lib/services/tournamentService';
+import { Analytics } from '@/lib/analytics';
 import { Tournament } from '@/lib/types/tournament';
 
 interface TeamCreationModalProps {
@@ -148,6 +149,7 @@ export function TeamCreationModal({
       // Clear logo preview after successful creation
       logoUpload.clearPreview();
 
+      Analytics.teamCreated(newTeam.id, newTeam.tournamentId || '');
       // Success - notify parent
       onTeamCreated(newTeam);
       onClose();

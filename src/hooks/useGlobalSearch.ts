@@ -43,8 +43,6 @@ export function useGlobalSearch(query: string) {
     setLoading(true);
     const pattern = `%${q}%`;
 
-    console.log('[GlobalSearch] Running search for:', q);
-
     try {
       const [
         customPlayersRes,
@@ -88,8 +86,6 @@ export function useGlobalSearch(query: string) {
           .ilike('name', pattern)
           .limit(50),
       ]);
-
-      console.log('[GlobalSearch] Raw results - players:', customPlayersRes.error || customPlayersRes.data?.length, 'tournaments:', tournamentsRes.error || tournamentsRes.data?.length);
 
       const matchingTeamIds = (matchingTeamIdsRes.data || []).map(t => t.id);
       let gamesRes: { data: any[] | null } = { data: [] };
@@ -153,7 +149,6 @@ export function useGlobalSearch(query: string) {
         coaches,
       });
     } catch (err) {
-      console.error('[GlobalSearch] Search failed:', err);
       setResults({
         players: [],
         teams: [],
@@ -183,9 +178,6 @@ export function useGlobalSearch(query: string) {
     results.tournaments.length > 0 ||
     results.games.length > 0 ||
     results.coaches.length > 0;
-
-  console.log('[GlobalSearch] query:', query);
-  console.log('[GlobalSearch] results:', results);
 
   return {
     results,

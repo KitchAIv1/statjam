@@ -41,6 +41,7 @@ import { useScheduleOverlay } from '@/hooks/useScheduleOverlay';
 import { useStartingLineupOverlay } from '@/hooks/useStartingLineupOverlay';
 import { toScheduleDateString } from '@/lib/utils/scheduleOverlayUtils';
 import { notify } from '@/lib/services/notificationService';
+import { Analytics } from '@/lib/analytics';
 import { UpgradeModal } from '@/components/subscription';
 import { BoxScoreOverlayPanel } from '@/components/overlay/BoxScoreOverlayPanel';
 import type { Tournament } from '@/lib/types/tournament';
@@ -326,6 +327,7 @@ export default function VideoCompositionTestPage() {
     
     // Start broadcast first (critical path - no delays)
     await startBroadcast(broadcastStream, { platform, streamKey, rtmpUrl, quality, region: relayRegion ?? 'us' });
+    Analytics.liveStreamStarted(selectedGameId || '', platform || 'unknown');
     notify.success('Broadcast started', `Streaming to ${platform === 'youtube' ? 'YouTube' : platform === 'twitch' ? 'Twitch' : 'Facebook Live'}`);
     
     // Update tournament streaming status in background (non-blocking)
@@ -348,6 +350,7 @@ export default function VideoCompositionTestPage() {
   const handleStopBroadcast = useCallback(() => {
     // Stop broadcast immediately (critical path)
     stopBroadcast();
+    Analytics.liveStreamEnded(selectedGameId || '', 0);
     setBroadcastStartTime(null);
     notify.info('Broadcast stopped');
     
@@ -358,7 +361,7 @@ export default function VideoCompositionTestPage() {
           tournamentStreamingService.stopStreaming(selectedTournament.id))
         .catch(error => console.warn('Failed to clear tournament streaming status:', error));
     }
-  }, [stopBroadcast, selectedTournament?.id]);
+  }, [stopBroadcast, selectedTournament?.id, selectedGameId]);
 
   // Reset broadcast start time when broadcast stops
   useEffect(() => {

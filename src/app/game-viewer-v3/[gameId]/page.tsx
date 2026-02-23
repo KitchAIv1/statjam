@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
 import { GameViewerV3Provider, useGameViewerV3Context } from '@/providers/GameViewerV3Provider';
 import { GameViewerV3Header } from './components/GameViewerV3Header';
 import { BoxScoreTabV3 } from './components/BoxScoreTabV3';
@@ -10,6 +10,7 @@ import { ClipsTabV3 } from './components/ClipsTabV3';
 import { TournamentGameArticle } from '@/app/game-viewer/[gameId]/components/TournamentGameArticle';
 import { ThemeToggle } from '@/app/game-viewer/[gameId]/components/ThemeToggle';
 import { FileText } from 'lucide-react';
+import { Analytics } from '@/lib/analytics';
 
 type TabType = 'box-score' | 'play-by-play' | 'clips' | 'article';
 
@@ -133,6 +134,12 @@ function TabButton({ active, onClick, label, isDark = true }: TabButtonProps) {
 
 export default function GameViewerV3Page({ params }: PageProps) {
   const { gameId } = use(params);
+
+  useEffect(() => {
+    if (gameId) {
+      Analytics.gameViewerOpen(gameId);
+    }
+  }, [gameId]);
 
   return (
     <GameViewerV3Provider gameId={gameId}>

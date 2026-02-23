@@ -18,6 +18,7 @@ import { TournamentThemeProvider, useTournamentTheme } from '@/contexts/Tourname
 import { getTournamentThemeClass } from '@/lib/utils/tournamentThemeClasses';
 import { TournamentThemeToggle } from './TournamentThemeToggle';
 import { GlobalSearchBar } from '@/components/search/GlobalSearchBar';
+import { Analytics } from '@/lib/analytics';
 
 const TABS = [
   'overview',
@@ -54,6 +55,12 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
   const [activePhase, setActivePhase] = useState<'upcoming' | 'live' | 'finals'>(getInitialPhase());
   const tabsListRef = useRef<HTMLDivElement>(null);
   const [tabsMounted, setTabsMounted] = useState(false);
+
+  useEffect(() => {
+    if (data?.tournament) {
+      Analytics.tournamentView(data.tournament.id, data.tournament.name);
+    }
+  }, [data?.tournament?.id]);
 
   const tabOptions = useMemo(() => TABS, []);
 

@@ -10,6 +10,7 @@ import { CoachTeam, QuickTrackGameRequest } from '@/lib/types/coach';
 import { CoachPlayerService } from '@/lib/services/coachPlayerService';
 import { AutomationFlags, COACH_AUTOMATION_FLAGS } from '@/lib/types/automation';
 import { GameServiceV3 } from '@/lib/services/gameServiceV3';
+import { Analytics } from '@/lib/analytics';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { SmartTooltip } from '@/components/onboarding/SmartTooltip';
 import { GameFormatId } from '@/lib/types/gameFormat';
@@ -167,7 +168,8 @@ export function CoachQuickTrackModal({ team, userId, onClose, onGameCreated }: C
       
       // Create the coach game
       const game = await CoachGameService.createQuickTrackGame(formData);
-      
+      Analytics.coachGameStarted(game.id);
+
       // ✅ NEW: Save automation settings to game
       console.log('💾 Saving automation settings for coach game:', game.id);
       await GameServiceV3.updateGameAutomation(game.id, automationSettings);

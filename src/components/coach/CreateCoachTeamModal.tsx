@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { CreateCoachTeamRequest, CoachPlayer } from '@/lib/types/coach';
+import { Analytics } from '@/lib/analytics';
 import { CoachPlayerSelectionList } from './CoachPlayerSelectionList';
 import { CreateCustomPlayerForm } from './CreateCustomPlayerForm';
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
@@ -136,12 +137,14 @@ export function CreateCoachTeamModal({ userId, onClose, onTeamCreated }: CreateC
 
   // Handle final completion
   const handleComplete = () => {
+    if (createdTeamId) Analytics.teamCreated(createdTeamId, '');
     onTeamCreated();
     onClose();
   };
 
   // Handle skip players
   const handleSkipPlayers = () => {
+    if (createdTeamId) Analytics.teamCreated(createdTeamId, '');
     onTeamCreated();
     onClose();
   };

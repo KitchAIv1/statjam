@@ -11,6 +11,7 @@ import { getRulesetDisplayName, getRulesetDescription } from '@/lib/types/rulese
 import { PhotoUploadField } from '@/components/ui/PhotoUploadField';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { TeamLimitSelector, UpgradeModal } from '@/components/subscription';
+import { Analytics } from '@/lib/analytics';
 
 const CreateTournamentV2 = () => {
   const { user, loading } = useAuthV2();
@@ -106,8 +107,9 @@ const CreateTournamentV2 = () => {
 
   const handleSubmit = async () => {
     console.log('🚀 Tournament submission initiated...');
-    const success = await submitTournament(user.id);
-    if (success) {
+    const result = await submitTournament(user.id);
+    if (result) {
+      Analytics.tournamentCreated(result.id, data.name);
       console.log('✅ Tournament created successfully, redirecting to dashboard...');
       // Add a small delay to show success state
       setTimeout(() => {

@@ -10,6 +10,7 @@
 import React, { useState } from 'react';
 import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuthV2 } from '@/hooks/useAuthV2';
+import { Analytics } from '@/lib/analytics';
 
 interface ClaimSignUpFormProps {
   playerName: string;
@@ -54,6 +55,7 @@ export function ClaimSignUpForm({ playerName, onSuccess, onError }: ClaimSignUpF
       });
 
       if (result.success && result.profile?.id) {
+        Analytics.signUp('player');
         onSuccess(result.profile.id);
       } else {
         onError(result.error || 'Failed to create account');

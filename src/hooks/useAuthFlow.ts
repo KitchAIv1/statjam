@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuthV2 } from './useAuthV2';
 import { type UserRole } from '@/components/auth/RoleSelector';
 import { type SignUpFormData, type SignInFormData } from '@/components/auth/utils/authValidation';
+import { Analytics } from '@/lib/analytics';
 
 export interface AuthFlowState {
   showEmailConfirmation: boolean;
@@ -138,7 +139,9 @@ export const useAuthFlow = (): UseAuthFlowReturn => {
     if (!result.success) {
       throw new Error(result.error || 'Sign up failed');
     }
-    
+
+    Analytics.signUp(userType);
+
     console.log('✅ useAuthFlow: Sign up successful!');
     
     // ✅ ENHANCED: Handle different signup outcomes

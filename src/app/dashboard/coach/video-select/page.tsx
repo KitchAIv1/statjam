@@ -16,6 +16,7 @@ import { useAuthV2 } from '@/hooks/useAuthV2';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCheckoutReturn } from '@/hooks/useCheckoutReturn';
 import { CoachGameService } from '@/lib/services/coachGameService';
+import { Analytics } from '@/lib/analytics';
 import { CoachTeamService } from '@/lib/services/coachTeamService';
 import { VideoStatService } from '@/lib/services/videoStatService';
 import { useCoachTeams } from '@/hooks/useCoachTeams';
@@ -252,7 +253,8 @@ function VideoSelectContent() {
         opponent_name: newGameOpponent.trim(),
         game_settings: { quarter_length_minutes: 8 },
       });
-      
+      Analytics.coachGameStarted(newGame.id);
+
       router.push(`/dashboard/coach/video/${newGame.id}`);
     } catch (error) {
       console.error('Error creating game:', error);

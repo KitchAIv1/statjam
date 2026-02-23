@@ -141,7 +141,7 @@ export function useTournamentForm() {
   };
 
   // Submit tournament
-  const submitTournament = async (organizerId: string): Promise<boolean> => {
+  const submitTournament = async (organizerId: string): Promise<{ id: string; name: string } | false> => {
     console.log('🏆 Starting tournament submission...', { organizerId, data: state.data });
     
     // Import notification service
@@ -182,7 +182,7 @@ export function useTournamentForm() {
       );
       
       setState(prev => ({ ...prev, loading: false }));
-      return true;
+      return result;
     } catch (error) {
       console.error('❌ Tournament creation failed:', error);
       

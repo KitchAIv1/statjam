@@ -19,6 +19,7 @@ import { errorLoggingService } from '@/lib/services/errorLoggingService';
 import { UPLOAD_CONFIG } from '@/lib/config/videoConfig';
 import type { VideoUploadProgress } from '@/lib/types/video';
 import { useVideoUpload } from '@/contexts/VideoUploadContext';
+import { Analytics } from '@/lib/analytics';
 
 interface VideoUploaderProps {
   gameId: string;
@@ -130,7 +131,8 @@ export function VideoUploader({
     
     // Update global context
     uploadContext.startUpload(gameId, file.name, file.size);
-    
+    Analytics.videoUploadStarted(gameId, Math.round(file.size / 1024 / 1024));
+
     const result = await BunnyUploadService.uploadVideo({
       file,
       gameId,
@@ -142,6 +144,7 @@ export function VideoUploader({
     if (result.success && result.videoId) {
       setCanRetry(false);
       uploadContext.completeUpload();
+      Analytics.videoUploadCompleted(gameId);
       onUploadComplete(result.videoId);
     } else {
       const rawError = result.error || 'Upload failed';
