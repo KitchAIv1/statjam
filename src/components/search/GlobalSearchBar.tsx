@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { toast } from 'sonner';
@@ -14,18 +15,31 @@ export function GlobalSearchBar() {
   const { theme } = useTournamentTheme();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownPortalRef = useRef<HTMLDivElement>(null);
 
   const { results, loading, hasResults } = useGlobalSearch(query);
 
+  const showDropdown = isOpen && query.trim().length >= 2;
+
+  useEffect(() => {
+    if (showDropdown && inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, [showDropdown]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
       if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(e.target as Node)
+        !inputRef.current?.contains(target) &&
+        !dropdownPortalRef.current?.contains(target)
       ) {
         setIsOpen(false);
       }
@@ -41,7 +55,6 @@ export function GlobalSearchBar() {
     };
   }, []);
 
-  const showDropdown = isOpen && query.trim().length >= 2;
 
   const handlePlayerClick = (id: string) => {
     setIsOpen(false);
@@ -86,30 +99,18 @@ export function GlobalSearchBar() {
     !results.games.length &&
     !results.coaches.length;
 
-  return (
-    <div className="relative w-full" ref={dropdownRef}>
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="search"
-          placeholder="Search Teams, Tournaments, Players..."
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setIsOpen(true);
-          }}
-          onFocus={() => query.trim().length >= 2 && setIsOpen(true)}
-          className={`w-full rounded-full border px-4 py-2 pl-10 text-sm focus:border-[#FF3B30]/50 focus:outline-none focus:ring-1 focus:ring-[#FF3B30]/30 ${getTournamentThemeClass('inputBorder', theme)} ${getTournamentThemeClass('inputBg', theme)} ${getTournamentThemeClass('inputText', theme)} ${getTournamentThemeClass('inputPlaceholder', theme)}`}
-        />
-        <Search
-          className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${getTournamentThemeClass('inputIcon', theme)}`}
-        />
-      </div>
-
-      {showDropdown && (
-        <div
-          className={`absolute left-0 right-0 top-full z-50 mt-1 max-h-[400px] overflow-y-auto rounded-lg border shadow-xl ${getTournamentThemeClass('headerBorder', theme)} ${getTournamentThemeClass('headerBg', theme)}`}
-        >
+  const dropdownContent = showDropdown && (
+    <div
+      ref={dropdownPortalRef}
+      style={{
+        position: 'fixed',
+        top: dropdownPos.top,
+        left: dropdownPos.left,
+        width: dropdownPos.width,
+        zIndex: 9999,
+      }}
+      className={`max-h-[400px] overflow-y-auto rounded-lg border shadow-xl ${getTournamentThemeClass('headerBorder', theme)} ${getTournamentThemeClass('headerBg', theme)}`}
+    >
           {loading && (
             <div className="flex items-center justify-center py-8">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#FF3B30]/30 border-t-[#FF3B30]" />
@@ -248,8 +249,29 @@ export function GlobalSearchBar() {
               )}
             </div>
           )}
-        </div>
-      )}
+    </div>
+  );
+
+  return (
+    <div className="relative w-full">
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="search"
+          placeholder="Search Teams, Tournaments, Players..."
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          className={`w-full rounded-full border px-4 py-2 pl-10 text-sm focus:border-[#FF3B30]/50 focus:outline-none focus:ring-1 focus:ring-[#FF3B30]/30 ${getTournamentThemeClass('inputBorder', theme)} ${getTournamentThemeClass('inputBg', theme)} ${getTournamentThemeClass('inputText', theme)} ${getTournamentThemeClass('inputPlaceholder', theme)}`}
+        />
+        <Search
+          className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${getTournamentThemeClass('inputIcon', theme)}`}
+        />
+      </div>
+      {typeof window !== 'undefined' && dropdownContent && createPortal(dropdownContent, document.body)}
     </div>
   );
 }

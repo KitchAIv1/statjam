@@ -87,6 +87,11 @@ export function useGlobalSearch(query: string) {
           .limit(50),
       ]);
 
+      console.log('[GlobalSearch] errors - players:', {
+        custom: customPlayersRes.error,
+        regular: regularPlayersRes.error,
+      }, 'teams:', teamsRes.error, 'tournaments:', tournamentsRes.error);
+
       const matchingTeamIds = (matchingTeamIdsRes.data || []).map(t => t.id);
       let gamesRes: { data: any[] | null } = { data: [] };
       if (matchingTeamIds.length > 0) {
@@ -178,6 +183,9 @@ export function useGlobalSearch(query: string) {
     results.tournaments.length > 0 ||
     results.games.length > 0 ||
     results.coaches.length > 0;
+
+  console.log('[GlobalSearch] query:', query);
+  console.log('[GlobalSearch] results:', results);
 
   return {
     results,
