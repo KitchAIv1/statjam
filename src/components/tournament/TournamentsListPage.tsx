@@ -38,6 +38,7 @@ interface Tournament {
   logo?: string | null;
   organizer_id?: string | null;
   description?: string | null;
+  is_public?: boolean;
 }
 
 interface TournamentWithStats extends Tournament {
@@ -84,7 +85,7 @@ export function TournamentsListPage() {
       try {
         const tournamentData = await hybridSupabaseService.query<Tournament>(
           'tournaments',
-          'id, name, status, start_date, end_date, venue, country, logo, organizer_id, description',
+          'id, name, status, start_date, end_date, venue, country, logo, organizer_id, description, is_public',
           {}
         );
 
@@ -207,23 +208,15 @@ export function TournamentsListPage() {
   }, []);
 
   const filteredTournaments = useMemo(() => {
-    // ✅ EDGE CASE: Filter out empty tournaments (no games AND no teams)
-    let filtered = tournamentsWithStats.filter(t => t.teamCount > 0 || t.gameCount > 0);
-    
-    // ✅ FILTER: Remove tournaments with "TEST" in name
-    filtered = filtered.filter(t => !t.name.toLowerCase().includes('test'));
-    
-    // ✅ FILTER: Remove completed tournaments with 0 games OR 0 teams
-    filtered = filtered.filter(t => {
-      const isCompleted = isTournamentEffectivelyCompleted(t);
-      if (isCompleted && (t.gameCount === 0 || t.teamCount === 0)) {
-        return false;
-      }
+    // ✅ Quality thresholds: is_public, exclusions, minimum teams/games
+    let filtered = tournamentsWithStats.filter(t => {
+      if (t.is_public === false) return false;
+      if (EXCLUDED_TOURNAMENT_IDS.includes(t.id)) return false;
+      if (t.name.toLowerCase().includes('test')) return false;
+      if (t.teamCount < 2) return false;
+      if (t.gameCount < 1) return false;
       return true;
     });
-    
-    // ✅ FILTER: Remove tournaments with teams but 0 games
-    filtered = filtered.filter(t => !(t.teamCount > 0 && t.gameCount === 0));
 
     if (selectedFilter !== 'all') {
       filtered = filtered.filter(t => {
