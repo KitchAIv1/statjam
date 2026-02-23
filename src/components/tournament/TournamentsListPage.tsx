@@ -9,6 +9,7 @@ import { GameService } from '@/lib/services/gameService';
 import { useLiveGameCount } from '@/hooks/useLiveGameCount';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import { TournamentsListHeader } from './TournamentsListHeader';
+import { GlobalSearchBar } from '@/components/search/GlobalSearchBar';
 import { FeaturedTournamentHero } from './FeaturedTournamentHero';
 import { LiveTournamentCard } from './LiveTournamentCard';
 import { UpcomingTournamentCard } from './UpcomingTournamentCard';
@@ -60,7 +61,6 @@ export function TournamentsListPage() {
   const [tournamentsWithStats, setTournamentsWithStats] = useState<TournamentWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'live' | 'upcoming' | 'completed'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(12);
   // ✅ OPTIMIZED: Use lightweight hook (1 query vs 14+ queries)
@@ -249,14 +249,6 @@ export function TournamentsListPage() {
       filtered = filtered.filter(t => t.isVerified);
     }
 
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(t => 
-        t.name.toLowerCase().includes(query) ||
-        (t.venue && t.venue.toLowerCase().includes(query))
-      );
-    }
-
     filtered.sort((a, b) => {
       if (a.isVerified && !b.isVerified) return -1;
       if (!a.isVerified && b.isVerified) return 1;
@@ -275,7 +267,7 @@ export function TournamentsListPage() {
     });
 
     return filtered;
-  }, [tournamentsWithStats, selectedFilter, searchQuery, showVerifiedOnly, isTournamentEffectivelyCompleted, isTournamentTrulyUpcoming]);
+  }, [tournamentsWithStats, selectedFilter, showVerifiedOnly, isTournamentEffectivelyCompleted, isTournamentTrulyUpcoming]);
 
   // ✅ FEATURED TOURNAMENTS: Show top 2 tournaments
   // Prioritizes: Live games > Completed tournaments with data > Upcoming
@@ -418,21 +410,7 @@ export function TournamentsListPage() {
           </a>
 
           <div className="hidden flex-1 max-w-md md:block">
-            <div className="relative">
-              <input
-                type="search"
-                placeholder="Search Teams, Tournaments, Players..."
-                className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-2 pl-10 text-sm text-white placeholder:text-white/40 focus:border-[#FF3B30]/50 focus:outline-none focus:ring-1 focus:ring-[#FF3B30]/30"
-              />
-              <svg
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
+            <GlobalSearchBar />
           </div>
 
           <div className="hidden md:flex shrink-0 items-center gap-4">
@@ -458,8 +436,6 @@ export function TournamentsListPage() {
 
       <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8">
         <TournamentsListHeader
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
           selectedFilter={selectedFilter}
           onFilterChange={setSelectedFilter}
           showVerifiedOnly={showVerifiedOnly}
@@ -481,7 +457,6 @@ export function TournamentsListPage() {
           </div>
         ) : tournamentsWithStats.length === 0 ? (
           <TournamentsEmptyState 
-            searchQuery={searchQuery}
             showVerifiedOnly={showVerifiedOnly}
           />
         ) : (

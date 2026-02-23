@@ -1,10 +1,8 @@
 "use client";
 
-import { Search, X, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 interface TournamentsListHeaderProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   selectedFilter: 'all' | 'live' | 'upcoming' | 'completed';
   onFilterChange: (filter: 'all' | 'live' | 'upcoming' | 'completed') => void;
   showVerifiedOnly: boolean;
@@ -22,8 +20,6 @@ interface TournamentsListHeaderProps {
  * Follows .cursorrules: <200 lines, single responsibility
  */
 export function TournamentsListHeader({
-  searchQuery,
-  onSearchChange,
   selectedFilter,
   onFilterChange,
   showVerifiedOnly,
@@ -48,28 +44,8 @@ export function TournamentsListHeader({
         </div>
       </div>
 
-      {/* Search and Filter Section */}
+      {/* Filter Section */}
       <div className="mb-6 space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#B3B3B3]" />
-          <input
-            type="text"
-            placeholder="Search tournaments by name or venue..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-full border border-white/10 bg-[#121212] px-10 py-3 text-sm text-white placeholder:text-white/40 focus:border-[#FF3B30]/50 focus:outline-none focus:ring-1 focus:ring-[#FF3B30]/30"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#B3B3B3] hover:text-white transition"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
         {/* Filter Tabs and Verified Toggle */}
         <div className="flex flex-wrap items-center gap-3 border-b border-white/10 pb-4">
           <div className="flex flex-wrap gap-2">
@@ -103,10 +79,9 @@ export function TournamentsListHeader({
         </div>
 
         {/* Results Count */}
-        {(searchQuery || showVerifiedOnly) && (
+        {showVerifiedOnly && (
           <div className="text-sm text-[#B3B3B3]">
             Showing {filteredCount} tournament{filteredCount !== 1 ? 's' : ''}
-            {searchQuery && ` matching "${searchQuery}"`}
             {showVerifiedOnly && ' (verified only)'}
           </div>
         )}
