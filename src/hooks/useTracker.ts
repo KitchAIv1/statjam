@@ -889,7 +889,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     const parsed = stored ? parseInt(stored, 10) : 0;
     let clockMinutesFromConfig = [5, 6, 8, 10, 12, 18, 20].includes(parsed)
       ? parsed
-      : originalQuarterLength;
+      : quarterLengthRef.current;
 
     // Determine clock duration based on quarter
     // Regular periods: Use original quarter/half length from pre-flight
@@ -1102,7 +1102,7 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
     const parsed = stored ? parseInt(stored, 10) : 0;
     let clockMinutesForQuarter = [5, 6, 8, 10, 12, 18, 20].includes(parsed)
       ? parsed
-      : originalQuarterLength;
+      : quarterLengthRef.current;
 
     // ✅ DYNAMIC PERIODS: Use periodsPerGame for overtime detection
     const isOvertime = newQuarter > periodsPerGame;
