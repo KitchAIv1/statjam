@@ -223,12 +223,9 @@ export function TournamentsListPage() {
         const status = (t.status || '').toLowerCase();
         if (selectedFilter === 'live') return status === 'active' || status === 'live';
         if (selectedFilter === 'upcoming') {
-          // ✅ Must pass BOTH status check AND date check
-          // Exclude derived-completed tournaments
           if (isTournamentEffectivelyCompleted(t)) return false;
-          // Exclude tournaments that have already started (strict date check)
           if (!isTournamentTrulyUpcoming(t)) return false;
-          return status === 'draft' || status === 'upcoming' || !status;
+          return true; // Date and completed checks determine if upcoming
         }
         if (selectedFilter === 'completed') {
           // ✅ Include derived-completed tournaments
@@ -348,28 +345,13 @@ export function TournamentsListPage() {
 
   const upcomingTournaments = useMemo(() => {
     const filtered = filteredTournaments.filter(t => {
-      const status = (t.status || '').toLowerCase();
-      const isUpcomingStatus = status === 'draft' || status === 'upcoming' || !status;
-      const hasNoTeams = t.teamCount === 0;
       const isTestTournament = t.name.toLowerCase().startsWith('test');
       
-      // ✅ EXCLUDE DERIVED-COMPLETED: Use helper for consistent logic
-      if (isTournamentEffectivelyCompleted(t)) {
-        return false;
-      }
+      if (isTournamentEffectivelyCompleted(t)) return false;
+      if (!isTournamentTrulyUpcoming(t)) return false;
       
-      // ✅ STRICT DATE CHECK: Exclude tournaments that have already started
-      if (!isTournamentTrulyUpcoming(t)) {
-        return false;
-      }
-      
-      // Exclude featured tournaments from the upcoming grid
       const isFeatured = featuredTournaments.some(ft => ft.id === t.id);
-      
-      return isUpcomingStatus && 
-             !isFeatured && 
-             !hasNoTeams && 
-             !isTestTournament;
+      return !isFeatured && !isTestTournament;
     });
     
     return filtered.slice(0, displayLimit);
