@@ -222,7 +222,7 @@ Tracker load:
 
 Quarter advance (manual):
   setQuarter(newQuarter)
-  clockMinutesForQuarter = localStorage || originalQuarterLength
+  clockMinutesForQuarter = localStorage || quarterLengthRef.current  // ✅ Post-fix: ref avoids stale state
   → updateGameClock(minutes), updateGameState(game_clock_minutes, …)
   → games.game_clock_minutes updated; games.quarter_length_minutes NOT updated
 
@@ -244,4 +244,79 @@ Overlay refetch (e.g. postgres_changes):
 
 ---
 
-*End of audit. No code was changed.*
+## 12. Re-Audit Confirmation (Post-Fix) — useTracker.ts
+
+**Purpose:** Confirm current state after fix: `resetClock` and `setQuarter` use `quarterLengthRef.current` as fallback instead of `originalQuarterLength`.
+
+### 12.1 Quarter length sources in useTracker
+
+| Symbol | Type | Declared | Initial value | Updated by |
+|--------|------|----------|---------------|------------|
+| `quarterLengthLockedRef` | `useRef<boolean>` | L154 | `false` | `getInitialQuarterLength` (when localStorage valid), init block (when setting/locking quarter length) |
+| `getInitialQuarterLength` | function | L156 | — | Returns parsed localStorage or **0** (fallback) |
+| `originalQuarterLength` | `useState` | L177 | `getInitialQuarterLength()` | Init block: `setOriginalQuarterLength(quarterLen)` when clock is set/locked |
+| `quarterLengthRef` | `useRef<number>` | L179 | `getInitialQuarterLength()` | **Sync only:** `useEffect` L194–196 sets `quarterLengthRef.current = originalQuarterLength` |
+
+### 12.2 Sync: ref mirrors state
+
+```ts
+// L194–196
+useEffect(() => {
+  quarterLengthRef.current = originalQuarterLength;
+}, [originalQuarterLength]);
+```
+
+So whenever `originalQuarterLength` changes (from init or from elsewhere), `quarterLengthRef.current` is updated. The ref is the “always-current” value; callbacks that close over `originalQuarterLength` can see stale state.
+
+### 12.3 resetClock (L884–925)
+
+| Step | Code / behavior |
+|------|------------------|
+| Source of minutes | `stored = localStorage.getItem('quarterLength_'+gameId)`, `parsed = stored ? parseInt(stored,10) : 0` |
+| Fallback | `clockMinutesFromConfig = [5,6,8,10,12,18,20].includes(parsed) ? parsed : quarterLengthRef.current` ✅ |
+| OT | `clockMinutes = isOT ? 5 : clockMinutesFromConfig` |
+| Writes | `setClock(...)`, `GameService.updateGameClock(gameId, { minutes: clockMinutes, ... })` |
+| Deps | `[gameId, quarter, originalQuarterLength, periodsPerGame]` — still includes state for reactivity; actual value used for fallback is ref |
+
+**Confirmed:** Fallback is `quarterLengthRef.current`, not `originalQuarterLength`.
+
+### 12.4 setQuarter (L1086–1151)
+
+| Step | Code / behavior |
+|------|------------------|
+| Source of minutes | Same: `stored` / `parsed` from localStorage |
+| Fallback | `clockMinutesForQuarter = ... : quarterLengthRef.current` ✅ |
+| OT | `newClockMinutes = isOvertime ? 5 : clockMinutesForQuarter` |
+| Then | `resetClock(newQuarter)` (which also uses ref fallback), `GameService.updateGameState(..., game_clock_minutes: newClockMinutes, ...)` |
+| Deps | `[gameId, resetClock, teamAId, teamBId, originalQuarterLength, periodsPerGame]` |
+
+**Confirmed:** Fallback is `quarterLengthRef.current`, not `originalQuarterLength`.
+
+### 12.5 Other usages of originalQuarterLength / quarterLengthRef
+
+| Location | Usage | Note |
+|----------|--------|------|
+| L931 `setCustomTime` | `maxMinutes = isOvertime ? 5 : originalQuarterLength` | UI validation max; state is fine (no stale-closure issue for max bound). |
+| L2442 return | `originalQuarterLength` in hook return | Exposed for “clock edit UI max validation”; callers get state. |
+| L892 `resetClock` | `quarterLengthRef.current` | Fallback ✅ |
+| L1105 `setQuarter` | `quarterLengthRef.current` | Fallback ✅ |
+
+### 12.6 Init block (L490–559) — still sets state, ref follows
+
+- `quarterLen` defaults to **12** in init (L493); then from localStorage or from “valid” `clockMinutes` if no stored value.
+- `setOriginalQuarterLength(quarterLen)` and `quarterLengthLockedRef.current = true` run when clock is set.
+- The `useEffect` above then sets `quarterLengthRef.current = originalQuarterLength`, so after init, ref and state match. When the user later calls `resetClock` or `setQuarter`, the fallback reads the ref, which has the latest value and avoids stale closures.
+
+### 12.7 End-to-end (Q3→Q4) after fix
+
+1. Pre-flight or prior init set `originalQuarterLength` (e.g. 6) and sync set `quarterLengthRef.current = 6`.
+2. User advances to Q4; `setQuarter(4)` runs.
+3. If localStorage is empty or invalid, `clockMinutesForQuarter = quarterLengthRef.current` → 6.
+4. `newClockMinutes = 6`, `resetClock(4)` runs; inside resetClock, same logic: fallback `quarterLengthRef.current` → 6.
+5. DB gets `game_clock_minutes: 6`; overlay gets 6 on next refetch.
+
+**Conclusion:** The fallback for “period length when localStorage is missing or invalid” is now the ref in both `resetClock` and `setQuarter`, and the ref is kept in sync with `originalQuarterLength`. Re-audit confirms the fix is in place and the mapping is consistent.
+
+---
+
+*End of audit. Section 12 added post-fix; no code changes in this document.*

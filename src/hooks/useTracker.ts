@@ -487,24 +487,43 @@ export const useTracker = ({ initialGameId, teamAId, teamBId, isCoachMode = fals
             }
           }
           
-          // ✅ FIX: Check localStorage for authoritative quarter length BEFORE setting clock
-          // This handles the case where DB has stale 12 min but pre-flight set 8 min
           const storageKey = `quarterLength_${gameId}`;
-          let quarterLen = 12;
+          const VALID_QUARTER_LENGTHS = [5, 6, 8, 10, 12, 18, 20];
+          let quarterLen = 0; // unknown until proven — never default to 12
+
+          // Priority 1: localStorage (written by pre-flight, most immediate)
           if (typeof window !== 'undefined') {
             const stored = localStorage.getItem(storageKey);
             if (stored) {
-              quarterLen = parseInt(stored, 10) || 12;
-              console.log(`🔍 DEBUG Clock Init - localStorage quarterLength: ${quarterLen} min`);
-              
-              // ✅ CRITICAL FIX: If clock is at full default quarter (12:00) but localStorage 
-              // has a different setting, trust localStorage (pre-flight override)
-              if (clockSeconds === 0 && clockMinutes === 12 && quarterLen !== 12) {
-                console.log(`⚠️ DB has stale 12:00, using localStorage ${quarterLen}:00 instead`);
-                clockMinutes = quarterLen;
+              const parsed = parseInt(stored, 10);
+              if (VALID_QUARTER_LENGTHS.includes(parsed)) {
+                quarterLen = parsed;
+                console.log(`🔒 Quarter length from localStorage: ${quarterLen} min`);
               }
             }
           }
+
+          // Priority 2: game.quarter_length_minutes from DB (written by pre-flight, authoritative)
+          if (quarterLen === 0 && game.quarter_length_minutes && VALID_QUARTER_LENGTHS.includes(game.quarter_length_minutes)) {
+            quarterLen = game.quarter_length_minutes;
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(storageKey, String(quarterLen));
+            }
+            console.log(`🔒 Quarter length loaded from DB: ${quarterLen} min`);
+          }
+
+          // Priority 3: infer from clock if at a clean full-period value
+          if (quarterLen === 0 && game.game_clock_seconds === 0 && VALID_QUARTER_LENGTHS.includes(game.game_clock_minutes)) {
+            quarterLen = game.game_clock_minutes;
+            console.log(`🔒 Quarter length inferred from clock: ${quarterLen} min`);
+          }
+
+          // Stale 12:00 override: DB wrote 12 but we know the real period length
+          if (clockSeconds === 0 && clockMinutes === 12 && quarterLen !== 0 && quarterLen !== 12) {
+            console.log(`⚠️ DB has stale 12:00, using ${quarterLen}:00 instead`);
+            clockMinutes = quarterLen;
+          }
+
           
           // 🔍 DEBUG: Log final clock values
           console.log('🔍 DEBUG Clock Init - FINAL values:', {
