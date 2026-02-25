@@ -161,7 +161,7 @@ export class NBAOverlayDrawer {
     const padding = 10;  // +15% from 8
     const logoSize = 83;  // +15% from 72
     const scoreWidth = 69;  // +15% from 60
-    const teamInfoWidth = 184;  // +15% from 160
+    const teamInfoWidth = 164;
     const logoY = y + (this.BAR_HEIGHT - logoSize) / 2;  // Center vertically (may overflow)
     
     if (isHome) {
@@ -236,17 +236,28 @@ export class NBAOverlayDrawer {
   ): void {
     const nameY = y + 38;  // Pushed down (+6px)
     const foulY = y + 68;  // Pushed down (+6px)
-    
+    const effectiveWidth = maxWidth - 8;
+
     // Team name (full name, truncate if needed) - larger font
     this.ctx.fillStyle = '#FFFFFF';
-    this.ctx.font = '800 28px Arial, sans-serif';  // Increased from 23px
+    // Scale font down if name too wide before truncating
+    const fontSizes = [28, 24, 20, 18];
+    let chosenSize = 28;
+    for (const size of fontSizes) {
+      this.ctx.font = `800 ${size}px Arial, sans-serif`;
+      if (this.ctx.measureText(teamName).width <= effectiveWidth) {
+        chosenSize = size;
+        break;
+      }
+    }
+    this.ctx.font = `800 ${chosenSize}px Arial, sans-serif`;
     this.ctx.textAlign = align;
     this.ctx.textBaseline = 'middle';
-    
+
     // Truncate name if too long
     let displayName = teamName;
     let nameWidth = this.ctx.measureText(displayName).width;
-    while (nameWidth > maxWidth && displayName.length > 0) {
+    while (nameWidth > effectiveWidth && displayName.length > 0) {
       displayName = displayName.slice(0, -1);
       nameWidth = this.ctx.measureText(displayName + '...').width;
     }

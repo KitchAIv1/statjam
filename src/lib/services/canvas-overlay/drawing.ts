@@ -237,13 +237,14 @@ export class OverlayDrawer {
     const teamName = isHome ? data.teamBName : data.teamAName;
     const primaryColor = isHome ? data.teamBPrimaryColor : data.teamAPrimaryColor;
     const padding = 24;
-    const teamNameFontSize = 26; // Increased from 20px
+    let teamNameFontSize = 26; // Increased from 20px
     
     // Measure badge width - simpler without logo
     this.ctx.font = `800 ${teamNameFontSize}px Arial, sans-serif`;
     const nameWidth = Math.min(this.ctx.measureText(teamName).width, 220);
     const badgeWidth = Math.max(padding + nameWidth + padding, 160);
     const badgeHeight = 75; // Slightly increased to accommodate larger font
+    const maxNameWidth = badgeWidth - padding * 2;
     
     // Badge background - clean with team color accent
     const bgColor = primaryColor 
@@ -265,8 +266,20 @@ export class OverlayDrawer {
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
     
+    // Scale font down if name too wide before truncating
+    const fontSizes = [26, 22, 18];
+    let chosenSize = 26;
+    for (const size of fontSizes) {
+      this.ctx.font = `800 ${size}px Arial, sans-serif`;
+      if (this.ctx.measureText(teamName).width <= maxNameWidth) {
+        chosenSize = size;
+        break;
+      }
+    }
+    this.ctx.font = `800 ${chosenSize}px Arial, sans-serif`;
+    teamNameFontSize = chosenSize;
+    
     // Truncate if needed
-    const maxNameWidth = badgeWidth - padding * 2;
     let displayName = teamName;
     let measuredWidth = this.ctx.measureText(displayName).width;
     if (measuredWidth > maxNameWidth) {
