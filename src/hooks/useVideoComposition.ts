@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { VideoCompositionState } from '@/lib/services/video-composition';
-import { GameOverlayData, OverlayVariant } from '@/lib/services/canvas-overlay';
+import { GameOverlayData, OverlayPosition, OverlayVariant } from '@/lib/services/canvas-overlay';
 import { initializeComposer, startComposition as startCompositionHelper } from './useVideoCompositionHelpers';
 
 interface UseVideoCompositionOptions {
@@ -23,6 +23,7 @@ interface UseVideoCompositionReturn {
   start: () => Promise<void>;
   stop: () => void;
   setVariant: (variant: OverlayVariant) => void;
+  setPosition: (position: OverlayPosition) => void;
 }
 
 export function useVideoComposition({
@@ -106,7 +107,13 @@ export function useVideoComposition({
       composerRef.current.setOverlayVariant(variant);
     }
   }, []);
-  
+
+  const setPosition = useCallback((position: OverlayPosition) => {
+    if (composerRef.current) {
+      composerRef.current.setOverlayPosition(position);
+    }
+  }, []);
+
   // Auto-start/stop based on enabled flag
   useEffect(() => {
     // Only auto-control if enabled is explicitly true
@@ -132,6 +139,7 @@ export function useVideoComposition({
     start,
     stop,
     setVariant,
+    setPosition,
   };
 }
 

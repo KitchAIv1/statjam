@@ -108,7 +108,7 @@ export class CompositionLoop {
    * Only includes fields that affect visual rendering.
    */
   private getOverlayDataHash(data: GameOverlayData): string {
-    return `${data.homeScore}-${data.awayScore}-${data.quarter}-${data.gameClockMinutes}:${data.gameClockSeconds}-${data.teamAFouls}-${data.teamBFouls}-${data.activePlayerStats?.playerId || 'none'}-${data.activePlayerStats?.isVisible || false}-${data.tournamentName || ''}-${data.infoBarLabel || ''}-${data.infoBarSecondaryLabel || ''}-${data.hideScoreBar ? '1' : '0'}-sched:${data.scheduleOverlayVisible ? '1' : '0'}-lineup:${data.lineupOverlayVisible ? '1' : '0'}-schedGames:${data.scheduleOverlayPayload?.games?.length || 0}`;
+    return `${data.homeScore}-${data.awayScore}-${data.quarter}-${data.gameClockMinutes}:${data.gameClockSeconds}-${data.teamAFouls}-${data.teamBFouls}-${data.activePlayerStats?.playerId || 'none'}-${data.activePlayerStats?.isVisible || false}-${data.tournamentName || ''}-${data.infoBarLabel || ''}-${data.infoBarSecondaryLabel || ''}-${data.hideScoreBar ? '1' : '0'}-sched:${data.scheduleOverlayVisible ? '1' : '0'}-lineup:${data.lineupOverlayVisible ? '1' : '0'}-schedGames:${data.scheduleOverlayPayload?.games?.length || 0}-teamStats:${data.teamStatsOverlayVisible ? '1' : '0'}-onCourt:${data.onCourtPlayersOverlayVisible ? '1' : '0'}-tsRows:${data.teamStatsOverlayPayload?.stats?.length || 0}-ocA:${data.onCourtPlayersOverlayPayload?.teamAPlayers?.length || 0}-ocB:${data.onCourtPlayersOverlayPayload?.teamBPlayers?.length || 0}-pos:${data.overlayPosition || 'top'}`;
   }
   
   /**

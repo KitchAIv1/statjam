@@ -6,10 +6,12 @@
  * Supports multiple overlay variants: 'classic' and 'nba'.
  */
 
-import { GameOverlayData, LogoCache, OverlayVariant } from './utils';
+import { GameOverlayData, LogoCache, OverlayPosition, OverlayVariant } from './utils';
 import { OverlayDrawer } from './drawing';
 import { PlayerStatsDrawer } from './playerStatsDrawer';
 import { NBAOverlayDrawer } from './nbaDrawing';
+import { TeamStatsDrawer } from './teamStatsDrawer';
+import { OnCourtPlayersDrawer } from './onCourtPlayersDrawer';
 
 export class CanvasOverlayRenderer {
   private canvas: HTMLCanvasElement;
@@ -18,8 +20,11 @@ export class CanvasOverlayRenderer {
   private drawer: OverlayDrawer;
   private nbaDrawer: NBAOverlayDrawer;
   private playerStatsDrawer: PlayerStatsDrawer;
+  private teamStatsDrawer: TeamStatsDrawer;
+  private onCourtPlayersDrawer: OnCourtPlayersDrawer;
   private initialized = false;
   private variant: OverlayVariant = 'classic';
+  private position: OverlayPosition = 'top';
   private readonly width: number;
   private readonly height: number;
   
@@ -40,6 +45,8 @@ export class CanvasOverlayRenderer {
     this.drawer = new OverlayDrawer(this.ctx, width, height);
     this.nbaDrawer = new NBAOverlayDrawer(this.ctx, width, height);
     this.playerStatsDrawer = new PlayerStatsDrawer(this.ctx, this.logoCache, width, height);
+    this.teamStatsDrawer = new TeamStatsDrawer(this.ctx, this.logoCache, width, height);
+    this.onCourtPlayersDrawer = new OnCourtPlayersDrawer(this.ctx, this.logoCache, width, height);
   }
   
   /**
@@ -48,7 +55,11 @@ export class CanvasOverlayRenderer {
   setVariant(variant: OverlayVariant): void {
     this.variant = variant;
   }
-  
+
+  setPosition(position: OverlayPosition): void {
+    this.position = position;
+  }
+
   /**
    * Get current overlay variant
    */
@@ -108,7 +119,7 @@ export class CanvasOverlayRenderer {
       // Draw based on selected variant
       if (this.variant === 'nba') {
         // NBA-style horizontal bar overlay
-        this.nbaDrawer.draw(overlayData, teamALogo, teamBLogo, tournamentLogo);
+        this.nbaDrawer.draw(overlayData, teamALogo, teamBLogo, tournamentLogo, this.position);
       } else {
         // Classic floating elements overlay — skip scoreboard when hideScoreBar (schedule overlay active)
         if (!overlayData.hideScoreBar) {
@@ -118,9 +129,9 @@ export class CanvasOverlayRenderer {
             this.drawer.drawTournamentHeader(overlayData, tournamentLogo);
           }
 
-          this.drawer.drawTeamSection('away', overlayData, teamALogo, !teamALogo);
-          this.drawer.drawTeamSection('home', overlayData, teamBLogo, !teamBLogo);
-          this.drawer.drawCenterSection(overlayData);
+          this.drawer.drawTeamSection('away', overlayData, teamALogo, !teamALogo, this.position);
+          this.drawer.drawTeamSection('home', overlayData, teamBLogo, !teamBLogo, this.position);
+          this.drawer.drawCenterSection(overlayData, this.position);
         }
       }
       
@@ -140,6 +151,18 @@ export class CanvasOverlayRenderer {
           overlayData.lineupOverlayPayload,
           overlayData.teamAPrimaryColor,
           overlayData.teamBPrimaryColor
+        );
+      }
+
+      if (overlayData.teamStatsOverlayVisible && overlayData.teamStatsOverlayPayload) {
+        await this.teamStatsDrawer.draw(overlayData.teamStatsOverlayPayload);
+      }
+
+      if (overlayData.onCourtPlayersOverlayVisible && overlayData.onCourtPlayersOverlayPayload) {
+        await this.onCourtPlayersDrawer.draw(
+          overlayData.onCourtPlayersOverlayPayload,
+          this.position,
+          this.variant === 'nba' ? overlayData.nbaBarAnchorY : undefined
         );
       }
       

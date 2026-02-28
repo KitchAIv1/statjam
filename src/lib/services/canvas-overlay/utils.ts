@@ -12,6 +12,46 @@
  */
 export type OverlayVariant = 'classic' | 'nba';
 
+export type OverlayPosition = 'top' | 'bottom';
+
+export interface TeamStatRow {
+  label: string;
+  teamAValue: string;
+  teamBValue: string;
+  teamALeads: boolean;
+}
+
+export interface TeamStatsOverlayPayload {
+  teamAName: string;
+  teamBName: string;
+  teamAPrimaryColor?: string;
+  teamBPrimaryColor?: string;
+  teamALogo?: string;
+  teamBLogo?: string;
+  stats: TeamStatRow[];
+}
+
+export interface OnCourtPlayer {
+  id: string;
+  name: string;
+  jerseyNumber?: string | number | null;
+  photo_url?: string | null;
+  pts: number;
+  reb: number;
+  ast: number;
+  stl: number;
+  blk: number;
+}
+
+export interface OnCourtPlayersOverlayPayload {
+  teamAName: string;
+  teamBName: string;
+  teamAPrimaryColor?: string;
+  teamBPrimaryColor?: string;
+  teamAPlayers: OnCourtPlayer[];
+  teamBPlayers: OnCourtPlayer[];
+}
+
 /**
  * Game overlay data interface
  * Matches EnhancedScoreOverlayProps from React component
@@ -78,6 +118,10 @@ export interface GameOverlayData {
   // Hide scoreboard bar when schedule overlay is active (e.g. Day Schedule)
   hideScoreBar?: boolean;
 
+  overlayPosition?: OverlayPosition;
+  // Set by nbaDrawer during render — used by onCourtPlayersDrawer to anchor below/above NBA bar
+  nbaBarAnchorY?: number;
+
   // Schedule overlay
   scheduleOverlayVisible?: boolean;
   scheduleOverlayPayload?: {
@@ -122,6 +166,14 @@ export interface GameOverlayData {
       }>;
     };
   } | null;
+
+  // Team stats comparison overlay
+  teamStatsOverlayVisible?: boolean;
+  teamStatsOverlayPayload?: TeamStatsOverlayPayload;
+
+  // On-court players side by side overlay
+  onCourtPlayersOverlayVisible?: boolean;
+  onCourtPlayersOverlayPayload?: OnCourtPlayersOverlayPayload;
 }
 
 /**

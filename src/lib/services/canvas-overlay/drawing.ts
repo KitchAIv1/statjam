@@ -6,7 +6,7 @@
  * Each method stays under 40 lines to comply with .cursorrules
  */
 
-import { GameOverlayData, getContrastSafeBarColor, getTailwindColor, getTailwindRgba, hexToRgba } from './utils';
+import { GameOverlayData, OverlayPosition, getContrastSafeBarColor, getTailwindColor, getTailwindRgba, hexToRgba } from './utils';
 
 export class OverlayDrawer {
   // Max width constraint (matches React max-w-7xl = 1280px)
@@ -89,18 +89,19 @@ export class OverlayDrawer {
     side: 'away' | 'home',
     data: GameOverlayData,
     teamLogo: HTMLImageElement | null,
-    teamLogoFallback: boolean
+    teamLogoFallback: boolean,
+    position: OverlayPosition = 'top'
   ): void {
     const isHome = side === 'home';
     const containerStartX = (this.width - this.MAX_WIDTH) / 2;
     const padding = 32;
     const centerX = this.width / 2;
-    
+
     // NBA-style dimensions
     const logoSize = 52; // Increased from 32px - prominent like NBA
     const logoGap = 16; // Gap between logo and badge
     const scoreFontSize = 80; // Increased from 72px for NBA impact
-    const scoreTopY = 56;
+    const scoreTopY = position === 'bottom' ? this.height - 150 : 56;
     const scoreCenterY = scoreTopY + scoreFontSize / 2;
     
     // Badge dimensions (simplified - no logo inside)
@@ -157,12 +158,12 @@ export class OverlayDrawer {
    * Grouped together and aligned as a unit with score center
    * Quarter and shot clock on same row
    */
-  drawCenterSection(data: GameOverlayData): void {
+  drawCenterSection(data: GameOverlayData, position: OverlayPosition = 'top'): void {
     const x = this.width / 2;
-    
+
     // Calculate vertical center of score for alignment (matches drawTeamSection)
     const scoreFontSize = 80; // Matches NBA-style score font
-    const scoreTopY = 56;
+    const scoreTopY = position === 'bottom' ? this.height - 150 : 56;
     const scoreCenterY = scoreTopY + scoreFontSize / 2;
     
     // Group dimensions - updated to match enhanced clock

@@ -21,7 +21,7 @@ import { useVideoComposition } from '@/hooks/useVideoComposition';
 import { useBroadcast } from '@/hooks/useBroadcast';
 import { useVideoSourceSelector } from '@/hooks/useVideoSourceSelector';
 import { BroadcastPlatform, QualityPreset, RelayRegion } from '@/lib/services/broadcast/types';
-import { OverlayVariant, InfoBarToggles } from '@/lib/services/canvas-overlay';
+import { OverlayPosition, OverlayVariant, InfoBarToggles, TeamStatRow, TeamStatsOverlayPayload, OnCourtPlayersOverlayPayload } from '@/lib/services/canvas-overlay';
 import { ConnectionStatus } from '@/lib/services/video-sources/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
@@ -39,12 +39,116 @@ import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { useBoxScoreOverlay } from '@/hooks/useBoxScoreOverlay';
 import { useScheduleOverlay } from '@/hooks/useScheduleOverlay';
 import { useStartingLineupOverlay } from '@/hooks/useStartingLineupOverlay';
+import { useTeamStats } from '@/hooks/useTeamStats';
+import type { TeamStats } from '@/lib/services/teamStatsService';
+import type { PlayerStats } from '@/lib/services/teamStatsService';
+import type { GameOverlayData } from '@/lib/services/canvas-overlay';
 import { toScheduleDateString } from '@/lib/utils/scheduleOverlayUtils';
 import { notify } from '@/lib/services/notificationService';
 import { Analytics } from '@/lib/analytics';
 import { UpgradeModal } from '@/components/subscription';
 import { BoxScoreOverlayPanel } from '@/components/overlay/BoxScoreOverlayPanel';
 import type { Tournament } from '@/lib/types/tournament';
+
+function buildTeamStatsPayload(
+  overlayData: GameOverlayData,
+  teamAStats: TeamStats | null,
+  teamBStats: TeamStats | null
+): TeamStatsOverlayPayload | undefined {
+  if (!teamAStats || !teamBStats) return undefined;
+
+  const pct = (made: number, att: number) =>
+    att > 0 ? `${((made / att) * 100).toFixed(1)}%` : '0%';
+
+  const rows: TeamStatRow[] = [
+    {
+      label: 'FG%',
+      teamAValue: pct(teamAStats.fieldGoalsMade, teamAStats.fieldGoalsAttempted),
+      teamBValue: pct(teamBStats.fieldGoalsMade, teamBStats.fieldGoalsAttempted),
+      teamALeads: teamAStats.fieldGoalsMade / (teamAStats.fieldGoalsAttempted || 1) >= teamBStats.fieldGoalsMade / (teamBStats.fieldGoalsAttempted || 1),
+    },
+    {
+      label: '3PT%',
+      teamAValue: pct(teamAStats.threePointersMade, teamAStats.threePointersAttempted),
+      teamBValue: pct(teamBStats.threePointersMade, teamBStats.threePointersAttempted),
+      teamALeads: teamAStats.threePointersMade / (teamAStats.threePointersAttempted || 1) >= teamBStats.threePointersMade / (teamBStats.threePointersAttempted || 1),
+    },
+    {
+      label: 'REB',
+      teamAValue: String(teamAStats.rebounds),
+      teamBValue: String(teamBStats.rebounds),
+      teamALeads: teamAStats.rebounds >= teamBStats.rebounds,
+    },
+    {
+      label: 'AST',
+      teamAValue: String(teamAStats.assists),
+      teamBValue: String(teamBStats.assists),
+      teamALeads: teamAStats.assists >= teamBStats.assists,
+    },
+    {
+      label: 'TOV',
+      teamAValue: String(teamAStats.turnovers),
+      teamBValue: String(teamBStats.turnovers),
+      teamALeads: teamAStats.turnovers <= teamBStats.turnovers,
+    },
+  ];
+
+  return {
+    teamAName: overlayData.teamAName,
+    teamBName: overlayData.teamBName,
+    teamAPrimaryColor: overlayData.teamAPrimaryColor,
+    teamBPrimaryColor: overlayData.teamBPrimaryColor,
+    teamALogo: overlayData.teamALogo,
+    teamBLogo: overlayData.teamBLogo,
+    stats: rows,
+  };
+}
+
+function buildOnCourtPlayersPayload(
+  overlayData: GameOverlayData,
+  teamAOnCourt: PlayerStats[],
+  teamBOnCourt: PlayerStats[],
+  teamAPlayers: { id: string; profilePhotoUrl?: string; jerseyNumber?: number }[],
+  teamBPlayers: { id: string; profilePhotoUrl?: string; jerseyNumber?: number }[]
+): OnCourtPlayersOverlayPayload {
+  const rosterMapA = new Map(teamAPlayers.map(p => [p.id, p]));
+  const rosterMapB = new Map(teamBPlayers.map(p => [p.id, p]));
+
+  return {
+    teamAName: overlayData.teamAName,
+    teamBName: overlayData.teamBName,
+    teamAPrimaryColor: overlayData.teamAPrimaryColor,
+    teamBPrimaryColor: overlayData.teamBPrimaryColor,
+    teamAPlayers: teamAOnCourt.slice(0, 5).map(p => {
+      const rosterPlayer = rosterMapA.get(p.playerId);
+      return {
+        id: p.playerId,
+        name: p.playerName,
+        jerseyNumber: rosterPlayer?.jerseyNumber ?? null,
+        photo_url: rosterPlayer?.profilePhotoUrl ?? null,
+        pts: p.points,
+        reb: p.rebounds,
+        ast: p.assists,
+        stl: p.steals,
+        blk: p.blocks,
+      };
+    }),
+    teamBPlayers: teamBOnCourt.slice(0, 5).map(p => {
+      const rosterPlayer = rosterMapB.get(p.playerId);
+      return {
+        id: p.playerId,
+        name: p.playerName,
+        jerseyNumber: rosterPlayer?.jerseyNumber ?? null,
+        photo_url: rosterPlayer?.profilePhotoUrl ?? null,
+        pts: p.points,
+        reb: p.rebounds,
+        ast: p.assists,
+        stl: p.steals,
+        blk: p.blocks,
+      };
+    }),
+  };
+}
 
 export default function VideoCompositionTestPage() {
   const { user } = useAuthContext();
@@ -54,6 +158,7 @@ export default function VideoCompositionTestPage() {
   const [autoTriggerEnabled, setAutoTriggerEnabled] = useState(true);
   const [broadcastStartTime, setBroadcastStartTime] = useState<number | null>(null);
   const [overlayVariant, setOverlayVariant] = useState<OverlayVariant>('classic');
+  const [overlayPosition, setOverlayPosition] = useState<OverlayPosition>('top');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   
@@ -129,6 +234,37 @@ export default function VideoCompositionTestPage() {
     tournamentName: selectedTournament?.name ?? '',
     tournamentLogo: selectedTournament?.logo,
   });
+
+  // Team Stats overlay
+  const [teamStatsVisible, setTeamStatsVisible] = useState(false);
+  const [onCourtPlayersVisible, setOnCourtPlayersVisible] = useState(false);
+  const prevQuarterRef = useRef<number>(0);
+
+  const teamAStatsData = useTeamStats(
+    selectedGameId || '',
+    overlayData?.teamAId || '',
+    { enabled: !!selectedGameId && !!overlayData?.teamAId }
+  );
+  const teamBStatsData = useTeamStats(
+    selectedGameId || '',
+    overlayData?.teamBId || '',
+    { enabled: !!selectedGameId && !!overlayData?.teamBId }
+  );
+
+  // Auto-trigger team stats overlay at Q2/Q3/Q4 start (7 seconds)
+  useEffect(() => {
+    const currentQuarter = overlayData?.quarter ?? 0;
+    const prevQuarter = prevQuarterRef.current;
+
+    if (currentQuarter > prevQuarter && currentQuarter >= 2 && currentQuarter <= 4) {
+      setTeamStatsVisible(true);
+      const timer = setTimeout(() => setTeamStatsVisible(false), 7000);
+      prevQuarterRef.current = currentQuarter;
+      return () => clearTimeout(timer);
+    }
+
+    prevQuarterRef.current = currentQuarter;
+  }, [overlayData?.quarter]);
 
   // Clear selected date when tournament changes
   useEffect(() => {
@@ -208,7 +344,7 @@ export default function VideoCompositionTestPage() {
       shotMadeAnimationStart: shotMadeData?.animationStart,
       shotMadeIs3Pointer: shotMadeData?.is3Pointer,
       // Hide canvas scoreboard when Day Schedule or Starting Lineup overlay is active
-      hideScoreBar: scheduleOverlay.isVisible || startingLineup.isVisible,
+      hideScoreBar: scheduleOverlay.isVisible || startingLineup.isVisible || teamStatsVisible,
       // Schedule overlay (canvas)
       scheduleOverlayVisible: scheduleOverlay.isVisible,
       scheduleOverlayPayload:
@@ -248,6 +384,22 @@ export default function VideoCompositionTestPage() {
               },
             }
           : null,
+      // Team Stats comparison overlay
+      teamStatsOverlayVisible: teamStatsVisible,
+      teamStatsOverlayPayload: teamStatsVisible
+        ? buildTeamStatsPayload(overlayData, teamAStatsData.teamStats, teamBStatsData.teamStats)
+        : undefined,
+      // On-Court Players overlay
+      onCourtPlayersOverlayVisible: onCourtPlayersVisible,
+      onCourtPlayersOverlayPayload: onCourtPlayersVisible
+        ? buildOnCourtPlayersPayload(
+            overlayData,
+            teamAStatsData.onCourtPlayers,
+            teamBStatsData.onCourtPlayers,
+            teamAPlayers,
+            teamBPlayers
+          )
+        : undefined,
     };
   }, [
     overlayData,
@@ -261,9 +413,17 @@ export default function VideoCompositionTestPage() {
     scheduleOverlay.schedulePayload,
     startingLineup.isVisible,
     startingLineup.payload,
+    teamStatsVisible,
+    teamAStatsData.teamStats,
+    teamBStatsData.teamStats,
+    onCourtPlayersVisible,
+    teamAStatsData.onCourtPlayers,
+    teamBStatsData.onCourtPlayers,
+    teamAPlayers,
+    teamBPlayers,
   ]);
   
-  const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition, setVariant } = useVideoComposition({
+  const { composedStream, state, error: compositionError, start: startComposition, stop: stopComposition, setVariant, setPosition } = useVideoComposition({
     videoStream: activeVideoStream,
     overlayData: fullOverlayData,
     enabled: false,
@@ -273,6 +433,10 @@ export default function VideoCompositionTestPage() {
   useEffect(() => {
     setVariant(overlayVariant);
   }, [overlayVariant, setVariant]);
+
+  useEffect(() => {
+    setPosition(overlayPosition);
+  }, [overlayPosition, setPosition]);
 
   const { state: broadcastState, start: startBroadcast, stop: stopBroadcast } = useBroadcast({
     relayServerUrl: process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8080',
@@ -657,6 +821,39 @@ export default function VideoCompositionTestPage() {
                 </Button>
               </div>
             </Card>
+
+            {/* Overlay Position */}
+            <Card className="p-2 flex-shrink-0">
+              <h3 className="text-sm font-semibold mb-1.5">Position</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setOverlayPosition('top')}
+                  className={`flex-1 py-1.5 px-2 rounded border flex flex-col items-center gap-0.5 text-xs transition-colors ${
+                    overlayPosition === 'top'
+                      ? 'border-[#FF3B30] bg-[#FF3B30]/10 text-foreground'
+                      : 'border-border text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground'
+                  }`}
+                >
+                  <div className="w-8 h-5 border border-border rounded relative">
+                    <div className="absolute top-0.5 left-1 right-1 h-1 bg-foreground/80 rounded-sm" />
+                  </div>
+                  <span className="font-semibold">Top</span>
+                </button>
+                <button
+                  onClick={() => setOverlayPosition('bottom')}
+                  className={`flex-1 py-1.5 px-2 rounded border flex flex-col items-center gap-0.5 text-xs transition-colors ${
+                    overlayPosition === 'bottom'
+                      ? 'border-[#FF3B30] bg-[#FF3B30]/10 text-foreground'
+                      : 'border-border text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground'
+                  }`}
+                >
+                  <div className="w-8 h-5 border border-border rounded relative">
+                    <div className="absolute bottom-0.5 left-1 right-1 h-1 bg-foreground/80 rounded-sm" />
+                  </div>
+                  <span className="font-semibold">Bottom</span>
+                </button>
+              </div>
+            </Card>
             
             {isComposing && selectedGameId && (
               <OverlayControlPanel
@@ -688,7 +885,31 @@ export default function VideoCompositionTestPage() {
                 selectedScheduleDate={selectedScheduleDate}
                 onScheduleDateSelect={setSelectedScheduleDate}
                 startingLineupVisible={startingLineup.isVisible}
-                onStartingLineupToggle={startingLineup.toggle}
+                onStartingLineupToggle={() => {
+                  startingLineup.toggle();
+                  setTeamStatsVisible(false);
+                  setOnCourtPlayersVisible(false);
+                }}
+                onTeamStatsToggle={() => {
+                  setTeamStatsVisible(v => {
+                    if (!v) {
+                      startingLineup.hide();
+                      setOnCourtPlayersVisible(false);
+                    }
+                    return !v;
+                  });
+                }}
+                teamStatsVisible={teamStatsVisible}
+                onOnCourtPlayersToggle={() => {
+                  setOnCourtPlayersVisible(v => {
+                    if (!v) {
+                      startingLineup.hide();
+                      setTeamStatsVisible(false);
+                    }
+                    return !v;
+                  });
+                }}
+                onCourtPlayersVisible={onCourtPlayersVisible}
               />
             )}
           </div>

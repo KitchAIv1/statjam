@@ -11,7 +11,7 @@
  * - Captures Canvas as MediaStream using captureStream()
  */
 
-import { CanvasOverlayRenderer, GameOverlayData, OverlayVariant } from '../canvas-overlay';
+import { CanvasOverlayRenderer, GameOverlayData, OverlayPosition, OverlayVariant } from '../canvas-overlay';
 import { VideoCompositionOptions, VideoCompositionState, VideoCompositionCallbacks } from './types';
 import { CompositionLoop } from './compositionLoop';
 import { VideoSourceManager } from './videoSourceManager';
@@ -75,7 +75,14 @@ export class VideoComposer {
       this.compositionLoop.invalidateCache();
     }
   }
-  
+
+  setOverlayPosition(position: OverlayPosition): void {
+    this.overlayRenderer.setPosition(position);
+    if (this.compositionLoop) {
+      this.compositionLoop.invalidateCache();
+    }
+  }
+
   /**
    * Get current overlay variant
    */

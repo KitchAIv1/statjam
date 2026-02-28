@@ -6,7 +6,7 @@
  * Follows .cursorrules: under 500 lines, functions under 40 lines.
  */
 
-import { GameOverlayData, getContrastSafeBarColor, getTailwindColor, hexToRgba } from './utils';
+import { GameOverlayData, OverlayPosition, getContrastSafeBarColor, getTailwindColor, hexToRgba } from './utils';
 
 export class NBAOverlayDrawer {
   private readonly MAX_WIDTH = 850;  // Compressed more for tighter layout
@@ -27,12 +27,22 @@ export class NBAOverlayDrawer {
     data: GameOverlayData,
     teamALogo: HTMLImageElement | null,
     teamBLogo: HTMLImageElement | null,
-    tournamentLogo: HTMLImageElement | null
+    tournamentLogo: HTMLImageElement | null,
+    position: OverlayPosition = 'top'
   ): void {
     if (data.hideScoreBar) return;
 
     const centerX = this.width / 2;
-    const barY = 20; // Top margin
+    const barY = position === 'bottom'
+      ? this.height - this.HEADER_HEIGHT - this.BAR_HEIGHT - this.INFO_BAR_HEIGHT - 20
+      : 20;
+
+    // Write anchor for onCourtPlayersDrawer — bottom of full bar stack (top pos) or top of bar stack (bottom pos)
+    if (position === 'bottom') {
+      data.nbaBarAnchorY = barY;  // panel sits above bar
+    } else {
+      data.nbaBarAnchorY = barY + this.HEADER_HEIGHT + this.BAR_HEIGHT + this.INFO_BAR_HEIGHT;  // panel sits below bar
+    }
 
     // Draw organizer header (always show branding)
     this.drawOrganizerHeader(data, tournamentLogo, centerX, barY);
@@ -376,8 +386,9 @@ export class NBAOverlayDrawer {
       const displayText = data.infoBarLabel || 'Powered By STATJAM';
       const infoBarType = data.infoBarType || 'tournament_name';
       const color = this.getInfoBarColor(infoBarType, data.infoBarTeamId, data);
-      
-      this.ctx.fillStyle = this.getContrastSafeTextColor(color);
+      // tournament_name uses dark bar background → always white text
+      const textColor = infoBarType === 'tournament_name' ? '#FFFFFF' : this.getContrastSafeTextColor(color);
+      this.ctx.fillStyle = textColor;
       this.ctx.font = 'italic 700 34px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';

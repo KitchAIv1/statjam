@@ -17,7 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2, Lock, Crown, LayoutGrid, List, Users2 } from 'lucide-react';
+import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2, Lock, Crown, LayoutGrid, List, Users2, BarChart2, Users } from 'lucide-react';
 import { GamePlayer } from '@/hooks/useGamePlayers';
 import { PlayerStatsOverlayData, InfoBarToggles } from '@/lib/services/canvas-overlay';
 import { toScheduleDateString, parseScheduleDateString } from '@/lib/utils/scheduleOverlayUtils';
@@ -52,6 +52,11 @@ interface OverlayControlPanelProps {
   onScheduleDateSelect?: (date: Date | null) => void;
   startingLineupVisible?: boolean;
   onStartingLineupToggle?: () => void;
+  // Team Stats & On-Court Players overlays
+  onTeamStatsToggle?: () => void;
+  teamStatsVisible?: boolean;
+  onOnCourtPlayersToggle?: () => void;
+  onCourtPlayersVisible?: boolean;
 }
 
 export function OverlayControlPanel({
@@ -81,6 +86,10 @@ export function OverlayControlPanel({
   onScheduleDateSelect,
   startingLineupVisible = false,
   onStartingLineupToggle,
+  onTeamStatsToggle,
+  teamStatsVisible = false,
+  onOnCourtPlayersToggle,
+  onCourtPlayersVisible = false,
 }: OverlayControlPanelProps) {
   return (
     <Card className="p-3">
@@ -291,7 +300,7 @@ export function OverlayControlPanel({
       </Tabs>
 
       {/* MANUAL Overlays Section */}
-      {(onBoxScoreToggle || onScheduleToggle || onStartingLineupToggle) && (
+      {(onBoxScoreToggle || onScheduleToggle || onStartingLineupToggle || onTeamStatsToggle || onOnCourtPlayersToggle) && (
         <div className="mt-3 pt-3 border-t border-border">
           <div className="flex items-center gap-1.5 mb-2">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Manual</span>
@@ -333,6 +342,44 @@ export function OverlayControlPanel({
                 <TooltipContent>
                   <p>Show Starting Lineup overlay</p>
                   <p className="text-[10px] opacity-80">Display 5v5 starters for both teams</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {onTeamStatsToggle && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={onTeamStatsToggle}
+                    size="sm"
+                    variant={teamStatsVisible ? 'default' : 'outline'}
+                    className="w-full h-7 text-xs"
+                  >
+                    <BarChart2 className="h-3 w-3 mr-1.5" />
+                    Team Stats
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Show Team Stats comparison overlay</p>
+                  <p className="text-[10px] opacity-80">ESPN-style team stats lower third</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {onOnCourtPlayersToggle && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={onOnCourtPlayersToggle}
+                    size="sm"
+                    variant={onCourtPlayersVisible ? 'default' : 'outline'}
+                    className="w-full h-7 text-xs"
+                  >
+                    <Users className="h-3 w-3 mr-1.5" />
+                    On-Court Players
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Show On-Court Players overlay</p>
+                  <p className="text-[10px] opacity-80">Live stats for current 5v5</p>
                 </TooltipContent>
               </Tooltip>
             )}
