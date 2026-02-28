@@ -32,8 +32,10 @@ interface GameResult {
 interface GameStat {
   game_id: string;
   team_id: string;
+  stat_type: string;
   stat_value: number;
   modifier: string;
+  is_opponent_stat: boolean;
 }
 
 export class TournamentStandingsService {
@@ -67,7 +69,7 @@ export class TournamentStandingsService {
         try {
           const stats = await hybridSupabaseService.query<GameStat>(
             'game_stats',
-            'game_id, team_id, stat_value, modifier',
+            'game_id, team_id, stat_type, stat_value, modifier, is_opponent_stat',
             { game_id: `eq.${game.id}` }
           );
           return { gameId: game.id, stats: stats || [] };
@@ -86,27 +88,35 @@ export class TournamentStandingsService {
       
       console.log(`✅ TournamentStandingsService: Fetched stats for all ${games.length} games`);
 
-      /**
-       * Calculate scores from game_stats (source of truth)
-       * stat_value contains: 2 for 2PT, 3 for 3PT, 1 for FT
-       */
+      const SCORING_STAT_TYPES = new Set([
+        'field_goal',
+        'two_pointer',
+        'three_pointer',
+        '3_pointer',
+        'free_throw',
+      ]);
+
       const calculateScoresFromStats = (gameId: string, teamAId: string, teamBId: string): { teamAScore: number; teamBScore: number } => {
         const stats = gameStatsMap.get(gameId) || [];
         let teamAScore = 0;
         let teamBScore = 0;
-        
+
         stats.forEach(stat => {
-          // Only count made shots (modifier = 'made')
-          if (stat.modifier === 'made') {
-            const points = stat.stat_value || 0;
-            if (stat.team_id === teamAId) {
-              teamAScore += points;
-            } else if (stat.team_id === teamBId) {
-              teamBScore += points;
-            }
+          if (stat.modifier !== 'made') return;
+          if (!SCORING_STAT_TYPES.has(stat.stat_type)) return;
+
+          const points = stat.stat_value || 0;
+
+          // Coach mode: is_opponent_stat means opponent scored (always team B in coach context)
+          if (stat.is_opponent_stat) {
+            teamBScore += points;
+          } else if (stat.team_id === teamAId) {
+            teamAScore += points;
+          } else if (stat.team_id === teamBId) {
+            teamBScore += points;
           }
         });
-        
+
         return { teamAScore, teamBScore };
       };
 
@@ -132,22 +142,28 @@ export class TournamentStandingsService {
         // ✅ FIX: ALWAYS calculate scores from game_stats (source of truth)
         // DB scores (home_score, away_score) are unreliable - often 0 or stale
         const gameStats = gameStatsMap.get(game.id) || [];
-        const hasStats = gameStats.length > 0;
-        
+        const hasScoringStats = gameStats.some(s =>
+          s.modifier === 'made' && SCORING_STAT_TYPES.has(s.stat_type)
+        );
+
         let teamAScore = 0;
         let teamBScore = 0;
-        
-        if (hasStats) {
+
+        if (hasScoringStats) {
           // Calculate from game_stats (source of truth)
           const calculatedScores = calculateScoresFromStats(game.id, teamAId, teamBId);
           teamAScore = calculatedScores.teamAScore;
           teamBScore = calculatedScores.teamBScore;
+          console.log(`🔍 GAME ${game.id}: STATS PATH — teamA(${teamAId})=${teamAScore}, teamB(${teamBId})=${teamBScore}, totalStats=${gameStats.length}, scoringStats=${gameStats.filter(s => s.modifier === 'made' && SCORING_STAT_TYPES.has(s.stat_type)).length}, hasOpponentStats=${gameStats.some(s => s.is_opponent_stat)}`);
         } else {
           // Fallback to DB scores only if no stats exist
           teamAScore = game.home_score || 0;
           teamBScore = game.away_score || 0;
-          console.warn(`⚠️ TournamentStandingsService: No stats for game ${game.id}, using DB scores`);
+          console.warn(`🔍 GAME ${game.id}: DB FALLBACK — home_score=${game.home_score}, away_score=${game.away_score}, totalStats=${gameStats.length}`);
         }
+
+        // If both 0, skip the game entirely (bad/incomplete data)
+        if (teamAScore === 0 && teamBScore === 0) return;
 
         // Initialize team A if not exists
         if (!standingsMap.has(teamAId)) {
@@ -231,6 +247,9 @@ export class TournamentStandingsService {
       });
 
       console.log('✅ TournamentStandingsService: Calculated standings for', standings.length, 'teams');
+      standings.forEach(s => {
+        console.log(`🏀 ${s.teamName}: W${s.wins}-L${s.losses} | PF=${s.pointsFor} PA=${s.pointsAgainst} DIFF=${s.pointDifferential} | ${s.streak}`);
+      });
       return standings;
     } catch (error) {
       console.error('❌ TournamentStandingsService: Error calculating standings:', error);

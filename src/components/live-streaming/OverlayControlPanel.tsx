@@ -17,7 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2, Lock, Crown, LayoutGrid, List, Users2, BarChart2, Users } from 'lucide-react';
+import { User, Calendar, BarChart3, Trophy, Zap, X, Tv2, Lock, Crown, List, Users2, BarChart2, Users } from 'lucide-react';
 import { GamePlayer } from '@/hooks/useGamePlayers';
 import { PlayerStatsOverlayData, InfoBarToggles } from '@/lib/services/canvas-overlay';
 import { toScheduleDateString, parseScheduleDateString } from '@/lib/utils/scheduleOverlayUtils';
@@ -43,8 +43,6 @@ interface OverlayControlPanelProps {
   overlaysLocked?: boolean;
   onUpgrade?: () => void;
   // Manual overlays
-  boxScoreVisible?: boolean;
-  onBoxScoreToggle?: () => void;
   scheduleVisible?: boolean;
   onScheduleToggle?: () => void;
   scheduleAvailableDates?: Date[];
@@ -77,8 +75,6 @@ export function OverlayControlPanel({
   onInfoBarToggleChange,
   overlaysLocked = false,
   onUpgrade,
-  boxScoreVisible = false,
-  onBoxScoreToggle,
   scheduleVisible = false,
   onScheduleToggle,
   scheduleAvailableDates = [],
@@ -300,32 +296,12 @@ export function OverlayControlPanel({
       </Tabs>
 
       {/* MANUAL Overlays Section */}
-      {(onBoxScoreToggle || onScheduleToggle || onStartingLineupToggle || onTeamStatsToggle || onOnCourtPlayersToggle) && (
+      {(onScheduleToggle || onStartingLineupToggle || onTeamStatsToggle || onOnCourtPlayersToggle) && (
         <div className="mt-3 pt-3 border-t border-border">
           <div className="flex items-center gap-1.5 mb-2">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Manual</span>
           </div>
           <div className="flex flex-col gap-1.5">
-            {onBoxScoreToggle && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={onBoxScoreToggle}
-                    size="sm"
-                    variant={boxScoreVisible ? 'default' : 'outline'}
-                    className="w-full h-7 text-xs"
-                    disabled
-                  >
-                    <LayoutGrid className="h-3 w-3 mr-1.5" />
-                    Box Score
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Show Box Score overlay</p>
-                  <p className="text-[10px] opacity-80">Display top scorers for both teams (disabled for now)</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
             {onStartingLineupToggle && (
               <Tooltip>
                 <TooltipTrigger asChild>

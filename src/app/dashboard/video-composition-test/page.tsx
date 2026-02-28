@@ -36,7 +36,6 @@ import { useBroadcastReadiness } from '@/hooks/useBroadcastReadiness';
 import { useInfoBarOverlays } from '@/hooks/useInfoBarOverlays';
 import { useOptimisticScores } from '@/hooks/useOptimisticScores';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
-import { useBoxScoreOverlay } from '@/hooks/useBoxScoreOverlay';
 import { useScheduleOverlay } from '@/hooks/useScheduleOverlay';
 import { useStartingLineupOverlay } from '@/hooks/useStartingLineupOverlay';
 import { useTeamStats } from '@/hooks/useTeamStats';
@@ -47,7 +46,6 @@ import { toScheduleDateString } from '@/lib/utils/scheduleOverlayUtils';
 import { notify } from '@/lib/services/notificationService';
 import { Analytics } from '@/lib/analytics';
 import { UpgradeModal } from '@/components/subscription';
-import { BoxScoreOverlayPanel } from '@/components/overlay/BoxScoreOverlayPanel';
 import type { Tournament } from '@/lib/types/tournament';
 
 function buildTeamStatsPayload(
@@ -197,21 +195,6 @@ export default function VideoCompositionTestPage() {
     scoreDelta,
   });
   
-  // Box Score overlay (manual trigger)
-  const boxScore = useBoxScoreOverlay({
-    gameId: selectedGameId,
-    teamAId: overlayData?.teamAId ?? null,
-    teamBId: overlayData?.teamBId ?? null,
-    teamAName: overlayData?.teamAName ?? 'Team A',
-    teamBName: overlayData?.teamBName ?? 'Team B',
-    teamAScore: optimisticScores.homeScore,
-    teamBScore: optimisticScores.awayScore,
-    teamAPrimaryColor: overlayData?.teamAPrimaryColor,
-    teamBPrimaryColor: overlayData?.teamBPrimaryColor,
-    teamALogoUrl: overlayData?.teamALogo,
-    teamBLogoUrl: overlayData?.teamBLogo,
-  });
-
   // Day Schedule overlay (manual trigger; user picks which day to show)
   const scheduleOverlay = useScheduleOverlay({
     tournamentId: selectedTournament?.id ?? null,
@@ -677,13 +660,6 @@ export default function VideoCompositionTestPage() {
                           </div>
                         </div>
                       )}
-                      <div className="absolute inset-0 overflow-hidden pointer-events-none [&>*]:pointer-events-auto">
-                        <BoxScoreOverlayPanel
-                          isVisible={boxScore.isVisible}
-                          isLoading={boxScore.isLoading}
-                          data={boxScore.boxScoreData}
-                        />
-                      </div>
                     </div>
                   </>
                 ) : (
@@ -877,8 +853,6 @@ export default function VideoCompositionTestPage() {
                 overlaysLocked={!overlaysAllowed}
                 onUpgrade={() => setShowUpgradeModal(true)}
                 // Manual overlays
-                boxScoreVisible={boxScore.isVisible}
-                onBoxScoreToggle={boxScore.toggle}
                 scheduleVisible={scheduleOverlay.isVisible}
                 onScheduleToggle={scheduleOverlay.toggle}
                 scheduleAvailableDates={scheduleOverlay.availableDates}
