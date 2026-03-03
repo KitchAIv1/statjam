@@ -49,8 +49,18 @@ export function OverviewTab({ data, onNavigateToTab }: OverviewTabProps) {
     limit: 100
   });
 
-  // API returns earliest first; use directly for carousel (no reverse needed)
-  const displayedMatchups = matchups;
+  const displayedMatchups = useMemo(() => {
+    if (matchupFilter === 'all') {
+      const upcoming = matchups
+        .filter(m => m.status === 'scheduled' || m.status === 'in_progress')
+        .sort((a, b) => new Date(a.gameDate).getTime() - new Date(b.gameDate).getTime());
+      const completed = matchups
+        .filter(m => m.status === 'completed')
+        .sort((a, b) => new Date(b.gameDate).getTime() - new Date(a.gameDate).getTime());
+      return [...completed, ...upcoming];
+    }
+    return matchups;
+  }, [matchups, matchupFilter]);
 
   // ✅ Fetch upcoming games for mobile section (no WebSocket, just HTTP)
   const { matchups: upcomingGames, loading: upcomingLoading } = useTournamentMatchups(data.tournament.id, {

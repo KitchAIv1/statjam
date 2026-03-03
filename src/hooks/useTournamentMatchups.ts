@@ -117,7 +117,7 @@ export function useTournamentMatchups(
       // ✅ Order asc = earliest first, so we fetch from tournament start (all months: Feb, Mar, Apr, May...)
       const filters: Record<string, string> = {
         'tournament_id': `eq.${tournamentId}`,
-        'order': 'start_time.asc',
+        'order': status === 'completed' ? 'start_time.desc' : 'start_time.asc',
         'limit': limit.toString()
       };
 

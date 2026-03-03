@@ -401,14 +401,14 @@ export function PlayerProfileModal({ isOpen, onClose, playerId, isCustomPlayer =
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`max-w-5xl max-h-[90vh] overflow-hidden p-0 border-0 shadow-2xl ${
+      <DialogContent className={`max-w-5xl max-h-[90vh] overflow-hidden p-0 border-0 shadow-2xl gap-0 ${
         isAwardView ? awardColors.modalBg : defaultModalBg
       }`}>
         <DialogHeader className="sr-only">
           <DialogTitle>{isAwardView ? `${awardTitle} - Player Profile` : 'Player Profile'}</DialogTitle>
         </DialogHeader>
 
-        <div className="relative flex flex-row min-h-[400px] sm:min-h-[500px] lg:min-h-[650px]">
+        <div className="relative flex flex-row h-[75vh] sm:h-[80vh] lg:h-[85vh] min-h-0 overflow-hidden">
           {/* Close Button */}
           <button
             onClick={onClose}

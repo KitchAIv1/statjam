@@ -45,12 +45,17 @@ interface RawGameStat {
 interface GameInfo {
   id: string;
   created_at: string;
+  start_time: string | null;
   team_a_id: string;
   team_b_id: string;
   home_score: number;
   away_score: number;
   tournament_id: string;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  quarter: number | null;
+  game_clock_minutes: number | null;
+  game_clock_seconds: number | null;
+  quarter_length_minutes: number | null;
   tournaments: {
     name: string;
   };
@@ -62,6 +67,27 @@ interface GameInfo {
     id: string;
     name: string;
   };
+}
+
+/**
+ * Calculate stint duration in seconds (handles cross-quarter stints).
+ * Mirrors GameViewerTimeStatsService.calculateStintSeconds exactly.
+ */
+function calculateStintSeconds(
+  startQuarter: number,
+  startGameClock: number,
+  endQuarter: number,
+  endGameClock: number,
+  quarterLengthSeconds: number
+): number {
+  if (startQuarter === endQuarter) {
+    return Math.max(0, startGameClock - endGameClock);
+  }
+  const startQuarterTime = startGameClock;
+  const fullQuarters = Math.max(0, endQuarter - startQuarter - 1);
+  const fullQuartersTime = fullQuarters * quarterLengthSeconds;
+  const endQuarterTime = quarterLengthSeconds - endGameClock;
+  return startQuarterTime + fullQuartersTime + endQuarterTime;
 }
 
 export class PlayerGameStatsService {
@@ -127,7 +153,7 @@ export class PlayerGameStatsService {
       // ✅ CRITICAL: Ensure authenticated session for RLS to work correctly
       // RLS will filter games based on player_has_game_stats_official() function
       // This respects is_official_team flags (practice games filtered, official games shown)
-      const [gamesResult, teamPlayersResult, allGameStatsResult] = await Promise.all([
+      const [gamesResult, teamPlayersResult, allGameStatsResult, subsResult] = await Promise.all([
         // Step 3: Fetch game info for all games
         // ✅ FILTER: Only tournament games (is_coach_game = false)
         // Coach mode games should not appear in player profiles/stats
@@ -136,12 +162,17 @@ export class PlayerGameStatsService {
           .select(`
             id,
             created_at,
+            start_time,
             team_a_id,
             team_b_id,
             home_score,
             away_score,
             tournament_id,
             status,
+            quarter,
+            game_clock_minutes,
+            game_clock_seconds,
+            quarter_length_minutes,
             tournaments (name),
             team_a:teams!team_a_id (id, name),
             team_b:teams!team_b_id (id, name)
@@ -165,12 +196,19 @@ export class PlayerGameStatsService {
         supabase
           .from('game_stats')
           .select('game_id, team_id, stat_value, modifier, is_opponent_stat')
+          .in('game_id', gameIds),
+
+        // Step 6: Fetch substitutions for accurate minutes calculation (matches game viewer)
+        supabase
+          .from('game_substitutions')
+          .select('game_id, team_id, player_in_id, custom_player_in_id, player_out_id, custom_player_out_id, quarter, game_time_minutes, game_time_seconds, created_at')
           .in('game_id', gameIds)
       ]);
 
       const { data: games, error: gamesError } = gamesResult;
       const { data: teamPlayers, error: teamError } = teamPlayersResult;
       const { data: allGameStats } = allGameStatsResult;
+      const { data: allSubstitutions } = subsResult;
 
       logger.debug('🔍 PlayerGameStatsService: Fetched', games?.length || 0, 'games from database');
       logger.debug('🔍 PlayerGameStatsService: Requested', gameIds.length, 'games, received', games?.length || 0);
@@ -276,9 +314,16 @@ export class PlayerGameStatsService {
         // Aggregate stats
         const stats = this.aggregateGameStats(gameStats);
 
+        // Compute accurate minutes from substitution data (matches game viewer)
+        const playerTeamId = isTeamA ? gameInfo.team_a_id : gameInfo.team_b_id;
+        const minutesPlayed = this.computeMinutesForPlayer(
+          playerId, playerTeamId, gameInfo,
+          allSubstitutions || [], gameStats.length > 0
+        );
+
         return {
           gameId,
-          gameDate: gameInfo.created_at,
+          gameDate: gameInfo.start_time || gameInfo.created_at,
           opponent: opponentTeam?.name || 'Unknown',
           opponentId: opponentTeam?.id || '',
           tournamentName: gameInfo.tournaments?.name || 'Unknown Tournament',
@@ -286,6 +331,7 @@ export class PlayerGameStatsService {
           result,
           finalScore,
           gameStatus: gameInfo.status,
+          minutesPlayed,
           ...stats
         } as GameStatsSummary;
       }).filter(Boolean) as GameStatsSummary[];
@@ -299,6 +345,102 @@ export class PlayerGameStatsService {
       logger.error('❌ PlayerGameStatsService: Unexpected error:', error);
       return [];
     }
+  }
+
+  /**
+   * Compute minutes for a single player in a single game.
+   * Uses substitution data for accuracy (matches game viewer box score logic).
+   */
+  private static computeMinutesForPlayer(
+    playerId: string,
+    teamId: string,
+    gameInfo: GameInfo,
+    substitutions: any[],
+    playerHasStats: boolean
+  ): number {
+    const quarterLengthMin = gameInfo.quarter_length_minutes || 8;
+    const quarterLengthSeconds = quarterLengthMin * 60;
+
+    // Determine game state (for closing open stints)
+    let stateQuarter: number;
+    let stateClockMin: number;
+    let stateClockSec: number;
+
+    if (gameInfo.status === 'completed') {
+      stateQuarter = gameInfo.quarter || 4;
+      stateClockMin = 0;
+      stateClockSec = 0;
+    } else {
+      stateQuarter = gameInfo.quarter || 1;
+      stateClockMin = gameInfo.game_clock_minutes ?? quarterLengthMin;
+      stateClockSec = gameInfo.game_clock_seconds ?? 0;
+    }
+
+    const teamSubs = substitutions
+      .filter((s: any) => s.team_id === teamId && s.game_id === gameInfo.id)
+      .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    // No substitutions: all players with stats get total elapsed time
+    if (teamSubs.length === 0) {
+      if (!playerHasStats) return 0;
+      const quarterTimeElapsed = quarterLengthSeconds - (stateClockMin * 60 + stateClockSec);
+      const totalTimeElapsed = ((stateQuarter - 1) * quarterLengthSeconds) + quarterTimeElapsed;
+      return Math.max(1, Math.round(totalTimeElapsed / 60));
+    }
+
+    // Infer if player is a starter
+    const playerFirstAction = new Map<string, 'IN' | 'OUT'>();
+    const playersInSubs = new Set<string>();
+
+    for (const sub of teamSubs) {
+      const pIn = sub.player_in_id || sub.custom_player_in_id;
+      const pOut = sub.player_out_id || sub.custom_player_out_id;
+      if (pIn) playersInSubs.add(pIn);
+      if (pOut) playersInSubs.add(pOut);
+      if (pOut && !playerFirstAction.has(pOut)) playerFirstAction.set(pOut, 'OUT');
+      if (pIn && !playerFirstAction.has(pIn)) playerFirstAction.set(pIn, 'IN');
+    }
+
+    const isStarter = playerFirstAction.get(playerId) === 'OUT' ||
+      (!playersInSubs.has(playerId) && playerHasStats);
+
+    // Calculate floor time from substitution stints
+    let totalSeconds = 0;
+    let isOnCourt = isStarter;
+    let stintStartQuarter = 1;
+    let stintStartGameClock = quarterLengthSeconds;
+
+    for (const sub of teamSubs) {
+      const subQuarter = sub.quarter || 1;
+      const subGameClock = ((sub.game_time_minutes ?? quarterLengthMin) * 60) + (sub.game_time_seconds ?? 0);
+      const pIn = sub.player_in_id || sub.custom_player_in_id;
+      const pOut = sub.player_out_id || sub.custom_player_out_id;
+
+      if (pIn === playerId && !isOnCourt) {
+        stintStartQuarter = subQuarter;
+        stintStartGameClock = subGameClock;
+        isOnCourt = true;
+      } else if (pOut === playerId && isOnCourt) {
+        totalSeconds += calculateStintSeconds(
+          stintStartQuarter, stintStartGameClock,
+          subQuarter, subGameClock,
+          quarterLengthSeconds
+        );
+        isOnCourt = false;
+      }
+    }
+
+    // Close open stint with current game state
+    if (isOnCourt) {
+      const currentClock = stateClockMin * 60 + stateClockSec;
+      totalSeconds += calculateStintSeconds(
+        stintStartQuarter, stintStartGameClock,
+        stateQuarter, currentClock,
+        quarterLengthSeconds
+      );
+    }
+
+    return totalSeconds > 0 ? Math.max(1, Math.round(totalSeconds / 60)) : 0;
   }
 
   /**
@@ -320,10 +462,6 @@ export class PlayerGameStatsService {
     let threePointersAttempted = 0;
     let freeThrowsMade = 0;
     let freeThrowsAttempted = 0;
-
-    // Count quarters played for minutes estimation
-    const quartersPlayed = new Set(gameStats.map(s => s.quarter)).size;
-    const minutesPlayed = quartersPlayed * 10; // Rough estimate: 10 min per quarter
 
     // Aggregate stats
     gameStats.forEach(stat => {
@@ -384,7 +522,6 @@ export class PlayerGameStatsService {
       : 0;
 
     return {
-      minutesPlayed,
       points,
       rebounds,
       assists,
