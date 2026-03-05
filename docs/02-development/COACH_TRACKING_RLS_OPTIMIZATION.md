@@ -326,8 +326,53 @@ These operations are **critical** and were preserved:
 
 ---
 
+## March 2026 — Further consolidation
+
+**Change:** The two coach INSERT policies were merged into one.
+
+- **Dropped:** `game_stats_coach_opponent_insert`, `game_stats_coach_regular_player_insert`
+- **Added:** `game_stats_coach_insert` — single INSERT policy with combined WITH CHECK
+
+**Merged policy SQL:**
+
+```sql
+CREATE POLICY "game_stats_coach_insert" ON game_stats
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM games g
+      JOIN teams t ON g.team_a_id = t.id
+      WHERE g.id = game_stats.game_id
+        AND t.coach_id = auth.uid()
+    )
+    AND (
+      (is_opponent_stat = true)
+      OR
+      (
+        is_opponent_stat = false
+        AND (
+          player_id IS NOT NULL
+          OR (
+            custom_player_id IS NOT NULL
+            AND EXISTS (
+              SELECT 1 FROM custom_players cp
+              WHERE cp.id = game_stats.custom_player_id
+                AND cp.coach_id = auth.uid()
+            )
+          )
+        )
+      )
+    )
+  );
+```
+
+**Why it is safe:** The two original policies had mutually exclusive conditions (`is_opponent_stat = true` vs `false` plus player checks). Combining them with OR preserves exactly the same allowed rows. In coach games, the Virtual Opponent model keeps the coach’s team as `team_a`; the same game/team EXISTS check applies. Verified against 129 coach games in production (track, delete, opponent stat flows).
+
+---
+
 ## 📚 Related Documentation
 
+- `docs/02-development/PERFORMANCE_OPTIMIZATIONS_MARCH_2026.md` - March 2026 RLS/index/debounce optimizations
 - `docs/01-project/DOCUMENTATION_UPDATE_SUMMARY_0.17.10.md` - Full update summary
 - `docs/01-project/CHANGELOG.md` - Version history
 - `scripts/AUDIT_DATABASE_INDEXES.sql` - Database audit script

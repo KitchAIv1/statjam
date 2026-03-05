@@ -11,6 +11,27 @@ _(Future changes.)_
 
 ---
 
+## [0.17.13] - 2026-03-XX
+
+### 🚀 **Performance optimizations (March 2026)**
+
+Full reference: [PERFORMANCE_OPTIMIZATIONS_MARCH_2026.md](../02-development/PERFORMANCE_OPTIMIZATIONS_MARCH_2026.md).
+
+#### Database
+- **ADDED**: Index `idx_game_stats_custom_player_created` on `game_stats(custom_player_id, created_at DESC)` to speed up player profile queries filtering by custom_player_id with time ordering.
+
+#### RLS policy consolidation (game_stats: 20 → 17 policies)
+- **REMOVED**: `game_stats_stat_admin_insert` — redundant; fully covered by `game_stats_stat_admin_manage` (ALL) WITH CHECK.
+- **REMOVED**: `game_stats_custom_player_stat_admin_read` — redundant; stat_admin_manage FOR ALL already allows SELECT for those rows (verified 0 rows uncovered in production).
+- **REMOVED**: `game_stats_coach_opponent_insert` and `game_stats_coach_regular_player_insert` — merged into single policy.
+- **ADDED**: `game_stats_coach_insert` — single INSERT policy combining former opponent and regular-player conditions (mutually exclusive WITH CHECK with OR). Security unchanged; verified against production data for all roles.
+
+#### Refetch cascade (N+1 reduction)
+- **CHANGED**: `useTeamRunAndMilestones` — added 300ms debounce to Realtime handler (was immediate). Stat write now triggers game_stats GET at T+300ms, clustering with useGameOverlayData.
+- **CHANGED**: `OrganizerLiveStream` — added 300ms debounce to game_stats Realtime handler (was immediate). Rapid stat writes now coalesce into one GET per 300ms window.
+
+---
+
 ## [0.17.12] - 2026-02-23
 
 ### 📊 **POST–DOC UPDATE RELEASE (35 commits since 4a7d587)**

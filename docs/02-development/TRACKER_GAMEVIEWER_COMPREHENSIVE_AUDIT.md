@@ -910,3 +910,14 @@ ALTER TABLE game_stats ENABLE TRIGGER game_stats_update_update_scores_and_fouls;
 - ✅ WebSocket health monitoring provides full visibility
 - ✅ Coach mode scores calculate correctly
 
+### March 2026 — Overlay and organizer debounce
+
+**Debounce timings updated:**
+
+| Hook / component              | Debounce (before) | Debounce (after) |
+|-------------------------------|-------------------|------------------|
+| useTeamRunAndMilestones       | None              | 300ms            |
+| OrganizerLiveStream (game_stats handler) | None | 300ms            |
+
+Reduces concurrent GETs when a stat is written; fetches cluster at T+300ms with useGameOverlayData.
+

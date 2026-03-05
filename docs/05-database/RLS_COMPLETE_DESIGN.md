@@ -346,6 +346,12 @@ CREATE POLICY "game_stats_organizer_view" ON game_stats
   );
 ```
 
+**Current state (March 2026)** — Production was consolidated from 20 to **17 policies** on `game_stats`:
+
+- **Dropped (redundant):** `game_stats_stat_admin_insert` — identical to `game_stats_stat_admin_manage` WITH CHECK; fully covered by the ALL policy. `game_stats_custom_player_stat_admin_read` — every row it allowed was already allowed by `game_stats_stat_admin_manage` FOR ALL; verified 0 rows uncovered in production data.
+- **Dropped and replaced:** `game_stats_coach_opponent_insert` and `game_stats_coach_regular_player_insert` merged into one policy.
+- **Added:** `game_stats_coach_insert` — single INSERT policy with combined WITH CHECK (opponent OR regular-player conditions). Mutually exclusive conditions; no behavioral change. Verified against production data across all user roles before applying.
+
 ---
 
 ### **6. TEAM_PLAYERS Table**

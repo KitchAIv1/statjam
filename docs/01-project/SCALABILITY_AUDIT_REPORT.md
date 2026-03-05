@@ -91,6 +91,17 @@
 
 ---
 
+### Per-stat refetch cascade (March 2026 update)
+
+When a single stat is written (POST to `game_stats`), multiple hooks subscribe to Realtime and each can trigger a GET. **Phase 1 debounce fix (March 2026):**
+
+- **useTeamRunAndMilestones**: Realtime handler now has **300ms debounce** (was immediate). Stat write → game_stats GET at T+300ms, clustering with useGameOverlayData.
+- **OrganizerLiveStream**: game_stats Realtime handler now has **300ms debounce** (was immediate). Rapid stat writes coalesce into a single GET per 300ms window.
+
+**Current cascade timeline:** Fetches now cluster at **T+300ms** instead of T+0 plus T+300ms, reducing concurrent GETs. Full cascade consolidation (shared data layer) remains a future phase — this is Phase 1 debounce only.
+
+---
+
 ## Caching Implementation Audit
 
 ### Current Caching Coverage
