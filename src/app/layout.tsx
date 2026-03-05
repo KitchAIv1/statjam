@@ -66,7 +66,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" translate="no">
       <head>
         {/* Performance optimization hints */}
         <link rel="preconnect" href="https://images.unsplash.com" />
@@ -74,6 +74,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+        <meta name="google" content="notranslate" />
         <meta name="theme-color" content="#f97316" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
