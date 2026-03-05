@@ -186,21 +186,22 @@ export function TournamentPageShell({ data }: TournamentPageShellProps) {
 
     const phases = ['all', 'regular', 'playoffs', 'finals'] as const;
     const categories = ['points', 'rebounds', 'assists', 'steals', 'blocks'] as const;
-    
-    // Prefetch all combinations (phases × categories = 20 requests, all parallel)
-    phases.forEach(phase => {
-      categories.forEach(category => {
-        const cacheKey = `${CacheKeys.tournamentLeaders(tournamentId, category, 1)}_${phase}`;
-        if (cache.get(cacheKey)) return; // Skip if already cached
 
-        // Prefetch in background (silent, non-blocking)
-        TournamentLeadersService.getTournamentPlayerLeaders(tournamentId, category, 1, phase)
-          .then(leaders => {
-            cache.set(cacheKey, leaders, CacheTTL.tournamentLeaders);
-          })
-          .catch(() => {}); // Silently ignore errors
+    const timer = setTimeout(() => {
+      phases.forEach(phase => {
+        categories.forEach(category => {
+          const cacheKey = `${CacheKeys.tournamentLeaders(tournamentId, category, 1)}_${phase}`;
+          if (cache.get(cacheKey)) return;
+
+          TournamentLeadersService.getTournamentPlayerLeaders(tournamentId, category, 1, phase)
+            .then(leaders => {
+              cache.set(cacheKey, leaders, CacheTTL.tournamentLeaders);
+            })
+            .catch(() => {});
+        });
       });
-    });
+    }, 3000);
+    return () => clearTimeout(timer);
   }, [data.tournament.id]);
 
   // ✅ Prefetch Teams/Players data for instant Players tab load

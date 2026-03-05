@@ -354,20 +354,18 @@ export class TournamentLeadersService {
 
     // Fetch regular players
     if (regularPlayerIds.length > 0) {
-      const promises = regularPlayerIds.map(id =>
-        hybridSupabaseService.query<{ id: string; name: string; profile_photo_url?: string }>('users', 'id, name, profile_photo_url', { id: `eq.${id}` })
+      const results = await hybridSupabaseService.query<{ id: string; name: string; profile_photo_url?: string }>(
+        'users', 'id, name, profile_photo_url', { id: `in.(${regularPlayerIds.join(',')})` }
       );
-      const results = await Promise.all(promises);
-      results.flat().forEach(p => playerInfoMap.set(p.id, { name: p.name || 'Unknown', profilePhotoUrl: p.profile_photo_url, isCustomPlayer: false }));
+      (results || []).forEach(p => playerInfoMap.set(p.id, { name: p.name || 'Unknown', profilePhotoUrl: p.profile_photo_url, isCustomPlayer: false }));
     }
 
     // Fetch custom players (include profile_photo_url)
     if (customPlayerIds.length > 0) {
-      const promises = customPlayerIds.map(id =>
-        hybridSupabaseService.query<{ id: string; name: string; profile_photo_url?: string }>('custom_players', 'id, name, profile_photo_url', { id: `eq.${id}` })
+      const results = await hybridSupabaseService.query<{ id: string; name: string; profile_photo_url?: string }>(
+        'custom_players', 'id, name, profile_photo_url', { id: `in.(${customPlayerIds.join(',')})` }
       );
-      const results = await Promise.all(promises);
-      results.flat().forEach(p => playerInfoMap.set(p.id, { name: p.name || 'Custom Player', profilePhotoUrl: p.profile_photo_url, isCustomPlayer: true }));
+      (results || []).forEach(p => playerInfoMap.set(p.id, { name: p.name || 'Custom Player', profilePhotoUrl: p.profile_photo_url, isCustomPlayer: true }));
     }
 
     // Convert to leaders array

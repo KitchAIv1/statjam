@@ -377,28 +377,52 @@ export class GameAwardsService {
         }
       }));
 
-      // ✅ Fetch game-specific stats using PlayerGameStatsService (proven to work for custom players)
-      const { PlayerGameStatsService } = await import('./playerGameStatsService');
+      // ✅ Batched stats fetch: two parallel queries for award winners only (replaces N×getPlayerGameStats)
+      const awardGameIds = games.map((g: any) => g.id);
+      const awardRegularPlayerIds = [...new Set([
+        ...games.map((g: any) => g.player_of_the_game_id).filter(Boolean),
+        ...games.map((g: any) => g.hustle_player_of_the_game_id).filter(Boolean)
+      ])];
+      const awardCustomPlayerIds = [...new Set([
+        ...games.map((g: any) => g.custom_player_of_the_game_id).filter(Boolean),
+        ...games.map((g: any) => g.custom_hustle_player_of_the_game_id).filter(Boolean)
+      ])];
 
-      // Helper to get stats for a specific player and game
-      const getPlayerStatsForGame = async (playerId: string, gameId: string, isCustom: boolean) => {
-        try {
-          const allGameStats = await PlayerGameStatsService.getPlayerGameStats(playerId, isCustom);
-          const gameStats = allGameStats.find(g => g.gameId === gameId);
-          if (gameStats) {
-            return {
-              points: gameStats.points,
-              rebounds: gameStats.rebounds,
-              assists: gameStats.assists,
-              steals: gameStats.steals,
-              blocks: gameStats.blocks
-            };
-          }
-        } catch (e) { console.error(`Stats fetch failed for player ${playerId}:`, e); }
-        return { ...DEFAULT_STATS };
-      };
+      const [regularStatsRows, customStatsRows] = await Promise.all([
+        awardRegularPlayerIds.length > 0
+          ? fetch(
+              `${this.SUPABASE_URL}/rest/v1/game_stats?game_id=in.(${awardGameIds.join(',')})&player_id=in.(${awardRegularPlayerIds.join(',')})&select=game_id,player_id,custom_player_id,stat_type,stat_value,modifier`,
+              { headers }
+            ).then(r => r.ok ? r.json() : []).catch(() => [])
+          : Promise.resolve([]),
+        awardCustomPlayerIds.length > 0
+          ? fetch(
+              `${this.SUPABASE_URL}/rest/v1/game_stats?game_id=in.(${awardGameIds.join(',')})&custom_player_id=in.(${awardCustomPlayerIds.join(',')})&select=game_id,player_id,custom_player_id,stat_type,stat_value,modifier`,
+              { headers }
+            ).then(r => r.ok ? r.json() : []).catch(() => [])
+          : Promise.resolve([])
+      ]);
 
-      const awardsWithStats = await Promise.all(games.map(async (game: any) => {
+      // Build lookup: key = `${playerId}_${gameId}` -> { points, rebounds, assists, steals, blocks }
+      // points = sum of stat_value where modifier === 'made'; rebounds/assists/steals/blocks = row counts for that stat_type
+      const awardStatsMap = new Map<string, { points: number; rebounds: number; assists: number; steals: number; blocks: number }>();
+      const allStatsRows = [...(regularStatsRows || []), ...(customStatsRows || [])];
+      for (const row of allStatsRows) {
+        const playerKey = row.player_id ?? row.custom_player_id;
+        if (!playerKey || !row.game_id) continue;
+        const mapKey = `${playerKey}_${row.game_id}`;
+        const existing = awardStatsMap.get(mapKey) ?? { points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0 };
+        if (row.modifier === 'made') {
+          existing.points += Number(row.stat_value) || 0;
+        }
+        if (row.stat_type === 'rebound') existing.rebounds += 1;
+        if (row.stat_type === 'assist') existing.assists += 1;
+        if (row.stat_type === 'steal') existing.steals += 1;
+        if (row.stat_type === 'block') existing.blocks += 1;
+        awardStatsMap.set(mapKey, existing);
+      }
+
+      const awardsWithStats = games.map((game: any) => {
         // ✅ FIX: Use calculated scores from game_stats (source of truth)
         const calculatedScores = scoresByGameId.get(game.id) || { teamAScore: 0, teamBScore: 0 };
         const { teamAScore, teamBScore } = calculatedScores;
@@ -407,11 +431,8 @@ export class GameAwardsService {
         const hustleId = game.hustle_player_of_the_game_id || game.custom_hustle_player_of_the_game_id;
         const isHustleCustom = !!game.custom_hustle_player_of_the_game_id;
 
-        // Fetch stats for awarded players using the proven PlayerGameStatsService
-        const [potgStats, hustleStats] = await Promise.all([
-          potgId ? getPlayerStatsForGame(potgId, game.id, isPotgCustom) : Promise.resolve({ ...DEFAULT_STATS }),
-          hustleId ? getPlayerStatsForGame(hustleId, game.id, isHustleCustom) : Promise.resolve({ ...DEFAULT_STATS })
-        ]);
+        const potgStats = potgId ? (awardStatsMap.get(`${potgId}_${game.id}`) ?? { ...DEFAULT_STATS }) : { ...DEFAULT_STATS };
+        const hustleStats = hustleId ? (awardStatsMap.get(`${hustleId}_${game.id}`) ?? { ...DEFAULT_STATS }) : { ...DEFAULT_STATS };
 
         // ✅ Get player info including photo URL
         const potgPlayerInfo = isPotgCustom ? customPlayersMap.get(potgId) : playersMap.get(potgId);
@@ -435,7 +456,7 @@ export class GameAwardsService {
             isCustomPlayer: isHustleCustom, stats: hustleStats
           } : null
         };
-      }));
+      });
 
       return awardsWithStats;
     } catch (error: any) {

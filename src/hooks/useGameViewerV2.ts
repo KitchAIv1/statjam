@@ -437,7 +437,7 @@ export function useGameViewerV2(gameId: string): GameViewerData {
   const [plays, setPlays] = useState<PlayByPlayEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const isInitialLoadRef = useRef(true);
   
   // ✅ COACH GAME FIX: Pre-computed stats for public viewers (bypass RLS)
   const [publicTeamAStats, setPublicTeamAStats] = useState<PublicTeamStats | null>(null);
@@ -893,11 +893,11 @@ export function useGameViewerV2(gameId: string): GameViewerData {
         setLoading(false);
       }
       // Mark that initial load is complete
-      if (isInitialLoad) {
-        setIsInitialLoad(false);
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false;
       }
     }
-  }, [gameId, isInitialLoad]);
+  }, [gameId]);
 
   useEffect(() => {
     void fetchGameData(false); // Initial load
