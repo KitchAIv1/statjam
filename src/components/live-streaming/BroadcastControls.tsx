@@ -14,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ChevronDown, ChevronUp, Youtube, Twitch, Facebook } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp, Youtube, Twitch, Facebook } from 'lucide-react';
 import { BroadcastPlatform, QualityPreset, RelayRegion, QUALITY_PRESETS } from '@/lib/services/broadcast/types';
 
 interface BroadcastControlsProps {
@@ -24,6 +24,34 @@ interface BroadcastControlsProps {
   error: string | null;
   onStart: (platform: BroadcastPlatform, streamKey: string, quality: QualityPreset, publicStreamUrl?: string, relayRegion?: RelayRegion) => void;
   onStop: () => void;
+}
+
+const YOUTUBE_STREAM_KEY_REGEX = /^[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/i;
+
+function validateStreamKey(value: string): { isValid: boolean; error: string | null; warning: string | null } {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return { isValid: false, error: null, warning: null };
+  }
+  if (trimmed.includes('http://') || trimmed.includes('https://')) {
+    return { isValid: false, error: 'This looks like a URL — paste your stream key only', warning: null };
+  }
+  if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
+    return { isValid: false, error: 'Paste your stream key, not the YouTube URL', warning: null };
+  }
+  if (trimmed.includes('rtmp://')) {
+    return { isValid: false, error: 'This is an RTMP address — paste the key only (e.g. xxxx-xxxx-xxxx-xxxx)', warning: null };
+  }
+  if (/\s/.test(trimmed)) {
+    return { isValid: false, error: 'Stream keys don\'t contain spaces', warning: null };
+  }
+  if (trimmed.length < 8) {
+    return { isValid: false, error: 'Stream key is too short', warning: null };
+  }
+  if (trimmed.length > 80) {
+    return { isValid: false, error: 'Stream key looks too long', warning: null };
+  }
+  return { isValid: true, error: null, warning: null };
 }
 
 export function BroadcastControls({
@@ -41,7 +69,10 @@ export function BroadcastControls({
   const [relayRegion, setRelayRegion] = useState<RelayRegion>('us');
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const streamKeyValidation = validateStreamKey(streamKey);
+
   const handleStart = () => {
+    if (streamKeyValidation.error) return;
     if (!streamKey.trim()) {
       return;
     }
@@ -171,6 +202,15 @@ export function BroadcastControls({
                   onChange={(e) => setStreamKey(e.target.value)}
                   className="h-7 text-xs"
                 />
+                {streamKey.length > 0 && streamKeyValidation.error && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                    {streamKeyValidation.error}
+                  </p>
+                )}
+                {streamKey.length > 0 && !streamKeyValidation.error && YOUTUBE_STREAM_KEY_REGEX.test(streamKey.trim()) && (
+                  <p className="text-xs text-green-600">Stream key looks good ✓</p>
+                )}
               </div>
 
               {/* Public Stream URL - for embedding on tournament page */}
@@ -207,7 +247,7 @@ export function BroadcastControls({
           {/* Start Button */}
           <Button
             onClick={handleStart}
-            disabled={!streamKey.trim() || isConnecting}
+            disabled={!streamKey.trim() || !!streamKeyValidation.error || isConnecting}
             className="w-full h-7 text-xs"
           >
             {isConnecting ? 'Connecting...' : 'Start Broadcast'}
