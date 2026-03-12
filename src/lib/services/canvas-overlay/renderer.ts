@@ -137,7 +137,7 @@ export class CanvasOverlayRenderer {
       
       // Player stats overlay works with both variants
       if (overlayData.activePlayerStats) {
-        await this.playerStatsDrawer.draw(overlayData.activePlayerStats);
+        await this.playerStatsDrawer.draw(overlayData.activePlayerStats, this.position);
       }
 
       // Draw schedule overlay on canvas

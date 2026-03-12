@@ -6,7 +6,7 @@
  * Separated from main drawing.ts to comply with .cursorrules (<500 lines).
  */
 
-import { LogoCache, PlayerStatsOverlayData } from './utils';
+import { LogoCache, OverlayPosition, PlayerStatsOverlayData } from './utils';
 
 export class PlayerStatsDrawer {
   // Card dimensions (NBA broadcast style - larger for TV visibility)
@@ -27,15 +27,17 @@ export class PlayerStatsDrawer {
    * Draw the player stats overlay card at bottom-center
    * Only draws if player data is visible and not expired
    */
-  async draw(data: PlayerStatsOverlayData): Promise<void> {
+  async draw(data: PlayerStatsOverlayData, position: OverlayPosition = 'top'): Promise<void> {
     if (!data.isVisible) return;
 
     // Check if overlay should auto-hide
     if (data.showUntil && Date.now() > data.showUntil) return;
 
-    // Position: bottom-center with safe margin
+    // Position: mirrors score bar — bottom-center when score is top, top-center when score is bottom
     const x = (this.canvasWidth - this.CARD_WIDTH) / 2;
-    const y = this.canvasHeight - this.CARD_HEIGHT - this.SAFE_MARGIN;
+    const y = position === 'bottom'
+      ? this.SAFE_MARGIN
+      : this.canvasHeight - this.CARD_HEIGHT - this.SAFE_MARGIN;
 
     this.ctx.save();
     this.drawCardBackground(x, y, data.teamPrimaryColor);
