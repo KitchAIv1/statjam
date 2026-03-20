@@ -38,6 +38,29 @@ interface GameStat {
   is_opponent_stat: boolean;
 }
 
+const STANDINGS_DIFF_ADJUSTMENTS_KEY = 'standingsPointDifferentialAdjustments';
+
+/**
+ * Optional league display adjustments from tournaments.ruleset_config.
+ * See docs/02-development/STANDINGS_POINT_DIFFERENTIAL_ADJUSTMENTS.md
+ */
+function parseStandingsPointDifferentialAdjustments(rulesetConfig: unknown): Map<string, number> {
+  const map = new Map<string, number>();
+  if (!rulesetConfig || typeof rulesetConfig !== 'object' || Array.isArray(rulesetConfig)) {
+    return map;
+  }
+  const raw = (rulesetConfig as Record<string, unknown>)[STANDINGS_DIFF_ADJUSTMENTS_KEY];
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return map;
+  }
+  for (const [teamId, val] of Object.entries(raw)) {
+    if (typeof val === 'number' && Number.isFinite(val) && teamId.length > 0) {
+      map.set(teamId, val);
+    }
+  }
+  return map;
+}
+
 export class TournamentStandingsService {
   /**
    * Get tournament standings calculated from completed games
@@ -79,12 +102,23 @@ export class TournamentStandingsService {
         }
       });
       
-      const statsResults = await Promise.all(statsPromises);
-      
+      const tournamentPromise = hybridSupabaseService.query<{ ruleset_config: unknown | null }>(
+        'tournaments',
+        'ruleset_config',
+        { id: `eq.${tournamentId}` }
+      );
+
+      const [statsResults, tournamentRows] = await Promise.all([
+        Promise.all(statsPromises),
+        tournamentPromise,
+      ]);
+
       // Group stats by game_id
       statsResults.forEach(({ gameId, stats }) => {
         gameStatsMap.set(gameId, stats);
       });
+
+      const diffAdjustments = parseStandingsPointDifferentialAdjustments(tournamentRows?.[0]?.ruleset_config);
       
       console.log(`✅ TournamentStandingsService: Fetched stats for all ${games.length} games`);
 
@@ -216,7 +250,9 @@ export class TournamentStandingsService {
       // Convert to standings array and calculate streaks
       const standings: TeamStanding[] = Array.from(standingsMap.values()).map(team => {
         const teamInfo = teamMap.get(team.teamId);
-        const pointDifferential = team.pointsFor - team.pointsAgainst;
+        const baseDiff = team.pointsFor - team.pointsAgainst;
+        const adjustment = diffAdjustments.get(team.teamId) ?? 0;
+        const pointDifferential = baseDiff + adjustment;
         const streak = this.calculateStreak(team.recentResults);
 
         return {
