@@ -104,7 +104,8 @@ export const CacheKeys = {
   tournament: (tournamentId: string) => `tournament:${tournamentId}`,
   gameBasic: (gameId: string) => `game_basic:${gameId}`,
   playerDashboard: (userId: string) => `player_dashboard:${userId}`,
-  playerGameStats: (userId: string) => `player_game_stats:${userId}`,
+  /** v3: chunked game_stats + range pagination (each chunk can exceed 1000 rows) */
+  playerGameStats: (userId: string) => `player_game_stats:v3:${userId}`,
   organizerDashboard: (userId: string) => `organizer_dashboard:${userId}`,
   organizerTournaments: (userId: string) => `organizer_tournaments:${userId}`,
   organizerGames: (userId: string) => `organizer_games:${userId}`,

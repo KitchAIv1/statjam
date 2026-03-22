@@ -4,6 +4,14 @@ Guidance for how data is fetched across the StatJam frontend and shared services
 
 ---
 
+## Tournament public standings — differential adjustments
+
+- **Service:** `TournamentStandingsService.getTournamentStandings` loads `tournaments.ruleset_config` and applies optional **`standingsPointDifferentialAdjustments`** (per-team numeric deltas to displayed Diff and sort only).
+- **Full spec + SQL:** [STANDINGS_POINT_DIFFERENTIAL_ADJUSTMENTS.md](../02-development/STANDINGS_POINT_DIFFERENTIAL_ADJUSTMENTS.md).
+- **Cache:** Results are cached under `tournament_standings:<tournamentId>` (~3 min); prefetch on public tournament shell uses the same key — see that doc for operational notes after DB changes.
+
+---
+
 ## Patterns to Avoid
 
 - **Never use `.map(id => query({ id: \`eq.${id}\` }))`** — always use `in.(id1,id2,...)` batch queries for multi-record lookups. Per-id queries create N+1 patterns (e.g. 93 queries for 93 players). See `tournamentLeadersService.ts` for the correct batch pattern.

@@ -2,7 +2,9 @@
 
 **Complete documentation index for the StatJam platform**
 
-**Recent updates (February 2026)**: **v0.17.12** – GA4 & event tracking · Global search · Sentry (video upload, useGlobalSearch) · CSP/GA4 & www redirect · Overlay/broadcast/tracker fixes. Full audit: [COMMITS_AUDIT_SINCE_FEB_2026](01-project/COMMITS_AUDIT_SINCE_FEB_2026.md). See [DOCUMENTATION_UPDATE_SUMMARY_FEB_2026](01-project/DOCUMENTATION_UPDATE_SUMMARY_FEB_2026.md).
+**Recent updates (March 2026)**: **v0.17.14** – Public tournament **standings point-differential adjustments** via `tournaments.ruleset_config` (`standingsPointDifferentialAdjustments`); doc hub + `package.json` version aligned. See [CHANGELOG 0.17.14](01-project/CHANGELOG.md) and [STANDINGS_POINT_DIFFERENTIAL_ADJUSTMENTS](02-development/STANDINGS_POINT_DIFFERENTIAL_ADJUSTMENTS.md).
+
+**Prior (February 2026)**: **v0.17.12** – GA4 & event tracking · Global search · Sentry · CSP/GA4 & www redirect · Overlay/broadcast/tracker. [COMMITS_AUDIT_SINCE_FEB_2026](01-project/COMMITS_AUDIT_SINCE_FEB_2026.md), [DOCUMENTATION_UPDATE_SUMMARY_FEB_2026](01-project/DOCUMENTATION_UPDATE_SUMMARY_FEB_2026.md).
 
 ---
 
@@ -45,6 +47,8 @@
 - **TEAM_FOULS_TIMEOUTS_ANALYSIS.md** - Team fouls and timeouts analysis
 
 ### **2. Development Guides** (`02-development/`)
+- **PLAYER_PROFILE_RESULT_SCORES_PLAN.md** - Public player game log RESULT fix: chunked `game_stats` (PostgREST row limit), scoring parity with tournament Overview ✨ NEW
+- **STANDINGS_POINT_DIFFERENTIAL_ADJUSTMENTS.md** - Optional league adjustments to public standings Diff via `ruleset_config`; RIBL6 SQL example; cache notes (✅ v0.17.14) ✨ NEW
 - **STREAM_ENDED_FEATURE_AUDIT.md** - Comprehensive audit of stream_ended feature implementation (✅ February 2026) ✨ NEW
 - **TOURNAMENT_LEADERS_PHASE_FILTER_OPTIMIZATION.md** - Tournament leaders game phase filter & prefetch optimization (✅ COMPLETED v0.17.2)
 - **LEADERS_GAME_PHASE_FILTER_IMPROVEMENT.md** - Leaders tab game phase filter improvement plan (✅ COMPLETED v0.17.2)
@@ -68,6 +72,7 @@
 - **test-admin.md** - Admin testing guide
 
 ### **3. Architecture** (`03-architecture/`)
+- **data-fetching.md** - Fetch patterns, standings `ruleset_config` adjustments, cache key notes (✅ updated v0.17.14)
 - **ARCHITECTURE_DESIGN.md** - Architecture design principles
 - **BACKEND_ARCHITECTURE.md** - Backend architecture details
 - **DATABASE_SCHEMA.md** - Database schema documentation

@@ -3,6 +3,11 @@ import { supabase } from '@/lib/supabase';
 import { ensureSupabaseSession } from '@/lib/supabase';
 import { cache, CacheKeys, CacheTTL } from '@/lib/utils/cache';
 import { logger } from '@/lib/utils/logger';
+import {
+  GAME_STATS_IN_CHUNK_GAME_COUNT,
+  POSTGREST_MAX_ROWS_PER_REQUEST,
+  teamScoresFromGameStatRows,
+} from '@/lib/utils/teamScoresFromGameStats';
 
 // Types for game stats aggregation
 export interface GameStatsSummary {
@@ -109,8 +114,8 @@ export class PlayerGameStatsService {
       }
 
       // ⚡ Check cache first (5 min TTL) - use separate cache key for custom players
-      const cacheKey = isCustomPlayer 
-        ? `custom_player_game_stats_${playerId}` 
+      const cacheKey = isCustomPlayer
+        ? `custom_player_game_stats:v3:${playerId}`
         : CacheKeys.playerGameStats(playerId);
       const cached = cache.get<GameStatsSummary[]>(cacheKey);
       if (cached) {
@@ -153,7 +158,9 @@ export class PlayerGameStatsService {
       // ✅ CRITICAL: Ensure authenticated session for RLS to work correctly
       // RLS will filter games based on player_has_game_stats_official() function
       // This respects is_official_team flags (practice games filtered, official games shown)
-      const [gamesResult, teamPlayersResult, allGameStatsResult, subsResult] = await Promise.all([
+      // Step 5 (game_stats for team scores): chunked .in('game_id') to avoid PostgREST ~1000 row
+      // truncation (same issue Overview avoids via per-game fetches — we batch by chunk to limit cost).
+      const [gamesResult, teamPlayersResult, subsResult] = await Promise.all([
         // Step 3: Fetch game info for all games
         // ✅ FILTER: Only tournament games (is_coach_game = false)
         // Coach mode games should not appear in player profiles/stats
@@ -179,7 +186,7 @@ export class PlayerGameStatsService {
           `)
           .in('id', gameIds)
           .eq('is_coach_game', false), // ✅ Exclude coach mode games from player profiles
-        
+
         // Step 4: Get player's team assignments to determine home/away
         // For custom players, query team_players by custom_player_id
         isCustomPlayer
@@ -192,23 +199,57 @@ export class PlayerGameStatsService {
               .select('team_id')
               .eq('player_id', playerId),
 
-        // Step 5: ✅ FIX - Fetch ALL game_stats for score calculation (source of truth)
-        supabase
-          .from('game_stats')
-          .select('game_id, team_id, stat_value, modifier, is_opponent_stat')
-          .in('game_id', gameIds),
-
         // Step 6: Fetch substitutions for accurate minutes calculation (matches game viewer)
         supabase
           .from('game_substitutions')
           .select('game_id, team_id, player_in_id, custom_player_in_id, player_out_id, custom_player_out_id, quarter, game_time_minutes, game_time_seconds, created_at')
-          .in('game_id', gameIds)
+          .in('game_id', gameIds),
       ]);
 
       const { data: games, error: gamesError } = gamesResult;
       const { data: teamPlayers, error: teamError } = teamPlayersResult;
-      const { data: allGameStats } = allGameStatsResult;
       const { data: allSubstitutions } = subsResult;
+
+      // Each chunk can still return >1000 rows (PostgREST default cap). Single fetch truncates —
+      // that caused correct scores only for games lucky enough to appear in the first page.
+      const allGameStats: any[] = [];
+      for (let i = 0; i < gameIds.length; i += GAME_STATS_IN_CHUNK_GAME_COUNT) {
+        const chunkIds = gameIds.slice(i, i + GAME_STATS_IN_CHUNK_GAME_COUNT);
+        let rangeStart = 0;
+        let pageNum = 0;
+        while (true) {
+          const rangeEnd = rangeStart + POSTGREST_MAX_ROWS_PER_REQUEST - 1;
+          const { data: page, error: chunkError } = await supabase
+            .from('game_stats')
+            .select('game_id, team_id, stat_value, modifier, is_opponent_stat')
+            .in('game_id', chunkIds)
+            .order('id', { ascending: true })
+            .range(rangeStart, rangeEnd);
+
+          if (chunkError) {
+            logger.error(
+              '❌ PlayerGameStatsService: game_stats chunk error:',
+              chunkError.message,
+              'games in chunk:',
+              chunkIds.length,
+              'page:',
+              pageNum
+            );
+            break;
+          }
+          if (!page?.length) break;
+          allGameStats.push(...page);
+          pageNum += 1;
+          if (page.length < POSTGREST_MAX_ROWS_PER_REQUEST) break;
+          rangeStart += POSTGREST_MAX_ROWS_PER_REQUEST;
+        }
+      }
+      logger.debug(
+        '🔍 PlayerGameStatsService: game_stats rows (chunked + paginated):',
+        allGameStats.length,
+        'game id chunks:',
+        Math.ceil(gameIds.length / GAME_STATS_IN_CHUNK_GAME_COUNT)
+      );
 
       logger.debug('🔍 PlayerGameStatsService: Fetched', games?.length || 0, 'games from database');
       logger.debug('🔍 PlayerGameStatsService: Requested', gameIds.length, 'games, received', games?.length || 0);
@@ -248,22 +289,11 @@ export class PlayerGameStatsService {
       const scoresByGameId = new Map<string, { teamAScore: number; teamBScore: number }>();
       for (const game of games) {
         const gameStatsForGame = (allGameStats || []).filter((s: any) => s.game_id === game.id);
-        let teamAScore = 0, teamBScore = 0;
-        
-        for (const stat of gameStatsForGame) {
-          if (stat.modifier !== 'made') continue;
-          const points = stat.stat_value || 0;
-          
-          // Handle is_opponent_stat for coach mode
-          if (stat.is_opponent_stat) {
-            teamBScore += points;
-          } else if (stat.team_id === game.team_a_id) {
-            teamAScore += points;
-          } else if (stat.team_id === game.team_b_id) {
-            teamBScore += points;
-          }
-        }
-        
+        const { teamAScore, teamBScore } = teamScoresFromGameStatRows(
+          gameStatsForGame,
+          game.team_a_id,
+          game.team_b_id
+        );
         scoresByGameId.set(game.id, { teamAScore, teamBScore });
       }
 

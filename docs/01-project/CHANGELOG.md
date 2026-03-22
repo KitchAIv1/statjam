@@ -11,6 +11,21 @@ _(Future changes.)_
 
 ---
 
+## [0.17.14] - 2026-03-05
+
+### Public tournament standings — league point-differential adjustments
+
+- **ADDED**: Optional per-team **point differential** deltas for public standings via `tournaments.ruleset_config` key `standingsPointDifferentialAdjustments` (`{ "<team_uuid>": <number>, ... }`). Applied in [`TournamentStandingsService.getTournamentStandings`](../../src/lib/services/tournamentStandingsService.ts) after PF/PA aggregation; affects **Diff** column and **sort order** only (W/L, PF, PA unchanged).
+- **ADDED**: [STANDINGS_POINT_DIFFERENTIAL_ADJUSTMENTS.md](../02-development/STANDINGS_POINT_DIFFERENTIAL_ADJUSTMENTS.md) — JSON shape, RIBL6 Supabase `UPDATE` example (Panthers + Spartans +20), removal notes.
+- **NOTE**: Client cache key `tournament_standings:<tournamentId>` (3 min TTL) also used by `TournamentPageShell` prefetch; after changing `ruleset_config`, allow TTL expiry or new session for fresh Diff.
+
+### Documentation & versioning
+
+- **UPDATED**: [INDEX.md](../INDEX.md) (hub banner + dev doc link), [PROJECT_STATUS.md](PROJECT_STATUS.md) (version line), [data-fetching.md](../03-architecture/data-fetching.md) (standings config + cache).
+- **BUMP**: `package.json` version → **0.17.14** (aligns changelog with shipped features after 0.17.12–0.17.13 doc-only gaps).
+
+---
+
 ## [0.17.13] - 2026-03-XX
 
 ### 🚀 **Performance optimizations (March 2026)**
