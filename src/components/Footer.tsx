@@ -34,13 +34,13 @@ export function Footer() {
                 Blog
               </a>
               <a 
-                href="mailto:support@statjam.net" 
+                href="mailto:founder@statjam.net" 
                 className="block text-gray-300 hover:text-white transition-colors"
               >
                 Contact Us
               </a>
               <span className="block text-gray-500 text-sm">
-                support@statjam.net
+                founder@statjam.net
               </span>
             </div>
           </div>

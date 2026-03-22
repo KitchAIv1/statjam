@@ -75,7 +75,7 @@ export function TournamentSocialFooter({ organizerId }: TournamentSocialFooterPr
             <span className={`h-4 w-px ${getTournamentThemeClass('footerDivider', theme)}`} />
             <a href="#" className={getTournamentThemeClass('footerLink', theme)}>Terms</a>
             <span className={`h-4 w-px ${getTournamentThemeClass('footerDivider', theme)}`} />
-            <a href="#" className={getTournamentThemeClass('footerLink', theme)}>Contact</a>
+            <a href="mailto:founder@statjam.net" className={getTournamentThemeClass('footerLink', theme)}>Contact</a>
             <span className={`h-4 w-px ${getTournamentThemeClass('footerDivider', theme)}`} />
             <span>© {new Date().getFullYear()} StatJam</span>
           </div>

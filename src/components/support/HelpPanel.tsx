@@ -43,7 +43,7 @@ export function HelpPanel({
   faqs,
   checklistLink,
   onChecklistOpen,
-  supportHref = "mailto:support@statjam.net",
+  supportHref = "mailto:founder@statjam.net",
   className
 }: HelpPanelProps) {
   const [open, setOpen] = useState(false);
@@ -72,7 +72,7 @@ export function HelpPanel({
             {panelTitle}
           </SheetTitle>
           <SheetDescription>
-            Get quick answers or reach out to support. Close the panel to return to tracking.
+            Get quick answers or reach out by email. Close the panel to return to tracking.
           </SheetDescription>
         </SheetHeader>
 
@@ -133,7 +133,7 @@ export function HelpPanel({
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <h3 className="text-sm font-semibold text-slate-900">Need more help?</h3>
             <p className="mt-1 text-sm text-slate-600">
-              Reach out to our support team and we’ll get back to you quickly.
+              Email founder@statjam.net — we’ll get back to you quickly.
             </p>
             <Button
               className="mt-3"
@@ -144,7 +144,7 @@ export function HelpPanel({
                 setOpen(false);
               }}
             >
-              Contact Support
+              Contact Us
             </Button>
           </div>
         </div>

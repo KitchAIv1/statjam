@@ -42,7 +42,11 @@ export default function ClaimError({
         
         <p className="text-gray-400 mb-6">
           Something went wrong while processing your claim. Please try refreshing
-          or contact support if the issue persists.
+          or{' '}
+          <a href="mailto:founder@statjam.net" className="text-orange-400 hover:text-orange-300 underline">
+            contact us
+          </a>{' '}
+          if the issue persists.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">

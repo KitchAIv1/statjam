@@ -865,7 +865,11 @@ export function PlayerManager({ team, isOpen, onClose, onUpdateTeam }: PlayerMan
                 <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="font-semibold mb-2">No Players Found</h3>
                 <p className="text-muted-foreground text-sm">
-                  Try adjusting your search criteria or contact support to add more players.
+                  Try adjusting your search criteria or email{' '}
+                  <a href="mailto:founder@statjam.net" className="text-primary underline">
+                    founder@statjam.net
+                  </a>{' '}
+                  to add more players.
                 </p>
               </div>
             )}

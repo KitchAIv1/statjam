@@ -192,7 +192,7 @@ Replace the default template with this custom StatJam-branded version:
                     <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
                 </p>
                 <p>
-                    Questions? Contact us at <a href="mailto:support@statjam.com">support@statjam.com</a>
+                    Questions? Contact us at <a href="mailto:founder@statjam.net">founder@statjam.net</a>
                 </p>
                 <p>© 2025 StatJam. All rights reserved.</p>
             </div>
@@ -257,7 +257,7 @@ Replace the default template with this custom StatJam-branded version:
                     <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
                 </p>
                 <p>
-                    Questions? Contact us at <a href="mailto:support@statjam.com">support@statjam.com</a>
+                    Questions? Contact us at <a href="mailto:founder@statjam.net">founder@statjam.net</a>
                 </p>
                 <p>© 2025 StatJam. All rights reserved.</p>
             </div>

@@ -18,7 +18,9 @@ export async function ensureCardAssetsBucket(): Promise<void> {
     
     if (testError && testError.message.includes('Bucket not found')) {
       // Bucket doesn't exist - this needs to be created by an admin
-      throw new Error('Storage bucket not found. Please contact support to set up photo storage.');
+      throw new Error(
+        'Storage bucket not found. Please email founder@statjam.net to set up photo storage.'
+      );
     }
     
     // If we get here, bucket exists and is accessible
