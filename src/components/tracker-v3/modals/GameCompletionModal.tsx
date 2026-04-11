@@ -264,6 +264,10 @@ export function GameCompletionModal({
           </button>
         </div>
 
+        <p className="px-6 pb-3 text-xs text-gray-500 border-b border-gray-200">
+          Completing this game will update the tournament leaderboard automatically.
+        </p>
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (

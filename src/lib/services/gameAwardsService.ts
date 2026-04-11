@@ -377,36 +377,45 @@ export class GameAwardsService {
         }
       }));
 
-      // ✅ Batched stats fetch: two parallel queries for award winners only (replaces N×getPlayerGameStats)
-      const awardGameIds = games.map((g: any) => g.id);
-      const awardRegularPlayerIds = [...new Set([
-        ...games.map((g: any) => g.player_of_the_game_id).filter(Boolean),
-        ...games.map((g: any) => g.hustle_player_of_the_game_id).filter(Boolean)
-      ])];
-      const awardCustomPlayerIds = [...new Set([
-        ...games.map((g: any) => g.custom_player_of_the_game_id).filter(Boolean),
-        ...games.map((g: any) => g.custom_hustle_player_of_the_game_id).filter(Boolean)
-      ])];
+      // ✅ Per-game game_stats for award winners only — avoids PostgREST ~1000-row cap on wide
+      // game_id=in.(...) × player_id/custom_player_id=in.(...) batches (same idea as team scores above).
+      const awardStatsSelect = 'game_id,player_id,custom_player_id,stat_type,stat_value,modifier';
+      const awardStatFetches: Promise<any[]>[] = [];
 
-      const [regularStatsRows, customStatsRows] = await Promise.all([
-        awardRegularPlayerIds.length > 0
-          ? fetch(
-              `${this.SUPABASE_URL}/rest/v1/game_stats?game_id=in.(${awardGameIds.join(',')})&player_id=in.(${awardRegularPlayerIds.join(',')})&select=game_id,player_id,custom_player_id,stat_type,stat_value,modifier`,
+      for (const game of games) {
+        const regIds = [...new Set([
+          game.player_of_the_game_id,
+          game.hustle_player_of_the_game_id
+        ].filter(Boolean))];
+        const custIds = [...new Set([
+          game.custom_player_of_the_game_id,
+          game.custom_hustle_player_of_the_game_id
+        ].filter(Boolean))];
+
+        if (regIds.length > 0) {
+          awardStatFetches.push(
+            fetch(
+              `${this.SUPABASE_URL}/rest/v1/game_stats?game_id=eq.${game.id}&player_id=in.(${regIds.join(',')})&select=${awardStatsSelect}`,
               { headers }
-            ).then(r => r.ok ? r.json() : []).catch(() => [])
-          : Promise.resolve([]),
-        awardCustomPlayerIds.length > 0
-          ? fetch(
-              `${this.SUPABASE_URL}/rest/v1/game_stats?game_id=in.(${awardGameIds.join(',')})&custom_player_id=in.(${awardCustomPlayerIds.join(',')})&select=game_id,player_id,custom_player_id,stat_type,stat_value,modifier`,
+            ).then(r => (r.ok ? r.json() : []) as any[]).catch(() => [])
+          );
+        }
+        if (custIds.length > 0) {
+          awardStatFetches.push(
+            fetch(
+              `${this.SUPABASE_URL}/rest/v1/game_stats?game_id=eq.${game.id}&custom_player_id=in.(${custIds.join(',')})&select=${awardStatsSelect}`,
               { headers }
-            ).then(r => r.ok ? r.json() : []).catch(() => [])
-          : Promise.resolve([])
-      ]);
+            ).then(r => (r.ok ? r.json() : []) as any[]).catch(() => [])
+          );
+        }
+      }
+
+      const awardStatChunks = await Promise.all(awardStatFetches);
 
       // Build lookup: key = `${playerId}_${gameId}` -> { points, rebounds, assists, steals, blocks }
       // points = sum of stat_value where modifier === 'made'; rebounds/assists/steals/blocks = row counts for that stat_type
       const awardStatsMap = new Map<string, { points: number; rebounds: number; assists: number; steals: number; blocks: number }>();
-      const allStatsRows = [...(regularStatsRows || []), ...(customStatsRows || [])];
+      const allStatsRows = awardStatChunks.flat();
       for (const row of allStatsRows) {
         const playerKey = row.player_id ?? row.custom_player_id;
         if (!playerKey || !row.game_id) continue;

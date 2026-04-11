@@ -43,6 +43,7 @@ import { FeatureTour } from '@/components/onboarding/FeatureTour';
 import { CompletionNudge } from '@/components/onboarding/CompletionNudge';
 import { coachFeatureTourSteps } from '@/config/onboarding/coachOnboarding';
 import { GameCompletionModal } from '@/components/tracker-v3/modals/GameCompletionModal';
+import { CompleteGameReminderBanner } from '@/components/tracker-v3/CompleteGameReminderBanner';
 import { GameOverModal } from '@/components/tracker-v3/modals/GameOverModal';
 import { NetworkStatusIndicator } from '@/components/ui/NetworkStatusIndicator';
 
@@ -149,6 +150,8 @@ function StatTrackerV3Content() {
   const [rosterRefreshKey, setRosterRefreshKey] = useState<string | number>(0);
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
   const [dismissedCompletionReminder, setDismissedCompletionReminder] = useState(false);
+  /** Dismissible banner when regulation/OT period clock is0:00 but game still in progress */
+  const [dismissedEndGameBanner, setDismissedEndGameBanner] = useState(false);
   
   // ✅ STICKY BUTTON FIX: Ref to store clear recording state function from stat grid components
   const clearDesktopRecordingStateRef = useRef<(() => void) | null>(null);
@@ -248,6 +251,10 @@ function StatTrackerV3Content() {
       setCurrentBenchB(teamBPlayers.slice(5));     // Rest on bench
     }
   }, [teamAPlayers, teamBPlayers]);
+
+  useEffect(() => {
+    setDismissedEndGameBanner(false);
+  }, [gameData?.id]);
 
   // ✅ Auto-select first player when team data loads
   useEffect(() => {
@@ -1317,6 +1324,17 @@ function StatTrackerV3Content() {
   
   const benchPlayers = getBenchPlayers();
 
+  const periodClockEnded =
+    tracker.clock.secondsRemaining <= 0 && !tracker.clock.isRunning;
+  const isLiveGameStatus =
+    tracker.gameStatus === 'in_progress' || tracker.gameStatus === 'overtime';
+  const shouldShowCompleteGameBanner =
+    isLiveGameStatus &&
+    !tracker.showAwardsModal &&
+    periodClockEnded &&
+    tracker.quarter >= tracker.periodsPerGame &&
+    !dismissedEndGameBanner;
+
   // ✅ SHARED MODALS: Render modals for BOTH mobile and desktop views
   const sharedModals = (
     <>
@@ -2022,6 +2040,14 @@ function StatTrackerV3Content() {
   if (isMobile) {
     return (
       <>
+        {shouldShowCompleteGameBanner && (
+          <div className="sticky top-0 z-40 px-3 pt-3" style={{ background: 'var(--dashboard-bg, #111827)' }}>
+            <CompleteGameReminderBanner
+              onCompleteGame={tracker.closeGame}
+              onDismiss={() => setDismissedEndGameBanner(true)}
+            />
+          </div>
+        )}
         <MobileLayoutV3
           gameData={gameData}
           tracker={tracker}
@@ -2056,6 +2082,62 @@ function StatTrackerV3Content() {
         {/* ✅ MOBILE: Render shared modals */}
         {sharedModals}
         {featureTour}
+
+        {gameData && (
+          <GameOverModal
+            isOpen={tracker.showGameOverModal}
+            teamAName={gameData.team_a?.name || 'Team A'}
+            teamBName={coachMode ? (opponentName || 'Opponent') : (gameData.team_b?.name || 'Team B')}
+            teamAScore={tracker.scores[gameData.team_a_id] || 0}
+            teamBScore={coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)}
+            isOvertime={tracker.quarter > tracker.periodsPerGame}
+            overtimeNumber={
+              tracker.quarter > tracker.periodsPerGame
+                ? tracker.quarter - tracker.periodsPerGame
+                : undefined
+            }
+            onEditStats={() => {
+              tracker.setShowGameOverModal(false);
+            }}
+            onCompleteGame={() => {
+              tracker.setShowGameOverModal(false);
+              tracker.closeGame();
+            }}
+          />
+        )}
+
+        {gameData && (
+          <GameCompletionModal
+            isOpen={tracker.showAwardsModal}
+            onClose={() => {
+              tracker.setShowAwardsModal(false);
+              if (coachMode || userRole === 'coach') {
+                router.push('/dashboard/coach');
+              } else if (userRole === 'stat_admin') {
+                router.push('/dashboard/stat-admin');
+              } else {
+                router.push('/dashboard');
+              }
+            }}
+            onComplete={tracker.completeGameWithAwards}
+            gameId={gameData.id}
+            teamAId={gameData.team_a_id}
+            teamBId={gameData.team_b_id}
+            teamAName={gameData.team_a?.name || 'Team A'}
+            teamBName={coachMode ? (opponentName || 'Opponent') : (gameData.team_b?.name || 'Team B')}
+            teamAScore={tracker.scores[gameData.team_a_id] || 0}
+            teamBScore={coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)}
+            isCoachGame={coachMode}
+            opponentName={opponentName || 'Opponent'}
+            onTrackAnother={
+              coachMode && coachTeamIdParam
+                ? () => {
+                    router.push(`/dashboard/coach?quickTrack=${coachTeamIdParam}`);
+                  }
+                : undefined
+            }
+          />
+        )}
       </>
     );
   }
@@ -2076,6 +2158,13 @@ function StatTrackerV3Content() {
               <span>🎯 DEMO MODE - This is a practice game for training purposes</span>
             </div>
           </div>
+        )}
+
+        {shouldShowCompleteGameBanner && (
+          <CompleteGameReminderBanner
+            onCompleteGame={tracker.closeGame}
+            onDismiss={() => setDismissedEndGameBanner(true)}
+          />
         )}
         
         {/* Top Scoreboard & Clock with Integrated Shot Clock */}
@@ -2129,7 +2218,10 @@ function StatTrackerV3Content() {
           teamBId={gameData.team_b_id}
         />
 
-        {coachMode && tracker.gameStatus === 'in_progress' && !dismissedCompletionReminder && (
+        {coachMode &&
+          tracker.gameStatus === 'in_progress' &&
+          !dismissedCompletionReminder &&
+          !shouldShowCompleteGameBanner && (
           <CompletionNudge
             className="mb-4"
             message="End the game when you're finished to unlock full coach analytics."
@@ -2262,8 +2354,12 @@ function StatTrackerV3Content() {
             teamBName={coachMode ? (opponentName || 'Opponent') : (gameData.team_b?.name || 'Team B')}
             teamAScore={tracker.scores[gameData.team_a_id] || 0}
             teamBScore={coachMode ? (tracker.scores.opponent || 0) : (tracker.scores[gameData.team_b_id] || 0)}
-            isOvertime={tracker.quarter > 4}
-            overtimeNumber={tracker.quarter > 4 ? tracker.quarter - 4 : undefined}
+            isOvertime={tracker.quarter > tracker.periodsPerGame}
+            overtimeNumber={
+              tracker.quarter > tracker.periodsPerGame
+                ? tracker.quarter - tracker.periodsPerGame
+                : undefined
+            }
             onEditStats={() => {
               // Close modal to let user edit stats using existing UI
               tracker.setShowGameOverModal(false);
@@ -2282,8 +2378,13 @@ function StatTrackerV3Content() {
             isOpen={tracker.showAwardsModal}
             onClose={() => {
               tracker.setShowAwardsModal(false);
-              // Navigate to dashboard on close
-              router.push('/dashboard/coach');
+              if (coachMode || userRole === 'coach') {
+                router.push('/dashboard/coach');
+              } else if (userRole === 'stat_admin') {
+                router.push('/dashboard/stat-admin');
+              } else {
+                router.push('/dashboard');
+              }
             }}
             onComplete={tracker.completeGameWithAwards}
             gameId={gameData.id}
