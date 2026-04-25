@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { supabase } from '@/lib/supabase';
 import { GameOverlayData } from '@/lib/services/canvas-overlay';
 
@@ -73,9 +74,16 @@ export function useGameOverlayData(gameId: string | null) {
   });
 
   const lastBroadcastAtRef = useRef<number>(0); // timestamp of last broadcast received
+  const clockBroadcastSampleRef = useRef(0);
 
   // Stable fetch function
   const fetchGameData = useCallback(async (isInitialLoad: boolean = false) => {
+    Sentry.addBreadcrumb({
+      category: 'overlay.fetch',
+      message: 'fetchGameData started',
+      level: 'info',
+      data: { gameId, isInitialLoad },
+    });
     if (!gameId || !supabase || fetchingRef.current) return;
     
     fetchingRef.current = true;
@@ -186,7 +194,17 @@ export function useGameOverlayData(gameId: string | null) {
         tournamentLogo: tournament?.logo,
       };
       });
+      Sentry.addBreadcrumb({
+        category: 'overlay.fetch',
+        message: 'fetchGameData completed',
+        level: 'info',
+        data: { gameId, isInitialLoad, useDbClock: !broadcastIsActive },
+      });
     } catch (err) {
+      Sentry.captureException(err, {
+        tags: { surface: 'overlay', operation: 'fetchGameData' },
+        extra: { gameId, isInitialLoad },
+      });
       if (mountedRef.current) {
         setError(err instanceof Error ? err.message : 'Failed to load game data');
       }
@@ -210,7 +228,16 @@ export function useGameOverlayData(gameId: string | null) {
 
   useEffect(() => {
     mountedRef.current = true;
-    
+    Sentry.setContext('overlay', {
+      gameId,
+      mountedAt: new Date().toISOString(),
+    });
+    Sentry.addBreadcrumb({
+      category: 'overlay.lifecycle',
+      message: 'useGameOverlayData mounted',
+      level: 'info',
+      data: { gameId },
+    });
     if (!gameId || !supabase) {
       setOverlayData(null);
       setLoading(false);
@@ -229,6 +256,19 @@ export function useGameOverlayData(gameId: string | null) {
         console.log('🕐 Clock broadcast received:', payload.secondsRemaining, payload.isRunning);
         if (!mountedRef.current) return;
         lastBroadcastAtRef.current = Date.now();
+        clockBroadcastSampleRef.current++;
+        if (clockBroadcastSampleRef.current % 10 === 0) {
+          Sentry.addBreadcrumb({
+            category: 'overlay.clock',
+            message: 'clock_tick received (sampled 1/10)',
+            level: 'debug',
+            data: {
+              secondsRemaining: payload.secondsRemaining,
+              isRunning: payload.isRunning,
+              sampleNumber: clockBroadcastSampleRef.current,
+            },
+          });
+        }
         setOverlayData(prev => prev ? {
           ...prev,
           gameClockMinutes: Math.floor(payload.secondsRemaining / 60),
@@ -236,7 +276,22 @@ export function useGameOverlayData(gameId: string | null) {
           isClockRunning: payload.isRunning
         } : null);
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        Sentry.addBreadcrumb({
+          category: 'overlay.channel',
+          message: `clock channel status: ${status}`,
+          level: status === 'SUBSCRIBED' ? 'info' : 'warning',
+          data: { gameId, status, error: (err as Error | undefined)?.message },
+        });
+        console.log(`📡 [clock:${gameId}] status:`, status, err);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          Sentry.captureMessage(`Overlay clock channel ${status}`, {
+            level: 'warning',
+            tags: { surface: 'overlay', channel: 'clock' },
+            extra: { gameId, error: (err as Error | undefined)?.message },
+          });
+        }
+      });
 
     // Subscribe to real-time updates (debounced)
     const statsChannel = supabase
@@ -251,7 +306,22 @@ export function useGameOverlayData(gameId: string | null) {
         },
         debouncedRefetch
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        Sentry.addBreadcrumb({
+          category: 'overlay.channel',
+          message: `stats channel status: ${status}`,
+          level: status === 'SUBSCRIBED' ? 'info' : 'warning',
+          data: { gameId, status, error: (err as Error | undefined)?.message },
+        });
+        console.log(`📡 [overlay_stats:${gameId}] status:`, status, err);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          Sentry.captureMessage(`Overlay stats channel ${status}`, {
+            level: 'warning',
+            tags: { surface: 'overlay', channel: 'stats' },
+            extra: { gameId, error: (err as Error | undefined)?.message },
+          });
+        }
+      });
 
     const gamesChannel = supabase
       .channel(`overlay_game:${gameId}`)
@@ -284,7 +354,22 @@ export function useGameOverlayData(gameId: string | null) {
           if (scoringChanged) debouncedRefetch();
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        Sentry.addBreadcrumb({
+          category: 'overlay.channel',
+          message: `games channel status: ${status}`,
+          level: status === 'SUBSCRIBED' ? 'info' : 'warning',
+          data: { gameId, status, error: (err as Error | undefined)?.message },
+        });
+        console.log(`📡 [overlay_game:${gameId}] status:`, status, err);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          Sentry.captureMessage(`Overlay games channel ${status}`, {
+            level: 'warning',
+            tags: { surface: 'overlay', channel: 'games' },
+            extra: { gameId, error: (err as Error | undefined)?.message },
+          });
+        }
+      });
 
     return () => {
       mountedRef.current = false;
