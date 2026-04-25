@@ -73,7 +73,12 @@ export class TournamentStandingsService {
       const games = await hybridSupabaseService.query<GameResult>(
         'games',
         'id, team_a_id, team_b_id, home_score, away_score, status',
-        { tournament_id: `eq.${tournamentId}`, status: `eq.completed` }
+        {
+          tournament_id: `eq.${tournamentId}`,
+          status: `eq.completed`,
+          is_coach_game: `eq.false`,
+          order: 'end_time.asc.nullslast,start_time.asc',
+        }
       );
 
       if (!games || games.length === 0) {
